@@ -1,5 +1,5 @@
 from typing import TYPE_CHECKING
-from pywa.errors import WhatsAppError
+from pywa.errors import WhatsAppApiError
 from pywa.types import Button, SectionList
 
 if TYPE_CHECKING:
@@ -17,7 +17,7 @@ class WhatsAppCloudApi:
     ) -> dict | list:
         res = self._session.request(method=method, url=f"{self._base_url}{endpoint}", **kwargs)
         if res.status_code != 200:
-            raise WhatsAppError(status_code=res.status_code, error=res.json()["error"])
+            raise WhatsAppApiError(status_code=res.status_code, error=res.json()["error"])
         return res.json()
 
     def _send_text_message(
@@ -26,7 +26,7 @@ class WhatsAppCloudApi:
             text: str,
             preview_url: bool = False,
             reply_to_message_id: str | None = None,
-    ):
+    ) -> str:
         data = {
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
@@ -42,7 +42,7 @@ class WhatsAppCloudApi:
             method="POST",
             endpoint=f"/{self.phone_id}/messages",
             json=data
-        )
+        )['messages'][0]['id']
 
     def _send_interactive_message(
             self: "WhatsApp",
@@ -50,7 +50,7 @@ class WhatsAppCloudApi:
             keyboard: list[Button] | SectionList,
             text: str,
             reply_to_message_id: str | None = None,
-    ):
+    ) -> str:
         data = {
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
@@ -75,4 +75,4 @@ class WhatsAppCloudApi:
             method="POST",
             endpoint=f"/{self.phone_id}/messages",
             json=data
-        )
+        )['messages'][0]['id']

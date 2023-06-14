@@ -44,7 +44,20 @@ class WhatsApp(WhatsAppCloudApi):
             preview_url: bool = False,
             reply_to_message_id: str | None = None,
             keyboard: list[Button] | SectionList | None = None,
-    ):
+    ) -> str:
+        """
+        Send a message to a WhatsApp user.
+
+        Args:
+            to: The phone ID of the WhatsApp user.
+            text: The text to send.
+            preview_url: Whether to show a preview of the URL in the message (if any).
+            reply_to_message_id: The message ID to reply to (optional).
+            keyboard: The keyboard to send with the message (optional).
+
+        Returns:
+            The message ID of the sent message.
+        """
         if not keyboard:
             return self._send_text_message(
                 to=to,
