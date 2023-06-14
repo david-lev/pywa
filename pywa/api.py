@@ -1,16 +1,19 @@
 from typing import TYPE_CHECKING
 from pywa.errors import WhatsAppError
 from pywa.types import Button, SectionList
+
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
 
 
 class WhatsAppCloudApi:
+    """Internal methods for the WhatsApp client."""
+
     def _make_request(
-        self: "WhatsApp",
-        method: str,
-        endpoint: str,
-        **kwargs
+            self: "WhatsApp",
+            method: str,
+            endpoint: str,
+            **kwargs
     ) -> dict | list:
         res = self._session.request(method=method, url=f"{self._base_url}{endpoint}", **kwargs)
         if res.status_code != 200:
@@ -18,11 +21,11 @@ class WhatsAppCloudApi:
         return res.json()
 
     def _send_text_message(
-        self: "WhatsApp",
-        to: str,
-        text: str,
-        preview_url: bool = False,
-        reply_to_message_id: str | None = None,
+            self: "WhatsApp",
+            to: str,
+            text: str,
+            preview_url: bool = False,
+            reply_to_message_id: str | None = None,
     ):
         data = {
             "messaging_product": "whatsapp",
@@ -42,11 +45,11 @@ class WhatsAppCloudApi:
         )
 
     def _send_interactive_message(
-        self: "WhatsApp",
-        to: str,
-        keyboard: list[Button] | SectionList,
-        text: str,
-        reply_to_message_id: str | None = None,
+            self: "WhatsApp",
+            to: str,
+            keyboard: list[Button] | SectionList,
+            text: str,
+            reply_to_message_id: str | None = None,
     ):
         data = {
             "messaging_product": "whatsapp",

@@ -5,13 +5,13 @@ from pywa.types import Button, SectionList
 
 class WhatsApp(WhatsAppCloudApi):
     def __init__(
-        self,
-        phone_id: str,
-        token: str,
-        verify_token: str | None = None,
-        base_url: str = "https://graph.facebook.com",
-        api_version: float = 17.0,
-        session: requests.Session | None = None,
+            self,
+            phone_id: str,
+            token: str,
+            verify_token: str | None = None,
+            base_url: str = "https://graph.facebook.com",
+            api_version: float = 17.0,
+            session: requests.Session | None = None,
     ):
         """
         Initialize the WhatsApp client.
@@ -38,12 +38,12 @@ class WhatsApp(WhatsAppCloudApi):
         }
 
     def send_message(
-        self,
-        to: str,
-        text: str,
-        preview_url: bool = False,
-        reply_to_message_id: str | None = None,
-        keyboard: list[Button] | SectionList | None = None,
+            self,
+            to: str,
+            text: str,
+            preview_url: bool = False,
+            reply_to_message_id: str | None = None,
+            keyboard: list[Button] | SectionList | None = None,
     ):
         if not keyboard:
             return self._send_text_message(
@@ -54,64 +54,64 @@ class WhatsApp(WhatsAppCloudApi):
             )
 
     def send_image(
-        self,
-        to: str,
-        image: str | bytes,
-        caption: str | None = None,
-        preview_url: bool = False,
-        reply_to_message_id: str | None = None,
-        keyboard: list[list] | None = None,
+            self,
+            to: str,
+            image: str | bytes,
+            caption: str | None = None,
+            preview_url: bool = False,
+            reply_to_message_id: str | None = None,
+            keyboard: list[list] | None = None,
     ):
         raise NotImplementedError
 
     def send_video(
-        self,
-        to: str,
-        video: str | bytes,
-        caption: str | None = None,
-        preview_url: bool = False,
-        reply_to_message_id: str | None = None,
-        keyboard: list[list] | None = None,
+            self,
+            to: str,
+            video: str | bytes,
+            caption: str | None = None,
+            preview_url: bool = False,
+            reply_to_message_id: str | None = None,
+            keyboard: list[list] | None = None,
     ):
         raise NotImplementedError
 
     def send_document(
-        self,
-        to: str,
-        document: str | bytes,
-        filename: str | None = None,
-        caption: str | None = None,
-        preview_url: bool = False,
-        reply_to_message_id: str | None = None,
-        keyboard: list[list] | None = None,
+            self,
+            to: str,
+            document: str | bytes,
+            filename: str | None = None,
+            caption: str | None = None,
+            preview_url: bool = False,
+            reply_to_message_id: str | None = None,
+            keyboard: list[list] | None = None,
     ):
         raise NotImplementedError
 
     def send_audio(
-        self,
-        to: str,
-        audio: str | bytes,
-        caption: str | None = None,
-        preview_url: bool = False,
-        reply_to_message_id: str | None = None,
-        keyboard: list[list] | None = None,
+            self,
+            to: str,
+            audio: str | bytes,
+            caption: str | None = None,
+            preview_url: bool = False,
+            reply_to_message_id: str | None = None,
+            keyboard: list[list] | None = None,
     ):
         raise NotImplementedError
 
     def send_reaction(
-        self,
-        to: str,
-        emoji: str,
-        message_id: str,
+            self,
+            to: str,
+            emoji: str,
+            message_id: str,
     ):
         raise NotImplementedError
 
     def send_location(
-        self,
-        to: str,
-        latitude: float,
-        longitude: float,
-        name: str | None = None,
-        address: str | None = None,
+            self,
+            to: str,
+            latitude: float,
+            longitude: float,
+            name: str | None = None,
+            address: str | None = None,
     ):
         raise NotImplementedError
