@@ -1,11 +1,26 @@
+from __future__ import annotations
+
+__all__ = (
+    "Message",
+    "MessageType",
+    "MessageStatus",
+    "MessageStatusType",
+    "CallbackButtonReply",
+    "CallbackListReply",
+    "Button",
+    "SectionRow",
+    "Section",
+    "SectionList",
+    "MessageStatus",
+)
+
 from datetime import datetime
-from typing import TYPE_CHECKING
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from pywa.errors import WhatsAppError
-
+from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from pywa import WhatsApp
+    from pywa.client import WhatsApp
 
 
 @dataclass(frozen=True, slots=True)
@@ -239,6 +254,10 @@ class Location:
     address: str | None = None
     url: str | None = None
 
+    @classmethod
+    def from_dict(cls, data: dict | None):
+        return cls(**data) if data else None
+
 
 @dataclass(frozen=True, slots=True)
 class ReplyToMessage:
@@ -296,7 +315,7 @@ class Message:
         reaction: The reaction of the message (if the message type is reaction). (optional)
         location: The location of the message (if the message type is location). (optional)
     """
-    _client: WhatsApp
+    _client: WhatsApp = field(repr=False, hash=False, compare=False)
     id: str
     metadata: Metadata
     from_user: User
@@ -319,7 +338,7 @@ class Message:
         msg_type = MessageType(message['type'])
         user = value['contacts'][0]
         if msg_type == MessageType.UNSUPPORTED:
-            raise ExceptionGroup("Unsupported message type", list(map(lambda e: WhatsAppError(e), message['errors'])))
+            raise WhatsAppError(error=message['errors'][0])
         return cls(
             _client=client,
             id=message['id'],
@@ -335,6 +354,7 @@ class Message:
             document=Document.from_dict(message.get('document')),
             audio=Audio.from_dict(message.get('audio')),
             reaction=Reaction.from_dict(message.get('reaction')),
+            location=Location.from_dict(message.get('location'))
         )
 
 
