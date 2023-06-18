@@ -1,13 +1,18 @@
 import requests
+import importlib
+from typing import Callable, Any
 from pywa.api import WhatsAppCloudApi
 from pywa.types import Button, SectionList
+from pywa import utils
 
 
-class WhatsApp(WhatsAppCloudApi):
+class WhatsApp:
     def __init__(
             self,
-            phone_id: str,
+            phone_id: str | int,
             token: str,
+            app: Any | None = None,
+            webhook_endpoint: str = "/pywa",
             verify_token: str | None = None,
             base_url: str = "https://graph.facebook.com",
             api_version: float = 17.0,
@@ -22,20 +27,59 @@ class WhatsApp(WhatsAppCloudApi):
         Args:
             phone_id: The phone ID of the WhatsApp account.
             token: The token of the WhatsApp account.
-            verify_token: The verify token if you want to receive messages from WhatsApp.
+            app: The Flask or FastAPI app.
+            webhook_endpoint: The endpoint to listen for incoming messages (default: `/pywa`).
+            verify_token: The verify token of the registered webhook.
             base_url: The base URL of the WhatsApp API. Default: `https://graph.facebook.com`
             api_version: The API version of the WhatsApp API. Default: 17.0
             session: The session to use for requests. Default: New session.
         """
-        self.phone_id = phone_id
-        self.token = token
-        self.verify_token = verify_token
-        self._session = session or requests.Session()
-        self._base_url = f"{base_url}/v{api_version}"
-        self._session.headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {token}",
-        }
+        self.phone_id = str(phone_id)
+        self.api = WhatsAppCloudApi(
+            phone_id=phone_id,
+            token=token,
+            session=session or requests.Session(),
+            base_url=base_url,
+            api_version=api_version,
+        )
+        if app is not None:
+            if verify_token is None:
+                raise ValueError("When listening for incoming messages, a verify token must be provided.")
+            if utils.is_flask_app(app):
+                flask = importlib.import_module("flask")
+
+                @app.before_request
+                def before_request():
+                    if flask.request.path != webhook_endpoint:
+                        return
+                    if flask.request.method == "GET":
+                        if verify_token == flask.request.args.get("hub.verify_token"):
+                            return flask.request.args.get("hub.challenge"), 200
+                        else:
+                            return "Error, invalid verification token", 403
+                    elif flask.request.method == "POST":
+                        if flask.request.json["entry"][0]["changes"][0]["value"]["metadata"]["phone_number_id"] == self.phone_id:
+                            print(flask.request.json)  # TODO: Handle incoming messages
+                        return "ok", 200
+
+            elif utils.is_fastapi_app(app):
+                fastapi = importlib.import_module("fastapi")
+
+                @app.middleware("http")
+                async def before_request(request: fastapi.Request, call_next: Callable):
+                    if request.url.path != webhook_endpoint:
+                        return await call_next(request)
+                    if request.method == "GET":
+                        if verify_token == request.query_params.get("hub.verify_token"):
+                            return fastapi.Response(content=request.query_params.get("hub.challenge"), status_code=200)
+                        else:
+                            return fastapi.Response(content="Error, invalid verification token", status_code=403)
+                    elif request.method == "POST":
+                        request_body = await request.json()
+                        if request_body["entry"][0]["changes"][0]["value"]["metadata"]["phone_number_id"] == self.phone_id:
+                            print(request_body)  # TODO: Handle incoming messages
+                        return fastapi.Response(content="ok", status_code=200)
+                    return await call_next(request)
 
     def send_message(
             self,
@@ -59,7 +103,7 @@ class WhatsApp(WhatsAppCloudApi):
             The message ID of the sent message.
         """
         if not keyboard:
-            return self._send_text_message(
+            return self.api.send_text_message(
                 to=to,
                 text=text,
                 preview_url=preview_url,
