@@ -364,8 +364,8 @@ class CallbackButtonReply:
     metadata: Metadata
     from_user: User
     timestamp: datetime
-    callback_id: str
-    callback_title: str
+    data: str
+    title: str
 
     @classmethod
     def from_dict(cls, client: WhatsApp, data: dict):
@@ -378,9 +378,9 @@ class CallbackListReply:
     metadata: Metadata
     from_user: User
     timestamp: datetime
-    callback_id: str
-    callback_title: str
-    callback_description: str | None
+    data: str
+    title: str
+    description: str | None
 
     @classmethod
     def from_dict(cls, client: WhatsApp, data: dict):

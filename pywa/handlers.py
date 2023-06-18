@@ -10,13 +10,14 @@ class Handler:
     def __init__(
             self,
             handler: Callable[["WhatsApp", Any], Any],
-            filters: Iterable[Callable[["WhatsApp", Any], bool]]
+            filters: Iterable[Callable[["WhatsApp", Any], bool]] | Callable[["WhatsApp", Any], bool] = None
     ):
         self.handler = handler
         self.filters = filters
 
     def __call__(self, wa: "WhatsApp", data: Any):
-        if all([f(wa, data) for f in self.filters]) if self.filters else True:
+        if all([f(wa, data) for f in self.filters]) if isinstance(self.filters, Iterable) else self.filters(wa, data) \
+                if self.filters else True:
             self.handler(wa, data)
 
 
