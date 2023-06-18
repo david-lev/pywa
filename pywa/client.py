@@ -79,7 +79,8 @@ class WhatsApp:
                             return fastapi.Response(content="Error, invalid verification token", status_code=403)
                     elif request.method == "POST":
                         request_body = await request.json()
-                        if request_body["entry"][0]["changes"][0]["value"]["metadata"]["phone_number_id"] == self.phone_id:
+                        if request_body["entry"][0]["changes"][0]["value"]["metadata"][
+                            "phone_number_id"] == self.phone_id:
                             print(Message.from_dict(self, request_body))  # TODO: Handle incoming messages
                         return fastapi.Response(content="ok", status_code=200)
                     return await call_next(request)
@@ -97,7 +98,7 @@ class WhatsApp:
 
     def on_message(
             self,
-            filters: Iterable[Callable[["WhatsApp", Message], bool]] = None
+            filters: Iterable[Callable[["WhatsApp", Message], bool]] | Callable[["WhatsApp", Message], bool] = None
     ):
         def decorator(func: Callable[["WhatsApp", Message], Any]):
             self.add_handler(MessageHandler(handler=func, filters=filters))
@@ -106,7 +107,7 @@ class WhatsApp:
 
     def on_button_callback(
             self,
-            filters: Iterable[Callable[["WhatsApp", CallbackButtonReply], bool]] = None
+            filters: Iterable[Callable[["WhatsApp", CallbackButtonReply], bool]] | Callable[["WhatsApp", CallbackButtonReply], bool] = None
     ):
         def decorator(func: Callable[["WhatsApp", CallbackButtonReply], Any]):
             self.add_handler(ButtonCallbackHandler(handler=func, filters=filters))
@@ -115,7 +116,7 @@ class WhatsApp:
 
     def on_selection_callback(
             self,
-            filters: Iterable[Callable[["WhatsApp", CallbackListReply], bool]] = None
+            filters: Iterable[Callable[["WhatsApp", CallbackListReply], bool]] | Callable[["WhatsApp", CallbackListReply], bool] = None
     ):
         def decorator(func: Callable[["WhatsApp", CallbackListReply], Any]):
             self.add_handler(SelectionCallbackHandler(handler=func, filters=filters))
