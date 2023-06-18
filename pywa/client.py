@@ -1,11 +1,10 @@
 import collections
 import requests
-import importlib
 from typing import Callable, Any, Iterable
 from pywa.api import WhatsAppCloudApi
 from pywa.handlers import Handler, MessageHandler, ButtonCallbackHandler, SelectionCallbackHandler
 from pywa.types import Button, SectionList, Message, CallbackButtonReply, CallbackListReply
-from pywa import utils
+from pywa import webhook
 
 
 class WhatsApp:
@@ -44,55 +43,25 @@ class WhatsApp:
             base_url=base_url,
             api_version=api_version,
         )
-        self._handlers = collections.defaultdict(list)
         if app is not None:
             if verify_token is None:
                 raise ValueError("When listening for incoming messages, a verify token must be provided.")
-            if utils.is_flask_app(app):
-                flask = importlib.import_module("flask")
-
-                @app.before_request
-                def before_request():
-                    if flask.request.path != webhook_endpoint:
-                        return
-                    if flask.request.method == "GET":
-                        if verify_token == flask.request.args.get("hub.verify_token"):
-                            return flask.request.args.get("hub.challenge"), 200
-                        else:
-                            return "Error, invalid verification token", 403
-                    elif flask.request.method == "POST":
-                        if flask.request.json["entry"][0]["changes"][0]["value"]["metadata"]["phone_number_id"] == self.phone_id:
-                            print(flask.request.json)  # TODO: Handle incoming messages
-                        return "ok", 200
-
-            elif utils.is_fastapi_app(app):
-                fastapi = importlib.import_module("fastapi")
-
-                @app.middleware("http")
-                async def before_request(request: fastapi.Request, call_next: Callable):
-                    if request.url.path != webhook_endpoint:
-                        return await call_next(request)
-                    if request.method == "GET":
-                        if verify_token == request.query_params.get("hub.verify_token"):
-                            return fastapi.Response(content=request.query_params.get("hub.challenge"), status_code=200)
-                        else:
-                            return fastapi.Response(content="Error, invalid verification token", status_code=403)
-                    elif request.method == "POST":
-                        request_body = await request.json()
-                        if request_body["entry"][0]["changes"][0]["value"]["metadata"][
-                            "phone_number_id"] == self.phone_id:
-                            print(Message.from_dict(self, request_body))  # TODO: Handle incoming messages
-                        return fastapi.Response(content="ok", status_code=200)
-                    return await call_next(request)
-
-            else:
-                raise ValueError("The app must be a Flask or FastAPI app.")
+            webhook.Webhook(
+                wa_client=self,
+                app=app,
+                verify_token=verify_token,
+                webhook_endpoint=webhook_endpoint,
+            )
+            self._handlers = collections.defaultdict(list)
+        else:
+            self._handlers = None
 
     def add_handler(self, handler: Handler):
+        if self._handlers is None:
+            raise ValueError("You must initialize the WhatsApp client with an app (Flask or FastAPI) to add handlers.")
         self._handlers[handler.__handler_type__].append(handler)
 
     def __call_handlers(self, event: Message | CallbackButtonReply | CallbackListReply):
-        print("Calling handlers", self._handlers)
         for handler in self._handlers[event.__class__]:  # TODO execute in parallel
             handler(self, event)
 
