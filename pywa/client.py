@@ -1,8 +1,10 @@
+import collections
 import requests
 import importlib
-from typing import Callable, Any
+from typing import Callable, Any, Iterable
 from pywa.api import WhatsAppCloudApi
-from pywa.types import Button, SectionList
+from pywa.handlers import Handler, MessageHandler, ButtonCallbackHandler, SelectionCallbackHandler
+from pywa.types import Button, SectionList, Message, CallbackButtonReply, CallbackListReply
 from pywa import utils
 
 
@@ -42,6 +44,7 @@ class WhatsApp:
             base_url=base_url,
             api_version=api_version,
         )
+        self._handlers = collections.defaultdict(list)
         if app is not None:
             if verify_token is None:
                 raise ValueError("When listening for incoming messages, a verify token must be provided.")
@@ -77,9 +80,47 @@ class WhatsApp:
                     elif request.method == "POST":
                         request_body = await request.json()
                         if request_body["entry"][0]["changes"][0]["value"]["metadata"]["phone_number_id"] == self.phone_id:
-                            print(request_body)  # TODO: Handle incoming messages
+                            print(Message.from_dict(self, request_body))  # TODO: Handle incoming messages
                         return fastapi.Response(content="ok", status_code=200)
                     return await call_next(request)
+
+            else:
+                raise ValueError("The app must be a Flask or FastAPI app.")
+
+    def add_handler(self, handler: Handler):
+        self._handlers[handler.__handler_type__].append(handler)
+
+    def __call_handlers(self, event: Message | CallbackButtonReply | CallbackListReply):
+        print("Calling handlers", self._handlers)
+        for handler in self._handlers[event.__class__]:  # TODO execute in parallel
+            handler(self, event)
+
+    def on_message(
+            self,
+            filters: Iterable[Callable[["WhatsApp", Message], bool]] = None
+    ):
+        def decorator(func: Callable[["WhatsApp", Message], Any]):
+            self.add_handler(MessageHandler(handler=func, filters=filters))
+
+        return decorator
+
+    def on_button_callback(
+            self,
+            filters: Iterable[Callable[["WhatsApp", CallbackButtonReply], bool]] = None
+    ):
+        def decorator(func: Callable[["WhatsApp", CallbackButtonReply], Any]):
+            self.add_handler(ButtonCallbackHandler(handler=func, filters=filters))
+
+        return decorator
+
+    def on_selection_callback(
+            self,
+            filters: Iterable[Callable[["WhatsApp", CallbackListReply], bool]] = None
+    ):
+        def decorator(func: Callable[["WhatsApp", CallbackListReply], Any]):
+            self.add_handler(SelectionCallbackHandler(handler=func, filters=filters))
+
+        return decorator
 
     def send_message(
             self,
