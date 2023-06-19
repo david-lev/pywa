@@ -4,10 +4,66 @@
 ### Client (basic client only to send messages)
 ```python
 from pywa import WhatsApp
+from pywa.types import Button, SectionList, Section, SectionRow
 
 wa = WhatsApp(phone_id="YOUR_PHONE_NUMBER", token="YOUR_TOKEN")
 wa.send_message(to="PHONE_NUMBER", text="Hello World!")
-wa.send_image(to="PHONE_NUMBER", image="PATH_TO_IMAGE")
+wa.send_reaction(
+    to="PHONE_NUMBER",
+    message_id=wa.send_image(to="PHONE_NUMBER",image="https://i.imgur.com/4QFZJZM.jpeg"),
+    emoji="👍"
+)
+wa.send_document(
+    to="PHONE_NUMBER",
+    document="https://file-examples.com/storage/fefb234bc0648a3e7a1a47d/2017/10/file-sample_150kB.pdf",
+    filename="sample.pdf"
+)
+wa.send_message(
+    to="PHONE_NUMBER",
+    header="Welcome!",
+    text="Please choose one of the following options:",
+    keyboard=[
+            Button("Help me", callback_data="menu:help"),
+            Button("Contact", callback_data="menu:contact"),
+    ],
+    footer="Powered by PyWa"
+)
+wa.send_message(
+    to="PHONE_NUMBER",
+    header="Welcome!",
+    text="Please select one of the following options:",
+    keyboard=SectionList(
+        button_title="Select",
+        sections=[
+            Section(
+                title='Utilities',
+                rows=[
+                    SectionRow(
+                        title='Help me',
+                        callback_data='menu:help',
+                        description='Get help'
+                    ),
+                    SectionRow(
+                        title='Contact',
+                        callback_data='menu:contact',
+                        description='Contact us'
+                    )
+                ]
+            ),
+            Section(
+                title='Other',
+                rows=[
+                    SectionRow(
+                        title='About',
+                        callback_data='menu:about',
+                        description='About us'
+                    )
+                ]
+            )
+        ]
+    ),
+    footer="Powered by PyWa"
+)
 ```
 
 ### Webhook (server to receive messages)
