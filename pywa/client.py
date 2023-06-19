@@ -71,36 +71,37 @@ class WhatsApp:
     ):
         def decorator(func: Callable[["WhatsApp", dict], Any]):
             self.add_handler(Handler(handler=func, filters=filters))
-
+            return func
         return decorator
 
     def on_message(
             self,
-            filters: Iterable[Callable[["WhatsApp", Message], bool]] | Callable[["WhatsApp", Message], bool] = None
+            filters: Iterable[Callable[["WhatsApp", Message], bool]] |
+            Callable[["WhatsApp", Message], bool] = None
     ):
         def decorator(func: Callable[["WhatsApp", Message], Any]):
             self.add_handler(MessageHandler(handler=func, filters=filters))
-
+            return func
         return decorator
 
     def on_callback_button(
             self,
-            filters: Iterable[Callable[["WhatsApp", CallbackButtonReply], bool]] | Callable[
-                ["WhatsApp", CallbackButtonReply], bool] = None
+            filters: Iterable[Callable[["WhatsApp", CallbackButtonReply], bool]] |
+            Callable[["WhatsApp", CallbackButtonReply], bool] = None
     ):
         def decorator(func: Callable[["WhatsApp", CallbackButtonReply], Any]):
             self.add_handler(ButtonCallbackHandler(handler=func, filters=filters))
-
+            return func
         return decorator
 
     def on_callback_selection(
             self,
-            filters: Iterable[Callable[["WhatsApp", CallbackListReply], bool]] | Callable[
-                ["WhatsApp", CallbackListReply], bool] = None
+            filters: Iterable[Callable[["WhatsApp", CallbackListReply], bool]] |
+            Callable[["WhatsApp", CallbackListReply], bool] = None
     ):
         def decorator(func: Callable[["WhatsApp", CallbackListReply], Any]):
             self.add_handler(SelectionCallbackHandler(handler=func, filters=filters))
-
+            return func
         return decorator
 
     def send_message(
