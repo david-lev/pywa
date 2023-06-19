@@ -5,8 +5,8 @@ __all__ = (
     "MessageType",
     "MessageStatus",
     "MessageStatusType",
-    "CallbackButtonReply",
-    "CallbackListReply",
+    "CallbackButton",
+    "CallbackSelection",
     "Button",
     "SectionRow",
     "Section",
@@ -17,7 +17,6 @@ __all__ = (
 from datetime import datetime
 from dataclasses import dataclass, field
 from enum import Enum
-from pywa.errors import WhatsAppError
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
@@ -109,10 +108,14 @@ class User:
 
     Attributes:
         wa_id: The WhatsApp ID of the user (The phone number with the country code).
-        name: The name of the user.
+        name: The name of the user (``None`` on MessageStatus).
     """
     wa_id: str
-    name: str
+    name: str | None
+
+    @classmethod
+    def from_dict(cls, data: dict) -> User:
+        return cls(wa_id=data["wa_id"], name=data["profile"]["name"])
 
 
 class MessageType(str, Enum):
@@ -293,7 +296,16 @@ class Metadata:
 
 
 @dataclass(frozen=True, slots=True)
-class Message:
+class BaseUpdate:
+    _client: WhatsApp = field(repr=False, hash=False, compare=False)
+    id: str
+    metadata: Metadata
+    from_user: User
+    timestamp: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class Message(BaseUpdate):
     """
     A message received from a user.
 
@@ -315,11 +327,6 @@ class Message:
         reaction: The reaction of the message (if the message type is reaction). (optional)
         location: The location of the message (if the message type is location). (optional)
     """
-    _client: WhatsApp = field(repr=False, hash=False, compare=False)
-    id: str
-    metadata: Metadata
-    from_user: User
-    timestamp: datetime
     type: MessageType
     reply_to_message: ReplyToMessage | None
     text: str | None
@@ -332,18 +339,14 @@ class Message:
     location: Location | None
 
     @classmethod
-    def from_dict(cls, client: WhatsApp, data: dict):
-        value = data['entry'][0]['changes'][0]['value']
+    def from_dict(cls, client: WhatsApp, value: dict):
         message = value['messages'][0]
         msg_type = MessageType(message['type'])
-        user = value['contacts'][0]
-        if msg_type == MessageType.UNSUPPORTED:
-            raise WhatsAppError(error=message['errors'][0])
         return cls(
             _client=client,
             id=message['id'],
             type=msg_type,
-            from_user=User(wa_id=user['wa_id'], name=user['profile']['name']),
+            from_user=User.from_dict(value['contacts'][0]),
             timestamp=datetime.fromtimestamp(int(message['timestamp'])),
             metadata=Metadata(**value['metadata']),
             reply_to_message=ReplyToMessage.from_dict(message.get('context')),
@@ -359,32 +362,46 @@ class Message:
 
 
 @dataclass(frozen=True, slots=True)
-class CallbackButtonReply:
-    id: str
-    metadata: Metadata
-    from_user: User
-    timestamp: datetime
+class CallbackButton(BaseUpdate):
+    """
+
+    """
     data: str
     title: str
 
     @classmethod
-    def from_dict(cls, client: WhatsApp, data: dict):
-        raise NotImplementedError
+    def from_dict(cls, client: WhatsApp, value: dict):
+        message = value['messages'][0]
+        return cls(
+            _client=client,
+            id=message['id'],
+            metadata=Metadata(**value['metadata']),
+            from_user=User.from_dict(value['contacts'][0]),
+            timestamp=datetime.fromtimestamp(int(message['timestamp'])),
+            data=message['interactive']['button_reply']['id'],
+            title=message['interactive']['button_reply']['title']
+        )
 
 
 @dataclass(frozen=True, slots=True)
-class CallbackListReply:
-    id: str
-    metadata: Metadata
-    from_user: User
-    timestamp: datetime
+class CallbackSelection(BaseUpdate):
     data: str
     title: str
     description: str | None
 
     @classmethod
-    def from_dict(cls, client: WhatsApp, data: dict):
-        raise NotImplementedError
+    def from_dict(cls, client: WhatsApp, value: dict):
+        message = value['messages'][0]
+        return cls(
+            _client=client,
+            id=message['id'],
+            metadata=Metadata(**value['metadata']),
+            from_user=User.from_dict(value['contacts'][0]),
+            timestamp=datetime.fromtimestamp(int(message['timestamp'])),
+            data=message['interactive']['list_reply']['id'],
+            title=message['interactive']['list_reply']['title'],
+            description=message['interactive']['list_reply'].get('description')
+        )
 
 
 class MessageStatusType(Enum):
@@ -392,10 +409,11 @@ class MessageStatusType(Enum):
     SENT = 'sent'
     DELIVERED = 'delivered'
     READ = 'read'
+    timestamp: datetime
 
 
 @dataclass(frozen=True, slots=True)
-class MessageStatus:
+class MessageStatus(BaseUpdate):
     """
     Represents the status of a message.
 
@@ -406,27 +424,18 @@ class MessageStatus:
         metadata: The metadata of the message (to which phone number it was sent).
         status: The status of the message.
         timestamp: The timestamp when the status was updated.
-        recipient_id: The ID of the recipient of the message.
-        conversation_id: The ID of the conversation of the message.
-        expiration_timestamp: The timestamp when the conversation will expire.
+        from_user: The user who the message was sent to.
     """
-    id: str
-    metadata: Metadata
     status: MessageStatusType
-    timestamp: datetime
-    recipient_id: str
-    conversation_id: str
-    expiration_timestamp: datetime
 
     @classmethod
-    def from_dict(cls, data: dict):
-        value = data['entry'][0]['changes'][0]['value']
+    def from_dict(cls, client: WhatsApp, value: dict):
+        status = value['statuses'][0]
         return cls(
-            id=value['id'],
+            _client=client,
+            id=status['id'],
             metadata=Metadata(**value['metadata']),
-            status=MessageStatusType(value['status']),
-            timestamp=datetime.fromtimestamp(int(value['timestamp'])),
-            recipient_id=value['recipient_id'],
-            conversation_id=value['conversation']['id'],
-            expiration_timestamp=datetime.fromtimestamp(int(value['conversation']['expiration_timestamp'])),
+            status=MessageStatusType(status['status']),
+            timestamp=datetime.fromtimestamp(int(status['timestamp'])),
+            from_user=User(wa_id=status['recipient_id'], name=None)
         )
