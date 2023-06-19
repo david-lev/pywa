@@ -30,7 +30,7 @@ class WhatsAppApiError(WhatsAppError):
         status_code (int): The status code of the response.
         error_code (int): The error code.
         message (str): The error message.
-        details (str): The error details.
+        details (str): The error details (optional).
         fbtrace_id (str): The Facebook trace ID.
     """
     def __init__(
@@ -41,8 +41,8 @@ class WhatsAppApiError(WhatsAppError):
         self.status_code = status_code
         self.error_code = error["code"]
         self.message = error["message"]
-        self.details = error["error_data"]["details"]
+        self.details = error.get("error_data", {}).get("details", None)
         self.fbtrace_id = error["fbtrace_id"]
 
     def __str__(self) -> str:
-        return f"WhatsAppApiError(status_code={self.status_code}, error_code={self.error_code}, details={self.details})"
+        return f"WhatsAppApiError(status_code={self.status_code}, message={self.message!r}, details={self.details!r})"

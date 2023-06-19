@@ -65,6 +65,15 @@ class WhatsApp:
         for handler in self._handlers[event.__class__]:  # TODO execute in parallel
             handler(self, event)
 
+    def on_raw_update(
+            self,
+            filters: Iterable[Callable[["WhatsApp", dict], bool]] | Callable[["WhatsApp", dict], bool] = None
+    ):
+        def decorator(func: Callable[["WhatsApp", dict], Any]):
+            self.add_handler(Handler(handler=func, filters=filters))
+
+        return decorator
+
     def on_message(
             self,
             filters: Iterable[Callable[["WhatsApp", Message], bool]] | Callable[["WhatsApp", Message], bool] = None
@@ -74,18 +83,20 @@ class WhatsApp:
 
         return decorator
 
-    def on_button_callback(
+    def on_callback_button(
             self,
-            filters: Iterable[Callable[["WhatsApp", CallbackButtonReply], bool]] | Callable[["WhatsApp", CallbackButtonReply], bool] = None
+            filters: Iterable[Callable[["WhatsApp", CallbackButtonReply], bool]] | Callable[
+                ["WhatsApp", CallbackButtonReply], bool] = None
     ):
         def decorator(func: Callable[["WhatsApp", CallbackButtonReply], Any]):
             self.add_handler(ButtonCallbackHandler(handler=func, filters=filters))
 
         return decorator
 
-    def on_selection_callback(
+    def on_callback_selection(
             self,
-            filters: Iterable[Callable[["WhatsApp", CallbackListReply], bool]] | Callable[["WhatsApp", CallbackListReply], bool] = None
+            filters: Iterable[Callable[["WhatsApp", CallbackListReply], bool]] | Callable[
+                ["WhatsApp", CallbackListReply], bool] = None
     ):
         def decorator(func: Callable[["WhatsApp", CallbackListReply], Any]):
             self.add_handler(SelectionCallbackHandler(handler=func, filters=filters))
@@ -99,6 +110,8 @@ class WhatsApp:
             preview_url: bool = False,
             reply_to_message_id: str | None = None,
             keyboard: list[Button] | SectionList | None = None,
+            header: str | None = None,
+            footer: str | None = None,
     ) -> str:
         """
         Send a message to a WhatsApp user.
@@ -109,6 +122,8 @@ class WhatsApp:
             preview_url: Whether to show a preview of the URL in the message (if any).
             reply_to_message_id: The message ID to reply to (optional).
             keyboard: The keyboard to send with the message (optional).
+            header: The header of the message (if keyboard is provided, optional).
+            footer: The footer of the message (if keyboard is provided, optional).
 
         Returns:
             The message ID of the sent message.
@@ -120,28 +135,114 @@ class WhatsApp:
                 preview_url=preview_url,
                 reply_to_message_id=reply_to_message_id,
             )
+        return self.api.send_interactive_message(
+            to=to,
+            keyboard=keyboard,
+            header={
+                "type": "text",
+                "text": header,
+            } if header else None,
+            body=text,
+            footer=footer,
+        )
 
     def send_image(
             self,
             to: str,
             image: str | bytes,
             caption: str | None = None,
-            preview_url: bool = False,
             reply_to_message_id: str | None = None,
-            keyboard: list[list] | None = None,
-    ):
-        raise NotImplementedError
+            buttons: list[Button] | None = None,
+            body: str | None = None,
+            footer: str | None = None,
+    ) -> str:
+        """
+        Send an image to a WhatsApp user.
+
+        Args:
+            to: The phone ID of the WhatsApp user.
+            image: The image to send (either a URL or a file ID).
+            caption: The caption of the image (optional).
+            reply_to_message_id: The message ID to reply to (optional).
+            buttons: The buttons to send with the image (optional).
+            body: The body of the message (if buttons are provided, optional).
+            footer: The footer of the message (if buttons are provided, optional).
+
+        Returns:
+            The message ID of the sent image.
+        """
+        if not buttons:
+            return self.api.send_media(
+                to=to,
+                media_id_or_url=image,
+                media_type="image",
+                reply_to_message_id=reply_to_message_id,
+                caption=caption,
+            )
+        if not body and not caption:
+            raise ValueError("Either body or caption must be provided when sending an image with buttons.")
+        return self.api.send_interactive_message(
+            to=to,
+            keyboard=buttons,
+            header={
+                "type": "image",
+                "image": {
+                    "link" if image.startswith(("https://", "http://")) else "id": image,
+                }
+            },
+            body=body or caption,
+            footer=footer,
+            reply_to_message_id=reply_to_message_id,
+        )
 
     def send_video(
             self,
             to: str,
             video: str | bytes,
             caption: str | None = None,
-            preview_url: bool = False,
             reply_to_message_id: str | None = None,
-            keyboard: list[list] | None = None,
-    ):
-        raise NotImplementedError
+            buttons: list[Button] | None = None,
+            body: str | None = None,
+            footer: str | None = None,
+    ) -> str:
+        """
+        Send a video to a WhatsApp user.
+
+        Args:
+            to: The phone ID of the WhatsApp user.
+            video: The video to send (either a URL or a file ID).
+            caption: The caption of the video (optional).
+            reply_to_message_id: The message ID to reply to (optional).
+            buttons: The buttons to send with the video (optional).
+            body: The body of the message (if buttons are provided, optional).
+            footer: The footer of the message (if buttons are provided, optional).
+
+        Returns:
+            The message ID of the sent message.
+        """
+        if not buttons:
+            return self.api.send_media(
+                to=to,
+                media_id_or_url=video,
+                media_type="video",
+                reply_to_message_id=reply_to_message_id,
+                caption=caption,
+            )
+        if not body and not caption:
+            raise ValueError("Either body or caption must be provided when sending a video with buttons.")
+        return self.api.send_interactive_message(
+            to=to,
+            keyboard=buttons,
+            header={
+                "type": "video",
+                "video": {
+                    "link" if video.startswith(("https://", "http://")) else "id": video,
+                }
+            },
+            body=body or caption,
+            footer=footer,
+            reply_to_message_id=reply_to_message_id,
+        )
 
     def send_document(
             self,
@@ -149,30 +250,99 @@ class WhatsApp:
             document: str | bytes,
             filename: str | None = None,
             caption: str | None = None,
-            preview_url: bool = False,
             reply_to_message_id: str | None = None,
-            keyboard: list[list] | None = None,
+            buttons: list[Button] | None = None,
+            body: str | None = None,
+            footer: str | None = None,
     ):
-        raise NotImplementedError
+        """
+        Send a document to a WhatsApp user.
+
+        Args:
+            to: The phone ID of the WhatsApp user.
+            document: The document to send (either a URL or a file ID).
+            filename: The filename of the document (optional).
+            caption: The caption of the document (optional).
+            reply_to_message_id: The message ID to reply to (optional).
+            buttons: The buttons to send with the document (optional).
+            body: The body of the message (if buttons are provided, optional).
+            footer: The footer of the message (if buttons are provided, optional).
+
+        Returns:
+            The message ID of the sent message.
+        """
+        if not buttons:
+            return self.api.send_media(
+                to=to,
+                media_id_or_url=document,
+                media_type="document",
+                reply_to_message_id=reply_to_message_id,
+                filename=filename,
+                caption=caption,
+            )
+        if not body and not caption:
+            raise ValueError("Either body or caption must be provided when sending a document with buttons.")
+        return self.api.send_interactive_message(
+            to=to,
+            keyboard=buttons,
+            header={
+                "type": "document",
+                "document": {
+                    "link" if document.startswith(("https://", "http://")) else "id": document,
+                    "filename": filename,
+                }
+            },
+            body=body or caption,
+            footer=footer,
+            reply_to_message_id=reply_to_message_id,
+        )
 
     def send_audio(
             self,
             to: str,
             audio: str | bytes,
-            caption: str | None = None,
-            preview_url: bool = False,
             reply_to_message_id: str | None = None,
-            keyboard: list[list] | None = None,
-    ):
-        raise NotImplementedError
+    ) -> str:
+        """
+        Send an audio file to a WhatsApp user.
+
+        Args:
+            to: The phone ID of the WhatsApp user.
+            audio: The audio file to send (either a URL or a file ID).
+            reply_to_message_id: The message ID to reply to (optional).
+
+        Returns:
+            The message ID of the sent message.
+        """
+        return self.api.send_media(
+            to=to,
+            media_id_or_url=audio,
+            media_type="audio",
+            reply_to_message_id=reply_to_message_id,
+        )
 
     def send_reaction(
             self,
             to: str,
             emoji: str,
             message_id: str,
-    ):
-        raise NotImplementedError
+    ) -> str:
+        """
+        React to a message with an emoji.
+
+        Args:
+            to: The phone ID of the WhatsApp user.
+            emoji: The emoji to react with.
+            message_id: The message ID to react to.
+
+        Returns:
+            The message ID of the reaction.
+        """
+        return self.api.send_reaction(
+            to=to,
+            emoji=emoji,
+            message_id=message_id,
+        )
 
     def send_location(
             self,
@@ -181,5 +351,21 @@ class WhatsApp:
             longitude: float,
             name: str | None = None,
             address: str | None = None,
-    ):
-        raise NotImplementedError
+    ) -> str:
+        """
+        Send a location to a WhatsApp user.
+
+        Args:
+            to: The phone ID of the WhatsApp user.
+            latitude: The latitude of the location.
+            longitude: The longitude of the location.
+            name: The name of the location (optional).
+            address: The address of the location (optional).
+        """
+        return self.api.send_location(
+            to=to,
+            latitude=latitude,
+            longitude=longitude,
+            name=name,
+            address=address,
+        )

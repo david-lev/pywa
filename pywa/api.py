@@ -109,7 +109,7 @@ class WhatsAppCloudApi:
             files=files
         )["id"]
 
-    def _send_media(
+    def send_media(
             self,
             to: str | int,
             media_id_or_url: str,
@@ -125,7 +125,7 @@ class WhatsAppCloudApi:
             "type": media_type,
             media_type: {
                 "link" if media_id_or_url.startswith(('https:', 'http:')) else "id": media_id_or_url,
-                **kwargs
+                **{k: v for k, v in kwargs.items() if v is not None}
             }
         }
         return self._make_request(
@@ -134,11 +134,69 @@ class WhatsAppCloudApi:
             json=data
         )['messages'][0]['id']
 
-    def _send_interactive_message(
+    def send_reaction(
+            self,
+            to: str | int,
+            emoji: str,
+            message_id: str,
+    ):
+        return self._make_request(
+            method="POST",
+            endpoint="/messages/",
+            json={
+                **self._common_keys,
+                "to": str(to),
+                "type": "reaction",
+                "reaction": {
+                    "emoji": emoji,
+                    "message_id": message_id
+                }
+            }
+        )['messages'][0]['id']
+
+    def send_location(
+            self,
+            to: str | int,
+            latitude: float,
+            longitude: float,
+            name: str | None = None,
+            address: str | None = None,
+    ):
+        data = {
+            **self._common_keys,
+            "to": str(to),
+            "type": "location",
+            "location": {
+                "latitude": latitude,
+                "longitude": longitude,
+                "name": name,
+                "address": address
+            }
+        }
+
+        return self._make_request(
+            method="POST",
+            endpoint=f"/messages",
+            json=data
+        )['messages'][0]['id']
+
+    def send_raw_json(
+            self,
+            data: dict
+    ) -> dict:
+        return self._make_request(
+            method="POST",
+            endpoint=f"/messages",
+            json=data
+        )
+
+    def send_interactive_message(
             self,
             to: str | int,
             keyboard: list[Button] | SectionList,
-            text: str,
+            body: str,
+            header: dict | None = None,
+            footer: str | None = None,
             reply_to_message_id: str | None = None,
     ) -> str:
         data = {
@@ -148,7 +206,7 @@ class WhatsAppCloudApi:
             "interactive": {
                 "type": "",
                 "action": {},
-                "body": {"text": text},
+                "body": {"text": body},
             }
         }
         if reply_to_message_id:
@@ -159,6 +217,10 @@ class WhatsAppCloudApi:
         else:
             data["interactive"]["type"] = "button"
             data["interactive"]["action"]["buttons"] = [button.to_dict() for button in keyboard]
+        if header:
+            data["interactive"]["header"] = header
+        if footer:
+            data["interactive"]["footer"] = {"text": footer}
 
         return self._make_request(
             method="POST",

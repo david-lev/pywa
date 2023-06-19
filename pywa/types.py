@@ -29,14 +29,14 @@ class Button:
     Represents a button in a keyboard.
 
     Attributes:
-        id: The ID of the button (You get this ID when the user clicks on the button).
         title: The title of the button.
+        callback_data: The payload to send when the user clicks on the button.
     """
-    id: str
     title: str
+    callback_data: str
 
     def to_dict(self) -> dict:
-        return {"type": "reply", "reply": {"id": self.id, "title": self.title}}
+        return {"type": "reply", "reply": {"id": self.callback_data, "title": self.title}}
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,16 +45,16 @@ class SectionRow:
     Represents a row in a section.
 
     Attributes:
-        id: The ID of the row (You get this ID when the user clicks on the row).
         title: The title of the row.
+        callback_data: The payload to send when the user clicks on the row.
         description: The description of the row (optional).
     """
-    id: str
     title: str
+    callback_data: str
     description: str | None = None
 
     def to_dict(self) -> dict:
-        d = {"id": self.id, "title": self.title}
+        d = {"id": self.callback_data, "title": self.title}
         if self.description:
             d["description"] = self.description
         return d
