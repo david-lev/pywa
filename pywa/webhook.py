@@ -1,13 +1,16 @@
 from typing import Union, TYPE_CHECKING, Callable
-from pywa.types import Message
+from pywa.types import Message, CallbackButton, CallbackSelection, MessageStatus, BaseUpdate
 from pywa import utils
 
 if TYPE_CHECKING:
     from pywa import WhatsApp
 
+__all__ = ["Webhook"]
+
 
 class Webhook:
     """Register a webhook to listen for incoming messages."""
+
     def __init__(
             self,
             wa_client: "WhatsApp",
@@ -30,7 +33,7 @@ class Webhook:
                 elif flask.request.method == "POST":
                     if flask.request.json["entry"][0]["changes"][0]["value"]["metadata"]["phone_number_id"] \
                             == wa_client.phone_id:
-                        print(flask.request.json)  # TODO: Handle incoming messages
+                        print(convert_dict_to_update(client=wa_client, d=flask.request.json))  # TODO: Handle incoming messages
                     return "ok", 200
 
         elif utils.is_fastapi_app(app):
@@ -49,9 +52,27 @@ class Webhook:
                     request_body = await request.json()
                     if request_body["entry"][0]["changes"][0]["value"]["metadata"]["phone_number_id"] \
                             == wa_client.phone_id:
-                        print(Message.from_dict(wa_client, request_body))  # TODO: Handle incoming messages
+                        print(convert_dict_to_update(client=wa_client, d=request_body))  # TODO: Handle incoming messages
                     return fastapi.Response(content="ok", status_code=200)
                 return await call_next(request)
 
         else:
             raise ValueError("The app must be a Flask or FastAPI app.")
+
+
+def convert_dict_to_update(client: "WhatsApp", d: dict) -> BaseUpdate:
+    value = d["entry"][0]["changes"][0]["value"]
+    if 'messages' in value:
+        if value["messages"][0]["type"] != "interactive":
+            return Message.from_dict(client=client, value=value)
+        else:
+            if value["messages"][0]["interactive"]["type"] == "button_reply":
+                return CallbackButton.from_dict(client=client, value=value)
+            elif value["messages"][0]["interactive"]["type"] == "list_reply":
+                return CallbackSelection.from_dict(client=client, value=value)
+
+    elif 'statuses' in value:
+        return MessageStatus.from_dict(client=client, value=value)
+
+    else:
+        raise ValueError("Invalid webhook data: " + str(d))
