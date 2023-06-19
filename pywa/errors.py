@@ -1,26 +1,6 @@
-class WhatsAppError(Exception):
-    """
-    Represents an error that sent by the WhatsApp Cloud API.
-
-    - See more: https://developers.facebook.com/docs/whatsapp/cloud-api/support/error-codes
-
-    Attributes:
-        error_code (int): The error code.
-        title (str): The error title.
-        message (str): The error message.
-        details (str): The error details.
-    """
-    def __init__(self, error: dict) -> None:
-        self.error_code = error["code"]
-        self.title = error["title"]
-        self.message = error["message"]
-        self.details = error["error_data"]["details"]
-
-    def __str__(self) -> str:
-        return f"WhatsAppError(error_code={self.error_code}, details={self.details})"
 
 
-class WhatsAppApiError(WhatsAppError):
+class WhatsAppApiError(Exception):
     """
     Represents an error that happened while making a request to the WhatsApp Cloud API.
 

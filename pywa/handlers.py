@@ -1,5 +1,5 @@
 from typing import Callable, Any, TYPE_CHECKING, Iterable
-from pywa.types import Message, CallbackButtonReply, CallbackListReply
+from pywa.types import Message, CallbackButton, CallbackSelection
 if TYPE_CHECKING:
     from pywa import WhatsApp
 
@@ -44,10 +44,10 @@ class MessageHandler(Handler):
 
 
 class ButtonCallbackHandler(Handler):
-    __handler_type__ = CallbackButtonReply
+    __handler_type__ = CallbackButton
     """A button handler."""
 
 
 class SelectionCallbackHandler(Handler):
-    __handler_type__ = CallbackListReply
+    __handler_type__ = CallbackSelection
     """A section handler."""

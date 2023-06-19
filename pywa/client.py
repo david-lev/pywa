@@ -3,7 +3,7 @@ import requests
 from typing import Callable, Any, Iterable
 from pywa.api import WhatsAppCloudApi
 from pywa.handlers import Handler, MessageHandler, ButtonCallbackHandler, SelectionCallbackHandler
-from pywa.types import Button, SectionList, Message, CallbackButtonReply, CallbackListReply
+from pywa.types import Button, SectionList, Message, CallbackButton, CallbackSelection, BaseUpdate
 from pywa import webhook
 
 
@@ -61,7 +61,7 @@ class WhatsApp:
             raise ValueError("You must initialize the WhatsApp client with an app (Flask or FastAPI) to add handlers.")
         self._handlers[handler.__handler_type__].append(handler)
 
-    def __call_handlers(self, event: Message | CallbackButtonReply | CallbackListReply):
+    def __call_handlers(self, event: BaseUpdate):
         for handler in self._handlers[event.__class__]:  # TODO execute in parallel
             handler(self, event)
 
@@ -86,20 +86,20 @@ class WhatsApp:
 
     def on_callback_button(
             self,
-            filters: Iterable[Callable[["WhatsApp", CallbackButtonReply], bool]] |
-            Callable[["WhatsApp", CallbackButtonReply], bool] = None
+            filters: Iterable[Callable[["WhatsApp", CallbackButton], bool]] |
+            Callable[["WhatsApp", CallbackButton], bool] = None
     ):
-        def decorator(func: Callable[["WhatsApp", CallbackButtonReply], Any]):
+        def decorator(func: Callable[["WhatsApp", CallbackButton], Any]):
             self.add_handler(ButtonCallbackHandler(handler=func, filters=filters))
             return func
         return decorator
 
     def on_callback_selection(
             self,
-            filters: Iterable[Callable[["WhatsApp", CallbackListReply], bool]] |
-            Callable[["WhatsApp", CallbackListReply], bool] = None
+            filters: Iterable[Callable[["WhatsApp", CallbackSelection], bool]] |
+            Callable[["WhatsApp", CallbackSelection], bool] = None
     ):
-        def decorator(func: Callable[["WhatsApp", CallbackListReply], Any]):
+        def decorator(func: Callable[["WhatsApp", CallbackSelection], Any]):
             self.add_handler(SelectionCallbackHandler(handler=func, filters=filters))
             return func
         return decorator

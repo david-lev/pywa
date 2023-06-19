@@ -67,9 +67,10 @@ wa.send_message(
 ```
 
 ### Webhook (server to receive messages)
+
 ```python
 from pywa import WhatsApp
-from pywa.types import Message, CallbackButtonReply
+from pywa.types import Message, CallbackButton
 from flask import Flask
 
 flask_app = Flask(__name__)
@@ -80,19 +81,21 @@ wa = WhatsApp(
     verify_token="YOUR_VERIFY_TOKEN"
 )
 
+
 @wa.on_message(filters=lambda _, msg: msg.text == "Hello World!")
 def hello_world(client, message):
     message.reply(text="Hello from PyWa!", quote=True)
-    
 
-@wa.on_button_callback(filters=lambda _, clb: clb.data == "id:123")
-def button_callback(client: WhatsApp, callback: CallbackButtonReply):
-    name, url = client.get_book(id=callback.data.split(":")[1])
+
+@wa.on_callback_button(filters=lambda _, clb: clb.data == "id:123")
+def button_callback(client: WhatsApp, callback: CallbackButton):
+    name, url = api.get_book(id=callback.data.split(":")[1])
     client.send_document(
         to=callback.from_user.wa_id,
         document=url,
         filename=name
     )
+
 
 flask_app.run()  # in production use gunicorn or something similar
 ```
@@ -113,8 +116,8 @@ flask_app = Flask(__name__)
 wa_1 = WhatsApp(phone_id=12345, app=flask_app, ...)
 wa_2 = WhatsApp(phone_id=67890, app=flask_app, ...)
 
-@wa_1.on_message
-@wa_2.on_message
+@wa_1.on_message()
+@wa_2.on_message()
 def x(client, message): pass
 
 flask_app.run()  # in production use gunicorn or something similar
