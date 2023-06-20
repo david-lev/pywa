@@ -668,7 +668,7 @@ class MessageStatus(BaseUpdate):
     - See more: https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/components#statuses-object
 
     Attributes:
-        id: The ID of the message.
+        id: The ID of the message that the status is for.
         metadata: The metadata of the message (to which phone number it was sent).
         status: The status of the message.
         timestamp: The timestamp when the status was updated.
