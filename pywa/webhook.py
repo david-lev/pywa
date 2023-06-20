@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Union, TYPE_CHECKING, Callable
 from pywa.types import Message, CallbackButton, CallbackSelection, MessageStatus, BaseUpdate
 from pywa import utils
@@ -13,7 +14,7 @@ class Webhook:
 
     def __init__(
             self,
-            wa_client: "WhatsApp",
+            wa_client: WhatsApp,
             app: Union["flask.Flask", "fastapi.FastAPI"],
             verify_token: str,
             webhook_endpoint: str
@@ -33,7 +34,11 @@ class Webhook:
                 elif flask.request.method == "POST":
                     if flask.request.json["entry"][0]["changes"][0]["value"]["metadata"]["phone_number_id"] \
                             == wa_client.phone_id:
-                        print(convert_dict_to_update(client=wa_client, d=flask.request.json))  # TODO: Handle incoming messages
+                        for raw_update_handler in wa_client._handlers["raw_update"]:
+                            raw_update_handler(self, flask.request.json)
+                        update, key = convert_dict_to_update(client=wa_client, d=flask.request.json)
+                        for handler in wa_client._handlers[key]:  # TODO execute in parallel
+                            handler(self, update)
                     return "ok", 200
 
         elif utils.is_fastapi_app(app):
@@ -52,7 +57,11 @@ class Webhook:
                     request_body = await request.json()
                     if request_body["entry"][0]["changes"][0]["value"]["metadata"]["phone_number_id"] \
                             == wa_client.phone_id:
-                        print(convert_dict_to_update(client=wa_client, d=request_body))  # TODO: Handle incoming messages
+                        for raw_update_handler in wa_client._handlers["raw_update"]:
+                            raw_update_handler(self, request_body)
+                        update, key = convert_dict_to_update(client=wa_client, d=request_body)
+                        for handler in wa_client._handlers[key]:  # TODO execute in parallel
+                            handler(self, update)
                     return fastapi.Response(content="ok", status_code=200)
                 return await call_next(request)
 
@@ -60,19 +69,19 @@ class Webhook:
             raise ValueError("The app must be a Flask or FastAPI app.")
 
 
-def convert_dict_to_update(client: "WhatsApp", d: dict) -> BaseUpdate:
+def convert_dict_to_update(client: WhatsApp, d: dict) -> tuple[BaseUpdate, str]:
+    """Convert a webhook dict to a BaseUpdate object."""
     value = d["entry"][0]["changes"][0]["value"]
     if 'messages' in value:
         if value["messages"][0]["type"] != "interactive":
-            return Message.from_dict(client=client, value=value)
+            return Message.from_dict(client=client, value=value), "message"
         else:
             if value["messages"][0]["interactive"]["type"] == "button_reply":
-                return CallbackButton.from_dict(client=client, value=value)
+                return CallbackButton.from_dict(client=client, value=value), "button"
             elif value["messages"][0]["interactive"]["type"] == "list_reply":
-                return CallbackSelection.from_dict(client=client, value=value)
+                return CallbackSelection.from_dict(client=client, value=value), "selection"
 
     elif 'statuses' in value:
-        return MessageStatus.from_dict(client=client, value=value)
-
+        return MessageStatus.from_dict(client=client, value=value), "status"
     else:
         raise ValueError("Invalid webhook data: " + str(d))

@@ -161,8 +161,9 @@ class Image(MediaBase):
         id: The ID of the image.
         sha256: The SHA256 hash of the image.
         mime_type: The MIME type of the image.
+        caption: The caption of the image (optional).
     """
-    pass
+    caption: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
