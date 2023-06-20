@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import re
 from typing import Callable, TYPE_CHECKING, Iterable
-from pywa.types import MessageType as Mt, Message as Msg
+from pywa.types import MessageType as Mt, Message as Msg, MessageStatus as Ms, \
+    MessageStatusType as Mst, CallbackButton, CallbackSelection
 from pywa import utils
 
 if TYPE_CHECKING:
@@ -44,18 +45,11 @@ class TextFilter:
             any((data.text.endswith(t) for t in text)))
     """Filter for text messages that end with the given text/s."""
 
-    REGEX_MATCH: Callable[[str | Iterable[str] | re.Pattern | Iterable[re.Pattern]], Callable[[Wa, Msg], bool]] \
+    REGEX: Callable[[str | Iterable[str] | re.Pattern | Iterable[re.Pattern]], Callable[[Wa, Msg], bool]] \
         = lambda reg: lambda wa, data: data.type == Mt.TEXT and (
             isinstance(reg, (str, re.Pattern)) and re.match(reg, data.text) or
             isinstance(reg, Iterable) and
             any((re.match(t, data.text) for t in reg)))
-    """Filter for text messages that match the given regex/regexes."""
-
-    REGEX_SEARCH: Callable[[str | Iterable[str] | re.Pattern | Iterable[re.Pattern]], Callable[[Wa, Msg], bool]] \
-        = lambda reg: lambda wa, data: data.type == Mt.TEXT and (
-            isinstance(reg, (str, re.Pattern)) and re.search(reg, data.text) or
-            isinstance(reg, Iterable) and
-            any((re.search(t, data.text) for t in reg)))
     """Filter for text messages that match the given regex/regexes."""
 
     LEN_BETWEEN: Callable[[tuple[int, int] | Iterable[tuple[int, int]]], Callable[[Wa, Msg], bool]] \
@@ -64,6 +58,20 @@ class TextFilter:
             isinstance(length, Iterable) and
             any((l[0] <= len(data.text) <= l[1] for l in length)))
     """Filter for text messages that have a length between the given range/s."""
+
+    @staticmethod
+    def COMMAND(cmd: str | Iterable[str], prefix: str = "/") -> Callable[[Wa, Msg], bool]:
+        """
+        Filter for text messages that are commands.
+
+        Args:
+            cmd: The command/s to filter for.
+            prefix: The prefix to filter for (default: "/").
+        """
+        return lambda wa, data: data.type == Mt.TEXT and (
+                isinstance(cmd, str) and data.text.startswith(prefix + cmd) or
+                isinstance(cmd, Iterable) and
+                any((data.text.startswith(prefix + c) for c in cmd)))
 
 
 class ImageFilter:
@@ -171,11 +179,13 @@ class LocationFilter:
             lon (float): Longitude of the center of the radius.
             radius (float | int): Radius in kilometers.
         """
+
         def _in_radius(_: Wa, msg: Msg) -> bool:
             return msg.type == Mt.LOCATION and \
                 utils.get_distance(
                     lat1=lat, lon1=lon, lat2=msg.location.latitude, lon2=msg.location.longitude
                 ) <= radius
+
         return _in_radius
 
 
@@ -211,7 +221,9 @@ class ContactsFilter:
     """Filter for contacts messages that have the given phone number/s."""
 
     HAS_WA: Callable[[Wa, Msg], bool] = lambda wa, data: data.type == Mt.CONTACTS and \
-        any((p.wa_id for p in (phone for contact in data.contacts for phone in contact.phones)))
+                                                         any((p.wa_id for p in
+                                                              (phone for contact in data.contacts for phone in
+                                                               contact.phones)))
     """Filter for contacts messages that have a WhatsApp account."""
 
 
@@ -220,3 +232,45 @@ class UnsupportedFilter:
 
     ANY: Callable[[Wa, Msg], bool] = lambda wa, data: data.type == Mt.UNSUPPORTED
     """Filter for all unsupported messages."""
+
+
+class CallbackFilter:
+    """Useful filters for callback queries."""
+
+    DATA_EQUALS: Callable[[str | Iterable[str]], Callable[[Wa, CallbackButton | CallbackSelection], bool]] \
+        = lambda data: lambda wa, data_: data_.data == data if isinstance(data, str) else any(
+        (data_.data == d for d in data))
+    """Filter for callbacks their data equals the given string/s."""
+
+    DATA_STARTS_WITH: Callable[[str | Iterable[str]], Callable[[Wa, CallbackButton | CallbackSelection], bool]] \
+        = lambda data: lambda wa, data_: data_.data.startswith(data) if isinstance(data, str) else any(
+        (data_.data.startswith(d) for d in data))
+    """Filter for callbacks their data starts with the given string/s."""
+
+    DATA_ENDS_WITH: Callable[[str | Iterable[str]], Callable[[Wa, CallbackButton | CallbackSelection], bool]] \
+        = lambda data: lambda wa, data_: data_.data.endswith(data) if isinstance(data, str) else any(
+        (data_.data.endswith(d) for d in data))
+    """Filter for callbacks their data ends with the given string/s."""
+
+    DATA_CONTAINS: Callable[[str | Iterable[str]], Callable[[Wa, CallbackButton | CallbackSelection], bool]] \
+        = lambda data: lambda wa, data_: data in data_.data if isinstance(data, str) else any(
+        (d in data_.data for d in data))
+    """Filter for callbacks their data contains the given string/s."""
+
+    DATA_REGEX: Callable[[str | Iterable[str]], Callable[[Wa, CallbackButton | CallbackSelection], bool]] \
+        = lambda regex: lambda wa, data_: re.match(regex, data_.data) if isinstance(regex, str) else any(
+        (re.match(r, data_.data) for r in regex))
+    """Filter for callbacks their data matches the given regex/regexes."""
+
+
+class MessageStatusFilter:
+    """Useful filters for message status updates."""
+
+    SENT: Callable[[Wa, Ms], bool] = lambda wa, data: data.status == Mst.SENT
+    """Filter for messages that have been sent."""
+
+    DELIVERED: Callable[[Wa, Ms], bool] = lambda wa, data: data.status == Mst.DELIVERED
+    """Filter for messages that have been delivered."""
+
+    READ: Callable[[Wa, Ms], bool] = lambda wa, data: data.status == Mst.READ
+    """Filter for messages that have been read."""
