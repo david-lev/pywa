@@ -2,6 +2,7 @@ from __future__ import annotations
 
 __all__ = (
     "Message",
+    "Contact",
     "MessageType",
     "MessageStatus",
     "MessageStatusType",
@@ -14,9 +15,11 @@ __all__ = (
 )
 
 from datetime import datetime
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from enum import Enum
 from typing import TYPE_CHECKING
+from pywa import utils
+
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
 
@@ -127,9 +130,9 @@ class MessageType(str, Enum):
     VIDEO = "video"
     REACTION = "reaction"
     LOCATION = "location"
+    CONTACTS = "contacts"
     UNSUPPORTED = "unsupported"
 
-    # CONTACTS = "contacts"
     # SYSTEM = "system"
     # ORDER = "order"
 
@@ -259,6 +262,102 @@ class Location:
     @classmethod
     def from_dict(cls, data: dict | None):
         return cls(**data) if data else None
+
+    def in_radius(self, other: Location, radius: float | int) -> bool:
+        """
+        Check if the location is in a radius of another location.
+
+        Args:
+            other: The other location (the center. No need for name, address or url).
+            radius: The radius in kilometers.
+        """
+        return utils.get_distance(
+            lat1=self.latitude, lon1=self.longitude, lat2=other.latitude, lon2=other.longitude
+        ) <= radius
+
+
+@dataclass(frozen=True, slots=True)
+class Contact:
+    name: Name
+    birthday: str | None = None
+    phones: list[Phone] = field(default_factory=list)
+    emails: list[Email] = field(default_factory=list)
+    urls: list[Url] = field(default_factory=list)
+    addresses: list[Address] = field(default_factory=list)
+    org: Org | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict | None):
+        return cls(
+            name=cls.Name(**data["name"]),
+            birthday=data.get("birthday"),
+            phones=[cls.Phone.from_dict(phone) for phone in data.get("phones", [])],
+            emails=[cls.Email.from_dict(email) for email in data.get("emails", [])],
+            urls=[cls.Url.from_dict(url) for url in data.get("urls", [])],
+            addresses=[cls.Address.from_dict(address) for address in data.get("addresses", [])],
+            org=cls.Org.from_dict(data.get("org")),
+        ) if data else None
+
+    @dataclass(frozen=True, slots=True)
+    class Name:
+        formatted_name: str
+        first_name: str | None = None
+        last_name: str | None = None
+        middle_name: str | None = None
+        suffix: str | None = None
+        prefix: str | None = None
+
+    @dataclass(frozen=True, slots=True)
+    class Phone:
+        phone: str | None = None
+        type: str | None = None
+        wa_id: str | None = None
+
+        @classmethod
+        def from_dict(cls, data: dict | None):
+            return cls(**data) if data else None
+
+    @dataclass(frozen=True, slots=True)
+    class Email:
+        email: str | None = None
+        type: str | None = None
+
+        @classmethod
+        def from_dict(cls, data: dict | None):
+            return cls(**data) if data else None
+
+    @dataclass(frozen=True, slots=True)
+    class Url:
+        url: str | None = None
+        type: str | None = None
+
+        @classmethod
+        def from_dict(cls, data: dict | None):
+            return cls(**data) if data else None
+
+    @dataclass(frozen=True, slots=True)
+    class Org:
+        company: str | None = None
+        department: str | None = None
+        title: str | None = None
+
+        @classmethod
+        def from_dict(cls, data: dict | None):
+            return cls(**data) if data else None
+
+    @dataclass(frozen=True, slots=True)
+    class Address:
+        street: str | None = None
+        city: str | None = None
+        state: str | None = None
+        zip: str | None = None
+        country: str | None = None
+        country_code: str | None = None
+        type: str | None = None
+
+        @classmethod
+        def from_dict(cls, data: dict | None):
+            return cls(**data) if data else None
 
 
 @dataclass(frozen=True, slots=True)
@@ -555,6 +654,7 @@ class Message(BaseUpdate):
         audio: The audio of the message (if the message type is audio). (optional)
         reaction: The reaction of the message (if the message type is reaction). (optional)
         location: The location of the message (if the message type is location). (optional)
+        contacts: The contacts of the message (if the message type is contacts). (optional)
     """
     type: MessageType
     reply_to_message: ReplyToMessage | None
@@ -566,6 +666,7 @@ class Message(BaseUpdate):
     audio: Audio | None
     reaction: Reaction | None
     location: Location | None
+    contacts: list[Contact] | None
 
     @classmethod
     def from_dict(cls, client: WhatsApp, value: dict):
@@ -586,7 +687,8 @@ class Message(BaseUpdate):
             document=Document.from_dict(message.get('document')),
             audio=Audio.from_dict(message.get('audio')),
             reaction=Reaction.from_dict(message.get('reaction')),
-            location=Location.from_dict(message.get('location'))
+            location=Location.from_dict(message.get('location')),
+            contacts=[Contact.from_dict(contact) for contact in message.get('contacts', [])] or None
         )
 
 
