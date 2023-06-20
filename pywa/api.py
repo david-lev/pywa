@@ -1,7 +1,7 @@
 import mimetypes
 import requests
 from pywa.errors import WhatsAppApiError
-from pywa.types import Button, SectionList
+from pywa.types import InlineButton, SectionList
 
 
 class WhatsAppCloudApi:
@@ -193,7 +193,7 @@ class WhatsAppCloudApi:
     def send_interactive_message(
             self,
             to: str | int,
-            keyboard: list[Button] | SectionList,
+            keyboard: list[InlineButton] | SectionList,
             body: str,
             header: dict | None = None,
             footer: str | None = None,

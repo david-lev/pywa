@@ -7,11 +7,10 @@ __all__ = (
     "MessageStatusType",
     "CallbackButton",
     "CallbackSelection",
-    "Button",
+    "InlineButton",
     "SectionRow",
     "Section",
     "SectionList",
-    "MessageStatus",
 )
 
 from datetime import datetime
@@ -23,9 +22,9 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True, slots=True)
-class Button:
+class InlineButton:
     """
-    Represents a button in a keyboard.
+    Represents an inline button in a keyboard.
 
     Attributes:
         title: The title of the button.
@@ -124,7 +123,6 @@ class MessageType(str, Enum):
     DOCUMENT = "document"
     TEXT = "text"
     IMAGE = "image"
-    INTERACTIVE = "interactive"
     STICKER = "sticker"
     VIDEO = "video"
     REACTION = "reaction"
@@ -303,6 +301,236 @@ class BaseUpdate:
     from_user: User
     timestamp: datetime
 
+    @property
+    def sender(self) -> str:
+        return self.from_user.wa_id
+
+    def reply_text(
+            self,
+            text: str,
+            preview_url: bool = False,
+            quote: bool = False,
+            keyboard: list[InlineButton] | SectionList | None = None,
+            header: str | None = None,
+            footer: str | None = None,
+    ) -> str:
+        """
+        Reply to the message with text.
+
+        Args:
+            text: The text to reply with.
+            preview_url: Whether to show a preview of the URL in the text (default: False).
+            quote: Whether to quote the message (default: False).
+            keyboard: The keyboard to send with the message (optional).
+            header: The header of the message (if keyboard is provided, optional).
+            footer: The footer of the message (if keyboard is provided, optional).
+
+        Returns:
+            The ID of the sent message.
+        """
+        return self._client.send_message(
+            to=self.sender,
+            text=text,
+            preview_url=preview_url,
+            reply_to_message_id=self.id if quote else None,
+            keyboard=keyboard,
+            header=header,
+            footer=footer
+        )
+
+    def reply_image(
+            self,
+            image: str | bytes,
+            caption: str | None = None,
+            quote: bool = False,
+            buttons: list[InlineButton] | None = None,
+            body: str | None = None,
+            footer: str | None = None,
+    ) -> str:
+        """
+        Reply to the message with an image.
+
+        Args:
+            image: The image to reply with.
+            caption: The caption of the image (optional).
+            quote: Whether to quote the message (default: False).
+            buttons: The buttons to send with the message (optional).
+            body: The body of the message (if buttons is provided, optional).
+            footer: The footer of the message (if buttons is provided, optional).
+
+        Returns:
+            The ID of the sent message.
+        """
+        return self._client.send_image(
+            to=self.sender,
+            image=image,
+            caption=caption,
+            reply_to_message_id=self.id if quote else None,
+            buttons=buttons,
+            body=body,
+            footer=footer
+        )
+
+    def reply_video(
+            self,
+            video: str | bytes,
+            caption: str | None = None,
+            quote: bool = False,
+            buttons: list[InlineButton] | None = None,
+            body: str | None = None,
+            footer: str | None = None,
+    ) -> str:
+        """
+        Reply to the message with a video.
+
+        Args:
+            video: The video to reply with.
+            caption: The caption of the video (optional).
+            quote: Whether to quote the message (default: False).
+            buttons: The buttons to send with the message (optional).
+            body: The body of the message (if buttons is provided, optional).
+            footer: The footer of the message (if buttons is provided, optional).
+
+        Returns:
+            The ID of the sent message.
+        """
+        return self._client.send_video(
+            to=self.sender,
+            video=video,
+            caption=caption,
+            reply_to_message_id=self.id if quote else None,
+            buttons=buttons,
+            body=body,
+            footer=footer
+        )
+
+    def reply_document(
+            self,
+            document: str | bytes,
+            filename: str | None = None,
+            caption: str | None = None,
+            quote: bool = False,
+            buttons: list[InlineButton] | None = None,
+            body: str | None = None,
+            footer: str | None = None,
+    ) -> str:
+        """
+        Reply to the message with a document.
+
+        Args:
+            document: The document to reply with.
+            filename: The filename of the document (optional).
+            caption: The caption of the document (optional).
+            quote: Whether to quote the message (default: False).
+            buttons: The buttons to send with the message (optional).
+            body: The body of the message (if buttons is provided, optional).
+            footer: The footer of the message (if buttons is provided, optional).
+
+        Returns:
+            The ID of the sent message.
+        """
+        return self._client.send_document(
+            to=self.sender,
+            document=document,
+            filename=filename,
+            caption=caption,
+            reply_to_message_id=self.id if quote else None,
+            buttons=buttons,
+            body=body,
+            footer=footer
+        )
+
+    def reply_audio(
+            self,
+            audio: str | bytes,
+            quote: bool = False,
+    ) -> str:
+        """
+        Reply to the message with an audio.
+
+        Args:
+            audio: The audio to reply with.
+            quote: Whether to quote the message (default: False).
+
+        Returns:
+            The ID of the sent message.
+        """
+        return self._client.send_audio(
+            to=self.sender,
+            audio=audio,
+            reply_to_message_id=self.id if quote else None
+        )
+
+    def reply_sticker(
+            self,
+            sticker: str | bytes,
+            animated: bool = False,
+            quote: bool = False,
+    ) -> str:
+        """
+        Reply to the message with a sticker.
+
+        Args:
+            sticker: The sticker to reply with.
+            animated: Whether the sticker is animated (default: False).
+            quote: Whether to quote the message (default: False).
+
+        Returns:
+            The ID of the sent message.
+        """
+        return self._client.send_sticker(
+            to=self.sender,
+            sticker=sticker,
+            animated=animated,
+            reply_to_message_id=self.id if quote else None
+        )
+
+    def reply_location(
+            self,
+            latitude: float,
+            longitude: float,
+            name: str | None = None,
+            address: str | None = None,
+    ) -> str:
+        """
+        Reply to the message with a location.
+
+        Args:
+            latitude: The latitude of the location.
+            longitude: The longitude of the location.
+            name: The name of the location (optional).
+            address: The address of the location (optional).
+
+        Returns:
+            The ID of the sent message.
+        """
+        return self._client.send_location(
+            to=self.sender,
+            latitude=latitude,
+            longitude=longitude,
+            name=name,
+            address=address
+        )
+
+    def react(
+            self,
+            emoji: str,
+    ) -> str:
+        """
+        React to the message with an emoji.
+
+        Args:
+            emoji: The emoji to react with.
+
+        Returns:
+            The ID of the sent message.
+        """
+        return self._client.send_reaction(
+            to=self.sender,
+            emoji=emoji,
+            message_id=self.id
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class Message(BaseUpdate):
@@ -364,7 +592,15 @@ class Message(BaseUpdate):
 @dataclass(frozen=True, slots=True)
 class CallbackButton(BaseUpdate):
     """
+    Represents a callback button.
 
+    Attributes:
+        id: The ID of the message.
+        metadata: The metadata of the message (to which phone number it was sent).
+        from_user: The user who sent the message.
+        timestamp: The timestamp when the message was sent.
+        data: The data of the button.
+        title: The title of the button.
     """
     data: str
     title: str
@@ -385,6 +621,18 @@ class CallbackButton(BaseUpdate):
 
 @dataclass(frozen=True, slots=True)
 class CallbackSelection(BaseUpdate):
+    """
+    Represents a callback selection.
+
+    Attributes:
+        id: The ID of the message.
+        metadata: The metadata of the message (to which phone number it was sent).
+        from_user: The user who sent the message.
+        timestamp: The timestamp when the message was sent.
+        data: The data of the selection.
+        title: The title of the selection.
+        description: The description of the selection (optional).
+    """
     data: str
     title: str
     description: str | None

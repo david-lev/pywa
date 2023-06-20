@@ -3,7 +3,7 @@ import requests
 from typing import Callable, Any, Iterable
 from pywa.api import WhatsAppCloudApi
 from pywa.handlers import Handler, MessageHandler, ButtonCallbackHandler, SelectionCallbackHandler
-from pywa.types import Button, SectionList, Message, CallbackButton, CallbackSelection, BaseUpdate
+from pywa.types import InlineButton, SectionList, Message, CallbackButton, CallbackSelection, BaseUpdate
 from pywa import webhook
 
 
@@ -110,7 +110,7 @@ class WhatsApp:
             text: str,
             preview_url: bool = False,
             reply_to_message_id: str | None = None,
-            keyboard: list[Button] | SectionList | None = None,
+            keyboard: list[InlineButton] | SectionList | None = None,
             header: str | None = None,
             footer: str | None = None,
     ) -> str:
@@ -153,7 +153,7 @@ class WhatsApp:
             image: str | bytes,
             caption: str | None = None,
             reply_to_message_id: str | None = None,
-            buttons: list[Button] | None = None,
+            buttons: list[InlineButton] | None = None,
             body: str | None = None,
             footer: str | None = None,
     ) -> str:
@@ -202,7 +202,7 @@ class WhatsApp:
             video: str | bytes,
             caption: str | None = None,
             reply_to_message_id: str | None = None,
-            buttons: list[Button] | None = None,
+            buttons: list[InlineButton] | None = None,
             body: str | None = None,
             footer: str | None = None,
     ) -> str:
@@ -252,7 +252,7 @@ class WhatsApp:
             filename: str | None = None,
             caption: str | None = None,
             reply_to_message_id: str | None = None,
-            buttons: list[Button] | None = None,
+            buttons: list[InlineButton] | None = None,
             body: str | None = None,
             footer: str | None = None,
     ):
@@ -320,6 +320,33 @@ class WhatsApp:
             media_id_or_url=audio,
             media_type="audio",
             reply_to_message_id=reply_to_message_id,
+        )
+
+    def send_sticker(
+            self,
+            to: str,
+            sticker: str | bytes,
+            animated: bool = False,
+            reply_to_message_id: str | None = None,
+    ) -> str:
+        """
+        Send a sticker to a WhatsApp user.
+
+        Args:
+            to: The phone ID of the WhatsApp user.
+            sticker: The sticker to send (either a URL or a file ID).
+            animated: Whether the sticker is animated (optional).
+            reply_to_message_id: The message ID to reply to (optional).
+
+        Returns:
+            The message ID of the sent message.
+        """
+        return self.api.send_media(
+            to=to,
+            media_id_or_url=sticker,
+            media_type="sticker",
+            reply_to_message_id=reply_to_message_id,
+            animated=animated,
         )
 
     def send_reaction(

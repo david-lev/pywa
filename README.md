@@ -2,15 +2,16 @@
 - Python wrapper for the WhatsApp Cloud API
 
 ### Client (basic client only to send messages)
+
 ```python
 from pywa import WhatsApp
-from pywa.types import Button, SectionList, Section, SectionRow
+from pywa.types import InlineButton, SectionList, Section, SectionRow
 
 wa = WhatsApp(phone_id="YOUR_PHONE_NUMBER", token="YOUR_TOKEN")
 wa.send_message(to="PHONE_NUMBER", text="Hello World!")
 wa.send_reaction(
     to="PHONE_NUMBER",
-    message_id=wa.send_image(to="PHONE_NUMBER",image="https://i.imgur.com/4QFZJZM.jpeg"),
+    message_id=wa.send_image(to="PHONE_NUMBER", image="https://i.imgur.com/4QFZJZM.jpeg"),
     emoji="👍"
 )
 wa.send_document(
@@ -23,8 +24,8 @@ wa.send_message(
     header="Welcome!",
     text="Please choose one of the following options:",
     keyboard=[
-            Button("Help me", callback_data="menu:help"),
-            Button("Contact", callback_data="menu:contact"),
+        InlineButton("Help me", callback_data="menu:help"),
+        InlineButton("Contact", callback_data="menu:contact"),
     ],
     footer="Powered by PyWa"
 )
@@ -126,9 +127,9 @@ flask_app.run()  # in production use gunicorn or something similar
 ### Todo:
 
 - [x] Basic client
-- [ ] Bound methods
-- [ ] Send media
-- [ ] Send keyboards
+- [x] Bound methods
+- [x] Send media
+- [x] Send keyboards
 - [ ] Async support
 - [x] Webhook
 - [x] Message filters
