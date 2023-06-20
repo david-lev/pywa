@@ -17,7 +17,8 @@ __all__ = (
 from datetime import datetime
 from dataclasses import dataclass, field, asdict
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable
+
 from pywa import utils
 
 if TYPE_CHECKING:
@@ -297,6 +298,17 @@ class Contact:
             addresses=[cls.Address.from_dict(address) for address in data.get("addresses", [])],
             org=cls.Org.from_dict(data.get("org")),
         ) if data else None
+
+    def to_dict(self) -> dict:
+        return {
+            "name": asdict(self.name),
+            "birthday": self.birthday,
+            "phones": [asdict(phone) for phone in self.phones],
+            "emails": [asdict(email) for email in self.emails],
+            "urls": [asdict(url) for url in self.urls],
+            "addresses": [asdict(address) for address in self.addresses],
+            "org": asdict(self.org) if self.org else None,
+        }
 
     @dataclass(frozen=True, slots=True)
     class Name:
@@ -610,6 +622,27 @@ class BaseUpdate:
             longitude=longitude,
             name=name,
             address=address
+        )
+
+    def reply_contact(
+            self,
+            contact: Contact | Iterable[Contact],
+            quote: bool = False,
+    ) -> str:
+        """
+        Reply to the message with a contact.
+
+        Args:
+            contact: The contact/s to send.
+            quote: Whether to quote the message (default: False).
+
+        Returns:
+            The ID of the sent message.
+        """
+        return self._client.send_contact(
+            to=self.sender,
+            contact=contact,
+            reply_to_message_id=self.id if quote else None
         )
 
     def react(
