@@ -4,7 +4,7 @@ from typing import Callable, Any, Iterable
 from pywa.api import WhatsAppCloudApi
 from pywa.handlers import Handler, MessageHandler, ButtonCallbackHandler, SelectionCallbackHandler, RawUpdateHandler, \
     MessageStatusHandler
-from pywa.types import InlineButton, SectionList, Message, CallbackButton, CallbackSelection, BaseUpdate, MessageStatus, MessageStatusType
+from pywa.types import InlineButton, SectionList, Message, CallbackButton, CallbackSelection, MessageStatus, Contact
 from pywa import webhook
 
 
@@ -71,7 +71,7 @@ class WhatsApp:
 
         Example:
 
-            >>> @wa.on_raw_update(filters=lambda _, __: True)
+            >>> @wa.on_raw_update()
             ... def raw_update_handler(wa: WhatsApp, update: dict):
             ...     print(update)
 
@@ -94,7 +94,7 @@ class WhatsApp:
 
         Example:
 
-            >>> @wa.on_message(filters=lambda wa, msg: msg.text == "Hello")
+            >>> @wa.on_message(filters=TextFilter.EQUALS(("hello", "hi"))
             ... def hello_handler(wa: WhatsApp, msg: Message):
             ...     msg.react("👋")
             ...     msg.reply_text(text="Hello from PyWa!", quote=True, buttons=[InlineButton("Help", data="help")
@@ -118,7 +118,7 @@ class WhatsApp:
 
         Example:
 
-            >>> @wa.on_callback_button(filters=lambda wa, btn: btn.data == "help")
+            >>> @wa.on_callback_button(filters=CallbackFilter.DATA_EQUALS("help"))
             ... def help_handler(wa: WhatsApp, btn: CallbackButton):
             ...     btn.reply_text(text="What can I help you with?")
 
@@ -141,7 +141,7 @@ class WhatsApp:
 
         Example:
 
-            >>> @wa.on_callback_selection(filters=lambda wa, sel: sel.data.startswith("id:"))
+            >>> @wa.on_callback_selection(filters=CallbackFilter.DATA_STARTS_WITH("id:"))
             ... def id_handler(wa: WhatsApp, sel: CallbackSelection):
             ...     sel.reply_text(text=f"Your ID is {sel.data.split(':', 1)[1]}")
 
@@ -164,9 +164,9 @@ class WhatsApp:
 
         Example:
 
-            >>> @wa.on_message_status_change(filters=lambda wa, status: status.status == MessageStatusType.DELIVERED)
+            >>> @wa.on_message_status_change(filters=MessageStatusFilter.READ)
             ... def delivered_handler(wa: WhatsApp, status: MessageStatus):
-            ...     print(f"Message {status.id} was delivered to {status.from_user.wa_id}")
+            ...     print(f"Message {status.id} was read by {status.from_user.wa_id}")
 
         Args:
             filters: Filters to apply to the incoming message status changes (filters are function that take the
@@ -189,6 +189,67 @@ class WhatsApp:
     ) -> str:
         """
         Send a message to a WhatsApp user.
+
+        Example:
+
+            >>> wa.send_message(
+            ...     to="1234567890",
+            ...     text="Hello from PyWa! (https://github.com/david-lev/pywa)",
+            ...     preview_url=True,
+            ... )
+
+        Example with keyboard buttons:
+
+            >>> wa.send_message(
+            ...     to="1234567890",
+            ...     header="Hello from PyWa!",
+            ...     text="What can I help you with?",
+            ...     keyboard=[
+            ...         InlineButton("Help", data="help"),
+            ...         InlineButton("About", data="about"),
+            ...     ],
+            ...     footer="Powered by PyWa",
+            ... )
+
+        Example with a section list:
+
+            >>> wa.send_message(
+            ...     to="1234567890",
+            ...     header="Hello from PyWa!",
+            ...     text="What can I help you with?",
+            ...     keyboard=SectionList(
+            ...         button_title="Choose an option",
+            ...         sections=[
+            ...             Section(
+            ...                 title="Help",
+            ...                 rows=[
+            ...                     SectionRow(
+            ...                         title="Help",
+            ...                         callback_data="help",
+            ...                         description="Get help with PyWa",
+            ...                     ),
+            ...                     SectionRow(
+            ...                         title="About",
+            ...                         callback_data="about",
+            ...                         description="Learn more about PyWa",
+            ...                     ),
+            ...                 ],
+            ...             ),
+            ...            Section(
+            ...                 title="Other",
+            ...                 rows=[
+            ...                     SectionRow(
+            ...                         title="GitHub",
+            ...                         callback_data="github",
+            ...                         description="View the PyWa GitHub repository",
+            ...                     ),
+            ...                 ],
+            ...             ),
+            ...         ],
+            ...     ),
+            ...     footer="Powered by PyWa",
+            ... )
+
 
         Args:
             to: The phone ID of the WhatsApp user.
@@ -232,6 +293,14 @@ class WhatsApp:
     ) -> str:
         """
         Send an image to a WhatsApp user.
+
+        Example:
+
+            >>> wa.send_image(
+            ...     to="1234567890",
+            ...     image="https://example.com/image.png",
+            ...     caption="This is an image!",
+            ... )
 
         Args:
             to: The phone ID of the WhatsApp user.
@@ -281,6 +350,14 @@ class WhatsApp:
     ) -> str:
         """
         Send a video to a WhatsApp user.
+
+        Example:
+
+            >>> wa.send_video(
+            ...     to="1234567890",
+            ...     video="https://example.com/video.mp4",
+            ...     caption="This is a video",
+            ... )
 
         Args:
             to: The phone ID of the WhatsApp user.
@@ -332,6 +409,16 @@ class WhatsApp:
         """
         Send a document to a WhatsApp user.
 
+        Example:
+
+            >>> wa.send_document(
+            ...     to="1234567890",
+            ...     document="https://example.com/example_123.pdf",
+            ...     filename="Example PDF",
+            ...     caption="Example PDF"
+            ... )
+
+
         Args:
             to: The phone ID of the WhatsApp user.
             document: The document to send (either a URL or a file ID).
@@ -380,6 +467,13 @@ class WhatsApp:
         """
         Send an audio file to a WhatsApp user.
 
+        Example:
+
+            >>> wa.send_audio(
+            ...     to='1234567890',
+            ...     audio='https://example.com/audio.mp3',
+            ... )
+
         Args:
             to: The phone ID of the WhatsApp user.
             audio: The audio file to send (either a URL or a file ID).
@@ -404,6 +498,13 @@ class WhatsApp:
     ) -> str:
         """
         Send a sticker to a WhatsApp user.
+
+        Example:
+
+            >>> wa.send_sticker(
+            ...     to='1234567890',
+            ...     sticker='https://example.com/sticker.webp',
+            ... )
 
         Args:
             to: The phone ID of the WhatsApp user.
@@ -431,6 +532,14 @@ class WhatsApp:
         """
         React to a message with an emoji.
 
+        Example:
+
+            >>> wa.send_reaction(
+            ...     to='1234567890',
+            ...     emoji='👍',
+            ...     message_id='wamid.XXX='
+            ... )
+
         Args:
             to: The phone ID of the WhatsApp user.
             emoji: The emoji to react with.
@@ -456,6 +565,16 @@ class WhatsApp:
         """
         Send a location to a WhatsApp user.
 
+        Example:
+
+            >>> wa.send_location(
+            ...     to='1234567890',
+            ...     latitude=37.4847483695049,
+            ...     longitude=--122.1473373086664,
+            ...     name='WhatsApp HQ',
+            ...     address='Menlo Park, 1601 Willow Rd, United States',
+            ... )
+
         Args:
             to: The phone ID of the WhatsApp user.
             latitude: The latitude of the location.
@@ -469,4 +588,40 @@ class WhatsApp:
             longitude=longitude,
             name=name,
             address=address,
+        )
+
+    def send_contact(
+            self,
+            to: str,
+            contact: Contact | Iterable[Contact],
+            reply_to_message_id: str | None = None,
+    ) -> str:
+        """
+        Send a contact to a WhatsApp user.
+
+        Example:
+
+            >>> from pywa.types import Contact
+            >>> wa.send_contact(
+            ...     to='1234567890',
+            ...     contact=Contact(
+            ...         name=Contact.Name(formatted_name='David Lev', first_name='David'),
+            ...         phones=[Contact.Phone(phone='1234567890', wa_id='1234567890', type='MOBILE')],
+            ...         emails=[Contact.Email(email='test@test.com', type='WORK')],
+            ...         urls=[Contact.Url(url='https://exmaple.com', type='HOME')],
+            ...      )
+            ... )
+
+        Args:
+            to: The phone ID of the WhatsApp user.
+            contact: The contact/s to send.
+            reply_to_message_id: The message ID to reply to (optional).
+
+        Returns:
+            The message ID of the sent message.
+        """
+        return self.api.send_contacts(
+            to=to,
+            contacts=contact if isinstance(contact, Iterable) else [contact],
+            reply_to_message_id=reply_to_message_id,
         )

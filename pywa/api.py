@@ -1,7 +1,8 @@
 import mimetypes
+from typing import Iterable
 import requests
 from pywa.errors import WhatsAppApiError
-from pywa.types import InlineButton, SectionList
+from pywa.types import InlineButton, SectionList, Contact
 
 
 class WhatsAppCloudApi:
@@ -222,6 +223,26 @@ class WhatsAppCloudApi:
         if footer:
             data["interactive"]["footer"] = {"text": footer}
 
+        return self._make_request(
+            method="POST",
+            endpoint=f"/messages",
+            json=data
+        )['messages'][0]['id']
+
+    def send_contacts(
+            self,
+            to: str | int,
+            contacts: Iterable[Contact],
+            reply_to_message_id: str | None = None,
+    ) -> str:
+        data = {
+            **self._common_keys,
+            "to": str(to),
+            "type": "contacts",
+            "contacts": [contact.to_dict() for contact in contacts]
+        }
+        if reply_to_message_id:
+            data["context"] = {"message_id": reply_to_message_id}
         return self._make_request(
             method="POST",
             endpoint=f"/messages",
