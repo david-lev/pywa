@@ -251,12 +251,12 @@ class CallbackFilter:
         return lambda wa, c: any((c.data == m for m in matches))
 
     @staticmethod
-    def data_starts_with(*matches: str) -> Callable[[Wa, CallbackButton | CallbackSelection], bool]:
+    def data_startswith(*matches: str) -> Callable[[Wa, CallbackButton | CallbackSelection], bool]:
         """Filter for callbacks their data starts with the given string/s."""
         return lambda wa, c: any((c.data.startswith(m) for m in matches))
 
     @staticmethod
-    def data_ends_with(*matches: str) -> Callable[[Wa, CallbackButton | CallbackSelection], bool]:
+    def data_endswith(*matches: str) -> Callable[[Wa, CallbackButton | CallbackSelection], bool]:
         """Filter for callbacks their data ends with the given string/s."""
         return lambda wa, c: any((c.data.endswith(m) for m in matches))
 

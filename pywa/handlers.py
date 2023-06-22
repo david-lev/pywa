@@ -1,4 +1,4 @@
-from typing import Callable, Any, TYPE_CHECKING, Iterable
+from typing import Callable, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pywa import WhatsApp
@@ -11,7 +11,7 @@ class Handler:
     def __init__(
             self,
             handler: Callable[["WhatsApp", Any], Any],
-            filters: Iterable[Callable[["WhatsApp", Any], bool]] | Callable[["WhatsApp", Any], bool] | None = None
+            *filters: Callable[["WhatsApp", Any], bool]
     ):
         """
         Initialize a new handler.
@@ -19,19 +19,18 @@ class Handler:
         Args:
             handler: The handler function. (gets the WhatsApp instance and the data as
                 arguments)
-            filters: A list of filters to apply to the handler. (filter functions get the WhatsApp instance and the
-                data as arguments and return a boolean value)
+            filters: The filters to apply to the handler. (gets the WhatsApp instance and
+                the data as arguments and returns a boolean)
         """
         self.handler = handler
-        self.filters = filters if isinstance(filters, Iterable) else (filters,) if filters else None
+        self.filters = filters
 
     def __call__(self, wa: "WhatsApp", data: Any):
-        if all([f(wa, data) for f in self.filters]) if self.filters else True:
+        if all([f(wa, data) for f in self.filters]):
             self.handler(wa, data)
 
 
 class MessageHandler(Handler):
-    __handler_type__ = "message"
     """A message handler (e.g. text, image, video, audio, etc.)."""
 
 

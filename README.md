@@ -60,7 +60,7 @@ wa = WhatsApp(
     verify_token='XYZXYZ',
 )
 
-@wa.on_message(filters=TextFilter.EQUALS(('Hello', 'Hi')))
+@wa.on_message(TextFilter.equals('Hello', 'Hi'))
 def hello(client: WhatsApp, message: Message):
     message.react('👋')
     message.reply_text(
@@ -68,14 +68,14 @@ def hello(client: WhatsApp, message: Message):
         keyboard=[
             InlineButton(
                 title='Click me!',
-                callback_data='click_me'
+                callback_data='id:123'
             )
         ]
     )
 
-@wa.on_callback_button(filters=CallbackFilter.DATA_EQUALS('click_me'))
+@wa.on_callback_button(CallbackFilter.data_starts_with('id:'))
 def click_me(client: WhatsApp, clb: CallbackButton):
-    clb.reply_text('You clicked me!', quote=True)
+    clb.reply_text('You clicked me!')
 
 flask_app.run()  # Run the flask app to start the webhook
 ```

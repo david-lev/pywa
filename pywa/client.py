@@ -62,10 +62,7 @@ class WhatsApp:
             raise ValueError("You must initialize the WhatsApp client with an app (Flask or FastAPI) to add handlers.")
         self._handlers[handler.__handler_type__].append(handler)
 
-    def on_raw_update(
-            self,
-            filters: Iterable[Callable[["WhatsApp", dict], bool]] | Callable[["WhatsApp", dict], bool] = None
-    ):
+    def on_raw_update(self, *filters: Callable[["WhatsApp", dict], bool]):
         """
         Decorator to register a function as a handler for raw updates.
 
@@ -80,21 +77,16 @@ class WhatsApp:
                 the incoming update and return a boolean).
         """
         def decorator(func: Callable[["WhatsApp", dict], Any]):
-            self.add_handler(RawUpdateHandler(handler=func, filters=filters))
+            self.add_handler(RawUpdateHandler(handler=func, *filters))
             return func
         return decorator
 
-    def on_message(
-            self,
-            filters: Iterable[Callable[["WhatsApp", Message], bool]] |
-            Callable[["WhatsApp", Message], bool] = None
-    ):
+    def on_message(self, *filters: Callable[["WhatsApp", Message], bool]):
         """
         Decorator to register a function as a handler for incoming messages.
 
         Example:
-
-            >>> @wa.on_message(filters=TextFilter.EQUALS(("hello", "hi"))
+            >>> @wa.on_message(TextFilter.equals("hello", "hi")
             ... def hello_handler(wa: WhatsApp, msg: Message):
             ...     msg.react("👋")
             ...     msg.reply_text(text="Hello from PyWa!", quote=True, buttons=[InlineButton("Help", data="help")
@@ -104,21 +96,17 @@ class WhatsApp:
                 the incoming message and return a boolean).
         """
         def decorator(func: Callable[["WhatsApp", Message], Any]):
-            self.add_handler(MessageHandler(handler=func, filters=filters))
+            self.add_handler(MessageHandler(handler=func, *filters))
             return func
         return decorator
 
-    def on_callback_button(
-            self,
-            filters: Iterable[Callable[["WhatsApp", CallbackButton], bool]] |
-            Callable[["WhatsApp", CallbackButton], bool] = None
-    ):
+    def on_callback_button(self, *filters: Callable[["WhatsApp", CallbackButton], bool]):
         """
         Decorator to register a function as a handler for incoming callback button presses.
 
         Example:
 
-            >>> @wa.on_callback_button(filters=CallbackFilter.DATA_EQUALS("help"))
+            >>> @wa.on_callback_button(CallbackFilter.data_equals("help"))
             ... def help_handler(wa: WhatsApp, btn: CallbackButton):
             ...     btn.reply_text(text="What can I help you with?")
 
@@ -127,21 +115,17 @@ class WhatsApp:
                 WhatsApp client and the incoming callback button and return a boolean).
         """
         def decorator(func: Callable[["WhatsApp", CallbackButton], Any]):
-            self.add_handler(ButtonCallbackHandler(handler=func, filters=filters))
+            self.add_handler(ButtonCallbackHandler(handler=func, *filters))
             return func
         return decorator
 
-    def on_callback_selection(
-            self,
-            filters: Iterable[Callable[["WhatsApp", CallbackSelection], bool]] |
-            Callable[["WhatsApp", CallbackSelection], bool] = None
-    ):
+    def on_callback_selection(self, *filters: Callable[["WhatsApp", CallbackSelection], bool]):
         """
         Decorator to register a function as a handler for incoming callback selections.
 
         Example:
 
-            >>> @wa.on_callback_selection(filters=CallbackFilter.DATA_STARTS_WITH("id:"))
+            >>> @wa.on_callback_selection(CallbackFilter.data_startswith("id:"))
             ... def id_handler(wa: WhatsApp, sel: CallbackSelection):
             ...     sel.reply_text(text=f"Your ID is {sel.data.split(':', 1)[1]}")
 
@@ -150,21 +134,17 @@ class WhatsApp:
                 WhatsApp client and the incoming callback selection and return a boolean).
         """
         def decorator(func: Callable[["WhatsApp", CallbackSelection], Any]):
-            self.add_handler(SelectionCallbackHandler(handler=func, filters=filters))
+            self.add_handler(SelectionCallbackHandler(handler=func, *filters))
             return func
         return decorator
 
-    def on_message_status_change(
-            self,
-            filters: Iterable[Callable[["WhatsApp", MessageStatus], bool]] |
-            Callable[["WhatsApp", MessageStatus], bool] = None
-    ):
+    def on_message_status_change(self, *filters: Callable[["WhatsApp", MessageStatus], bool]):
         """
         Decorator to register a function as a handler for incoming message status changes.
 
         Example:
 
-            >>> @wa.on_message_status_change(filters=MessageStatusFilter.READ)
+            >>> @wa.on_message_status_change(MessageStatusFilter.READ)
             ... def delivered_handler(wa: WhatsApp, status: MessageStatus):
             ...     print(f"Message {status.id} was read by {status.from_user.wa_id}")
 
@@ -173,7 +153,7 @@ class WhatsApp:
                 WhatsApp client and the incoming message status change and return a boolean).
         """
         def decorator(func: Callable[["WhatsApp", MessageStatus], Any]):
-            self.add_handler(MessageStatusHandler(handler=func, filters=filters))
+            self.add_handler(MessageStatusHandler(handler=func, *filters))
             return func
         return decorator
 
