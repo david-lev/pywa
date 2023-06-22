@@ -31,6 +31,7 @@ class Handler:
 
 
 class MessageHandler(Handler):
+    __handler_type__ = "message"
     """A message handler (e.g. text, image, video, audio, etc.)."""
 
 
