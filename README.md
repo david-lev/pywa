@@ -1,6 +1,8 @@
 # PyWa
 - Python wrapper for the WhatsApp Cloud API
 
+THIS IS A WORK IN PROGRESS. DO NOT USE IN PRODUCTION.
+
 ## Contents
 - [Installation](#installation)
 - [Usage](#usage)
