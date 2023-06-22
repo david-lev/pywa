@@ -31,8 +31,8 @@ class InlineButton:
     Represents an inline button in a keyboard.
 
     Attributes:
-        title: The title of the button.
-        callback_data: The payload to send when the user clicks on the button.
+        title: The title of the button (up to 20 characters).
+        callback_data: The payload to send when the user clicks on the button (up to 256 characters).
     """
     title: str
     callback_data: str
@@ -47,9 +47,9 @@ class SectionRow:
     Represents a row in a section.
 
     Attributes:
-        title: The title of the row.
-        callback_data: The payload to send when the user clicks on the row.
-        description: The description of the row (optional).
+        title: The title of the row (up to 24 characters).
+        callback_data: The payload to send when the user clicks on the row (up to 200 characters).
+        description: The description of the row (optional, up to 72 characters).
     """
     title: str
     callback_data: str
@@ -91,7 +91,7 @@ class SectionList:
     - See more: https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages#section-object
 
     Attributes:
-        button_title: The title of the button that opens the section list.
+        button_title: The title of the button that opens the section list (up to 20 characters).
         sections: The sections in the section list (at least 1, no more than 10).
     """
     button_title: str
@@ -434,8 +434,8 @@ class BaseUpdate:
             preview_url: Whether to show a preview of the URL in the text (default: False).
             quote: Whether to quote the message (default: False).
             keyboard: The keyboard to send with the message (optional).
-            header: The header of the message (if keyboard is provided, optional).
-            footer: The footer of the message (if keyboard is provided, optional).
+            header: The header of the message (if keyboard is provided, optional, up to 60 characters, no markdown allowed).
+            footer: The footer of the message (if keyboard is provided, optional, up to 60 characters, markdown has no effect).
 
         Returns:
             The ID of the sent message.
@@ -468,7 +468,7 @@ class BaseUpdate:
             quote: Whether to quote the message (default: False).
             buttons: The buttons to send with the message (optional).
             body: The body of the message (if buttons is provided, optional).
-            footer: The footer of the message (if buttons is provided, optional).
+            footer: The footer of the message (if buttons is provided, optional, up to 60 characters, markdown has no effect).
 
         Returns:
             The ID of the sent message.
@@ -501,7 +501,7 @@ class BaseUpdate:
             quote: Whether to quote the message (default: False).
             buttons: The buttons to send with the message (optional).
             body: The body of the message (if buttons is provided, optional).
-            footer: The footer of the message (if buttons is provided, optional).
+            footer: The footer of the message (if buttons is provided, optional, up to 60 characters, markdown has no effect).
 
         Returns:
             The ID of the sent message.
@@ -531,12 +531,12 @@ class BaseUpdate:
 
         Args:
             document: The document to reply with.
-            filename: The filename of the document (optional).
+            filename: The filename of the document (optional, The extension of the filename will specify what format the document is displayed as in WhatsApp).
             caption: The caption of the document (optional).
             quote: Whether to quote the message (default: False).
             buttons: The buttons to send with the message (optional).
             body: The body of the message (if buttons is provided, optional).
-            footer: The footer of the message (if buttons is provided, optional).
+            footer: The footer of the message (if buttons is provided, optional, up to 60 characters, markdown has no effect).
 
         Returns:
             The ID of the sent message.
@@ -661,6 +661,20 @@ class BaseUpdate:
         return self._client.send_reaction(
             to=self.sender,
             emoji=emoji,
+            message_id=self.id
+        )
+
+    def unreact(
+            self,
+    ) -> str:
+        """
+        Remove the reaction from the message.
+
+        Returns:
+            The ID of the sent message.
+        """
+        return self._client.remove_reaction(
+            to=self.sender,
             message_id=self.id
         )
 

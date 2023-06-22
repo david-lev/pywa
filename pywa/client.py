@@ -253,12 +253,12 @@ class WhatsApp:
 
         Args:
             to: The phone ID of the WhatsApp user.
-            text: The text to send.
+            text: The text to send (markdown allowed, max 4096 characters).
             preview_url: Whether to show a preview of the URL in the message (if any).
             reply_to_message_id: The message ID to reply to (optional).
             keyboard: The keyboard to send with the message (optional).
-            header: The header of the message (if keyboard is provided, optional).
-            footer: The footer of the message (if keyboard is provided, optional).
+            header: The header of the message (if keyboard is provided, optional, up to 60 characters, no markdown allowed).
+            footer: The footer of the message (if keyboard is provided, optional, up to 60 characters, markdown has no effect).
 
         Returns:
             The message ID of the sent message.
@@ -305,11 +305,11 @@ class WhatsApp:
         Args:
             to: The phone ID of the WhatsApp user.
             image: The image to send (either a URL or a file ID).
-            caption: The caption of the image (optional).
+            caption: The caption of the image (optional, markdown allowed).
             reply_to_message_id: The message ID to reply to (optional).
             buttons: The buttons to send with the image (optional).
-            body: The body of the message (if buttons are provided, optional).
-            footer: The footer of the message (if buttons are provided, optional).
+            body: The body of the message (if buttons are provided, optional, up to 1024 characters, markdown allowed).
+            footer: The footer of the message (if buttons is provided, optional, markdown has no effect).
 
         Returns:
             The message ID of the sent image.
@@ -362,11 +362,11 @@ class WhatsApp:
         Args:
             to: The phone ID of the WhatsApp user.
             video: The video to send (either a URL or a file ID).
-            caption: The caption of the video (optional).
+            caption: The caption of the video (optional, markdown allowed).
             reply_to_message_id: The message ID to reply to (optional).
             buttons: The buttons to send with the video (optional).
-            body: The body of the message (if buttons are provided, optional).
-            footer: The footer of the message (if buttons are provided, optional).
+            body: The body of the message (if buttons are provided, optional, up to 1024 characters, markdown allowed).
+            footer: The footer of the message (if buttons is provided, optional, markdown has no effect).
 
         Returns:
             The message ID of the sent message.
@@ -422,12 +422,12 @@ class WhatsApp:
         Args:
             to: The phone ID of the WhatsApp user.
             document: The document to send (either a URL or a file ID).
-            filename: The filename of the document (optional).
+            filename: The filename of the document (optional, The extension of the filename will specify what format the document is displayed as in WhatsApp).
             caption: The caption of the document (optional).
             reply_to_message_id: The message ID to reply to (optional).
             buttons: The buttons to send with the document (optional).
-            body: The body of the message (if buttons are provided, optional).
-            footer: The footer of the message (if buttons are provided, optional).
+            body: The body of the message (if buttons are provided, optional, up to 1024 characters, markdown allowed).
+            footer: The footer of the message (if buttons is provided, optional, markdown has no effect).
 
         Returns:
             The message ID of the sent message.
@@ -498,6 +498,8 @@ class WhatsApp:
     ) -> str:
         """
         Send a sticker to a WhatsApp user.
+            - A static sticker needs to be 512x512 pixels and cannot exceed 100 KB.
+            - An animated sticker must be 512x512 pixels and cannot exceed 500 KB.
 
         Example:
 
@@ -552,6 +554,27 @@ class WhatsApp:
             to=to,
             emoji=emoji,
             message_id=message_id,
+        )
+
+    def remove_reaction(
+            self,
+            to: str,
+            message_id: str,
+    ) -> str:
+        """
+        Remove a reaction from a message.
+
+        Example:
+
+            >>> wa.remove_reaction(
+            ...     to='1234567890',
+            ...     message_id='wamid.XXX='
+            ... )
+        """
+        return self.api.send_reaction(
+            to=to,
+            message_id=message_id,
+            emoji=""
         )
 
     def send_location(
