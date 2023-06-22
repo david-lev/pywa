@@ -248,3 +248,17 @@ class WhatsAppCloudApi:
             endpoint=f"/messages",
             json=data
         )['messages'][0]['id']
+
+    def mark_message_as_read(
+            self,
+            message_id: str
+    ) -> bool:
+        return self._make_request(
+            method="POST",
+            endpoint=f"/messages",
+            json={
+                "messaging_product": "whatsapp",
+                "status": "read",
+                "message_id": message_id
+            }
+        )["success"]

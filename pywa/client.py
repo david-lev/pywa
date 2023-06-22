@@ -648,3 +648,18 @@ class WhatsApp:
             contacts=contact if isinstance(contact, Iterable) else [contact],
             reply_to_message_id=reply_to_message_id,
         )
+
+    def mark_message_as_read(
+            self,
+            message_id: str,
+    ) -> bool:
+        """
+        Mark a message as read.
+
+        Args:
+            message_id: The message ID to mark as read.
+
+        Returns:
+            Whether the message was marked as read.
+        """
+        return self.api.mark_message_as_read(message_id=message_id)

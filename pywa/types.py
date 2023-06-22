@@ -678,6 +678,19 @@ class BaseUpdate:
             message_id=self.id
         )
 
+    def mark_as_read(
+            self
+    ) -> bool:
+        """
+        Mark the message as read.
+
+        Returns:
+            Whether it was successful.
+        """
+        return self._client.mark_message_as_read(
+            message_id=self.id
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class Message(BaseUpdate):
