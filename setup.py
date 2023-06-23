@@ -6,10 +6,11 @@ setup(
     packages=find_packages(),
     version=__version__,
     description="Python wrapper for the WhatsApp Cloud API",
-    long_description=(open('README.md', encoding='utf-8').read()),
-    long_description_content_type="text/markdown",
+    long_description=(open('README.rst', encoding='utf-8').read()),
+    long_description_content_type="text/x-rst",
     author_email='davidlev@telegmail.com',
     install_requires=["requests"],
+    python_requires=">=3.10",
     extras_require={
         "flask": ["flask"],
         "fastapi": ["fastapi", "uvicorn"],
