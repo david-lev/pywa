@@ -1,5 +1,7 @@
 from __future__ import annotations
-from typing import Union, TYPE_CHECKING, Callable
+
+import collections
+from typing import Union, TYPE_CHECKING, Callable, Any
 from pywa.types import Message, CallbackButton, CallbackSelection, MessageStatus, BaseUpdate
 from pywa import utils
 
@@ -15,14 +17,17 @@ class Webhook:
     def __init__(
             self,
             wa_client: WhatsApp,
-            app: Union["flask.Flask", "fastapi.FastAPI"],
+            server: Union["flask.Flask", "fastapi.FastAPI"],
             verify_token: str,
-            webhook_endpoint: str
+            webhook_endpoint: str,
+            filter_updates: bool
     ):
-        if utils.is_flask_app(app):
+        self.handlers: dict[str, list[Callable[[WhatsApp, BaseUpdate | dict], Any]]] = collections.defaultdict(list)
+
+        if utils.is_flask_app(server):
             import flask
 
-            @app.before_request
+            @server.before_request
             def before_request():
                 if flask.request.path != webhook_endpoint:
                     return
@@ -32,19 +37,20 @@ class Webhook:
                     else:
                         return "Error, invalid verification token", 403
                 elif flask.request.method == "POST":
-                    if flask.request.json["entry"][0]["changes"][0]["value"]["metadata"]["phone_number_id"] \
-                            == wa_client.phone_id:
-                        for raw_update_handler in wa_client._handlers["raw_update"]:
+                    if not filter_updates or (
+                            flask.request.json["entry"][0]["changes"][0]["value"]["metadata"]["phone_number_id"]
+                            == wa_client.phone_id):
+                        for raw_update_handler in self.handlers["raw_update"]:
                             raw_update_handler(wa_client, flask.request.json)
                         update, key = convert_dict_to_update(client=wa_client, d=flask.request.json)
-                        for handler in wa_client._handlers[key]:  # TODO execute in parallel
+                        for handler in self.handlers[key]:  # TODO execute in parallel
                             handler(wa_client, update)
                     return "ok", 200
 
-        elif utils.is_fastapi_app(app):
+        elif utils.is_fastapi_app(server):
             import fastapi
 
-            @app.middleware("http")
+            @server.middleware("http")
             async def before_request(request: fastapi.Request, call_next: Callable):
                 if request.url.path != webhook_endpoint:
                     return await call_next(request)
@@ -55,12 +61,14 @@ class Webhook:
                         return fastapi.Response(content="Error, invalid verification token", status_code=403)
                 elif request.method == "POST":
                     request_body = await request.json()
-                    if request_body["entry"][0]["changes"][0]["value"]["metadata"]["phone_number_id"] \
-                            == wa_client.phone_id:
-                        for raw_update_handler in wa_client._handlers["raw_update"]:
+                    if not filter_updates or (
+                            request_body["entry"][0]["changes"][0]["value"]["metadata"]["phone_number_id"]
+                            == wa_client.phone_id):
+                        for raw_update_handler in self.handlers["raw_update"]:
                             raw_update_handler(wa_client, request_body)
                         update, key = convert_dict_to_update(client=wa_client, d=request_body)
-                        for handler in wa_client._handlers[key]:  # TODO execute in parallel
+                        handler: Callable[[WhatsApp, BaseUpdate], Any]
+                        for handler in self.handlers[key]:  # TODO execute in parallel
                             handler(wa_client, update)
                     return fastapi.Response(content="ok", status_code=200)
                 return await call_next(request)

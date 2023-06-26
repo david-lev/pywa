@@ -1,4 +1,3 @@
-import collections
 import hashlib
 import mimetypes
 import os
@@ -17,28 +16,30 @@ class WhatsApp:
             self,
             phone_id: str | int,
             token: str,
-            app: Any | None = None,
-            webhook_endpoint: str = "/pywa",
-            verify_token: str | None = None,
             base_url: str = "https://graph.facebook.com",
-            api_version: float = 17.0,
+            api_version: float | int = 17.0,
             session: requests.Session | None = None,
-    ):
+            server: Any | None = None,
+            webhook_endpoint: str = "/",
+            verify_token: str | None = None,
+            filter_updates: bool = True,
+    ) -> None:
         """
         Initialize the WhatsApp client.
 
         >>> from pywa import WhatsApp
-        >>> wa = WhatsApp(phone_id="100944", token="EAADKQl9oJxx")
+        >>> wa = WhatsApp(phone_id="100944",token="EAADKQl9oJxx")
 
         Args:
-            phone_id: The phone ID of the WhatsApp account.
+            phone_id: The 'Phone number ID'
             token: The token of the WhatsApp account.
-            app: The Flask or FastAPI app.
-            webhook_endpoint: The endpoint to listen for incoming messages (default: `/pywa`).
+            base_url: The base URL of the WhatsApp API. Default: ``https://graph.facebook.com``
+            api_version: The API version of the WhatsApp API. Default: ``17.0``
+            session: The session to use for requests. (Do not use the same session for multiple WhatsApp clients!)
+            server: The Flask or FastAPI app instance.
+            webhook_endpoint: The endpoint to listen for incoming messages (default: ``/``).
             verify_token: The verify token of the registered webhook.
-            base_url: The base URL of the WhatsApp API. Default: `https://graph.facebook.com`
-            api_version: The API version of the WhatsApp API. Default: 17.0
-            session: The session to use for requests. Default: New session.
+            filter_updates: Whether to filter out updates that not sended to this phone number.
         """
         self.phone_id = str(phone_id)
         self.api = WhatsAppCloudApi(
@@ -46,25 +47,26 @@ class WhatsApp:
             token=token,
             session=session or requests.Session(),
             base_url=base_url,
-            api_version=api_version,
+            api_version=float(api_version),
         )
-        if app is not None:
+        if server is not None:
             if verify_token is None:
                 raise ValueError("When listening for incoming messages, a verify token must be provided.")
-            webhook.Webhook(
+            self.webhook = webhook.Webhook(
                 wa_client=self,
-                app=app,
+                server=server,
                 verify_token=verify_token,
                 webhook_endpoint=webhook_endpoint,
+                filter_updates=filter_updates,
             )
-            self._handlers = collections.defaultdict(list)
         else:
-            self._handlers = None
+            self.webhook = None
 
     def add_handler(self, handler: Handler):
-        if self._handlers is None:
-            raise ValueError("You must initialize the WhatsApp client with an app (Flask or FastAPI) to add handlers.")
-        self._handlers[handler.__handler_type__].append(handler)
+        if self.webhook is None:
+            raise ValueError("You must initialize the WhatsApp client with an web server"
+                             " (Flask or FastAPI) in order to handle incoming messages.")
+        self.webhook.handlers[handler.__handler_type__].append(handler)
 
     def on_raw_update(self, *filters: Callable[["WhatsApp", dict], bool]):
         """

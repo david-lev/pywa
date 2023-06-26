@@ -22,6 +22,7 @@ __all__ = (
     "LocationFilter",
     "ContactsFilter",
     "CallbackFilter",
+    "MessageStatusFilter"
 )
 
 _ONLY_NUMS_RE = re.compile(r"\D")
