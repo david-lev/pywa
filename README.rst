@@ -109,7 +109,7 @@ ________________________
             ]
         )
 
-    @wa.on_callback_button(CallbackFilter.data_starts_with('id:'))
+    @wa.on_callback_button(CallbackFilter.data_startswith('id:'))
     def click_me(client: WhatsApp, clb: CallbackButton):
         clb.reply_text('You clicked me!')
 

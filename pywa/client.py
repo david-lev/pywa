@@ -1,10 +1,14 @@
 import collections
+import hashlib
+import mimetypes
+import os
 import requests
 from typing import Callable, Any, Iterable
 from pywa.api import WhatsAppCloudApi
 from pywa.handlers import Handler, MessageHandler, ButtonCallbackHandler, SelectionCallbackHandler, RawUpdateHandler, \
     MessageStatusHandler
-from pywa.types import InlineButton, SectionList, Message, CallbackButton, CallbackSelection, MessageStatus, Contact
+from pywa.types import InlineButton, SectionList, Message, CallbackButton, CallbackSelection, MessageStatus, Contact, \
+    MediaUrlResponse
 from pywa import webhook
 
 
@@ -249,7 +253,7 @@ class WhatsApp:
                 text=text,
                 preview_url=preview_url,
                 reply_to_message_id=reply_to_message_id,
-            )
+            )['messages'][0]['id']
         return self.api.send_interactive_message(
             to=to,
             keyboard=keyboard,
@@ -259,7 +263,7 @@ class WhatsApp:
             } if header else None,
             body=text,
             footer=footer,
-        )
+        )['messages'][0]['id']
 
     def send_image(
             self,
@@ -301,7 +305,7 @@ class WhatsApp:
                 media_type="image",
                 reply_to_message_id=reply_to_message_id,
                 caption=caption,
-            )
+            )['messages'][0]['id']
         if not body and not caption:
             raise ValueError("Either body or caption must be provided when sending an image with buttons.")
         return self.api.send_interactive_message(
@@ -316,7 +320,7 @@ class WhatsApp:
             body=body or caption,
             footer=footer,
             reply_to_message_id=reply_to_message_id,
-        )
+        )['messages'][0]['id']
 
     def send_video(
             self,
@@ -358,7 +362,7 @@ class WhatsApp:
                 media_type="video",
                 reply_to_message_id=reply_to_message_id,
                 caption=caption,
-            )
+            )['messages'][0]['id']
         if not body and not caption:
             raise ValueError("Either body or caption must be provided when sending a video with buttons.")
         return self.api.send_interactive_message(
@@ -373,7 +377,7 @@ class WhatsApp:
             body=body or caption,
             footer=footer,
             reply_to_message_id=reply_to_message_id,
-        )
+        )['messages'][0]['id']
 
     def send_document(
             self,
@@ -385,7 +389,7 @@ class WhatsApp:
             buttons: list[InlineButton] | None = None,
             body: str | None = None,
             footer: str | None = None,
-    ):
+    ) -> str:
         """
         Send a document to a WhatsApp user.
 
@@ -420,7 +424,7 @@ class WhatsApp:
                 reply_to_message_id=reply_to_message_id,
                 filename=filename,
                 caption=caption,
-            )
+            )['messages'][0]['id']
         if not body and not caption:
             raise ValueError("Either body or caption must be provided when sending a document with buttons.")
         return self.api.send_interactive_message(
@@ -436,7 +440,7 @@ class WhatsApp:
             body=body or caption,
             footer=footer,
             reply_to_message_id=reply_to_message_id,
-        )
+        )['messages'][0]['id']
 
     def send_audio(
             self,
@@ -467,7 +471,7 @@ class WhatsApp:
             media_id_or_url=audio,
             media_type="audio",
             reply_to_message_id=reply_to_message_id,
-        )
+        )['messages'][0]['id']
 
     def send_sticker(
             self,
@@ -503,7 +507,7 @@ class WhatsApp:
             media_type="sticker",
             reply_to_message_id=reply_to_message_id,
             animated=animated,
-        )
+        )['messages'][0]['id']
 
     def send_reaction(
             self,
@@ -534,7 +538,7 @@ class WhatsApp:
             to=to,
             emoji=emoji,
             message_id=message_id,
-        )
+        )['messages'][0]['id']
 
     def remove_reaction(
             self,
@@ -555,7 +559,7 @@ class WhatsApp:
             to=to,
             message_id=message_id,
             emoji=""
-        )
+        )['messages'][0]['id']
 
     def send_location(
             self,
@@ -591,7 +595,7 @@ class WhatsApp:
             longitude=longitude,
             name=name,
             address=address,
-        )
+        )['messages'][0]['id']
 
     def send_contact(
             self,
@@ -627,7 +631,7 @@ class WhatsApp:
             to=to,
             contacts=contact if isinstance(contact, Iterable) else [contact],
             reply_to_message_id=reply_to_message_id,
-        )
+        )['messages'][0]['id']
 
     def mark_message_as_read(
             self,
@@ -642,4 +646,90 @@ class WhatsApp:
         Returns:
             Whether the message was marked as read.
         """
-        return self.api.mark_message_as_read(message_id=message_id)
+        return self.api.mark_message_as_read(message_id=message_id)['success']
+
+    def upload_media(
+            self,
+            media: str | bytes,
+            mime_type: str | None = None,
+    ) -> str:
+        """
+        Upload media to WhatsApp servers.
+
+        Example:
+            >>> wa.upload_media(
+            ...     media='https://example.com/image.jpg',
+            ...     mime_type='image/jpeg',
+            ... )
+
+        Args:
+            media: The media to upload (either a URL or a file Path or bytes).
+            mime_type: The MIME type of the media (optional).
+
+        Returns:
+            The media ID.
+
+        Raises:
+            ValueError: If mime_type is not provided and cannot be guessed (e.g. for bytes or URLs without
+                Content-Type header).
+        """
+        return self.api.upload_media(
+            media=media,
+            mime_type=mime_type,
+        )['id']
+
+    def get_media_url(
+            self,
+            media_id: str
+    ) -> MediaUrlResponse:
+        """
+        Get the URL of a media.
+            - The URL is valid for 5 minutes.
+            - You can download with ``wa.download_media``.
+
+        Args:
+            media_id: The media ID.
+
+        Returns:
+            A MediaResponse object with the media URL.
+        """
+        res = self.api.get_media_url(media_id=media_id)
+        return MediaUrlResponse(
+            _client=self,
+            id=res['id'],
+            url=res['url'],
+            mime_type=res['mime_type'],
+            sha256=res['sha256'],
+            file_size=res['file_size'],
+        )
+
+    def download_media(
+            self,
+            url: str,
+            path: str | None = None,
+            filename: str | None = None,
+            in_memory: bool = False,
+    ) -> str | bytes:
+        """
+        Download a media file from WhatsApp servers.
+
+        Args:
+            url: The URL of the media file (from ``get_media_url``).
+            path: The path where to save the file (if not provided, the current working directory will be used).
+            filename: The name of the file (if not provided, it will be guessed from the URL + extension).
+            in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
+
+        Returns:
+            The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
+        """
+        content, mimetype = self.api.download_media(media_url=url)
+        if in_memory:
+            return content
+        if path is None:
+            path = os.getcwd()
+        if filename is None:
+            filename = hashlib.sha256(url.encode()).hexdigest() + mimetypes.guess_extension(mimetype)
+        path = os.path.join(path, filename)
+        with open(path, "wb") as f:
+            f.write(content)
+        return path

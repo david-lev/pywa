@@ -12,6 +12,7 @@ __all__ = (
     "SectionRow",
     "Section",
     "SectionList",
+    "MediaUrlResponse"
 )
 
 from datetime import datetime
@@ -147,13 +148,45 @@ class MessageType(str, Enum):
 
 @dataclass(frozen=True, slots=True)
 class MediaBase:
+    _client: WhatsApp = field(repr=False, hash=False, compare=False)
     id: str
     sha256: str
     mime_type: str
 
     @classmethod
-    def from_dict(cls, data: dict | None):
-        return cls(**data) if data else None
+    def from_dict(cls, client: WhatsApp, data: dict | None):
+        return cls(_client=client, **data) if data else None
+
+    def get_media_url(self) -> str:
+        """Gets the URL of the media. (expires after 5 minutes)"""
+        return self._client.get_media_url(media_id=self.id).url
+
+    def download(
+            self,
+            path: str | None = None,
+            filename: str | None = None,
+            in_memory: bool = False,
+    ) -> bytes | str:
+        """
+        Download a media file from WhatsApp servers.
+            - Same as ``WhatsApp.download_media(media_url=WhatsApp.get_media_url(media_id))``
+
+        >>> message.image.download()
+
+        Args:
+            path: The path where to save the file (if not provided, the current working directory will be used).
+            filename: The name of the file (if not provided, it will be guessed from the URL + extension).
+            in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
+
+        Returns:
+            The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
+        """
+        return self._client.download_media(
+            url=self.get_media_url(),
+            path=path,
+            filename=filename,
+            in_memory=in_memory
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -278,7 +311,58 @@ class Location:
 
 
 @dataclass(frozen=True, slots=True)
+class MediaUrlResponse:
+    """
+    Represents a media response.
+
+    Attributes:
+        id: The ID of the media.
+        url: The URL of the media (valid for 5 minutes).
+        mime_type: The MIME type of the media.
+        sha256: The SHA256 hash of the media.
+        file_size: The size of the media in bytes.
+    """
+    _client: WhatsApp = field(repr=False, hash=False, compare=False)
+    id: str
+    url: str
+    mime_type: str
+    sha256: str
+    file_size: int
+
+    def download(
+            self,
+            filepath: str | None = None,
+            filename: str | None = None,
+            in_memory: bool = False,
+    ) -> bytes | str:
+        """
+        Download a media file from WhatsApp servers.
+
+        Args:
+            filepath: The path where to save the file (if not provided, the current working directory will be used).
+            filename: The name of the file (if not provided, it will be guessed from the URL + extension).
+            in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
+
+        Returns:
+            The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
+        """
+        return self._client.download_media(url=self.url, path=filepath, filename=filename, in_memory=in_memory)
+
+
+@dataclass(frozen=True, slots=True)
 class Contact:
+    """
+    Represents a contact.
+
+    Attributes:
+        name: The name of the contact.
+        birthday: The birthday of the contact (in ``YYYY-MM-DD`` format, optional).
+        phones: The phone numbers of the contact.
+        emails: The email addresses of the contact.
+        urls: The URLs of the contact.
+        addresses: The addresses of the contact.
+        org: The organization of the contact (optional).
+    """
     name: Name
     birthday: str | None = None
     phones: list[Phone] = field(default_factory=list)
@@ -312,6 +396,19 @@ class Contact:
 
     @dataclass(frozen=True, slots=True)
     class Name:
+        """
+        Represents a contact's name.
+
+        - At least one of the optional parameters needs to be included along with the formatted_name parameter.
+
+        Attributes:
+            formatted_name: The formatted name of the contact.
+            first_name: The first name of the contact (optional).
+            last_name: The last name of the contact (optional).
+            middle_name: The middle name of the contact (optional).
+            suffix: The suffix of the contact (optional).
+            prefix: The prefix of the contact (optional).
+        """
         formatted_name: str
         first_name: str | None = None
         last_name: str | None = None
@@ -321,6 +418,14 @@ class Contact:
 
     @dataclass(frozen=True, slots=True)
     class Phone:
+        """
+        Represents a contact's phone number.
+
+        Attributes:
+            phone: The phone number (If ``wa_id`` is provided, No need for the ``phone``).
+            type: The type of the phone number (Standard Values are CELL, MAIN, IPHONE, HOME, and WORK. optional).
+            wa_id: The WhatsApp ID of the contact (optional).
+        """
         phone: str | None = None
         type: str | None = None
         wa_id: str | None = None
@@ -331,6 +436,13 @@ class Contact:
 
     @dataclass(frozen=True, slots=True)
     class Email:
+        """
+        Represents a contact's email address.
+
+        Attributes:
+            email: The email address.
+            type: The type of the email address (Standard Values are WORK and HOME. optional).
+        """
         email: str | None = None
         type: str | None = None
 
@@ -340,6 +452,13 @@ class Contact:
 
     @dataclass(frozen=True, slots=True)
     class Url:
+        """
+        Represents a contact's URL.
+
+        Attributes:
+            url: The URL.
+            type: The type of the URL (Standard Values are WORK and HOME. optional).
+        """
         url: str | None = None
         type: str | None = None
 
@@ -349,6 +468,14 @@ class Contact:
 
     @dataclass(frozen=True, slots=True)
     class Org:
+        """
+        Represents a contact's organization.
+
+        Attributes:
+            company: The company of the contact (optional).
+            department: The department of the contact (optional).
+            title: The title of the business contact (optional).
+        """
         company: str | None = None
         department: str | None = None
         title: str | None = None
@@ -359,6 +486,18 @@ class Contact:
 
     @dataclass(frozen=True, slots=True)
     class Address:
+        """
+        Represents a contact's address.
+
+        Attributes:
+            street: The street number and name of the address (optional).
+            city: The city name of the address (optional).
+            state: State abbreviation.
+            zip: Zip code of the address (optional).
+            country: Full country name.
+            country_code: Two-letter country abbreviation (e.g. US, GB, IN. optional).
+            type: The type of the address (Standard Values are WORK and HOME. optional).
+        """
         street: str | None = None
         city: str | None = None
         state: str | None = None
@@ -407,6 +546,7 @@ class Metadata:
 
 @dataclass(frozen=True, slots=True)
 class BaseUpdate:
+    """Base class for all update types."""
     _client: WhatsApp = field(repr=False, hash=False, compare=False)
     id: str
     metadata: Metadata
@@ -741,15 +881,40 @@ class Message(BaseUpdate):
             metadata=Metadata(**value['metadata']),
             reply_to_message=ReplyToMessage.from_dict(message.get('context')),
             text=message['text']['body'] if 'text' in message else None,
-            image=Image.from_dict(message.get('image')),
-            video=Video.from_dict(message.get('video')),
-            sticker=Sticker.from_dict(message.get('sticker')),
-            document=Document.from_dict(message.get('document')),
-            audio=Audio.from_dict(message.get('audio')),
+            image=Image.from_dict(client=client, data=message.get('image')),
+            video=Video.from_dict(client=client, data=message.get('video')),
+            sticker=Sticker.from_dict(client=client, data=message.get('sticker')),
+            document=Document.from_dict(client=client, data=message.get('document')),
+            audio=Audio.from_dict(client=client, data=message.get('audio')),
             reaction=Reaction.from_dict(message.get('reaction')),
             location=Location.from_dict(message.get('location')),
             contacts=[Contact.from_dict(contact) for contact in message.get('contacts', [])] or None
         )
+
+    def download_media(
+            self,
+            filepath: str | None = None,
+            filename: str | None = None,
+            in_memory: bool = False,
+    ) -> str | bytes:
+        """
+        Download a media file from WhatsApp servers (image, video, sticker, document or audio).
+
+        Args:
+            filepath: The path where to save the file (if not provided, the current working directory will be used).
+            filename: The name of the file (if not provided, it will be guessed from the URL + extension).
+            in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
+
+        Returns:
+            The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
+
+        Raises:
+            ValueError: If the message does not contain any media.
+        """
+        media = self.image or self.video or self.sticker or self.document or self.audio
+        if not media:
+            raise ValueError('The message does not contain any media.')
+        return media.download(path=filepath, filename=filename, in_memory=in_memory)
 
 
 @dataclass(frozen=True, slots=True)

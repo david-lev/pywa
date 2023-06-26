@@ -35,10 +35,10 @@ class Webhook:
                     if flask.request.json["entry"][0]["changes"][0]["value"]["metadata"]["phone_number_id"] \
                             == wa_client.phone_id:
                         for raw_update_handler in wa_client._handlers["raw_update"]:
-                            raw_update_handler(self, flask.request.json)
+                            raw_update_handler(wa_client, flask.request.json)
                         update, key = convert_dict_to_update(client=wa_client, d=flask.request.json)
                         for handler in wa_client._handlers[key]:  # TODO execute in parallel
-                            handler(self, update)
+                            handler(wa_client, update)
                     return "ok", 200
 
         elif utils.is_fastapi_app(app):
@@ -58,10 +58,10 @@ class Webhook:
                     if request_body["entry"][0]["changes"][0]["value"]["metadata"]["phone_number_id"] \
                             == wa_client.phone_id:
                         for raw_update_handler in wa_client._handlers["raw_update"]:
-                            raw_update_handler(self, request_body)
+                            raw_update_handler(wa_client, request_body)
                         update, key = convert_dict_to_update(client=wa_client, d=request_body)
                         for handler in wa_client._handlers[key]:  # TODO execute in parallel
-                            handler(self, update)
+                            handler(wa_client, update)
                     return fastapi.Response(content="ok", status_code=200)
                 return await call_next(request)
 
