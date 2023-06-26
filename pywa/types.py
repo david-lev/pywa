@@ -528,7 +528,7 @@ class ReplyToMessage:
         return cls(
             message_id=data['id'],
             from_user_id=data['from']
-        ) if data else None
+        ) if (data and 'id' in data) else None
 
 
 @dataclass(frozen=True, slots=True)
@@ -846,6 +846,7 @@ class Message(BaseUpdate):
         from_user: The user who sent the message.
         timestamp: The timestamp when the message was sent.
         reply_to_message: The message to which this message is a reply to. (optional)
+        forwarded: Whether the message was forwarded.
         text: The text of the message (if the message type is text). (optional)
         image: The image of the message (if the message type is image). (optional)
         video: The video of the message (if the message type is video). (optional)
@@ -858,6 +859,7 @@ class Message(BaseUpdate):
     """
     type: MessageType
     reply_to_message: ReplyToMessage | None
+    forwarded: bool
     text: str | None
     image: Image | None
     video: Video | None
@@ -879,6 +881,7 @@ class Message(BaseUpdate):
             from_user=User.from_dict(value['contacts'][0]),
             timestamp=datetime.fromtimestamp(int(message['timestamp'])),
             metadata=Metadata(**value['metadata']),
+            forwarded=message.get('context', {}).get('forwarded', False),
             reply_to_message=ReplyToMessage.from_dict(message.get('context')),
             text=message['text']['body'] if 'text' in message else None,
             image=Image.from_dict(client=client, data=message.get('image')),
