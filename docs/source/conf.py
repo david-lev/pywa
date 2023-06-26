@@ -86,3 +86,5 @@ ogp_type = "website"
 ogp_custom_meta_tags = [
     '<meta property="og:description" content="pywa • Python wrapper for the WhatsApp Cloud API" /> '
 ]
+
+html_extra_path = ["google898e98a538257a96.html"]
