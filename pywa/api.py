@@ -17,6 +17,8 @@ class WhatsAppCloudApi:
             api_version: float,
     ):
         self.phone_id = phone_id
+        if session.headers.get("Authorization") is not None:
+            raise ValueError("You can't use the same requests.Session for multiple WhatsApp instances!")
         self._session = session
         self._base_url = f"{base_url}/v{api_version}"
         self._session.headers = {
