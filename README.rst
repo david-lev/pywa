@@ -3,10 +3,10 @@
   :alt: PyWa Logo
 .. end-logo
 
-`pywa <https://github.com/david-lev/pywa>`_: Python wrapper for the WhatsApp Cloud API
+`PyWa <https://github.com/david-lev/pywa>`_ • Python wrapper for the WhatsApp Cloud API
 ######################################################################################
 
-THIS IS A WORK IN PROGRESS. DO NOT USE IN PRODUCTION.
+**THIS IS A WORK IN PROGRESS. DO NOT USE IN PRODUCTION.**
 
 
 .. image:: https://img.shields.io/pypi/dm/pywa?style=flat-square
@@ -32,7 +32,6 @@ THIS IS A WORK IN PROGRESS. DO NOT USE IN PRODUCTION.
 ________________________
 
 
-
 🎛 Installation
 --------------
 .. installation
@@ -52,15 +51,12 @@ ________________________
 
 .. code-block:: bash
 
-    git clone https://github.com/david-lev/pywa.git
-    cd pywa && python3 setup.py install
+    pip3 install -U git+https://github.com/david-lev/pywa.git
 
 .. end-installation
 
 ----------------------------------------
 
-**DOCUMENTATION WILL BE AVAILABLE SOON**
-----------------------------------------
 
 👨‍💻 **Usage**
 ----------------

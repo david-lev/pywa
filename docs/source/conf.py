@@ -13,7 +13,7 @@
 import os
 import sys
 from datetime import date
-from pywa import __version__
+from pywa.__version__ import __version__
 
 
 sys.path.insert(0, os.path.abspath('.'))

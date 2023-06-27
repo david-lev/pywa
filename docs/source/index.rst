@@ -10,3 +10,10 @@
 
    📖 Home <self>
 
+.. toctree::
+
+    content/getting-started
+    content/client
+    content/types
+    content/erros
+    content/examples
