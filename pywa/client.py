@@ -1,3 +1,5 @@
+"""The WhatsApp client."""
+
 import hashlib
 import mimetypes
 import os
@@ -8,7 +10,7 @@ from pywa.handlers import Handler, MessageHandler, ButtonCallbackHandler, Select
     MessageStatusHandler
 from pywa.types import InlineButton, SectionList, Message, CallbackButton, CallbackSelection, MessageStatus, Contact, \
     MediaUrlResponse
-from pywa import webhook
+from pywa.webhook import Webhook
 
 
 class WhatsApp:
@@ -52,7 +54,7 @@ class WhatsApp:
         if server is not None:
             if verify_token is None:
                 raise ValueError("When listening for incoming messages, a verify token must be provided.")
-            self.webhook = webhook.Webhook(
+            self.webhook = Webhook(
                 wa_client=self,
                 server=server,
                 verify_token=verify_token,

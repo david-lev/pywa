@@ -92,7 +92,7 @@ ________________________
     wa = WhatsApp(
         phone_id='1234567890',
         token='xxxxxxxxxxxxxxx',
-        app=flask_app,
+        server=flask_app,
         verify_token='XYZXYZ',
     )
 
