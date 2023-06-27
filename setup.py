@@ -1,10 +1,9 @@
 from setuptools import find_packages, setup
-from pywa.__version__ import __version__
 
 setup(
     name="pywa",
     packages=find_packages(),
-    version=__version__,
+    version=open('pywa/__version__.py', encoding='utf-8').read().split('__version__ = "')[1].split('"')[0],
     description="Python wrapper for the WhatsApp Cloud API",
     long_description=(open('README.rst', encoding='utf-8').read()),
     long_description_content_type="text/x-rst",
