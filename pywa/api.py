@@ -350,7 +350,7 @@ class WhatsAppCloudApi:
             method="POST",
             endpoint=f"/{self.phone_id}/messages",
             json=data
-        )['messages'][0]['id']
+        )
 
     def send_raw_json(
             self,
