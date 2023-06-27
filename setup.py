@@ -1,5 +1,5 @@
 from setuptools import find_packages, setup
-from pywa import __version__
+from pywa.__version__ import __version__
 
 setup(
     name="pywa",
