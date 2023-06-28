@@ -4,7 +4,7 @@
 .. end-logo
 
 `PyWa <https://github.com/david-lev/pywa>`_ • Python wrapper for the WhatsApp Cloud API
-######################################################################################
+########################################################################################
 
 **THIS IS A WORK IN PROGRESS. DO NOT USE IN PRODUCTION.**
 
