@@ -1019,7 +1019,7 @@ class MessageStatusType(Enum):
     SENT = 'sent'
     DELIVERED = 'delivered'
     READ = 'read'
-    timestamp: datetime
+    FAILED = 'failed'
 
 
 @dataclass(frozen=True, slots=True)
@@ -1035,17 +1035,23 @@ class MessageStatus(BaseUpdate):
         status: The status of the message.
         timestamp: The timestamp when the status was updated.
         from_user: The user who the message was sent to.
+        error: The error that occurred (if status is ``failed``).
     """
     status: MessageStatusType
+    error: WhatsAppApiError | None
 
     @classmethod
     def from_dict(cls, client: WhatsApp, value: dict):
         status = value['statuses'][0]
+        status_type = MessageStatusType(status['status'])
         return cls(
             _client=client,
             id=status['id'],
             metadata=Metadata(**value['metadata']),
-            status=MessageStatusType(status['status']),
+            type=MessageType.MESSAGE_STATUS,
+            status=status_type,
             timestamp=datetime.fromtimestamp(int(status['timestamp'])),
-            from_user=User(wa_id=status['recipient_id'], name=None)
+            from_user=User(wa_id=status['recipient_id'], name=None),
+            error=WhatsAppApiError.from_incoming_error(status['errors'][0])
+            if status_type == MessageStatusType.FAILED else None
         )

@@ -52,7 +52,7 @@ class WhatsAppCloudApi:
         """
         res = self._session.request(method=method, url=f"{self._base_url}{endpoint}", **kwargs)
         if res.status_code != 200:
-            raise WhatsAppApiError(status_code=res.status_code, error=res.json()["error"])
+            raise WhatsAppApiError.from_response(status_code=res.status_code, error=res.json()["error"])
         return res.json()
 
     def send_text_message(

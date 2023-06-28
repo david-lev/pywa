@@ -31,25 +31,30 @@ class Handler:
 
 
 class MessageHandler(Handler):
-    __handler_type__ = "message"
     """A message handler (e.g. text, image, video, audio, etc.)."""
+    __handler_type__ = "message"
 
 
 class ButtonCallbackHandler(Handler):
-    __handler_type__ = "button"
     """A button handler."""
+    __handler_type__ = "button"
 
 
 class SelectionCallbackHandler(Handler):
-    __handler_type__ = "selection"
     """A section handler."""
+    __handler_type__ = "selection"
 
 
 class RawUpdateHandler(Handler):
-    __handler_type__ = "raw_update"
     """A raw update handler."""
+    __handler_type__ = "raw_update"
 
 
 class MessageStatusHandler(Handler):
+    """
+    A message status handler (e.g. delivered, read, failed, etc.).
+
+    **DO NOT USE THIS HANDLER TO SEND MESSAGES, IT WILL CAUSE AN INFINITE LOOP!**
+    """
     __handler_type__ = "message_status"
     """A message status handler (e.g. delivered, read, etc.)."""

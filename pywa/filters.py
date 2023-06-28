@@ -286,3 +286,11 @@ class MessageStatusFilter:
 
     READ: Callable[[Wa, Ms], bool] = lambda wa, data: data.status == Mst.READ
     """Filter for messages that have been read."""
+
+    FAILED: Callable[[Wa, Ms], bool] = lambda wa, data: data.status == Mst.FAILED
+    """Filter for messages that have failed to send (than you can access to the ``error`` attribute)."""
+
+    @staticmethod
+    def failed_on_error_code(*codes: int) -> Callable[[Wa, Ms], bool]:
+        """Filter for messages that have failed to send with the given error code/s."""
+        return lambda wa, s: s.status == Mst.FAILED and s.error.error_code in codes

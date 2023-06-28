@@ -146,15 +146,22 @@ class WhatsApp:
             return func
         return decorator
 
-    def on_message_status_change(self, *filters: Callable[["WhatsApp", MessageStatus], bool]):
+    def on_message_status(self, *filters: Callable[["WhatsApp", MessageStatus], bool]):
         """
         Decorator to register a function as a handler for incoming message status changes.
 
+        **DO NOT USE THIS HANDLER TO SEND MESSAGES, IT WILL CAUSE AN INFINITE LOOP!**
+
         Example:
 
-            >>> @wa.on_message_status_change(MessageStatusFilter.READ)
+            >>> @wa.on_message_status(MessageStatusFilter.READ)
             ... def delivered_handler(wa: WhatsApp, status: MessageStatus):
             ...     print(f"Message {status.id} was read by {status.from_user.wa_id}")
+
+            >>> @wa.on_message_status(MessageStatusFilter.FAILED)
+            ... def delivered_handler(wa: WhatsApp, status: MessageStatus):
+            ...     print(f"Message {status.id} failed to send to {status.to_user.wa_id}. error: {status.error.message}
+
 
         Args:
             filters: Filters to apply to the incoming message status changes (filters are function that take the
