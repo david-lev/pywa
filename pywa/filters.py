@@ -35,24 +35,56 @@ class TextFilter:
     """Filter for all text messages."""
 
     @staticmethod
-    def equals(*matches: str) -> Callable[[Wa, Msg], bool]:
-        """Filter for text messages that equal the given text/s."""
-        return lambda wa, m: m.type == Mt.TEXT and any((t == m.text for t in matches))
+    def equals(*matches: str, ignore_case: bool = False) -> Callable[[Wa, Msg], bool]:
+        """
+        Filter for text messages that equal the given text/s.
+
+        Args:
+            matches: The text/s to filter for.
+            ignore_case: Whether to ignore case when matching (default: ``False``).
+        """
+        return lambda wa, m: m.type == Mt.TEXT and any(
+            (m.text.lower() == t.lower() if ignore_case else m.text == t for t in matches)
+        )
 
     @staticmethod
-    def contains(*matches: str) -> Callable[[Wa, Msg], bool]:
-        """Filter for text messages that contain the given text/s."""
-        return lambda wa, m: m.type == Mt.TEXT and any((t in m.text for t in matches))
+    def contains(*matches: str, ignore_case: bool = False) -> Callable[[Wa, Msg], bool]:
+        """
+        Filter for text messages that contain the given text/s.
+
+        Args:
+            matches: The text/s to filter for.
+            ignore_case: Whether to ignore case when matching. (default: ``False``).
+        """
+        return lambda wa, m: m.type == Mt.TEXT and any(
+            (t.lower() in m.text.lower() if ignore_case else t in m.text for t in matches)
+        )
 
     @staticmethod
-    def startswith(*matches: str) -> Callable[[Wa, Msg], bool]:
-        """Filter for text messages that start with the given text/s."""
-        return lambda wa, m: m.type == Mt.TEXT and any((m.text.startswith(t) for t in matches))
+    def startswith(*matches: str, ignore_case: bool = False) -> Callable[[Wa, Msg], bool]:
+        """
+        Filter for text messages that start with the given text/s.
+
+        Args:
+            matches: The text/s to filter for.
+            ignore_case: Whether to ignore case when matching (default: ``False``).
+        """
+        return lambda wa, m: m.type == Mt.TEXT and any(
+            (m.text.lower().startswith(t.lower()) if ignore_case else m.text.startswith(t) for t in matches)
+        )
 
     @staticmethod
-    def endswith(*matches: str) -> Callable[[Wa, Msg], bool]:
-        """Filter for text messages that end with the given text/s."""
-        return lambda wa, m: m.type == Mt.TEXT and any((m.text.endswith(t) for t in matches))
+    def endswith(*matches: str, ignore_case: bool = False) -> Callable[[Wa, Msg], bool]:
+        """
+        Filter for text messages that end with the given text/s.
+
+        Args:
+            matches: The text/s to filter for.
+            ignore_case: Whether to ignore case when matching (default: ``False``).
+        """
+        return lambda wa, m: m.type == Mt.TEXT and any(
+            (m.text.lower().endswith(t.lower()) if ignore_case else m.text.endswith(t) for t in matches)
+        )
 
     @staticmethod
     def regex(*patterns: str | re.Pattern, flags: int = 0) -> Callable[[Wa, Msg], bool]:
@@ -73,15 +105,20 @@ class TextFilter:
         return lambda wa, m: m.type == Mt.TEXT and any((i[0] <= len(m.text) <= i[1] for i in lengths))
 
     @staticmethod
-    def command(*cmds: str, prefixes: str | Iterable[str] = "!") -> Callable[[Wa, Msg], bool]:
+    def command(*cmds: str, prefixes: str | Iterable[str] = "!", ignore_case: bool = False) -> Callable[
+        [Wa, Msg], bool]:
         """
         Filter for text messages that are commands.
 
         Args:
             cmds: The command/s to filter for (e.g. "start", "hello").
             prefixes: The prefix/s to filter for (default: "!", i.e. "!start").
+            ignore_case: Whether to ignore case when matching (default: ``False``).
         """
-        return lambda wa, m: m.type == Mt.TEXT and any(m.text[0] in prefixes and m.text[1:].startswith(c) for c in cmds)
+        return lambda wa, m: m.type == Mt.TEXT and any(
+            m.text[0] in prefixes and (m.text[1:] if not ignore_case else m.text[1:].lower())
+            .startswith((c if not ignore_case else c.lower()) for c in cmds)
+        )
 
 
 class ImageFilter:
@@ -199,13 +236,17 @@ class ReactionFilter:
     """Useful filters for reaction messages."""
 
     ANY: Callable[[Wa, Msg], bool] = lambda wa, m: m.type == Mt.REACTION
-    """Filter for all reaction messages."""
+    """Filter for all reaction updates (added or removed)."""
+
+    ADDED: Callable[[Wa, Msg], bool] = lambda wa, m: m.type == Mt.REACTION and m.reaction.emoji is not None
+    """Filter for reaction messages that were added."""
+
+    REMOVED: Callable[[Wa, Msg], bool] = lambda wa, m: m.type == Mt.REACTION and m.reaction.emoji is None
+    """Filter for reaction messages that were removed."""
 
     @staticmethod
     def emoji(*emojis: str) -> Callable[[Wa, Msg], bool]:
-        """
-        Filter for custom reaction messages. pass emojis as strings.
-        """
+        """Filter for custom reaction messages. pass emojis as strings."""
         return lambda wa, m: m.type == Mt.REACTION and m.reaction.emoji in emojis
 
 
@@ -246,25 +287,57 @@ class UnsupportedMsgFilter:
 class CallbackFilter:
     """Useful filters for callback queries."""
 
-    @staticmethod
-    def data_equals(*matches: str) -> Callable[[Wa, CallbackButton | CallbackSelection], bool]:
-        """Filter for callbacks their data equals the given string/s."""
-        return lambda wa, c: any((c.data == m for m in matches))
+    ANY: Callable[[Wa, CallbackButton | CallbackSelection], bool] = lambda wa, c: True
+    """Filter for all callback queries (the default)."""
 
     @staticmethod
-    def data_startswith(*matches: str) -> Callable[[Wa, CallbackButton | CallbackSelection], bool]:
-        """Filter for callbacks their data starts with the given string/s."""
-        return lambda wa, c: any((c.data.startswith(m) for m in matches))
+    def data_equals(*matches: str, ignore_case: bool = False) -> Callable[
+        [Wa, CallbackButton | CallbackSelection], bool]:
+        """
+        Filter for callbacks their data equals the given string/s.
+
+        Args:
+            matches: The string/s to match.
+            ignore_case: Whether to ignore case when matching (default: False).
+        """
+        return lambda wa, c: any((c.data.lower() == m.lower() if ignore_case else c.data == m for m in matches))
 
     @staticmethod
-    def data_endswith(*matches: str) -> Callable[[Wa, CallbackButton | CallbackSelection], bool]:
-        """Filter for callbacks their data ends with the given string/s."""
-        return lambda wa, c: any((c.data.endswith(m) for m in matches))
+    def data_startswith(*matches: str, ignore_case: bool = False) -> Callable[[Wa, CallbackButton | CallbackSelection], bool]:
+        """
+        Filter for callbacks their data starts with the given string/s.
+
+        Args:
+            matches: The string/s to match.
+            ignore_case: Whether to ignore case when matching (default: False).
+        """
+        return lambda wa, c: any(
+            (c.data.lower().startswith(m.lower()) if ignore_case else c.data.startswith(m) for m in matches)
+        )
 
     @staticmethod
-    def data_contains(*matches: str) -> Callable[[Wa, CallbackButton | CallbackSelection], bool]:
-        """Filter for callbacks their data contains the given string/s."""
-        return lambda wa, c: any((m in c.data for m in matches))
+    def data_endswith(*matches: str, ignore_case: bool = False) -> Callable[[Wa, CallbackButton | CallbackSelection], bool]:
+        """
+        Filter for callbacks their data ends with the given string/s.
+
+        Args:
+            matches: The string/s to match.
+            ignore_case: Whether to ignore case when matching (default: False).
+        """
+        return lambda wa, c: any(
+            (c.data.lower().endswith(m.lower()) if ignore_case else c.data.endswith(m) for m in matches)
+        )
+
+    @staticmethod
+    def data_contains(*matches: str, ignore_case: bool = False) -> Callable[[Wa, CallbackButton | CallbackSelection], bool]:
+        """
+        Filter for callbacks their data contains the given string/s.
+
+        Args:
+            matches: The string/s to match.
+            ignore_case: Whether to ignore case when matching (default: False).
+        """
+        return lambda wa, c: any((m in c.data.lower() if ignore_case else m in c.data for m in matches))
 
     @staticmethod
     def data_regex(*patterns: str | re.Pattern) -> Callable[[Wa, CallbackButton | CallbackSelection], bool]:
