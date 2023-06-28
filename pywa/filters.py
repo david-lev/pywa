@@ -25,8 +25,6 @@ __all__ = (
     "MessageStatusFilter"
 )
 
-_ONLY_NUMS_RE = re.compile(r"\D")
-
 
 class TextFilter:
     """Useful filters for text messages."""
@@ -35,7 +33,7 @@ class TextFilter:
     """Filter for all text messages."""
 
     @staticmethod
-    def equals(*matches: str, ignore_case: bool = False) -> Callable[[Wa, Msg], bool]:
+    def match(*matches: str, ignore_case: bool = False) -> Callable[[Wa, Msg], bool]:
         """
         Filter for text messages that equal the given text/s.
 
@@ -46,6 +44,8 @@ class TextFilter:
         return lambda wa, m: m.type == Mt.TEXT and any(
             (m.text.lower() == t.lower() if ignore_case else m.text == t for t in matches)
         )
+
+    equals = match  # alias
 
     @staticmethod
     def contains(*matches: str, ignore_case: bool = False) -> Callable[[Wa, Msg], bool]:
@@ -90,8 +90,8 @@ class TextFilter:
     def regex(*patterns: str | re.Pattern, flags: int = 0) -> Callable[[Wa, Msg], bool]:
         """
         Filter for text messages that match the given regex/regexes.
-            * It's recommended to pass compiled regexes to save time (``re.compile(your_pattern)``)
         """
+        patterns = [re.compile(p, flags) if isinstance(p, str) else p for p in patterns]
         return lambda wa, m: m.type == Mt.TEXT and any(re.match(p, m.text, flags) for p in patterns)
 
     @staticmethod
@@ -105,8 +105,7 @@ class TextFilter:
         return lambda wa, m: m.type == Mt.TEXT and any((i[0] <= len(m.text) <= i[1] for i in lengths))
 
     @staticmethod
-    def command(*cmds: str, prefixes: str | Iterable[str] = "!", ignore_case: bool = False) -> Callable[
-        [Wa, Msg], bool]:
+    def command(*cmds: str, prefixes: str | Iterable[str] = "!", ignore_case: bool = False) -> Callable[[Wa, Msg], bool]:
         """
         Filter for text messages that are commands.
 
@@ -272,8 +271,10 @@ class ContactsFilter:
         Filter for contacts messages that have the given phone number/s.
             * Pass only the numbers, without plus sign, spaces, etc.
         """
+        only_nums_pattern = re.compile(r"\D")
+        phones = [re.sub(only_nums_pattern, "", p) for p in phones]
         return lambda wa, m: m.type == Mt.CONTACTS and (
-            any((re.sub(_ONLY_NUMS_RE, "", p.phone) in phones for contact in m.contacts for p in contact.phones))
+            any((re.sub(only_nums_pattern, "", p.phone) in phones for contact in m.contacts for p in contact.phones))
         )
 
 
@@ -291,8 +292,7 @@ class CallbackFilter:
     """Filter for all callback queries (the default)."""
 
     @staticmethod
-    def data_equals(*matches: str, ignore_case: bool = False) -> Callable[
-        [Wa, CallbackButton | CallbackSelection], bool]:
+    def data_equals(*matches: str, ignore_case: bool = False) -> Callable[[Wa, CallbackButton | CallbackSelection], bool]:
         """
         Filter for callbacks their data equals the given string/s.
 
@@ -343,8 +343,8 @@ class CallbackFilter:
     def data_regex(*patterns: str | re.Pattern) -> Callable[[Wa, CallbackButton | CallbackSelection], bool]:
         """
         Filter for callbacks their data matches the given regex/regexes.
-            * It's recommended to pass compiled regexes to save time (``re.compile(your_pattern)``)
         """
+        patterns = [re.compile(p) if isinstance(p, str) else p for p in patterns]
         return lambda wa, c: any((re.match(p, c.data) for p in patterns))
 
 
