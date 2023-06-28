@@ -488,7 +488,6 @@ class WhatsApp:
             self,
             to: str,
             sticker: str | bytes,
-            animated: bool = False,
             reply_to_message_id: str | None = None,
     ) -> str:
         """
@@ -506,7 +505,6 @@ class WhatsApp:
         Args:
             to: The phone ID of the WhatsApp user.
             sticker: The sticker to send (either a URL or a file ID).
-            animated: Whether the sticker is animated (optional).
             reply_to_message_id: The message ID to reply to (optional).
 
         Returns:
@@ -517,7 +515,6 @@ class WhatsApp:
             media_id_or_url=sticker,
             media_type="sticker",
             reply_to_message_id=reply_to_message_id,
-            animated=animated,
         )['messages'][0]['id']
 
     def send_reaction(

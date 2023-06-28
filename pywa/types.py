@@ -724,7 +724,6 @@ class BaseUpdate:
     def reply_sticker(
             self,
             sticker: str | bytes,
-            animated: bool = False,
             quote: bool = False,
     ) -> str:
         """
@@ -732,7 +731,6 @@ class BaseUpdate:
 
         Args:
             sticker: The sticker to reply with.
-            animated: Whether the sticker is animated (default: False).
             quote: Whether to quote the message (default: False).
 
         Returns:
@@ -741,7 +739,6 @@ class BaseUpdate:
         return self._client.send_sticker(
             to=self.sender,
             sticker=sticker,
-            animated=animated,
             reply_to_message_id=self.message_id_to_reply if quote else None
         )
 
