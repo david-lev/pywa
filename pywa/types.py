@@ -19,8 +19,8 @@ from datetime import datetime
 from dataclasses import dataclass, field, asdict
 from enum import Enum
 from typing import TYPE_CHECKING, Iterable
-
 from pywa import utils
+from pywa.errors import WhatsAppApiError
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
@@ -133,6 +133,8 @@ class MessageType(str, Enum):
     REACTION = "reaction"
     LOCATION = "location"
     CONTACTS = "contacts"
+    INTERACTIVE = "interactive"
+    MESSAGE_STATUS = "message_status"  # Not a real message type, used for MessageStatus
     UNSUPPORTED = "unsupported"
 
     # SYSTEM = "system"
@@ -265,10 +267,10 @@ class Reaction:
 
     Attributes:
         message_id: The ID of the message that was reacted to.
-        emoji: The emoji that was used to react to the message.
+        emoji: The emoji that was used to react to the message (optional, ``None`` if removed).
     """
     message_id: str
-    emoji: str
+    emoji: str | None = None
 
     @classmethod
     def from_dict(cls, data: dict | None):
@@ -376,10 +378,10 @@ class Contact:
         return cls(
             name=cls.Name(**data["name"]),
             birthday=data.get("birthday"),
-            phones=[cls.Phone.from_dict(phone) for phone in data.get("phones", [])],
-            emails=[cls.Email.from_dict(email) for email in data.get("emails", [])],
-            urls=[cls.Url.from_dict(url) for url in data.get("urls", [])],
-            addresses=[cls.Address.from_dict(address) for address in data.get("addresses", [])],
+            phones=[cls.Phone.from_dict(phone) for phone in data.get("phones", ())],
+            emails=[cls.Email.from_dict(email) for email in data.get("emails", ())],
+            urls=[cls.Url.from_dict(url) for url in data.get("urls", ())],
+            addresses=[cls.Address.from_dict(address) for address in data.get("addresses", ())],
             org=cls.Org.from_dict(data.get("org")),
         ) if data else None
 
@@ -549,6 +551,7 @@ class BaseUpdate:
     """Base class for all update types."""
     _client: WhatsApp = field(repr=False, hash=False, compare=False)
     id: str
+    type: MessageType
     metadata: Metadata
     from_user: User
     timestamp: datetime
@@ -556,6 +559,11 @@ class BaseUpdate:
     @property
     def sender(self) -> str:
         return self.from_user.wa_id
+
+    @property
+    def message_id_to_reply(self) -> str:
+        """The ID of the message to reply to."""
+        return self.id
 
     def reply_text(
             self,
@@ -584,7 +592,7 @@ class BaseUpdate:
             to=self.sender,
             text=text,
             preview_url=preview_url,
-            reply_to_message_id=self.id if quote else None,
+            reply_to_message_id=self.message_id_to_reply if quote else None,
             keyboard=keyboard,
             header=header,
             footer=footer
@@ -617,7 +625,7 @@ class BaseUpdate:
             to=self.sender,
             image=image,
             caption=caption,
-            reply_to_message_id=self.id if quote else None,
+            reply_to_message_id=self.message_id_to_reply if quote else None,
             buttons=buttons,
             body=body,
             footer=footer
@@ -650,7 +658,7 @@ class BaseUpdate:
             to=self.sender,
             video=video,
             caption=caption,
-            reply_to_message_id=self.id if quote else None,
+            reply_to_message_id=self.message_id_to_reply if quote else None,
             buttons=buttons,
             body=body,
             footer=footer
@@ -686,7 +694,7 @@ class BaseUpdate:
             document=document,
             filename=filename,
             caption=caption,
-            reply_to_message_id=self.id if quote else None,
+            reply_to_message_id=self.message_id_to_reply if quote else None,
             buttons=buttons,
             body=body,
             footer=footer
@@ -710,7 +718,7 @@ class BaseUpdate:
         return self._client.send_audio(
             to=self.sender,
             audio=audio,
-            reply_to_message_id=self.id if quote else None
+            reply_to_message_id=self.message_id_to_reply if quote else None
         )
 
     def reply_sticker(
@@ -734,7 +742,7 @@ class BaseUpdate:
             to=self.sender,
             sticker=sticker,
             animated=animated,
-            reply_to_message_id=self.id if quote else None
+            reply_to_message_id=self.message_id_to_reply if quote else None
         )
 
     def reply_location(
@@ -782,7 +790,7 @@ class BaseUpdate:
         return self._client.send_contact(
             to=self.sender,
             contact=contact,
-            reply_to_message_id=self.id if quote else None
+            reply_to_message_id=self.message_id_to_reply if quote else None
         )
 
     def react(
@@ -801,7 +809,7 @@ class BaseUpdate:
         return self._client.send_reaction(
             to=self.sender,
             emoji=emoji,
-            message_id=self.id
+            message_id=self.message_id_to_reply
         )
 
     def unreact(
@@ -815,7 +823,7 @@ class BaseUpdate:
         """
         return self._client.remove_reaction(
             to=self.sender,
-            message_id=self.id
+            message_id=self.message_id_to_reply
         )
 
     def mark_as_read(
@@ -828,7 +836,7 @@ class BaseUpdate:
             Whether it was successful.
         """
         return self._client.mark_message_as_read(
-            message_id=self.id
+            message_id=self.message_id_to_reply
         )
 
 
@@ -857,7 +865,6 @@ class Message(BaseUpdate):
         location: The location of the message (if the message type is location). (optional)
         contacts: The contacts of the message (if the message type is contacts). (optional)
     """
-    type: MessageType
     reply_to_message: ReplyToMessage | None
     forwarded: bool
     text: str | None
@@ -870,14 +877,18 @@ class Message(BaseUpdate):
     location: Location | None
     contacts: list[Contact] | None
 
+    @property
+    def message_id_to_reply(self) -> str:
+        """The ID of the message"""
+        return self.id if self.type != MessageType.REACTION else self.reaction.message_id
+
     @classmethod
     def from_dict(cls, client: WhatsApp, value: dict):
         message = value['messages'][0]
-        msg_type = MessageType(message['type'])
         return cls(
             _client=client,
             id=message['id'],
-            type=msg_type,
+            type=MessageType(message['type']),
             from_user=User.from_dict(value['contacts'][0]),
             timestamp=datetime.fromtimestamp(int(message['timestamp'])),
             metadata=Metadata(**value['metadata']),
@@ -891,7 +902,7 @@ class Message(BaseUpdate):
             audio=Audio.from_dict(client=client, data=message.get('audio')),
             reaction=Reaction.from_dict(message.get('reaction')),
             location=Location.from_dict(message.get('location')),
-            contacts=[Contact.from_dict(contact) for contact in message.get('contacts', [])] or None
+            contacts=[Contact.from_dict(contact) for contact in message.get('contacts', ())] or None
         )
 
     def download_media(
@@ -928,13 +939,21 @@ class CallbackButton(BaseUpdate):
     Attributes:
         id: The ID of the message.
         metadata: The metadata of the message (to which phone number it was sent).
+        type: The message type (always ``interactive``).
         from_user: The user who sent the message.
         timestamp: The timestamp when the message was sent.
+        reply_to_message: The message to which this callback button is a reply to.
         data: The data of the button.
         title: The title of the button.
     """
+    reply_to_message: ReplyToMessage
     data: str
     title: str
+
+    @property
+    def message_id_to_reply(self) -> str:
+        """The ID of the message to reply to"""
+        return self.reply_to_message.message_id
 
     @classmethod
     def from_dict(cls, client: WhatsApp, value: dict):
@@ -943,8 +962,10 @@ class CallbackButton(BaseUpdate):
             _client=client,
             id=message['id'],
             metadata=Metadata(**value['metadata']),
+            type=MessageType(message['type']),
             from_user=User.from_dict(value['contacts'][0]),
             timestamp=datetime.fromtimestamp(int(message['timestamp'])),
+            reply_to_message=ReplyToMessage.from_dict(message['context']),
             data=message['interactive']['button_reply']['id'],
             title=message['interactive']['button_reply']['title']
         )
@@ -958,15 +979,23 @@ class CallbackSelection(BaseUpdate):
     Attributes:
         id: The ID of the message.
         metadata: The metadata of the message (to which phone number it was sent).
+        type: The message type (always ``interactive``).
         from_user: The user who sent the message.
         timestamp: The timestamp when the message was sent.
+        reply_to_message: The message to which this callback selection is a reply to.
         data: The data of the selection.
         title: The title of the selection.
         description: The description of the selection (optional).
     """
+    reply_to_message: ReplyToMessage
     data: str
     title: str
     description: str | None
+
+    @property
+    def message_id_to_reply(self) -> str:
+        """The ID of the message to reply to"""
+        return self.reply_to_message.message_id
 
     @classmethod
     def from_dict(cls, client: WhatsApp, value: dict):
@@ -975,8 +1004,10 @@ class CallbackSelection(BaseUpdate):
             _client=client,
             id=message['id'],
             metadata=Metadata(**value['metadata']),
+            type=MessageType(message['type']),
             from_user=User.from_dict(value['contacts'][0]),
             timestamp=datetime.fromtimestamp(int(message['timestamp'])),
+            reply_to_message=ReplyToMessage.from_dict(message['context']),
             data=message['interactive']['list_reply']['id'],
             title=message['interactive']['list_reply']['title'],
             description=message['interactive']['list_reply'].get('description')
