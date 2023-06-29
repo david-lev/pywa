@@ -181,25 +181,24 @@ class WhatsAppCloudApi:
             endpoint=f"/{media_id}"
         )
 
-    def download_media(
+    def get_media_bytes(
             self,
             media_url: str,
-    ) -> tuple[bytes, str]:
+    ) -> tuple[bytes, str | None]:
         """
-        Download a media file from WhatsApp servers.
+        Get the bytes of a media file from WhatsApp servers.
 
         Args:
             media_url: The URL of the media file (from ``get_media_url``).
 
         Returns:
-            The media file bytes and the MIME type.
+            The media file bytes and the MIME type (if available).
         """
         headers = self._session.headers.copy()
         del headers["Content-Type"]
         res = self._session.get(media_url, headers=headers)
         res.raise_for_status()
-        return res.content, res.headers.get("Content-Type", default=res.headers.get("content-type")) \
-                            or 'application/octet-stream'
+        return res.content, res.headers.get("Content-Type")
 
     def delete_media(self, media_id: str) -> dict[str, bool]:
         """

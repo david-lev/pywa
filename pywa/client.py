@@ -730,13 +730,14 @@ class WhatsApp:
         Returns:
             The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
         """
-        content, mimetype = self.api.download_media(media_url=url)
+        content, mimetype = self.api.get_media_bytes(media_url=url)
         if in_memory:
             return content
         if path is None:
             path = os.getcwd()
         if filename is None:
-            filename = hashlib.sha256(url.encode()).hexdigest() + mimetypes.guess_extension(mimetype)
+            filename = hashlib.sha256(url.encode()).hexdigest() +\
+                       mimetypes.guess_extension(mimetype or 'application/octet-stream')
         path = os.path.join(path, filename)
         with open(path, "wb") as f:
             f.write(content)

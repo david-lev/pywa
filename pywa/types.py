@@ -598,6 +598,8 @@ class BaseUpdate:
             footer=footer
         )
 
+    reply = reply_text  # alias
+
     def reply_image(
             self,
             image: str | bytes,
@@ -1029,6 +1031,7 @@ class MessageStatus(BaseUpdate):
     Attributes:
         id: The ID of the message that the status is for.
         metadata: The metadata of the message (to which phone number it was sent).
+        type: The message type (always ``message_status``).
         status: The status of the message.
         timestamp: The timestamp when the status was updated.
         from_user: The user who the message was sent to.
