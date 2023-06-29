@@ -15,5 +15,6 @@
     content/getting-started
     content/client
     content/types
+    content/filters
     content/erros
     content/examples

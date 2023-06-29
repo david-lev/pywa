@@ -37,6 +37,8 @@ class TextFilter:
         """
         Filter for text messages that equal the given text/s.
 
+        >>> TextFilter.match("Hello", "Hi")
+
         Args:
             matches: The text/s to filter for.
             ignore_case: Whether to ignore case when matching (default: ``False``).
@@ -52,6 +54,8 @@ class TextFilter:
         """
         Filter for text messages that contain the given text/s.
 
+        >>> TextFilter.contains("Cat", "Dog", ignore_case=True)
+
         Args:
             matches: The text/s to filter for.
             ignore_case: Whether to ignore case when matching. (default: ``False``).
@@ -64,6 +68,8 @@ class TextFilter:
     def startswith(*matches: str, ignore_case: bool = False) -> Callable[[Wa, Msg], bool]:
         """
         Filter for text messages that start with the given text/s.
+
+        >>> TextFilter.startswith("What", "When", ignore_case=True)
 
         Args:
             matches: The text/s to filter for.
@@ -78,6 +84,8 @@ class TextFilter:
         """
         Filter for text messages that end with the given text/s.
 
+        >>> TextFilter.endswith("Bye", "See you", ignore_case=True)
+
         Args:
             matches: The text/s to filter for.
             ignore_case: Whether to ignore case when matching (default: ``False``).
@@ -90,6 +98,12 @@ class TextFilter:
     def regex(*patterns: str | re.Pattern, flags: int = 0) -> Callable[[Wa, Msg], bool]:
         """
         Filter for text messages that match the given regex/regexes.
+
+        >>> TextFilter.regex(r"Hello\s+World", r"Bye\s+World", flags=re.IGNORECASE)
+
+        Args:
+            patterns: The regex/regexes to filter for.
+            flags: The regex flags to use (default: ``0``).
         """
         patterns = [re.compile(p, flags) if isinstance(p, str) else p for p in patterns]
         return lambda wa, m: m.type == Mt.TEXT and any(re.match(p, m.text, flags) for p in patterns)
@@ -98,6 +112,8 @@ class TextFilter:
     def length(*lengths: tuple[int, int]) -> Callable[[Wa, Msg], bool]:
         """
         Filter for text messages that have a length between the given range/s.
+
+        >>> TextFilter.length((1, 10), (50, 100))
 
         Args:
             lengths: The length range/s to filter for (e.g. (1, 10), (50, 100)).
@@ -108,6 +124,8 @@ class TextFilter:
     def command(*cmds: str, prefixes: str | Iterable[str] = "!", ignore_case: bool = False) -> Callable[[Wa, Msg], bool]:
         """
         Filter for text messages that are commands.
+
+        >>> TextFilter.command("start", "hello", prefixes=("!", "/"), ignore_case=True)
 
         Args:
             cmds: The command/s to filter for (e.g. "start", "hello").
@@ -136,6 +154,8 @@ class ImageFilter:
         """
         Filter for image messages that have the given mime type/s.
         See https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#supported-media-types
+
+        >>> ImageFilter.mimetype("image/png")
         """
         return lambda wa, m: m.type == Mt.IMAGE and any((t == m.image.mime_type for t in mime_types))
 
@@ -151,6 +171,8 @@ class VideoFilter:
         """
         Filter for video messages that have the given mime type/s.
         See https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#supported-media-types
+
+        >>> VideoFilter.mimetype("video/mp4")
         """
         return lambda wa, m: m.type == Mt.VIDEO and any((t == m.video.mime_type for t in mime_types))
 
@@ -172,6 +194,8 @@ class AudioFilter:
         """
         Filter for audio messages that have the given mime type/s.
         See https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#supported-media-types
+
+        >>> AudioFilter.mimetype("audio/ogg")
         """
         return lambda wa, m: m.type == Mt.AUDIO and any((t == m.audio.mime_type for t in mime_types))
 
@@ -187,6 +211,8 @@ class DocumentFilter:
         """
         Filter for document messages that have the given mime type/s.
         See https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#supported-media-types
+
+        >>> DocumentFilter.mimetype("application/pdf")
         """
         return lambda wa, m: m.type == Mt.DOCUMENT and any((t == m.document.mime_type for t in mime_types))
 
@@ -201,6 +227,7 @@ class StickerFilter:
     """Filter for animated sticker messages."""
 
     STATIC: Callable[[Wa, Msg], bool] = lambda wa, m: m.type == Mt.STICKER and not m.sticker.animated
+    """Filter for static sticker messages."""
 
 
 class LocationFilter:
@@ -245,7 +272,11 @@ class ReactionFilter:
 
     @staticmethod
     def emoji(*emojis: str) -> Callable[[Wa, Msg], bool]:
-        """Filter for custom reaction messages. pass emojis as strings."""
+        """
+        Filter for custom reaction messages. pass emojis as strings.
+
+        >>> ReactionFilter.emoji("👍", "👎")
+        """
         return lambda wa, m: m.type == Mt.REACTION and m.reaction.emoji in emojis
 
 
@@ -262,14 +293,20 @@ class ContactsFilter:
 
     @staticmethod
     def count(min_count: int, max_count: int) -> Callable[[Wa, Msg], bool]:
-        """Filter for contacts messages that have a number of contacts between min_count and max_count."""
+        """
+        Filter for contacts messages that have a number of contacts between min_count and max_count.
+
+        >>> ContactsFilter.count(1, 1) # ensure only 1 contact
+        >>> ContactsFilter.count(1, 5) # between 1 and 5 contacts
+        """
         return lambda wa, m: m.type == Mt.CONTACTS and min_count <= len(m.contacts) <= max_count
 
     @staticmethod
     def phone(*phones: str) -> Callable[[Wa, Msg], bool]:
         """
         Filter for contacts messages that have the given phone number/s.
-            * Pass only the numbers, without plus sign, spaces, etc.
+
+        >>> ContactsFilter.phone("+1 555-555-5555", "972123456789")
         """
         only_nums_pattern = re.compile(r"\D")
         phones = [re.sub(only_nums_pattern, "", p) for p in phones]
@@ -292,9 +329,12 @@ class CallbackFilter:
     """Filter for all callback queries (the default)."""
 
     @staticmethod
-    def data_equals(*matches: str, ignore_case: bool = False) -> Callable[[Wa, CallbackButton | CallbackSelection], bool]:
+    def data_match(*matches: str, ignore_case: bool = False) -> Callable[[Wa, CallbackButton | CallbackSelection], bool]:
         """
         Filter for callbacks their data equals the given string/s.
+
+        >>> CallbackFilter.data_match("menu")
+        >>> CallbackFilter.data_match("back", "return", "exit")
 
         Args:
             matches: The string/s to match.
@@ -302,10 +342,14 @@ class CallbackFilter:
         """
         return lambda wa, c: any((c.data.lower() == m.lower() if ignore_case else c.data == m for m in matches))
 
+    data_equals = data_match
+
     @staticmethod
     def data_startswith(*matches: str, ignore_case: bool = False) -> Callable[[Wa, CallbackButton | CallbackSelection], bool]:
         """
         Filter for callbacks their data starts with the given string/s.
+
+        >>> CallbackFilter.data_startswith("id:")
 
         Args:
             matches: The string/s to match.
@@ -320,6 +364,8 @@ class CallbackFilter:
         """
         Filter for callbacks their data ends with the given string/s.
 
+        >>> CallbackFilter.data_endswith(":true", ":false")
+
         Args:
             matches: The string/s to match.
             ignore_case: Whether to ignore case when matching (default: False).
@@ -333,6 +379,8 @@ class CallbackFilter:
         """
         Filter for callbacks their data contains the given string/s.
 
+        >>> CallbackFilter.data_contains("back")
+
         Args:
             matches: The string/s to match.
             ignore_case: Whether to ignore case when matching (default: False).
@@ -343,6 +391,8 @@ class CallbackFilter:
     def data_regex(*patterns: str | re.Pattern) -> Callable[[Wa, CallbackButton | CallbackSelection], bool]:
         """
         Filter for callbacks their data matches the given regex/regexes.
+
+        >>> CallbackFilter.data_regex(r"^\d+$")  # only digits
         """
         patterns = [re.compile(p) if isinstance(p, str) else p for p in patterns]
         return lambda wa, c: any((re.match(p, c.data) for p in patterns))
@@ -364,6 +414,10 @@ class MessageStatusFilter:
     """Filter for messages that have failed to send (than you can access to the ``error`` attribute)."""
 
     @staticmethod
-    def failed_on_error_code(*codes: int) -> Callable[[Wa, Ms], bool]:
-        """Filter for messages that have failed to send with the given error code/s."""
+    def failed_with_error_code(*codes: int) -> Callable[[Wa, Ms], bool]:
+        """
+        Filter for messages that have failed to send with the given error code/s.
+
+        >>> MessageStatusFilter.failed_with_error_code(131056) # Too many requests
+        """
         return lambda wa, s: s.status == Mst.FAILED and s.error.error_code in codes
