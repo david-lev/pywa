@@ -215,7 +215,7 @@ class Video(MediaBase):
         sha256: The SHA256 hash of the video.
         mime_type: The MIME type of the video.
     """
-    pass
+    caption: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -244,6 +244,7 @@ class Document(MediaBase):
         filename: The filename of the document (optional).
     """
     filename: str | None = None
+    caption: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
