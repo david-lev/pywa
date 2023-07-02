@@ -1,7 +1,7 @@
 import mimetypes
 import requests
 from typing import Iterable
-from pywa.errors import WhatsAppApiError
+from pywa.errors import WhatsAppError
 from pywa.types import InlineButton, SectionList, Contact
 
 
@@ -48,11 +48,11 @@ class WhatsAppCloudApi:
             The response JSON.
 
         Raises:
-            WhatsAppApiError: If the request failed.
+            WhatsAppError: If the request failed.
         """
         res = self._session.request(method=method, url=f"{self._base_url}{endpoint}", **kwargs)
         if res.status_code != 200:
-            raise WhatsAppApiError.from_response(status_code=res.status_code, error=res.json()["error"])
+            raise WhatsAppError.from_response(status_code=res.status_code, error=res.json()["error"])
         return res.json()
 
     def send_text_message(

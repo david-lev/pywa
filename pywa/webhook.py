@@ -93,6 +93,6 @@ class Webhook:
                     return CallbackSelection.from_dict(client=client, value=value), "selection"
 
         elif 'statuses' in value:
-            return MessageStatus.from_dict(client=client, value=value), "status"
+            return MessageStatus.from_dict(client=client, value=value), "message_status"
         else:
             raise ValueError("Invalid webhook data: " + str(d))

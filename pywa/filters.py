@@ -1,15 +1,6 @@
 """Usefully filters to use in your handlers."""
 from __future__ import annotations
 
-import re
-from typing import Callable, TYPE_CHECKING, Iterable
-from pywa import utils
-from pywa.types import MessageType as Mt, Message as Msg, MessageStatus as Ms, MessageStatusType as Mst, \
-    CallbackButton, CallbackSelection
-
-if TYPE_CHECKING:
-    from pywa import WhatsApp as Wa
-
 __all__ = (
     "TextFilter",
     "ImageFilter",
@@ -24,6 +15,15 @@ __all__ = (
     "CallbackFilter",
     "MessageStatusFilter"
 )
+
+import re
+from typing import Callable, TYPE_CHECKING, Iterable
+from pywa import utils
+from pywa.types import MessageType as Mt, Message as Msg, MessageStatus as Ms, MessageStatusType as Mst, \
+    CallbackButton, CallbackSelection
+
+if TYPE_CHECKING:
+    from pywa import WhatsApp as Wa
 
 
 class TextFilter:

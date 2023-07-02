@@ -1,3 +1,15 @@
+"""
+This module contains the handlers for incoming updates.
+"""
+
+__all__ = (
+    "MessageHandler",
+    "ButtonCallbackHandler",
+    "SelectionCallbackHandler",
+    "RawUpdateHandler",
+    "MessageStatusHandler"
+)
+
 from typing import Callable, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -36,12 +48,12 @@ class MessageHandler(Handler):
 
 
 class ButtonCallbackHandler(Handler):
-    """A button handler."""
+    """A button click handler."""
     __handler_type__ = "button"
 
 
 class SelectionCallbackHandler(Handler):
-    """A section handler."""
+    """A selection choice handler."""
     __handler_type__ = "selection"
 
 
@@ -57,4 +69,3 @@ class MessageStatusHandler(Handler):
     **DO NOT USE THIS HANDLER TO SEND MESSAGES, IT WILL CAUSE AN INFINITE LOOP!**
     """
     __handler_type__ = "message_status"
-    """A message status handler (e.g. delivered, read, etc.)."""

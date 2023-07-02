@@ -1,6 +1,11 @@
+"""
+This module contains the errors that can be raised by the WhatsApp Cloud API or incoming error from the webhook.
+"""
+
+__all__ = ("WhatsAppError",)
 
 
-class WhatsAppApiError(Exception):
+class WhatsAppError(Exception):
     """
     Represents an error that happened while making a request to the WhatsApp Cloud API or incoming error from the webhook.
 
@@ -35,7 +40,7 @@ class WhatsAppApiError(Exception):
             cls,
             status_code: int,
             error: dict
-    ) -> "WhatsAppApiError":
+    ) -> "WhatsAppError":
         """Create an error from a response."""
         return cls(
             status_code=status_code,
@@ -50,7 +55,7 @@ class WhatsAppApiError(Exception):
     def from_incoming_error(
             cls,
             error: dict
-    ) -> "WhatsAppApiError":
+    ) -> "WhatsAppError":
         """Create an error from an incoming error."""
         return cls(
             status_code=None,
@@ -62,7 +67,7 @@ class WhatsAppApiError(Exception):
         )
 
     def __str__(self) -> str:
-        return f"WhatsAppApiError(status_code={self.status_code}, message={self.message!r}, details={self.details!r})"
+        return f"WhatsAppError(message={self.message!r}, details={self.details!r}, error_code={self.error_code!r})"
 
     def __repr__(self) -> str:
         return self.__str__()
