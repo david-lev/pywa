@@ -71,16 +71,21 @@ class Webhook:
 
     def call_handlers(self, update: dict) -> None:
         """Call the handlers for the given update."""
-        if not self.filter_updates or (
-                update["entry"][0]["changes"][0]["value"]["metadata"]["phone_number_id"] == self.wa_client.phone_id):
-            for raw_update_handler in self.handlers["raw_update"]:
-                raw_update_handler(self.wa_client, update)
-            update, key = self.convert_dict_to_update(client=self.wa_client, d=update)
-            for handler in self.handlers[key]:  # TODO execute in parallel
-                handler(self.wa_client, update)
+        try:
+            if not self.filter_updates or (
+                    update["entry"][0]["changes"][0]["value"]["metadata"]["phone_number_id"] == self.wa_client.phone_id):
+                for raw_update_handler in self.handlers["raw_update"]:
+                    raw_update_handler(self.wa_client, update)
+                update, key = self.convert_dict_to_update(client=self.wa_client, d=update)
+                if key is None:
+                    return
+                for handler in self.handlers[key]:  # TODO execute in parallel
+                    handler(self.wa_client, update)
+        except (KeyError, IndexError):  # the update not send to this phone and filter_updates is True
+            pass
 
     @staticmethod
-    def convert_dict_to_update(client: WhatsApp, d: dict) -> tuple[BaseUpdate, str]:
+    def convert_dict_to_update(client: WhatsApp, d: dict) -> tuple[BaseUpdate | None, str | None]:
         """Convert a webhook dict to a BaseUpdate object."""
         value = d["entry"][0]["changes"][0]["value"]
         if 'messages' in value:
@@ -94,5 +99,5 @@ class Webhook:
 
         elif 'statuses' in value:
             return MessageStatus.from_dict(client=client, value=value), "message_status"
-        else:
-            raise ValueError("Invalid webhook data: " + str(d))
+        return None, None  # the update is not supported
+
