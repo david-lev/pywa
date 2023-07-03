@@ -51,7 +51,7 @@ class WhatsAppCloudApi:
             WhatsAppError: If the request failed.
         """
         res = self._session.request(method=method, url=f"{self._base_url}{endpoint}", **kwargs)
-        if res.status_code != 200:
+        if res.status_code >= 400:
             raise WhatsAppError.from_response(status_code=res.status_code, error=res.json()["error"])
         return res.json()
 
