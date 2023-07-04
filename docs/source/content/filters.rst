@@ -93,8 +93,6 @@ Helper functions
 Built-in Filters
 ----------------
 
-----------------
-
 Message Filters
 ~~~~~~~~~~~~~~~
 
