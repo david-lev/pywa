@@ -41,7 +41,8 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinxext.opengraph",
     "sphinx.ext.napoleon",
-    "sphinx.ext.autosummary"
+    "sphinx.ext.autosummary",
+    "sphinx.ext.autosectionlabel"
 ]
 
 # The suffix of source filenames.

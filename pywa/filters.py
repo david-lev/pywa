@@ -2,7 +2,11 @@
 from __future__ import annotations
 
 __all__ = (
-    "FilterCombine",
+    "all_",
+    "any_",
+    "not_",
+    "FORWARDED",
+    "from_user",
     "TextFilter",
     "ImageFilter",
     "VideoFilter",
@@ -34,45 +38,56 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 
-class FilterCombine:
+FORWARDED: MessageT = lambda wa, m: m.forwarded
+"""
+Filter for forwarded messages.
+
+>>> filters.FORWARDED
+"""
+
+
+def all_(*filters: Callable[[Wa, T], bool]) -> Callable[[Wa, T], bool]:
     """
-    Combine filters with ``and`` & ``or`` like operators.
+    Filter for messages that pass all the given filters.
 
-    If you need to combine filters with ``and`` or ``or``, use ``FilterCombine.all`` or ``FilterCombine.any``.
-
-    Here are some examples:
-
-    >>> from pywa.filters import FilterCombine as FC  # short name for convenience
-
-    Matches messages that start with "Hello" and end with "World" or have a length between 1 and 10:
-
-    >>> FC.all(TextFilter.startswith("Hello"), FC.any(TextFilter.endswith("World"), TextFilter.length((1, 10))))
-
-    Matches messages that are either images or videos with a caption:
-
-    >>> FC.any(ImageFilter.ANY, FC.all(VideoFilter.mimetype("video/mp4"), VideoFilter.HAS_CAPTION))
-
-    Keep in mind that all macth-filters (``match``, ``startswith``, ``endswith``, ``contains`` etc.) returns True if
-    any of the given matches are found. so there is no need to use ``FC.any`` with them.
+    >>> all_(TextFilter.startswith("World"), TextFilter.contains("Word"))
     """
+    return lambda wa, m: all(f(wa, m) for f in filters)
 
-    @staticmethod
-    def all(*filters: Callable[[Wa, T], bool]) -> Callable[[Wa, T], bool]:
-        """
-        Filter for messages that pass all the given filters.
 
-        >>> FilterCombine.all(TextFilter.startswith("World"), TextFilter.contains("Word"))
-        """
-        return lambda wa, m: all(f(wa, m) for f in filters)
+def any_(*filters: Callable[[Wa, T], bool]) -> Callable[[Wa, T], bool]:
+    """
+    Filter for messages that pass any of the given filters.
 
-    @staticmethod
-    def any(*filters: Callable[[Wa, T], bool]) -> Callable[[Wa, T], bool]:
-        """
-        Filter for messages that pass any of the given filters.
+    >>> any_(TextFilter.contains("Hello"), TextFilter.contains("World"))
+    """
+    return lambda wa, m: any(f(wa, m) for f in filters)
 
-        >>> FilterCombine.any(TextFilter.contains("Hello"), TextFilter.contains("World"))
-        """
-        return lambda wa, m: any(f(wa, m) for f in filters)
+
+def not_(fil: Callable[[Wa, T], bool]) -> Callable[[Wa, T], bool]:
+    """
+    Filter for messages that don't pass the given filter.
+
+    >>> not_(TextFilter.contains("Hello"))
+    """
+    return lambda wa, m: not fil(wa, m)
+
+
+def from_user(*numbers: str) -> MessageT:
+    """
+    Filter for messages that are sent from the given numbers.
+        - Aliases: ``from_users``, ``from_numbers``, ``from_number``
+
+    >>> filters.from_user("1234567890", "0987654321")
+    """
+    only_nums_pattern = re.compile(r"\D")
+    numbers = tuple(re.sub(only_nums_pattern, "", n) for n in numbers)
+    return lambda wa, m: m.from_user.wa_id in numbers
+
+
+from_users = from_user  # alias
+from_number = from_user  # alias
+from_numbers = from_user  # alias
 
 
 class _BaseUpdateFilter:
@@ -83,46 +98,20 @@ class _BaseUpdateFilter:
     def _match_type(cls, m: Msg) -> bool:
         return m.type in cls.__message_types__
 
-    @classmethod
-    def from_user(cls, *numbers: str) -> MessageT:
-        """
-        Filter for messages that are sent from the given numbers.
-            - Aliases: ``from_numbers``, ``from_number``
 
-        >>> TextFilter.from_user("1234567890", "0987654321")
-        """
-        only_nums_pattern = re.compile(r"\D")
-        numbers = tuple(re.sub(only_nums_pattern, "", n) for n in numbers)
-        return lambda wa, m: cls._match_type(m) and any(n == m.from_user.wa_id for n in numbers)
-
-    from_users = from_user  # alias
-    from_number = from_user  # alias
-    from_numbers = from_user  # alias
-
-
-class _UpdateWithForwardedFilter(_BaseUpdateFilter):
-    FORWARDED: MessageT = lambda wa, m: m.forwarded
-    """Filter for forwarded messages."""
-
-
-class _MediaFilter(_UpdateWithForwardedFilter):
+class _MediaFilter(_BaseUpdateFilter):
 
     @classmethod
-    def mimetype(cls, *mime_types: str) -> MessageT:
+    def mimetype(cls, *mimetypes: str) -> MessageT:
         """
         Filter for media messages that match any of the given mime types.
-        See https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#supported-media-types
-
             - Aliases: ``mimetypes``, ``mime_type``, ``mime_types``
+            - See https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#supported-media-types
 
-        >>> ImageFilter.mimetype("image/png")
-        >>> VideoFilter.mimetypes("video/mp4", "video/3gpp")
-        >>> AudioFilter.mimetypes("audio/mpeg", "audio/ogg")
-        >>> DocumentFilter.mimetypes("application/pdf", "application/msword")
-        >>> StickerFilter.mime_type("image/webp")
+        >>> ImageFilter.mimetype("image/png", "image/jpeg")
         """
         return lambda wa, m: cls._match_type(m) and any(
-            t == getattr(m, cls.__message_types__[0].value).mime_type for t in mime_types
+            t == getattr(m, cls.__message_types__[0].value).mime_type for t in mimetypes
         )
 
     mimetypes = mimetype  # alias
@@ -133,19 +122,27 @@ class _MediaFilter(_UpdateWithForwardedFilter):
 class _MediaWithCaptionFilter(_MediaFilter):
     @classmethod
     def _has_caption(cls, wa: Wa, m: Msg) -> bool:
-        return m.type == cls.__message_types__[0] and m.caption is not None
+        return cls._match_type(m) and m.caption is not None
 
     HAS_CAPTION: MessageT = _has_caption
-    """Filter for media messages that have a caption."""
+    """
+    Filter for media messages that have a caption.
+    
+    >>> ImageFilter.HAS_CAPTION
+    """
 
 
-class TextFilter(_UpdateWithForwardedFilter):
+class TextFilter(_BaseUpdateFilter):
     """Useful filters for text messages."""
     
     __message_types__ = (Mt.TEXT,)
 
     ANY: MessageT = lambda wa, m: m.type == Mt.TEXT
-    """Filter for all text messages."""
+    """
+    Filter for all text messages.
+    
+    >>> TextFilter.ANY
+    """
 
     @staticmethod
     def match(*matches: str, ignore_case: bool = False) -> MessageT:
@@ -283,7 +280,11 @@ class ImageFilter(_MediaWithCaptionFilter):
     __message_types__ = (Mt.IMAGE,)
 
     ANY: MessageT = lambda wa, m: ImageFilter._match_type(m)
-    """Filter for all image messages."""
+    """
+    Filter for all image messages.
+    
+    >>> ImageFilter.ANY
+    """
 
 
 class VideoFilter(_MediaWithCaptionFilter):
@@ -292,7 +293,11 @@ class VideoFilter(_MediaWithCaptionFilter):
     __message_types__ = (Mt.VIDEO,)
 
     ANY: MessageT = lambda wa, m: VideoFilter._match_type(m)
-    """Filter for all video messages."""
+    """
+    Filter for all video messages.
+    
+    >>> VideoFilter.ANY
+    """
 
 
 class DocumentFilter(_MediaWithCaptionFilter):
@@ -301,7 +306,11 @@ class DocumentFilter(_MediaWithCaptionFilter):
     __message_types__ = (Mt.DOCUMENT,)
 
     ANY: MessageT = lambda wa, m: DocumentFilter._match_type(m)
-    """Filter for all document messages."""
+    """
+    Filter for all document messages.
+    
+    >>> DocumentFilter.ANY
+    """
 
 
 class AudioFilter(_MediaFilter):
@@ -310,13 +319,25 @@ class AudioFilter(_MediaFilter):
     __message_types__ = (Mt.AUDIO,)
 
     ANY: MessageT = lambda wa, m: AudioFilter._match_type(m)
-    """Filter for all audio messages."""
+    """
+    Filter for all audio messages (voice notes and audio files).
+    
+    >>> AudioFilter.ANY
+    """
 
     VOICE: MessageT = lambda wa, m: AudioFilter._match_type(m) and m.audio.voice
-    """Filter for audio messages that are voice notes."""
+    """
+    Filter for audio messages that are voice notes.
+    
+    >>> AudioFilter.VOICE
+    """
 
     AUDIO: MessageT = lambda wa, m: AudioFilter._match_type(m) and not m.audio.voice
-    """Filter for audio messages that are audio files."""
+    """
+    Filter for audio messages that are audio files.
+    
+    >>> AudioFilter.AUDIO
+    """
 
 
 class StickerFilter(_MediaFilter):
@@ -325,22 +346,38 @@ class StickerFilter(_MediaFilter):
     __message_types__ = (Mt.STICKER,)
 
     ANY: MessageT = lambda wa, m: StickerFilter._match_type(m)
-    """Filter for all sticker messages."""
+    """
+    Filter for all sticker messages.
+    
+    >>> StickerFilter.ANY
+    """
 
     ANIMATED: MessageT = lambda wa, m: StickerFilter._match_type(m) and m.sticker.animated
-    """Filter for animated sticker messages."""
+    """
+    Filter for animated sticker messages.
+    
+    >>> StickerFilter.ANIMATED
+    """
 
     STATIC: MessageT = lambda wa, m: StickerFilter._match_type(m) and not m.sticker.animated
-    """Filter for static sticker messages."""
+    """
+    Filter for static sticker messages.
+    
+    >>> StickerFilter.STATIC
+    """
 
 
-class LocationFilter(_UpdateWithForwardedFilter):
+class LocationFilter(_BaseUpdateFilter):
     """Useful filters for location messages."""
 
     __message_types__ = (Mt.LOCATION,)
 
     ANY: MessageT = lambda wa, m: LocationFilter._match_type(m)
-    """Filter for all location messages."""
+    """
+    Filter for all location messages.
+    
+    >>> LocationFilter.ANY
+    """
 
     @staticmethod
     def in_radius(lat: float, lon: float, radius: float | int) -> MessageT:
@@ -370,13 +407,25 @@ class ReactionFilter(_BaseUpdateFilter):
     __message_types__ = (Mt.REACTION,)
 
     ANY: MessageT = lambda wa, m: ReactionFilter._match_type(m)
-    """Filter for all reaction updates (added or removed)."""
+    """
+    Filter for all reaction updates (added or removed).
+    
+    >>> ReactionFilter.ANY
+    """
 
     ADDED: MessageT = lambda wa, m: ReactionFilter._match_type(m) and m.reaction.emoji is not None
-    """Filter for reaction messages that were added."""
+    """
+    Filter for reaction messages that were added.
+    
+    >>> ReactionFilter.ADDED
+    """
 
     REMOVED: MessageT = lambda wa, m: ReactionFilter._match_type(m) and m.reaction.emoji is None
-    """Filter for reaction messages that were removed."""
+    """
+    Filter for reaction messages that were removed.
+    
+    >>> ReactionFilter.REMOVED
+    """
 
     @staticmethod
     def emoji(*emojis: str) -> MessageT:
@@ -393,13 +442,17 @@ class ReactionFilter(_BaseUpdateFilter):
     reactions = emoji  # alias
 
 
-class ContactsFilter(_UpdateWithForwardedFilter):
+class ContactsFilter(_BaseUpdateFilter):
     """Useful filters for contact messages."""
 
     __message_types__ = (Mt.CONTACTS,)
 
     ANY: MessageT = lambda wa, m: ContactsFilter._match_type(m)
-    """Filter for all contacts messages."""
+    """
+    Filter for all contacts messages.
+    
+    >>> ContactsFilter.ANY
+    """
 
     HAS_WA: MessageT = lambda wa, m: ContactsFilter._match_type(m) and (
         any((p.wa_id for p in (phone for contact in m.contacts for phone in contact.phones)))
@@ -445,7 +498,11 @@ class UnsupportedMsgFilter(_BaseUpdateFilter):
     __message_types__ = (Mt.UNSUPPORTED,)
 
     ANY: MessageT = lambda wa, m: m.type == Mt.UNSUPPORTED
-    """Filter for all unsupported messages."""
+    """
+    Filter for all unsupported messages.
+    
+    >>> UnsupportedMsgFilter.ANY
+    """
 
 
 class CallbackFilter(_BaseUpdateFilter):
@@ -454,7 +511,11 @@ class CallbackFilter(_BaseUpdateFilter):
     __message_types__ = (Mt.INTERACTIVE,)
 
     ANY: CallbackT = lambda wa, c: True
-    """Filter for all callback queries (the default)."""
+    """
+    Filter for all callback queries (the default).
+    
+    >>> CallbackFilter.ANY
+    """
 
     @staticmethod
     def data_match(*matches: str, ignore_case: bool = False) -> CallbackT:
@@ -544,16 +605,32 @@ class MessageStatusFilter(_BaseUpdateFilter):
     __message_types__ = (Mt.MESSAGE_STATUS,)
 
     SENT: MessageStatusT = lambda wa, data: data.status == Mst.SENT
-    """Filter for messages that have been sent."""
+    """
+    Filter for messages that have been sent.
+    
+    >>> MessageStatusFilter.SENT
+    """
 
     DELIVERED: MessageStatusT = lambda wa, data: data.status == Mst.DELIVERED
-    """Filter for messages that have been delivered."""
+    """
+    Filter for messages that have been delivered.
+    
+    >>> MessageStatusFilter.DELIVERED
+    """
 
     READ: MessageStatusT = lambda wa, data: data.status == Mst.READ
-    """Filter for messages that have been read."""
+    """
+    Filter for messages that have been read.
+    
+    >>> MessageStatusFilter.READ
+    """
 
     FAILED: MessageStatusT = lambda wa, data: data.status == Mst.FAILED
-    """Filter for messages that have failed to send (than you can access to the ``error`` attribute)."""
+    """
+    Filter for messages that have failed to send (than you can access to the ``error`` attribute).
+    
+    >>> MessageStatusFilter.FAILED
+    """
 
     @staticmethod
     def failed_with_error_code(*codes: int) -> MessageStatusT:

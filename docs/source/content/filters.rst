@@ -1,7 +1,9 @@
-Filters
-=======
+🔬 Filters
+============
 
 .. currentmodule:: pywa.filters
+
+- See all the `Built-in Filters`_.
 
 Filters are used by the handlers to determine if they should handle an update or not.
 You can create your own filters by providing a function that takes the client and the update and returns a boolean.
@@ -52,42 +54,128 @@ Here is an example of how to use them:
 
 ----------------------------------------
 
+Combining Filters
+-----------------
+
+If you need to combine (``&``, ``|``) or negate (``not``) filters, you can use the
+:meth:`all_`, :meth:`any_` and :meth:`not_` functions.
+
+Here is some examples:
+
+.. code-block:: python
+
+    from pywa import filters as fil  # short name for convenience
+    from pywa.filters import TextFilter, ImageFilter, VideoFilter
+
+    fil.all_(TextFilter.startswith("Hello"), fil.any_(TextFilter.endswith("World"), TextFilter.length((1, 10))))
+    fil.any_(ImageFilter.ANY, fil.all_(VideoFilter.mimetype("video/mp4"), VideoFilter.HAS_CAPTION))
+    fil.not_(TextFilter.contains("bad word"))
+
+
+Keep in mind that all match-filters (``match``, ``startswith``, ``endswith``, ``contains`` etc.) returns True if
+any of the given matches are found. so there is no need to use ``FC.any`` with them.
+
+----------------------------------------
+
+
+Helper functions
+~~~~~~~~~~~~~~~~
+
+
+.. autodata:: FORWARDED
+.. autofunction:: all_
+.. autofunction:: any_
+.. autofunction:: not_
+.. autofunction:: from_user
+
+----------------------------------------
+
 Built-in Filters
 ----------------
 
+----------------
+
+Message Filters
+~~~~~~~~~~~~~~~
+
 .. autoclass:: TextFilter
-    :members:
+.. autoattribute:: TextFilter.ANY
+.. automethod:: TextFilter.match
+.. automethod:: TextFilter.contain
+.. automethod:: TextFilter.startswith
+.. automethod:: TextFilter.endswith
+.. automethod:: TextFilter.regex
+.. automethod:: TextFilter.length
+.. automethod:: TextFilter.command
 
 .. autoclass:: ImageFilter
-    :members:
+.. autoattribute:: ImageFilter.ANY
+.. autoattribute:: ImageFilter.HAS_CAPTION
+.. automethod:: ImageFilter.mimetype
 
 .. autoclass:: VideoFilter
-    :members:
+.. autoattribute:: VideoFilter.ANY
+.. autoattribute:: VideoFilter.HAS_CAPTION
+.. automethod:: VideoFilter.mimetype
 
 .. autoclass:: AudioFilter
-    :members:
+.. autoattribute:: AudioFilter.ANY
+.. autoattribute:: AudioFilter.VOICE
+.. autoattribute:: AudioFilter.AUDIO
 
 .. autoclass:: DocumentFilter
-    :members:
+.. autoattribute:: DocumentFilter.ANY
+.. autoattribute:: DocumentFilter.HAS_CAPTION
+.. automethod:: DocumentFilter.mimetype
 
 .. autoclass:: StickerFilter
-    :members:
+.. autoattribute:: StickerFilter.ANY
+.. autoattribute:: StickerFilter.ANIMATED
+.. autoattribute:: StickerFilter.STATIC
 
 .. autoclass:: ReactionFilter
-    :members:
-
-.. autoclass:: UnsupportedMsgFilter
-    :members:
+.. autoattribute:: ReactionFilter.ANY
+.. autoattribute:: ReactionFilter.ADDED
+.. autoattribute:: ReactionFilter.REMOVED
+.. automethod:: ReactionFilter.emoji
 
 .. autoclass:: LocationFilter
-    :members:
+.. autoattribute:: LocationFilter.ANY
+.. automethod:: LocationFilter.in_radius
 
 .. autoclass:: ContactsFilter
-    :members:
+.. autoattribute:: ContactsFilter.ANY
+.. autoattribute:: ContactsFilter.HAS_WA
+.. automethod:: ContactsFilter.count
+.. automethod:: ContactsFilter.phone
+
+
+.. autoclass:: UnsupportedMsgFilter
+.. autoattribute:: UnsupportedMsgFilter.ANY
+
+----------------
+
+Callback Filters
+~~~~~~~~~~~~~~~~
 
 .. autoclass:: CallbackFilter
-    :members:
+.. autoattribute:: CallbackFilter.ANY
+.. automethod:: CallbackFilter.data_match
+.. automethod:: CallbackFilter.data_contain
+.. automethod:: CallbackFilter.data_startswith
+.. automethod:: CallbackFilter.data_endswith
+.. automethod:: CallbackFilter.data_regex
+
+----------------
+
+Message Status Filters
+~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: MessageStatusFilter
-    :members:
+.. autoattribute:: MessageStatusFilter.SENT
+.. autoattribute:: MessageStatusFilter.DELIVERED
+.. autoattribute:: MessageStatusFilter.READ
+.. autoattribute:: MessageStatusFilter.FAILED
+.. automethod:: MessageStatusFilter.failed_with_error_code
+.. automethod:: MessageStatusFilter.failed_with_exception
 
