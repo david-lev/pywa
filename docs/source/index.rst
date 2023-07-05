@@ -16,5 +16,5 @@
     content/client
     content/types
     content/filters
-    content/erros
+    content/errors
     content/examples

@@ -1,5 +1,7 @@
 """The WhatsApp client."""
 
+__all__ = ("WhatsApp",)
+
 import hashlib
 import mimetypes
 import os

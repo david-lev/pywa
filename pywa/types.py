@@ -16,11 +16,11 @@ __all__ = (
 )
 
 from datetime import datetime
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field, asdict, fields
 from enum import Enum
 from typing import TYPE_CHECKING, Iterable
 from pywa import utils
-from pywa.errors import WhatsAppApiError
+from pywa.errors import WhatsAppError
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
@@ -148,16 +148,25 @@ class MessageType(str, Enum):
         return self.value
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class _FromDict:
+    """Base class for dataclasses that can be created from dict unpacking."""
+    # noinspection PyArgumentList
+    @classmethod
+    def from_dict(cls, **kwargs):
+
+        return cls(**{
+            k: v for k, v in kwargs.items()
+            if k in (f.name for f in fields(cls))
+        })
+
+
 @dataclass(frozen=True, slots=True)
-class MediaBase:
+class MediaBase(_FromDict):
     _client: WhatsApp = field(repr=False, hash=False, compare=False)
     id: str
     sha256: str
     mime_type: str
-
-    @classmethod
-    def from_dict(cls, client: WhatsApp, data: dict | None):
-        return cls(_client=client, **data) if data else None
 
     def get_media_url(self) -> str:
         """Gets the URL of the media. (expires after 5 minutes)"""
@@ -200,9 +209,7 @@ class Image(MediaBase):
         id: The ID of the image.
         sha256: The SHA256 hash of the image.
         mime_type: The MIME type of the image.
-        caption: The caption of the image (optional).
     """
-    caption: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -215,7 +222,6 @@ class Video(MediaBase):
         sha256: The SHA256 hash of the video.
         mime_type: The MIME type of the video.
     """
-    caption: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -244,7 +250,6 @@ class Document(MediaBase):
         filename: The filename of the document (optional).
     """
     filename: str | None = None
-    caption: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -262,7 +267,7 @@ class Audio(MediaBase):
 
 
 @dataclass(frozen=True, slots=True)
-class Reaction:
+class Reaction(_FromDict):
     """
     Represents a reaction to a message.
 
@@ -273,13 +278,9 @@ class Reaction:
     message_id: str
     emoji: str | None = None
 
-    @classmethod
-    def from_dict(cls, data: dict | None):
-        return cls(**data) if data else None
-
 
 @dataclass(frozen=True, slots=True)
-class Location:
+class Location(_FromDict):
     """
     Represents a location.
 
@@ -296,25 +297,20 @@ class Location:
     address: str | None = None
     url: str | None = None
 
-    @classmethod
-    def from_dict(cls, data: dict | None):
-        return cls(**data) if data else None
-
-    def in_radius(self, other: Location, radius: float | int) -> bool:
+    def in_radius(self, lat: float, lon: float, radius: float | int) -> bool:
         """
         Check if the location is in a radius of another location.
 
         Args:
-            other: The other location (the center. No need for name, address or url).
+            lat: The latitude of the other location.
+            lon: The longitude of the other location.
             radius: The radius in kilometers.
         """
-        return utils.get_distance(
-            lat1=self.latitude, lon1=self.longitude, lat2=other.latitude, lon2=other.longitude
-        ) <= radius
+        return utils.get_distance(lat1=self.latitude, lon1=self.longitude, lat2=lat, lon2=lon) <= radius
 
 
 @dataclass(frozen=True, slots=True)
-class MediaUrlResponse:
+class MediaUrlResponse(_FromDict):
     """
     Represents a media response.
 
@@ -375,15 +371,15 @@ class Contact:
     org: Org | None = None
 
     @classmethod
-    def from_dict(cls, data: dict | None):
+    def from_dict(cls, **data):
         return cls(
-            name=cls.Name(**data["name"]),
+            name=cls.Name.from_dict(**data["name"]),
             birthday=data.get("birthday"),
-            phones=[cls.Phone.from_dict(phone) for phone in data.get("phones", ())],
-            emails=[cls.Email.from_dict(email) for email in data.get("emails", ())],
-            urls=[cls.Url.from_dict(url) for url in data.get("urls", ())],
-            addresses=[cls.Address.from_dict(address) for address in data.get("addresses", ())],
-            org=cls.Org.from_dict(data.get("org")),
+            phones=[cls.Phone.from_dict(**phone) for phone in data.get("phones", ())],
+            emails=[cls.Email.from_dict(**email) for email in data.get("emails", ())],
+            urls=[cls.Url.from_dict(**url) for url in data.get("urls", ())],
+            addresses=[cls.Address.from_dict(**address) for address in data.get("addresses", ())],
+            org=cls.Org.from_dict(**data.get("org")) if data.get("org") else None,
         ) if data else None
 
     def to_dict(self) -> dict:
@@ -398,7 +394,7 @@ class Contact:
         }
 
     @dataclass(frozen=True, slots=True)
-    class Name:
+    class Name(_FromDict):
         """
         Represents a contact's name.
 
@@ -420,7 +416,7 @@ class Contact:
         prefix: str | None = None
 
     @dataclass(frozen=True, slots=True)
-    class Phone:
+    class Phone(_FromDict):
         """
         Represents a contact's phone number.
 
@@ -433,12 +429,8 @@ class Contact:
         type: str | None = None
         wa_id: str | None = None
 
-        @classmethod
-        def from_dict(cls, data: dict | None):
-            return cls(**data) if data else None
-
     @dataclass(frozen=True, slots=True)
-    class Email:
+    class Email(_FromDict):
         """
         Represents a contact's email address.
 
@@ -449,12 +441,8 @@ class Contact:
         email: str | None = None
         type: str | None = None
 
-        @classmethod
-        def from_dict(cls, data: dict | None):
-            return cls(**data) if data else None
-
     @dataclass(frozen=True, slots=True)
-    class Url:
+    class Url(_FromDict):
         """
         Represents a contact's URL.
 
@@ -465,12 +453,8 @@ class Contact:
         url: str | None = None
         type: str | None = None
 
-        @classmethod
-        def from_dict(cls, data: dict | None):
-            return cls(**data) if data else None
-
     @dataclass(frozen=True, slots=True)
-    class Org:
+    class Org(_FromDict):
         """
         Represents a contact's organization.
 
@@ -483,12 +467,8 @@ class Contact:
         department: str | None = None
         title: str | None = None
 
-        @classmethod
-        def from_dict(cls, data: dict | None):
-            return cls(**data) if data else None
-
     @dataclass(frozen=True, slots=True)
-    class Address:
+    class Address(_FromDict):
         """
         Represents a contact's address.
 
@@ -508,10 +488,6 @@ class Contact:
         country: str | None = None
         country_code: str | None = None
         type: str | None = None
-
-        @classmethod
-        def from_dict(cls, data: dict | None):
-            return cls(**data) if data else None
 
 
 @dataclass(frozen=True, slots=True)
@@ -535,7 +511,7 @@ class ReplyToMessage:
 
 
 @dataclass(frozen=True, slots=True)
-class Metadata:
+class Metadata(_FromDict):
     """
     Represents the metadata of a message.
 
@@ -598,8 +574,6 @@ class BaseUpdate:
             header=header,
             footer=footer
         )
-
-    reply = reply_text  # alias
 
     def reply_image(
             self,
@@ -862,9 +836,11 @@ class Message(BaseUpdate):
         sticker: The sticker of the message (if the message type is sticker). (optional)
         document: The document of the message (if the message type is document). (optional)
         audio: The audio of the message (if the message type is audio). (optional)
+        caption: The caption of the message (if the message type is image, video, or document). (optional)
         reaction: The reaction of the message (if the message type is reaction). (optional)
         location: The location of the message (if the message type is location). (optional)
         contacts: The contacts of the message (if the message type is contacts). (optional)
+        error: The error of the message (if the message type is `unsupported`). (optional)
     """
     reply_to_message: ReplyToMessage | None
     forwarded: bool
@@ -875,17 +851,19 @@ class Message(BaseUpdate):
     sticker: Sticker | None
     document: Document | None
     audio: Audio | None
+    caption: str | None
     reaction: Reaction | None
     location: Location | None
     contacts: list[Contact] | None
+    error: WhatsAppError | None
 
     @property
     def message_id_to_reply(self) -> str:
-        """The ID of the message"""
+        """The ID of the message to reply to."""
         return self.id if self.type != MessageType.REACTION else self.reaction.message_id
 
     @classmethod
-    def from_dict(cls, client: WhatsApp, value: dict):
+    def from_dict(cls, client: WhatsApp, value: dict) -> Message:
         message = value['messages'][0]
         return cls(
             _client=client,
@@ -893,19 +871,22 @@ class Message(BaseUpdate):
             type=MessageType(message['type']),
             from_user=User.from_dict(value['contacts'][0]),
             timestamp=datetime.fromtimestamp(int(message['timestamp'])),
-            metadata=Metadata(**value['metadata']),
+            metadata=Metadata.from_dict(**value['metadata']),
             forwarded=message.get('context', {}).get('forwarded', False),
             forwarded_frequently=message.get('context', {}).get('frequently_forwarded', False),
             reply_to_message=ReplyToMessage.from_dict(message.get('context')),
             text=message['text']['body'] if 'text' in message else None,
-            image=Image.from_dict(client=client, data=message.get('image')),
-            video=Video.from_dict(client=client, data=message.get('video')),
-            sticker=Sticker.from_dict(client=client, data=message.get('sticker')),
-            document=Document.from_dict(client=client, data=message.get('document')),
-            audio=Audio.from_dict(client=client, data=message.get('audio')),
-            reaction=Reaction.from_dict(message.get('reaction')),
-            location=Location.from_dict(message.get('location')),
-            contacts=[Contact.from_dict(contact) for contact in message.get('contacts', ())] or None
+            image=Image.from_dict(_client=client, **message.get('image')) if 'image' in message else None,
+            video=Video.from_dict(_client=client, **message.get('video')) if 'video' in message else None,
+            sticker=Sticker.from_dict(_client=client, **message.get('sticker')) if 'sticker' in message else None,
+            document=Document.from_dict(_client=client, **message.get('document')) if 'document' in message else None,
+            audio=Audio.from_dict(_client=client, **message.get('audio')) if 'audio' in message else None,
+            caption=message.get(message['type'], {}).get('caption', None)
+            if message['type'] in ('image', 'video', 'document') else None,
+            reaction=Reaction.from_dict(**message.get('reaction')) if 'reaction' in message else None,
+            location=Location.from_dict(**message.get('location')) if 'location' in message else None,
+            contacts=[Contact.from_dict(**contact) for contact in message.get('contacts', ())] or None,
+            error=WhatsAppError.from_incoming_error(message['errors'][0]) if 'errors' in message else None
         )
 
     def download_media(
@@ -964,7 +945,7 @@ class CallbackButton(BaseUpdate):
         return cls(
             _client=client,
             id=message['id'],
-            metadata=Metadata(**value['metadata']),
+            metadata=Metadata.from_dict(**value['metadata']),
             type=MessageType(message['type']),
             from_user=User.from_dict(value['contacts'][0]),
             timestamp=datetime.fromtimestamp(int(message['timestamp'])),
@@ -1006,7 +987,7 @@ class CallbackSelection(BaseUpdate):
         return cls(
             _client=client,
             id=message['id'],
-            metadata=Metadata(**value['metadata']),
+            metadata=Metadata.from_dict(**value['metadata']),
             type=MessageType(message['type']),
             from_user=User.from_dict(value['contacts'][0]),
             timestamp=datetime.fromtimestamp(int(message['timestamp'])),
@@ -1035,14 +1016,13 @@ class MessageStatus(BaseUpdate):
     Attributes:
         id: The ID of the message that the status is for.
         metadata: The metadata of the message (to which phone number it was sent).
-        type: The message type (always ``message_status``).
         status: The status of the message.
         timestamp: The timestamp when the status was updated.
         from_user: The user who the message was sent to.
         error: The error that occurred (if status is ``failed``).
     """
     status: MessageStatusType
-    error: WhatsAppApiError | None
+    error: WhatsAppError | None
 
     @classmethod
     def from_dict(cls, client: WhatsApp, value: dict):
@@ -1051,11 +1031,11 @@ class MessageStatus(BaseUpdate):
         return cls(
             _client=client,
             id=status['id'],
-            metadata=Metadata(**value['metadata']),
+            metadata=Metadata.from_dict(**value['metadata']),
             type=MessageType.MESSAGE_STATUS,
             status=status_type,
             timestamp=datetime.fromtimestamp(int(status['timestamp'])),
             from_user=User(wa_id=status['recipient_id'], name=None),
-            error=WhatsAppApiError.from_incoming_error(status['errors'][0])
+            error=WhatsAppError.from_incoming_error(status['errors'][0])
             if status_type == MessageStatusType.FAILED else None
         )

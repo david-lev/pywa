@@ -92,7 +92,7 @@ ________________________
         verify_token='XYZXYZ',
     )
 
-    @wa.on_message(TextFilter.equals('Hello', 'Hi'))
+    @wa.on_message(TextFilter.match('Hello', 'Hi'))
     def hello(client: WhatsApp, message: Message):
         message.react('👋')
         message.reply_text(
@@ -105,7 +105,7 @@ ________________________
             ]
         )
 
-    @wa.on_callback_button(CallbackFilter.data_startswith('id:'))
+    @wa.on_callback_button(CallbackFilter.data_startswith('id'))
     def click_me(client: WhatsApp, clb: CallbackButton):
         clb.reply_text('You clicked me!')
 
