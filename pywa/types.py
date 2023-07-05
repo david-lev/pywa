@@ -855,6 +855,7 @@ class Message(BaseUpdate):
         timestamp: The timestamp when the message was sent.
         reply_to_message: The message to which this message is a reply to. (optional)
         forwarded: Whether the message was forwarded.
+        forwarded_frequently: When the message was been forwarded meny times.
         text: The text of the message (if the message type is text). (optional)
         image: The image of the message (if the message type is image). (optional)
         video: The video of the message (if the message type is video). (optional)
@@ -867,6 +868,7 @@ class Message(BaseUpdate):
     """
     reply_to_message: ReplyToMessage | None
     forwarded: bool
+    forwarded_frequently: bool
     text: str | None
     image: Image | None
     video: Video | None
@@ -893,6 +895,7 @@ class Message(BaseUpdate):
             timestamp=datetime.fromtimestamp(int(message['timestamp'])),
             metadata=Metadata(**value['metadata']),
             forwarded=message.get('context', {}).get('forwarded', False),
+            forwarded_frequently=message.get('context', {}).get('frequently_forwarded', False),
             reply_to_message=ReplyToMessage.from_dict(message.get('context')),
             text=message['text']['body'] if 'text' in message else None,
             image=Image.from_dict(client=client, data=message.get('image')),
