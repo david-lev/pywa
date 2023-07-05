@@ -914,6 +914,63 @@ class Message(BaseUpdate):
             raise ValueError('The message does not contain any media.')
         return media.download(path=filepath, filename=filename, in_memory=in_memory)
 
+    def copy(self, to: str):
+
+        if self.text:
+            self._client.send_message(
+                to=to,
+                text=self.text
+                # preview_url=False,
+                # TODO An option should be added that if the message has a preview, for example,
+                # then the message will be copied with a preview or at least an option to control it
+            )
+
+        elif self.document:
+            self._client.send_document(
+                to=to,
+                document=self.document.id,
+                filename=self.document.filename,
+                caption=self.caption,
+            )
+
+        elif self.image:
+            self._client.send_image(
+                to=to,
+                image=self.image.id,
+                caption=self.caption,
+            )
+
+        elif self.video:
+            self._client.send_video(
+                to=to,
+                video=self.video.id,
+                caption=self.caption
+            )
+
+        elif self.sticker:
+            self._client.send_sticker(
+                to=to,
+                sticker=self.sticker.id
+            )
+
+        elif self.location:
+            self._client.send_location(
+                to=to,
+                latitude=self.location.latitude,
+                longitude=self.location.longitude,
+                name=self.location.name,
+                address=self.location.address
+            )
+
+        elif self.audio:
+            self._client.send_audio(
+                to=to,
+                audio=self.audio.id
+            )
+
+        elif self.contacts:
+            pass  # TODO
+
 
 @dataclass(frozen=True, slots=True)
 class CallbackButton(BaseUpdate):
