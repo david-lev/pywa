@@ -914,65 +914,117 @@ class Message(BaseUpdate):
             raise ValueError('The message does not contain any media.')
         return media.download(path=filepath, filename=filename, in_memory=in_memory)
 
-    def copy(self, to: str):
+    def copy(
+            self,
+            to: str,
+            reply_to_message_id: str = None,
+            preview_url: bool = False,
+            keyboard: list[InlineButton] | SectionList | None = None,
+            header: str | None = None,
+            body: str | None = None,
+            footer: str | None = None,
+    ) -> str:
+        """
+        Copy incoming message to another chat
+            - The WhatsApp Cloud API does not offer a `real` forward option so this is just copy the message content.
 
-        if self.text:
-            self._client.send_message(
-                to=to,
-                text=self.text
-                # preview_url=False,
-                # TODO An option should be added that if the message has a preview, for example,
-                # then the message will be copied with a preview or at least an option to control it
-            )
+        Args:
+            to: The phone ID of the WhatsApp user to copy the message to.
+            reply_to_message_id:  The message ID to reply to (optional).
+            preview_url: Whether to show a preview of the URL in the message (if any).
+            keyboard: The buttons to send with the message (only in case of message from type ``text``, ``document``,
+             ``video`` and ``image``. also, the ``SectionList`` is only available to ``text`` type)
+            header: The header of the message (if keyboard is provided, optional, up to 60 characters, no markdown allowed).
+            body: The body of the message (if keyboard are provided, optional, up to 1024 characters, markdown allowed).
+            footer: The footer of the message (if keyboard is provided, optional, markdown has no effect).
 
-        elif self.document:
-            self._client.send_document(
-                to=to,
-                document=self.document.id,
-                filename=self.document.filename,
-                caption=self.caption,
-            )
+        Returns:
+            The ID of the sent message.
 
-        elif self.image:
-            self._client.send_image(
-                to=to,
-                image=self.image.id,
-                caption=self.caption,
-            )
-
-        elif self.video:
-            self._client.send_video(
-                to=to,
-                video=self.video.id,
-                caption=self.caption
-            )
-
-        elif self.sticker:
-            self._client.send_sticker(
-                to=to,
-                sticker=self.sticker.id
-            )
-
-        elif self.location:
-            self._client.send_location(
-                to=to,
-                latitude=self.location.latitude,
-                longitude=self.location.longitude,
-                name=self.location.name,
-                address=self.location.address
-            )
-
-        elif self.audio:
-            self._client.send_audio(
-                to=to,
-                audio=self.audio.id
-            )
-
-        elif self.contacts:
-            self._client.send_contact(
-                to=to,
-                contact=self.contacts
-            )
+        Raises:
+            ValueError: If the message type is ``reaction`` and no ``reply_to_message_id`` is provided, or if the message
+             type is ``unsupported``.
+        """
+        match self.type:
+            case MessageType.TEXT:
+                return self._client.send_message(
+                    to=to,
+                    reply_to_message_id=reply_to_message_id,
+                    text=self.text,
+                    preview_url=preview_url,
+                    keyboard=keyboard,
+                    header=header,
+                    footer=footer,
+                )
+            case MessageType.DOCUMENT:
+                return self._client.send_document(
+                    to=to,
+                    reply_to_message_id=reply_to_message_id,
+                    document=self.document.id,
+                    filename=self.document.filename,
+                    caption=self.caption,
+                    buttons=keyboard,
+                    body=body,
+                    footer=footer,
+                )
+            case MessageType.IMAGE:
+                return self._client.send_image(
+                    to=to,
+                    reply_to_message_id=reply_to_message_id,
+                    image=self.image.id,
+                    caption=self.caption,
+                    buttons=keyboard,
+                    body=body,
+                    footer=footer,
+                )
+            case MessageType.VIDEO:
+                return self._client.send_video(
+                    to=to,
+                    reply_to_message_id=reply_to_message_id,
+                    video=self.video.id,
+                    caption=self.caption,
+                    buttons=keyboard,
+                    body=body,
+                    footer=footer,
+                )
+            case MessageType.STICKER:
+                return self._client.send_sticker(
+                    to=to,
+                    reply_to_message_id=reply_to_message_id,
+                    sticker=self.sticker.id
+                )
+            case MessageType.LOCATION:
+                return self._client.send_location(
+                    to=to,
+                    latitude=self.location.latitude,
+                    longitude=self.location.longitude,
+                    name=self.location.name,
+                    address=self.location.address
+                )
+            case MessageType.AUDIO:
+                return self._client.send_audio(
+                    to=to,
+                    reply_to_message_id=reply_to_message_id,
+                    audio=self.audio.id
+                )
+            case MessageType.CONTACTS:
+                return self._client.send_contact(
+                    to=to,
+                    reply_to_message_id=reply_to_message_id,
+                    contact=self.contacts
+                )
+            case MessageType.REACTION:
+                if reply_to_message_id is None:
+                    raise ValueError("You need to provide `reply_to_message_id` in order to `copy` a reaction")
+                return self._client.send_reaction(
+                    to=to,
+                    message_id=reply_to_message_id,
+                    emoji=self.reaction.emoji or ""
+                )
+            case MessageType.UNSUPPORTED:
+                raise ValueError("MessageType.UNSUPPORTED cannot be copied!")
+            case _:
+                raise ValueError("Message with unknown type cannot be copied!")
 
 
 @dataclass(frozen=True, slots=True)
