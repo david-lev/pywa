@@ -151,10 +151,10 @@ class MessageType(str, Enum):
 @dataclass(frozen=True, slots=True, kw_only=True)
 class _FromDict:
     """Base class for dataclasses that can be created from dict unpacking."""
+
     # noinspection PyArgumentList
     @classmethod
     def from_dict(cls, **kwargs):
-
         return cls(**{
             k: v for k, v in kwargs.items()
             if k in (f.name for f in fields(cls))
@@ -969,7 +969,10 @@ class Message(BaseUpdate):
             )
 
         elif self.contacts:
-            pass  # TODO
+            self._client.send_contact(
+                to=to,
+                contact=self.contacts
+            )
 
 
 @dataclass(frozen=True, slots=True)
