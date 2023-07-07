@@ -5,7 +5,8 @@ messages."""
 
 import collections
 from typing import Union, TYPE_CHECKING, Callable, Any
-from pywa.types import Message, CallbackButton, CallbackSelection, MessageStatus, BaseUpdate
+from pywa.types import Message, CallbackButton, CallbackSelection, MessageStatus
+from pywa.types.base_update import BaseUpdate
 from pywa import utils
 
 if TYPE_CHECKING:
