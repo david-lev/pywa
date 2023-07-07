@@ -20,7 +20,7 @@ class MessageStatusType(_StrEnum):
     FAILED = 'failed'
     UNKNOWN = 'unknown'
 
-    def __missing__(self, key):
+    def _missing_(self, key):
         return self.UNKNOWN
 
 
