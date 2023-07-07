@@ -3,10 +3,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING
 from .base_update import BaseUpdate
+from .others import MessageType, Metadata, User, ReplyToMessage
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
-    from .others import MessageType, Metadata, User, ReplyToMessage
 
 
 @dataclass(frozen=True, slots=True)

@@ -5,11 +5,10 @@ from typing import TYPE_CHECKING
 from pywa.errors import WhatsAppError
 from .others import _StrEnum
 from .base_update import BaseUpdate
+from .others import Metadata, MessageType, User
 
 if TYPE_CHECKING:
-    from ..client import WhatsApp
-    from .base_update import BaseUpdate
-    from .others import Metadata, MessageType, User
+    from pywa.client import WhatsApp
 
 
 class MessageStatusType(_StrEnum):

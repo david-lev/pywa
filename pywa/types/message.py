@@ -4,12 +4,12 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from pywa.errors import WhatsAppError
 from .base_update import BaseUpdate
+from .others import ReplyToMessage, Reaction, Location, Contact, MessageType, User, Metadata
+from .callback import SectionList, InlineButton
+from .media import Image, Video, Sticker, Document, Audio
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
-    from .callback import SectionList, InlineButton
-    from .media import Image, Video, Sticker, Document, Audio
-    from .others import ReplyToMessage, Reaction, Location, Contact, MessageType, User, Metadata
 
 
 @dataclass(frozen=True, slots=True)

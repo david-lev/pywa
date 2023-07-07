@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 from .others import _FromDict
@@ -109,3 +110,42 @@ class Audio(MediaBase):
         voice: Whether the audio is a voice message or just an audio file.
     """
     voice: bool
+
+
+@dataclass(frozen=True, slots=True)
+class MediaUrlResponse(_FromDict):
+    """
+    Represents a media response.
+
+    Attributes:
+        id: The ID of the media.
+        url: The URL of the media (valid for 5 minutes).
+        mime_type: The MIME type of the media.
+        sha256: The SHA256 hash of the media.
+        file_size: The size of the media in bytes.
+    """
+    _client: WhatsApp = field(repr=False, hash=False, compare=False)
+    id: str
+    url: str
+    mime_type: str
+    sha256: str
+    file_size: int
+
+    def download(
+            self,
+            filepath: str | None = None,
+            filename: str | None = None,
+            in_memory: bool = False,
+    ) -> bytes | str:
+        """
+        Download a media file from WhatsApp servers.
+
+        Args:
+            filepath: The path where to save the file (if not provided, the current working directory will be used).
+            filename: The name of the file (if not provided, it will be guessed from the URL + extension).
+            in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
+
+        Returns:
+            The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
+        """
+        return self._client.download_media(url=self.url, path=filepath, filename=filename, in_memory=in_memory)
