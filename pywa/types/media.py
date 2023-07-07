@@ -1,4 +1,5 @@
 from __future__ import annotations
+import mimetypes
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 from .others import _FromDict
@@ -17,6 +18,11 @@ class MediaBase(_FromDict):
     def get_media_url(self) -> str:
         """Gets the URL of the media. (expires after 5 minutes)"""
         return self._client.get_media_url(media_id=self.id).url
+
+    @property
+    def extension(self) -> str | None:
+        """Gets the extension of the media (with dot. eg: .jpg, .mp4, ...)"""
+        return mimetypes.guess_extension(self.mime_type)
 
     def download(
             self,
