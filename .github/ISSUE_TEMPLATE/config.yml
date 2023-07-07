@@ -1,5 +1,8 @@
 blank_issues_enabled: true
 contact_links:
-  - name: Pywa Discussions
-    url: https://github.com/david-lev/pywa/discussions
-    about: For questions etc.
+  - name: Telegram Group
+    url: https://t.me/pywachat
+    about: Please ask and answer questions here.
+  - name: Telegram Channel
+    url: https://t.me/py_wa
+    about: Please subscribe to get the latest news.

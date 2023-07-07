@@ -1,9 +1,4 @@
-import math
 from importlib import import_module
-from typing import Callable, TYPE_CHECKING
-if TYPE_CHECKING:
-    from pywa import WhatsApp
-    from pywa.types import MessageType, Message
 
 
 def is_fastapi_app(app):
@@ -26,6 +21,7 @@ def get_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """
     Calculate the distance between two points on Earth using the Haversine formula.
     """
+    math = import_module("math")
     lon1, lat1, lon2, lat2 = map(math.radians, [lon1, lat1, lon2, lat2])
     return (2 * math.asin(
         math.sqrt(

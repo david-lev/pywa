@@ -6,6 +6,7 @@ __all__ = (
     "any_",
     "not_",
     "FORWARDED",
+    "FORWARDED_MANY_TIMES",
     "from_user",
     "TextFilter",
     "ImageFilter",
@@ -43,6 +44,13 @@ FORWARDED: MessageT = lambda wa, m: m.forwarded
 Filter for forwarded messages.
 
 >>> filters.FORWARDED
+"""
+
+FORWARDED_MANY_TIMES: MessageT = lambda wa, m: m.forwarded_many_times
+"""
+Filter for messages that have been forwarded many times.
+
+>>> filters.FORWARDED_MANY_TIMES
 """
 
 

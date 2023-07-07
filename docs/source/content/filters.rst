@@ -83,6 +83,7 @@ Helper functions
 
 
 .. autodata:: FORWARDED
+.. autodata:: FORWARDED_MANY_TIMES
 .. autofunction:: all_
 .. autofunction:: any_
 .. autofunction:: not_
