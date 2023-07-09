@@ -9,6 +9,7 @@ __all__ = (
     "FORWARDED_MANY_TIMES",
     "from_user",
     "TextFilter",
+    "MediaFilter",
     "ImageFilter",
     "VideoFilter",
     "AudioFilter",
@@ -99,7 +100,9 @@ from_numbers = from_user  # alias
 
 
 class _BaseUpdateFilter:
-
+    """
+    Base class for all filters.
+    """
     __message_types__: tuple[Mt, ...] = ()
     
     @classmethod
@@ -107,7 +110,18 @@ class _BaseUpdateFilter:
         return m.type in cls.__message_types__
 
 
-class _MediaFilter(_BaseUpdateFilter):
+class MediaFilter(_BaseUpdateFilter):
+    """
+    Useful filters for media messages.
+    """
+    __message_types__ = (Mt.IMAGE, Mt.VIDEO, Mt.AUDIO, Mt.DOCUMENT, Mt.STICKER)
+
+    ANY: MessageT = lambda wa, m: m.has_media
+    """
+    Filter for all media messages.
+    
+    >>> MediaFilter.ANY
+    """
 
     @classmethod
     def mimetype(cls, *mimetypes: str) -> MessageT:
@@ -127,7 +141,7 @@ class _MediaFilter(_BaseUpdateFilter):
     mime_types = mimetype  # alias
 
 
-class _MediaWithCaptionFilter(_MediaFilter):
+class _MediaWithCaptionFilter(MediaFilter):
     @classmethod
     def _has_caption(cls, wa: Wa, m: Msg) -> bool:
         return cls._match_type(m) and m.caption is not None
@@ -321,7 +335,7 @@ class DocumentFilter(_MediaWithCaptionFilter):
     """
 
 
-class AudioFilter(_MediaFilter):
+class AudioFilter(MediaFilter):
     """Useful filters for audio messages."""
 
     __message_types__ = (Mt.AUDIO,)
@@ -348,7 +362,7 @@ class AudioFilter(_MediaFilter):
     """
 
 
-class StickerFilter(_MediaFilter):
+class StickerFilter(MediaFilter):
     """Useful filters for sticker messages."""
 
     __message_types__ = (Mt.STICKER,)
