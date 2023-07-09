@@ -438,7 +438,7 @@ class WhatsApp:
             >>> wa.send_document(
             ...     to="1234567890",
             ...     document="https://example.com/example_123.pdf",
-            ...     file_name="exmaple.pdf",
+            ...     file_name="example.pdf",
             ...     caption="Example PDF"
             ... )
 
@@ -536,7 +536,7 @@ class WhatsApp:
 
         Args:
             to: The phone ID of the WhatsApp user.
-            sticker: The sticker to send (either a media ID, URL, file path, bytes, or a open file object).
+            sticker: The sticker to send (either a media ID, URL, file path, bytes, or an open file object).
             reply_to_message_id: The message ID to reply to (optional).
 
         Returns:

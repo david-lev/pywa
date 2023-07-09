@@ -1,9 +1,6 @@
-import io
-import mimetypes
 import requests
 from typing import Iterable, BinaryIO
 from requests_toolbelt import MultipartEncoder
-
 from pywa.errors import WhatsAppError
 from pywa.types import InlineButton, SectionList, Contact
 

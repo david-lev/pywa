@@ -73,7 +73,7 @@ Here is some examples:
 
 
 Keep in mind that all match-filters (``match``, ``startswith``, ``endswith``, ``contains`` etc.) returns True if
-any of the given matches are found. so there is no need to use ``FC.any`` with them.
+any of the given matches are found. so there is no need to use ``fil.any_`` with them.
 
 ----------------------------------------
 
@@ -107,15 +107,17 @@ Message Filters
 .. automethod:: TextFilter.length
 .. automethod:: TextFilter.command
 
+.. autoclass:: MediaFilter
+.. autoattribute:: MediaFilter.ANY
+.. autoattribute:: MediaFilter.mimetype
+
 .. autoclass:: ImageFilter
 .. autoattribute:: ImageFilter.ANY
 .. autoattribute:: ImageFilter.HAS_CAPTION
-.. automethod:: ImageFilter.mimetype
 
 .. autoclass:: VideoFilter
 .. autoattribute:: VideoFilter.ANY
 .. autoattribute:: VideoFilter.HAS_CAPTION
-.. automethod:: VideoFilter.mimetype
 
 .. autoclass:: AudioFilter
 .. autoattribute:: AudioFilter.ANY
@@ -125,7 +127,6 @@ Message Filters
 .. autoclass:: DocumentFilter
 .. autoattribute:: DocumentFilter.ANY
 .. autoattribute:: DocumentFilter.HAS_CAPTION
-.. automethod:: DocumentFilter.mimetype
 
 .. autoclass:: StickerFilter
 .. autoattribute:: StickerFilter.ANY
@@ -147,7 +148,6 @@ Message Filters
 .. autoattribute:: ContactsFilter.HAS_WA
 .. automethod:: ContactsFilter.count
 .. automethod:: ContactsFilter.phone
-
 
 .. autoclass:: UnsupportedMsgFilter
 .. autoattribute:: UnsupportedMsgFilter.ANY
