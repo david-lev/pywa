@@ -8,7 +8,7 @@ setup(
     long_description=(open('README.rst', encoding='utf-8').read()),
     long_description_content_type="text/x-rst",
     author_email='davidlev@telegmail.com',
-    install_requires=["requests"],
+    install_requires=["requests", "requests-toolbelt"],
     python_requires=">=3.10",
     extras_require={
         "flask": ["flask"],

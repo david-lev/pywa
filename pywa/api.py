@@ -1,6 +1,9 @@
+import io
 import mimetypes
 import requests
-from typing import Iterable
+from typing import Iterable, BinaryIO
+from requests_toolbelt import MultipartEncoder
+
 from pywa.errors import WhatsAppError
 from pywa.types import InlineButton, SectionList, Contact
 
@@ -102,8 +105,9 @@ class WhatsAppCloudApi:
 
     def upload_media(
             self,
-            media: str | bytes,
-            mime_type: str | None
+            media: bytes | BinaryIO,
+            mime_type: str | None,
+            file_name: str = "file",
     ) -> dict[str, str]:
         """
         Upload a media file to WhatsApp.
@@ -115,42 +119,31 @@ class WhatsAppCloudApi:
             }
 
         Args:
-            media: media bytes / path / URL to upload.
-            mime_type: The type of the media file (if not provided, it will be guessed with the `mimetypes` library).
+            media: media bytes or open(path, 'rb') object
+            mime_type: The type of the media file
+            file_name: The name of the media file (default: "file").
 
         Returns:
             A dict with the ID of the uploaded media file.
-
-        Raises:
-            ValueError: If ``mime_type`` is not provided and cannot be guessed (e.g. for bytes or URLs without
-             ``Content-Type`` header).
         """
-        if isinstance(media, str):
-            if media.startswith(("https://", "http://")):
-                res = requests.get(media)
-                res.raise_for_status()
-                file = res.content
-                mime_type = mime_type or res.headers.get('Content-Type', default=res.headers.get('content-type'))
-            else:
-                mime_type = mime_type or mimetypes.guess_type(media)[0]
-                with open(media, "rb") as f:
-                    file = f.read()
-        else:
-            file = media
-        if mime_type is None:
-            raise ValueError("mime_type is required")
         headers = self._session.headers.copy()
-        headers["Content-Type"] = mime_type
-        files = {
-            'file': (None, file),
-            'type': (None, mime_type),
-            'messaging_product': (None, '"whatsapp"'),
-        }
+        form_data = MultipartEncoder(
+            {
+                "file": (
+                    file_name,
+                    media,
+                    mime_type
+                ),
+                "messaging_product": "whatsapp",
+                "type": mime_type
+            }
+        )
+        headers["Content-Type"] = form_data.content_type
         return self._make_request(
             method="POST",
             endpoint=f"/{self.phone_id}/media",
             headers=headers,
-            files=files
+            data=form_data
         )
 
     def get_media_url(self, media_id: str) -> dict:
