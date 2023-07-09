@@ -6,7 +6,7 @@ import hashlib
 import mimetypes
 import os
 import requests
-from typing import Callable, Any, Iterable
+from typing import Callable, Any, Iterable, BinaryIO
 from pywa.api import WhatsAppCloudApi
 from pywa.handlers import Handler, MessageHandler, ButtonCallbackHandler, SelectionCallbackHandler, RawUpdateHandler, \
     MessageStatusHandler
@@ -278,10 +278,35 @@ class WhatsApp:
             footer=footer,
         )['messages'][0]['id']
 
+    send_text = send_message  # alias
+
+    def _resolve_media_param(
+            self,
+            media: str | bytes | BinaryIO,
+            mime_type: str,
+            file_name: str,
+    ) -> tuple[bool, str]:
+        """
+        Internal method to resolve media parameters to a media ID or URL.
+        """
+        if isinstance(media, str):
+            if media.startswith(("https://", "http://")):
+                return True, media
+            elif not os.path.isfile(media) and media.isdigit():
+                return False, media  # assume it's a media ID
+            else:
+                return False, self.upload_media(
+                    media=media,
+                    mime_type=mimetypes.guess_type(media)[0] or mime_type,
+                    file_name=os.path.basename(media) or file_name
+                )
+        else:
+            return False, self.api.upload_media(media=media, mime_type=mime_type, file_name=file_name)['id']
+
     def send_image(
             self,
             to: str,
-            image: str | bytes,
+            image: str | bytes | BinaryIO,
             caption: str | None = None,
             reply_to_message_id: str | None = None,
             buttons: list[InlineButton] | None = None,
@@ -301,7 +326,7 @@ class WhatsApp:
 
         Args:
             to: The phone ID of the WhatsApp user.
-            image: The image to send (either a URL or a file ID).
+            image: The image to send (either a media ID, URL, file path, bytes, or a open file object).
             caption: The caption of the image (optional, markdown allowed).
             reply_to_message_id: The message ID to reply to (optional).
             buttons: The buttons to send with the image (optional).
@@ -311,6 +336,7 @@ class WhatsApp:
         Returns:
             The message ID of the sent image.
         """
+        is_url, image = self._resolve_media_param(media=image, mime_type="image/jpeg", file_name="image.jpg")
         if not buttons:
             return self.api.send_media(
                 to=to,
@@ -327,7 +353,7 @@ class WhatsApp:
             header={
                 "type": "image",
                 "image": {
-                    "link" if image.startswith(("https://", "http://")) else "id": image,
+                    "link" if is_url else "id": image,
                 }
             },
             body=body or caption,
@@ -338,7 +364,7 @@ class WhatsApp:
     def send_video(
             self,
             to: str,
-            video: str | bytes,
+            video: str | bytes | BinaryIO,
             caption: str | None = None,
             reply_to_message_id: str | None = None,
             buttons: list[InlineButton] | None = None,
@@ -358,7 +384,7 @@ class WhatsApp:
 
         Args:
             to: The phone ID of the WhatsApp user.
-            video: The video to send (either a URL or a file ID).
+            video: The video to send (either a media ID, URL, file path, bytes, or a open file object).
             caption: The caption of the video (optional, markdown allowed).
             reply_to_message_id: The message ID to reply to (optional).
             buttons: The buttons to send with the video (optional).
@@ -368,6 +394,7 @@ class WhatsApp:
         Returns:
             The message ID of the sent message.
         """
+        is_url, video = self._resolve_media_param(media=video, mime_type="video/mp4", file_name="video.mp4")
         if not buttons:
             return self.api.send_media(
                 to=to,
@@ -384,7 +411,7 @@ class WhatsApp:
             header={
                 "type": "video",
                 "video": {
-                    "link" if video.startswith(("https://", "http://")) else "id": video,
+                    "link" if is_url else "id": video,
                 }
             },
             body=body or caption,
@@ -395,8 +422,8 @@ class WhatsApp:
     def send_document(
             self,
             to: str,
-            document: str | bytes,
-            filename: str | None = None,
+            document: str | bytes | BinaryIO,
+            file_name: str | None = None,
             caption: str | None = None,
             reply_to_message_id: str | None = None,
             buttons: list[InlineButton] | None = None,
@@ -411,15 +438,15 @@ class WhatsApp:
             >>> wa.send_document(
             ...     to="1234567890",
             ...     document="https://example.com/example_123.pdf",
-            ...     filename="Example PDF",
+            ...     file_name="exmaple.pdf",
             ...     caption="Example PDF"
             ... )
 
 
         Args:
             to: The phone ID of the WhatsApp user.
-            document: The document to send (either a URL or a file ID).
-            filename: The filename of the document (optional, The extension of the filename will specify what format the document is displayed as in WhatsApp).
+            document: The document to send (either a media ID, URL, file path, bytes, or a open file object).
+            file_name: The filename of the document (optional, The extension of the filename will specify what format the document is displayed as in WhatsApp).
             caption: The caption of the document (optional).
             reply_to_message_id: The message ID to reply to (optional).
             buttons: The buttons to send with the document (optional).
@@ -429,13 +456,15 @@ class WhatsApp:
         Returns:
             The message ID of the sent message.
         """
+        is_url, document = self._resolve_media_param(media=document, mime_type="text/plain",
+                                                     file_name=file_name or "file.text")
         if not buttons:
             return self.api.send_media(
                 to=to,
                 media_id_or_url=document,
                 media_type="document",
                 reply_to_message_id=reply_to_message_id,
-                filename=filename,
+                file_name=file_name,
                 caption=caption,
             )['messages'][0]['id']
         if not body and not caption:
@@ -446,8 +475,8 @@ class WhatsApp:
             header={
                 "type": "document",
                 "document": {
-                    "link" if document.startswith(("https://", "http://")) else "id": document,
-                    "filename": filename,
+                    "link" if is_url else "id": document,
+                    "filename": file_name,
                 }
             },
             body=body or caption,
@@ -458,7 +487,7 @@ class WhatsApp:
     def send_audio(
             self,
             to: str,
-            audio: str | bytes,
+            audio: str | bytes | BinaryIO,
             reply_to_message_id: str | None = None,
     ) -> str:
         """
@@ -473,12 +502,13 @@ class WhatsApp:
 
         Args:
             to: The phone ID of the WhatsApp user.
-            audio: The audio file to send (either a URL or a file ID).
+            audio: The audio file to send (either a media ID, URL, file path, bytes, or a open file object).
             reply_to_message_id: The message ID to reply to (optional).
 
         Returns:
             The message ID of the sent message.
         """
+        _, audio = self._resolve_media_param(media=audio, mime_type="audio/mpeg", file_name="audio.mp3")
         return self.api.send_media(
             to=to,
             media_id_or_url=audio,
@@ -489,7 +519,7 @@ class WhatsApp:
     def send_sticker(
             self,
             to: str,
-            sticker: str | bytes,
+            sticker: str | bytes | BinaryIO,
             reply_to_message_id: str | None = None,
     ) -> str:
         """
@@ -506,12 +536,13 @@ class WhatsApp:
 
         Args:
             to: The phone ID of the WhatsApp user.
-            sticker: The sticker to send (either a URL or a file ID).
+            sticker: The sticker to send (either a media ID, URL, file path, bytes, or a open file object).
             reply_to_message_id: The message ID to reply to (optional).
 
         Returns:
             The message ID of the sent message.
         """
+        _, sticker = self._resolve_media_param(media=sticker, mime_type="image/webp", file_name="sticker.webp")
         return self.api.send_media(
             to=to,
             media_id_or_url=sticker,
@@ -660,8 +691,9 @@ class WhatsApp:
 
     def upload_media(
             self,
-            media: str | bytes,
-            mime_type: str | None = None,
+            media: str | bytes | BinaryIO,
+            mime_type: str,
+            file_name: str | None = None,
     ) -> str:
         """
         Upload media to WhatsApp servers.
@@ -673,18 +705,29 @@ class WhatsApp:
             ... )
 
         Args:
-            media: The media to upload (either a URL or a file Path or bytes).
-            mime_type: The MIME type of the media (optional).
+            media: The media to upload (can be a URL, bytes, or a file path).
+            mime_type: The MIME type of the media (required if media is bytes or a file path).
+            file_name: The file name of the media (optional).
 
         Returns:
             The media ID.
-
-        Raises:
-            ValueError: If mime_type is not provided and cannot be guessed (e.g. for bytes or URLs without
-                Content-Type header).
         """
+        if isinstance(media, str):
+            if os.path.isfile(media):
+                file, file_name, mime_type = \
+                    open(media, 'rb'), os.path.basename(media), (mimetypes.guess_type(media)[0] or mime_type)
+            elif media.startswith(("https://", "http://")):
+                res = requests.get(media)
+                res.raise_for_status()
+                file, file_name, mime_type = \
+                    res.content, os.path.basename(media) or file_name, (res.headers['Content-Type'] or mime_type)
+            else:
+                raise ValueError(f'File not found or invalid URL: {media}')
+        else:
+            file = media
         return self.api.upload_media(
-            media=media,
+            file_name=file_name or 'file',
+            media=file,
             mime_type=mime_type,
         )['id']
 
@@ -695,7 +738,11 @@ class WhatsApp:
         """
         Get the URL of a media.
             - The URL is valid for 5 minutes.
-            - You can download with ``wa.download_media``.
+            - The media can be downloaded using the ``download`` method.
+
+        Example:
+            >>> wa.get_media_url(
+            ...
 
         Args:
             media_id: The media ID.
@@ -717,7 +764,7 @@ class WhatsApp:
             self,
             url: str,
             path: str | None = None,
-            filename: str | None = None,
+            file_name: str | None = None,
             in_memory: bool = False,
     ) -> str | bytes:
         """
@@ -726,7 +773,7 @@ class WhatsApp:
         Args:
             url: The URL of the media file (from ``get_media_url``).
             path: The path where to save the file (if not provided, the current working directory will be used).
-            filename: The name of the file (if not provided, it will be guessed from the URL + extension).
+            file_name: The name of the file (if not provided, it will be guessed from the URL + extension).
             in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
 
         Returns:
@@ -737,10 +784,10 @@ class WhatsApp:
             return content
         if path is None:
             path = os.getcwd()
-        if filename is None:
-            filename = hashlib.sha256(url.encode()).hexdigest() +\
-                       mimetypes.guess_extension(mimetype or 'application/octet-stream')
-        path = os.path.join(path, filename)
+        if file_name is None:
+            file_name = hashlib.sha256(url.encode()).hexdigest() + \
+                        mimetypes.guess_extension(mimetype) or '.bin'
+        path = os.path.join(path, file_name)
         with open(path, "wb") as f:
             f.write(content)
         return path

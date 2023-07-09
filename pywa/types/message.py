@@ -60,6 +60,16 @@ class Message(BaseUpdate):
         """The ID of the message to reply to."""
         return self.id if self.type != MessageType.REACTION else self.reaction.message_id
 
+    @property
+    def has_media(self) -> bool:
+        """Whether the message has any media."""
+        return any(getattr(self, media_type) for media_type in ('image', 'video', 'sticker', 'document', 'audio'))
+
+    @property
+    def is_reply(self) -> bool:
+        """Whether the message is a reply to another message."""
+        return self.reply_to_message is not None
+
     @classmethod
     def from_dict(cls, client: WhatsApp, value: dict) -> Message:
         message = value['messages'][0]
@@ -91,7 +101,7 @@ class Message(BaseUpdate):
     def download_media(
             self,
             filepath: str | None = None,
-            filename: str | None = None,
+            file_name: str | None = None,
             in_memory: bool = False,
     ) -> str | bytes:
         """
@@ -99,7 +109,7 @@ class Message(BaseUpdate):
 
         Args:
             filepath: The path where to save the file (if not provided, the current working directory will be used).
-            filename: The name of the file (if not provided, it will be guessed from the URL + extension).
+            file_name: The name of the file (if not provided, it will be guessed from the URL + extension).
             in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
 
         Returns:
@@ -108,10 +118,11 @@ class Message(BaseUpdate):
         Raises:
             ValueError: If the message does not contain any media.
         """
-        media = self.image or self.video or self.sticker or self.document or self.audio
-        if not media:
+        media = next((getattr(self, media_type) for media_type in ('image', 'video', 'sticker', 'document', 'audio')
+                      if getattr(self, media_type)), None)
+        if media is None:
             raise ValueError('The message does not contain any media.')
-        return media.download(path=filepath, filename=filename, in_memory=in_memory)
+        return media.download(path=filepath, file_name=file_name, in_memory=in_memory)
 
     def copy(
             self,
@@ -160,7 +171,7 @@ class Message(BaseUpdate):
                     to=to,
                     reply_to_message_id=reply_to_message_id,
                     document=self.document.id,
-                    filename=self.document.filename,
+                    file_name=self.document.filename,
                     caption=self.caption,
                     buttons=keyboard,
                     body=body,

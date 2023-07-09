@@ -27,7 +27,7 @@ class MediaBase(_FromDict):
     def download(
             self,
             path: str | None = None,
-            filename: str | None = None,
+            file_name: str | None = None,
             in_memory: bool = False,
     ) -> bytes | str:
         """
@@ -38,18 +38,14 @@ class MediaBase(_FromDict):
 
         Args:
             path: The path where to save the file (if not provided, the current working directory will be used).
-            filename: The name of the file (if not provided, it will be guessed from the URL + extension).
+            file_name: The name of the file (if not provided, it will be guessed from the URL + extension).
             in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
 
         Returns:
             The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
         """
-        return self._client.download_media(
-            url=self.get_media_url(),
-            path=path,
-            filename=filename,
-            in_memory=in_memory
-        )
+        return self._client.download_media(url=self.get_media_url(), path=path, file_name=file_name,
+                                           in_memory=in_memory)
 
 
 @dataclass(frozen=True, slots=True)
@@ -140,7 +136,7 @@ class MediaUrlResponse(_FromDict):
     def download(
             self,
             filepath: str | None = None,
-            filename: str | None = None,
+            file_name: str | None = None,
             in_memory: bool = False,
     ) -> bytes | str:
         """
@@ -148,10 +144,10 @@ class MediaUrlResponse(_FromDict):
 
         Args:
             filepath: The path where to save the file (if not provided, the current working directory will be used).
-            filename: The name of the file (if not provided, it will be guessed from the URL + extension).
+            file_name: The name of the file (if not provided, it will be guessed from the URL + extension).
             in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
 
         Returns:
             The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
         """
-        return self._client.download_media(url=self.url, path=filepath, filename=filename, in_memory=in_memory)
+        return self._client.download_media(url=self.url, path=filepath, file_name=file_name, in_memory=in_memory)

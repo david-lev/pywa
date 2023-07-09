@@ -106,7 +106,7 @@ class WhatsAppCloudApi:
     def upload_media(
             self,
             media: bytes | BinaryIO,
-            mime_type: str | None,
+            mime_type: str,
             file_name: str = "file",
     ) -> dict[str, str]:
         """
@@ -121,8 +121,7 @@ class WhatsAppCloudApi:
         Args:
             media: media bytes or open(path, 'rb') object
             mime_type: The type of the media file
-            file_name: The name of the media file (default: "file").
-
+            file_name: The name of the media file (default: ``file``).
         Returns:
             A dict with the ID of the uploaded media file.
         """

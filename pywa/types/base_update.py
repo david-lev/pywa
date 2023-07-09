@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Iterable, TYPE_CHECKING
+from typing import Iterable, TYPE_CHECKING, BinaryIO
 from .others import MessageType, Metadata, User, Contact
 
 if TYPE_CHECKING:
@@ -63,7 +63,7 @@ class BaseUpdate:
 
     def reply_image(
             self,
-            image: str | bytes,
+            image: str | bytes | BinaryIO,
             caption: str | None = None,
             quote: bool = False,
             buttons: list[InlineButton] | None = None,
@@ -96,7 +96,7 @@ class BaseUpdate:
 
     def reply_video(
             self,
-            video: str | bytes,
+            video: str | bytes | BinaryIO,
             caption: str | None = None,
             quote: bool = False,
             buttons: list[InlineButton] | None = None,
@@ -129,8 +129,8 @@ class BaseUpdate:
 
     def reply_document(
             self,
-            document: str | bytes,
-            filename: str | None = None,
+            document: str | bytes | BinaryIO,
+            file_name: str | None = None,
             caption: str | None = None,
             quote: bool = False,
             buttons: list[InlineButton] | None = None,
@@ -142,7 +142,7 @@ class BaseUpdate:
 
         Args:
             document: The document to reply with.
-            filename: The filename of the document (optional, The extension of the filename will specify what format the document is displayed as in WhatsApp).
+            file_name: The filename of the document (optional, The extension of the filename will specify what format the document is displayed as in WhatsApp).
             caption: The caption of the document (optional).
             quote: Whether to quote the message (default: False).
             buttons: The buttons to send with the message (optional).
@@ -155,7 +155,7 @@ class BaseUpdate:
         return self._client.send_document(
             to=self.sender,
             document=document,
-            filename=filename,
+            file_name=file_name,
             caption=caption,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             buttons=buttons,
@@ -165,7 +165,7 @@ class BaseUpdate:
 
     def reply_audio(
             self,
-            audio: str | bytes,
+            audio: str | bytes | BinaryIO,
             quote: bool = False,
     ) -> str:
         """
@@ -186,7 +186,7 @@ class BaseUpdate:
 
     def reply_sticker(
             self,
-            sticker: str | bytes,
+            sticker: str | bytes | BinaryIO,
             quote: bool = False,
     ) -> str:
         """
