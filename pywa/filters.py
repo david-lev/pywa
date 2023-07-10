@@ -57,7 +57,7 @@ Filter for messages that have been forwarded many times.
 
 def all_(*filters: Callable[[Wa, T], bool]) -> Callable[[Wa, T], bool]:
     """
-    Filter for messages that pass all the given filters.
+    Filter for updates that pass all the given filters.
 
     >>> all_(TextFilter.startswith("World"), TextFilter.contains("Word"))
     """
@@ -66,7 +66,7 @@ def all_(*filters: Callable[[Wa, T], bool]) -> Callable[[Wa, T], bool]:
 
 def any_(*filters: Callable[[Wa, T], bool]) -> Callable[[Wa, T], bool]:
     """
-    Filter for messages that pass any of the given filters.
+    Filter for updates that pass any of the given filters.
 
     >>> any_(TextFilter.contains("Hello"), TextFilter.contains("World"))
     """
@@ -75,7 +75,7 @@ def any_(*filters: Callable[[Wa, T], bool]) -> Callable[[Wa, T], bool]:
 
 def not_(fil: Callable[[Wa, T], bool]) -> Callable[[Wa, T], bool]:
     """
-    Filter for messages that don't pass the given filter.
+    Filter for updates that don't pass the given filter.
 
     >>> not_(TextFilter.contains("Hello"))
     """
@@ -179,9 +179,7 @@ class TextFilter(_BaseUpdateFilter):
             ignore_case: Whether to ignore case when matching (default: ``False``).
         """
         matches = tuple(m.lower() for m in matches) if ignore_case else matches
-        return lambda wa, m: TextFilter._match_type(m) and any(
-            (m.text.lower() if ignore_case else m.text) == t for t in matches
-        )
+        return lambda wa, m: TextFilter._match_type(m) and (m.text.lower() if ignore_case else m.text) in matches
 
     same_as = match  # alias
     matches = match # alias
@@ -220,9 +218,7 @@ class TextFilter(_BaseUpdateFilter):
             ignore_case: Whether to ignore case when matching (default: ``False``).
         """
         matches = tuple(m.lower() for m in matches) if ignore_case else matches
-        return lambda wa, m: TextFilter._match_type(m) and any(
-            (m.text.lower() if ignore_case else m.text).startswith(t) for t in matches
-        )
+        return lambda wa, m: TextFilter._match_type(m) and (m.text.lower() if ignore_case else m.text).startswith(matches)
 
     @staticmethod
     def endswith(*matches: str, ignore_case: bool = False) -> MessageT:
@@ -236,9 +232,7 @@ class TextFilter(_BaseUpdateFilter):
             ignore_case: Whether to ignore case when matching (default: ``False``).
         """
         matches = tuple(m.lower() for m in matches) if ignore_case else matches
-        return lambda wa, m: TextFilter._match_type(m) and any(
-            (m.text.lower() if ignore_case else m.text).endswith(t) for t in matches
-        )
+        return lambda wa, m: TextFilter._match_type(m) and (m.text.lower() if ignore_case else m.text).endswith(matches)
 
     @staticmethod
     def regex(*patterns: str | re.Pattern, flags: int = 0) -> MessageT:
@@ -553,7 +547,7 @@ class CallbackFilter(_BaseUpdateFilter):
             ignore_case: Whether to ignore case when matching (default: False).
         """
         matches = tuple(m.lower() for m in matches) if ignore_case else matches
-        return lambda wa, c: any((c.data.lower() if ignore_case else c.data) == m for m in matches)
+        return lambda wa, c: (c.data.lower() if ignore_case else c.data) in matches
 
     data_equals = data_match
     data_same_as = data_match
@@ -571,7 +565,7 @@ class CallbackFilter(_BaseUpdateFilter):
             ignore_case: Whether to ignore case when matching (default: False).
         """
         matches = tuple(m.lower() for m in matches) if ignore_case else matches
-        return lambda wa, c: any((c.data.lower() if ignore_case else c.data).startswith(m for m in matches))
+        return lambda wa, c: (c.data.lower() if ignore_case else c.data).startswith(matches)
 
     @staticmethod
     def data_endswith(*matches: str, ignore_case: bool = False) -> CallbackT:
@@ -585,7 +579,7 @@ class CallbackFilter(_BaseUpdateFilter):
             ignore_case: Whether to ignore case when matching (default: False).
         """
         matches = tuple(m.lower() for m in matches) if ignore_case else matches
-        return lambda wa, c: any((c.data.lower() if ignore_case else c.data).endswith(m for m in matches))
+        return lambda wa, c: (c.data.lower() if ignore_case else c.data).endswith(matches)
 
     @staticmethod
     def data_contain(*matches: str, ignore_case: bool = False) -> CallbackT:
