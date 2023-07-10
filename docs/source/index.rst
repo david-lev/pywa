@@ -14,6 +14,8 @@
 
     content/getting-started
     content/client
+    content/handlers
+    content/updates
     content/types
     content/filters
     content/errors

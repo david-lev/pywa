@@ -1,5 +1,5 @@
-Updates
-=======
+💬 Updates
+==========
 
 .. currentmodule:: pywa.types
 
@@ -10,3 +10,24 @@ In PyWa, this update split into 4 different types:
 - :class:`CallbackButton`: represents a callback from a user (when the user clicks on a button).
 - :class:`CallbackSelection`: represents a callback from a user (when the user selects an option from selection list).
 - :class:`MessageStatus`: represents a status change of message that was sent by the bot (read, delivered, etc).
+
+------------------------------------------------------------------------------------------------------------------------
+
+.. autoclass:: Message()
+    :members:
+
+------------------------------------------------------------------------------------------------------------------------
+
+.. autoclass:: CallbackButton()
+    :members:
+
+------------------------------------------------------------------------------------------------------------------------
+
+.. autoclass:: CallbackSelection()
+    :members:
+
+------------------------------------------------------------------------------------------------------------------------
+
+.. autoclass:: MessageStatus()
+    :members:
+
