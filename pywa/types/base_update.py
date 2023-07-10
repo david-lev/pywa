@@ -166,14 +166,12 @@ class BaseUpdate:
     def reply_audio(
             self,
             audio: str | bytes | BinaryIO,
-            quote: bool = False,
     ) -> str:
         """
         Reply to the message with an audio.
 
         Args:
             audio: The audio to reply with.
-            quote: Whether to quote the message (default: False).
 
         Returns:
             The ID of the sent message.
@@ -181,20 +179,17 @@ class BaseUpdate:
         return self._client.send_audio(
             to=self.sender,
             audio=audio,
-            reply_to_message_id=self.message_id_to_reply if quote else None
         )
 
     def reply_sticker(
             self,
             sticker: str | bytes | BinaryIO,
-            quote: bool = False,
     ) -> str:
         """
         Reply to the message with a sticker.
 
         Args:
             sticker: The sticker to reply with.
-            quote: Whether to quote the message (default: False).
 
         Returns:
             The ID of the sent message.
@@ -202,7 +197,6 @@ class BaseUpdate:
         return self._client.send_sticker(
             to=self.sender,
             sticker=sticker,
-            reply_to_message_id=self.message_id_to_reply if quote else None
         )
 
     def reply_location(

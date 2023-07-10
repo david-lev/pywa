@@ -213,7 +213,6 @@ class WhatsAppCloudApi:
             to: str | int,
             media_id_or_url: str,
             media_type: str,
-            reply_to_message_id: str | None = None,
             **kwargs
     ) -> dict[str, dict | list]:
         """
@@ -231,14 +230,11 @@ class WhatsAppCloudApi:
             to: The WhatsApp ID of the recipient.
             media_id_or_url: The ID or URL of the media file to send.
             media_type: The type of the media file.
-            reply_to_message_id: The ID of the message to reply to.
             **kwargs: Additional arguments to send with the message.
 
         Returns:
             The sent message.
         """
-        if reply_to_message_id:
-            kwargs["context"] = {"message_id": reply_to_message_id}
         data = {
             **self._common_keys,
             "to": str(to),

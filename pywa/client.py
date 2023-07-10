@@ -328,7 +328,7 @@ class WhatsApp:
             to: The phone ID of the WhatsApp user.
             image: The image to send (either a media ID, URL, file path, bytes, or a open file object).
             caption: The caption of the image (optional, markdown allowed).
-            reply_to_message_id: The message ID to reply to (optional).
+            reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
             buttons: The buttons to send with the image (optional).
             body: The body of the message (if buttons are provided, optional, up to 1024 characters, markdown allowed).
             footer: The footer of the message (if buttons is provided, optional, markdown has no effect).
@@ -342,7 +342,6 @@ class WhatsApp:
                 to=to,
                 media_id_or_url=image,
                 media_type="image",
-                reply_to_message_id=reply_to_message_id,
                 caption=caption,
             )['messages'][0]['id']
         if not body and not caption:
@@ -386,7 +385,7 @@ class WhatsApp:
             to: The phone ID of the WhatsApp user.
             video: The video to send (either a media ID, URL, file path, bytes, or a open file object).
             caption: The caption of the video (optional, markdown allowed).
-            reply_to_message_id: The message ID to reply to (optional).
+            reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
             buttons: The buttons to send with the video (optional).
             body: The body of the message (if buttons are provided, optional, up to 1024 characters, markdown allowed).
             footer: The footer of the message (if buttons is provided, optional, markdown has no effect).
@@ -400,7 +399,6 @@ class WhatsApp:
                 to=to,
                 media_id_or_url=video,
                 media_type="video",
-                reply_to_message_id=reply_to_message_id,
                 caption=caption,
             )['messages'][0]['id']
         if not body and not caption:
@@ -448,7 +446,7 @@ class WhatsApp:
             document: The document to send (either a media ID, URL, file path, bytes, or a open file object).
             file_name: The filename of the document (optional, The extension of the filename will specify what format the document is displayed as in WhatsApp).
             caption: The caption of the document (optional).
-            reply_to_message_id: The message ID to reply to (optional).
+            reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
             buttons: The buttons to send with the document (optional).
             body: The body of the message (if buttons are provided, optional, up to 1024 characters, markdown allowed).
             footer: The footer of the message (if buttons is provided, optional, markdown has no effect).
@@ -463,7 +461,6 @@ class WhatsApp:
                 to=to,
                 media_id_or_url=document,
                 media_type="document",
-                reply_to_message_id=reply_to_message_id,
                 file_name=file_name,
                 caption=caption,
             )['messages'][0]['id']
@@ -488,7 +485,6 @@ class WhatsApp:
             self,
             to: str,
             audio: str | bytes | BinaryIO,
-            reply_to_message_id: str | None = None,
     ) -> str:
         """
         Send an audio file to a WhatsApp user.
@@ -503,7 +499,6 @@ class WhatsApp:
         Args:
             to: The phone ID of the WhatsApp user.
             audio: The audio file to send (either a media ID, URL, file path, bytes, or a open file object).
-            reply_to_message_id: The message ID to reply to (optional).
 
         Returns:
             The message ID of the sent message.
@@ -513,14 +508,12 @@ class WhatsApp:
             to=to,
             media_id_or_url=audio,
             media_type="audio",
-            reply_to_message_id=reply_to_message_id,
         )['messages'][0]['id']
 
     def send_sticker(
             self,
             to: str,
             sticker: str | bytes | BinaryIO,
-            reply_to_message_id: str | None = None,
     ) -> str:
         """
         Send a sticker to a WhatsApp user.
@@ -537,7 +530,6 @@ class WhatsApp:
         Args:
             to: The phone ID of the WhatsApp user.
             sticker: The sticker to send (either a media ID, URL, file path, bytes, or an open file object).
-            reply_to_message_id: The message ID to reply to (optional).
 
         Returns:
             The message ID of the sent message.
@@ -547,7 +539,6 @@ class WhatsApp:
             to=to,
             media_id_or_url=sticker,
             media_type="sticker",
-            reply_to_message_id=reply_to_message_id,
         )['messages'][0]['id']
 
     def send_reaction(
