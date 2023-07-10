@@ -288,8 +288,8 @@ class TextFilter(_BaseUpdateFilter):
             ignore_case: Whether to ignore case when matching (default: ``False``).
         """
         cmds = tuple(c.lower() for c in cmds) if ignore_case else cmds
-        return lambda wa, m: TextFilter._match_type(m) and any(
-            m.text[0] in prefixes and (m.text[1:].lower() if ignore_case else m.text[1:]).startswith(c for c in cmds)
+        return lambda wa, m: TextFilter._match_type(m) and (
+            m.text[0] in prefixes and (m.text[1:].lower() if ignore_case else m.text[1:]).startswith(cmds)
         )
     commands = command  # alias
     cmd = command  # alias
