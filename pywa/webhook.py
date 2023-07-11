@@ -1,11 +1,13 @@
 from __future__ import annotations
+from pywa.handlers import Handler
+from pywa.handlers import *
 
 """The webhook module contains the Webhook class, which is used to register a webhook to listen for incoming 
 messages."""
 
 import collections
 import threading
-from typing import Union, TYPE_CHECKING, Callable, Any
+from typing import Union, TYPE_CHECKING, Callable, Any, Type
 from pywa.types import Message, CallbackButton, CallbackSelection, MessageStatus
 from pywa.types.base_update import BaseUpdate
 from pywa import utils
@@ -77,29 +79,29 @@ class Webhook:
             if not self.filter_updates or (
                     update["entry"][0]["changes"][0]["value"]["metadata"][
                         "phone_number_id"] == self.wa_client.phone_id):
-                for raw_update_handler in self.handlers["raw_update"]:
+                for raw_update_handler in self.handlers[RawUpdateHandler.__handler_type__]:
                     raw_update_handler(self.wa_client, update)
                 update, key = self.convert_dict_to_update(client=self.wa_client, d=update)
                 if key is None:
                     return
-                for handler in self.handlers[key]:
+                for handler in self.handlers[key.__handler_type__]:
                     handler(self.wa_client, update)
         except (KeyError, IndexError):  # the update not send to this phone and filter_updates is True
             pass
 
     @staticmethod
-    def convert_dict_to_update(client: WhatsApp, d: dict) -> tuple[BaseUpdate | None, str | None]:
+    def convert_dict_to_update(client: WhatsApp, d: dict) -> tuple[BaseUpdate | None, Type[Handler] | None]:
         """Convert a webhook dict to a BaseUpdate object."""
         value = d["entry"][0]["changes"][0]["value"]
         if 'messages' in value:
             if value["messages"][0]["type"] != "interactive":
-                return Message.from_dict(client=client, value=value), "message"
+                return Message.from_dict(client=client, value=value), MessageHandler
             else:
                 if value["messages"][0]["interactive"]["type"] == "button_reply":
-                    return CallbackButton.from_dict(client=client, value=value), "button"
+                    return CallbackButton.from_dict(client=client, value=value), ButtonCallbackHandler
                 elif value["messages"][0]["interactive"]["type"] == "list_reply":
-                    return CallbackSelection.from_dict(client=client, value=value), "selection"
+                    return CallbackSelection.from_dict(client=client, value=value), SelectionCallbackHandler
 
         elif 'statuses' in value:
-            return MessageStatus.from_dict(client=client, value=value), "message_status"
+            return MessageStatus.from_dict(client=client, value=value), MessageStatusHandler
         return None, None  # the update is not supported
