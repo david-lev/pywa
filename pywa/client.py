@@ -66,11 +66,24 @@ class WhatsApp:
         else:
             self.webhook = None
 
-    def add_handler(self, handler: Handler):
+    def add_handlers(self, *handlers: Handler):
+        """
+        Add handlers manually (instead of using decorators).
+
+        Example:
+            >>> from pywa.handlers import MessageHandler, ButtonCallbackHandler
+            >>> from pywa.filters import TextFilter
+            >>> print_message = lambda wa, msg: print(msg)
+            >>> wa.add_handlers(
+            ...     MessageHandler(print_message, TextFilter.ANY),
+            ...     ButtonCallbackHandler(print_message),
+            ... )
+        """
         if self.webhook is None:
             raise ValueError("You must initialize the WhatsApp client with an web server"
                              " (Flask or FastAPI) in order to handle incoming messages.")
-        self.webhook.handlers[handler.__handler_type__].append(handler)
+        for handler in handlers:
+            self.webhook.handlers[handler.__handler_type__].append(handler)
 
     def on_raw_update(self, *filters: Callable[["WhatsApp", dict], bool]):
         """
@@ -87,7 +100,7 @@ class WhatsApp:
                 the incoming update and return a boolean).
         """
         def decorator(func: Callable[["WhatsApp", dict], Any]):
-            self.add_handler(RawUpdateHandler(func, *filters))
+            self.add_handlers(RawUpdateHandler(func, *filters))
             return func
         return decorator
 
@@ -106,7 +119,7 @@ class WhatsApp:
                 the incoming message and return a boolean).
         """
         def decorator(func: Callable[["WhatsApp", Message], Any]):
-            self.add_handler(MessageHandler(func, *filters))
+            self.add_handlers(MessageHandler(func, *filters))
             return func
         return decorator
 
@@ -125,7 +138,7 @@ class WhatsApp:
                 WhatsApp client and the incoming callback button and return a boolean).
         """
         def decorator(func: Callable[["WhatsApp", CallbackButton], Any]):
-            self.add_handler(ButtonCallbackHandler(func, *filters))
+            self.add_handlers(ButtonCallbackHandler(func, *filters))
             return func
         return decorator
 
@@ -144,7 +157,7 @@ class WhatsApp:
                 WhatsApp client and the incoming callback selection and return a boolean).
         """
         def decorator(func: Callable[["WhatsApp", CallbackSelection], Any]):
-            self.add_handler(SelectionCallbackHandler(func, *filters))
+            self.add_handlers(SelectionCallbackHandler(func, *filters))
             return func
         return decorator
 
@@ -170,7 +183,7 @@ class WhatsApp:
                 WhatsApp client and the incoming message status change and return a boolean).
         """
         def decorator(func: Callable[["WhatsApp", MessageStatus], Any]):
-            self.add_handler(MessageStatusHandler(func, *filters))
+            self.add_handlers(MessageStatusHandler(func, *filters))
             return func
         return decorator
 
