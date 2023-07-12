@@ -28,6 +28,11 @@ class CallbackButton(BaseUpdate):
     data: str
     title: str
 
+    @property
+    def message_id_to_reply(self) -> str:
+        """The ID of the message to reply to."""
+        return self.reply_to_message.message_id
+
     @classmethod
     def from_dict(cls, client: WhatsApp, value: dict):
         message = value['messages'][0]
