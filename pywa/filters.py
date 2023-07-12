@@ -159,11 +159,19 @@ class TextFilter(_BaseUpdateFilter):
     
     __message_types__ = (Mt.TEXT,)
 
-    ANY: MessageT = lambda wa, m: m.type == Mt.TEXT
+    ANY: MessageT = lambda wa, m: m.type == Mt.TEXT and not TextFilter.COMMAND(wa, m)
     """
-    Filter for all text messages.
+    Filter for all text messages (excluding commands).
     
     >>> TextFilter.ANY
+    """
+
+    COMMAND: MessageT = lambda wa, m: m.type == Mt.TEXT and m.text.startswith(("!", "/", "#"))
+    """
+    Filter for text messages that are commands (start with ``!``, ``/``, or ``#``).
+        - Use TextFilter.command if you want to filter for specific commands or prefixes.
+    
+    >>> TextFilter.COMMAND
     """
 
     @staticmethod
