@@ -132,7 +132,7 @@ class Section:
     - See more: https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages#section-object
 
     Attributes:
-        title: The title of the section.
+        title: The title of the section (up to 24 characters).
         rows: The rows in the section (at least 1, no more than 10).
     """
     title: str
