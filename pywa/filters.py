@@ -29,6 +29,7 @@ from pywa import utils
 from pywa.errors import WhatsAppError, ReEngagementMessage, MessageUndeliverable
 from pywa.types import MessageType as Mt, Message as Msg, MessageStatus as Ms, MessageStatusType as Mst, \
     CallbackButton, CallbackSelection
+from pywa.types.base_update import BaseUpdate
 
 if TYPE_CHECKING:
     from pywa import WhatsApp as Wa
@@ -37,7 +38,7 @@ if TYPE_CHECKING:
     CallbackT: TypeAlias = Callable[[Wa, CallbackButton | CallbackSelection], bool]
     MessageStatusT: TypeAlias = Callable[[Wa, Ms], bool]
 
-T = TypeVar("T")
+T = TypeVar("T", bound=BaseUpdate)
 
 
 FORWARDED: MessageT = lambda wa, m: m.forwarded
@@ -52,6 +53,13 @@ FORWARDED_MANY_TIMES: MessageT = lambda wa, m: m.forwarded_many_times
 Filter for messages that have been forwarded many times.
 
 >>> filters.FORWARDED_MANY_TIMES
+"""
+
+REPLY: MessageT = lambda wa, m: m.reply_to_message is not None
+"""
+Filter for messages that reply to another message.
+
+>>> filters.REPLY
 """
 
 
