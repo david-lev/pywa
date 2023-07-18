@@ -311,7 +311,7 @@ class WhatsApp:
                 return False, self.upload_media(
                     media=media,
                     mime_type=mimetypes.guess_type(media)[0] or mime_type,
-                    file_name=os.path.basename(media) or file_name
+                    file_name=file_name or os.path.basename(media)
                 )
         else:
             return False, self.api.upload_media(media=media, mime_type=mime_type, file_name=file_name)['id']
