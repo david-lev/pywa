@@ -3,7 +3,7 @@
 
 .. currentmodule:: pywa.filters
 
-- See all the `Built-in Filters`_.
+- See all the `Helper filters`_.
 
 Filters are used by the handlers to determine if they should handle an update or not.
 You can create your own filters by providing a function that takes the client and the update and returns a boolean.
@@ -75,82 +75,81 @@ Here is some examples:
 Keep in mind that all match-filters (``match``, ``startswith``, ``endswith``, ``contains`` etc.) returns True if
 any of the given matches are found. so there is no need to use ``fil.any_`` with them.
 
+
 ----------------------------------------
 
 
-Helper functions
-~~~~~~~~~~~~~~~~
+Helper filters
+~~~~~~~~~~~~~~
 
-
-.. autodata:: FORWARDED
-.. autodata:: FORWARDED_MANY_TIMES
 .. autofunction:: all_
 .. autofunction:: any_
 .. autofunction:: not_
-.. autofunction:: from_user
+.. autofunction:: from_users
+.. autoattribute:: pywa.filters.forwarded
+.. autoattribute:: pywa.filters.forwarded_many_times
+.. autoattribute:: pywa.filters.reply
 
-----------------------------------------
-
-Built-in Filters
 ----------------
 
 Message Filters
 ~~~~~~~~~~~~~~~
 
 .. autoclass:: TextFilter
-.. autoattribute:: TextFilter.ANY
-.. automethod:: TextFilter.match
-.. automethod:: TextFilter.contain
+.. autoattribute:: TextFilter.any
+.. automethod:: TextFilter.matches
+.. automethod:: TextFilter.contains
 .. automethod:: TextFilter.startswith
 .. automethod:: TextFilter.endswith
 .. automethod:: TextFilter.regex
 .. automethod:: TextFilter.length
+.. automethod:: TextFilter.is_command
 .. automethod:: TextFilter.command
 
 .. autoclass:: MediaFilter
-.. autoattribute:: MediaFilter.ANY
-.. autoattribute:: MediaFilter.mimetype
+.. autoattribute:: MediaFilter.any
+.. automethod:: MediaFilter.mimetypes
 
 .. autoclass:: ImageFilter
-.. autoattribute:: ImageFilter.ANY
-.. autoattribute:: ImageFilter.HAS_CAPTION
+.. autoattribute:: ImageFilter.any
+.. autoattribute:: ImageFilter.has_caption
 
 .. autoclass:: VideoFilter
-.. autoattribute:: VideoFilter.ANY
-.. autoattribute:: VideoFilter.HAS_CAPTION
+.. autoattribute:: VideoFilter.any
+.. autoattribute:: VideoFilter.has_caption
 
 .. autoclass:: AudioFilter
-.. autoattribute:: AudioFilter.ANY
-.. autoattribute:: AudioFilter.VOICE
-.. autoattribute:: AudioFilter.AUDIO
+.. autoattribute:: AudioFilter.any
+.. autoattribute:: AudioFilter.voice
+.. autoattribute:: AudioFilter.audio
 
 .. autoclass:: DocumentFilter
-.. autoattribute:: DocumentFilter.ANY
-.. autoattribute:: DocumentFilter.HAS_CAPTION
+.. autoattribute:: DocumentFilter.any
+.. autoattribute:: DocumentFilter.has_caption
 
 .. autoclass:: StickerFilter
-.. autoattribute:: StickerFilter.ANY
-.. autoattribute:: StickerFilter.ANIMATED
-.. autoattribute:: StickerFilter.STATIC
+.. autoattribute:: StickerFilter.any
+.. autoattribute:: StickerFilter.animated
+.. autoattribute:: StickerFilter.static
 
 .. autoclass:: ReactionFilter
-.. autoattribute:: ReactionFilter.ANY
-.. autoattribute:: ReactionFilter.ADDED
-.. autoattribute:: ReactionFilter.REMOVED
-.. automethod:: ReactionFilter.emoji
+.. autoattribute:: ReactionFilter.any
+.. autoattribute:: ReactionFilter.added
+.. autoattribute:: ReactionFilter.removed
+.. automethod:: ReactionFilter.emojis
 
 .. autoclass:: LocationFilter
-.. autoattribute:: LocationFilter.ANY
+.. autoattribute:: LocationFilter.any
 .. automethod:: LocationFilter.in_radius
 
 .. autoclass:: ContactsFilter
-.. autoattribute:: ContactsFilter.ANY
-.. autoattribute:: ContactsFilter.HAS_WA
+.. autoattribute:: ContactsFilter.any
+.. autoattribute:: ContactsFilter.has_wa
 .. automethod:: ContactsFilter.count
-.. automethod:: ContactsFilter.phone
+.. automethod:: ContactsFilter.phones
 
 .. autoclass:: UnsupportedMsgFilter
-.. autoattribute:: UnsupportedMsgFilter.ANY
+.. autoattribute:: UnsupportedMsgFilter.any
 
 ----------------
 
@@ -158,9 +157,9 @@ Callback Filters
 ~~~~~~~~~~~~~~~~
 
 .. autoclass:: CallbackFilter
-.. autoattribute:: CallbackFilter.ANY
-.. automethod:: CallbackFilter.data_match
-.. automethod:: CallbackFilter.data_contain
+.. autoattribute:: CallbackFilter.any
+.. automethod:: CallbackFilter.data_matches
+.. automethod:: CallbackFilter.data_contains
 .. automethod:: CallbackFilter.data_startswith
 .. automethod:: CallbackFilter.data_endswith
 .. automethod:: CallbackFilter.data_regex
@@ -171,10 +170,9 @@ Message Status Filters
 ~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: MessageStatusFilter
-.. autoattribute:: MessageStatusFilter.SENT
-.. autoattribute:: MessageStatusFilter.DELIVERED
-.. autoattribute:: MessageStatusFilter.READ
-.. autoattribute:: MessageStatusFilter.FAILED
-.. automethod:: MessageStatusFilter.failed_with_error_code
-.. automethod:: MessageStatusFilter.failed_with_exception
+.. autoattribute:: MessageStatusFilter.sent
+.. autoattribute:: MessageStatusFilter.delivered
+.. autoattribute:: MessageStatusFilter.read
+.. autoattribute:: MessageStatusFilter.failed
+.. automethod:: MessageStatusFilter.failed_with
 

@@ -92,11 +92,11 @@ ________________________
         verify_token='XYZXYZ',
     )
 
-    @wa.on_message(TextFilter.match('Hello', 'Hi'))
-    def hello(client: WhatsApp, message: Message):
-        message.react('👋')
-        message.reply_text(
-            text='Hello from PyWa!',
+    @wa.on_message(TextFilter.matches('Hello', 'Hi'))
+    def hello(client: WhatsApp, msg: Message):
+        msg.react('👋')
+        msg.reply_text(
+            text=f'Hello {msg.from_user.name}!',
             keyboard=[
                 InlineButton(
                     title='Click me!',

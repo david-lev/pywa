@@ -33,7 +33,7 @@ class Handler:
         self.filters = filters
 
     def __call__(self, wa: "WhatsApp", data: Any):
-        if all([f(wa, data) for f in self.filters]):
+        if all((f(wa, data) for f in self.filters)):
             self.handler(wa, data)
 
 

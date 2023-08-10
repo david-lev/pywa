@@ -169,11 +169,7 @@ class WhatsApp:
 
         Example:
 
-            >>> @wa.on_message_status(MessageStatusFilter.READ)
-            ... def delivered_handler(wa: WhatsApp, status: MessageStatus):
-            ...     print(f"Message {status.id} was read by {status.from_user.wa_id}")
-
-            >>> @wa.on_message_status(MessageStatusFilter.FAILED)
+            >>> @wa.on_message_status(MessageStatusFilter.failed)
             ... def delivered_handler(wa: WhatsApp, status: MessageStatus):
             ...     print(f"Message {status.id} failed to send to {status.to_user.wa_id}. error: {status.error.message}
 
