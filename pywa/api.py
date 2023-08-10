@@ -104,7 +104,7 @@ class WhatsAppCloudApi:
             self,
             media: bytes | BinaryIO,
             mime_type: str,
-            file_name: str = "file",
+            filename: str,
     ) -> dict[str, str]:
         """
         Upload a media file to WhatsApp.
@@ -118,7 +118,7 @@ class WhatsAppCloudApi:
         Args:
             media: media bytes or open(path, 'rb') object
             mime_type: The type of the media file
-            file_name: The name of the media file (default: ``file``).
+            filename: The name of the media file
         Returns:
             A dict with the ID of the uploaded media file.
         """
@@ -126,7 +126,7 @@ class WhatsAppCloudApi:
         form_data = MultipartEncoder(
             {
                 "file": (
-                    file_name,
+                    filename,
                     media,
                     mime_type
                 ),

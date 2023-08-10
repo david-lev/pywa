@@ -43,11 +43,11 @@ Here is an example of how to use them:
 
     wa = WhatsApp(...)
 
-    @wa.on_message(TextFilter.match('hello', 'hi', ignore_case=True))
+    @wa.on_message(TextFilter.matches('hello', 'hi', ignore_case=True))
     def handle_hello(wa: WhatsApp, msg: Message):
         msg.reply(f'Hello {msg.from_user.name}!', keyboard=[InlineButton('Click me!', 'click')])
 
-    @wa.on_callback(CallbackFilter.data_match('click'))
+    @wa.on_callback(CallbackFilter.data_matches('click'))
     def handle_click(wa: WhatsApp, clb: CallbackButton):
         clb.reply('You clicked me!')
 
@@ -68,12 +68,12 @@ Here is some examples:
     from pywa.filters import TextFilter, ImageFilter, VideoFilter
 
     fil.all_(TextFilter.startswith("Hello"), fil.any_(TextFilter.endswith("World"), TextFilter.length((1, 10))))
-    fil.any_(ImageFilter.ANY, fil.all_(VideoFilter.mimetype("video/mp4"), VideoFilter.HAS_CAPTION))
+    fil.any_(ImageFilter(), fil.all_(VideoFilter.mimetypes("video/mp4"), VideoFilter.has_caption))
     fil.not_(TextFilter.contains("bad word"))
 
 
-Keep in mind that all match-filters (``match``, ``startswith``, ``endswith``, ``contains`` etc.) returns True if
-any of the given matches are found. so there is no need to use ``fil.any_`` with them.
+Keep in mind that all match-filters (``matches``, ``startswith``, ``endswith``, ``contains`` etc.) returns True if
+ANY of the given matches are found. so there is no need to use ``fil.any_`` with them.
 
 
 ----------------------------------------

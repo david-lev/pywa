@@ -1,6 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, fields, field, asdict
 from enum import Enum
+from typing import Iterable
 from pywa import utils
 
 
@@ -129,10 +130,10 @@ class Contact:
     """
     name: Name
     birthday: str | None = None
-    phones: list[Phone] = field(default_factory=list)
-    emails: list[Email] = field(default_factory=list)
-    urls: list[Url] = field(default_factory=list)
-    addresses: list[Address] = field(default_factory=list)
+    phones: Iterable[Phone] = field(default_factory=list)
+    emails: Iterable[Email] = field(default_factory=list)
+    urls: Iterable[Url] = field(default_factory=list)
+    addresses: Iterable[Address] = field(default_factory=list)
     org: Org | None = None
 
     @classmethod

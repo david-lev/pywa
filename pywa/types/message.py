@@ -101,7 +101,7 @@ class Message(BaseUpdate):
     def download_media(
             self,
             filepath: str | None = None,
-            file_name: str | None = None,
+            filename: str | None = None,
             in_memory: bool = False,
     ) -> str | bytes:
         """
@@ -109,7 +109,7 @@ class Message(BaseUpdate):
 
         Args:
             filepath: The path where to save the file (if not provided, the current working directory will be used).
-            file_name: The name of the file (if not provided, it will be guessed from the URL + extension).
+            filename: The name of the file (if not provided, it will be guessed from the URL + extension).
             in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
 
         Returns:
@@ -122,7 +122,7 @@ class Message(BaseUpdate):
                       if getattr(self, media_type)), None)
         if media is None:
             raise ValueError('The message does not contain any media.')
-        return media.download(path=filepath, file_name=file_name, in_memory=in_memory)
+        return media.download(path=filepath, filename=filename, in_memory=in_memory)
 
     def copy(
             self,
@@ -171,7 +171,7 @@ class Message(BaseUpdate):
                     to=to,
                     reply_to_message_id=reply_to_message_id,
                     document=self.document.id,
-                    file_name=self.document.filename,
+                    filename=self.document.filename,
                     caption=self.caption,
                     buttons=keyboard,
                     body=body,

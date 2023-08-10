@@ -130,7 +130,7 @@ class BaseUpdate:
     def reply_document(
             self,
             document: str | bytes | BinaryIO,
-            file_name: str | None = None,
+            filename: str | None = None,
             caption: str | None = None,
             quote: bool = False,
             buttons: list[InlineButton] | None = None,
@@ -142,7 +142,7 @@ class BaseUpdate:
 
         Args:
             document: The document to reply with.
-            file_name: The filename of the document (optional, The extension of the filename will specify what format the document is displayed as in WhatsApp).
+            filename: The filename of the document (optional, The extension of the filename will specify what format the document is displayed as in WhatsApp).
             caption: The caption of the document (optional).
             quote: Whether to quote the message (default: False).
             buttons: The buttons to send with the message (optional).
@@ -155,7 +155,7 @@ class BaseUpdate:
         return self._client.send_document(
             to=self.sender,
             document=document,
-            file_name=file_name,
+            filename=filename,
             caption=caption,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             buttons=buttons,

@@ -488,7 +488,6 @@ class ContactsFilter(_BaseUpdateFilter):
     def count(min_count: int, max_count: int) -> MessageFilterT:
         """
         Filter for contacts messages that have a number of contacts between min_count and max_count.
-            - Aliases: ``contacts_count``, ``contacts_count_between``
 
         >>> ContactsFilter.count(1, 1) # ensure only 1 contact
         >>> ContactsFilter.count(1, 5) # between 1 and 5 contacts
