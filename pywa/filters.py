@@ -629,28 +629,28 @@ class MessageStatusFilter(_BaseUpdateFilter):
     >>> MessageStatusFilter.any
     """
 
-    sent: MessageStatusFilterT = lambda wa, data: data.status == Mst.SENT
+    sent: MessageStatusFilterT = lambda wa, s: s.status == Mst.SENT
     """
     Filter for messages that have been sent.
     
     >>> MessageStatusFilter.sent
     """
 
-    delivered: MessageStatusFilterT = lambda wa, data: data.status == Mst.DELIVERED
+    delivered: MessageStatusFilterT = lambda wa, s: s.status == Mst.DELIVERED
     """
     Filter for messages that have been delivered.
     
     >>> MessageStatusFilter.delivered
     """
 
-    read: MessageStatusFilterT = lambda wa, data: data.status == Mst.READ
+    read: MessageStatusFilterT = lambda wa, s: s.status == Mst.READ
     """
     Filter for messages that have been read.
     
     >>> MessageStatusFilter.read
     """
 
-    failed: MessageStatusFilterT = lambda wa, data: data.status == Mst.FAILED
+    failed: MessageStatusFilterT = lambda wa, s: s.status == Mst.FAILED
     """
     Filter for status updates of messages that have failed to send.
     
@@ -668,7 +668,8 @@ class MessageStatusFilter(_BaseUpdateFilter):
         >>> MessageStatusFilter.failed_with(ReEngagementMessage)
         >>> MessageStatusFilter.failed_with(131051)
         """
-        exceptions = tuple(e for e in errors if issubclass(e, WhatsAppError))
-        error_codes = tuple(e for e in errors if isinstance(e, int))
-        return lambda wa, s: (s.status == Mst.FAILED and
-                              (isinstance(s.error, exceptions) or s.error.error_code in error_codes))
+        error_codes = tuple(c for c in errors if isinstance(c, int))
+        exceptions = tuple(e for e in errors if e not in error_codes and issubclass(e, WhatsAppError))
+        return lambda wa, s: s.status == Mst.FAILED and (
+            any((isinstance(s.error, e) for e in exceptions)) or s.error.error_code in error_codes
+        )
