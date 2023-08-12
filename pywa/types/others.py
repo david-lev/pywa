@@ -6,10 +6,13 @@ from pywa import utils
 
 
 class _StrEnum(str, Enum):
-    def __eq__(self, other):
+    def __eq__(self, other: _StrEnum | str):
         if isinstance(other, str):
             return self.value == other.lower()
         return super().__eq__(other)
+
+    def __ne__(self, other: _StrEnum | str):
+        return not self.__eq__(other)
 
     def __str__(self):
         return self.value
@@ -24,9 +27,10 @@ class _FromDict:
 
     # noinspection PyArgumentList
     @classmethod
-    def from_dict(cls, **kwargs):
+    def from_dict(cls, data: dict, **kwargs):
+        data.update(kwargs)
         return cls(**{
-            k: v for k, v in kwargs.items()
+            k: v for k, v in data.items()
             if k in (f.name for f in fields(cls))
         })
 
@@ -47,6 +51,16 @@ class User:
     def from_dict(cls, data: dict) -> User:
         return cls(wa_id=data["wa_id"], name=data["profile"]["name"])
 
+    def as_vcard(self) -> str:
+        """Get the user as a vCard."""
+        return "\n".join((
+            "BEGIN:VCARD",
+            "VERSION:3.0",
+            f"FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:{self.name}",
+            f"TEL;type=CELL;type=VOICE:+{self.wa_id}",
+            "END:VCARD"
+        ))
+
 
 class MessageType(_StrEnum):
     """Message types."""
@@ -61,10 +75,10 @@ class MessageType(_StrEnum):
     CONTACTS = "contacts"
     INTERACTIVE = "interactive"
     MESSAGE_STATUS = "message_status"  # Not a real message type, used for MessageStatus
+    ORDER = "order"
+    SYSTEM = "system"
+    UNKNOWN = "unknown"
     UNSUPPORTED = "unsupported"
-
-    # SYSTEM = "system"
-    # ORDER = "order"
 
     @classmethod
     def _missing_(cls, value):
@@ -130,25 +144,26 @@ class Contact:
     """
     name: Name
     birthday: str | None = None
-    phones: Iterable[Phone] = field(default_factory=list)
-    emails: Iterable[Email] = field(default_factory=list)
-    urls: Iterable[Url] = field(default_factory=list)
-    addresses: Iterable[Address] = field(default_factory=list)
+    phones: Iterable[Phone] = field(default_factory=tuple)
+    emails: Iterable[Email] = field(default_factory=tuple)
+    urls: Iterable[Url] = field(default_factory=tuple)
+    addresses: Iterable[Address] = field(default_factory=tuple)
     org: Org | None = None
 
     @classmethod
-    def from_dict(cls, **data):
+    def from_dict(cls, data: dict):
         return cls(
-            name=cls.Name.from_dict(**data["name"]),
+            name=cls.Name.from_dict(data["name"]),
             birthday=data.get("birthday"),
-            phones=[cls.Phone.from_dict(**phone) for phone in data.get("phones", ())],
-            emails=[cls.Email.from_dict(**email) for email in data.get("emails", ())],
-            urls=[cls.Url.from_dict(**url) for url in data.get("urls", ())],
-            addresses=[cls.Address.from_dict(**address) for address in data.get("addresses", ())],
-            org=cls.Org.from_dict(**data.get("org")) if data.get("org") else None,
-        ) if data else None
+            phones=tuple(cls.Phone.from_dict(phone) for phone in data.get("phones", ())),
+            emails=tuple(cls.Email.from_dict(email) for email in data.get("emails", ())),
+            urls=tuple(cls.Url.from_dict(url) for url in data.get("urls", ())),
+            addresses=tuple(cls.Address.from_dict(address) for address in data.get("addresses", ())),
+            org=cls.Org.from_dict(data["org"]) if "org" in data else None
+        )
 
     def to_dict(self) -> dict:
+        """Get the contact as a dict."""
         return {
             "name": asdict(self.name),
             "birthday": self.birthday,
@@ -158,6 +173,21 @@ class Contact:
             "addresses": [asdict(address) for address in self.addresses],
             "org": asdict(self.org) if self.org else None,
         }
+
+    def as_vcard(self) -> str:
+        """Get the contact as a vCard."""
+        return "\n".join(s for s in (
+            "BEGIN:VCARD",
+            "VERSION:3.0",
+            f"FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:{self.name.formatted_name}",
+            f"BDAY:{self.birthday}" if self.birthday else None,
+            "\n".join(f"TEL;type={phone.type}:{phone.phone}" for phone in self.phones) if self.phones else None,
+            "\n".join(f"EMAIL;type={email.type}:{email.email}" for email in self.emails) if self.emails else None,
+            "\n".join(f"URL;type={url.type}:{url.url}" for url in self.urls) if self.urls else None,
+            "\n".join(f"ADR;type={a.type}:;;{';'.join((getattr(a, f) or '') for f in ('street', 'city', 'state', 'zip', 'country') )}"
+                      for a in self.addresses) if self.addresses else None,
+            "END:VCARD"
+        ) if s is not None)
 
     @dataclass(frozen=True, slots=True)
     class Name(_FromDict):
@@ -269,7 +299,7 @@ class ReplyToMessage:
     from_user_id: str
 
     @classmethod
-    def from_dict(cls, data: dict | None):
+    def from_dict(cls, data: dict | None) -> ReplyToMessage | None:
         return cls(
             message_id=data['id'],
             from_user_id=data['from']
@@ -287,3 +317,95 @@ class Metadata(_FromDict):
     """
     display_phone_number: str
     phone_number_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class Product:
+    """
+    Represents a product in an order.
+
+    Attributes:
+        retailer_id: Unique identifier of the product in a catalog.
+        quantity: Number of items ordered.
+        price: Price of the item.
+        currency: Currency of the price.
+    """
+    retailer_id: str
+    quantity: int
+    price: float
+    currency: str
+
+    @classmethod
+    def from_dict(cls, data: dict) -> Product:
+        return cls(
+            retailer_id=data["product_retailer_id"],
+            quantity=data["quantity"],
+            price=data["item_price"],
+            currency=data["currency"]
+        )
+
+    @property
+    def total_price(self) -> float:
+        """Total price of the product."""
+        return self.quantity * self.price
+
+
+@dataclass(frozen=True, slots=True)
+class Order:
+    """
+    Represents an order.
+
+    Attributes:
+        catalog_id: The ID for the catalog the ordered item belongs to.
+        text: Text message from the user sent along with the order.
+        products:The ordered products.
+
+    Properties:
+        total_price: Total price of the order.
+    """
+    catalog_id: str
+    text: str
+    products: tuple[Product]
+
+    @classmethod
+    def from_dict(cls, data: dict) -> Order:
+        message = data['messages'][0]
+        return cls(
+            catalog_id=message['order']['catalog_id'],
+            text=message['order']['text'],
+            products=tuple(Product.from_dict(p) for p in message['order']['product_items'])
+        )
+
+    @property
+    def total_price(self) -> float:
+        """Total price of the order."""
+        return sum(p.total_price for p in self.products)
+
+
+@dataclass(frozen=True, slots=True)
+class System:
+    """
+    Represents a system update (A customer has updated their phone number or profile information).
+
+    Attributes:
+        type: The type of the system update (customer_changed_number or customer_identity_changed).
+        body: Describes the change to the customer's identity or phone number.
+        identity: Hash for the identity fetched from server.
+        wa_id: The WhatsApp ID for the customer prior to the update.
+        new_wa_id: New WhatsApp ID for the customer when their phone number is updated.
+    """
+    type: str
+    body: str
+    identity: str
+    wa_id: str
+    new_wa_id: str | None
+
+    @classmethod
+    def from_dict(cls, data: dict) -> System:
+        return cls(
+            type=data['type'],
+            body=data['body'],
+            identity=data['identity'],
+            wa_id=data['customer'],
+            new_wa_id=data.get('wa_id')
+        )

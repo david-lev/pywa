@@ -2,13 +2,13 @@
 This module contains the handlers for incoming updates.
 """
 
-__all__ = (
+__all__ = [
     "MessageHandler",
-    "ButtonCallbackHandler",
-    "SelectionCallbackHandler",
+    "CallbackButtonHandler",
+    "CallbackSelectionHandler",
     "RawUpdateHandler",
     "MessageStatusHandler"
-)
+]
 
 from typing import Callable, Any, TYPE_CHECKING
 from pywa.types import Message, CallbackButton, CallbackSelection, MessageStatus
@@ -56,7 +56,7 @@ class MessageHandler(Handler):
         super().__init__(handler, *filters)
 
 
-class ButtonCallbackHandler(Handler):
+class CallbackButtonHandler(Handler):
     """
     A button callback handler.
 
@@ -75,7 +75,7 @@ class ButtonCallbackHandler(Handler):
         super().__init__(handler, *filters)
 
 
-class SelectionCallbackHandler(Handler):
+class CallbackSelectionHandler(Handler):
     """
     A selection callback handler.
 

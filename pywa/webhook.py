@@ -98,10 +98,10 @@ class Webhook:
                 return Message.from_dict(client=client, value=value), MessageHandler
             else:
                 if value["messages"][0]["interactive"]["type"] == "button_reply":
-                    return CallbackButton.from_dict(client=client, value=value), ButtonCallbackHandler
+                    return CallbackButton.from_dict(client=client, data=value), CallbackButtonHandler
                 elif value["messages"][0]["interactive"]["type"] == "list_reply":
-                    return CallbackSelection.from_dict(client=client, value=value), SelectionCallbackHandler
+                    return CallbackSelection.from_dict(client=client, data=value), CallbackSelectionHandler
 
         elif 'statuses' in value:
-            return MessageStatus.from_dict(client=client, value=value), MessageStatusHandler
+            return MessageStatus.from_dict(client=client, data=value), MessageStatusHandler
         return None, None  # the update is not supported

@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from pywa.errors import WhatsAppError
 from .base_update import BaseUpdate
-from .others import ReplyToMessage, Reaction, Location, Contact, MessageType, User, Metadata
+from .others import ReplyToMessage, Reaction, Location, Contact, MessageType, User, Metadata, Order, System
 from .callback import SectionList, InlineButton
 from .media import Image, Video, Sticker, Document, Audio
 
@@ -22,7 +22,7 @@ class Message(BaseUpdate):
     Attributes:
         id: The message ID.
         metadata: The metadata of the message (to which phone number it was sent).
-        type: The message type (text, image, video, etc).
+        type: The message type (text, image, video, etc.).
         from_user: The user who sent the message.
         timestamp: The timestamp when the message was sent.
         reply_to_message: The message to which this message is a reply to. (optional)
@@ -38,6 +38,8 @@ class Message(BaseUpdate):
         reaction: The reaction of the message (if the message type is reaction). (optional)
         location: The location of the message (if the message type is location). (optional)
         contacts: The contacts of the message (if the message type is contacts). (optional)
+        order: The order of the message (if the message type is order). (optional)
+        system: The system update (if the message type is system). (optional)
         error: The error of the message (if the message type is `unsupported`). (optional)
     """
     reply_to_message: ReplyToMessage | None
@@ -52,7 +54,9 @@ class Message(BaseUpdate):
     caption: str | None
     reaction: Reaction | None
     location: Location | None
-    contacts: list[Contact] | None
+    contacts: tuple[Contact] | None
+    order: Order | None
+    system: System | None
     error: WhatsAppError | None
 
     @property
@@ -63,7 +67,10 @@ class Message(BaseUpdate):
     @property
     def has_media(self) -> bool:
         """Whether the message has any media."""
-        return any(getattr(self, media_type) for media_type in ('image', 'video', 'sticker', 'document', 'audio'))
+        try:
+            return self.media is not None
+        except ValueError:
+            return False
 
     @property
     def is_reply(self) -> bool:
@@ -72,31 +79,46 @@ class Message(BaseUpdate):
 
     @classmethod
     def from_dict(cls, client: WhatsApp, value: dict) -> Message:
-        message = value['messages'][0]
-        context = message.get('context')
+        msg = value['messages'][0]
+        context = msg.get('context')
         return cls(
             _client=client,
-            id=message['id'],
-            type=MessageType(message['type']),
+            id=msg['id'],
+            type=MessageType(msg['type']),
             from_user=User.from_dict(value['contacts'][0]),
-            timestamp=datetime.fromtimestamp(int(message['timestamp'])),
-            metadata=Metadata.from_dict(**value['metadata']),
+            timestamp=datetime.fromtimestamp(int(msg['timestamp'])),
+            metadata=Metadata.from_dict(value['metadata']),
             forwarded=any(context.get(key) for key in ('forwarded', 'frequently_forwarded')) if context else False,
             forwarded_many_times=context.get('frequently_forwarded', False) if context else False,
-            reply_to_message=ReplyToMessage.from_dict(message.get('context')),
-            text=message['text']['body'] if 'text' in message else None,
-            image=Image.from_dict(_client=client, **message.get('image')) if 'image' in message else None,
-            video=Video.from_dict(_client=client, **message.get('video')) if 'video' in message else None,
-            sticker=Sticker.from_dict(_client=client, **message.get('sticker')) if 'sticker' in message else None,
-            document=Document.from_dict(_client=client, **message.get('document')) if 'document' in message else None,
-            audio=Audio.from_dict(_client=client, **message.get('audio')) if 'audio' in message else None,
-            caption=message.get(message['type'], {}).get('caption', None)
-            if message['type'] in ('image', 'video', 'document') else None,
-            reaction=Reaction.from_dict(**message.get('reaction')) if 'reaction' in message else None,
-            location=Location.from_dict(**message.get('location')) if 'location' in message else None,
-            contacts=[Contact.from_dict(**contact) for contact in message.get('contacts', ())] or None,
-            error=WhatsAppError.from_incoming_error(message['errors'][0]) if 'errors' in message else None
+            reply_to_message=ReplyToMessage.from_dict(context),
+            text=msg['text']['body'] if 'text' in msg else None,
+            image=Image.from_dict(data=msg['image'], _client=client) if 'image' in msg else None,
+            video=Video.from_dict(data=msg['video'], _client=client) if 'video' in msg else None,
+            sticker=Sticker.from_dict(data=msg['sticker'], _client=client) if 'sticker' in msg else None,
+            document=Document.from_dict(data=msg['document'], _client=client) if 'document' in msg else None,
+            audio=Audio.from_dict(data=msg['audio'], _client=client) if 'audio' in msg else None,
+            caption=msg[msg['type']].get('caption') if msg['type'] in ('image', 'video', 'document') else None,
+            reaction=Reaction.from_dict(msg['reaction']) if 'reaction' in msg else None,
+            location=Location.from_dict(msg.get('location')) if 'location' in msg else None,
+            contacts=tuple(Contact.from_dict(c) for c in msg['contacts']) if 'contacts' in msg else None,
+            order=Order.from_dict(msg['order']) if 'order' in msg else None,
+            system=System.from_dict(msg['system']) if 'system' in msg else None,
+            error=WhatsAppError.from_incoming_error(msg['errors'][0]) if 'errors' in msg else None
         )
+
+    @property
+    def media(self) -> Image | Video | Sticker | Document | Audio:
+        """
+        The media of the message (image, video, sticker, document or audio).
+
+        Raises:
+            ValueError: If the message does not contain any media. (You can check this with ``msg.has_media``)
+        """
+        try:
+            return next(getattr(self, media_type) for media_type in ('image', 'video', 'sticker', 'document', 'audio')
+                        if getattr(self, media_type))
+        except StopIteration:
+            raise ValueError('The message does not contain any media.')
 
     def download_media(
             self,
@@ -118,11 +140,7 @@ class Message(BaseUpdate):
         Raises:
             ValueError: If the message does not contain any media.
         """
-        media = next((getattr(self, media_type) for media_type in ('image', 'video', 'sticker', 'document', 'audio')
-                      if getattr(self, media_type)), None)
-        if media is None:
-            raise ValueError('The message does not contain any media.')
-        return media.download(path=filepath, filename=filename, in_memory=in_memory)
+        return self.media.download(path=filepath, filename=filename, in_memory=in_memory)
 
     def copy(
             self,

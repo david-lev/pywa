@@ -34,14 +34,14 @@ class CallbackButton(BaseUpdate):
         return self.reply_to_message.message_id
 
     @classmethod
-    def from_dict(cls, client: WhatsApp, value: dict):
-        message = value['messages'][0]
+    def from_dict(cls, client: WhatsApp, data: dict):
+        message = data['messages'][0]
         return cls(
             _client=client,
             id=message['id'],
-            metadata=Metadata.from_dict(**value['metadata']),
+            metadata=Metadata.from_dict(data['metadata']),
             type=MessageType(message['type']),
-            from_user=User.from_dict(value['contacts'][0]),
+            from_user=User.from_dict(data['contacts'][0]),
             timestamp=datetime.fromtimestamp(int(message['timestamp'])),
             reply_to_message=ReplyToMessage.from_dict(message['context']),
             data=message['interactive']['button_reply']['id'],
@@ -71,14 +71,14 @@ class CallbackSelection(BaseUpdate):
     description: str | None
 
     @classmethod
-    def from_dict(cls, client: WhatsApp, value: dict):
-        message = value['messages'][0]
+    def from_dict(cls, client: WhatsApp, data: dict):
+        message = data['messages'][0]
         return cls(
             _client=client,
             id=message['id'],
-            metadata=Metadata.from_dict(**value['metadata']),
+            metadata=Metadata.from_dict(data['metadata']),
             type=MessageType(message['type']),
-            from_user=User.from_dict(value['contacts'][0]),
+            from_user=User.from_dict(data['contacts'][0]),
             timestamp=datetime.fromtimestamp(int(message['timestamp'])),
             reply_to_message=ReplyToMessage.from_dict(message['context']),
             data=message['interactive']['list_reply']['id'],

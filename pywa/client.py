@@ -1,6 +1,6 @@
 """The WhatsApp client."""
 
-__all__ = ("WhatsApp",)
+__all__ = ["WhatsApp",]
 
 import hashlib
 import mimetypes
@@ -8,7 +8,7 @@ import os
 import requests
 from typing import Callable, Any, Iterable, BinaryIO
 from pywa.api import WhatsAppCloudApi
-from pywa.handlers import Handler, MessageHandler, ButtonCallbackHandler, SelectionCallbackHandler, RawUpdateHandler, \
+from pywa.handlers import Handler, MessageHandler, CallbackButtonHandler, CallbackSelectionHandler, RawUpdateHandler, \
     MessageStatusHandler
 from pywa.types import InlineButton, SectionList, Message, CallbackButton, CallbackSelection, MessageStatus, Contact, \
     MediaUrlResponse
@@ -71,12 +71,12 @@ class WhatsApp:
         Add handlers manually (instead of using decorators).
 
         Example:
-            >>> from pywa.handlers import MessageHandler, ButtonCallbackHandler
+            >>> from pywa.handlers import MessageHandler, CallbackButtonHandler
             >>> from pywa.filters import TextFilter
             >>> print_message = lambda wa, msg: print(msg)
             >>> wa.add_handlers(
             ...     MessageHandler(print_message, TextFilter.ANY),
-            ...     ButtonCallbackHandler(print_message),
+            ...     CallbackButtonHandler(print_message),
             ... )
         """
         if self.webhook is None:
@@ -138,7 +138,7 @@ class WhatsApp:
                 WhatsApp client and the incoming callback button and return a boolean).
         """
         def decorator(func: Callable[["WhatsApp", CallbackButton], Any]):
-            self.add_handlers(ButtonCallbackHandler(func, *filters))
+            self.add_handlers(CallbackButtonHandler(func, *filters))
             return func
         return decorator
 
@@ -157,7 +157,7 @@ class WhatsApp:
                 WhatsApp client and the incoming callback selection and return a boolean).
         """
         def decorator(func: Callable[["WhatsApp", CallbackSelection], Any]):
-            self.add_handlers(SelectionCallbackHandler(func, *filters))
+            self.add_handlers(CallbackSelectionHandler(func, *filters))
             return func
         return decorator
 
