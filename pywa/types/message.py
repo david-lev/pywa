@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, Any
 from pywa.errors import WhatsAppError
 from .base_update import BaseUpdate
 from .others import ReplyToMessage, Reaction, Location, Contact, MessageType, User, Metadata, Order, System
@@ -10,6 +10,22 @@ from .media import Image, Video, Sticker, Document, Audio
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
+
+
+_FIELDS_TO_OBJECTS: dict[str, Callable[[dict, WhatsApp], Any]] = {
+    'text': lambda m, _client: m['body'],
+    'image': Image.from_dict,
+    'video': Video.from_dict,
+    'sticker': Sticker.from_dict,
+    'document': Document.from_dict,
+    'audio': Audio.from_dict,
+    'reaction': Reaction.from_dict,
+    'location': Location.from_dict,
+    'contacts': lambda m, _client: tuple(Contact.from_dict(c) for c in m),
+    'order': Order.from_dict,
+    'system': System.from_dict,
+}
+_MEDIA_FIELDS = ('image', 'video', 'sticker', 'document', 'audio')
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,19 +61,19 @@ class Message(BaseUpdate):
     reply_to_message: ReplyToMessage | None
     forwarded: bool
     forwarded_many_times: bool
-    text: str | None
-    image: Image | None
-    video: Video | None
-    sticker: Sticker | None
-    document: Document | None
-    audio: Audio | None
-    caption: str | None
-    reaction: Reaction | None
-    location: Location | None
-    contacts: tuple[Contact] | None
-    order: Order | None
-    system: System | None
-    error: WhatsAppError | None
+    text: str | None = None
+    image: Image | None = None
+    video: Video | None = None
+    sticker: Sticker | None = None
+    document: Document | None = None
+    audio: Audio | None = None
+    caption: str | None = None
+    reaction: Reaction | None = None
+    location: Location | None = None
+    contacts: tuple[Contact] | None = None
+    order: Order | None = None
+    system: System | None = None
+    error: WhatsAppError | None = None
 
     @property
     def message_id_to_reply(self) -> str:
@@ -80,29 +96,22 @@ class Message(BaseUpdate):
     @classmethod
     def from_dict(cls, client: WhatsApp, value: dict) -> Message:
         msg = value['messages'][0]
+        msg_type = msg['type']
         context = msg.get('context')
+        msg_obj = _FIELDS_TO_OBJECTS.get(msg_type)
+        msg_content = {msg_type: msg_obj(msg[msg_type], _client=client)} if msg_obj is not None else {}
         return cls(
             _client=client,
             id=msg['id'],
             type=MessageType(msg['type']),
+            **msg_content,
             from_user=User.from_dict(value['contacts'][0]),
             timestamp=datetime.fromtimestamp(int(msg['timestamp'])),
             metadata=Metadata.from_dict(value['metadata']),
             forwarded=any(context.get(key) for key in ('forwarded', 'frequently_forwarded')) if context else False,
             forwarded_many_times=context.get('frequently_forwarded', False) if context else False,
             reply_to_message=ReplyToMessage.from_dict(context),
-            text=msg['text']['body'] if 'text' in msg else None,
-            image=Image.from_dict(data=msg['image'], _client=client) if 'image' in msg else None,
-            video=Video.from_dict(data=msg['video'], _client=client) if 'video' in msg else None,
-            sticker=Sticker.from_dict(data=msg['sticker'], _client=client) if 'sticker' in msg else None,
-            document=Document.from_dict(data=msg['document'], _client=client) if 'document' in msg else None,
-            audio=Audio.from_dict(data=msg['audio'], _client=client) if 'audio' in msg else None,
-            caption=msg[msg['type']].get('caption') if msg['type'] in ('image', 'video', 'document') else None,
-            reaction=Reaction.from_dict(msg['reaction']) if 'reaction' in msg else None,
-            location=Location.from_dict(msg.get('location')) if 'location' in msg else None,
-            contacts=tuple(Contact.from_dict(c) for c in msg['contacts']) if 'contacts' in msg else None,
-            order=Order.from_dict(msg['order']) if 'order' in msg else None,
-            system=System.from_dict(msg['system']) if 'system' in msg else None,
+            caption=msg[msg_type].get('caption') if msg_type in ('image', 'video', 'document') else None,
             error=WhatsAppError.from_incoming_error(msg['errors'][0]) if 'errors' in msg else None
         )
 
@@ -115,8 +124,7 @@ class Message(BaseUpdate):
             ValueError: If the message does not contain any media. (You can check this with ``msg.has_media``)
         """
         try:
-            return next(getattr(self, media_type) for media_type in ('image', 'video', 'sticker', 'document', 'audio')
-                        if getattr(self, media_type))
+            return next(getattr(self, media_type) for media_type in _MEDIA_FIELDS if getattr(self, media_type))
         except StopIteration:
             raise ValueError('The message does not contain any media.')
 
@@ -218,7 +226,6 @@ class Message(BaseUpdate):
             case MessageType.STICKER:
                 return self._client.send_sticker(
                     to=to,
-                    reply_to_message_id=reply_to_message_id,
                     sticker=self.sticker.id
                 )
             case MessageType.LOCATION:
@@ -232,7 +239,6 @@ class Message(BaseUpdate):
             case MessageType.AUDIO:
                 return self._client.send_audio(
                     to=to,
-                    reply_to_message_id=reply_to_message_id,
                     audio=self.audio.id
                 )
             case MessageType.CONTACTS:

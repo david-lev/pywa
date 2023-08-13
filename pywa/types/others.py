@@ -1,8 +1,11 @@
 from __future__ import annotations
 from dataclasses import dataclass, fields, field, asdict
 from enum import Enum
-from typing import Iterable
+from typing import Iterable, TYPE_CHECKING
 from pywa import utils
+
+if TYPE_CHECKING:
+    from pywa.client import WhatsApp
 
 
 class _StrEnum(str, Enum):
@@ -162,7 +165,7 @@ class Contact:
             org=cls.Org.from_dict(data["org"]) if "org" in data else None
         )
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, str | dict[str, str] | list[dict[str, str]] | None]:
         """Get the contact as a dict."""
         return {
             "name": asdict(self.name),
@@ -325,12 +328,12 @@ class Product:
     Represents a product in an order.
 
     Attributes:
-        retailer_id: Unique identifier of the product in a catalog.
+        sku: Unique identifier of the product in a catalog (also referred to as `Content ID` or `Retailer ID`).
         quantity: Number of items ordered.
         price: Price of the item.
         currency: Currency of the price.
     """
-    retailer_id: str
+    sku: str
     quantity: int
     price: float
     currency: str
@@ -338,7 +341,7 @@ class Product:
     @classmethod
     def from_dict(cls, data: dict) -> Product:
         return cls(
-            retailer_id=data["product_retailer_id"],
+            sku=data["product_retailer_id"],
             quantity=data["quantity"],
             price=data["item_price"],
             currency=data["currency"]
@@ -357,23 +360,22 @@ class Order:
 
     Attributes:
         catalog_id: The ID for the catalog the ordered item belongs to.
-        text: Text message from the user sent along with the order.
         products:The ordered products.
+        text: Text message from the user sent along with the order (optional).
 
     Properties:
         total_price: Total price of the order.
     """
     catalog_id: str
-    text: str
     products: tuple[Product]
+    text: str | None
 
     @classmethod
-    def from_dict(cls, data: dict) -> Order:
-        message = data['messages'][0]
+    def from_dict(cls, data: dict, _client: WhatsApp) -> Order:
         return cls(
-            catalog_id=message['order']['catalog_id'],
-            text=message['order']['text'],
-            products=tuple(Product.from_dict(p) for p in message['order']['product_items'])
+            catalog_id=data['catalog_id'],
+            text=data.get('text'),
+            products=tuple(Product.from_dict(p) for p in data['product_items'])
         )
 
     @property
@@ -401,7 +403,7 @@ class System:
     new_wa_id: str | None
 
     @classmethod
-    def from_dict(cls, data: dict) -> System:
+    def from_dict(cls, data: dict, _client: WhatsApp) -> System:
         return cls(
             type=data['type'],
             body=data['body'],
