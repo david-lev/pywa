@@ -11,7 +11,7 @@ from pywa.api import WhatsAppCloudApi
 from pywa.handlers import Handler, MessageHandler, CallbackButtonHandler, CallbackSelectionHandler, RawUpdateHandler, \
     MessageStatusHandler
 from pywa.types import InlineButton, SectionList, Message, CallbackButton, CallbackSelection, MessageStatus, Contact, \
-    MediaUrlResponse
+    MediaUrlResponse, ProductsSection
 from pywa.webhook import Webhook
 
 
@@ -185,11 +185,11 @@ class WhatsApp:
 
     def send_message(
             self,
-            to: str,
+            to: str | int,
             text: str,
             preview_url: bool = False,
             reply_to_message_id: str | None = None,
-            keyboard: list[InlineButton] | SectionList | None = None,
+            keyboard: Iterable[InlineButton] | SectionList | None = None,
             header: str | None = None,
             footer: str | None = None,
     ) -> str:
@@ -271,14 +271,16 @@ class WhatsApp:
         """
         if not keyboard:
             return self.api.send_text_message(
-                to=to,
+                to=str(to),
                 text=text,
                 preview_url=preview_url,
                 reply_to_message_id=reply_to_message_id,
             )['messages'][0]['id']
+        is_list = isinstance(keyboard, SectionList)
         return self.api.send_interactive_message(
-            to=to,
-            keyboard=keyboard,
+            to=str(to),
+            type_="list" if is_list else "button",
+            action=keyboard.to_dict() if is_list else {"buttons": tuple(b.to_dict() for b in keyboard)},
             header={
                 "type": "text",
                 "text": header,
@@ -314,11 +316,11 @@ class WhatsApp:
 
     def send_image(
             self,
-            to: str,
+            to: str | int,
             image: str | bytes | BinaryIO,
             caption: str | None = None,
             reply_to_message_id: str | None = None,
-            buttons: list[InlineButton] | None = None,
+            buttons: Iterable[InlineButton] | None = None,
             body: str | None = None,
             footer: str | None = None,
     ) -> str:
@@ -348,16 +350,18 @@ class WhatsApp:
         is_url, image = self._resolve_media_param(media=image, mime_type="image/jpeg", filename="image.jpg")
         if not buttons:
             return self.api.send_media(
-                to=to,
+                to=str(to),
                 media_id_or_url=image,
+                is_url=is_url,
                 media_type="image",
                 caption=caption,
             )['messages'][0]['id']
         if not body and not caption:
             raise ValueError("Either body or caption must be provided when sending an image with buttons.")
         return self.api.send_interactive_message(
-            to=to,
-            keyboard=buttons,
+            to=str(to),
+            type_="button",
+            action={"buttons": tuple(b.to_dict() for b in buttons)},
             header={
                 "type": "image",
                 "image": {
@@ -371,11 +375,11 @@ class WhatsApp:
 
     def send_video(
             self,
-            to: str,
+            to: str | int,
             video: str | bytes | BinaryIO,
             caption: str | None = None,
             reply_to_message_id: str | None = None,
-            buttons: list[InlineButton] | None = None,
+            buttons: Iterable[InlineButton] | None = None,
             body: str | None = None,
             footer: str | None = None,
     ) -> str:
@@ -405,16 +409,18 @@ class WhatsApp:
         is_url, video = self._resolve_media_param(media=video, mime_type="video/mp4", filename="video.mp4")
         if not buttons:
             return self.api.send_media(
-                to=to,
+                to=str(to),
                 media_id_or_url=video,
+                is_url=is_url,
                 media_type="video",
                 caption=caption,
             )['messages'][0]['id']
         if not body and not caption:
             raise ValueError("Either body or caption must be provided when sending a video with buttons.")
         return self.api.send_interactive_message(
-            to=to,
-            keyboard=buttons,
+            to=str(to),
+            type_="button",
+            action={"buttons": tuple(b.to_dict() for b in buttons)},
             header={
                 "type": "video",
                 "video": {
@@ -428,12 +434,12 @@ class WhatsApp:
 
     def send_document(
             self,
-            to: str,
+            to: str | int,
             document: str | bytes | BinaryIO,
             filename: str | None = None,
             caption: str | None = None,
             reply_to_message_id: str | None = None,
-            buttons: list[InlineButton] | None = None,
+            buttons: Iterable[InlineButton] | None = None,
             body: str | None = None,
             footer: str | None = None,
     ) -> str:
@@ -467,17 +473,19 @@ class WhatsApp:
                                                      filename=filename or "file.text")
         if not buttons:
             return self.api.send_media(
-                to=to,
+                to=str(to),
                 media_id_or_url=document,
+                is_url=is_url,
                 media_type="document",
-                filename=filename,
                 caption=caption,
+                filename=filename,
             )['messages'][0]['id']
         if not body and not caption:
             raise ValueError("Either body or caption must be provided when sending a document with buttons.")
         return self.api.send_interactive_message(
-            to=to,
-            keyboard=buttons,
+            to=str(to),
+            type_="button",
+            action={"buttons": tuple(b.to_dict() for b in buttons)},
             header={
                 "type": "document",
                 "document": {
@@ -492,7 +500,7 @@ class WhatsApp:
 
     def send_audio(
             self,
-            to: str,
+            to: str | int,
             audio: str | bytes | BinaryIO,
     ) -> str:
         """
@@ -512,16 +520,17 @@ class WhatsApp:
         Returns:
             The message ID of the sent message.
         """
-        _, audio = self._resolve_media_param(media=audio, mime_type="audio/mpeg", filename="audio.mp3")
+        is_url, audio = self._resolve_media_param(media=audio, mime_type="audio/mpeg", filename="audio.mp3")
         return self.api.send_media(
-            to=to,
+            to=str(to),
             media_id_or_url=audio,
+            is_url=is_url,
             media_type="audio",
         )['messages'][0]['id']
 
     def send_sticker(
             self,
-            to: str,
+            to: str | int,
             sticker: str | bytes | BinaryIO,
     ) -> str:
         """
@@ -543,16 +552,17 @@ class WhatsApp:
         Returns:
             The message ID of the sent message.
         """
-        _, sticker = self._resolve_media_param(media=sticker, mime_type="image/webp", filename="sticker.webp")
+        is_url, sticker = self._resolve_media_param(media=sticker, mime_type="image/webp", filename="sticker.webp")
         return self.api.send_media(
-            to=to,
+            to=str(to),
             media_id_or_url=sticker,
+            is_url=is_url,
             media_type="sticker",
         )['messages'][0]['id']
 
     def send_reaction(
             self,
-            to: str,
+            to: str | int,
             emoji: str,
             message_id: str,
     ) -> str:
@@ -576,14 +586,14 @@ class WhatsApp:
             The message ID of the reaction.
         """
         return self.api.send_reaction(
-            to=to,
+            to=str(to),
             emoji=emoji,
             message_id=message_id,
         )['messages'][0]['id']
 
     def remove_reaction(
             self,
-            to: str,
+            to: str | int,
             message_id: str,
     ) -> str:
         """
@@ -597,14 +607,14 @@ class WhatsApp:
             ... )
         """
         return self.api.send_reaction(
-            to=to,
+            to=str(to),
             message_id=message_id,
             emoji=""
         )['messages'][0]['id']
 
     def send_location(
             self,
-            to: str,
+            to: str | int,
             latitude: float,
             longitude: float,
             name: str | None = None,
@@ -631,7 +641,7 @@ class WhatsApp:
             address: The address of the location (optional).
         """
         return self.api.send_location(
-            to=to,
+            to=str(to),
             latitude=latitude,
             longitude=longitude,
             name=name,
@@ -640,7 +650,7 @@ class WhatsApp:
 
     def send_contact(
             self,
-            to: str,
+            to: str | int,
             contact: Contact | Iterable[Contact],
             reply_to_message_id: str | None = None,
     ) -> str:
@@ -669,9 +679,119 @@ class WhatsApp:
             The message ID of the sent message.
         """
         return self.api.send_contacts(
-            to=to,
+            to=str(to),
             contacts=tuple(c.to_dict() for c in contact) if isinstance(contact, Iterable) else (contact.to_dict()),
             reply_to_message_id=reply_to_message_id,
+        )['messages'][0]['id']
+
+    def send_catalog(
+            self,
+            to: str | int,
+            text: str,
+            footer: str | None = None,
+            thumbnail_product_sku: str | None = None,
+            reply_to_message_id: str | None = None,
+    ) -> str:
+        """
+        Send the business catalog to a WhatsApp user.
+
+        Args:
+            to: The phone ID of the WhatsApp user.
+            text: Text to appear in the message body (up to 1024 characters).
+            footer: Text to appear in the footer of the message (optional, up to 60 characters).
+            thumbnail_product_sku: The thumbnail of this item will be used as the message's header image (optional, if
+                not provided, the first item in the catalog will be used).
+            reply_to_message_id: The message ID to reply to (optional).
+
+        Returns:
+            The message ID of the sent message.
+        """
+        return self.api.send_interactive_message(
+            to=str(to),
+            type_="catalog_message",
+            action={
+                "name": "catalog_message",
+                **({"parameters": {
+                    "thumbnail_product_retailer_id": thumbnail_product_sku,
+                }} if thumbnail_product_sku else {}),
+            },
+            body=text,
+            footer=footer,
+            reply_to_message_id=reply_to_message_id
+        )['messages'][0]['id']
+
+    def send_product(
+            self,
+            to: str | int,
+            catalog_id: str,
+            sku: str,
+            text: str | None = None,
+            footer: str | None = None,
+            reply_to_message_id: str | None = None,
+    ) -> str:
+        """
+        Send a product from a business catalog to a WhatsApp user.
+            - To send multiple products, use `wa.send_products`.
+        Args:
+            to: The phone ID of the WhatsApp user.
+            catalog_id: The ID of the catalog to send the product from (https://business.facebook.com/commerce/)
+            sku: The product SKU to send.
+            text: Text to appear in the message body (up to 1024 characters).
+            footer: Text to appear in the footer of the message (optional, up to 60 characters).
+            reply_to_message_id: The message ID to reply to (optional).
+
+        Returns:
+            The message ID of the sent message.
+        """
+        return self.api.send_interactive_message(
+            to=str(to),
+            type_="product",
+            action={
+                "catalog_id": catalog_id,
+                "product_retailer_id": sku,
+            },
+            body=text,
+            footer=footer,
+            reply_to_message_id=reply_to_message_id
+        )['messages'][0]['id']
+
+    def send_products(
+            self,
+            to: str | int,
+            catalog_id: str,
+            product_sections: Iterable[ProductsSection],
+            title: str,
+            text: str,
+            footer: str | None = None,
+            reply_to_message_id: str | None = None,
+    ) -> str:
+        """
+        Send products from a business catalog to a WhatsApp user.
+            - To send a single product, use `wa.send_product`.
+
+        Args:
+            to: The phone ID of the WhatsApp user.
+            catalog_id: The ID of the catalog to send the product from (https://business.facebook.com/commerce/)
+            product_sections: The product sections to send (up to 30 products across all sections).
+            title: The title of the product list (up to 60 characters).
+            text: Text to appear in the message body (up to 1024 characters).
+            footer: Text to appear in the footer of the message (optional, up to 60 characters).
+            reply_to_message_id: The message ID to reply to (optional).
+
+        Returns:
+            The message ID of the sent message.
+        """
+        return self.api.send_interactive_message(
+            to=str(to),
+            type_="product_list",
+            action={
+                "catalog_id": catalog_id,
+                "sections": tuple(ps.to_dict() for ps in product_sections),
+            },
+            header={"type": "text", "text": title},
+            body=text,
+            footer=footer,
+            reply_to_message_id=reply_to_message_id
         )['messages'][0]['id']
 
     def mark_message_as_read(

@@ -1,8 +1,7 @@
 import requests
-from typing import Iterable, BinaryIO
+from typing import Iterable, BinaryIO, Any
 from requests_toolbelt import MultipartEncoder
 from pywa.errors import WhatsAppError
-from pywa.types import InlineButton, SectionList, Contact
 
 
 class WhatsAppCloudApi:
@@ -57,7 +56,7 @@ class WhatsAppCloudApi:
 
     def send_text_message(
             self,
-            to: str | int,
+            to: str,
             text: str,
             preview_url: bool = False,
             reply_to_message_id: str | None = None,
@@ -210,10 +209,12 @@ class WhatsAppCloudApi:
 
     def send_media(
             self,
-            to: str | int,
+            to: str,
             media_id_or_url: str,
             media_type: str,
-            **kwargs
+            is_url: bool,
+            caption: str | None = None,
+            filename: str | None = None,
     ) -> dict[str, dict | list]:
         """
         Send a media file to a WhatsApp user.
@@ -229,8 +230,10 @@ class WhatsAppCloudApi:
         Args:
             to: The WhatsApp ID of the recipient.
             media_id_or_url: The ID or URL of the media file to send.
-            media_type: The type of the media file.
-            **kwargs: Additional arguments to send with the message.
+            is_url: Whether the media_id_or_url is a URL or an ID.
+            media_type: The type of the media file (e.g. 'image', 'video', 'document').
+            caption: The caption to send with the media file (only for images, videos and documents).
+            filename: The filename to send with the media file (only for documents).
 
         Returns:
             The sent message.
@@ -240,8 +243,9 @@ class WhatsAppCloudApi:
             "to": str(to),
             "type": media_type,
             media_type: {
-                "link" if media_id_or_url.startswith(('https:', 'http:')) else "id": media_id_or_url,
-                **{k: v for k, v in kwargs.items() if v is not None}
+                ("link" if is_url else "id"): media_id_or_url,
+                **({"caption": caption} if caption else {}),
+                **({"filename": filename} if filename else {})
             }
         }
         return self._make_request(
@@ -252,7 +256,7 @@ class WhatsAppCloudApi:
 
     def send_reaction(
             self,
-            to: str | int,
+            to: str,
             emoji: str,
             message_id: str,
     ) -> dict[str, dict | list]:
@@ -291,7 +295,7 @@ class WhatsAppCloudApi:
 
     def send_location(
             self,
-            to: str | int,
+            to: str,
             latitude: float,
             longitude: float,
             name: str | None = None,
@@ -365,10 +369,11 @@ class WhatsAppCloudApi:
 
     def send_interactive_message(
             self,
-            to: str | int,
-            keyboard: list[InlineButton] | SectionList,
-            body: str,
+            to: str,
+            type_: str,
+            action: dict[str, Any],
             header: dict | None = None,
+            body: str | None = None,
             footer: str | None = None,
             reply_to_message_id: str | None = None,
     ) -> dict[str, dict | list]:
@@ -385,47 +390,37 @@ class WhatsAppCloudApi:
 
         Args:
             to: The WhatsApp ID of the recipient.
-            keyboard: The keyboard to send.
-            body: The body of the message.
+            type_: The type of the message (e.g. ``list``, ``button``, ``product``, etc.).
+            action: The action of the message.
             header: The header of the message.
+            body: The body of the message.
             footer: The footer of the message.
             reply_to_message_id: The ID of the message to reply to.
 
         Returns:
             The sent message.
         """
-        data = {
-            **self._common_keys,
-            "to": str(to),
-            "type": "interactive",
-            "interactive": {
-                "type": "",
-                "action": {},
-                "body": {"text": body},
-            }
-        }
-        if reply_to_message_id:
-            data["context"] = {"message_id": reply_to_message_id}
-        if isinstance(keyboard, SectionList):
-            data["interactive"]["type"] = "list"
-            data["interactive"]["action"] = keyboard.to_dict()
-        else:
-            data["interactive"]["type"] = "button"
-            data["interactive"]["action"]["buttons"] = [button.to_dict() for button in keyboard]
-        if header:
-            data["interactive"]["header"] = header
-        if footer:
-            data["interactive"]["footer"] = {"text": footer}
-
         return self._make_request(
             method="POST",
             endpoint=f"/{self.phone_id}/messages",
-            json=data
+            json={
+                **self._common_keys,
+                "to": to,
+                "type": "interactive",
+                "interactive": {
+                    "type": type_,
+                    "action": action,
+                    **({"header": header} if header else {}),
+                    **({"body": {"text": body}} if body else {}),
+                    **({"footer": {"text": footer}} if footer else {}),
+                },
+                **({"context": {"message_id": reply_to_message_id}} if reply_to_message_id else {}),
+            }
         )
 
     def send_contacts(
             self,
-            to: str | int,
+            to: str,
             contacts: Iterable[dict[str, str | dict[str, str] | list[dict[str, str]] | None]],
             reply_to_message_id: str | None = None,
     ) -> dict[str, dict | list]:

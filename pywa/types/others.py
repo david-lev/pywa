@@ -411,3 +411,24 @@ class System:
             wa_id=data['customer'],
             new_wa_id=data.get('wa_id')
         )
+
+
+@dataclass(frozen=True, slots=True)
+class ProductsSection:
+    """
+    Represents a section in a section list.
+
+    - See more: https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages#section-object
+
+    Attributes:
+        title: The title of the products section (up to 24 characters).
+        skus: The SKUs of the products in the section (at least 1, no more than 30).
+    """
+    title: str
+    skus: list[str]
+
+    def to_dict(self) -> dict:
+        return {
+            "title": self.title,
+            "product_items": tuple({"product_retailer_id": sku} for sku in self.skus)
+        }

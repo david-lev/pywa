@@ -141,7 +141,7 @@ class Section:
     def to_dict(self) -> dict:
         return {
             "title": self.title,
-            "rows": [row.to_dict() for row in self.rows]
+            "rows": tuple(row.to_dict() for row in self.rows)
         }
 
 
@@ -162,5 +162,5 @@ class SectionList:
     def to_dict(self) -> dict:
         return {
             "button": self.button_title,
-            "sections": [section.to_dict() for section in self.sections]
+            "sections": tuple(section.to_dict() for section in self.sections)
         }

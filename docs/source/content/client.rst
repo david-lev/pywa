@@ -53,3 +53,7 @@ Here is an example of how to use PyWa with Flask:
 - flask_app: Your Flask app instance
 - webhook_endpoint: The endpoint that PyWa will register to listen for updates, defaults to '/'
 - verify_token: The verify token that you set in the app dashboard
+
+.. currentmodule:: pywa.client
+.. autoclass:: WhatsApp()
+    :members:

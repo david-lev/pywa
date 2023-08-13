@@ -1,21 +1,17 @@
 ❇️ Types
 ====================
 
-.. currentmodule:: pywa.types
+.. currentmodule:: pywa.types.message
+
+.. autoclass:: Message()
+    :members:
 
 .. autoclass:: MessageType()
     :members:
     :undoc-members:
 
-.. autoclass:: MessageStatusType()
-    :members:
-    :undoc-members:
 
-.. autoclass:: Contact()
-    :members:
-
-.. autoclass:: MediaUrlResponse()
-    :members:
+.. currentmodule:: pywa.types.callback
 
 .. autoclass:: InlineButton()
     :members:
@@ -47,6 +43,9 @@
 .. autoclass:: Sticker()
     :members:
 
+.. autoclass:: MediaUrlResponse()
+    :members:
+
 .. currentmodule:: pywa.types.others
 
 .. autoclass:: Reaction()
@@ -54,3 +53,40 @@
 
 .. autoclass:: Location()
     :members:
+
+.. autoclass:: Contact()
+    :members:
+
+.. autoclass:: Product()
+    :members:
+
+.. autoclass:: Order()
+    :members:
+
+.. autoclass:: ProductsSection()
+    :members:
+
+.. autoclass:: System()
+    :members:
+
+.. autoclass:: User()
+    :members:
+
+.. autoclass:: ReplyToMessage()
+    :members:
+
+.. autoclass:: Metadata()
+    :members:
+
+
+.. currentmodule:: pywa.types.message_status
+
+.. autoclass:: MessageStatus()
+    :members:
+
+.. autoclass:: Conversation()
+    :members:
+
+.. autoclass:: MessageStatusType()
+    :members:
+    :undoc-members:
