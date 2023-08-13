@@ -58,6 +58,11 @@ class Message(BaseUpdate):
         system: The system update (if the message type is system). (optional)
         error: The error of the message (if the message type is `unsupported`). (optional)
     """
+    id: str
+    type: MessageType
+    metadata: Metadata
+    from_user: User
+    timestamp: datetime
     reply_to_message: ReplyToMessage | None
     forwarded: bool
     forwarded_many_times: bool

@@ -51,6 +51,11 @@ class MessageStatus(BaseUpdate):
         conversation: The conversation the given status notification belongs to (Optional).
         error: The error that occurred (if status is ``failed``).
     """
+    id: str
+    type: MessageType
+    metadata: Metadata
+    from_user: User
+    timestamp: datetime
     status: MessageStatusType
     conversation: Conversation | None
     error: WhatsAppError | None

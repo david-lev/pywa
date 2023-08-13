@@ -24,6 +24,11 @@ class CallbackButton(BaseUpdate):
         data: The data of the button.
         title: The title of the button.
     """
+    id: str
+    type: MessageType
+    metadata: Metadata
+    from_user: User
+    timestamp: datetime
     reply_to_message: ReplyToMessage
     data: str
     title: str
@@ -65,6 +70,11 @@ class CallbackSelection(BaseUpdate):
         title: The title of the selection.
         description: The description of the selection (optional).
     """
+    id: str
+    type: MessageType
+    metadata: Metadata
+    from_user: User
+    timestamp: datetime
     reply_to_message: ReplyToMessage
     data: str
     title: str
