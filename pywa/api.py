@@ -336,23 +336,31 @@ class WhatsAppCloudApi:
             json=data
         )
 
-    def send_raw_json(
+    def send_raw_request(
             self,
-            data: dict
-    ) -> dict:
+            method: str,
+            endpoint: str,
+            **kwargs
+    ) -> Any:
         """
         Send a raw JSON message to a WhatsApp Cloud API.
 
+        - The endpoint can contain path parameters (e.g. ``/v1/messages/{phone_id}``). only ``phone_id`` is supported.
+        - Every request will automatically include the ``Authorization`` and ``Content-Type`` headers. you can override
+            them by passing them in ``kwargs`` (headers={...}).
+
         Args:
-            data: The raw JSON data to send.
+            method: The HTTP method to use (e.g. ``POST``, ``GET``, etc.).
+            endpoint: The endpoint to send the message to (e.g. ``/v1/messages``).
+            **kwargs: Additional arguments to send with the message (e.g. ``json={...}``, headers={...}, etc.).
 
         Returns:
-            The sent message.
+            The response from the WhatsApp Cloud API.
         """
         return self._make_request(
-            method="POST",
-            endpoint=f"/{self.phone_id}/messages",
-            json=data
+            method=method,
+            endpoint=endpoint.format(phone_id=self.phone_id),
+            **kwargs
         )
 
     def send_interactive_message(
@@ -418,7 +426,7 @@ class WhatsAppCloudApi:
     def send_contacts(
             self,
             to: str | int,
-            contacts: Iterable[Contact],
+            contacts: Iterable[dict[str, str | dict[str, str] | list[dict[str, str]] | None]],
             reply_to_message_id: str | None = None,
     ) -> dict[str, dict | list]:
         """
@@ -444,7 +452,7 @@ class WhatsAppCloudApi:
             **self._common_keys,
             "to": str(to),
             "type": "contacts",
-            "contacts": [contact.to_dict() for contact in contacts]
+            "contacts": tuple(contacts)
         }
         if reply_to_message_id:
             data["context"] = {"message_id": reply_to_message_id}

@@ -670,7 +670,7 @@ class WhatsApp:
         """
         return self.api.send_contacts(
             to=to,
-            contacts=contact if isinstance(contact, Iterable) else [contact],
+            contacts=tuple(c.to_dict() for c in contact) if isinstance(contact, Iterable) else (contact.to_dict()),
             reply_to_message_id=reply_to_message_id,
         )['messages'][0]['id']
 
@@ -792,15 +792,3 @@ class WhatsApp:
         with open(path, "wb") as f:
             f.write(content)
         return path
-
-    def send_custom_json(self, data: dict | list) -> dict:
-        """
-        Send a custom JSON payload.
-
-        Args:
-            data: The JSON payload to send.
-
-        Returns:
-            The response from WhatsApp servers.
-        """
-        return self.api.send_raw_json(data=data)
