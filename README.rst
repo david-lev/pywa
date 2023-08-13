@@ -82,7 +82,7 @@ ________________________
     from pywa import WhatsApp
     from flask import Flask
     from pywa.types import Message, CallbackButton, InlineButton
-    from pywa.filters import TextFilter, CallbackFilter
+    from pywa.filters import text, callback
 
     flask_app = Flask(__name__)
     wa = WhatsApp(
@@ -92,7 +92,7 @@ ________________________
         verify_token='XYZXYZ',
     )
 
-    @wa.on_message(TextFilter.matches('Hello', 'Hi'))
+    @wa.on_message(text.matches('Hello', 'Hi'))
     def hello(client: WhatsApp, msg: Message):
         msg.react('👋')
         msg.reply_text(
@@ -105,7 +105,7 @@ ________________________
             ]
         )
 
-    @wa.on_callback_button(CallbackFilter.data_startswith('id'))
+    @wa.on_callback_button(callback.data_startswith('id'))
     def click_me(client: WhatsApp, clb: CallbackButton):
         clb.reply_text('You clicked me!')
 

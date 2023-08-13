@@ -31,7 +31,7 @@ If the function returns True, the handler will handle the update, otherwise it w
 
 The library provides some built-in filters that you can use. The filters are located in the :mod:`pywa.filters` module
 and separated by classes, for example, the :class:`TextFilter` filter will only handle text messages, while the
-:class:`CallbackFilter` filter will only handle callbacks.
+:class:`callback` filter will only handle callbacks.
 
 Here is an example of how to use them:
 
@@ -39,7 +39,7 @@ Here is an example of how to use them:
 
     from pywa import WhatsApp
     from pywa.types import Message, CallbackButton, InlineButton
-    from pywa.filters import TextFilter, CallbackFilter
+    from pywa.filters import TextFilter, callback
 
     wa = WhatsApp(...)
 
@@ -47,7 +47,7 @@ Here is an example of how to use them:
     def handle_hello(wa: WhatsApp, msg: Message):
         msg.reply(f'Hello {msg.from_user.name}!', keyboard=[InlineButton('Click me!', 'click')])
 
-    @wa.on_callback(CallbackFilter.data_matches('click'))
+    @wa.on_callback(callback.data_matches('click'))
     def handle_click(wa: WhatsApp, clb: CallbackButton):
         clb.reply('You clicked me!')
 
@@ -65,10 +65,10 @@ Here is some examples:
 .. code-block:: python
 
     from pywa import filters as fil  # short name for convenience
-    from pywa.filters import TextFilter, ImageFilter, VideoFilter
+    from pywa.filters import TextFilter, image, video
 
     fil.all_(TextFilter.startswith("Hello"), fil.any_(TextFilter.endswith("World"), TextFilter.length((1, 10))))
-    fil.any_(ImageFilter(), fil.all_(VideoFilter.mimetypes("video/mp4"), VideoFilter.has_caption))
+    fil.any_(image(), fil.all_(video.mimetypes("video/mp4"), video.has_caption))
     fil.not_(TextFilter.contains("bad word"))
 
 
@@ -95,84 +95,90 @@ Helper filters
 Message Filters
 ~~~~~~~~~~~~~~~
 
-.. autoclass:: TextFilter
-.. autoattribute:: TextFilter.any
-.. automethod:: TextFilter.matches
-.. automethod:: TextFilter.contains
-.. automethod:: TextFilter.startswith
-.. automethod:: TextFilter.endswith
-.. automethod:: TextFilter.regex
-.. automethod:: TextFilter.length
-.. automethod:: TextFilter.is_command
-.. automethod:: TextFilter.command
+.. autoclass:: text
+.. autoattribute:: text.any
+.. automethod:: text.matches
+.. automethod:: text.contains
+.. automethod:: text.startswith
+.. automethod:: text.endswith
+.. automethod:: text.regex
+.. automethod:: text.length
+.. automethod:: text.is_command
+.. automethod:: text.command
 
-.. autoclass:: MediaFilter
-.. autoattribute:: MediaFilter.any
-.. automethod:: MediaFilter.mimetypes
+.. autoclass:: media
+.. autoattribute:: media.any
+.. automethod:: media.mimetypes
 
-.. autoclass:: ImageFilter
-.. autoattribute:: ImageFilter.any
-.. autoattribute:: ImageFilter.has_caption
+.. autoclass:: image
+.. autoattribute:: image.any
+.. autoattribute:: image.has_caption
 
-.. autoclass:: VideoFilter
-.. autoattribute:: VideoFilter.any
-.. autoattribute:: VideoFilter.has_caption
+.. autoclass:: video
+.. autoattribute:: video.any
+.. autoattribute:: video.has_caption
 
-.. autoclass:: AudioFilter
-.. autoattribute:: AudioFilter.any
-.. autoattribute:: AudioFilter.voice
-.. autoattribute:: AudioFilter.audio
+.. autoclass:: audio
+.. autoattribute:: audio.any
+.. autoattribute:: audio.voice
+.. autoattribute:: audio.audio
 
-.. autoclass:: DocumentFilter
-.. autoattribute:: DocumentFilter.any
-.. autoattribute:: DocumentFilter.has_caption
+.. autoclass:: document
+.. autoattribute:: document.any
+.. autoattribute:: document.has_caption
 
-.. autoclass:: StickerFilter
-.. autoattribute:: StickerFilter.any
-.. autoattribute:: StickerFilter.animated
-.. autoattribute:: StickerFilter.static
+.. autoclass:: sticker
+.. autoattribute:: sticker.any
+.. autoattribute:: sticker.animated
+.. autoattribute:: sticker.static
 
-.. autoclass:: ReactionFilter
-.. autoattribute:: ReactionFilter.any
-.. autoattribute:: ReactionFilter.added
-.. autoattribute:: ReactionFilter.removed
-.. automethod:: ReactionFilter.emojis
+.. autoclass:: reaction
+.. autoattribute:: reaction.any
+.. autoattribute:: reaction.added
+.. autoattribute:: reaction.removed
+.. automethod:: reaction.emojis
 
-.. autoclass:: LocationFilter
-.. autoattribute:: LocationFilter.any
-.. automethod:: LocationFilter.in_radius
+.. autoclass:: location
+.. autoattribute:: location.any
+.. automethod:: location.in_radius
 
-.. autoclass:: ContactsFilter
-.. autoattribute:: ContactsFilter.any
-.. autoattribute:: ContactsFilter.has_wa
-.. automethod:: ContactsFilter.count
-.. automethod:: ContactsFilter.phones
+.. autoclass:: contacts
+.. autoattribute:: contacts.any
+.. autoattribute:: contacts.has_wa
+.. automethod:: contacts.count
+.. automethod:: contacts.phones
 
-.. autoclass:: UnsupportedMsgFilter
-.. autoattribute:: UnsupportedMsgFilter.any
+.. autoclass:: order
+.. autoattribute:: order.any
+.. automethod:: order.price
+.. automethod:: order.count
+.. automethod:: order.has_products
+
+.. autoclass:: unsupported
+.. autoattribute:: unsupported.any
 
 ----------------
 
 Callback Filters
 ~~~~~~~~~~~~~~~~
 
-.. autoclass:: CallbackFilter
-.. autoattribute:: CallbackFilter.any
-.. automethod:: CallbackFilter.data_matches
-.. automethod:: CallbackFilter.data_contains
-.. automethod:: CallbackFilter.data_startswith
-.. automethod:: CallbackFilter.data_endswith
-.. automethod:: CallbackFilter.data_regex
+.. autoclass:: callback
+.. autoattribute:: callback.any
+.. automethod:: callback.data_matches
+.. automethod:: callback.data_contains
+.. automethod:: callback.data_startswith
+.. automethod:: callback.data_endswith
+.. automethod:: callback.data_regex
 
 ----------------
 
 Message Status Filters
 ~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: MessageStatusFilter
-.. autoattribute:: MessageStatusFilter.sent
-.. autoattribute:: MessageStatusFilter.delivered
-.. autoattribute:: MessageStatusFilter.read
-.. autoattribute:: MessageStatusFilter.failed
-.. automethod:: MessageStatusFilter.failed_with
+.. autoclass:: message_status
+.. autoattribute:: message_status.sent
+.. autoattribute:: message_status.delivered
+.. autoattribute:: message_status.read
+.. autoattribute:: message_status.failed
+.. automethod:: message_status.failed_with
 
