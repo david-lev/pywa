@@ -69,7 +69,7 @@ def all_(*filters: Callable[[Wa, T], bool]) -> Callable[[Wa, T], bool]:
     """
     Filter for updates that pass all the given filters.
 
-    >>> all_(text.startswith("World"), text.contains("Word"))
+    >>> all_(text.endswith("World"), text.contains("Word"))
     """
     return lambda wa, m: all(f(wa, m) for f in filters)
 
@@ -96,7 +96,7 @@ def from_users(*numbers: str) -> MessageFilterT:
     """
     Filter for messages that are sent from the given numbers.
 
-    >>> from_users("+1 555-555-5555","972123456789")
+    >>> from_users("+1 555-555-5555", "972123456789")
     """
     only_nums_pattern = re.compile(r"\D")
     numbers = tuple(re.sub(only_nums_pattern, "", n) for n in numbers)

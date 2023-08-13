@@ -30,7 +30,7 @@ If the function returns True, the handler will handle the update, otherwise it w
 
 
 The library provides some built-in filters that you can use. The filters are located in the :mod:`pywa.filters` module
-and separated by classes, for example, the :class:`TextFilter` filter will only handle text messages, while the
+and separated by classes, for example, the :class:`text` filter will only handle text messages, while the
 :class:`callback` filter will only handle callbacks.
 
 Here is an example of how to use them:
@@ -39,11 +39,11 @@ Here is an example of how to use them:
 
     from pywa import WhatsApp
     from pywa.types import Message, CallbackButton, InlineButton
-    from pywa.filters import TextFilter, callback
+    from pywa.filters import text, callback
 
     wa = WhatsApp(...)
 
-    @wa.on_message(TextFilter.matches('hello', 'hi', ignore_case=True))
+    @wa.on_message(text.matches('hello', 'hi', ignore_case=True))
     def handle_hello(wa: WhatsApp, msg: Message):
         msg.reply(f'Hello {msg.from_user.name}!', keyboard=[InlineButton('Click me!', 'click')])
 
@@ -65,11 +65,10 @@ Here is some examples:
 .. code-block:: python
 
     from pywa import filters as fil  # short name for convenience
-    from pywa.filters import TextFilter, image, video
 
-    fil.all_(TextFilter.startswith("Hello"), fil.any_(TextFilter.endswith("World"), TextFilter.length((1, 10))))
-    fil.any_(image(), fil.all_(video.mimetypes("video/mp4"), video.has_caption))
-    fil.not_(TextFilter.contains("bad word"))
+    fil.all_(fil.text.startswith("Hello"), fil.any_(fil.text.endswith("World"), fil.text.length((1, 10))))
+    fil.any_(fil.image.any, fil.all_(fil.video.mimetypes("video/mp4"), fil.video.has_caption))
+    fil.not_(fil.text.contains("bad word"))
 
 
 Keep in mind that all match-filters (``matches``, ``startswith``, ``endswith``, ``contains`` etc.) returns True if
@@ -152,7 +151,7 @@ Message Filters
 .. autoattribute:: order.any
 .. automethod:: order.price
 .. automethod:: order.count
-.. automethod:: order.has_products
+.. automethod:: order.has_product
 
 .. autoclass:: unsupported
 .. autoattribute:: unsupported.any
