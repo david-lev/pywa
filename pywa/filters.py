@@ -108,14 +108,20 @@ class _BaseUpdateFilter(ABC):
     Base class for all filters.
     """
 
-    @abstractmethod
-    def __new__(cls) -> Callable[[Wa, T], bool]:
-        ...
+    def __new__(cls, wa: Wa, m: T) -> bool:
+        """When instantiated, call the ``any`` method."""
+        return cls.any(wa, m)
 
     @property
     @abstractmethod
     def __message_types__(self) -> tuple[Mt, ...]:
         """The message types that the filter is for."""
+        ...
+
+    @staticmethod
+    @abstractmethod
+    def any(wa: Wa, m: T) -> bool:
+        """Filter for all updates of this type."""
         ...
 
     @classmethod
@@ -129,14 +135,11 @@ class MediaFilter(_BaseUpdateFilter):
     """
     __message_types__ = (Mt.IMAGE, Mt.VIDEO, Mt.AUDIO, Mt.DOCUMENT, Mt.STICKER)
 
-    def __new__(cls):
-        return cls.any
-
     """
     Filter for all media messages.
-        - Same as ``filters.media()``.
+        - Same as ``filters.media``.
     
-    >>> MediaFilter.any
+    >>> media.any
     """
     any: MessageFilterT = lambda wa, m: m.has_media
 
@@ -155,7 +158,7 @@ class MediaFilter(_BaseUpdateFilter):
         )
 
 
-media = MediaFilter
+media: MessageFilterT | Type[MediaFilter] = MediaFilter
 
 
 class _MediaWithCaptionFilter(MediaFilter, ABC):
@@ -176,13 +179,10 @@ class TextFilter(_BaseUpdateFilter):
 
     __message_types__ = (Mt.TEXT,)
 
-    def __new__(cls):
-        return cls.any
-
     any: MessageFilterT = lambda wa, m: m.type == Mt.TEXT and not TextFilter.is_command(wa, m)
     """
     Filter for all text messages (excluding commands).
-        - Same as ``filters.text()``.
+        - Same as ``filters.text``.
     
     >>> filters.text.any
     """
@@ -298,24 +298,24 @@ class TextFilter(_BaseUpdateFilter):
         )
 
 
-text = TextFilter
+text: MessageFilterT | Type[TextFilter] = TextFilter
 
 
 class ImageFilter(_MediaWithCaptionFilter):
-    """Useful filters for image messages. Aliases: ``filters.media``, ``filters.photo``."""
+    """Useful filters for image messages. Alias: ``filters.image``."""
 
     __message_types__ = (Mt.IMAGE,)
 
     any: MessageFilterT = lambda wa, m: ImageFilter._match_type(m)
     """
     Filter for all image messages.
-        - Same as ``filters.image()``.
+        - Same as ``filters.image``.
     
     >>> filters.image.any
     """
 
 
-image = ImageFilter
+image: MessageFilterT | Type[ImageFilter] = ImageFilter
 
 
 class VideoFilter(_MediaWithCaptionFilter):
@@ -326,13 +326,13 @@ class VideoFilter(_MediaWithCaptionFilter):
     any: MessageFilterT = lambda wa, m: VideoFilter._match_type(m)
     """
     Filter for all video messages.
-        - Same as ``filters.video()``.
+        - Same as ``filters.video``.
     
     >>> filters.video.any
     """
 
 
-video = VideoFilter
+video: MessageFilterT | Type[VideoFilter] = VideoFilter
 
 
 class DocumentFilter(_MediaWithCaptionFilter):
@@ -343,13 +343,13 @@ class DocumentFilter(_MediaWithCaptionFilter):
     any: MessageFilterT = lambda wa, m: DocumentFilter._match_type(m)
     """
     Filter for all document messages.
-        - Same as ``filters.document()``.
+        - Same as ``filters.document``.
     
     >>> filters.document.any
     """
 
 
-document = DocumentFilter
+document: MessageFilterT | Type[DocumentFilter] = DocumentFilter
 
 
 class AudioFilter(MediaFilter):
@@ -360,7 +360,7 @@ class AudioFilter(MediaFilter):
     any: MessageFilterT = lambda wa, m: AudioFilter._match_type(m)
     """
     Filter for all audio messages (voice notes and audio files).
-        - Same as ``filters.audio()``.
+        - Same as ``filters.audio``.
     
     >>> filters.audio.any
     """
@@ -380,7 +380,7 @@ class AudioFilter(MediaFilter):
     """
 
 
-audio = AudioFilter
+audio: MessageFilterT | Type[AudioFilter] = AudioFilter
 
 
 class StickerFilter(MediaFilter):
@@ -391,7 +391,7 @@ class StickerFilter(MediaFilter):
     any: MessageFilterT = lambda wa, m: StickerFilter._match_type(m)
     """
     Filter for all sticker messages.
-        - Same as ``filters.sticker()``.
+        - Same as ``filters.sticker``.
     
     >>> filters.sticker.any
     """
@@ -411,7 +411,7 @@ class StickerFilter(MediaFilter):
     """
 
 
-sticker = StickerFilter
+sticker: MessageFilterT | Type[StickerFilter] = StickerFilter
 
 
 class LocationFilter(_BaseUpdateFilter):
@@ -419,13 +419,10 @@ class LocationFilter(_BaseUpdateFilter):
 
     __message_types__ = (Mt.LOCATION,)
 
-    def __new__(cls):
-        return cls.any
-
     any: MessageFilterT = lambda wa, m: LocationFilter._match_type(m)
     """
     Filter for all location messages.
-        - Same as ``filters.location()``.
+        - Same as ``filters.location``.
     
     >>> filters.location.any
     """
@@ -452,7 +449,7 @@ class LocationFilter(_BaseUpdateFilter):
         return _in_radius
 
 
-location = LocationFilter
+location: MessageFilterT | Type[LocationFilter] = LocationFilter
 
 
 class ReactionFilter(_BaseUpdateFilter):
@@ -460,13 +457,10 @@ class ReactionFilter(_BaseUpdateFilter):
 
     __message_types__ = (Mt.REACTION,)
 
-    def __new__(cls):
-        return cls.any
-
     any: MessageFilterT = lambda wa, m: ReactionFilter._match_type(m)
     """
     Filter for all reaction updates (added or removed).
-        - Same as ``filters.reaction()``.
+        - Same as ``filters.reaction``.
     
     >>> filters.reaction.any
     """
@@ -495,7 +489,7 @@ class ReactionFilter(_BaseUpdateFilter):
         return lambda wa, m: ReactionFilter._match_type(m) and m.reaction.emojis in emojis
 
 
-reaction = ReactionFilter
+reaction: MessageFilterT | Type[ReactionFilter] = ReactionFilter
 
 
 class ContactsFilter(_BaseUpdateFilter):
@@ -503,13 +497,10 @@ class ContactsFilter(_BaseUpdateFilter):
 
     __message_types__ = (Mt.CONTACTS,)
 
-    def __new__(cls):
-        return cls.any
-
     any: MessageFilterT = lambda wa, m: ContactsFilter._match_type(m)
     """
     Filter for all contacts messages.
-        - Same as ``filters.contacts()``.
+        - Same as ``filters.contacts``.
     
     >>> filters.contacts.any
     """
@@ -547,7 +538,7 @@ class ContactsFilter(_BaseUpdateFilter):
         )
 
 
-contacts = ContactsFilter
+contacts: MessageFilterT | Type[ContactsFilter] = ContactsFilter
 
 
 class OrderFilter(_BaseUpdateFilter):
@@ -555,13 +546,10 @@ class OrderFilter(_BaseUpdateFilter):
 
     __message_types__ = (Mt.ORDER,)
 
-    def __new__(cls):
-        return cls.any
-
     any: MessageFilterT = lambda wa, m: OrderFilter._match_type(m)
     """
     Filter for all order messages.
-        - Same as ``filters.order()``.
+        - Same as ``filters.order``.
     
     >>> filters.order.any
     """
@@ -607,7 +595,7 @@ class OrderFilter(_BaseUpdateFilter):
         )
 
 
-order = OrderFilter
+order: MessageFilterT | Type[OrderFilter] = OrderFilter
 
 
 class UnsupportedMsgFilter(_BaseUpdateFilter):
@@ -621,13 +609,13 @@ class UnsupportedMsgFilter(_BaseUpdateFilter):
     any: MessageFilterT = lambda wa, m: m.type == Mt.UNSUPPORTED
     """
     Filter for all unsupported messages.
-        - Same as ``filters.unsupported()``.
+        - Same as ``filters.unsupported``.
     
     >>> filters.unsupported.any
     """
 
 
-unsupported = UnsupportedMsgFilter
+unsupported: MessageFilterT | Type[UnsupportedMsgFilter] = UnsupportedMsgFilter
 
 
 class CallbackFilter(_BaseUpdateFilter):
@@ -641,7 +629,7 @@ class CallbackFilter(_BaseUpdateFilter):
     any: CallbackFilterT = lambda wa, c: True
     """
     Filter for all callback queries (the default).
-        - Same as ``filters.callback()``.
+        - Same as ``filters.callback``.
     
     >>> filters.callback.any
     """
@@ -718,21 +706,18 @@ class CallbackFilter(_BaseUpdateFilter):
         return lambda wa, c: any((re.match(p, c.data, flags) for p in patterns))
 
 
-callback = CallbackFilter
+callback: CallbackFilterT | Type[CallbackFilter] = CallbackFilter
 
 
 class MessageStatusFilter(_BaseUpdateFilter):
     """Useful filters for message status updates. Alias: ``filters.message_status``."""
 
-    __message_types__ = (Mt.MESSAGE_STATUS,)
-
-    def __new__(cls):
-        return cls.any
+    __message_types__ = ()
 
     any: MessageStatusFilterT = lambda wa, s: True
     """
     Filter for all message status updates (the default).
-        - Same as ``filters.message_status()``.
+        - Same as ``filters.message_status``.
         
     >>> filters.message_status.any
     """
@@ -783,4 +768,4 @@ class MessageStatusFilter(_BaseUpdateFilter):
         )
 
 
-message_status = MessageStatusFilter
+message_status: MessageStatusFilterT | Type[MessageStatusFilter] = MessageStatusFilter
