@@ -18,8 +18,9 @@ class MessageStatusType(_StrEnum):
     READ = 'read'
     FAILED = 'failed'
 
-    def _missing_(self, key):
-        return self.FAILED
+    @classmethod
+    def _missing_(cls, value: str) -> MessageStatusType:
+        return cls.FAILED
 
 
 class ConversationCategory(_StrEnum):
@@ -31,11 +32,12 @@ class ConversationCategory(_StrEnum):
     REFERRAL_CONVERSION = 'referral_conversion'
     UNKNOWN = 'unknown'
 
-    def _missing_(self, key):
-        return self.UNKNOWN
+    @classmethod
+    def _missing_(cls, value: str) -> ConversationCategory:
+        return cls.UNKNOWN
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class MessageStatus(BaseUpdate):
     """
     Represents the status of a message.

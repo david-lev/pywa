@@ -1,4 +1,5 @@
 from __future__ import annotations
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Iterable, TYPE_CHECKING, BinaryIO
@@ -9,15 +10,35 @@ if TYPE_CHECKING:
     from .callback import InlineButton, SectionList
 
 
-@dataclass(frozen=True, slots=True)
-class BaseUpdate:
+def _no_default():
+    raise TypeError('No default value')
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class BaseUpdate(ABC):
     """Base class for all update types."""
+
     _client: WhatsApp = field(repr=False, hash=False, compare=False)
-    id: str
-    type: MessageType
-    metadata: Metadata
-    from_user: User
-    timestamp: datetime
+
+    @property
+    @abstractmethod
+    def type(self) -> MessageType: ...
+
+    @property
+    @abstractmethod
+    def id(self) -> str: ...
+
+    @property
+    @abstractmethod
+    def metadata(self) -> Metadata: ...
+
+    @property
+    @abstractmethod
+    def from_user(self) -> User: ...
+
+    @property
+    @abstractmethod
+    def timestamp(self) -> datetime: ...
 
     @property
     def sender(self) -> str:

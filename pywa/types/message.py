@@ -1,5 +1,5 @@
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Callable, Any
 from pywa.errors import WhatsAppError
@@ -12,23 +12,23 @@ if TYPE_CHECKING:
     from pywa.client import WhatsApp
 
 
-_FIELDS_TO_OBJECTS: dict[str, Callable[[dict, WhatsApp], Any]] = {
-    'text': lambda m, _client: m['body'],
-    'image': Image.from_dict,
-    'video': Video.from_dict,
-    'sticker': Sticker.from_dict,
-    'document': Document.from_dict,
-    'audio': Audio.from_dict,
-    'reaction': Reaction.from_dict,
-    'location': Location.from_dict,
-    'contacts': lambda m, _client: tuple(Contact.from_dict(c) for c in m),
-    'order': Order.from_dict,
-    'system': System.from_dict,
-}
+_FIELDS_TO_OBJECTS_CONSTRUCTORS: dict[str, Callable[[dict, WhatsApp], Any]] = dict(
+    text=lambda m, _client: m['body'],
+    image=Image.from_dict,
+    video=Video.from_dict,
+    sticker=Sticker.from_dict,
+    document=Document.from_dict,
+    audio=Audio.from_dict,
+    reaction=Reaction.from_dict,
+    location=Location.from_dict,
+    contacts=lambda m, _client: tuple(Contact.from_dict(c) for c in m),
+    order=Order.from_dict,
+    system=System.from_dict,
+)
 _MEDIA_FIELDS = ('image', 'video', 'sticker', 'document', 'audio')
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Message(BaseUpdate):
     """
     A message received from a user.
@@ -87,11 +87,11 @@ class Message(BaseUpdate):
 
     @property
     def has_media(self) -> bool:
-        """Whether the message has any media."""
-        try:
-            return self.media is not None
-        except ValueError:
-            return False
+        """
+        Whether the message has any media. (image, video, sticker, document or audio)
+            - If you want to get the media of the message, use ``media`` instead.
+        """
+        return self.media is not None
 
     @property
     def is_reply(self) -> bool:
@@ -103,8 +103,8 @@ class Message(BaseUpdate):
         msg = value['messages'][0]
         msg_type = msg['type']
         context = msg.get('context')
-        msg_obj = _FIELDS_TO_OBJECTS.get(msg_type)
-        msg_content = {msg_type: msg_obj(msg[msg_type], _client=client)} if msg_obj is not None else {}
+        constructor = _FIELDS_TO_OBJECTS_CONSTRUCTORS.get(msg_type)
+        msg_content = {msg_type: constructor(msg[msg_type], _client=client)} if constructor is not None else {}
         return cls(
             _client=client,
             id=msg['id'],
@@ -121,17 +121,12 @@ class Message(BaseUpdate):
         )
 
     @property
-    def media(self) -> Image | Video | Sticker | Document | Audio:
+    def media(self) -> Image | Video | Sticker | Document | Audio | None:
         """
-        The media of the message (image, video, sticker, document or audio).
-
-        Raises:
-            ValueError: If the message does not contain any media. (You can check this with ``msg.has_media``)
+        The media of the message if any, otherwise ``None``. (image, video, sticker, document or audio)
+            - If you want to check whether the message has any media, use ``has_media`` instead.
         """
-        try:
-            return next(getattr(self, media_type) for media_type in _MEDIA_FIELDS if getattr(self, media_type))
-        except StopIteration:
-            raise ValueError('The message does not contain any media.')
+        return next((getattr(self, media_type) for media_type in _MEDIA_FIELDS if getattr(self, media_type)), None)
 
     def download_media(
             self,
@@ -153,7 +148,10 @@ class Message(BaseUpdate):
         Raises:
             ValueError: If the message does not contain any media.
         """
-        return self.media.download(path=filepath, filename=filename, in_memory=in_memory)
+        try:
+            return self.media.download(path=filepath, filename=filename, in_memory=in_memory)
+        except AttributeError:
+            raise ValueError('Message does not contain any media.')
 
     def copy(
             self,

@@ -84,7 +84,7 @@ class MessageType(_StrEnum):
     UNSUPPORTED = "unsupported"
 
     @classmethod
-    def _missing_(cls, value):
+    def _missing_(cls, value: str) -> MessageType:
         return cls.UNSUPPORTED
 
 

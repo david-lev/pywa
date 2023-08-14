@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from pywa.client import WhatsApp
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class CallbackButton(BaseUpdate):
     """
     Represents a callback button.
@@ -54,7 +54,7 @@ class CallbackButton(BaseUpdate):
         )
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class CallbackSelection(BaseUpdate):
     """
     Represents a callback selection.
