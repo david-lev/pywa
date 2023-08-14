@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, fields
+from enum import Enum
 from importlib import import_module
 
 
@@ -28,3 +32,24 @@ def get_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
             math.sin((lat2 - lat1) / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2)
     )) * 6371
 
+
+class StrEnum(str, Enum):
+    def __str__(self):
+        return f"{self.__class__.__name__}.{self.name}"
+
+    def __repr__(self):
+        return self.__str__()
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class FromDict:
+    """Allows to ignore extra fields when creating a dataclass from a dict."""
+
+    # noinspection PyArgumentList
+    @classmethod
+    def from_dict(cls, data: dict, **kwargs):
+        data.update(kwargs)
+        return cls(**{
+            k: v for k, v in data.items()
+            if k in (f.name for f in fields(cls))
+        })

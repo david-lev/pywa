@@ -13,8 +13,7 @@ from pywa.api import WhatsAppCloudApi
 from pywa.handlers import Handler, MessageHandler, CallbackButtonHandler, CallbackSelectionHandler, RawUpdateHandler, \
     MessageStatusHandler
 from pywa.types import InlineButton, SectionList, Message, CallbackButton, CallbackSelection, MessageStatus, Contact, \
-    MediaUrlResponse, ProductsSection
-from pywa.types.others import BusinessProfile, Industry, CommerceSettings
+    MediaUrlResponse, ProductsSection, BusinessProfile, Industry, CommerceSettings
 from pywa.webhook import Webhook
 
 _MISSING = object()
