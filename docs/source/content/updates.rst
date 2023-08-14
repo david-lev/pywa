@@ -31,3 +31,10 @@ In PyWa, this update split into 4 different types:
 .. autoclass:: MessageStatus()
     :members:
 
+------------------------------------------------------------------------------------------------------------------------
+
+.. currentmodule:: pywa.types.base_update
+
+.. autoclass:: BaseUpdate()
+    :members:
+

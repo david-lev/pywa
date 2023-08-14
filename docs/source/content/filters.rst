@@ -95,7 +95,6 @@ Message Filters
 ~~~~~~~~~~~~~~~
 
 .. autoclass:: text
-.. autoattribute:: text.any
 .. automethod:: text.matches
 .. automethod:: text.contains
 .. automethod:: text.startswith
@@ -106,55 +105,45 @@ Message Filters
 .. automethod:: text.command
 
 .. autoclass:: media
-.. autoattribute:: media.any
 .. automethod:: media.mimetypes
 
 .. autoclass:: image
-.. autoattribute:: image.any
 .. autoattribute:: image.has_caption
 
 .. autoclass:: video
-.. autoattribute:: video.any
 .. autoattribute:: video.has_caption
 
 .. autoclass:: audio
-.. autoattribute:: audio.any
 .. autoattribute:: audio.voice
 .. autoattribute:: audio.audio
 
 .. autoclass:: document
-.. autoattribute:: document.any
 .. autoattribute:: document.has_caption
 
 .. autoclass:: sticker
-.. autoattribute:: sticker.any
 .. autoattribute:: sticker.animated
 .. autoattribute:: sticker.static
 
 .. autoclass:: reaction
-.. autoattribute:: reaction.any
 .. autoattribute:: reaction.added
 .. autoattribute:: reaction.removed
 .. automethod:: reaction.emojis
 
 .. autoclass:: location
-.. autoattribute:: location.any
+.. autoattribute:: location.is_current_location
 .. automethod:: location.in_radius
 
 .. autoclass:: contacts
-.. autoattribute:: contacts.any
 .. autoattribute:: contacts.has_wa
 .. automethod:: contacts.count
 .. automethod:: contacts.phones
 
 .. autoclass:: order
-.. autoattribute:: order.any
 .. automethod:: order.price
 .. automethod:: order.count
 .. automethod:: order.has_product
 
 .. autoclass:: unsupported
-.. autoattribute:: unsupported.any
 
 ----------------
 
@@ -162,7 +151,6 @@ Callback Filters
 ~~~~~~~~~~~~~~~~
 
 .. autoclass:: callback
-.. autoattribute:: callback.any
 .. automethod:: callback.data_matches
 .. automethod:: callback.data_contains
 .. automethod:: callback.data_startswith

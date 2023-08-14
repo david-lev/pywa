@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Callable, Any
+from typing import TYPE_CHECKING, Callable, Any, Iterable
 from pywa.errors import WhatsAppError
 from .callback import InlineButton, SectionList
 from .base_update import BaseUpdate
-from .others import ReplyToMessage, Reaction, Location, Contact, User, Metadata, Order, System, MessageType
+from .others import ReplyToMessage, Reaction, Location, Contact, User, Metadata, Order, System, MessageType, \
+    ProductsSection
 from .media import Image, Video, Sticker, Document, Audio
 
 if TYPE_CHECKING:
@@ -158,12 +159,12 @@ class Message(BaseUpdate):
     def copy(
             self,
             to: str,
-            reply_to_message_id: str = None,
-            preview_url: bool = False,
-            keyboard: list[InlineButton] | SectionList | None = None,
             header: str | None = None,
             body: str | None = None,
             footer: str | None = None,
+            keyboard: Iterable[InlineButton] | SectionList | None = None,
+            preview_url: bool = False,
+            reply_to_message_id: str = None,
     ) -> str:
         """
         Copy incoming message to another chat
@@ -171,13 +172,13 @@ class Message(BaseUpdate):
 
         Args:
             to: The phone ID of the WhatsApp user to copy the message to.
-            reply_to_message_id:  The message ID to reply to (optional).
-            preview_url: Whether to show a preview of the URL in the message (if any).
-            keyboard: The buttons to send with the message (only in case of message from type ``text``, ``document``,
-             ``video`` and ``image``. also, the ``SectionList`` is only available to ``text`` type)
             header: The header of the message (if keyboard is provided, optional, up to 60 characters, no markdown allowed).
             body: The body of the message (if keyboard are provided, optional, up to 1024 characters, markdown allowed).
             footer: The footer of the message (if keyboard is provided, optional, markdown has no effect).
+            keyboard: The buttons to send with the message (only in case of message from type ``text``, ``document``,
+             ``video`` and ``image``. also, the ``SectionList`` is only available to ``text`` type)
+            reply_to_message_id:  The message ID to reply to (optional).
+            preview_url: Whether to show a preview of the URL in the message (if any).
 
         Returns:
             The ID of the sent message.
@@ -190,43 +191,43 @@ class Message(BaseUpdate):
             case MessageType.TEXT:
                 return self._client.send_message(
                     to=to,
-                    reply_to_message_id=reply_to_message_id,
                     text=self.text,
                     preview_url=preview_url,
-                    keyboard=keyboard,
                     header=header,
                     footer=footer,
+                    keyboard=keyboard,
+                    reply_to_message_id=reply_to_message_id,
                 )
             case MessageType.DOCUMENT:
                 return self._client.send_document(
                     to=to,
-                    reply_to_message_id=reply_to_message_id,
                     document=self.document.id,
                     filename=self.document.filename,
                     caption=self.caption,
-                    buttons=keyboard,
                     body=body,
                     footer=footer,
+                    buttons=keyboard,
+                    reply_to_message_id=reply_to_message_id,
                 )
             case MessageType.IMAGE:
                 return self._client.send_image(
                     to=to,
-                    reply_to_message_id=reply_to_message_id,
                     image=self.image.id,
                     caption=self.caption,
-                    buttons=keyboard,
                     body=body,
                     footer=footer,
+                    buttons=keyboard,
+                    reply_to_message_id=reply_to_message_id,
                 )
             case MessageType.VIDEO:
                 return self._client.send_video(
                     to=to,
-                    reply_to_message_id=reply_to_message_id,
                     video=self.video.id,
                     caption=self.caption,
                     buttons=keyboard,
                     body=body,
                     footer=footer,
+                    reply_to_message_id=reply_to_message_id,
                 )
             case MessageType.STICKER:
                 return self._client.send_sticker(
@@ -249,8 +250,8 @@ class Message(BaseUpdate):
             case MessageType.CONTACTS:
                 return self._client.send_contact(
                     to=to,
+                    contact=self.contacts,
                     reply_to_message_id=reply_to_message_id,
-                    contact=self.contacts
                 )
             case MessageType.REACTION:
                 if reply_to_message_id is None:
@@ -259,6 +260,37 @@ class Message(BaseUpdate):
                     to=to,
                     message_id=reply_to_message_id,
                     emoji=self.reaction.emoji or ""
+                )
+            case MessageType.ORDER:
+                if len(self.order.products) == 1:
+                    return self._client.send_product(
+                        to=to,
+                        catalog_id=self.order.catalog_id,
+                        sku=self.order.products[0].sku,
+                        body=body,
+                        footer=footer,
+                        reply_to_message_id=reply_to_message_id,
+                    )
+                return self._client.send_products(
+                    to=to,
+                    catalog_id=self.order.catalog_id,
+                    product_sections=(ProductsSection(
+                        title=header,
+                        skus=(p.sku for p in self.order.products)
+                    ),),
+                    title=header,
+                    body=body,
+                    footer=footer,
+                    reply_to_message_id=reply_to_message_id,
+                    )
+            case MessageType.SYSTEM:
+                return self._client.send_message(
+                    to=to,
+                    text=self.system.body,
+                    header=header,
+                    footer=footer,
+                    keyboard=keyboard,
+                    reply_to_message_id=reply_to_message_id,
                 )
             case MessageType.UNSUPPORTED:
                 raise ValueError("MessageType.UNSUPPORTED cannot be copied!")
