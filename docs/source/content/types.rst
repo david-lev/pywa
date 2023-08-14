@@ -10,6 +10,7 @@
     :members:
     :undoc-members:
 
+====================
 
 .. currentmodule:: pywa.types.callback
 
@@ -25,6 +26,7 @@
 .. autoclass:: SectionRow()
     :members:
 
+====================
 
 .. currentmodule:: pywa.types.media
 
@@ -45,6 +47,8 @@
 
 .. autoclass:: MediaUrlResponse()
     :members:
+
+====================
 
 .. currentmodule:: pywa.types.others
 
@@ -78,6 +82,17 @@
 .. autoclass:: Metadata()
     :members:
 
+.. autoclass:: BusinessProfile()
+    :members:
+
+.. autoclass:: Industry()
+    :members:
+    :undoc-members:
+
+.. autoclass:: CommerceSettings()
+    :members:
+
+====================
 
 .. currentmodule:: pywa.types.message_status
 

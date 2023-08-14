@@ -432,3 +432,89 @@ class ProductsSection:
             "title": self.title,
             "product_items": tuple({"product_retailer_id": sku} for sku in self.skus)
         }
+
+
+class Industry(_StrEnum):
+    UNDEFINED = "UNDEFINED"
+    OTHER = "OTHER"
+    AUTO = "AUTO"
+    BEAUTY = "BEAUTY"
+    APPAREL = "APPAREL"
+    EDU = "EDU"
+    ENTERTAIN = "ENTERTAIN"
+    EVENT_PLAN = "EVENT_PLAN"
+    FINANCE = "FINANCE"
+    GROCERY = "GROCERY"
+    GOVT = "GOVT"
+    HOTEL = "HOTEL"
+    HEALTH = "HEALTH"
+    NONPROFIT = "NONPROFIT"
+    PROF_SERVICES = "PROF_SERVICES"
+    RETAIL = "RETAIL"
+    TRAVEL = "TRAVEL"
+    RESTAURANT = "RESTAURANT"
+    NOT_A_BIZ = "NOT_A_BIZ"
+
+    @classmethod
+    def _missing_(cls, value: str) -> None:
+        return None
+
+
+@dataclass(frozen=True, slots=True)
+class BusinessProfile:
+    """
+    Represents a business profile.
+
+    Attributes:
+        about: This text appears in the business's profile, beneath its profile image, phone number, and contact buttons.
+        address: Address of the business. Character limit 256.
+        description: Description of the business. Character limit 512.
+        email: The contact email address (in valid email format) of the business. Character limit 128.
+        industry: The industry of the business.
+        profile_picture_url: URL of the profile picture that was uploaded to Meta.
+        websites: The URLs associated with the business. For instance, a website, Facebook Page, or Instagram.
+         There is a maximum of 2 websites with a maximum of 256 characters each.
+    """
+    about: str
+    address: str | None
+    industry: Industry
+    description: str | None
+    email: str | None
+    profile_picture_url: str | None
+    websites: tuple[str] | None
+
+    @classmethod
+    def from_dict(cls, data: dict) -> BusinessProfile:
+        return cls(
+            about=data['about'],
+            address=data.get('address'),
+            industry=Industry(data['vertical']),
+            description=data.get('description'),
+            email=data.get('email'),
+            profile_picture_url=data.get('profile_picture_url'),
+            websites=tuple(data.get('websites', [])) or None
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class CommerceSettings:
+    """
+    Represents the WhatsApp commerce settings.
+
+    Attributes:
+        catalog_id: The ID of the catalog associated with the business.
+        is_catalog_visible: Whether the catalog is visible to customers.
+        is_cart_enabled: Whether the cart is enabled.
+    """
+    catalog_id: str
+    is_catalog_visible: bool
+    is_cart_enabled: bool
+
+    @classmethod
+    def from_dict(cls, data: dict) -> CommerceSettings:
+        return cls(
+            catalog_id=data['id'],
+            is_catalog_visible=data['is_catalog_visible'],
+            is_cart_enabled=data['is_cart_enabled']
+        )
+

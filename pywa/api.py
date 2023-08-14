@@ -1,3 +1,5 @@
+"""The internal API for the WhatsApp client."""
+
 import requests
 from typing import Iterable, BinaryIO, Any
 from requests_toolbelt import MultipartEncoder
@@ -483,3 +485,92 @@ class WhatsAppCloudApi:
                 "message_id": message_id
             }
         )
+
+    def get_business_profile(self) -> dict[str, list[dict[str, str | list[str]]]]:
+        """
+        Get the business profile.
+
+        Return example::
+
+            {
+              "data": [{
+                "about": "ABOUT",
+                "address": "ADDRESS",
+                "description": "DESCRIPTION",
+                "email": "EMAIL",
+                "messaging_product": "whatsapp",
+                "profile_picture_url": "https://URL",
+                "websites": [
+                   "https://WEBSITE-1",
+                   "https://WEBSITE-2"
+                 ],
+                "vertical": "INDUSTRY",
+              }]
+            }
+        """
+        fields = ('about', 'address', 'description', 'email', 'profile_picture_url', 'websites', 'vertical')
+        return self._make_request(
+            method="GET",
+            endpoint=f"/{self.phone_id}/whatsapp_business_profile?fields={','.join(fields)}"
+        )
+
+    def update_business_profile(self, data: dict[str, str | list[str]]) -> dict[str, bool]:
+        """
+        Update the business profile.
+
+        Args:
+            data: The data to update the business profile with.
+
+        Return example::
+
+            {
+                "success": True
+            }
+        """
+        data.update(messaging_product="whatsapp")
+        return self._make_request(
+            method="POST",
+            endpoint=f"/{self.phone_id}/whatsapp_business_profile",
+            json=data
+        )
+
+    def get_commerce_settings(self) -> dict[str, list[dict]]:
+        """
+        Get the commerce settings of the business catalog.
+
+        Return example::
+
+            {
+              "data": [
+                {
+                  "is_cart_enabled": True,
+                  "is_catalog_visible": True,
+                  "id": "727705352028726"
+                }
+              ]
+            }
+        """
+        return self._make_request(
+            method="GET",
+            endpoint=f"/{self.phone_id}/whatsapp_commerce_settings"
+        )
+
+    def update_commerce_settings(self, data: dict) -> dict[str, bool]:
+        """
+        Change the commerce settings of the business catalog.
+
+        Args:
+            data: The data to update the commerce settings with.
+
+        Return example::
+
+            {
+              "success": True
+            }
+        """
+        return self._make_request(
+            method="POST",
+            endpoint=f"/{self.phone_id}/whatsapp_commerce_settings",
+            params=data
+        )
+

@@ -14,7 +14,10 @@ from pywa.handlers import Handler, MessageHandler, CallbackButtonHandler, Callba
     MessageStatusHandler
 from pywa.types import InlineButton, SectionList, Message, CallbackButton, CallbackSelection, MessageStatus, Contact, \
     MediaUrlResponse, ProductsSection
+from pywa.types.others import BusinessProfile, Industry, CommerceSettings
 from pywa.webhook import Webhook
+
+_MISSING = object()
 
 
 class WhatsApp:
@@ -929,3 +932,93 @@ class WhatsApp:
         with open(path, "wb") as f:
             f.write(content)
         return path
+
+    def get_business_profile(self) -> BusinessProfile:
+        """
+        Get the business profile of the WhatsApp Business account.
+
+        Returns:
+            The business profile.
+        """
+        return BusinessProfile.from_dict(data=self.api.get_business_profile()['data'][0])
+
+    def update_business_profile(
+            self,
+            about: str | None = _MISSING,
+            address: str | None = _MISSING,
+            description: str | None = _MISSING,
+            email: str | None = _MISSING,
+            profile_picture_handle: str | None = _MISSING,
+            industry: Industry | None = _MISSING,
+            websites: Iterable[str] | None = _MISSING
+    ) -> bool:
+        """
+        Update the business profile of the WhatsApp Business account.
+
+        Args:
+            about: The business's About text. This text appears in the business's profile, beneath its profile image,
+             phone number, and contact buttons. (cannot be empty. must be between 1 and 139 characters.
+             Markdown is not supported. Hyperlinks can be included but will not render as clickable links.)
+            address: Address of the business. Character limit 256.
+            description: Description of the business. Character limit 512.
+            email: The contact email address (in valid email format) of the business. Character limit 128.
+            profile_picture_handle: Handle of the profile picture. This handle is generated when you upload the binary
+             file for the profile picture to Meta using the Resumable Upload API
+             (https://developers.facebook.com/docs/graph-api/guides/upload)
+            industry: Industry of the business.
+            websites: The URLs associated with the business. For instance, a website, Facebook Page, or Instagram.
+             (You must include the http:// or https:// portion of the URL.
+             There is a maximum of 2 websites with a maximum of 256 characters each.)
+
+        Returns:
+            Whether the business profile was updated.
+        """
+        data = {
+            key: value or '' for key, value in {
+                'about': about,
+                'address': address,
+                'description': description,
+                'email': email,
+                'profile_picture_handle': profile_picture_handle,
+                'vertical': industry,
+                'websites': websites,
+            }.items() if value is not _MISSING
+        }
+        return self.api.update_business_profile(data)['success']
+
+    def get_commerce_settings(self) -> CommerceSettings:
+        """
+        Get the commerce settings of the WhatsApp Business account.
+
+        Returns:
+            The commerce settings.
+        """
+        return CommerceSettings.from_dict(data=self.api.get_commerce_settings()['data'][0])
+
+    def update_commerce_settings(
+            self,
+            is_catalog_visible: bool = None,
+            is_cart_enabled: bool = None,
+    ) -> bool:
+        """
+        Update the commerce settings of the WhatsApp Business account.
+
+        Args:
+            is_catalog_visible: Whether the catalog is visible (optional).
+            is_cart_enabled: Whether the cart is enabled (optional).
+
+        Returns:
+            Whether the commerce settings were updated.
+
+        Raises:
+            ValueError: If no arguments are provided.
+        """
+        data = {
+            key: value for key, value in {
+                'is_cart_enabled': is_cart_enabled,
+                'is_catalog_visible': is_catalog_visible,
+            }.items() if value is not None
+        }
+        if not data:
+            raise ValueError('At least one argument must be provided')
+        return self.api.update_commerce_settings(data)['success']
