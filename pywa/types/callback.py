@@ -1,9 +1,9 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable
 from .base_update import BaseUpdate
-from .others import MessageType, Metadata, User, ReplyToMessage
+from .others import Metadata, User, ReplyToMessage, MessageType
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
@@ -146,7 +146,7 @@ class Section:
         rows: The rows in the section (at least 1, no more than 10).
     """
     title: str
-    rows: list[SectionRow]
+    rows: Iterable[SectionRow]
 
     def to_dict(self) -> dict:
         return {
@@ -167,7 +167,7 @@ class SectionList:
         sections: The sections in the section list (at least 1, no more than 10).
     """
     button_title: str
-    sections: list[Section]
+    sections: Iterable[Section]
 
     def to_dict(self) -> dict:
         return {

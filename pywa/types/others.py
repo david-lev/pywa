@@ -1,41 +1,10 @@
 from __future__ import annotations
-from dataclasses import dataclass, fields, field, asdict
-from enum import Enum
+from dataclasses import dataclass, field, asdict
 from typing import Iterable, TYPE_CHECKING
 from pywa import utils
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
-
-
-class _StrEnum(str, Enum):
-    def __eq__(self, other: _StrEnum | str):
-        if isinstance(other, str):
-            return self.value == other.lower()
-        return super().__eq__(other)
-
-    def __ne__(self, other: _StrEnum | str):
-        return not self.__eq__(other)
-
-    def __str__(self):
-        return self.value
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}.{self.name}"
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
-class _FromDict:
-    """Base class for dataclasses that can be created from dict unpacking."""
-
-    # noinspection PyArgumentList
-    @classmethod
-    def from_dict(cls, data: dict, **kwargs):
-        data.update(kwargs)
-        return cls(**{
-            k: v for k, v in data.items()
-            if k in (f.name for f in fields(cls))
-        })
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,7 +34,7 @@ class User:
         ))
 
 
-class MessageType(_StrEnum):
+class MessageType(utils.StrEnum):
     """Message types."""
     AUDIO = "audio"
     DOCUMENT = "document"
@@ -77,7 +46,6 @@ class MessageType(_StrEnum):
     LOCATION = "location"
     CONTACTS = "contacts"
     INTERACTIVE = "interactive"
-    MESSAGE_STATUS = "message_status"  # Not a real message type, used for MessageStatus
     ORDER = "order"
     SYSTEM = "system"
     UNKNOWN = "unknown"
@@ -89,7 +57,7 @@ class MessageType(_StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
-class Reaction(_FromDict):
+class Reaction(utils.FromDict):
     """
     Represents a reaction to a message.
 
@@ -102,7 +70,7 @@ class Reaction(_FromDict):
 
 
 @dataclass(frozen=True, slots=True)
-class Location(_FromDict):
+class Location(utils.FromDict):
     """
     Represents a location.
 
@@ -131,7 +99,7 @@ class Location(_FromDict):
         return utils.get_distance(lat1=self.latitude, lon1=self.longitude, lat2=lat, lon2=lon) <= radius
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class Contact:
     """
     Represents a contact.
@@ -165,15 +133,15 @@ class Contact:
             org=cls.Org.from_dict(data["org"]) if "org" in data else None
         )
 
-    def to_dict(self) -> dict[str, str | dict[str, str] | list[dict[str, str]] | None]:
+    def to_dict(self) -> dict[str, str | dict[str, str] | tuple[dict[str, str]] | None]:
         """Get the contact as a dict."""
         return {
             "name": asdict(self.name),
             "birthday": self.birthday,
-            "phones": [asdict(phone) for phone in self.phones],
-            "emails": [asdict(email) for email in self.emails],
-            "urls": [asdict(url) for url in self.urls],
-            "addresses": [asdict(address) for address in self.addresses],
+            "phones": tuple(asdict(phone) for phone in self.phones),
+            "emails": tuple(asdict(email) for email in self.emails),
+            "urls": tuple(asdict(url) for url in self.urls),
+            "addresses": tuple(asdict(address) for address in self.addresses),
             "org": asdict(self.org) if self.org else None,
         }
 
@@ -193,7 +161,7 @@ class Contact:
         ) if s is not None)
 
     @dataclass(frozen=True, slots=True)
-    class Name(_FromDict):
+    class Name(utils.FromDict):
         """
         Represents a contact's name.
 
@@ -215,7 +183,7 @@ class Contact:
         prefix: str | None = None
 
     @dataclass(frozen=True, slots=True)
-    class Phone(_FromDict):
+    class Phone(utils.FromDict):
         """
         Represents a contact's phone number.
 
@@ -229,7 +197,7 @@ class Contact:
         wa_id: str | None = None
 
     @dataclass(frozen=True, slots=True)
-    class Email(_FromDict):
+    class Email(utils.FromDict):
         """
         Represents a contact's email address.
 
@@ -241,7 +209,7 @@ class Contact:
         type: str | None = None
 
     @dataclass(frozen=True, slots=True)
-    class Url(_FromDict):
+    class Url(utils.FromDict):
         """
         Represents a contact's URL.
 
@@ -253,7 +221,7 @@ class Contact:
         type: str | None = None
 
     @dataclass(frozen=True, slots=True)
-    class Org(_FromDict):
+    class Org(utils.FromDict):
         """
         Represents a contact's organization.
 
@@ -267,7 +235,7 @@ class Contact:
         title: str | None = None
 
     @dataclass(frozen=True, slots=True)
-    class Address(_FromDict):
+    class Address(utils.FromDict):
         """
         Represents a contact's address.
 
@@ -310,7 +278,7 @@ class ReplyToMessage:
 
 
 @dataclass(frozen=True, slots=True)
-class Metadata(_FromDict):
+class Metadata(utils.FromDict):
     """
     Represents the metadata of a message.
 
@@ -425,7 +393,7 @@ class ProductsSection:
         skus: The SKUs of the products in the section (at least 1, no more than 30).
     """
     title: str
-    skus: list[str]
+    skus: Iterable[str]
 
     def to_dict(self) -> dict:
         return {
@@ -434,7 +402,7 @@ class ProductsSection:
         }
 
 
-class Industry(_StrEnum):
+class Industry(utils.StrEnum):
     UNDEFINED = "UNDEFINED"
     OTHER = "OTHER"
     AUTO = "AUTO"

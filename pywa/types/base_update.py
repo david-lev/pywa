@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Iterable, TYPE_CHECKING, BinaryIO
-from .others import MessageType, Metadata, User, Contact
+from .others import Metadata, User, Contact
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
@@ -19,10 +19,6 @@ class BaseUpdate(ABC):
     """Base class for all update types."""
 
     _client: WhatsApp = field(repr=False, hash=False, compare=False)
-
-    @property
-    @abstractmethod
-    def type(self) -> MessageType: ...
 
     @property
     @abstractmethod

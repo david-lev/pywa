@@ -1,11 +1,12 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
+
+from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Callable, Any
 from pywa.errors import WhatsAppError
+from .callback import InlineButton, SectionList
 from .base_update import BaseUpdate
-from .others import ReplyToMessage, Reaction, Location, Contact, MessageType, User, Metadata, Order, System
-from .callback import SectionList, InlineButton
+from .others import ReplyToMessage, Reaction, Location, Contact, User, Metadata, Order, System, MessageType
 from .media import Image, Video, Sticker, Document, Audio
 
 if TYPE_CHECKING:
@@ -25,6 +26,7 @@ _FIELDS_TO_OBJECTS_CONSTRUCTORS: dict[str, Callable[[dict, WhatsApp], Any]] = di
     order=Order.from_dict,
     system=System.from_dict,
 )
+
 _MEDIA_FIELDS = ('image', 'video', 'sticker', 'document', 'audio')
 
 

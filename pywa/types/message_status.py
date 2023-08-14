@@ -3,15 +3,15 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING
 from pywa.errors import WhatsAppError
-from .others import _StrEnum
+from pywa import utils
 from .base_update import BaseUpdate
-from .others import Metadata, MessageType, User
+from .others import Metadata, User
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
 
 
-class MessageStatusType(_StrEnum):
+class MessageStatusType(utils.StrEnum):
     """Message status type."""
     SENT = 'sent'
     DELIVERED = 'delivered'
@@ -23,7 +23,7 @@ class MessageStatusType(_StrEnum):
         return cls.FAILED
 
 
-class ConversationCategory(_StrEnum):
+class ConversationCategory(utils.StrEnum):
     """Conversation category."""
     AUTHENTICATION = 'authentication'
     MARKETING = 'marketing'
@@ -54,7 +54,6 @@ class MessageStatus(BaseUpdate):
         error: The error that occurred (if status is ``failed``).
     """
     id: str
-    type: MessageType
     metadata: Metadata
     from_user: User
     timestamp: datetime
@@ -70,7 +69,6 @@ class MessageStatus(BaseUpdate):
             _client=client,
             id=status['id'],
             metadata=Metadata.from_dict(data['metadata']),
-            type=MessageType.MESSAGE_STATUS,
             status=status_type,
             timestamp=datetime.fromtimestamp(int(status['timestamp'])),
             from_user=User(wa_id=status['recipient_id'], name=None),

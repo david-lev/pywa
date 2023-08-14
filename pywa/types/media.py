@@ -3,14 +3,14 @@ import mimetypes
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
-from .others import _FromDict
+from pywa import utils
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class MediaBase(ABC, _FromDict):
+class MediaBase(ABC, utils.FromDict):
     """Base class for all media types."""
 
     _client: WhatsApp = field(repr=False, hash=False, compare=False)
@@ -146,7 +146,7 @@ class Audio(MediaBase):
 
 
 @dataclass(frozen=True, slots=True)
-class MediaUrlResponse(_FromDict):
+class MediaUrlResponse(utils.FromDict):
     """
     Represents a media response.
 
