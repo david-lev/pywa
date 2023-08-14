@@ -87,6 +87,11 @@ class Location(utils.FromDict):
     address: str | None = None
     url: str | None = None
 
+    @property
+    def current_location(self) -> bool:
+        """Check if the shared location is the current location or manually selected."""
+        return not any((self.name, self.address, self.url))
+
     def in_radius(self, lat: float, lon: float, radius: float | int) -> bool:
         """
         Check if the location is in a radius of another location.

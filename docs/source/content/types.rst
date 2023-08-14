@@ -3,9 +3,6 @@
 
 .. currentmodule:: pywa.types.message
 
-.. autoclass:: Message()
-    :members:
-
 .. autoclass:: MessageType()
     :members:
     :undoc-members:
@@ -95,9 +92,6 @@
 ====================
 
 .. currentmodule:: pywa.types.message_status
-
-.. autoclass:: MessageStatus()
-    :members:
 
 .. autoclass:: Conversation()
     :members:

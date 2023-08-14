@@ -427,6 +427,13 @@ class LocationFilter(_BaseUpdateFilter):
     >>> filters.location.any
     """
 
+    current_location: MessageFilterT = lambda wa, m: LocationFilter._match_type(m) and m.location.current_location
+    """
+    Filter for location messages that are the current location of the user and not just selected manually.
+    
+    >>> filters.location.current_location
+    """
+
     @staticmethod
     def in_radius(lat: float, lon: float, radius: float | int) -> MessageFilterT:
         """

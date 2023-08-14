@@ -75,9 +75,11 @@ class WhatsApp:
         Add handlers programmatically instead of using decorators.
 
         Example:
+
             >>> from pywa.handlers import MessageHandler, CallbackButtonHandler
             >>> from pywa.filters import text
-            >>> print_message = lambda wa, msg: print(msg)
+            >>> print_message = lambda _, msg: print(msg)
+            >>> wa = WhatsApp(...)
             >>> wa.add_handlers(
             ...     MessageHandler(print_message, text.any),
             ...     CallbackButtonHandler(print_message),
@@ -116,9 +118,9 @@ class WhatsApp:
         Example:
 
             >>> from pywa.types import InlineButton
-            >>> from pywa.filters import text
+            >>> from pywa import filters as fil
             >>> wa = WhatsApp(...)
-            >>> @wa.on_message(text.matches("Hello", "Hi", ignore_case=True))
+            >>> @wa.on_message(fil.text.matches("Hello", "Hi", ignore_case=True))
             ... def hello_handler(_: WhatsApp, msg: Message):
             ...     msg.react("👋")
             ...     msg.reply_text(text="Hello from PyWa!", quote=True, buttons=[InlineButton("Help", data="help")
@@ -138,11 +140,10 @@ class WhatsApp:
 
         Example:
 
-
             >>> from pywa.types import CallbackButton
-            >>> from pywa.filters import callback
+            >>> from pywa import filters as fil
             >>> wa = WhatsApp(...)
-            >>> @wa.on_callback_button(callback.data_matches("help"))
+            >>> @wa.on_callback_button(fil.callback.data_matches("help"))
             ... def help_handler(_: WhatsApp, btn: CallbackButton):
             ...     btn.reply_text(text="What can I help you with?")
 
@@ -162,9 +163,9 @@ class WhatsApp:
         Example:
 
             >>> from pywa.types import CallbackSelection
-            >>> from pywa.filters import callback
+            >>> from pywa import filters as fil
             >>> wa = WhatsApp(...)
-            >>> @wa.on_callback_selection(callback.data_startswith("id:"))
+            >>> @wa.on_callback_selection(fil.callback.data_startswith("id:"))
             ... def id_handler(_: WhatsApp, sel: CallbackSelection):
             ...     sel.reply_text(text=f"Your ID is {sel.data.split(':', 1)[1]}")
 
@@ -186,11 +187,11 @@ class WhatsApp:
         Example:
 
             >>> from pywa.types import MessageStatus
-            >>> from pywa.filters import message_status
+            >>> from pywa import filters as fil
             >>> wa = WhatsApp(...)
-            >>> @wa.on_message_status(message_status.failed)
-            ... def delivered_handler(wa: WhatsApp, status: MessageStatus):
-            ...     print(f"Message {status.id} failed to send to {status.from_user.wa_id}. error: {status.error.message}
+            >>> @wa.on_message_status(fil.message_status.failed)
+            ... def delivered_handler(client: WhatsApp, status: MessageStatus):
+            ...     print(f"Message {status.id} failed to send to {status.from_user.wa_id}: {status.error.message})
 
 
         Args:
@@ -206,17 +207,18 @@ class WhatsApp:
             self,
             to: str | int,
             text: str,
-            preview_url: bool = False,
-            reply_to_message_id: str | None = None,
-            keyboard: Iterable[InlineButton] | SectionList | None = None,
             header: str | None = None,
             footer: str | None = None,
+            keyboard: Iterable[InlineButton] | SectionList | None = None,
+            preview_url: bool = False,
+            reply_to_message_id: str | None = None,
     ) -> str:
         """
         Send a message to a WhatsApp user.
 
         Example:
 
+            >>> wa = WhatsApp(...)
             >>> wa.send_message(
             ...     to="1234567890",
             ...     text="Hello from PyWa! (https://github.com/david-lev/pywa)",
@@ -225,23 +227,27 @@ class WhatsApp:
 
         Example with keyboard buttons:
 
+            >>> from pywa.types import InlineButton
+            >>> wa = WhatsApp(...)
             >>> wa.send_message(
             ...     to="1234567890",
             ...     header="Hello from PyWa!",
             ...     text="What can I help you with?",
+            ...     footer="Powered by PyWa",
             ...     keyboard=[
             ...         InlineButton("Help", data="help"),
             ...         InlineButton("About", data="about"),
             ...     ],
-            ...     footer="Powered by PyWa",
             ... )
 
         Example with a section list:
-
+            >>> from pywa.types import SectionList, Section, SectionRow
+            >>> wa = WhatsApp(...)
             >>> wa.send_message(
             ...     to="1234567890",
             ...     header="Hello from PyWa!",
             ...     text="What can I help you with?",
+            ...     footer="Powered by PyWa",
             ...     keyboard=SectionList(
             ...         button_title="Choose an option",
             ...         sections=[
@@ -272,18 +278,19 @@ class WhatsApp:
             ...             ),
             ...         ],
             ...     ),
-            ...     footer="Powered by PyWa",
             ... )
 
 
         Args:
             to: The phone ID of the WhatsApp user.
             text: The text to send (markdown allowed, max 4096 characters).
+            header: The header of the message (if keyboard is provided, optional, up to 60 characters,
+             no markdown allowed).
+            footer: The footer of the message (if keyboard is provided, optional, up to 60 characters,
+             markdown has no effect).
+            keyboard: The keyboard to send with the message (optional).
             preview_url: Whether to show a preview of the URL in the message (if any).
             reply_to_message_id: The message ID to reply to (optional).
-            keyboard: The keyboard to send with the message (optional).
-            header: The header of the message (if keyboard is provided, optional, up to 60 characters, no markdown allowed).
-            footer: The footer of the message (if keyboard is provided, optional, up to 60 characters, markdown has no effect).
 
         Returns:
             The message ID of the sent message.
@@ -338,16 +345,18 @@ class WhatsApp:
             to: str | int,
             image: str | bytes | BinaryIO,
             caption: str | None = None,
-            reply_to_message_id: str | None = None,
-            buttons: Iterable[InlineButton] | None = None,
             body: str | None = None,
             footer: str | None = None,
+            buttons: Iterable[InlineButton] | None = None,
+            reply_to_message_id: str | None = None,
     ) -> str:
         """
         Send an image to a WhatsApp user.
+            - Images must be 8-bit, RGB or RGBA.
 
         Example:
 
+            >>> wa = WhatsApp(...)
             >>> wa.send_image(
             ...     to="1234567890",
             ...     image="https://example.com/image.png",
@@ -356,15 +365,16 @@ class WhatsApp:
 
         Args:
             to: The phone ID of the WhatsApp user.
-            image: The image to send (either a media ID, URL, file path, bytes, or a open file object).
+            image: The image to send (either a media ID, URL, file path, bytes, or an open file object).
             caption: The caption of the image (optional, markdown allowed).
-            reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
-            buttons: The buttons to send with the image (optional).
-            body: The body of the message (if buttons are provided, optional, up to 1024 characters, markdown allowed).
+            body: The body of the message (optional, up to 1024 characters, markdown allowed,
+             if buttons are provided and body is not provided, caption will be used as the body)
             footer: The footer of the message (if buttons is provided, optional, markdown has no effect).
+            buttons: The buttons to send with the image (optional).
+            reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
 
         Returns:
-            The message ID of the sent image.
+            The message ID of the sent image message.
         """
         is_url, image = self._resolve_media_param(media=image, mime_type="image/jpeg", filename="image.jpg")
         if not buttons:
@@ -397,16 +407,20 @@ class WhatsApp:
             to: str | int,
             video: str | bytes | BinaryIO,
             caption: str | None = None,
-            reply_to_message_id: str | None = None,
-            buttons: Iterable[InlineButton] | None = None,
             body: str | None = None,
             footer: str | None = None,
+            buttons: Iterable[InlineButton] | None = None,
+            reply_to_message_id: str | None = None,
+
     ) -> str:
         """
         Send a video to a WhatsApp user.
+            - Only H.264 video codec and AAC audio codec is supported.
+            - Videos with a single audio stream or no audio stream are supported.
 
         Example:
 
+            >>> wa = WhatsApp(...)
             >>> wa.send_video(
             ...     to="1234567890",
             ...     video="https://example.com/video.mp4",
@@ -415,15 +429,16 @@ class WhatsApp:
 
         Args:
             to: The phone ID of the WhatsApp user.
-            video: The video to send (either a media ID, URL, file path, bytes, or a open file object).
+            video: The video to send (either a media ID, URL, file path, bytes, or an open file object).
             caption: The caption of the video (optional, markdown allowed).
-            reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
-            buttons: The buttons to send with the video (optional).
-            body: The body of the message (if buttons are provided, optional, up to 1024 characters, markdown allowed).
+            body: The body of the message (optional, up to 1024 characters, markdown allowed,
+                if buttons are provided and body is not provided, caption will be used as the body)
             footer: The footer of the message (if buttons is provided, optional, markdown has no effect).
+            buttons: The buttons to send with the video (optional).
+            reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
 
         Returns:
-            The message ID of the sent message.
+            The message ID of the sent video.
         """
         is_url, video = self._resolve_media_param(media=video, mime_type="video/mp4", filename="video.mp4")
         if not buttons:
@@ -457,16 +472,17 @@ class WhatsApp:
             document: str | bytes | BinaryIO,
             filename: str | None = None,
             caption: str | None = None,
-            reply_to_message_id: str | None = None,
-            buttons: Iterable[InlineButton] | None = None,
             body: str | None = None,
             footer: str | None = None,
+            buttons: Iterable[InlineButton] | None = None,
+            reply_to_message_id: str | None = None,
     ) -> str:
         """
         Send a document to a WhatsApp user.
 
         Example:
 
+            >>> wa = WhatsApp(...)
             >>> wa.send_document(
             ...     to="1234567890",
             ...     document="https://example.com/example_123.pdf",
@@ -477,19 +493,24 @@ class WhatsApp:
 
         Args:
             to: The phone ID of the WhatsApp user.
-            document: The document to send (either a media ID, URL, file path, bytes, or a open file object).
-            filename: The filename of the document (optional, The extension of the filename will specify what format the document is displayed as in WhatsApp).
+            document: The document to send (either a media ID, URL, file path, bytes, or an open file object).
+            filename: The filename of the document (optional, The extension of the filename will specify what format the
+             document is displayed as in WhatsApp).
             caption: The caption of the document (optional).
-            reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
-            buttons: The buttons to send with the document (optional).
-            body: The body of the message (if buttons are provided, optional, up to 1024 characters, markdown allowed).
+            body: The body of the message (optional, up to 1024 characters, markdown allowed,
+                if buttons are provided and body is not provided, caption will be used as the body)
             footer: The footer of the message (if buttons is provided, optional, markdown has no effect).
+            buttons: The buttons to send with the document (optional).
+            reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
 
         Returns:
-            The message ID of the sent message.
+            The message ID of the sent document.
         """
-        is_url, document = self._resolve_media_param(media=document, mime_type="text/plain",
-                                                     filename=filename or "file.text")
+        is_url, document = self._resolve_media_param(
+            media=document,
+            mime_type="text/plain",
+            filename=filename or "file.txt",
+        )
         if not buttons:
             return self.api.send_media(
                 to=str(to),
@@ -527,6 +548,7 @@ class WhatsApp:
 
         Example:
 
+            >>> wa = WhatsApp(...)
             >>> wa.send_audio(
             ...     to='1234567890',
             ...     audio='https://example.com/audio.mp3',
@@ -534,10 +556,10 @@ class WhatsApp:
 
         Args:
             to: The phone ID of the WhatsApp user.
-            audio: The audio file to send (either a media ID, URL, file path, bytes, or a open file object).
+            audio: The audio file to send (either a media ID, URL, file path, bytes, or an open file object).
 
         Returns:
-            The message ID of the sent message.
+            The message ID of the sent audio file.
         """
         is_url, audio = self._resolve_media_param(media=audio, mime_type="audio/mpeg", filename="audio.mp3")
         return self.api.send_media(
@@ -559,6 +581,7 @@ class WhatsApp:
 
         Example:
 
+            >>> wa = WhatsApp(...)
             >>> wa.send_sticker(
             ...     to='1234567890',
             ...     sticker='https://example.com/sticker.webp',
@@ -587,9 +610,11 @@ class WhatsApp:
     ) -> str:
         """
         React to a message with an emoji.
+            - You can react to incoming messages by using the :py:func:`pywa.types.Message.react` method.
 
         Example:
 
+            >>> wa = WhatsApp(...)
             >>> wa.send_reaction(
             ...     to='1234567890',
             ...     emoji='👍',
@@ -602,7 +627,8 @@ class WhatsApp:
             message_id: The message ID to react to.
 
         Returns:
-            The message ID of the reaction.
+            The message ID of the reaction (You can't use this message id to remove the reaction or perform any other
+             action on it. instead, use the message ID of the message you reacted to).
         """
         return self.api.send_reaction(
             to=str(to),
@@ -620,15 +646,20 @@ class WhatsApp:
 
         Example:
 
+            >>> wa = WhatsApp(...)
             >>> wa.remove_reaction(
             ...     to='1234567890',
             ...     message_id='wamid.XXX='
             ... )
+
+        Returns:
+            The message ID of the reaction (You can't use this message id to re-react or perform any other action on it.
+             instead, use the message ID of the message you unreacted to).
         """
         return self.api.send_reaction(
             to=str(to),
-            message_id=message_id,
-            emoji=""
+            emoji="",
+            message_id=message_id
         )['messages'][0]['id']
 
     def send_location(
@@ -644,6 +675,7 @@ class WhatsApp:
 
         Example:
 
+            >>> wa = WhatsApp(...)
             >>> wa.send_location(
             ...     to='1234567890',
             ...     latitude=37.4847483695049,
@@ -658,6 +690,9 @@ class WhatsApp:
             longitude: The longitude of the location.
             name: The name of the location (optional).
             address: The address of the location (optional).
+
+        Returns:
+            The message ID of the sent location.
         """
         return self.api.send_location(
             to=str(to),
@@ -674,11 +709,12 @@ class WhatsApp:
             reply_to_message_id: str | None = None,
     ) -> str:
         """
-        Send a contact to a WhatsApp user.
+        Send a contact/s to a WhatsApp user.
 
         Example:
 
             >>> from pywa.types import Contact
+            >>> wa = WhatsApp(...)
             >>> wa.send_contact(
             ...     to='1234567890',
             ...     contact=Contact(
@@ -706,7 +742,7 @@ class WhatsApp:
     def send_catalog(
             self,
             to: str | int,
-            text: str,
+            body: str,
             footer: str | None = None,
             thumbnail_product_sku: str | None = None,
             reply_to_message_id: str | None = None,
@@ -714,9 +750,19 @@ class WhatsApp:
         """
         Send the business catalog to a WhatsApp user.
 
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.send_catalog(
+            ...     to='1234567890',
+            ...     body='Check out our catalog!',
+            ...     footer='Powered by PyWa',
+            ...     thumbnail_product_sku='SKU123',
+            ... )
+
         Args:
             to: The phone ID of the WhatsApp user.
-            text: Text to appear in the message body (up to 1024 characters).
+            body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
             thumbnail_product_sku: The thumbnail of this item will be used as the message's header image (optional, if
                 not provided, the first item in the catalog will be used).
@@ -734,7 +780,7 @@ class WhatsApp:
                     "thumbnail_product_retailer_id": thumbnail_product_sku,
                 }} if thumbnail_product_sku else {}),
             },
-            body=text,
+            body=body,
             footer=footer,
             reply_to_message_id=reply_to_message_id
         )['messages'][0]['id']
@@ -744,18 +790,31 @@ class WhatsApp:
             to: str | int,
             catalog_id: str,
             sku: str,
-            text: str | None = None,
+            body: str | None = None,
             footer: str | None = None,
             reply_to_message_id: str | None = None,
     ) -> str:
         """
         Send a product from a business catalog to a WhatsApp user.
-            - To send multiple products, use `wa.send_products`.
+            - To send multiple products, use :py:func:`pywa.WhatsApp.send_products`.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.send_product(
+            ...     to='1234567890',
+            ...     catalog_id='1234567890',
+            ...     sku='SKU123',
+            ...     body='Check out this product!',
+            ...     footer='Powered by PyWa',
+            ... )
+
         Args:
             to: The phone ID of the WhatsApp user.
-            catalog_id: The ID of the catalog to send the product from (https://business.facebook.com/commerce/)
+            catalog_id: The ID of the catalog to send the product from. (To get the catalog ID use
+             :py:func:`pywa.WhatsApp.get_commerce_settings` or visit https://business.facebook.com/commerce/).
             sku: The product SKU to send.
-            text: Text to appear in the message body (up to 1024 characters).
+            body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
             reply_to_message_id: The message ID to reply to (optional).
 
@@ -769,7 +828,7 @@ class WhatsApp:
                 "catalog_id": catalog_id,
                 "product_retailer_id": sku,
             },
-            body=text,
+            body=body,
             footer=footer,
             reply_to_message_id=reply_to_message_id
         )['messages'][0]['id']
@@ -780,20 +839,43 @@ class WhatsApp:
             catalog_id: str,
             product_sections: Iterable[ProductsSection],
             title: str,
-            text: str,
+            body: str,
             footer: str | None = None,
             reply_to_message_id: str | None = None,
     ) -> str:
         """
         Send products from a business catalog to a WhatsApp user.
-            - To send a single product, use `wa.send_product`.
+            - To send a single product, use :py:func:`pywa.WhatsApp.send_product`.
+
+        Example:
+
+            >>> from pywa.types import ProductsSection
+            >>> wa = WhatsApp(...)
+            >>> wa.send_products(
+            ...     to='1234567890',
+            ...     catalog_id='1234567890',
+            ...     title='Tech Products',
+            ...     body='Check out our products!',
+            ...     product_sections=[
+            ...         ProductsSection(
+            ...             title='Smartphones',
+            ...             skus=['IPHONE12', 'GALAXYS21'],
+            ...         ),
+            ...         ProductsSection(
+            ...             title='Laptops',
+            ...             skus=['MACBOOKPRO', 'SURFACEPRO'],
+            ...         ),
+            ...     ],
+            ...     footer='Powered by PyWa',
+            ... )
 
         Args:
             to: The phone ID of the WhatsApp user.
-            catalog_id: The ID of the catalog to send the product from (https://business.facebook.com/commerce/)
+            catalog_id: The ID of the catalog to send the product from (To get the catalog ID use
+             :py:func:`pywa.WhatsApp.get_commerce_settings` or visit https://business.facebook.com/commerce/).
             product_sections: The product sections to send (up to 30 products across all sections).
             title: The title of the product list (up to 60 characters).
-            text: Text to appear in the message body (up to 1024 characters).
+            body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
             reply_to_message_id: The message ID to reply to (optional).
 
@@ -808,7 +890,7 @@ class WhatsApp:
                 "sections": tuple(ps.to_dict() for ps in product_sections),
             },
             header={"type": "text", "text": title},
-            body=text,
+            body=body,
             footer=footer,
             reply_to_message_id=reply_to_message_id
         )['messages'][0]['id']
@@ -819,6 +901,12 @@ class WhatsApp:
     ) -> bool:
         """
         Mark a message as read.
+            - You can mark incoming messages as read by using the :py:func:`pywa.types.Message.mark_as_read` method.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.mark_message_as_read(message_id='wamid.XXX=')
 
         Args:
             message_id: The message ID to mark as read.
@@ -838,6 +926,8 @@ class WhatsApp:
         Upload media to WhatsApp servers.
 
         Example:
+
+            >>> wa = WhatsApp(...)
             >>> wa.upload_media(
             ...     media='https://example.com/image.jpg',
             ...     mime_type='image/jpeg',
@@ -850,6 +940,10 @@ class WhatsApp:
 
         Returns:
             The media ID.
+
+        Raises:
+            ValueError: If the file is not found or the URL is invalid or if the media is bytes and the filename is not
+             provided.
         """
         if isinstance(media, str):
             if os.path.isfile(media):
@@ -879,11 +973,12 @@ class WhatsApp:
         """
         Get the URL of a media.
             - The URL is valid for 5 minutes.
-            - The media can be downloaded using the ``download`` method.
+            - The media can be downloaded directly from the message using the :py:func:`pywa.WhatsApp.download_media`
 
         Example:
-            >>> wa.get_media_url(
-            ...
+
+            >>> wa = WhatsApp(...)
+            >>> wa.get_media_url(media_id='wamid.XXX=')
 
         Args:
             media_id: The media ID.
@@ -911,6 +1006,15 @@ class WhatsApp:
         """
         Download a media file from WhatsApp servers.
 
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.download_media(
+            ...     url='https://mmg-fna.whatsapp.net/d/f/Amc.../v2/1234567890',
+            ...     path='/home/david/Downloads',
+            ...     filename='image.jpg',
+            ... )
+
         Args:
             url: The URL of the media file (from ``get_media_url``).
             path: The path where to save the file (if not provided, the current working directory will be used).
@@ -936,6 +1040,11 @@ class WhatsApp:
         """
         Get the business profile of the WhatsApp Business account.
 
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.get_business_profile()
+
         Returns:
             The business profile.
         """
@@ -953,6 +1062,20 @@ class WhatsApp:
     ) -> bool:
         """
         Update the business profile of the WhatsApp Business account.
+
+        Example:
+
+            >>> from pywa.types import Industry
+            >>> wa = WhatsApp(...)
+            >>> wa.update_business_profile(
+            ...     about='This is a test business',
+            ...     address='Menlo Park, 1601 Willow Rd, United States',
+            ...     description='This is a test business',
+            ...     email='test@test.com',
+            ...     profile_picture_handle='1234567890',
+            ...     industry=Industry.NOT_A_BIZ,
+            ...     websites=('https://example.com', 'https://google.com'),
+            ... )
 
         Args:
             about: The business's About text. This text appears in the business's profile, beneath its profile image,
@@ -989,6 +1112,11 @@ class WhatsApp:
         """
         Get the commerce settings of the WhatsApp Business account.
 
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.get_commerce_settings()
+
         Returns:
             The commerce settings.
         """
@@ -1001,6 +1129,14 @@ class WhatsApp:
     ) -> bool:
         """
         Update the commerce settings of the WhatsApp Business account.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.update_commerce_settings(
+            ...     is_catalog_visible=True,
+            ...     is_cart_enabled=True,
+            ... )
 
         Args:
             is_catalog_visible: Whether the catalog is visible (optional).
