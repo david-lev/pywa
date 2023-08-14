@@ -130,7 +130,7 @@ Message Filters
 .. automethod:: reaction.emojis
 
 .. autoclass:: location
-.. autoattribute:: location.is_current_location
+.. autoattribute:: location.current_location
 .. automethod:: location.in_radius
 
 .. autoclass:: contacts
