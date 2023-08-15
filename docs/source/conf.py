@@ -72,7 +72,6 @@ html_favicon = "favicon.ico"
 html_static_path = ['../static']
 
 html_theme_options = {
-    "sidebar_hide_name": True,
     "use_sidenotes": True,
     "repository_url": "https://github.com/david-lev/pywa",
     "repository_branch": "master",
@@ -83,11 +82,39 @@ html_theme_options = {
     "use_source_button": True,
     "logo": {
         "text": "pywa",
+        "link": "https://pywa.readthedocs.io/",
         "alt_text": "pywa logo",
         "image_light": "pywa-logo.png",
         "image_dark": "pywa-logo.png",
     },
-    "github_url": "https://github.com/david-lev/pywa",
+    "icon_links_label": "Quick Links",
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/david-lev/pywa",
+            "icon": "fab fa-github",
+        },
+        {
+            "name": "PyPI",
+            "url": "https://pypi.org/project/pywa/",
+            "icon": "fab fa-python",
+        },
+        {
+            "name": "Updates",
+            "url": "https:/t.me/py_wa",
+            "icon": "fa-solid fa-bullhorn",
+        },
+        {
+            "name": "Chat",
+            "url": "https://t.me/pywachat",
+            "icon": "fa-solid fa-comment-dots",
+        },
+        {
+            "name": "Issues",
+            "url": "https://github.com/david-lev/pywa/issues",
+            "icon": "fas fa-bug",
+        }
+    ],
     "use_download_button": True,
 }
 

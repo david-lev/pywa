@@ -3,8 +3,6 @@
 
 .. currentmodule:: pywa.filters
 
-- See all the `Helper filters`_.
-
 Filters are used by the handlers to determine if they should handle an update or not.
 You can create your own filters by providing a function that takes the client and the update and returns a boolean.
 If the function returns True, the handler will handle the update, otherwise it will be ignored.
@@ -14,24 +12,22 @@ If the function returns True, the handler will handle the update, otherwise it w
     from pywa import WhatsApp
     from pywa.types import Message
 
-    def my_filter(wa: WhatsApp, msg: Message) -> bool:
-        return 'xyz' not in msg.text
+    def without_xyz_filter(_: WhatsApp, msg: Message) -> bool:
+        return msg.text and 'xyz' not in msg.text
 
     wa = WhatsApp(...)
 
-    @wa.on_message(my_filter)
-    def handle_only_messages_without_xyz(wa: WhatsApp, msg: Message):
+    @wa.on_message(without_xyz_filter)
+    def messages_without_xyz(wa: WhatsApp, msg: Message):
         msg.reply('You said something without xyz!')
 
     # Or with lambda:
-    @wa.on_message(lambda wa, msg: 'xyz' not in msg.text)
-    def handle_only_messages_without_xyz(wa: WhatsApp, msg: Message):
+    @wa.on_message(lambda _, msg: msg.text and 'xyz' not in msg.text)
+    def messages_without_xyz(wa: WhatsApp, msg: Message):
         msg.reply('You said something without xyz!')
 
 
-The library provides some built-in filters that you can use. The filters are located in the :mod:`pywa.filters` module
-and separated by classes, for example, the :class:`text` filter will only handle text messages, while the
-:class:`callback` filter will only handle callbacks.
+The library provides some built-in filters that you can use. The filters are located in the :mod:`pywa.filters` module.
 
 Here is an example of how to use them:
 
@@ -67,19 +63,25 @@ Here is some examples:
     from pywa import filters as fil  # short name for convenience
 
     fil.all_(fil.text.startswith("Hello"), fil.any_(fil.text.endswith("World"), fil.text.length((1, 10))))
-    fil.any_(fil.image.any, fil.all_(fil.video.mimetypes("video/mp4"), fil.video.has_caption))
+    fil.any_(fil.image, fil.all_(fil.video.mimetypes("video/mp4"), fil.video.has_caption))
     fil.not_(fil.text.contains("bad word"))
 
 
-Keep in mind that all match-filters (``matches``, ``startswith``, ``endswith``, ``contains`` etc.) returns True if
-ANY of the given matches are found. so there is no need to use ``fil.any_`` with them.
+.. role:: python(code)
+   :language: python
 
+.. note::
+    :class: dropdown
+
+    Keep in mind that all match-filters (:meth:`text.matches`, :meth:`text.contains`, etc) will return ``True`` if
+    **ANY** of the given matches are found. so there is no need to do something like
+    :python:`any_(text.matches('hello'), text.matches('hi'))`, you can just do :python:`text.matches('hello', 'hi')`.
 
 ----------------------------------------
 
 
-Helper filters
-~~~~~~~~~~~~~~
+Built-in Filters
+-----------------
 
 .. autofunction:: all_
 .. autofunction:: any_
