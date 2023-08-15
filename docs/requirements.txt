@@ -1,4 +1,4 @@
 pywa
-furo==2022.12.7
+sphinx-book-theme==1.0.1
 sphinx-copybutton==0.5.1
 sphinxext-opengraph==0.7.5

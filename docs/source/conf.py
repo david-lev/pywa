@@ -61,7 +61,7 @@ exclude_patterns = []
 
 pygments_style = "friendly"
 
-html_theme = "furo"
+html_theme = "sphinx_book_theme"
 copybutton_prompt_text = "$ "
 suppress_warnings = ["image.not_readable"]
 html_favicon = "favicon.ico"
@@ -73,15 +73,30 @@ html_static_path = ['../static']
 
 html_theme_options = {
     "sidebar_hide_name": True,
-    "light_logo": "pywa-logo.png",
-    "dark_logo": "pywa-logo.png",
+    "use_sidenotes": True,
+    "repository_url": "https://github.com/david-lev/pywa",
+    "repository_branch": "master",
+    "path_to_docs": "docs/source",
+    "use_edit_page_button": True,
+    "use_repository_button": True,
+    "use_issues_button": True,
+    "use_source_button": True,
+    "logo": {
+        "text": "pywa",
+        "alt_text": "pywa logo",
+        "image_light": "pywa-logo.png",
+        "image_dark": "pywa-logo.png",
+    },
+    "github_url": "https://github.com/david-lev/pywa",
+    "use_download_button": True,
 }
 
 intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 
 ogp_site_url = "https://pywa.readthedocs.io/"
 ogp_site_name = "pywa documentation"
-ogp_image = "https://pywa.readthedocs.io/en/latest/static/pywa-ogp.png"
+ogp_image = "https://pywa.readthedocs.io/en/latest/_static/pywa-ogp.png"
+ogp_image_alt = "pywa logo"
 ogp_description_length = 300
 ogp_type = "website"
 ogp_custom_meta_tags = [
