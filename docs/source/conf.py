@@ -101,7 +101,7 @@ html_theme_options = {
         },
         {
             "name": "Updates",
-            "url": "https:/t.me/py_wa",
+            "url": "https://t.me/py_wa",
             "icon": "fa-solid fa-bullhorn",
         },
         {
