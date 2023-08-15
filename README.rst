@@ -122,4 +122,16 @@ ________________________
 
 See the `Documentation <https://pywa.readthedocs.io/>`_ for detailed instructions
 
+📝 **License**
+---------------
+
+This project is licensed under the MIT License - see the
+`LICENSE <https://github.com/david-lev/pywa/blob/master/LICENSE>`_ file for details
+
+🙏 **Acknowledgments**
+-----------------------
+
+- `Pyrogram <https://pyrogram.org/>`_ - For the design inspiration
+
+
 .. end-readme

@@ -12,11 +12,11 @@
 
 .. toctree::
 
-    content/getting-started
-    content/client
-    content/handlers
-    content/updates
-    content/types
-    content/filters
-    content/errors
-    content/examples
+    /content/getting-started
+    /content/client/overview
+    /content/handlers/overview
+    /content/updates/overview
+    /content/filters/overview
+    /content/errors/overview
+    /content/types
+    /content/examples
