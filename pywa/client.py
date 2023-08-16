@@ -12,7 +12,7 @@ from typing import Callable, Any, Iterable, BinaryIO
 from pywa.api import WhatsAppCloudApi
 from pywa.handlers import Handler, MessageHandler, CallbackButtonHandler, CallbackSelectionHandler, RawUpdateHandler, \
     MessageStatusHandler
-from pywa.types import InlineButton, SectionList, Message, CallbackButton, CallbackSelection, MessageStatus, Contact, \
+from pywa.types import Button, SectionList, Message, CallbackButton, CallbackSelection, MessageStatus, Contact, \
     MediaUrlResponse, ProductsSection, BusinessProfile, Industry, CommerceSettings
 from pywa.webhook import Webhook
 
@@ -35,23 +35,43 @@ class WhatsApp:
         """
         Initialize the WhatsApp client.
 
-        >>> from pywa import WhatsApp
-        >>> wa = WhatsApp(phone_id="100944",token="EAADKQl9oJxx")
+        Example without webhook:
+
+            >>> from pywa import WhatsApp
+            >>> wa = WhatsApp(phone_id="100944",token="EAADKQl9oJxx")
+
+        Example with webhook (using Flask):
+
+            >>> from pywa import WhatsApp
+            >>> from flask import Flask
+            >>> flask_app = Flask(__name__)
+            >>> wa = WhatsApp(
+            ...     phone_id="100944",
+            ...     token="EAADKQl9oJxx",
+            ...     server=flask_app,
+            ...     verify_token="my_verify_token",
+            ... )
+            >>> @wa.on_message()
+            ... def message_handler(_: WhatsApp, msg: Message): print(msg)
+            >>> flask_app.run()  # or by using a WSGI server (e.g. gunicorn, waitress, etc.)
 
         Args:
-            phone_id: The 'Phone number ID'
-            token: The token of the WhatsApp account.
-            base_url: The base URL of the WhatsApp API. Default: ``https://graph.facebook.com``
-            api_version: The API version of the WhatsApp API. Default: ``17.0``
-            session: The session to use for requests. (Do not use the same session for multiple WhatsApp clients!)
-            server: The Flask or FastAPI app instance.
+            phone_id: The Phone number ID (Not the phone number itself, the ID can be found in the App settings).
+            token: The token of the WhatsApp account (In prodaction,
+             `use permanent token <https://developers.facebook.com/docs/whatsapp/business-management-api/get-started>`_).
+            base_url: The base URL of the WhatsApp API (default: ``https://graph.facebook.com``).
+            api_version: The API version of the WhatsApp API (default: ``17.0``).
+            session: The session to use for requests (default: new ``requests.Session()``, Do not use the same
+             session across multiple WhatsApp clients!)
+            server: The Flask or FastAPI app instance to use for the webhook.
             webhook_endpoint: The endpoint to listen for incoming messages (default: ``/``).
-            verify_token: The verify token of the registered webhook.
-            filter_updates: Whether to filter out updates that not sended to this phone number.
+            verify_token: The verify token of the registered webhook (Required when ``server`` is provided).
+            filter_updates: Whether to filter out updates that not sended to this phone number (default: ``True``, does
+                not apply to raw updates).
         """
         self.phone_id = str(phone_id)
         self.api = WhatsAppCloudApi(
-            phone_id=phone_id,
+            phone_id=self.phone_id,
             token=token,
             session=session or requests.Session(),
             base_url=base_url,
@@ -91,9 +111,13 @@ class WhatsApp:
         for handler in handlers:
             self.webhook.handlers[handler.__handler_type__].append(handler)
 
-    def on_raw_update(self, *filters: Callable[[WhatsApp, dict], bool]):
+    def on_raw_update(
+            self, *filters: Callable[[WhatsApp, dict], bool]
+    ) -> Callable[[Callable[[WhatsApp, dict], Any]], Callable[[WhatsApp, dict], Any]]:
         """
         Decorator to register a function as a handler for raw updates.
+            - This handler is called for **EVERY** update received from WhatsApp,
+            even if it's not sended to the client phone number.
 
         Example:
             
@@ -106,35 +130,39 @@ class WhatsApp:
             filters: Filters to apply to the incoming updates (filters are function that take the WhatsApp client and
                 the incoming update and return a boolean).
         """
-        def decorator(func: Callable[[WhatsApp, dict], Any]):
+        def decorator(func: Callable[[WhatsApp, dict], Any]) -> Callable[[WhatsApp, dict], Any]:
             self.add_handlers(RawUpdateHandler(func, *filters))
             return func
         return decorator
 
-    def on_message(self, *filters: Callable[[WhatsApp, Message], bool]):
+    def on_message(
+            self, *filters: Callable[[WhatsApp, Message], bool]
+    ) -> Callable[[Callable[[WhatsApp, Message], Any]], Callable[[WhatsApp, Message], Any]]:
         """
         Decorator to register a function as a handler for incoming messages.
 
         Example:
 
-            >>> from pywa.types import InlineButton
+            >>> from pywa.types import Button
             >>> from pywa import filters as fil
             >>> wa = WhatsApp(...)
             >>> @wa.on_message(fil.text.matches("Hello", "Hi", ignore_case=True))
             ... def hello_handler(_: WhatsApp, msg: Message):
             ...     msg.react("👋")
-            ...     msg.reply_text(text="Hello from PyWa!", quote=True, buttons=[InlineButton("Help", data="help")
+            ...     msg.reply_text(text="Hello from PyWa!", quote=True, buttons=[Button("Help", data="help")
 
         Args:
             filters: Filters to apply to the incoming messages (filters are function that take the WhatsApp client and
                 the incoming message and return a boolean).
         """
-        def decorator(func: Callable[[WhatsApp, Message], Any]):
+        def decorator(func: Callable[[WhatsApp, Message], Any]) -> Callable[[WhatsApp, Message], Any]:
             self.add_handlers(MessageHandler(func, *filters))
             return func
         return decorator
 
-    def on_callback_button(self, *filters: Callable[[WhatsApp, CallbackButton], bool]):
+    def on_callback_button(
+            self, *filters: Callable[[WhatsApp, CallbackButton], bool]
+    ) -> Callable[[Callable[[WhatsApp, CallbackButton], Any]], Callable[[WhatsApp, CallbackButton], Any]]:
         """
         Decorator to register a function as a handler for incoming callback button presses.
 
@@ -151,12 +179,14 @@ class WhatsApp:
             filters: Filters to apply to the incoming callback button presses (filters are function that take the
                 WhatsApp client and the incoming callback button and return a boolean).
         """
-        def decorator(func: Callable[[WhatsApp, CallbackButton], Any]):
+        def decorator(func: Callable[[WhatsApp, CallbackButton], Any]) -> Callable[[WhatsApp, CallbackButton], Any]:
             self.add_handlers(CallbackButtonHandler(func, *filters))
             return func
         return decorator
 
-    def on_callback_selection(self, *filters: Callable[[WhatsApp, CallbackSelection], bool]):
+    def on_callback_selection(
+            self, *filters: Callable[[WhatsApp, CallbackSelection], bool]
+    ) -> Callable[[Callable[[WhatsApp, CallbackSelection], Any]], Callable[[WhatsApp, CallbackSelection], Any]]:
         """
         Decorator to register a function as a handler for incoming callback selections.
 
@@ -173,12 +203,16 @@ class WhatsApp:
             filters: Filters to apply to the incoming callback selections (filters are function that take the
                 WhatsApp client and the incoming callback selection and return a boolean).
         """
-        def decorator(func: Callable[[WhatsApp, CallbackSelection], Any]):
+        def decorator(
+                func: Callable[[WhatsApp, CallbackSelection], Any]
+        ) -> Callable[[WhatsApp, CallbackSelection], Any]:
             self.add_handlers(CallbackSelectionHandler(func, *filters))
             return func
         return decorator
 
-    def on_message_status(self, *filters: Callable[[WhatsApp, MessageStatus], bool]):
+    def on_message_status(
+            self, *filters: Callable[[WhatsApp, MessageStatus], bool]
+    ) -> Callable[[Callable[[WhatsApp, MessageStatus], Any]], Callable[[WhatsApp, MessageStatus], Any]]:
         """
         Decorator to register a function as a handler for incoming message status changes.
 
@@ -198,7 +232,7 @@ class WhatsApp:
             filters: Filters to apply to the incoming message status changes (filters are function that take the
                 WhatsApp client and the incoming message status change and return a boolean).
         """
-        def decorator(func: Callable[[WhatsApp, MessageStatus], Any]):
+        def decorator(func: Callable[[WhatsApp, MessageStatus], Any]) -> Callable[[WhatsApp, MessageStatus], Any]:
             self.add_handlers(MessageStatusHandler(func, *filters))
             return func
         return decorator
@@ -209,7 +243,7 @@ class WhatsApp:
             text: str,
             header: str | None = None,
             footer: str | None = None,
-            keyboard: Iterable[InlineButton] | SectionList | None = None,
+            keyboard: Iterable[Button] | SectionList | None = None,
             preview_url: bool = False,
             reply_to_message_id: str | None = None,
     ) -> str:
@@ -227,7 +261,7 @@ class WhatsApp:
 
         Example with keyboard buttons:
 
-            >>> from pywa.types import InlineButton
+            >>> from pywa.types import Button
             >>> wa = WhatsApp(...)
             >>> wa.send_message(
             ...     to="1234567890",
@@ -235,8 +269,8 @@ class WhatsApp:
             ...     text="What can I help you with?",
             ...     footer="Powered by PyWa",
             ...     keyboard=[
-            ...         InlineButton("Help", data="help"),
-            ...         InlineButton("About", data="about"),
+            ...         Button("Help", data="help"),
+            ...         Button("About", data="about"),
             ...     ],
             ... )
 
@@ -347,7 +381,7 @@ class WhatsApp:
             caption: str | None = None,
             body: str | None = None,
             footer: str | None = None,
-            buttons: Iterable[InlineButton] | None = None,
+            buttons: Iterable[Button] | None = None,
             reply_to_message_id: str | None = None,
     ) -> str:
         """
@@ -409,7 +443,7 @@ class WhatsApp:
             caption: str | None = None,
             body: str | None = None,
             footer: str | None = None,
-            buttons: Iterable[InlineButton] | None = None,
+            buttons: Iterable[Button] | None = None,
             reply_to_message_id: str | None = None,
 
     ) -> str:
@@ -474,7 +508,7 @@ class WhatsApp:
             caption: str | None = None,
             body: str | None = None,
             footer: str | None = None,
-            buttons: Iterable[InlineButton] | None = None,
+            buttons: Iterable[Button] | None = None,
             reply_to_message_id: str | None = None,
     ) -> str:
         """

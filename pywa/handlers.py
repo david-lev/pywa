@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 class Handler:
     """Base class for all handlers."""
-    __handler_type__ = None
+    __handler_type__: str
 
     def __init__(
             self,
@@ -44,6 +44,13 @@ class MessageHandler(Handler):
     Handler for incoming messages (text, image, video, etc.).
         - You can use the :func:`~pywa.client.WhatsApp.on_message` decorator to register a handler for this type.
 
+    Example:
+
+        >>> from pywa import WhatsApp, filters as fil
+        >>> wa = WhatsApp(...)
+        >>> print_text_messages = lambda _, msg: print(msg)
+        >>> wa.add_handlers(MessageHandler(print_text_messages, fil.text))
+
     Args:
         handler: The handler function. (gets the WhatsApp instance and the message as arguments)
         filters: The filters to apply to the handler. (gets the WhatsApp instance and
@@ -63,6 +70,13 @@ class CallbackButtonHandler(Handler):
     """
     A button callback handler.
         - You can use the :func:`~pywa.client.WhatsApp.on_callback_button` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp, filters as fil
+        >>> wa = WhatsApp(...)
+        >>> print_btn = lambda _, btn: print(btn)
+        >>> wa.add_handlers(CallbackButtonHandler(print_btn, fil.callback.data_startswith('id:')))
 
     Args:
         handler: The handler function. (gets the WhatsApp instance and the callback as arguments)
@@ -84,6 +98,13 @@ class CallbackSelectionHandler(Handler):
     A selection callback handler.
         - You can use the :func:`~pywa.client.WhatsApp.on_callback_selection` decorator to register a handler for this type.
 
+    Example:
+
+        >>> from pywa import WhatsApp, filters as fil
+        >>> wa = WhatsApp(...)
+        >>> print_selection = lambda _, sel: print(sel)
+        >>> wa.add_handlers(CallbackSelectionHandler(print_selection, fil.callback.data_startswith('id:')))
+
     Args:
         handler: The handler function. (gets the WhatsApp instance and the callback as arguments)
         filters: The filters to apply to the handler. (gets the WhatsApp instance and
@@ -103,6 +124,13 @@ class MessageStatusHandler(Handler):
     A message status handler.
         - You can use the :func:`~pywa.client.WhatsApp.on_message_status` decorator to register a handler for this type.
 
+    Example:
+
+        >>> from pywa import WhatsApp, filters as fil
+        >>> wa = WhatsApp(...)
+        >>> print_failed_messages = lambda _, msg: print(msg)
+        >>> wa.add_handlers(MessageStatusHandler(print_failed_messages, fil.message_status.failed))
+
     Args:
         handler: The handler function. (gets the WhatsApp instance and the message status as arguments)
         filters: The filters to apply to the handler. (gets the WhatsApp instance and
@@ -121,7 +149,15 @@ class MessageStatusHandler(Handler):
 class RawUpdateHandler(Handler):
     """
     A raw update handler.
+        - This handler is called for **EVERY** update received from WhatsApp, even if it's not sended to the client phone number.
         - You can use the :func:`~pywa.client.WhatsApp.on_raw_update` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp, filters as fil
+        >>> wa = WhatsApp(...)
+        >>> print_updates = lambda _, data: print(data)
+        >>> wa.add_handlers(RawUpdateHandler(print_updates))
 
     Args:
         handler: The handler function. (gets the WhatsApp instance and the data-dict as arguments)

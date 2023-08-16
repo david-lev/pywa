@@ -7,7 +7,7 @@ from .others import Metadata, User, Contact, ProductsSection
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
-    from .callback import InlineButton, SectionList
+    from .callback import Button, SectionList
 
 
 def _no_default():
@@ -50,7 +50,7 @@ class BaseUpdate(ABC):
             text: str,
             header: str | None = None,
             footer: str | None = None,
-            keyboard: Iterable[InlineButton] | SectionList | None = None,
+            keyboard: Iterable[Button] | SectionList | None = None,
             quote: bool = False,
             preview_url: bool = False,
     ) -> str:
@@ -67,14 +67,14 @@ class BaseUpdate(ABC):
 
         Example with keyboard buttons:
 
-            >>> from pywa.types import InlineButton
+            >>> from pywa.types import Button
             >>> msg.reply_text(
             ...     header="Hello from PyWa!",
             ...     text="What can I help you with?",
             ...     footer="Powered by PyWa",
             ...     keyboard=[
-            ...         InlineButton("Help", data="help"),
-            ...         InlineButton("About", data="about"),
+            ...         Button("Help", data="help"),
+            ...         Button("About", data="about"),
             ...     ],
             ...     quote=True
             ... )
@@ -148,7 +148,7 @@ class BaseUpdate(ABC):
             caption: str | None = None,
             body: str | None = None,
             footer: str | None = None,
-            buttons: Iterable[InlineButton] | None = None,
+            buttons: Iterable[Button] | None = None,
             quote: bool = False,
     ) -> str:
         """
@@ -192,7 +192,7 @@ class BaseUpdate(ABC):
             caption: str | None = None,
             body: str | None = None,
             footer: str | None = None,
-            buttons: Iterable[InlineButton] | None = None,
+            buttons: Iterable[Button] | None = None,
             quote: bool = False,
     ) -> str:
         """
@@ -238,7 +238,7 @@ class BaseUpdate(ABC):
             caption: str | None = None,
             body: str | None = None,
             footer: str | None = None,
-            buttons: Iterable[InlineButton] | None = None,
+            buttons: Iterable[Button] | None = None,
             quote: bool = False,
     ) -> str:
         """

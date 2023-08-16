@@ -81,7 +81,7 @@ ________________________
 
     from pywa import WhatsApp
     from flask import Flask
-    from pywa.types import Message, CallbackButton, InlineButton
+    from pywa.types import Message, CallbackButton, Button
     from pywa.filters import text, callback
 
     flask_app = Flask(__name__)
@@ -98,7 +98,7 @@ ________________________
         msg.reply_text(
             text=f'Hello {msg.from_user.name}!',
             keyboard=[
-                InlineButton(
+                Button(
                     title='Click me!',
                     callback_data='id:123'
                 )

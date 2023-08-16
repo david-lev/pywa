@@ -98,9 +98,9 @@ class CallbackSelection(BaseUpdate):
 
 
 @dataclass(frozen=True, slots=True)
-class InlineButton:
+class Button:
     """
-    Represents an inline button in a keyboard.
+    Represents a button in the button list.
 
     Attributes:
         title: The title of the button (up to 20 characters).
@@ -111,6 +111,18 @@ class InlineButton:
 
     def to_dict(self) -> dict:
         return {"type": "reply", "reply": {"id": self.callback_data, "title": self.title}}
+
+
+@dataclass(frozen=True, slots=True)
+class InlineButton(Button):
+    """
+    Deprecated. Use :class:`Button` instead.
+
+    - This class will be removed in v1.0.0
+    """
+    def __post_init__(self):
+        import warnings
+        warnings.warn("InlineButton is deprecated. Use Button instead (This class will be removed in v1.0.0)")
 
 
 @dataclass(frozen=True, slots=True)

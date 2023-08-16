@@ -11,7 +11,7 @@
 
 .. currentmodule:: pywa.types.callback
 
-.. autoclass:: InlineButton()
+.. autoclass:: Button()
     :members:
 
 .. autoclass:: SectionList()

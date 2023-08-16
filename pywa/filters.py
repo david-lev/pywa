@@ -92,7 +92,7 @@ def not_(fil: Callable[[Wa, T], bool]) -> Callable[[Wa, T], bool]:
     return lambda wa, m: not fil(wa, m)
 
 
-def from_users(*numbers: str) -> MessageFilterT:
+def from_users(*numbers: str) -> MessageFilterT | CallbackFilterT | MessageStatusFilterT:
     """
     Filter for messages that are sent from the given numbers.
 
