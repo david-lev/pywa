@@ -3,5 +3,8 @@ Handler Decorators
 
 .. currentmodule:: pywa.client
 
-.. autoclass:: WhatsApp()
-    :members: on_message, on_callback_button, on_callback_selection, on_message_status, on_raw_update
+.. automethod:: WhatsApp.on_message
+.. automethod:: WhatsApp.on_callback_button
+.. automethod:: WhatsApp.on_callback_selection
+.. automethod:: WhatsApp.on_message_status
+.. automethod:: WhatsApp.on_raw_update

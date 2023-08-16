@@ -151,8 +151,6 @@ class Section:
     """
     Represents a section in a section list.
 
-    - See more: https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages#section-object
-
     Attributes:
         title: The title of the section (up to 24 characters).
         rows: The rows in the section (at least 1, no more than 10).
@@ -171,8 +169,6 @@ class Section:
 class SectionList:
     """
     Represents a section list in an interactive message.
-
-    - See more: https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages#section-object
 
     Attributes:
         button_title: The title of the button that opens the section list (up to 20 characters).

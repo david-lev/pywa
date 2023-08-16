@@ -53,7 +53,7 @@ class MessageHandler(Handler):
 
     Args:
         handler: The handler function. (gets the WhatsApp instance and the message as arguments)
-        filters: The filters to apply to the handler. (gets the WhatsApp instance and
+        *filters: The filters to apply to the handler. (gets the WhatsApp instance and
             the message as arguments and returns a boolean)
     """
     __handler_type__ = "message"
@@ -80,7 +80,7 @@ class CallbackButtonHandler(Handler):
 
     Args:
         handler: The handler function. (gets the WhatsApp instance and the callback as arguments)
-        filters: The filters to apply to the handler. (gets the WhatsApp instance and
+        *filters: The filters to apply to the handler. (gets the WhatsApp instance and
             the callback as arguments and returns a boolean)
     """
     __handler_type__ = "button"
@@ -107,7 +107,7 @@ class CallbackSelectionHandler(Handler):
 
     Args:
         handler: The handler function. (gets the WhatsApp instance and the callback as arguments)
-        filters: The filters to apply to the handler. (gets the WhatsApp instance and
+        *filters: The filters to apply to the handler. (gets the WhatsApp instance and
     """
     __handler_type__ = "selection"
 
@@ -133,7 +133,7 @@ class MessageStatusHandler(Handler):
 
     Args:
         handler: The handler function. (gets the WhatsApp instance and the message status as arguments)
-        filters: The filters to apply to the handler. (gets the WhatsApp instance and
+        *filters: The filters to apply to the handler. (gets the WhatsApp instance and
             the message status as arguments and returns a boolean)
     """
     __handler_type__ = "message_status"
@@ -161,7 +161,7 @@ class RawUpdateHandler(Handler):
 
     Args:
         handler: The handler function. (gets the WhatsApp instance and the data-dict as arguments)
-        filters: The filters to apply to the handler. (gets the WhatsApp instance and
+        *filters: The filters to apply to the handler. (gets the WhatsApp instance and
             the data-dict as arguments and returns a boolean)
     """
     __handler_type__ = "raw_update"

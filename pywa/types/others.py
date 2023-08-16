@@ -301,7 +301,7 @@ class Product:
     Represents a product in an order.
 
     Attributes:
-        sku: Unique identifier of the product in a catalog (also referred to as `Content ID` or `Retailer ID`).
+        sku: Unique identifier of the product in a catalog (also referred to as ``Content ID`` or ``Retailer ID``).
         quantity: Number of items ordered.
         price: Price of the item.
         currency: Currency of the price.
@@ -363,7 +363,7 @@ class System:
     Represents a system update (A customer has updated their phone number or profile information).
 
     Attributes:
-        type: The type of the system update (customer_changed_number or customer_identity_changed).
+        type: The type of the system update (``customer_changed_number`` or ``customer_identity_changed``).
         body: Describes the change to the customer's identity or phone number.
         identity: Hash for the identity fetched from server.
         wa_id: The WhatsApp ID for the customer prior to the update.
@@ -390,8 +390,6 @@ class System:
 class ProductsSection:
     """
     Represents a section in a section list.
-
-    - See more: https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages#section-object
 
     Attributes:
         title: The title of the products section (up to 24 characters).

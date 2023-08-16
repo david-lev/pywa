@@ -70,7 +70,7 @@ Here is some examples:
 .. role:: python(code)
    :language: python
 
-.. note::
+.. hint::
     :class: dropdown
 
     Keep in mind that all match-filters (:meth:`text.matches`, :meth:`text.contains`, etc) will return ``True`` if

@@ -58,19 +58,32 @@ templates_path = ['_templates']
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
-
 pygments_style = "friendly"
-
 html_theme = "sphinx_book_theme"
-copybutton_prompt_text = "$ "
 suppress_warnings = ["image.not_readable"]
-html_favicon = "favicon.ico"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['../static']
+html_favicon = "favicon.ico"
 
+# sphinx.ext.autodoc
+autodoc_member_order = "bysource"
+# autodoc_typehints = "none"  # show type hints in doc signature
+# autodoc_typehints = "description"  # show type hints in doc body instead of signature
+
+# sphinx.ext.napoleon
+napoleon_google_docstring = True
+napoleon_numpy_docstring = False
+napoleon_use_ivar = True
+
+# sphinx-copybutton
+copybutton_prompt_text = r">>> |\.\.\. |> |\$ |\# | In \[\d*\]: | {2,5}\.\.\.: | {5,8}: "
+copybutton_prompt_is_regexp = True
+copybutton_remove_prompts = True
+
+# sphinx_book_theme
 html_theme_options = {
     "use_sidenotes": True,
     "repository_url": "https://github.com/david-lev/pywa",
@@ -118,8 +131,10 @@ html_theme_options = {
     "use_download_button": True,
 }
 
+# sphinx.ext.intersphinx
 intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 
+# sphinxext.opengraph
 ogp_site_url = "https://pywa.readthedocs.io/"
 ogp_site_name = "pywa documentation"
 ogp_image = "https://pywa.readthedocs.io/en/latest/_static/pywa-ogp.png"

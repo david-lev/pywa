@@ -3,6 +3,12 @@ Message Filters
 
 .. automodule:: pywa.filters
 
+.. autoattribute:: pywa.filters.forwarded
+.. autoattribute:: pywa.filters.forwarded_many_times
+.. autoattribute:: pywa.filters.reply
+
+----------------
+
 .. autoclass:: text
 .. automethod:: text.matches
 .. automethod:: text.contains
@@ -12,6 +18,8 @@ Message Filters
 .. automethod:: text.length
 .. automethod:: text.is_command
 .. automethod:: text.command
+
+----------------
 
 .. autoclass:: media
 .. automethod:: media.mimetypes
@@ -33,24 +41,34 @@ Message Filters
 .. autoattribute:: sticker.animated
 .. autoattribute:: sticker.static
 
+----------------
+
 .. autoclass:: reaction
 .. autoattribute:: reaction.added
 .. autoattribute:: reaction.removed
 .. automethod:: reaction.emojis
 
+----------------
+
 .. autoclass:: location
 .. autoattribute:: location.current_location
 .. automethod:: location.in_radius
+
+----------------
 
 .. autoclass:: contacts
 .. autoattribute:: contacts.has_wa
 .. automethod:: contacts.count
 .. automethod:: contacts.phones
 
+----------------
+
 .. autoclass:: order
 .. automethod:: order.price
 .. automethod:: order.count
 .. automethod:: order.has_product
+
+----------------
 
 .. autoclass:: unsupported
 

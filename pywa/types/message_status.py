@@ -42,7 +42,7 @@ class MessageStatus(BaseUpdate):
     """
     Represents the status of a message.
 
-    - See more: https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/components#statuses-object
+    - `\`MessageStatus\` on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/components#statuses-object>`_.
 
     Attributes:
         id: The ID of the message that the status is for.
@@ -83,7 +83,7 @@ class Conversation:
     """
     Represents a conversation.
 
-    - See more: https://developers.facebook.com/docs/whatsapp/pricing#conversations
+    - `\`Conversation\` on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/pricing#conversations>`_.
 
     Attributes:
         id: The ID of the conversation.

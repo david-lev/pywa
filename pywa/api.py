@@ -85,7 +85,7 @@ class WhatsAppCloudApi:
         """
         data = {
             **self._common_keys,
-            "to": str(to),
+            "to": to,
             "type": "text",
             "text": {
                 "body": text,
@@ -242,7 +242,7 @@ class WhatsAppCloudApi:
         """
         data = {
             **self._common_keys,
-            "to": str(to),
+            "to": to,
             "type": media_type,
             media_type: {
                 ("link" if is_url else "id"): media_id_or_url,
@@ -286,7 +286,7 @@ class WhatsAppCloudApi:
             endpoint=f"/{self.phone_id}/messages/",
             json={
                 **self._common_keys,
-                "to": str(to),
+                "to": to,
                 "type": "reaction",
                 "reaction": {
                     "emoji": emoji,
@@ -326,7 +326,7 @@ class WhatsAppCloudApi:
         """
         data = {
             **self._common_keys,
-            "to": str(to),
+            "to": to,
             "type": "location",
             "location": {
                 "latitude": latitude,
@@ -423,7 +423,7 @@ class WhatsAppCloudApi:
     def send_contacts(
             self,
             to: str,
-            contacts: Iterable[dict[str, str | dict[str, str] | list[dict[str, str]] | None]],
+            contacts: tuple[dict],
             reply_to_message_id: str | None = None,
     ) -> dict[str, dict | list]:
         """
@@ -447,7 +447,7 @@ class WhatsAppCloudApi:
         """
         data = {
             **self._common_keys,
-            "to": str(to),
+            "to": to,
             "type": "contacts",
             "contacts": tuple(contacts)
         }
@@ -468,7 +468,9 @@ class WhatsAppCloudApi:
 
         Return example::
 
-            {'success': True}
+            {
+                'success': True
+            }
 
         Args:
             message_id: The ID of the message to mark as read.
@@ -573,4 +575,3 @@ class WhatsAppCloudApi:
             endpoint=f"/{self.phone_id}/whatsapp_commerce_settings",
             params=data
         )
-

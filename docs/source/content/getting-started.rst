@@ -1,6 +1,11 @@
 ⚙️ Get Started
 ===============
 
+
+.. note::
+
+    WORK IN PROGRESS
+
 ⬇️ Installation
 ---------------
 .. include:: ../../../README.rst
@@ -8,5 +13,3 @@
   :end-before: end-installation
 
 ================================
-
-** THIS IS A WORK IN PROGRESS **

@@ -116,8 +116,8 @@ class WhatsApp:
     ) -> Callable[[Callable[[WhatsApp, dict], Any]], Callable[[WhatsApp, dict], Any]]:
         """
         Decorator to register a function as a handler for raw updates.
-            - This handler is called for **EVERY** update received from WhatsApp,
-            even if it's not sended to the client phone number.
+            - This handler is called for **EVERY** update received from WhatsApp, even if it's not sended to the client phone number.
+            - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.RawUpdateHandler`.
 
         Example:
             
@@ -127,7 +127,7 @@ class WhatsApp:
             ...     print(update)
 
         Args:
-            filters: Filters to apply to the incoming updates (filters are function that take the WhatsApp client and
+            *filters: Filters to apply to the incoming updates (filters are function that take the WhatsApp client and
                 the incoming update and return a boolean).
         """
         def decorator(func: Callable[[WhatsApp, dict], Any]) -> Callable[[WhatsApp, dict], Any]:
@@ -140,6 +140,7 @@ class WhatsApp:
     ) -> Callable[[Callable[[WhatsApp, Message], Any]], Callable[[WhatsApp, Message], Any]]:
         """
         Decorator to register a function as a handler for incoming messages.
+            - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.MessageHandler`.
 
         Example:
 
@@ -152,7 +153,7 @@ class WhatsApp:
             ...     msg.reply_text(text="Hello from PyWa!", quote=True, buttons=[Button("Help", data="help")
 
         Args:
-            filters: Filters to apply to the incoming messages (filters are function that take the WhatsApp client and
+            *filters: Filters to apply to the incoming messages (filters are function that take the WhatsApp client and
                 the incoming message and return a boolean).
         """
         def decorator(func: Callable[[WhatsApp, Message], Any]) -> Callable[[WhatsApp, Message], Any]:
@@ -165,6 +166,7 @@ class WhatsApp:
     ) -> Callable[[Callable[[WhatsApp, CallbackButton], Any]], Callable[[WhatsApp, CallbackButton], Any]]:
         """
         Decorator to register a function as a handler for incoming callback button presses.
+            - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.CallbackButtonHandler`.
 
         Example:
 
@@ -176,7 +178,7 @@ class WhatsApp:
             ...     btn.reply_text(text="What can I help you with?")
 
         Args:
-            filters: Filters to apply to the incoming callback button presses (filters are function that take the
+            *filters: Filters to apply to the incoming callback button presses (filters are function that take the
                 WhatsApp client and the incoming callback button and return a boolean).
         """
         def decorator(func: Callable[[WhatsApp, CallbackButton], Any]) -> Callable[[WhatsApp, CallbackButton], Any]:
@@ -189,6 +191,7 @@ class WhatsApp:
     ) -> Callable[[Callable[[WhatsApp, CallbackSelection], Any]], Callable[[WhatsApp, CallbackSelection], Any]]:
         """
         Decorator to register a function as a handler for incoming callback selections.
+            - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.CallbackSelectionHandler`.
 
         Example:
 
@@ -200,7 +203,7 @@ class WhatsApp:
             ...     sel.reply_text(text=f"Your ID is {sel.data.split(':', 1)[1]}")
 
         Args:
-            filters: Filters to apply to the incoming callback selections (filters are function that take the
+            *filters: Filters to apply to the incoming callback selections (filters are function that take the
                 WhatsApp client and the incoming callback selection and return a boolean).
         """
         def decorator(
@@ -215,6 +218,7 @@ class WhatsApp:
     ) -> Callable[[Callable[[WhatsApp, MessageStatus], Any]], Callable[[WhatsApp, MessageStatus], Any]]:
         """
         Decorator to register a function as a handler for incoming message status changes.
+            - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.MessageStatusHandler`.
 
         **DO NOT USE THIS HANDLER TO SEND MESSAGES, IT WILL CAUSE AN INFINITE LOOP!**
 
@@ -229,7 +233,7 @@ class WhatsApp:
 
 
         Args:
-            filters: Filters to apply to the incoming message status changes (filters are function that take the
+            *filters: Filters to apply to the incoming message status changes (filters are function that take the
                 WhatsApp client and the incoming message status change and return a boolean).
         """
         def decorator(func: Callable[[WhatsApp, MessageStatus], Any]) -> Callable[[WhatsApp, MessageStatus], Any]:
@@ -317,11 +321,11 @@ class WhatsApp:
 
         Args:
             to: The phone ID of the WhatsApp user.
-            text: The text to send (markdown allowed, max 4096 characters).
+            text: The text to send (`markdown <https://faq.whatsapp.com/539178204879377>`_ allowed, max 4096 characters).
             header: The header of the message (if keyboard is provided, optional, up to 60 characters,
-             no markdown allowed).
+             no `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
             footer: The footer of the message (if keyboard is provided, optional, up to 60 characters,
-             markdown has no effect).
+             `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             keyboard: The keyboard to send with the message (optional).
             preview_url: Whether to show a preview of the URL in the message (if any).
             reply_to_message_id: The message ID to reply to (optional).
@@ -400,10 +404,12 @@ class WhatsApp:
         Args:
             to: The phone ID of the WhatsApp user.
             image: The image to send (either a media ID, URL, file path, bytes, or an open file object).
-            caption: The caption of the image (optional, markdown allowed).
-            body: The body of the message (optional, up to 1024 characters, markdown allowed,
-             if buttons are provided and body is not provided, caption will be used as the body)
-            footer: The footer of the message (if buttons is provided, optional, markdown has no effect).
+            caption: The caption of the image (optional, `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
+            body: The body of the message (optional, up to 1024 characters,
+             `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed, if buttons are provided and body is not
+             provided, caption will be used as the body)
+            footer: The footer of the message (if buttons is provided, optional,
+             `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the image (optional).
             reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
 
@@ -464,10 +470,12 @@ class WhatsApp:
         Args:
             to: The phone ID of the WhatsApp user.
             video: The video to send (either a media ID, URL, file path, bytes, or an open file object).
-            caption: The caption of the video (optional, markdown allowed).
-            body: The body of the message (optional, up to 1024 characters, markdown allowed,
-                if buttons are provided and body is not provided, caption will be used as the body)
-            footer: The footer of the message (if buttons is provided, optional, markdown has no effect).
+            caption: The caption of the video (optional, `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
+            body: The body of the message (optional, up to 1024 characters,
+             `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed, if buttons are provided and body is not
+             provided, caption will be used as the body)
+            footer: The footer of the message (if buttons is provided, optional,
+             `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the video (optional).
             reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
 
@@ -531,9 +539,11 @@ class WhatsApp:
             filename: The filename of the document (optional, The extension of the filename will specify what format the
              document is displayed as in WhatsApp).
             caption: The caption of the document (optional).
-            body: The body of the message (optional, up to 1024 characters, markdown allowed,
-                if buttons are provided and body is not provided, caption will be used as the body)
-            footer: The footer of the message (if buttons is provided, optional, markdown has no effect).
+            body: The body of the message (optional, up to 1024 characters,
+             `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed, if buttons are provided and body is not
+             provided, caption will be used as the body)
+            footer: The footer of the message (if buttons is provided, optional,
+             `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the document (optional).
             reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
 
@@ -644,7 +654,7 @@ class WhatsApp:
     ) -> str:
         """
         React to a message with an emoji.
-            - You can react to incoming messages by using the :py:func:`pywa.types.Message.react` method.
+            - You can react to incoming messages by using the :py:func:`~pywa.types.base_update.BaseUpdate.react` method.
 
         Example:
 
@@ -662,7 +672,7 @@ class WhatsApp:
 
         Returns:
             The message ID of the reaction (You can't use this message id to remove the reaction or perform any other
-             action on it. instead, use the message ID of the message you reacted to).
+            action on it. instead, use the message ID of the message you reacted to).
         """
         return self.api.send_reaction(
             to=str(to),
@@ -677,6 +687,7 @@ class WhatsApp:
     ) -> str:
         """
         Remove a reaction from a message.
+            - You can remove reactions from incoming messages by using the :py:func:`~pywa.types.base_update.BaseUpdate.unreact` method.
 
         Example:
 
@@ -688,7 +699,7 @@ class WhatsApp:
 
         Returns:
             The message ID of the reaction (You can't use this message id to re-react or perform any other action on it.
-             instead, use the message ID of the message you unreacted to).
+            instead, use the message ID of the message you unreacted to).
         """
         return self.api.send_reaction(
             to=str(to),
@@ -830,7 +841,7 @@ class WhatsApp:
     ) -> str:
         """
         Send a product from a business catalog to a WhatsApp user.
-            - To send multiple products, use :py:func:`pywa.WhatsApp.send_products`.
+            - To send multiple products, use :py:func:`~pywa.client.WhatsApp.send_products`.
 
         Example:
 
@@ -846,7 +857,8 @@ class WhatsApp:
         Args:
             to: The phone ID of the WhatsApp user.
             catalog_id: The ID of the catalog to send the product from. (To get the catalog ID use
-             :py:func:`pywa.WhatsApp.get_commerce_settings` or visit https://business.facebook.com/commerce/).
+             :py:func:`~pywa.client.WhatsApp.get_commerce_settings` or in the `Commerce Manager
+             <https://business.facebook.com/commerce/>`_).
             sku: The product SKU to send.
             body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
@@ -879,7 +891,7 @@ class WhatsApp:
     ) -> str:
         """
         Send products from a business catalog to a WhatsApp user.
-            - To send a single product, use :py:func:`pywa.WhatsApp.send_product`.
+            - To send a single product, use :py:func:`~pywa.client.WhatsApp.send_product`.
 
         Example:
 
@@ -906,7 +918,8 @@ class WhatsApp:
         Args:
             to: The phone ID of the WhatsApp user.
             catalog_id: The ID of the catalog to send the product from (To get the catalog ID use
-             :py:func:`pywa.WhatsApp.get_commerce_settings` or visit https://business.facebook.com/commerce/).
+             :py:func:`~pywa.client.WhatsApp.get_commerce_settings` or in the `Commerce Manager
+             <https://business.facebook.com/commerce/>`_).
             product_sections: The product sections to send (up to 30 products across all sections).
             title: The title of the product list (up to 60 characters).
             body: Text to appear in the message body (up to 1024 characters).
@@ -935,7 +948,7 @@ class WhatsApp:
     ) -> bool:
         """
         Mark a message as read.
-            - You can mark incoming messages as read by using the :py:func:`pywa.types.Message.mark_as_read` method.
+            - You can mark incoming messages as read by using the :py:func:`~pywa.types.base_update.BaseUpdate.mark_as_read` method.
 
         Example:
 
@@ -1007,7 +1020,7 @@ class WhatsApp:
         """
         Get the URL of a media.
             - The URL is valid for 5 minutes.
-            - The media can be downloaded directly from the message using the :py:func:`pywa.WhatsApp.download_media`
+            - The media can be downloaded directly from the message using the :py:func:`~pywa.types.Message.download_media` method.
 
         Example:
 
@@ -1050,7 +1063,7 @@ class WhatsApp:
             ... )
 
         Args:
-            url: The URL of the media file (from ``get_media_url``).
+            url: The URL of the media file (from :py:func:`~pywa.client.WhatsApp.get_media_url`).
             path: The path where to save the file (if not provided, the current working directory will be used).
             filename: The name of the file (if not provided, it will be guessed from the URL + extension).
             in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
@@ -1113,17 +1126,18 @@ class WhatsApp:
 
         Args:
             about: The business's About text. This text appears in the business's profile, beneath its profile image,
-             phone number, and contact buttons. (cannot be empty. must be between 1 and 139 characters.
-             Markdown is not supported. Hyperlinks can be included but will not render as clickable links.)
+             phone number, and contact buttons. (cannot be empty. must be between 1 and 139 characters. `markdown
+             <https://faq.whatsapp.com/539178204879377>`_ is not supported. Hyperlinks can be included but
+             will not render as clickable links.)
             address: Address of the business. Character limit 256.
             description: Description of the business. Character limit 512.
             email: The contact email address (in valid email format) of the business. Character limit 128.
             profile_picture_handle: Handle of the profile picture. This handle is generated when you upload the binary
-             file for the profile picture to Meta using the Resumable Upload API
-             (https://developers.facebook.com/docs/graph-api/guides/upload)
+             file for the profile picture to Meta using the `Resumable Upload API
+             <https://developers.facebook.com/docs/graph-api/guides/upload>`_.
             industry: Industry of the business.
             websites: The URLs associated with the business. For instance, a website, Facebook Page, or Instagram.
-             (You must include the http:// or https:// portion of the URL.
+             (You must include the ``http://`` or ``https://`` portion of the URL.
              There is a maximum of 2 websites with a maximum of 256 characters each.)
 
         Returns:

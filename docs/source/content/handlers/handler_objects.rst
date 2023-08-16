@@ -1,6 +1,10 @@
 Handler Objects
 ===================
 
+.. currentmodule:: pywa.client
+
+.. automethod:: WhatsApp.add_handlers
+
 .. currentmodule:: pywa.handlers
 
 .. autoclass:: MessageHandler

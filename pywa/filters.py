@@ -69,7 +69,7 @@ def all_(*filters: Callable[[Wa, T], bool]) -> Callable[[Wa, T], bool]:
     """
     Filter for updates that pass all the given filters.
 
-    >>> all_(text.endswith("World"), text.contains("Word"))
+    >>> all_(text.startswith("Hello"), text.endswith("Word"))
     """
     return lambda wa, m: all(f(wa, m) for f in filters)
 
@@ -135,19 +135,20 @@ class MediaFilter(_BaseUpdateFilter):
     """
     __message_types__ = (Mt.IMAGE, Mt.VIDEO, Mt.AUDIO, Mt.DOCUMENT, Mt.STICKER)
 
+    any: MessageFilterT = lambda wa, m: m.has_media
     """
     Filter for all media messages.
         - Same as ``filters.media``.
     
-    >>> media.any
+    >>> filters.media.any
     """
-    any: MessageFilterT = lambda wa, m: m.has_media
 
     @classmethod
     def mimetypes(cls, *mimetypes: str) -> MessageFilterT:
         """
         Filter for media messages that match any of the given mime types.
-            - See https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#supported-media-types
+
+        - `\`Supported Media Types\` on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#supported-media-types>`_.
 
         >>> media.mimetypes("application/pdf", "image/png")
         >>> video.mimetypes("video/mp4")
@@ -203,7 +204,7 @@ class TextFilter(_BaseUpdateFilter):
         >>> text.matches("Hello","Hi")
 
         Args:
-            matches: The text/s to filter for.
+            *matches: The text/s to filter for.
             ignore_case: Whether to ignore case when matching (default: ``False``).
         """
         matches = tuple(m.lower() for m in matches) if ignore_case else matches
@@ -217,7 +218,7 @@ class TextFilter(_BaseUpdateFilter):
         >>> text.contains("Cat","Dog",ignore_case=True)
 
         Args:
-            matches: The text/s to filter for.
+            *matches: The text/s to filter for.
             ignore_case: Whether to ignore case when matching. (default: ``False``).
         """
         matches = tuple(m.lower() for m in matches) if ignore_case else matches
@@ -233,7 +234,7 @@ class TextFilter(_BaseUpdateFilter):
         >>> text.startswith("What", "When", ignore_case=True)
 
         Args:
-            matches: The text/s to filter for.
+            *matches: The text/s to filter for.
             ignore_case: Whether to ignore case when matching (default: ``False``).
         """
         matches = tuple(m.lower() for m in matches) if ignore_case else matches
@@ -248,7 +249,7 @@ class TextFilter(_BaseUpdateFilter):
         >>> text.endswith("Bye", "See you", ignore_case=True)
 
         Args:
-            matches: The text/s to filter for.
+            *matches: The text/s to filter for.
             ignore_case: Whether to ignore case when matching (default: ``False``).
         """
         matches = tuple(m.lower() for m in matches) if ignore_case else matches
@@ -262,7 +263,7 @@ class TextFilter(_BaseUpdateFilter):
         >>> text.regex(r"Hello\s+World", r"Bye\s+World", flags=re.IGNORECASE)
 
         Args:
-            patterns: The regex/regexes to filter for.
+            *patterns: The regex/regexes to filter for.
             flags: The regex flags to use (default: ``0``).
         """
         patterns = tuple(re.compile(p, flags) if isinstance(p, str) else p for p in patterns)
@@ -276,7 +277,7 @@ class TextFilter(_BaseUpdateFilter):
         >>> text.length((1, 10), (50, 100))
 
         Args:
-            lengths: The length range/s to filter for (e.g. (1, 10), (50, 100)).
+            *lengths: The length range/s to filter for (e.g. (1, 10), (50, 100)).
         """
         return lambda wa, m: TextFilter._match_type(m) and any(i[0] <= len(m.text) <= i[1] for i in lengths)
 
@@ -288,7 +289,7 @@ class TextFilter(_BaseUpdateFilter):
         >>> text.command("start", "hello", prefixes=("!", "/"), ignore_case=True)
 
         Args:
-            cmds: The command/s to filter for (e.g. "start", "hello").
+            *cmds: The command/s to filter for (e.g. "start", "hello").
             prefixes: The prefix/s to filter for (default: "!", i.e. "!start").
             ignore_case: Whether to ignore case when matching (default: ``False``).
         """
@@ -593,7 +594,7 @@ class OrderFilter(_BaseUpdateFilter):
         Filter for order messages that have the given product/s.
 
         Args:
-            skus: The products SKUs.
+            *skus: The products SKUs.
 
         >>> order.has_product("pizza_1","pizza_2")
         """
@@ -650,7 +651,7 @@ class CallbackFilter(_BaseUpdateFilter):
         >>> callback.data_matches("back","return","exit")
 
         Args:
-            matches: The string/s to match.
+            *matches: The string/s to match.
             ignore_case: Whether to ignore case when matching (default: False).
         """
         matches = tuple(m.lower() for m in matches) if ignore_case else matches
@@ -664,7 +665,7 @@ class CallbackFilter(_BaseUpdateFilter):
         >>> callback.data_startswith("id:")
 
         Args:
-            matches: The string/s to match.
+            *matches: The string/s to match.
             ignore_case: Whether to ignore case when matching (default: False).
         """
         matches = tuple(m.lower() for m in matches) if ignore_case else matches
@@ -678,7 +679,7 @@ class CallbackFilter(_BaseUpdateFilter):
         >>> callback.data_endswith(":true", ":false")
 
         Args:
-            matches: The string/s to match.
+            *matches: The string/s to match.
             ignore_case: Whether to ignore case when matching (default: False).
         """
         matches = tuple(m.lower() for m in matches) if ignore_case else matches
@@ -692,7 +693,7 @@ class CallbackFilter(_BaseUpdateFilter):
         >>> callback.data_contains("back")
 
         Args:
-            matches: The string/s to match.
+            *matches: The string/s to match.
             ignore_case: Whether to ignore case when matching (default: False).
         """
         matches = tuple(m.lower() for m in matches) if ignore_case else matches
@@ -706,7 +707,7 @@ class CallbackFilter(_BaseUpdateFilter):
         >>> callback.data_regex(r"^\d+$")  # only digits
 
         Args:
-            patterns: The regex/regexes to match.
+            *patterns: The regex/regexes to match.
             flags: The regex flags to use (default: 0).
         """
         patterns = tuple(re.compile(p) if isinstance(p, str) else p for p in patterns)
@@ -763,7 +764,7 @@ class MessageStatusFilter(_BaseUpdateFilter):
         Filter for status updates of messages that have failed to send with the given error/s.
 
         Args:
-            errors: The exceptions from `pywa.errors` or error codes to match.
+            *errors: The exceptions from `pywa.errors` or error codes to match.
 
         >>> message_status.failed_with(ReEngagementMessage)
         >>> message_status.failed_with(131051)

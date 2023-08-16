@@ -97,10 +97,10 @@ Registering a callback function
 After you start the server and register the webhook url, you need to register a callback function that will be called
 when an update is received from WhatsApp.
 
-.. note::
+.. attention::
     :class: dropdown
 
-    The callback functions must be registered before starting the server. Otherwise, the updates will not be handled!
+    ALl callback functions must be registered before starting the server. Otherwise, the updates will not be handled!
 
 There are two ways to register a callback function:
 
@@ -176,7 +176,7 @@ Available handlers
 
    * - Decorator
      - Handler
-     - Called when X is received
+     - The type of the update
    * - :meth:`~pywa.client.WhatsApp.on_message`
      - :class:`MessageHandler`
      - :class:`~pywa.types.Message`

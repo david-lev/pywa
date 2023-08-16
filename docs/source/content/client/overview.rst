@@ -3,6 +3,10 @@
 
 .. currentmodule:: pywa.client
 
+.. note::
+
+    WORK IN PROGRESS
+
 
 The :class:`~WhatsApp` client has two responsibilities. Sending messages & handling updates. You can use both or only one of them.
 
@@ -45,4 +49,3 @@ The available methods are:
 
 .. toctree::
     client_reference
-    api_reference

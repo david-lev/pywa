@@ -36,7 +36,7 @@ class Message(BaseUpdate):
     """
     A message received from a user.
 
-    - See more: https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/components#messages-object
+    - `\`Message\` on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/components#messages-object>`_
 
     Attributes:
         id: The message ID.
@@ -92,7 +92,7 @@ class Message(BaseUpdate):
     def has_media(self) -> bool:
         """
         Whether the message has any media. (image, video, sticker, document or audio)
-            - If you want to get the media of the message, use ``media`` instead.
+            - If you want to get the media of the message, use :attr:`~Message.media` instead.
         """
         return self.media is not None
 
@@ -127,7 +127,7 @@ class Message(BaseUpdate):
     def media(self) -> Image | Video | Sticker | Document | Audio | None:
         """
         The media of the message if any, otherwise ``None``. (image, video, sticker, document or audio)
-            - If you want to check whether the message has any media, use ``has_media`` instead.
+            - If you want to check whether the message has any media, use :attr:`~Message.has_media` instead.
         """
         return next((getattr(self, media_type) for media_type in _MEDIA_FIELDS if getattr(self, media_type)), None)
 
@@ -292,7 +292,5 @@ class Message(BaseUpdate):
                     keyboard=keyboard,
                     reply_to_message_id=reply_to_message_id,
                 )
-            case MessageType.UNSUPPORTED:
-                raise ValueError("MessageType.UNSUPPORTED cannot be copied!")
             case _:
-                raise ValueError("Message with unknown type cannot be copied!")
+                raise ValueError(f"Message of type {self.type} cannot be copied.")

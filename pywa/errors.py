@@ -10,7 +10,8 @@ class WhatsAppError(Exception):
     """
     Base exception for all WhatsApp errors.
 
-    - See more: https://developers.facebook.com/docs/whatsapp/cloud-api/support/error-codes
+    - `\`Cloud API Error Codes\` on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/support/error-codes>`_.
+
 
     Attributes:
         error_code: The error code.

@@ -1,7 +1,9 @@
 ⚙️ Setup
 =========
 
-**THIS IS A WORK IN PROGRESS**
+.. admonition::
+
+    WORK IN PROGRESS
 
 Create a Test App
 -----------------
