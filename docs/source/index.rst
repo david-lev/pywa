@@ -23,5 +23,5 @@
     /content/updates/overview
     /content/filters/overview
     /content/errors/overview
-    /content/types
+    /content/types/overview
     /content/examples

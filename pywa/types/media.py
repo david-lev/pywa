@@ -44,7 +44,7 @@ class MediaBase(ABC, utils.FromDict):
     ) -> bytes | str:
         """
         Download a media file from WhatsApp servers.
-            - Same as ``WhatsApp.download_media(media_url=WhatsApp.get_media_url(media.id))``
+            - Same as :func:`~pywa.client.WhatsApp.download_media` with ``media_url=media.get_media_url()``
 
         >>> message.image.download()
 

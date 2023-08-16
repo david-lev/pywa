@@ -1,4 +1,4 @@
-⚙️ Handlers
+🎛️ Handlers
 ==================
 .. currentmodule:: pywa.handlers
 

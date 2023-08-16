@@ -32,30 +32,15 @@
 ________________________
 
 
-🎛 Installation
---------------
-.. installation
+📄 Quick Documentation Index
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- **Install using pip3:**
-
-.. code-block:: bash
-
-    pip3 install -U pywa
-
-    # or if you want to use webhooks
-    pip3 install -U pywa[flask]
-    # or:
-    pip3 install -U pywa[fastapi]
-
-- **Install from source:**
-
-.. code-block:: bash
-
-    pip3 install -U git+https://github.com/david-lev/pywa.git
-
-.. end-installation
-
-----------------------------------------
+`Get Started <https://pywa.readthedocs.io/en/latest/content/getting-started.html>`_
+• `The WhatsApp Client <https://pywa.readthedocs.io/en/latest/content/client/overview.html>`_
+•`Handlers <https://pywa.readthedocs.io/en/latest/content/handlers/overview.html>`_
+• `Filters <https://pywa.readthedocs.io/en/latest/content/filters/overview.html>`_
+• `Updates <https://pywa.readthedocs.io/en/latest/content/updates/overview.html>`_
+• `Examples <https://pywa.readthedocs.io/en/latest/content/examples.html>`_
 
 
 👨‍💻 **Usage**
@@ -75,7 +60,7 @@ ________________________
         text='Hello from PyWa!'
     )
 
-- Create a WhatsApp client, pass a Flask (or FastAPI) app and start handling incoming updates
+- Create a WhatsApp client, pass a web server app (Flask in this example) and start the webhook:
 
 .. code-block:: python
 
@@ -109,7 +94,33 @@ ________________________
     def click_me(client: WhatsApp, clb: CallbackButton):
         clb.reply_text('You clicked me!')
 
-    flask_app.run()  # Run the flask app to start the webhook
+    flask_app.run()  # Run the flask app to start the server
+
+🎛 Installation
+--------------
+.. installation
+
+- **Install using pip3:**
+
+.. code-block:: bash
+
+    pip3 install -U pywa
+
+- **Install from source (the bleeding edge):**
+
+.. code-block:: bash
+
+    git clone https://github.com/david-lev/pywa.git
+    cd pywa && pip3 install -U .
+
+- **If you going to use the webhook features, here is shortcut to install the required dependencies:**
+
+.. code-block:: bash
+
+    pip3 install -U pywa[flask]
+    pip3 install -U pywa[fastapi]
+
+.. end-installation
 
 
 💾 **Requirements**
@@ -127,6 +138,11 @@ See the `Documentation <https://pywa.readthedocs.io/>`_ for detailed instruction
 
 This project is licensed under the MIT License - see the
 `LICENSE <https://github.com/david-lev/pywa/blob/master/LICENSE>`_ file for details
+
+🔱 **Contributing**
+--------------------
+
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 🙏 **Acknowledgments**
 -----------------------
