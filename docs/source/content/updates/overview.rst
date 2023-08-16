@@ -8,7 +8,7 @@
 In WhatsApp Cloud API, updates are sent to your webhook URL. There are lots of different types of updates,
 but currently, we only support the ``messages`` field. this field contains all the user-related updates (e.g. messages, callbacks, etc.).
 
-.. hint::
+.. tip::
 
         If you do want to handle other types of updates, you can use the :func:`~pywa.client.WhatsApp.on_raw_update`
         decorator. This decorator will be called for every update.

@@ -6,9 +6,6 @@
 `PyWa <https://github.com/david-lev/pywa>`_ • Python wrapper for the WhatsApp Cloud API
 ########################################################################################
 
-**THIS IS A WORK IN PROGRESS. DO NOT USE IN PRODUCTION.**
-
-
 .. image:: https://img.shields.io/pypi/dm/pywa?style=flat-square
     :alt: PyPI Downloads
     :target: https://pypi.org/project/pywa/
@@ -31,13 +28,15 @@
 
 ________________________
 
+**PyWa is a Python framework for building WhatsApp bots using the WhatsApp Cloud API.**
+**The goal is to provide a uniform, fully typed, convenient and usable layer.**
 
 📄 Quick Documentation Index
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 `Get Started <https://pywa.readthedocs.io/en/latest/content/getting-started.html>`_
-• `The WhatsApp Client <https://pywa.readthedocs.io/en/latest/content/client/overview.html>`_
-•`Handlers <https://pywa.readthedocs.io/en/latest/content/handlers/overview.html>`_
+• `WhatsApp Client <https://pywa.readthedocs.io/en/latest/content/client/overview.html>`_
+• `Handlers <https://pywa.readthedocs.io/en/latest/content/handlers/overview.html>`_
 • `Filters <https://pywa.readthedocs.io/en/latest/content/filters/overview.html>`_
 • `Updates <https://pywa.readthedocs.io/en/latest/content/updates/overview.html>`_
 • `Examples <https://pywa.readthedocs.io/en/latest/content/examples.html>`_
@@ -53,7 +52,10 @@ ________________________
 
     from pywa import WhatsApp
 
-    wa = WhatsApp(phone_id='100458559237541', token='xxxxxxxxxxxxxxx')
+    wa = WhatsApp(
+        phone_id='100458559237541',
+        token='xxxxxxxxxxxxxxx'
+    )
 
     wa.send_message(
         to='9876543210',
@@ -132,6 +134,19 @@ ________________________
 -----------------------
 
 See the `Documentation <https://pywa.readthedocs.io/>`_ for detailed instructions
+
+☑️ **TODO**
+------------
+- Add tests
+- Add support for async
+- Add support for typed template messages
+- Media URL caching
+- Move from threading
+- Add support for more web frameworks (``Django``, etc.)
+- Add support for more types of updates (``account_alerts``, ``message_template_status_updates``, etc.)
+- Add more examples
+
+Feel free to open an issue if you have any suggestions. or even better - submit a PR!
 
 📝 **License**
 ---------------

@@ -100,7 +100,7 @@ when an update is received from WhatsApp.
 .. attention::
     :class: dropdown
 
-    ALl callback functions must be registered before starting the server. Otherwise, the updates will not be handled!
+    All callback functions must be registered before starting the server. Otherwise, the updates will not be handled!
 
 There are two ways to register a callback function:
 
@@ -165,6 +165,11 @@ main code, or when you want to dynamically register handlers programmatically.
 
     if __name__ == '__main__':
         # start the server
+
+.. seealso::
+    :class: dropdown
+
+    See how to filter updates in `Filters <filters/overview.html>`_.
 
 
 Available handlers

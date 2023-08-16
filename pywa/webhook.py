@@ -79,11 +79,11 @@ class Webhook:
             if not self.filter_updates or (
                     update["entry"][0]["changes"][0]["value"]["metadata"][
                         "phone_number_id"] == self.wa_client.phone_id):
-                update, key = self._convert_dict_to_update(client=self.wa_client, d=update)
+                update_obj, key = self._convert_dict_to_update(client=self.wa_client, d=update)
                 if key is None:
                     return
                 for handler in self.handlers[key.__handler_type__]:
-                    handler(self.wa_client, update)
+                    handler(self.wa_client, update_obj)
             raise KeyError  # to always skip the except block
         except (KeyError, IndexError):  # the update not send to this phone id or filter_updates is True
             for raw_update_handler in self.handlers[RawUpdateHandler.__handler_type__]:
