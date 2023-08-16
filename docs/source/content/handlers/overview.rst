@@ -132,7 +132,7 @@ The easiest way to register a callback function is to use the ``on_message`` and
 Using ``Handler`` objects
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The other way to register a callback function is to use the ``add_handlers`` method and pass the function wrapped in
+The other way to register a callback function is to use the :meth:`~pywa.client.WhatsApp.add_handlers` method and pass the function wrapped in
 a ``Handler`` object. This is useful when your application is large and you want to separate the handlers from the
 main code, or when you want to dynamically register handlers programmatically.
 

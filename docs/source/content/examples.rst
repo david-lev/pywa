@@ -1,7 +1,7 @@
-Examples
-=========
+💡 Examples
+==============
 
-.. admonition::
+.. note::
     :class: dropdown
 
     WORK IN PROGRESS

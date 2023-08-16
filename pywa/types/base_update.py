@@ -56,7 +56,7 @@ class BaseUpdate(ABC):
     ) -> str:
         """
         Reply to the message with text.
-            - Shortcut for ::py:func:`pywa.client.WhatsApp.send_message` with ``to`` and ``reply_to_message_id``.
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.send_message` with ``to`` and ``reply_to_message_id``.
 
         Example:
 
@@ -153,7 +153,7 @@ class BaseUpdate(ABC):
     ) -> str:
         """
         Reply to the message with an image.
-            - Shortcut for ::py:func:`pywa.client.WhatsApp.send_image` with ``to`` and ``reply_to_message_id``.
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.send_image` with ``to`` and ``reply_to_message_id``.
             - Images must be 8-bit, RGB or RGBA.
 
         Example:
@@ -197,7 +197,7 @@ class BaseUpdate(ABC):
     ) -> str:
         """
         Reply to the message with a video.
-            - Shortcut for ::py:func:`pywa.client.WhatsApp.send_video` with ``to`` and ``reply_to_message_id``.
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.send_video` with ``to`` and ``reply_to_message_id``.
             - Only H.264 video codec and AAC audio codec is supported.
             - Videos with a single audio stream or no audio stream are supported.
 
@@ -243,7 +243,7 @@ class BaseUpdate(ABC):
     ) -> str:
         """
         Reply to the message with a document.
-            - Shortcut for ::py:func:`pywa.client.WhatsApp.send_document` with ``to`` and ``reply_to_message_id``.
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.send_document` with ``to`` and ``reply_to_message_id``.
 
         Example:
 
@@ -286,7 +286,7 @@ class BaseUpdate(ABC):
     ) -> str:
         """
         Reply to the message with an audio.
-            - Shortcut for ::py:func:`pywa.client.WhatsApp.send_audio` with ``to`` and ``reply_to_message_id``.
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.send_audio` with ``to`` and ``reply_to_message_id``.
 
         Example:
 
@@ -311,7 +311,7 @@ class BaseUpdate(ABC):
     ) -> str:
         """
         Reply to the message with a sticker.
-            - Shortcut for ::py:func:`pywa.client.WhatsApp.send_sticker` with ``to`` and ``reply_to_message_id``.
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.send_sticker` with ``to`` and ``reply_to_message_id``.
             - A static sticker needs to be 512x512 pixels and cannot exceed 100 KB.
             - An animated sticker must be 512x512 pixels and cannot exceed 500 KB.
 
@@ -341,7 +341,7 @@ class BaseUpdate(ABC):
     ) -> str:
         """
         Reply to the message with a location.
-            - Shortcut for ::py:func:`pywa.client.WhatsApp.send_location` with ``to`` and ``reply_to_message_id``.
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.send_location` with ``to`` and ``reply_to_message_id``.
 
         Example:
 
@@ -377,7 +377,7 @@ class BaseUpdate(ABC):
     ) -> str:
         """
         Reply to the message with a contact/s.
-            - Shortcut for ::py:func:`pywa.client.WhatsApp.send_contact` with ``to`` and ``reply_to_message_id``.
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.send_contact` with ``to`` and ``reply_to_message_id``.
 
         Example:
 
@@ -412,7 +412,7 @@ class BaseUpdate(ABC):
     ) -> str:
         """
         React to the message with an emoji.
-            - Shortcut for ::py:func:`pywa.client.WhatsApp.send_reaction` with ``to`` and ``message_id``.
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.send_reaction` with ``to`` and ``message_id``.
 
         Example:
 
@@ -435,6 +435,7 @@ class BaseUpdate(ABC):
     ) -> str:
         """
         Remove the reaction from the message.
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.remove_reaction` with ``to`` and ``message_id``.
 
         Example:
 
@@ -457,7 +458,7 @@ class BaseUpdate(ABC):
     ) -> str:
         """
         Reply to the message with a catalog.
-            - Shortcut for ::py:func:`pywa.client.WhatsApp.send_catalog` with ``to`` and ``reply_to_message_id``.
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.send_catalog` with ``to`` and ``reply_to_message_id``.
 
         Example:
 
@@ -495,12 +496,13 @@ class BaseUpdate(ABC):
     ) -> str:
         """
         Reply to the message with a product.
-            - Shortcut for ::py:func:`pywa.client.WhatsApp.send_product` with ``to`` and ``reply_to_message_id``.
-            - To reply with multiple products, use ``reply_catalog``.
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.send_product` with ``to`` and ``reply_to_message_id``.
+            - To reply with multiple products, use :py:func:`~BaseUpdate.reply_products`.
 
         Args:
             catalog_id: The ID of the catalog to send the product from. (To get the catalog ID use
-             :py:func:`pywa.WhatsApp.get_commerce_settings` or visit https://business.facebook.com/commerce/).
+             :py:func:`~pywa.client.WhatsApp.get_commerce_settings` or in the `Commerce Manager
+             <https://business.facebook.com/commerce/>`_).
             sku: The product SKU to send.
             body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
@@ -529,8 +531,8 @@ class BaseUpdate(ABC):
     ) -> str:
         """
         Reply to the message with a product.
-            - Shortcut for ::py:func:`pywa.client.WhatsApp.send_products` with ``to`` and ``reply_to_message_id``.
-            - To reply with multiple products, use ``reply_catalog``.
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.send_products` with ``to`` and ``reply_to_message_id``.
+            - To reply with multiple products, use :py:func:`~BaseUpdate.reply_products`.
 
         Example:
 
@@ -555,8 +557,8 @@ class BaseUpdate(ABC):
 
 
         Args:
-            catalog_id: The ID of the catalog to send the product from (To get the catalog ID use
-             :py:func:`pywa.WhatsApp.get_commerce_settings` or visit https://business.facebook.com/commerce/).
+            catalog_id: The ID of the catalog to send the product from (To get the catalog ID
+             use :py:func:`~pywa.client.WhatsApp.get_commerce_settings` or in the `Commerce Manager <https://business.facebook.com/commerce/>`_).
             product_sections: The product sections to send (up to 30 products across all sections).
             title: The title of the product list (up to 60 characters).
             body: Text to appear in the message body (up to 1024 characters).
@@ -581,6 +583,7 @@ class BaseUpdate(ABC):
     ) -> bool:
         """
         Mark the message as read.
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.mark_message_as_read` with ``message_id``.
 
         Returns:
             Whether it was successful.
