@@ -28,8 +28,8 @@
 
 ________________________
 
-**PyWa is a Python framework for building WhatsApp bots using the WhatsApp Cloud API.**
-**The goal is to provide a uniform, fully typed, convenient and usable layer.**
+**PyWa is a Fast, Simple and Lightweight Python framework for building WhatsApp bots using the WhatsApp Cloud API.**
+**The library is designed to be easy to use, and handle all the heavy lifting for you.**
 
 📄 Quick Documentation Index
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -140,7 +140,6 @@ See the `Documentation <https://pywa.readthedocs.io/>`_ for detailed instruction
 - Add tests
 - Add support for async
 - Add support for typed template messages
-- Media URL caching
 - Move from threading
 - Add support for more web frameworks (``Django``, etc.)
 - Add support for more types of updates (``account_alerts``, ``message_template_status_updates``, etc.)

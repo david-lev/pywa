@@ -17,6 +17,12 @@ Enums
 
 ----------------
 
+.. autoclass:: ConversationCategory()
+    :members:
+    :undoc-members:
+
+----------------
+
 .. currentmodule:: pywa.types.others
 
 .. autoclass:: Industry()

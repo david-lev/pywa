@@ -1,7 +1,7 @@
 """The internal API for the WhatsApp client."""
 
 import requests
-from typing import Iterable, BinaryIO, Any
+from typing import BinaryIO, Any
 from requests_toolbelt import MultipartEncoder
 from pywa.errors import WhatsAppError
 

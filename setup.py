@@ -15,7 +15,7 @@ setup(
         "fastapi": ["fastapi", "uvicorn"],
     },
     project_urls={
-        "Documentation": "https://github.com/david-lev/pywa#readme",
+        "Documentation": "https://pywa.readthedocs.io/",
         "Issue Tracker": "https://github.com/david-lev/pywa/issues",
         "Source Code": "https://github.com/david-lev/pywa",
         "Funding": "https://github.com/sponsors/david-lev"

@@ -34,6 +34,7 @@ class WhatsApp:
     ) -> None:
         """
         Initialize the WhatsApp client.
+            - Full documentation on `pywa.readthedocs.io <https://pywa.readthedocs.io>`_.
 
         Example without webhook:
 
@@ -57,7 +58,7 @@ class WhatsApp:
 
         Args:
             phone_id: The Phone number ID (Not the phone number itself, the ID can be found in the App settings).
-            token: The token of the WhatsApp account (In prodaction,
+            token: The token of the WhatsApp account (In production, you should
              `use permanent token <https://developers.facebook.com/docs/whatsapp/business-management-api/get-started>`_).
             base_url: The base URL of the WhatsApp API (default: ``https://graph.facebook.com``).
             api_version: The API version of the WhatsApp API (default: ``17.0``).

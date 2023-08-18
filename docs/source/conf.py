@@ -42,6 +42,7 @@ extensions = [
     "sphinxext.opengraph",
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
+    "sphinx_togglebutton",
     "sphinx.ext.autosectionlabel"
 ]
 
