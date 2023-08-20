@@ -139,7 +139,6 @@ See the `Documentation <https://pywa.readthedocs.io/>`_ for detailed instruction
 ------------
 - Add tests
 - Add support for async
-- Add support for typed template messages
 - Move from threading
 - Add support for more web frameworks (``Django``, etc.)
 - Add support for more types of updates (``account_alerts``, ``message_template_status_updates``, etc.)
