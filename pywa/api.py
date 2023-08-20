@@ -579,20 +579,14 @@ class WhatsAppCloudApi:
     def create_template(
             self,
             business_account_id: str,
-            name: str,
-            category: str,
-            language: str,
-            components: tuple[dict[str, str | None] | dict[str, str] | dict[str, str | tuple[dict[str, str], ...]], ...]
+            template: dict[str, str | list[str]]
     ) -> dict[str, str]:
         """
         Create a message template.
 
         Args:
             business_account_id: The ID of the business account.
-            name: The name of the template.
-            category: The category of the template.
-            language: The language code of the template.
-            components: The components of the template.
+            template: The template to create.
 
         Return example::
 
@@ -605,12 +599,7 @@ class WhatsAppCloudApi:
         return self._make_request(
             method="POST",
             endpoint=f"/{business_account_id}/message_templates",
-            json={
-                "name": name,
-                "category": category,
-                "language": language,
-                "components": components
-            }
+            json=template
         )
 
     def send_template(

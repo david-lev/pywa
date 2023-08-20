@@ -16,8 +16,7 @@ from pywa.handlers import (
 )
 from pywa.types import (
     Button, SectionList, Message, CallbackButton, CallbackSelection, MessageStatus, Contact, MediaUrlResponse,
-    ProductsSection, BusinessProfile, Industry, CommerceSettings, NewTemplate, NewAuthenticationTemplate,
-    TemplateResponse, Template
+    ProductsSection, BusinessProfile, Industry, CommerceSettings, NewTemplate, Template, TemplateResponse
 )
 
 _MISSING = object()
@@ -1225,14 +1224,15 @@ class WhatsApp:
 
     def create_template(
             self,
-            template: NewTemplate | NewAuthenticationTemplate,
+            template: NewTemplate,
             placeholder: tuple[str, str] | None = None,
     ) -> TemplateResponse:
         """
-        Create a template.
+        `\`Create Templates\` on developers.facebook.com
+        <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates>`_.
 
         ATTENTION: In case of an errors, WhatsApp does not return a proper error message, instead, it returns a message
-         of `invalid parameter` with error code of 100. You need to pay attention to the following:
+        of `invalid parameter` with error code of 100. You need to pay attention to the following:
             - The template name must be unique.
             - The limitiations of the characters in every field (all documented).
             - The order of the buttons.
@@ -1243,42 +1243,60 @@ class WhatsApp:
 
         Example:
 
-            >>> from pywa.types import NewTemplate as Temp
+            >>> from pywa.types import NewTemplate as NewTemp
             >>> wa = WhatsApp(...)
             >>> wa.create_template(
-            ...     template=Temp(
+            ...     template=NewTemp(
             ...         name='buy_new_iphone_x',
-            ...         category=Temp.Category.MARKETING,
+            ...         category=NewTemp.Category.MARKETING,
             ...         language='en_US',
-            ...         header=Temp.TextHeader('The New iPhone {15} is here!'),
-            ...         body=Temp.Body('Buy now and use the code {WA_IPHONE_15} to get {15%} off!'),
-            ...         footer=Temp.Footer('Powered by PyWa'),
+            ...         header=NewTemp.TextHeader('The New iPhone {15} is here!'),
+            ...         body=NewTemp.Body('Buy now and use the code {WA_IPHONE_15} to get {15%} off!'),
+            ...         footer=NewTemp.Footer('Powered by PyWa'),
             ...         buttons=[
-            ...             Temp.UrlButton(title='Buy Now', url='https://example.com/shop/{iphone15}'),
-            ...             Temp.PhoneNumberButton(title='Call Us', phone_number='1234567890'),
-            ...             Temp.QuickReplyButton('Unsubscribe from marketing messages'),
-            ...             Temp.QuickReplyButton('Unsubscribe from all messages'),
+            ...             NewTemp.UrlButton(title='Buy Now', url='https://example.com/shop/{iphone15}'),
+            ...             NewTemp.PhoneNumberButton(title='Call Us', phone_number='1234567890'),
+            ...             NewTemp.QuickReplyButton('Unsubscribe from marketing messages'),
+            ...             NewTemp.QuickReplyButton('Unsubscribe from all messages'),
             ...         ],
             ...     ),
             ... )
 
+        Example for Authentication Template:
+
+            >>> from pywa.types import NewTemplate as NewTemp
+            >>> wa = WhatsApp(...)
+            >>> wa.create_template(
+            ...     template=NewTemp(
+            ...         name='auth_with_otp',
+            ...         category=NewTemp.Category.AUTHENTICATION,
+            ...         language='en_US',
+            ...         body=NewTemp.AuthBody(
+            ...             code_expiration_minutes=5,
+            ...             add_security_recommendation=True,
+            ...         ),
+            ...         buttons=NewTemp.OTPButton(
+            ...             otp_type=NewTemp.OTPButton.OtpType.ONE_TAP,
+            ...             title='Copy Code',
+            ...             autofill_text='Autofill',
+            ...             package_name='com.example.app',
+            ...             signature_hash='1234567890ABCDEF1234567890ABCDEF12345678'
+            ...         )
+            ...     ),
+            ... )
 
         Args:
             template: The template to create.
              <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/supported-languages>`_).
-            placeholder: The placeholder start & end (optional, default: ``('{', '}')``)).
+            placeholder: The placeholders start & end (optional, default: ``('{', '}')``)).
 
         Returns:
             The template created response. containing the template ID, status and category.
-
         """
         self._validate_business_account_id_provided()
         return TemplateResponse(**self.api.create_template(
             business_account_id=self.business_account_id,
-            name=template.name,
-            category=template.category.name,
-            language=template.language,
-            components=template.get_components(placeholder=placeholder),
+            template=template.to_dict(placeholder=placeholder)
         ))
 
     def send_template(
@@ -1310,6 +1328,19 @@ class WhatsApp:
             ...             Temp.QuickReplyButtonData(data='unsubscribe_from_marketing_messages'),
             ...             Temp.QuickReplyButtonData(data='unsubscribe_from_all_messages'),
             ...         ],
+            ...     ),
+            ... )
+
+        Example for Authentication Template:
+
+            >>> from pywa.types import Template as Temp
+            >>> wa = WhatsApp(...)
+            >>> wa.send_template(
+            ...     to='1234567890',
+            ...         template=Temp(
+            ...         name='auth_with_otp',
+            ...         language='en_US',
+            ...         buttons=Temp.OTPButtonCode(code='123456'),
             ...     ),
             ... )
 

@@ -4,7 +4,6 @@ __all__ = [
     'Template',
     'NewTemplate',
     'TemplateResponse',
-    'NewAuthenticationTemplate',
 ]
 
 import abc
@@ -60,14 +59,14 @@ class TemplateResponse(utils.FromDict):
     category: NewTemplate.Category
 
 
-class TemplateComponentType(utils.StrEnum):
+class ComponentType(utils.StrEnum):
     HEADER = 'HEADER'
     BODY = 'BODY'
     FOOTER = 'FOOTER'
     BUTTONS = 'BUTTONS'
 
 
-class TemplateHeaderFormatType(utils.StrEnum):
+class HeaderFormatType(utils.StrEnum):
     TEXT = 'TEXT'
     IMAGE = 'IMAGE'
     VIDEO = 'VIDEO'
@@ -75,7 +74,7 @@ class TemplateHeaderFormatType(utils.StrEnum):
     LOCATION = 'LOCATION'
 
 
-class TemplateButtonType(utils.StrEnum):
+class ButtonType(utils.StrEnum):
     PHONE_NUMBER = 'PHONE_NUMBER'
     URL = 'URL'
     QUICK_REPLY = 'QUICK_REPLY'
@@ -85,25 +84,27 @@ class TemplateButtonType(utils.StrEnum):
 class NewTemplateComponentABC(abc.ABC):
     @property
     @abc.abstractmethod
-    def type(self) -> TemplateComponentType: ...
+    def type(self) -> ComponentType: ...
 
 
 class NewTemplateHeaderABC(NewTemplateComponentABC, abc.ABC):
     @property
     @abc.abstractmethod
-    def format(self) -> TemplateHeaderFormatType: ...
+    def format(self) -> HeaderFormatType: ...
 
 
 class NewButtonABC(abc.ABC):
     @property
     @abc.abstractmethod
-    def type(self) -> TemplateButtonType: ...
+    def type(self) -> ButtonType: ...
 
 
 @dataclass(slots=True)
 class NewTemplate:
     """
     Represents a new template.
+    `\`Create Templates\` on developers.facebook.com
+    <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates>`_.
 
     Attributes:
         name: Name of the template (up to 512 characters, must be unique).
@@ -113,26 +114,45 @@ class NewTemplate:
         body: Body of the template.
         header: Header of the template (optional).
         footer: Footer of the template (optional).
-        buttons: Buttons to send with the template (optional).
+        buttons: Buttons to send with the template (optional, ``OTPButton`` is required for AUTHENTICATION).
 
     Example:
 
-        >>> from pywa.types import NewTemplate as Temp
-        >>> Temp(
+        >>> from pywa.types import NewTemplate as NewTemp
+        >>> NewTemp(
         ...     name='buy_new_iphone_x',
-        ...     category=Temp.Category.MARKETING,
+        ...     category=NewTemp.Category.MARKETING,
         ...     language='en_US',
-        ...     header=Temp.TextHeader('The New iPhone {15} is here!'),
-        ...     body=Temp.Body('Buy now and use the code {WA_IPHONE_15} to get {15%} off!'),
-        ...     footer=Temp.Footer('Powered by PyWa'),
+        ...     header=NewTemp.TextHeader('The New iPhone {15} is here!'),
+        ...     body=NewTemp.Body('Hello {John}! Buy now and use the code {WA_IPHONE_15} to get {15%} off!'),
+        ...     footer=NewTemp.Footer('Powered by PyWa'),
         ...     buttons=[
-        ...         Temp.UrlButton(title='Buy Now', url='https://example.com/shop/{iphone15}'),
-        ...         Temp.PhoneNumberButton(title='Call Us', phone_number='1234567890'),
-        ...         Temp.QuickReplyButton('Unsubscribe from marketing messages'),
-        ...         Temp.QuickReplyButton('Unsubscribe from all messages'),
+        ...         NewTemp.UrlButton(title='Buy Now', url='https://example.com/shop/{iphone15}'),
+        ...         NewTemp.PhoneNumberButton(title='Call Us', phone_number='1234567890'),
+        ...         NewTemp.QuickReplyButton('Unsubscribe from marketing messages'),
+        ...         NewTemp.QuickReplyButton('Unsubscribe from all messages'),
         ...     ],
         ... )
 
+        Example for Authentication template:
+
+        >>> from pywa.types import NewTemplate as NewTemp
+        >>> NewTemp(
+        ...     name='auth_with_otp',
+        ...     category=NewTemp.Category.AUTHENTICATION,
+        ...     language='en_US',
+        ...     body=NewTemp.AuthBody(
+        ...         code_expiration_minutes=5,
+        ...         add_security_recommendation=True
+        ...     ),
+        ...     buttons=NewTemp.OTPButton(
+        ...         otp_type=NewTemp.OTPButton.OtpType.ONE_TAP,
+        ...         title='Copy Code',
+        ...         autofill_text='Autofill',
+        ...         package_name='com.example.app',
+        ...         signature_hash='1234567890ABCDEF1234567890ABCDEF12345678'
+        ...     )
+        ... )
 
     Templates are limited to 10 quick reply buttons. If using quick reply buttons with other buttons, buttons must be
     organized into two groups: quick reply buttons and non-quick reply buttons. If grouped incorrectly, error will be
@@ -153,16 +173,51 @@ class NewTemplate:
     name: str
     category: Category
     language: str
-    body: Body
+    body: Body | AuthBody
     header: TextHeader | ImageHeader | VideoHeader | DocumentHeader | LocationHeader | None = None
     footer: Footer | None = None
-    buttons: Iterable[PhoneNumberButton | UrlButton | QuickReplyButton] | None = None
+    buttons: Iterable[PhoneNumberButton | UrlButton | QuickReplyButton] | OTPButton | None = None
+
+    def __post_init__(self):
+        if self.category == self.Category.AUTHENTICATION and not (
+                isinstance(self.body, self.AuthBody) or isinstance(self.buttons, self.OTPButton)
+        ):
+            raise ValueError('body of AuthBody and buttons of OTPButton are required for AUTHENTICATION')
+
+    def to_dict(
+            self,
+            placeholder: tuple[str, str] = None
+    ) -> dict[str, str | dict[str, str | tuple[str, ...]] | tuple[dict[str, str | tuple[str, ...]], ...]]:
+        if isinstance(self.buttons, self.OTPButton):
+            components = (
+                dict(type=ComponentType.BUTTONS.value, buttons=(self.buttons.to_dict(),)),
+                dict(type=ComponentType.BODY.value,
+                     add_security_recommendation=self.body.add_security_recommendation),
+                dict(type=ComponentType.FOOTER.value, code_expiration_minutes=self.body.code_expiration_minutes)
+                if self.body.code_expiration_minutes else None,
+            )
+        else:
+            components = (
+                self.body.to_dict(placeholder),
+                self.header.to_dict(placeholder) if self.header else None,
+                self.footer.to_dict() if self.footer else None,
+                dict(
+                    type=ComponentType.BUTTONS.value,
+                    buttons=tuple(button.to_dict(placeholder) for button in self.buttons)
+                ) if self.buttons else None
+            )
+        return dict(
+            name=self.name,
+            category=self.category.value,
+            language=self.language,
+            components=tuple(component for component in components if component is not None)
+        )
 
     class Category(utils.StrEnum):
         """
         Template category.
     
-        `\`NewTemplate Categorization\` on
+        `\`Template Categorization\` on
         developers.facebook.com
         <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#categories>`_
         """
@@ -183,8 +238,8 @@ class NewTemplate:
         Attributes:
             text: Text to send with the header (Up to 60 characters. Supports 1 placeholder).
         """
-        type: TemplateComponentType = field(default=TemplateComponentType.HEADER, init=False)
-        format: TemplateHeaderFormatType = field(default=TemplateHeaderFormatType.TEXT, init=False)
+        type: ComponentType = field(default=ComponentType.HEADER, init=False)
+        format: HeaderFormatType = field(default=HeaderFormatType.TEXT, init=False)
         text: str
 
         def to_dict(self, placeholder: tuple[str, str] = None) -> dict[str, str | None]:
@@ -209,8 +264,8 @@ class NewTemplate:
             examples: List of image handles (Use the `Resumable Upload API
              <https://developers.facebook.com/docs/graph-api/guides/upload>`_ to upload the images)
         """
-        type: TemplateComponentType = field(default=TemplateComponentType.HEADER, init=False)
-        format: TemplateHeaderFormatType = field(default=TemplateHeaderFormatType.IMAGE, init=False)
+        type: ComponentType = field(default=ComponentType.HEADER, init=False)
+        format: HeaderFormatType = field(default=HeaderFormatType.IMAGE, init=False)
         examples: Iterable[str]
 
         def to_dict(self) -> dict[str, str | dict[str, tuple[str, ...]]]:
@@ -233,8 +288,8 @@ class NewTemplate:
             examples: List of video handles (Use the `Resumable Upload API
              <https://developers.facebook.com/docs/graph-api/guides/upload>`_ to upload the videos)
         """
-        type: TemplateComponentType = field(default=TemplateComponentType.HEADER, init=False)
-        format: TemplateHeaderFormatType = field(default=TemplateHeaderFormatType.VIDEO, init=False)
+        type: ComponentType = field(default=ComponentType.HEADER, init=False)
+        format: HeaderFormatType = field(default=HeaderFormatType.VIDEO, init=False)
         examples: Iterable[str]
 
         def to_dict(self) -> dict[str, str | dict[str, tuple[str, ...]]]:
@@ -250,15 +305,15 @@ class NewTemplate:
         Represents a document header.
     
         Example:
-            >>> from pywa.types.template import NewTemplate
+            >>> from pywa.types import NewTemplate
             >>> NewTemplate.DocumentHeader(examples=["2:c2FtcGxl..."])
     
         Attributes:
             examples: List of document handles (Use the `Resumable Upload API
              <https://developers.facebook.com/docs/graph-api/guides/upload>`_ to upload the documents)
         """
-        type: TemplateComponentType = field(default=TemplateComponentType.HEADER, init=False)
-        format: TemplateHeaderFormatType = field(default=TemplateHeaderFormatType.DOCUMENT, init=False)
+        type: ComponentType = field(default=ComponentType.HEADER, init=False)
+        format: HeaderFormatType = field(default=HeaderFormatType.DOCUMENT, init=False)
         examples: Iterable[str]
 
         def to_dict(self) -> dict[str, str | dict[str, tuple[str, ...]]]:
@@ -281,8 +336,8 @@ class NewTemplate:
             >>> from pywa.types import NewTemplate
             >>> NewTemplate.LocationHeader()
         """
-        type: TemplateComponentType = field(default=TemplateComponentType.HEADER, init=False)
-        format: TemplateHeaderFormatType = field(default=TemplateHeaderFormatType.LOCATION, init=False)
+        type: ComponentType = field(default=ComponentType.HEADER, init=False)
+        format: HeaderFormatType = field(default=HeaderFormatType.LOCATION, init=False)
 
         def to_dict(self) -> dict[str, str]:
             return dict(
@@ -306,7 +361,7 @@ class NewTemplate:
         Attributes:
             text: Text to send with the body (Up to 1024 characters. Supports multiple placeholders).
         """
-        type: TemplateComponentType = field(default=TemplateComponentType.BODY, init=False)
+        type: ComponentType = field(default=ComponentType.BODY, init=False)
         text: str
 
         def to_dict(self, placeholder: tuple[str, str] = None) -> dict[str, str | None]:
@@ -314,8 +369,30 @@ class NewTemplate:
             return dict(
                 type=self.type.value,
                 text=formatted_text,
-                **(dict(example=dict(body_text=(examples,)) if examples else {}))
+                **(dict(example=dict(body_text=(examples,))) if examples else {})
             )
+
+    @dataclass(slots=True)
+    class AuthBody:
+        """
+        Represents the configuration for an authentication template.
+
+        Example:
+
+            >>> from pywa.types import NewTemplate
+            >>> NewTemplate.AuthBody(
+            ...     code_expiration_minutes=5,
+            ...     add_security_recommendation=True
+            ... )
+
+        Attributes:
+            code_expiration_minutes: Indicates number of minutes the password or code is valid. If omitted, the code
+             expiration warning will not be displayed in the delivered message. (Minimum ``1``, maximum ``90``).
+            add_security_recommendation: Set to ``True`` if you want the template to include the string, ``"For your security,
+             do not share this code"``. Set to ``False`` to exclude the string. Defaults to ``False``.
+        """
+        code_expiration_minutes: int | None = None
+        add_security_recommendation: bool = False
 
     @dataclass(slots=True)
     class Footer(NewTemplateComponentABC):
@@ -323,13 +400,13 @@ class NewTemplate:
         Represents a template footer.
     
         Example:
-            >>> from pywa.types.template import NewTemplate
+            >>> from pywa.types import NewTemplate
             >>> NewTemplate.Footer(text='Use the link below to log in to your account.')
     
         Attributes:
             text: Text to send with the footer (Up to 60 characters, no placeholders allowed).
         """
-        type: TemplateComponentType = field(default=TemplateComponentType.FOOTER, init=False)
+        type: ComponentType = field(default=ComponentType.FOOTER, init=False)
         text: str
 
         def to_dict(self) -> dict[str, str | None]:
@@ -353,7 +430,7 @@ class NewTemplate:
             phone_number: Alphanumeric string. Business phone number to be (display phone number)
              called when the user taps the button (Up to 20 characters, no placeholders allowed).
         """
-        type: TemplateButtonType = field(default=TemplateButtonType.PHONE_NUMBER, init=False)
+        type: ButtonType = field(default=ButtonType.PHONE_NUMBER, init=False)
         title: str
         phone_number: int | str
 
@@ -378,13 +455,17 @@ class NewTemplate:
             url: URL to be loaded when the user taps the button (Up to 2000 characters, supports 1 placeholder, which
              be appended to the end of the URL).
         """
-        type: TemplateComponentType = field(default=TemplateButtonType.URL, init=False)
+        type: ComponentType = field(default=ButtonType.URL, init=False)
         title: str
         url: str
 
         def to_dict(self, placeholder: tuple[str, str] = None) -> dict[str, str]:
-            formatted_title, title_examples = _get_examples_from_placeholders(self.title, *(placeholder if placeholder else ()))
-            formatted_url, url_examples = _get_examples_from_placeholders(self.url, *(placeholder if placeholder else ()))
+            formatted_title, title_examples = (
+                _get_examples_from_placeholders(self.title, *(placeholder if placeholder else ()))
+            )
+            formatted_url, url_examples = (
+                _get_examples_from_placeholders(self.url, *(placeholder if placeholder else ()))
+            )
             examples = title_examples + url_examples
             return dict(
                 type=self.type.value,
@@ -415,73 +496,22 @@ class NewTemplate:
         Attributes:
             text: The text to send when the user taps the button (Up to 25 characters, no placeholders allowed).
         """
-        type: TemplateComponentType = field(default=TemplateButtonType.QUICK_REPLY, init=False)
+        type: ComponentType = field(default=ButtonType.QUICK_REPLY, init=False)
         text: str
 
         def to_dict(self, placeholder: None = None) -> dict[str, str]:
             return dict(type=self.type.value, text=self.text)
 
-    def get_components(
-            self,
-            placeholder: tuple[str, str] = None
-    ) -> tuple[dict[str, str | None] | dict[str, str] | dict[str, str | tuple[dict[str, str], ...]], ...]:
-        return tuple(component for component in (
-            self.body.to_dict(placeholder),
-            self.header.to_dict(placeholder) if self.header else None,
-            self.footer.to_dict() if self.footer else None,
-            dict(
-                type=TemplateComponentType.BUTTONS.value,
-                buttons=tuple(button.to_dict(placeholder) for button in self.buttons)
-            ) if self.buttons else None
-        ) if component is not None)
-
-
-@dataclass(slots=True)
-class NewAuthenticationTemplate:
-    """
-    Represents an authentication template.
-
-    Example:
-
-        >>> from pywa.types import NewAuthenticationTemplate as AuthTemp
-        >>> AuthTemp(
-        ...     name='login_with_otp',
-        ...     language='en_US',
-        ...     button=AuthTemp.OTPButton(
-        ...         otp_type=AuthTemp.OTPButton.OtpType.ONE_TAP,
-        ...         title='Copy Code',
-        ...         autofill_text='Autofill',
-        ...         package_name='com.example.app',
-        ...         signature_hash='1234567890ABCDEF1234567890ABCDEF12345678'
-        ...     ),
-        ...     code_expiration_minutes=5,
-        ...     add_security_recommendation=True
-        ... )
-
-    Attributes:
-        button: Button to send with the template.
-        code_expiration_minutes: Indicates number of minutes the password or code is valid. If omitted, the code
-         expiration warning will not be displayed in the delivered message. (Minimum ``1``, maximum ``90``).
-        add_security_recommendation: Set to ``True`` if you want the template to include the string, ``"For your security,
-         do not share this code"``. Set to ``False`` to exclude the string. Defaults to ``False``.
-    """
-    category: NewTemplate.Category = field(default=NewTemplate.Category.AUTHENTICATION, init=False)
-    name: str
-    language: str
-    button: OTPButton
-    code_expiration_minutes: int | None = None
-    add_security_recommendation: bool = False
-
-    @dataclass(frozen=True, slots=True)
+    @dataclass(slots=True)
     class OTPButton(NewButtonABC):
         """
         Represents a button that can be used to send an OTP.
 
         Example for ONE_TAP:
 
-            >>> from pywa.types import NewAuthenticationTemplate as AuthTemp
-            >>> AuthTemp.OTPButton(
-            ...     otp_type=AuthTemp.OTPButton.OtpType.ONE_TAP,
+            >>> from pywa.types import NewTemplate
+            >>> NewTemplate.OTPButton(
+            ...     otp_type=NewTemplate.OTPButton.OtpType.ONE_TAP,
             ...     title='Copy Code',
             ...     autofill_text='Autofill',
             ...     package_name='com.example.app',
@@ -490,9 +520,9 @@ class NewAuthenticationTemplate:
 
         Example for COPY_CODE:
 
-            >>> from pywa.types import NewAuthenticationTemplate as AuthTemp
-            >>> AuthTemp.OTPButton(
-            ...     otp_type=AuthTemp.OTPButton.OtpType.COPY_CODE,
+            >>> from pywa.types import NewTemplate
+            >>> NewTemplate.OTPButton(
+            ...     otp_type=NewTemplate.OTPButton.OtpType.COPY_CODE,
             ...     title='Copy Code'
             ... )
 
@@ -510,7 +540,7 @@ class NewAuthenticationTemplate:
              <https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates#app-signing-key-hash>`_
                 for more information. Required if ``otp_type`` is ``OtpType.ONE_TAP``.
         """
-        type: TemplateComponentType = field(default=TemplateButtonType.OTP, init=False)
+        type: ComponentType = field(default=ButtonType.OTP, init=False)
         otp_type: OtpType
         title: str | None = None
         autofill_text: str | None = None
@@ -524,7 +554,7 @@ class NewAuthenticationTemplate:
 
         def __post_init__(self):
             if self.otp_type == self.OtpType.ONE_TAP and not (self.package_name and self.signature_hash):
-                raise ValueError('package_name and signature_hash are required for ONE_TAP')
+                raise ValueError('`package_name` and `signature_hash` are required for ONE_TAP')
 
         def to_dict(self) -> dict[str, str | None]:
             base = dict(type=self.type.value, otp_type=self.otp_type.value, text=self.title)
@@ -535,14 +565,6 @@ class NewAuthenticationTemplate:
                     **(dict(autofill_text=self.autofill_text) if self.autofill_text else {})
                 )
             return base
-
-    def to_dict(self) -> tuple[dict[str, str | None] | dict[str, str] | dict[str, str | tuple[dict[str, str], ...]], ...]:
-        return tuple(component for component in (
-            dict(type=TemplateComponentType.BUTTONS.value, buttons=(self.button.to_dict())),
-            dict(type=TemplateComponentType.BODY.value, add_security_recommendation=self.add_security_recommendation),
-            dict(type=TemplateComponentType.FOOTER.value, code_expiration_minutes=self.code_expiration_minutes)
-            if self.code_expiration_minutes else None,
-        ) if component is not None)
 
 
 class ParamType(utils.StrEnum):
@@ -577,25 +599,32 @@ class Template:
     If in the template created with body that contains 3 variables, then the message must contain 3 values for the
     placeholders.
 
-    >>> from pywa.types import Template
-    >>> Template(
+    >>> from pywa.types import Template as Temp
+    >>> Temp(
     ...     name='buy_new_iphone_x',
     ...     language='en_US',
     ...     header=TextValue(value='15'),
     ...     body=[
-    ...         Template.TextValue(value='John Doe'),
-    ...         Template.TextValue(value='WA_IPHONE_15'),
-    ...         Template.TextValue(value='15%'),
+    ...         Temp.TextValue(value='John Doe'),
+    ...         Temp.TextValue(value='WA_IPHONE_15'),
+    ...         Temp.TextValue(value='15%'),
     ...     ],
     ...     buttons=[
-    ...         Template.UrlButtonValue(value='iphone15'),
-    ...         Template.QuickReplyButtonData(data='unsubscribe_from_marketing_messages'),
-    ...         Template.QuickReplyButtonData(data='unsubscribe_from_all_messages'),
+    ...         Temp.UrlButtonValue(value='iphone15'),
+    ...         Temp.QuickReplyButtonData(data='unsubscribe_from_marketing_messages'),
+    ...         Temp.QuickReplyButtonData(data='unsubscribe_from_all_messages'),
     ...     ],
     ... )
 
-    - Authentication templates required the code in the body to be sent as a ``TextValue`` and with ``OTPButtonCode``. other
-        components are not allowed.
+    Example for Authentication template:
+
+    >>> from pywa.types import Template as Temp
+    >>> Temp(
+    ...     name='auth_with_otp',
+    ...     language='en_US',
+    ...     buttons=Temp.OTPButtonCode(code='123456'),
+    ... )
+
 
     Attributes:
         name: The name of the template.
@@ -607,9 +636,15 @@ class Template:
     """
     name: str
     language: str
-    body: Iterable[TextValue | Currency | DateTime]
+    body: Iterable[TextValue | Currency | DateTime] | None = None
     header: TextValue | Document | Image | Video | Location | None = None
     buttons: Iterable[QuickReplyButtonData | UrlButtonValue] | OTPButtonCode | None = None
+
+    def __post_init__(self):
+        if isinstance(self.buttons, self.OTPButtonCode):
+            if any((self.header, self.body)):
+                raise ValueError('`body` and `header` are not allowed for AUTHENTICATION')
+            self.body = (self.TextValue(value=self.buttons.code),)
 
     def to_dict(self, is_header_url: bool = False) -> dict[str, str | dict[str, str | tuple[dict[str, str], ...]]]:
         return dict(
@@ -617,11 +652,11 @@ class Template:
             language=dict(code=self.language),
             components=tuple(comp for comp in (
                 dict(
-                    type=TemplateComponentType.BODY.value,
+                    type=ComponentType.BODY.value,
                     parameters=tuple(component.to_dict() for component in self.body)
                 ),
                 dict(
-                    type=TemplateComponentType.HEADER.value,
+                    type=ComponentType.HEADER.value,
                     parameters=(self.header.to_dict(is_header_url),)
                 ) if self.header else None,
                 *((dict(
