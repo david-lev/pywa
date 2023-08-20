@@ -1226,10 +1226,42 @@ class WhatsApp:
             category: Template.Category,
             template: Template | AuthenticationTemplate,
             language: str,
-            allow_category_change: bool = False,
+            var_format: tuple[str, str] | None = None,
     ) -> TemplateResponse:
         """
         Create a template.
+
+        ATTENTION: In case of an errors, WhatsApp does not return a proper error message, instead, it returns a message
+         of `invalid parameter` with error code of 100. You need to pay attention to the following:
+            - The template name must be unique.
+            - The limitiations of the characters in every field (all documented).
+            - The order of the buttons.
+
+
+        Templates can be created and managed in the
+        `WhatsApp Message Templates <https://business.facebook.com/wa/manage/message-templates/>`_ dashboard.
+
+        Example:
+
+            >>> from pywa.types import Template
+            >>> wa = WhatsApp(...)
+            >>> wa.create_template(
+            ...     name='buy_new_iphone_x',
+            ...     category=Template.Category.MARKETING,
+            ...     language='en_US',
+            ...     template=Template(
+            ...         header=Template.TextHeader('The New iPhone {15} is here!'),
+            ...         body=Template.Body('Buy now and use the code {WA_IPHONE_15} to get {15%} off!'),
+            ...         footer=Template.Footer('Powered by PyWa'),
+            ...         buttons=[
+            ...             Template.UrlButton(title='Buy Now', url='https://example.com/shop/{iphone15}'),
+            ...             Template.PhoneNumberButton(title='Call Us', phone_number='1234567890'),
+            ...             Template.QuickReplyButton('Unsubscribe from marketing messages'),
+            ...             Template.QuickReplyButton('Unsubscribe from all messages'),
+            ...         ],
+            ...     ),
+            ... )
+
 
         Args:
             name: The name of the template (up to 512 characters).
@@ -1237,10 +1269,7 @@ class WhatsApp:
             template: The template.
             language: The language of the template (See `Template language and locale code
              <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/supported-languages>`_).
-            allow_category_change: Set to True to allow WhatsApp to assign a category based on their `template guidelines
-             <https://developers.facebook.com/docs/whatsapp/updates-to-pricing/new-template-guidelines>`_. This can
-             prevent your template from being rejected for miscategorization. (optional)
-             (optional).
+            var_format: The variable start & end (optional, default: ``('{', '}')``)).
 
         Returns:
             The template created response. containing the template ID, status and category.
@@ -1251,9 +1280,6 @@ class WhatsApp:
             business_account_id=self.business_account_id,
             name=name,
             category=category.value,
-            allow_category_change=allow_category_change,
-            components=template.to_dict(),
+            components=template.to_dict(formatting=var_format),
             language=language,
         ))
-
-

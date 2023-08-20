@@ -40,7 +40,7 @@ def _extract_examples(
     examples: list[str] = []
     for example in re.finditer(r'\%s(.*?)\%s' % (start, end), string):
         examples.append(example.group(1))
-    for idx, example in enumerate(examples):
+    for idx, example in enumerate(examples, start=1):
         string = string.replace(f"{start}{example}{end}", "{{" + str(idx) + "}}")
     return string, tuple(examples)
 
@@ -306,7 +306,7 @@ class Template:
             return dict(
                 type=self.type.value,
                 text=formatted_text,
-                **(dict(example=dict(body_text=examples)) if examples else {})
+                **(dict(example=dict(body_text=(examples,)) if examples else {}))
             )
 
     @dataclass(frozen=True, slots=True)
@@ -382,7 +382,7 @@ class Template:
                 type=self.type.value,
                 text=formatted_title,
                 url=formatted_url,
-                **(dict(example=tuple(examples)) if examples else {})
+                **(dict(example=examples if examples else {}))
             )
 
     @dataclass(frozen=True, slots=True)

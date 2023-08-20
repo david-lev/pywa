@@ -581,7 +581,6 @@ class WhatsAppCloudApi:
             business_account_id: str,
             name: str,
             category: str,
-            allow_category_change: bool,
             language: str,
             components: tuple[dict[str, str | None] | dict[str, str] | dict[str, str | tuple[dict[str, str], ...]], ...]
     ) -> dict[str, str]:
@@ -592,7 +591,6 @@ class WhatsAppCloudApi:
             business_account_id: The ID of the business account.
             name: The name of the template.
             category: The category of the template.
-            allow_category_change: Whether the category can be changed.
             language: The language code of the template.
             components: The components of the template.
 
@@ -610,7 +608,6 @@ class WhatsAppCloudApi:
             json={
                 "name": name,
                 "category": category,
-                "allow_category_change": allow_category_change,
                 "language": language,
                 "components": components
             }
