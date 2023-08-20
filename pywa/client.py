@@ -14,7 +14,7 @@ from pywa.handlers import Handler, MessageHandler, CallbackButtonHandler, Callba
     MessageStatusHandler
 from pywa.types import Button, SectionList, Message, CallbackButton, CallbackSelection, MessageStatus, Contact, \
     MediaUrlResponse, ProductsSection, BusinessProfile, Industry, CommerceSettings
-from pywa.types.template import Template, AuthenticationTemplate, TemplateResponse
+from pywa.types.template import NewTemplate, NewAuthenticationTemplate, TemplateResponse
 from pywa.webhook import Webhook
 
 _MISSING = object()
@@ -1222,10 +1222,7 @@ class WhatsApp:
 
     def create_template(
             self,
-            name: str,
-            category: Template.Category,
-            template: Template | AuthenticationTemplate,
-            language: str,
+            template: NewTemplate | NewAuthenticationTemplate,
             var_format: tuple[str, str] | None = None,
     ) -> TemplateResponse:
         """
@@ -1243,31 +1240,28 @@ class WhatsApp:
 
         Example:
 
-            >>> from pywa.types import Template
+            >>> from pywa.types import NewTemplate as Temp
             >>> wa = WhatsApp(...)
             >>> wa.create_template(
-            ...     name='buy_new_iphone_x',
-            ...     category=Template.Category.MARKETING,
-            ...     language='en_US',
-            ...     template=Template(
-            ...         header=Template.TextHeader('The New iPhone {15} is here!'),
-            ...         body=Template.Body('Buy now and use the code {WA_IPHONE_15} to get {15%} off!'),
-            ...         footer=Template.Footer('Powered by PyWa'),
+            ...     template=Temp(
+            ...         name='buy_new_iphone_x',
+            ...         category=Temp.Category.MARKETING,
+            ...         language='en_US',
+            ...         header=Temp.TextHeader('The New iPhone {15} is here!'),
+            ...         body=Temp.Body('Buy now and use the code {WA_IPHONE_15} to get {15%} off!'),
+            ...         footer=Temp.Footer('Powered by PyWa'),
             ...         buttons=[
-            ...             Template.UrlButton(title='Buy Now', url='https://example.com/shop/{iphone15}'),
-            ...             Template.PhoneNumberButton(title='Call Us', phone_number='1234567890'),
-            ...             Template.QuickReplyButton('Unsubscribe from marketing messages'),
-            ...             Template.QuickReplyButton('Unsubscribe from all messages'),
+            ...             Temp.UrlButton(title='Buy Now', url='https://example.com/shop/{iphone15}'),
+            ...             Temp.PhoneNumberButton(title='Call Us', phone_number='1234567890'),
+            ...             Temp.QuickReplyButton('Unsubscribe from marketing messages'),
+            ...             Temp.QuickReplyButton('Unsubscribe from all messages'),
             ...         ],
             ...     ),
             ... )
 
 
         Args:
-            name: The name of the template (up to 512 characters).
-            category: The category of the template.
-            template: The template.
-            language: The language of the template (See `Template language and locale code
+            template: The template to create.
              <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/supported-languages>`_).
             var_format: The variable start & end (optional, default: ``('{', '}')``)).
 
@@ -1278,8 +1272,8 @@ class WhatsApp:
         self._validate_business_account_id_provided()
         return TemplateResponse(**self.api.create_template(
             business_account_id=self.business_account_id,
-            name=name,
-            category=category.value,
-            components=template.to_dict(formatting=var_format),
-            language=language,
+            name=template.name,
+            category=template.category.name,
+            language=template.language,
+            components=template.get_components(formatting=var_format),
         ))

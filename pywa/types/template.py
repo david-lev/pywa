@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 __all__ = [
-    'Template',
+    'NewTemplate',
     'TemplateResponse',
-    'AuthenticationTemplate',
+    'NewAuthenticationTemplate',
 ]
 
 import abc
@@ -50,12 +50,12 @@ class TemplateResponse(utils.FromDict):
     """
 
     Attributes:
-        id: Template ID.
+        id: NewTemplate ID.
 
     """
     id: str
     status: str
-    category: Template.Category
+    category: NewTemplate.Category
 
 
 class TemplateComponentType(utils.StrEnum):
@@ -80,30 +80,34 @@ class TemplateButtonType(utils.StrEnum):
     OTP = 'OTP'
 
 
-class TemplateComponentABC(abc.ABC):
+class NewTemplateComponentABC(abc.ABC):
     @property
     @abc.abstractmethod
     def type(self) -> TemplateComponentType: ...
 
 
-class TemplateHeaderABC(TemplateComponentABC, abc.ABC):
+class NewTemplateHeaderABC(NewTemplateComponentABC, abc.ABC):
     @property
     @abc.abstractmethod
     def format(self) -> TemplateHeaderFormatType: ...
 
 
-class ButtonABC(abc.ABC):
+class NewButtonABC(abc.ABC):
     @property
     @abc.abstractmethod
     def type(self) -> TemplateButtonType: ...
 
 
 @dataclass(frozen=True, slots=True)
-class Template:
+class NewTemplate:
     """
-    Represents a template.
+    Represents a new template.
 
     Attributes:
+        name: Name of the template (up to 512 characters, must be unique).
+        category: Category of the template.
+        language: The language of the template (See `Template language and locale code
+         <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/supported-languages>`_).
         body: Body of the template.
         header: Header of the template (optional).
         footer: Footer of the template (optional).
@@ -111,21 +115,20 @@ class Template:
 
     Example:
 
-        >>> from pywa.types import Template as Temp
+        >>> from pywa.types import NewTemplate as Temp
         >>> Temp(
-        ...     header=Temp.TextHeader(text='Hello, {John}!'),
-        ...     body=Temp.Body(
-        ...         text='Shop now through {the end of August} and use '
-        ...                 'code {25OF} to get {25%} off of all merchandise',
-        ...     ),
-        ...     footer=Temp.Footer(text='Use the link below to log in to your account.'),
+        ...     name='buy_new_iphone_x',
+        ...     category=Temp.Category.MARKETING,
+        ...     language='en_US',
+        ...     header=Temp.TextHeader('The New iPhone {15} is here!'),
+        ...     body=Temp.Body('Buy now and use the code {WA_IPHONE_15} to get {15%} off!'),
+        ...     footer=Temp.Footer('Powered by PyWa'),
         ...     buttons=[
-        ...         Temp.PhoneNumberButton(title='Call Us', phone_number='12125552368'),
-        ...         Temp.UrlButton(
-        ...             title='Log In',
-        ...             url='https://x.com/login?email={john@example}'
-        ...         )
-        ...     ]
+        ...         Temp.UrlButton(title='Buy Now', url='https://example.com/shop/{iphone15}'),
+        ...         Temp.PhoneNumberButton(title='Call Us', phone_number='1234567890'),
+        ...         Temp.QuickReplyButton('Unsubscribe from marketing messages'),
+        ...         Temp.QuickReplyButton('Unsubscribe from all messages'),
+        ...     ],
         ... )
 
 
@@ -145,6 +148,9 @@ class Template:
     When using the Cloud API to send a template that has multiple quick reply buttons, you can use the index property
     to designate the order in which buttons appear in the template message.
     """
+    name: str
+    category: Category
+    language: str
     body: Body
     header: TextHeader | ImageHeader | VideoHeader | DocumentHeader | LocationHeader | None = None
     footer: Footer | None = None
@@ -154,7 +160,7 @@ class Template:
         """
         Template category.
     
-        `\`Template Categorization\` on
+        `\`NewTemplate Categorization\` on
         developers.facebook.com
         <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#categories>`_
         """
@@ -163,14 +169,14 @@ class Template:
         UTILITY = 'UTILITY'
 
     @dataclass(frozen=True, slots=True)
-    class TextHeader(TemplateHeaderABC):
+    class TextHeader(NewTemplateHeaderABC):
         """
         Represents a text header.
     
         Example:
     
-            >>> from pywa.types import Template
-            >>> Template.TextHeader(text='Hello, {John}!')
+            >>> from pywa.types import NewTemplate
+            >>> NewTemplate.TextHeader(text='Hello, {John}!')
     
         Attributes:
             text: Text to send with the header (Up to 60 characters. Supports 1 variable)
@@ -189,13 +195,13 @@ class Template:
             )
 
     @dataclass(frozen=True, slots=True)
-    class ImageHeader(TemplateHeaderABC):
+    class ImageHeader(NewTemplateHeaderABC):
         """
         Represents an image header.
     
         Example:
-            >>> from pywa.types.template import Template
-            >>> Template.ImageHeader(examples=["2:c2FtcGxl..."])
+            >>> from pywa.types.template import NewTemplate
+            >>> NewTemplate.ImageHeader(examples=["2:c2FtcGxl..."])
     
         Attributes:
             examples: List of image handles (Use the `Resumable Upload API
@@ -213,13 +219,13 @@ class Template:
             )
 
     @dataclass(frozen=True, slots=True)
-    class VideoHeader(TemplateHeaderABC):
+    class VideoHeader(NewTemplateHeaderABC):
         """
         Represents a video header.
     
         Example:
-            >>> from pywa.types import Template
-            >>> Template.VideoHeader(examples=["2:c2FtcGxl..."])
+            >>> from pywa.types import NewTemplate
+            >>> NewTemplate.VideoHeader(examples=["2:c2FtcGxl..."])
     
         Attributes:
             examples: List of video handles (Use the `Resumable Upload API
@@ -237,13 +243,13 @@ class Template:
             )
 
     @dataclass(frozen=True, slots=True)
-    class DocumentHeader(TemplateHeaderABC):
+    class DocumentHeader(NewTemplateHeaderABC):
         """
         Represents a document header.
     
         Example:
-            >>> from pywa.types.template import Template
-            >>> Template.DocumentHeader(examples=["2:c2FtcGxl..."])
+            >>> from pywa.types.template import NewTemplate
+            >>> NewTemplate.DocumentHeader(examples=["2:c2FtcGxl..."])
     
         Attributes:
             examples: List of document handles (Use the `Resumable Upload API
@@ -261,7 +267,7 @@ class Template:
             )
 
     @dataclass(frozen=True, slots=True)
-    class LocationHeader(TemplateHeaderABC):
+    class LocationHeader(NewTemplateHeaderABC):
         """
         Location headers appear as generic maps at the top of the template and are useful for order tracking, delivery
         updates, ride hailing pickup/dropoff, locating physical stores, etc. When tapped, the app user's default map app
@@ -270,8 +276,8 @@ class Template:
         - Location headers can only be used in templates categorized as ``UTILITY`` or ``MARKETING``. Real-time locations are not supported.
     
         Example:
-            >>> from pywa.types import Template
-            >>> Template.LocationHeader()
+            >>> from pywa.types import NewTemplate
+            >>> NewTemplate.LocationHeader()
         """
         type: TemplateComponentType = field(default=TemplateComponentType.HEADER, init=False)
         format: TemplateHeaderFormatType = field(default=TemplateHeaderFormatType.LOCATION, init=False)
@@ -283,14 +289,14 @@ class Template:
             )
 
     @dataclass(frozen=True, slots=True)
-    class Body(TemplateComponentABC):
+    class Body(NewTemplateComponentABC):
         """
         Represents a template body.
     
         Example:
     
-            >>> from pywa.types import Template
-            >>> Template.Body(
+            >>> from pywa.types import NewTemplate
+            >>> NewTemplate.Body(
             ...     text='Shop now through {the end of August} and '
             ...         'use code {25OF} to get {25%} off of all merchandise',
             ... )
@@ -310,13 +316,13 @@ class Template:
             )
 
     @dataclass(frozen=True, slots=True)
-    class Footer(TemplateComponentABC):
+    class Footer(NewTemplateComponentABC):
         """
         Represents a template footer.
     
         Example:
-            >>> from pywa.types.template import Template
-            >>> Template.Footer(text='Use the link below to log in to your account.')
+            >>> from pywa.types.template import NewTemplate
+            >>> NewTemplate.Footer(text='Use the link below to log in to your account.')
     
         Attributes:
             text: Text to send with the footer (Up to 60 characters, no variables allowed).
@@ -331,14 +337,14 @@ class Template:
             )
 
     @dataclass(frozen=True, slots=True)
-    class PhoneNumberButton(ButtonABC):
+    class PhoneNumberButton(NewButtonABC):
         """
         Phone number buttons call the specified business phone number when tapped by the app user.
         Templates are limited to one phone number button.
 
         Example:
-            >>> from pywa.types import Template
-            >>> Template.PhoneNumberButton(title='Call Us', phone_number='12125552368')
+            >>> from pywa.types import NewTemplate
+            >>> NewTemplate.PhoneNumberButton(title='Call Us', phone_number='12125552368')
 
         Attributes:
             title: Button text (Up to 25 characters, no variables allowed).
@@ -353,14 +359,14 @@ class Template:
             return dict(type=self.type.value, text=self.title, phone_number=str(self.phone_number))
 
     @dataclass(frozen=True, slots=True)
-    class UrlButton(ButtonABC):
+    class UrlButton(NewButtonABC):
         """
         URL buttons load the specified URL in the device's default web browser when tapped by the app user.
         Templates are limited to two URL buttons.
 
         Example:
-            >>> from pywa.types import Template
-            >>> Template.UrlButton(
+            >>> from pywa.types import NewTemplate
+            >>> NewTemplate.UrlButton(
             ...     title='Log In',
             ...     url='https://x.com/login?email={john@example}'
             ... )
@@ -386,7 +392,7 @@ class Template:
             )
 
     @dataclass(frozen=True, slots=True)
-    class QuickReplyButton(ButtonABC):
+    class QuickReplyButton(NewButtonABC):
         """
         Quick reply buttons are custom text-only buttons that immediately message you with the specified text string when
         tapped by the app user. A common use case-case is a button that allows your customer to easily opt-out of any
@@ -398,9 +404,9 @@ class Template:
 
         Example:
 
-            >>> from pywa.types import Template
-            >>> Template.QuickReplyButton(text='Unsubscribe from Promos')
-            >>> Template.QuickReplyButton(text='Unsubscribe from All')
+            >>> from pywa.types import NewTemplate
+            >>> NewTemplate.QuickReplyButton(text='Unsubscribe from Promos')
+            >>> NewTemplate.QuickReplyButton(text='Unsubscribe from All')
 
         Attributes:
             text: The text to send when the user taps the button (Up to 25 characters, no variables allowed).
@@ -411,7 +417,7 @@ class Template:
         def to_dict(self, formatting: None = None) -> dict[str, str]:
             return dict(type=self.type.value, text=self.text)
 
-    def to_dict(
+    def get_components(
             self,
             formatting: tuple[str, str] = None
     ) -> tuple[dict[str, str | None] | dict[str, str] | dict[str, str | tuple[dict[str, str], ...]], ...]:
@@ -427,14 +433,16 @@ class Template:
 
 
 @dataclass(frozen=True, slots=True)
-class AuthenticationTemplate:
+class NewAuthenticationTemplate:
     """
     Represents an authentication template.
 
     Example:
 
-        >>> from pywa.types import AuthenticationTemplate as AuthTemp
+        >>> from pywa.types import NewAuthenticationTemplate as AuthTemp
         >>> AuthTemp(
+        ...     name='login_with_otp',
+        ...     language='en_US',
         ...     button=AuthTemp.OTPButton(
         ...         otp_type=AuthTemp.OTPButton.OtpType.ONE_TAP,
         ...         title='Copy Code',
@@ -453,18 +461,21 @@ class AuthenticationTemplate:
         add_security_recommendation: Set to ``True`` if you want the template to include the string, ``"For your security,
          do not share this code"``. Set to ``False`` to exclude the string. Defaults to ``False``.
     """
+    category: NewTemplate.Category = field(default=NewTemplate.Category.AUTHENTICATION, init=False)
+    name: str
+    language: str
     button: OTPButton
     code_expiration_minutes: int | None = None
     add_security_recommendation: bool = False
 
     @dataclass(frozen=True, slots=True)
-    class OTPButton(ButtonABC):
+    class OTPButton(NewButtonABC):
         """
         Represents a button that can be used to send an OTP.
 
         Example for ONE_TAP:
 
-            >>> from pywa.types import AuthenticationTemplate as AuthTemp
+            >>> from pywa.types import NewAuthenticationTemplate as AuthTemp
             >>> AuthTemp.OTPButton(
             ...     otp_type=AuthTemp.OTPButton.OtpType.ONE_TAP,
             ...     title='Copy Code',
@@ -475,7 +486,7 @@ class AuthenticationTemplate:
 
         Example for COPY_CODE:
 
-            >>> from pywa.types import AuthenticationTemplate as AuthTemp
+            >>> from pywa.types import NewAuthenticationTemplate as AuthTemp
             >>> AuthTemp.OTPButton(
             ...     otp_type=AuthTemp.OTPButton.OtpType.COPY_CODE,
             ...     title='Copy Code'
