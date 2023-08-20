@@ -8,4 +8,4 @@ from .others import Contact, User, Reaction, Location, Metadata, ReplyToMessage,
 from .callback import CallbackButton, CallbackSelection, Button, SectionRow, Section, SectionList
 from .message_status import MessageStatus, MessageStatusType, Conversation, ConversationCategory
 from .media import MediaUrlResponse
-from .template import NewTemplate, NewAuthenticationTemplate, TemplateResponse
+from .template import NewTemplate, NewAuthenticationTemplate, TemplateResponse, Template

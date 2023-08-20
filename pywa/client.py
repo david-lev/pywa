@@ -10,12 +10,15 @@ import os
 import requests
 from typing import Callable, Any, Iterable, BinaryIO
 from pywa.api import WhatsAppCloudApi
-from pywa.handlers import Handler, MessageHandler, CallbackButtonHandler, CallbackSelectionHandler, RawUpdateHandler, \
-    MessageStatusHandler
-from pywa.types import Button, SectionList, Message, CallbackButton, CallbackSelection, MessageStatus, Contact, \
-    MediaUrlResponse, ProductsSection, BusinessProfile, Industry, CommerceSettings
-from pywa.types.template import NewTemplate, NewAuthenticationTemplate, TemplateResponse
 from pywa.webhook import Webhook
+from pywa.handlers import (
+    Handler, MessageHandler, CallbackButtonHandler, CallbackSelectionHandler, RawUpdateHandler, MessageStatusHandler
+)
+from pywa.types import (
+    Button, SectionList, Message, CallbackButton, CallbackSelection, MessageStatus, Contact, MediaUrlResponse,
+    ProductsSection, BusinessProfile, Industry, CommerceSettings, NewTemplate, NewAuthenticationTemplate,
+    TemplateResponse, Template
+)
 
 _MISSING = object()
 
@@ -1223,7 +1226,7 @@ class WhatsApp:
     def create_template(
             self,
             template: NewTemplate | NewAuthenticationTemplate,
-            var_format: tuple[str, str] | None = None,
+            placeholder: tuple[str, str] | None = None,
     ) -> TemplateResponse:
         """
         Create a template.
@@ -1263,7 +1266,7 @@ class WhatsApp:
         Args:
             template: The template to create.
              <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/supported-languages>`_).
-            var_format: The variable start & end (optional, default: ``('{', '}')``)).
+            placeholder: The placeholder start & end (optional, default: ``('{', '}')``)).
 
         Returns:
             The template created response. containing the template ID, status and category.
@@ -1275,5 +1278,70 @@ class WhatsApp:
             name=template.name,
             category=template.category.name,
             language=template.language,
-            components=template.get_components(formatting=var_format),
+            components=template.get_components(placeholder=placeholder),
         ))
+
+    def send_template(
+            self,
+            to: str | int,
+            template: Template,
+            reply_to_message_id: str | None = None,
+    ) -> str:
+        """
+        Send a template to a WhatsApp user.
+
+        Example:
+
+            >>> from pywa.types import Template as Temp
+            >>> wa = WhatsApp(...)
+            >>> wa.send_template(
+            ...     to='1234567890',
+            ...         template=Temp(
+            ...         name='buy_new_iphone_x',
+            ...         language='en_US',
+            ...         header=Temp.TextValue(value='15'),
+            ...         body=[
+            ...             Temp.TextValue(value='John Doe'),
+            ...             Temp.TextValue(value='WA_IPHONE_15'),
+            ...             Temp.TextValue(value='15%'),
+            ...         ],
+            ...         buttons=[
+            ...             Temp.UrlButtonValue(value='iphone15'),
+            ...             Temp.QuickReplyButtonData(data='unsubscribe_from_marketing_messages'),
+            ...             Temp.QuickReplyButtonData(data='unsubscribe_from_all_messages'),
+            ...         ],
+            ...     ),
+            ... )
+
+        Args:
+            to: The phone ID of the WhatsApp user.
+            template: The template to send.
+            reply_to_message_id: The message ID to reply to (optional).
+
+        Returns:
+            The message ID of the sent template.
+
+        Raises:
+
+        """
+        is_url = None
+        match type(template.header):
+            case Template.TextValue:
+                pass
+            case Template.Image:
+                is_url, template.header.image = self._resolve_media_param(
+                    media=template.header.image, mime_type="image/jpeg", filename="image.jpg"
+                )
+            case Template.Document:
+                is_url, template.header.document = self._resolve_media_param(
+                    media=template.header.document, mime_type="text/plain", filename="file.pdf"
+                )
+            case Template.Video:
+                is_url, template.header.video = self._resolve_media_param(
+                    media=template.header.video, mime_type="video/mp4", filename="video.mp4"
+                )
+        return self.api.send_template(
+            to=str(to),
+            template=template.to_dict(is_header_url=is_url),
+            reply_to_message_id=reply_to_message_id,
+        )['messages'][0]['id']

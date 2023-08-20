@@ -215,6 +215,16 @@ class UnsupportedMessageType(SendMessageError):
     __error_codes__ = (131051,)
 
 
+class MediaDownloadError(SendMessageError):
+    """Unable to download the media sent by the user."""
+    __error_codes__ = (131052,)
+
+
+class MediaUploadError(SendMessageError):
+    """Unable to upload the media used in the message."""
+    __error_codes__ = (131053,)
+
+
 class RecipientNotInAllowedList(SendMessageError):
     """
     When using test numbers, you can add up to 5 numbers that can receive messages. This error is raised when the
@@ -231,3 +241,49 @@ class InvalidParameter(SendMessageError):
 class MissingRequiredParameter(SendMessageError):
     """You must provide a value for the required parameter."""
     __error_codes__ = (131008,)
+
+
+class TemplateParamCountMismatch(SendMessageError):
+    """The number of variable parameter values included in the request did not match the number of variable parameters
+    defined in the template.."""
+    __error_codes__ = (132000,)
+
+
+class TemplateNotExists(SendMessageError):
+    """The template does not exist in the specified language or the template has not been approved."""
+    __error_codes__ = (132001,)
+
+
+class TemplateTextTooLong(SendMessageError):
+    """The template text is too long."""
+    __error_codes__ = (132005,)
+
+
+class GenericError(SendMessageError):
+    """Generic error."""
+    __error_codes__ = (135000,)
+
+
+class UnknownError(SendMessageError):
+    """Message failed to send due to an unknown error."""
+    __error_codes__ = (131000,)
+
+
+class AccessDenied(SendMessageError):
+    """Permission is either not granted or has been removed."""
+    __error_codes__ = (131005,)
+
+
+class ServiceUnavailable(SendMessageError):
+    """A service is temporarily unavailable."""
+    __error_codes__ = (131016,)
+
+
+class RecipientCannotBeSender(SendMessageError):
+    """Sender and recipient phone number is the same."""
+    __error_codes__ = (131021,)
+
+
+class BusinessPaymentIssue(SendMessageError):
+    """Message failed to send because there were one or more errors related to your payment method."""
+    __error_codes__ = (131042,)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 __all__ = [
+    'Template',
     'NewTemplate',
     'TemplateResponse',
     'NewAuthenticationTemplate',
@@ -9,13 +10,13 @@ __all__ = [
 import abc
 import re
 from dataclasses import dataclass, field
-from typing import Iterable
+from typing import Iterable, BinaryIO
 from pywa import utils
 
 DEFAULT = object()
 
 
-def _extract_examples(
+def _get_examples_from_placeholders(
         string: str,
         start: str = '{',
         end: str = '}'
@@ -25,9 +26,9 @@ def _extract_examples(
 
     Example:
 
-        >>> _extract_examples('Hello, {john}, today is {day}')
+        >>> _get_examples_from_placeholders('Hello, {john}, today is {day}')
         ('Hello, {{0}}, today is {{1}}', ('john', 'day'))
-        >>> _extract_examples('Hello, (john), today is (day)', start='(', end=')')
+        >>> _get_examples_from_placeholders('Hello, (john), today is (day)',start='(',end=')')
 
     Args:
       string: The string to extract the examples from.
@@ -50,8 +51,9 @@ class TemplateResponse(utils.FromDict):
     """
 
     Attributes:
-        id: NewTemplate ID.
-
+        id: the template ID.
+        status: the template status.
+        category: the template category.
     """
     id: str
     status: str
@@ -98,7 +100,7 @@ class NewButtonABC(abc.ABC):
     def type(self) -> TemplateButtonType: ...
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class NewTemplate:
     """
     Represents a new template.
@@ -145,8 +147,8 @@ class NewTemplate:
         - ``Quick Reply``, ``URL``, ``Quick Reply``
         - ``URL``, ``Quick Reply``, ``URL``
 
-    When using the Cloud API to send a template that has multiple quick reply buttons, you can use the index property
-    to designate the order in which buttons appear in the template message.
+    When you send a template that has multiple quick reply buttons, the order in which the buttons appear in the template
+    is the order in which they will appear in the delivered message
     """
     name: str
     category: Category
@@ -168,7 +170,7 @@ class NewTemplate:
         MARKETING = 'MARKETING'
         UTILITY = 'UTILITY'
 
-    @dataclass(frozen=True, slots=True)
+    @dataclass(slots=True)
     class TextHeader(NewTemplateHeaderABC):
         """
         Represents a text header.
@@ -179,14 +181,14 @@ class NewTemplate:
             >>> NewTemplate.TextHeader(text='Hello, {John}!')
     
         Attributes:
-            text: Text to send with the header (Up to 60 characters. Supports 1 variable)
+            text: Text to send with the header (Up to 60 characters. Supports 1 placeholder).
         """
         type: TemplateComponentType = field(default=TemplateComponentType.HEADER, init=False)
         format: TemplateHeaderFormatType = field(default=TemplateHeaderFormatType.TEXT, init=False)
         text: str
 
-        def to_dict(self, formatting: tuple[str, str] = None) -> dict[str, str | None]:
-            formatted_text, examples = _extract_examples(self.text, *(formatting if formatting else ()))
+        def to_dict(self, placeholder: tuple[str, str] = None) -> dict[str, str | None]:
+            formatted_text, examples = _get_examples_from_placeholders(self.text, *(placeholder if placeholder else ()))
             return dict(
                 type=self.type.value,
                 format=self.format.value,
@@ -194,7 +196,7 @@ class NewTemplate:
                 **(dict(example=dict(header_text=examples)) if examples else {})
             )
 
-    @dataclass(frozen=True, slots=True)
+    @dataclass(slots=True)
     class ImageHeader(NewTemplateHeaderABC):
         """
         Represents an image header.
@@ -218,7 +220,7 @@ class NewTemplate:
                 example=dict(header_handle=tuple(self.examples))
             )
 
-    @dataclass(frozen=True, slots=True)
+    @dataclass(slots=True)
     class VideoHeader(NewTemplateHeaderABC):
         """
         Represents a video header.
@@ -242,7 +244,7 @@ class NewTemplate:
                 example=dict(header_handle=tuple(self.examples))
             )
 
-    @dataclass(frozen=True, slots=True)
+    @dataclass(slots=True)
     class DocumentHeader(NewTemplateHeaderABC):
         """
         Represents a document header.
@@ -266,7 +268,7 @@ class NewTemplate:
                 example=dict(header_handle=tuple(self.examples))
             )
 
-    @dataclass(frozen=True, slots=True)
+    @dataclass(slots=True)
     class LocationHeader(NewTemplateHeaderABC):
         """
         Location headers appear as generic maps at the top of the template and are useful for order tracking, delivery
@@ -288,7 +290,7 @@ class NewTemplate:
                 format=self.format.value,
             )
 
-    @dataclass(frozen=True, slots=True)
+    @dataclass(slots=True)
     class Body(NewTemplateComponentABC):
         """
         Represents a template body.
@@ -302,20 +304,20 @@ class NewTemplate:
             ... )
     
         Attributes:
-            text: Text to send with the body (Up to 1024 characters. Supports multiple variables).
+            text: Text to send with the body (Up to 1024 characters. Supports multiple placeholders).
         """
         type: TemplateComponentType = field(default=TemplateComponentType.BODY, init=False)
         text: str
 
-        def to_dict(self, formatting: tuple[str, str] = None) -> dict[str, str | None]:
-            formatted_text, examples = _extract_examples(self.text, *(formatting if formatting else ()))
+        def to_dict(self, placeholder: tuple[str, str] = None) -> dict[str, str | None]:
+            formatted_text, examples = _get_examples_from_placeholders(self.text, *(placeholder if placeholder else ()))
             return dict(
                 type=self.type.value,
                 text=formatted_text,
                 **(dict(example=dict(body_text=(examples,)) if examples else {}))
             )
 
-    @dataclass(frozen=True, slots=True)
+    @dataclass(slots=True)
     class Footer(NewTemplateComponentABC):
         """
         Represents a template footer.
@@ -325,7 +327,7 @@ class NewTemplate:
             >>> NewTemplate.Footer(text='Use the link below to log in to your account.')
     
         Attributes:
-            text: Text to send with the footer (Up to 60 characters, no variables allowed).
+            text: Text to send with the footer (Up to 60 characters, no placeholders allowed).
         """
         type: TemplateComponentType = field(default=TemplateComponentType.FOOTER, init=False)
         text: str
@@ -336,7 +338,7 @@ class NewTemplate:
                 text=self.text
             )
 
-    @dataclass(frozen=True, slots=True)
+    @dataclass(slots=True)
     class PhoneNumberButton(NewButtonABC):
         """
         Phone number buttons call the specified business phone number when tapped by the app user.
@@ -347,18 +349,18 @@ class NewTemplate:
             >>> NewTemplate.PhoneNumberButton(title='Call Us', phone_number='12125552368')
 
         Attributes:
-            title: Button text (Up to 25 characters, no variables allowed).
+            title: Button text (Up to 25 characters, no placeholders allowed).
             phone_number: Alphanumeric string. Business phone number to be (display phone number)
-             called when the user taps the button (Up to 20 characters, no variables allowed).
+             called when the user taps the button (Up to 20 characters, no placeholders allowed).
         """
         type: TemplateButtonType = field(default=TemplateButtonType.PHONE_NUMBER, init=False)
         title: str
         phone_number: int | str
 
-        def to_dict(self, formatting: None = None) -> dict[str, str]:
+        def to_dict(self, placeholder: None = None) -> dict[str, str]:
             return dict(type=self.type.value, text=self.title, phone_number=str(self.phone_number))
 
-    @dataclass(frozen=True, slots=True)
+    @dataclass(slots=True)
     class UrlButton(NewButtonABC):
         """
         URL buttons load the specified URL in the device's default web browser when tapped by the app user.
@@ -373,16 +375,16 @@ class NewTemplate:
 
         Attributes:
             title: Button text (Up to 25 characters, supports 1 variable).
-            url: URL to be loaded when the user taps the button (Up to 2000 characters, supports 1 variable
-             appended to the end of the URL).
+            url: URL to be loaded when the user taps the button (Up to 2000 characters, supports 1 placeholder, which
+             be appended to the end of the URL).
         """
         type: TemplateComponentType = field(default=TemplateButtonType.URL, init=False)
         title: str
         url: str
 
-        def to_dict(self, formatting: tuple[str, str] = None) -> dict[str, str]:
-            formatted_title, title_examples = _extract_examples(self.title, *(formatting if formatting else ()))
-            formatted_url, url_examples = _extract_examples(self.url, *(formatting if formatting else ()))
+        def to_dict(self, placeholder: tuple[str, str] = None) -> dict[str, str]:
+            formatted_title, title_examples = _get_examples_from_placeholders(self.title, *(placeholder if placeholder else ()))
+            formatted_url, url_examples = _get_examples_from_placeholders(self.url, *(placeholder if placeholder else ()))
             examples = title_examples + url_examples
             return dict(
                 type=self.type.value,
@@ -391,12 +393,14 @@ class NewTemplate:
                 **(dict(example=examples if examples else {}))
             )
 
-    @dataclass(frozen=True, slots=True)
+    @dataclass(slots=True)
     class QuickReplyButton(NewButtonABC):
         """
         Quick reply buttons are custom text-only buttons that immediately message you with the specified text string when
         tapped by the app user. A common use case-case is a button that allows your customer to easily opt-out of any
         marketing messages.
+
+            - You will provide the callback data when you send the template.
 
         Templates are limited to 10 quick reply buttons. If using quick reply buttons with other buttons, buttons must be
         organized into two groups: quick reply buttons and non-quick reply buttons. If grouped incorrectly, the API will
@@ -409,30 +413,30 @@ class NewTemplate:
             >>> NewTemplate.QuickReplyButton(text='Unsubscribe from All')
 
         Attributes:
-            text: The text to send when the user taps the button (Up to 25 characters, no variables allowed).
+            text: The text to send when the user taps the button (Up to 25 characters, no placeholders allowed).
         """
         type: TemplateComponentType = field(default=TemplateButtonType.QUICK_REPLY, init=False)
         text: str
 
-        def to_dict(self, formatting: None = None) -> dict[str, str]:
+        def to_dict(self, placeholder: None = None) -> dict[str, str]:
             return dict(type=self.type.value, text=self.text)
 
     def get_components(
             self,
-            formatting: tuple[str, str] = None
+            placeholder: tuple[str, str] = None
     ) -> tuple[dict[str, str | None] | dict[str, str] | dict[str, str | tuple[dict[str, str], ...]], ...]:
         return tuple(component for component in (
-            self.body.to_dict(formatting),
-            self.header.to_dict(formatting) if self.header else None,
+            self.body.to_dict(placeholder),
+            self.header.to_dict(placeholder) if self.header else None,
             self.footer.to_dict() if self.footer else None,
             dict(
                 type=TemplateComponentType.BUTTONS.value,
-                buttons=tuple(button.to_dict(formatting) for button in self.buttons)
+                buttons=tuple(button.to_dict(placeholder) for button in self.buttons)
             ) if self.buttons else None
         ) if component is not None)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class NewAuthenticationTemplate:
     """
     Represents an authentication template.
@@ -540,3 +544,282 @@ class NewAuthenticationTemplate:
             if self.code_expiration_minutes else None,
         ) if component is not None)
 
+
+class ParamType(utils.StrEnum):
+    TEXT = 'text'
+    CURRENCY = 'currency'
+    DATE_TIME = 'date_time'
+    DOCUMENT = 'document'
+    IMAGE = 'image'
+    VIDEO = 'video'
+    LOCATION = 'location'
+    BUTTON = 'button'
+
+
+class ButtonSubType(utils.StrEnum):
+    QUICK_REPLY = 'quick_reply'
+    URL = 'url'
+
+
+class ComponentABC(abc.ABC):
+    @property
+    @abc.abstractmethod
+    def type(self) -> ParamType: ...
+
+
+@dataclass(slots=True)
+class Template:
+    """
+    The template to send.
+
+    The template message is basically a message that contains the values of the template placeholders.
+
+    If in the template created with body that contains 3 variables, then the message must contain 3 values for the
+    placeholders.
+
+    >>> from pywa.types import Template
+    >>> Template(
+    ...     name='buy_new_iphone_x',
+    ...     language='en_US',
+    ...     header=TextValue(value='15'),
+    ...     body=[
+    ...         Template.TextValue(value='John Doe'),
+    ...         Template.TextValue(value='WA_IPHONE_15'),
+    ...         Template.TextValue(value='15%'),
+    ...     ],
+    ...     buttons=[
+    ...         Template.UrlButtonValue(value='iphone15'),
+    ...         Template.QuickReplyButtonData(data='unsubscribe_from_marketing_messages'),
+    ...         Template.QuickReplyButtonData(data='unsubscribe_from_all_messages'),
+    ...     ],
+    ... )
+
+    - Authentication templates required the code in the body to be sent as a ``TextValue`` and with ``OTPButtonCode``. other
+        components are not allowed.
+
+    Attributes:
+        name: The name of the template.
+        language: The language of the template (See `Template language and locale code
+            <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/supported-languages>`_).
+        body: The body of the template, which can include one or more text variables.
+        header: The header of the template (required base on the template you are sending).
+        buttons: The buttons to send with the template (required base on the template you are sending).
+    """
+    name: str
+    language: str
+    body: Iterable[TextValue | Currency | DateTime]
+    header: TextValue | Document | Image | Video | Location | None = None
+    buttons: Iterable[QuickReplyButtonData | UrlButtonValue] | OTPButtonCode | None = None
+
+    def to_dict(self, is_header_url: bool = False) -> dict[str, str | dict[str, str | tuple[dict[str, str], ...]]]:
+        return dict(
+            name=self.name,
+            language=dict(code=self.language),
+            components=tuple(comp for comp in (
+                dict(
+                    type=TemplateComponentType.BODY.value,
+                    parameters=tuple(component.to_dict() for component in self.body)
+                ),
+                dict(
+                    type=TemplateComponentType.HEADER.value,
+                    parameters=(self.header.to_dict(is_header_url),)
+                ) if self.header else None,
+                *((dict(
+                    type=b.type.value,
+                    sub_type=b.sub_type.value,
+                    index=idx,
+                    parameters=(b.to_dict(),)
+                ) for idx, b in enumerate(self.buttons)) if self.buttons is not None else ())
+            ) if comp is not None)
+        )
+
+    @dataclass(slots=True)
+    class TextValue(ComponentABC):
+        """
+        Represents a value to variable in the template.
+
+        Example:
+            >>> from pywa.types import Template
+            >>> Template.TextValue(var='John Doe')  # The template was created with 'Hello, {John}!'
+
+        Attributes:
+            value: The value to assign to the variable in the template.
+        """
+        type: ParamType = field(default=ParamType.TEXT, init=False)
+        value: str
+
+        def to_dict(self, is_url: None = None) -> dict[str, str]:
+            return dict(type=self.type.value, text=self.value)
+
+    @dataclass(slots=True)
+    class Currency(ComponentABC):
+        """
+        Represents a currency variable.
+
+        Attributes:
+            fallback_value: Default text if localization fails.
+            code: ISO 4217 currency code (e.g. USD, EUR, etc.).
+            amount_1000: Amount multiplied by 1000.
+        """
+        type: ParamType = field(default=ParamType.CURRENCY, init=False)
+        fallback_value: str
+        code: str
+        amount_1000: int
+
+        def to_dict(self) -> dict[str, str]:
+            return dict(
+                type=self.type.value,
+                currency=dict(
+                    fallback_value=self.fallback_value,
+                    code=self.code,
+                    amount_1000=self.amount_1000
+                )
+            )
+
+    @dataclass(slots=True)
+    class DateTime(ComponentABC):
+        """
+        Represents a date time variable.
+
+        Attributes:
+            fallback_value: Default text if localization fails.
+        """
+        type: ParamType = field(default=ParamType.DATE_TIME, init=False)
+        fallback_value: str
+
+        def to_dict(self) -> dict[str, str]:
+            return dict(
+                type=self.type.value,
+                date_time=dict(
+                    fallback_value=self.fallback_value,
+                )
+            )
+
+    @dataclass(slots=True)
+    class Document(ComponentABC):
+        """
+        Represents a document.
+
+        Attributes:
+            document: The document to send (PDF only. either a media ID, URL, file path, bytes, or an open file object).
+        """
+        type: ParamType = field(default=ParamType.DOCUMENT, init=False)
+        document: str | bytes | BinaryIO
+
+        def to_dict(self, is_url: bool) -> dict[str, str]:
+            return dict(type=self.type.value, document=dict(url=self.document) if is_url else dict(id=self.document))
+
+    @dataclass(slots=True)
+    class Image(ComponentABC):
+        """
+        Represents an image.
+
+        Attributes:
+            image: The image to send (either a media ID, URL, file path, bytes, or an open file object).
+        """
+        type: ParamType = field(default=ParamType.IMAGE, init=False)
+        image: str | bytes | BinaryIO
+
+        def to_dict(self, is_url: bool) -> dict[str, str]:
+            return dict(type=self.type.value, image=dict(url=self.image) if is_url else dict(id=self.image))
+
+    @dataclass(slots=True)
+    class Video(ComponentABC):
+        """
+        Represents a video.
+
+        Attributes:
+            video: The video to send (either a media ID, URL, file path, bytes, or an open file object).
+        """
+        type: ParamType = field(default=ParamType.VIDEO, init=False)
+        video: str | bytes | BinaryIO
+
+        def to_dict(self, is_url: bool) -> dict[str, str]:
+            return dict(type=self.type.value, video=dict(url=self.video) if is_url else dict(id=self.video))
+
+    @dataclass(slots=True)
+    class Location(ComponentABC):
+        """
+        Represents a location.
+
+        Attributes:
+            latitude: The latitude of the location.
+            longitude: The longitude of the location.
+            name: The name of the location.
+            address: The address of the location.
+        """
+        type: ParamType = field(default=ParamType.LOCATION, init=False)
+        latitude: float
+        longitude: float
+        name: str | None = None
+        address: str | None = None
+
+        def to_dict(self) -> dict[str, str]:
+            return dict(
+                type=self.type.value,
+                location=dict(
+                    latitude=self.latitude,
+                    longitude=self.longitude,
+                    **(dict(name=self.name) if self.name else {}),
+                    **(dict(address=self.address) if self.address else {})
+                )
+            )
+
+    @dataclass(slots=True)
+    class QuickReplyButtonData(ComponentABC):
+        """
+        Represents a quick reply button.
+
+        Attributes:
+            data: The data to send when the user taps the button (you can listen for this data in the webhook).
+        """
+        type: ParamType = field(default=ParamType.BUTTON, init=False)
+        sub_type: ButtonSubType = field(default=ButtonSubType.QUICK_REPLY, init=False)
+        data: str
+
+        def to_dict(self) -> dict[str, str]:
+            return dict(type='payload', payload=self.data)
+
+    @dataclass(slots=True)
+    class UrlButtonValue(ComponentABC):
+        """
+        Represents a URL button variable.
+
+        Example:
+            >>> from pywa.types import Template
+            >>> Template.UrlButtonValue(value='COUPON123')  # The template was created with 'https://example.com/shop/{COUPON12}'
+
+        Attributes:
+            value: The value to assign to the variable in the template (appended to the end of the URL).
+        """
+        type: ParamType = field(default=ParamType.BUTTON, init=False)
+        sub_type: ButtonSubType = field(default=ButtonSubType.URL, init=False)
+        value: str
+
+        def to_dict(self) -> dict[str, str]:
+            return dict(type='text', text=self.value)
+
+    @dataclass(slots=True)
+    class OTPButtonCode(ComponentABC):
+        """
+        Represents an OTP button variable.
+
+        Example:
+            >>> from pywa.types import Template
+            >>> Template.OTPButtonCode(value='123456')
+
+        Attributes:
+            code: The code to copy or autofill when the user taps the button.
+        """
+        type: ParamType = field(default=ParamType.BUTTON, init=False)
+        sub_type: ButtonSubType = field(default=ButtonSubType.URL, init=False)
+        code: str
+
+        def to_dict(self) -> dict[str, str]:
+            return dict(type='text', text=self.code)
+
+        def __iter__(self):
+            yield self
+
+        def __next__(self):
+            return self

@@ -612,3 +612,40 @@ class WhatsAppCloudApi:
                 "components": components
             }
         )
+
+    def send_template(
+            self,
+            to: str,
+            template: dict,
+            reply_to_message_id: str | None = None
+    ) -> dict[str, dict | list]:
+        """
+        Send a template to a WhatsApp user.
+
+        Args:
+            to: The WhatsApp ID of the recipient.
+            template: The template to send.
+            reply_to_message_id: The ID of the message to reply to.
+
+        Returns example::
+
+            {
+                'messaging_product': 'whatsapp',
+                'contacts': [{'input': '1234567890', 'wa_id': '1234567890'}],
+                'messages': [{'id': 'wamid.XXXXXXXXXXXXXXXX=='}]
+            }
+
+        """
+        data = {
+            **self._common_keys,
+            "to": to,
+            "type": "template",
+            "template": template
+        }
+        if reply_to_message_id:
+            data["context"] = {"message_id": reply_to_message_id}
+        return self._make_request(
+            method="POST",
+            endpoint=f"/{self.phone_id}/messages",
+            json=data
+        )
