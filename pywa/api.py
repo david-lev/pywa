@@ -575,3 +575,43 @@ class WhatsAppCloudApi:
             endpoint=f"/{self.phone_id}/whatsapp_commerce_settings",
             params=data
         )
+
+    def create_template(
+            self,
+            business_account_id: str,
+            name: str,
+            category: str,
+            allow_category_change: bool,
+            language: str,
+            components: tuple[dict[str, str | None] | dict[str, str] | dict[str, str | tuple[dict[str, str], ...]], ...]
+    ) -> dict[str, str]:
+        """
+        Create a message template.
+
+        Args:
+            business_account_id: The ID of the business account.
+            name: The name of the template.
+            category: The category of the template.
+            allow_category_change: Whether the category can be changed.
+            language: The language code of the template.
+            components: The components of the template.
+
+        Return example::
+
+            {
+                "id": "594425479261596",
+                "status": "PENDING",
+                "category": "MARKETING"
+            }
+        """
+        return self._make_request(
+            method="POST",
+            endpoint=f"/{business_account_id}/message_templates",
+            json={
+                "name": name,
+                "category": category,
+                "allow_category_change": allow_category_change,
+                "language": language,
+                "components": components
+            }
+        )

@@ -14,6 +14,7 @@ from pywa.handlers import Handler, MessageHandler, CallbackButtonHandler, Callba
     MessageStatusHandler
 from pywa.types import Button, SectionList, Message, CallbackButton, CallbackSelection, MessageStatus, Contact, \
     MediaUrlResponse, ProductsSection, BusinessProfile, Industry, CommerceSettings
+from pywa.types.template import Template, AuthenticationTemplate, TemplateResponse
 from pywa.webhook import Webhook
 
 _MISSING = object()
@@ -31,6 +32,7 @@ class WhatsApp:
             webhook_endpoint: str = "/",
             verify_token: str | None = None,
             filter_updates: bool = True,
+            business_account_id: str | int | None = None,
     ) -> None:
         """
         Initialize the WhatsApp client.
@@ -69,8 +71,11 @@ class WhatsApp:
             verify_token: The verify token of the registered webhook (Required when ``server`` is provided).
             filter_updates: Whether to filter out updates that not sended to this phone number (default: ``True``, does
                 not apply to raw updates).
+            business_account_id: The business account ID of the WhatsApp account (optional, required for some API
+                methods).
         """
         self.phone_id = str(phone_id)
+        self.business_account_id = str(business_account_id) if business_account_id is not None else None
         self.api = WhatsAppCloudApi(
             phone_id=self.phone_id,
             token=token,
@@ -1206,3 +1211,49 @@ class WhatsApp:
         if not data:
             raise ValueError('At least one argument must be provided')
         return self.api.update_commerce_settings(data)['success']
+
+    def _validate_business_account_id_provided(self):
+        """Internal method to validate that the business account ID was provided."""
+        if self.business_account_id is None:
+            raise ValueError(
+                "You must provide the business account ID when using this method. "
+                "You can provide it when initializing the client or by setting the business_account_id attribute."
+            )
+
+    def create_template(
+            self,
+            name: str,
+            category: Template.Category,
+            template: Template | AuthenticationTemplate,
+            language: str,
+            allow_category_change: bool = False,
+    ) -> TemplateResponse:
+        """
+        Create a template.
+
+        Args:
+            name: The name of the template (up to 512 characters).
+            category: The category of the template.
+            template: The template.
+            language: The language of the template (See `Template language and locale code
+             <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/supported-languages>`_).
+            allow_category_change: Set to True to allow WhatsApp to assign a category based on their `template guidelines
+             <https://developers.facebook.com/docs/whatsapp/updates-to-pricing/new-template-guidelines>`_. This can
+             prevent your template from being rejected for miscategorization. (optional)
+             (optional).
+
+        Returns:
+            The template created response. containing the template ID, status and category.
+
+        """
+        self._validate_business_account_id_provided()
+        return TemplateResponse(**self.api.create_template(
+            business_account_id=self.business_account_id,
+            name=name,
+            category=category.value,
+            allow_category_change=allow_category_change,
+            components=template.to_dict(),
+            language=language,
+        ))
+
+
