@@ -1231,11 +1231,14 @@ class WhatsApp:
         `\`Create Templates\` on developers.facebook.com
         <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates>`_.
 
+        - To send a template, use :py:func:`~pywa.client.WhatsApp.send_template`.
+
         ATTENTION: In case of an errors, WhatsApp does not return a proper error message, instead, it returns a message
         of `invalid parameter` with error code of 100. You need to pay attention to the following:
-            - The template name must be unique.
-            - The limitiations of the characters in every field (all documented).
-            - The order of the buttons.
+
+        - The template name must be unique.
+        - The limitiations of the characters in every field (all documented).
+        - The order of the buttons.
 
 
         Templates can be created and managed in the
@@ -1307,6 +1310,8 @@ class WhatsApp:
     ) -> str:
         """
         Send a template to a WhatsApp user.
+
+        - To create a template, use :py:func:`~pywa.client.WhatsApp.create_template`.
 
         Example:
 

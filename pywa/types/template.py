@@ -538,7 +538,7 @@ class NewTemplate:
             package_name: Android package name of your app. Required if ``otp_type`` is ``OtpType.ONE_TAP``.
             signature_hash: Your app signing key hash. See `App Signing Key Hash
              <https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates#app-signing-key-hash>`_
-                for more information. Required if ``otp_type`` is ``OtpType.ONE_TAP``.
+             for more information. Required if ``otp_type`` is ``OtpType.ONE_TAP``.
         """
         type: ComponentType = field(default=ButtonType.OTP, init=False)
         otp_type: OtpType

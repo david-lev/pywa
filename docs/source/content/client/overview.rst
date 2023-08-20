@@ -30,6 +30,7 @@ The available methods are:
        :meth:`~WhatsApp.send_location`,
        :meth:`~WhatsApp.send_contact`,
        :meth:`~WhatsApp.send_sticker`,
+       :meth:`~WhatsApp.send_template`,
        :meth:`~WhatsApp.send_catalog`,
        :meth:`~WhatsApp.send_product`,
        :meth:`~WhatsApp.send_products`,
@@ -41,7 +42,8 @@ The available methods are:
        :meth:`~WhatsApp.download_media`,
        :meth:`~WhatsApp.get_media_url`
    * - Business profile
-     - :meth:`~WhatsApp.get_business_profile`,
+     - :meth:`~WhatsApp.create_template`,
+       :meth:`~WhatsApp.get_business_profile`,
        :meth:`~WhatsApp.update_business_profile`
    * - Commerce
      - :meth:`~WhatsApp.get_commerce_settings`,
