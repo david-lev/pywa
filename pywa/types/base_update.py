@@ -40,11 +40,20 @@ class BaseUpdate(ABC):
 
     @property
     def sender(self) -> str:
+        """
+        The WhatsApp ID of the sender.
+            - Shortcut for ``.from_user.wa_id``.
+        """
         return self.from_user.wa_id
 
     @property
     def message_id_to_reply(self) -> str:
-        """The ID of the message to reply to."""
+        """
+        The ID of the message to reply to.
+
+        If you want to ``wa.send_x`` with ``reply_to_message_id`` in order to reply to a message, use this property
+        instead of ``id`` to prevent errors.
+        """
         return self.id
 
     def reply_text(

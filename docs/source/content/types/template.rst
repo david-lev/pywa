@@ -1,20 +1,19 @@
-Enums
-=====
+Template
+========
 
 .. currentmodule:: pywa.types.template
 
 .. autoclass:: NewTemplate()
-    :members:
-    :undoc-members:
+    :members: Category, Text, Image, Video, Document, Location, Body, AuthBody, Footer, PhoneNumberButton, UrlButton,
+                QuickReplyButton, OTPButton, MPMButton, CatalogButton
 
 --------------------
 
 .. autoclass:: Template()
-    :members:
-    :undoc-members:
+    :members: TextValue, Currency, DateTime, Image, Video, Document, Location, QuickReplyButtonData, UrlButtonValue,
+                OTPButtonCode, MPMButton, CatalogButton
 
 --------------------
 
 .. autoclass:: TemplateResponse()
-    :members:
-    :undoc-members:
+

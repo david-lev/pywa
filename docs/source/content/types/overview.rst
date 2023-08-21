@@ -7,4 +7,3 @@
     template
     update_fields
     others
-    enums

@@ -764,7 +764,7 @@ class MessageStatusFilter(_BaseUpdateFilter):
         Filter for status updates of messages that have failed to send with the given error/s.
 
         Args:
-            *errors: The exceptions from `pywa.errors` or error codes to match.
+            *errors: The exceptions from :mod:`pywa.errors` or error codes to match.
 
         >>> message_status.failed_with(ReEngagementMessage)
         >>> message_status.failed_with(131051)

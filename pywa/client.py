@@ -1253,7 +1253,7 @@ class WhatsApp:
             ...         name='buy_new_iphone_x',
             ...         category=NewTemp.Category.MARKETING,
             ...         language='en_US',
-            ...         header=NewTemp.TextHeader('The New iPhone {15} is here!'),
+            ...         header=NewTemp.Text('The New iPhone {15} is here!'),
             ...         body=NewTemp.Body('Buy now and use the code {WA_IPHONE_15} to get {15%} off!'),
             ...         footer=NewTemp.Footer('Powered by PyWa'),
             ...         buttons=[

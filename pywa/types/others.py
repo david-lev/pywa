@@ -35,7 +35,25 @@ class User:
 
 
 class MessageType(utils.StrEnum):
-    """Message types."""
+    """
+    Message types.
+
+    Attributes:
+        AUDIO: An audio message.
+        DOCUMENT: A document message.
+        TEXT: A text message.
+        IMAGE: An image message.
+        STICKER: A sticker message.
+        VIDEO: A video message.
+        REACTION: A reaction to a message.
+        LOCATION: A location message.
+        CONTACTS: A contacts message.
+        INTERACTIVE: An interactive message (callback).
+        ORDER: An order message.
+        SYSTEM: A system message.
+        UNKNOWN: An unknown message.
+        UNSUPPORTED: An unsupported message.
+    """
     AUDIO = "audio"
     DOCUMENT = "document"
     TEXT = "text"
@@ -406,6 +424,30 @@ class ProductsSection:
 
 
 class Industry(utils.StrEnum):
+    """
+    Represents the industry of a business.
+
+    Attributes:
+        UNDEFINED: Undefined.
+        OTHER: Other.
+        AUTO: Automotive.
+        BEAUTY: Beauty.
+        APPAREL: Apparel.
+        EDU: Education.
+        ENTERTAIN: Entertainment.
+        EVENT_PLAN: Event planning.
+        FINANCE: Finance.
+        GROCERY: Grocery store.
+        GOVT: Government.
+        HOTEL: Hotel.
+        HEALTH: Health.
+        NONPROFIT: Nonprofit.
+        PROF_SERVICES: Professional services.
+        RETAIL: Retail.
+        TRAVEL: Travel.
+        RESTAURANT: Restaurant.
+        NOT_A_BIZ: Not a business.
+    """
     UNDEFINED = "UNDEFINED"
     OTHER = "OTHER"
     AUTO = "AUTO"

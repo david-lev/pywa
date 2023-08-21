@@ -33,7 +33,7 @@ class MediaBase(ABC, utils.FromDict):
 
     @property
     def extension(self) -> str | None:
-        """Gets the extension of the media (with dot. eg: .jpg, .mp4, ...)"""
+        """Gets the extension of the media (with dot.)"""
         return mimetypes.guess_extension(self.mime_type)
 
     def download(

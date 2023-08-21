@@ -4,28 +4,23 @@ Media
 .. currentmodule:: pywa.types.media
 
 .. autoclass:: Image()
-    :members:
 
 .. autoclass:: Video()
-    :members:
 
 .. autoclass:: Audio()
-    :members:
 
 .. autoclass:: Document()
-    :members:
 
 .. autoclass:: Sticker()
-    :members:
 
 --------------------------------
 
-Every media type has the following properties and methods:
+**Every media type has the following properties and methods:**
 
-.. autoclass:: MediaBase()
-    :members: extension, get_media_url, download
+.. autoproperty:: MediaBase.extension
+.. automethod:: MediaBase.get_media_url
+.. automethod:: MediaBase.download
 
 ----------------
 
 .. autoclass:: MediaUrlResponse()
-    :members:

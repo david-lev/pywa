@@ -12,7 +12,15 @@ if TYPE_CHECKING:
 
 
 class MessageStatusType(utils.StrEnum):
-    """Message status type."""
+    """
+    Message status type.
+
+    Attributes:
+        SENT: The message was sent.
+        DELIVERED: The message was delivered.
+        READ: The message was read.
+        FAILED: The message failed to send (you can access the error with ``.error`` attribute).
+    """
     SENT = 'sent'
     DELIVERED = 'delivered'
     READ = 'read'
@@ -24,7 +32,17 @@ class MessageStatusType(utils.StrEnum):
 
 
 class ConversationCategory(utils.StrEnum):
-    """Conversation category."""
+    """
+    Conversation category.
+
+    Attributes:
+        AUTHENTICATION: The conversation is related to authentication.
+        MARKETING: The conversation is related to marketing.
+        UTILITY: The conversation is related to utility.
+        SERVICE: The conversation is related to service.
+        REFERRAL_CONVERSION: The conversation is related to referral conversion.
+        UNKNOWN: The conversation category is unknown.
+    """
     AUTHENTICATION = 'authentication'
     MARKETING = 'marketing'
     UTILITY = 'utility'

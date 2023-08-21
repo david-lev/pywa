@@ -8,9 +8,11 @@ __all__ = [
 
 import abc
 import re
+import warnings
 from dataclasses import dataclass, field
 from typing import Iterable, BinaryIO
 from pywa import utils
+from .others import ProductsSection
 
 DEFAULT = object()
 
@@ -26,7 +28,7 @@ def _get_examples_from_placeholders(
     Example:
 
         >>> _get_examples_from_placeholders('Hello, {john}, today is {day}')
-        ('Hello, {{0}}, today is {{1}}', ('john', 'day'))
+        ('Hello, {{1}}, today is {{2}}', ('john', 'day'))
         >>> _get_examples_from_placeholders('Hello, (john), today is (day)',start='(',end=')')
 
     Args:
@@ -79,6 +81,8 @@ class ButtonType(utils.StrEnum):
     URL = 'URL'
     QUICK_REPLY = 'QUICK_REPLY'
     OTP = 'OTP'
+    MPM = 'MPM'
+    CATALOG = 'CATALOG'
 
 
 class NewTemplateComponentABC(abc.ABC):
@@ -97,6 +101,9 @@ class NewButtonABC(abc.ABC):
     @property
     @abc.abstractmethod
     def type(self) -> ButtonType: ...
+
+    @abc.abstractmethod
+    def to_dict(self, placeholder: tuple[str, str] = None) -> dict[str, str | None]: ...
 
 
 @dataclass(slots=True)
@@ -123,7 +130,7 @@ class NewTemplate:
         ...     name='buy_new_iphone_x',
         ...     category=NewTemp.Category.MARKETING,
         ...     language='en_US',
-        ...     header=NewTemp.TextHeader('The New iPhone {15} is here!'),
+        ...     header=NewTemp.Text('The New iPhone {15} is here!'),
         ...     body=NewTemp.Body('Hello {John}! Buy now and use the code {WA_IPHONE_15} to get {15%} off!'),
         ...     footer=NewTemp.Footer('Powered by PyWa'),
         ...     buttons=[
@@ -159,13 +166,13 @@ class NewTemplate:
     raised when submitting the template.
 
     Examples of valid groupings:
-        - ``Quick Reply``, ``Quick Reply``
-        - ``Quick Reply``, ``Quick Reply``, ``URL``, ``Phone``
-        - ``URL``, ``Phone``, ``Quick Reply``, ``Quick Reply``
+        - [``QuickReplyButton``, ``QuickReplyButton``]
+        - [``QuickReplyButton``, ``QuickReplyButton``, ``UrlButton``, ``PhoneNumberButton``]
+        - [``UrlButton``, ``PhoneNumberButton``, ``QuickReplyButton``, ``QuickReplyButton``]
 
     Examples of invalid groupings:
-        - ``Quick Reply``, ``URL``, ``Quick Reply``
-        - ``URL``, ``Quick Reply``, ``URL``
+        - [``QuickReplyButton``, ``UrlButton``, ``QuickReplyButton``]
+        - [``UrlButton``, ``QuickReplyButton``, ``UrlButton``]
 
     When you send a template that has multiple quick reply buttons, the order in which the buttons appear in the template
     is the order in which they will appear in the delivered message
@@ -174,9 +181,9 @@ class NewTemplate:
     category: Category
     language: str
     body: Body | AuthBody
-    header: TextHeader | ImageHeader | VideoHeader | DocumentHeader | LocationHeader | None = None
+    header: Text | Image | Video | Document | Location | None = None
     footer: Footer | None = None
-    buttons: Iterable[PhoneNumberButton | UrlButton | QuickReplyButton] | OTPButton | None = None
+    buttons: Iterable[PhoneNumberButton | UrlButton | QuickReplyButton | MPMButton | CatalogButton] | OTPButton | None = None
 
     def __post_init__(self):
         if self.category == self.Category.AUTHENTICATION and not (
@@ -220,20 +227,25 @@ class NewTemplate:
         `\`Template Categorization\` on
         developers.facebook.com
         <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#categories>`_
+
+        Attributes:
+            AUTHENTICATION: Authentication templates are used to send one-time passwords (OTPs) or codes to app users.
+            MARKETING: Marketing templates are used to send promotional messages to app users.
+            UTILITY: Utility templates are used to send non-promotional messages to app users.
         """
         AUTHENTICATION = 'AUTHENTICATION'
         MARKETING = 'MARKETING'
         UTILITY = 'UTILITY'
 
     @dataclass(slots=True)
-    class TextHeader(NewTemplateHeaderABC):
+    class Text(NewTemplateHeaderABC):
         """
         Represents a text header.
     
         Example:
     
             >>> from pywa.types import NewTemplate
-            >>> NewTemplate.TextHeader(text='Hello, {John}!')
+            >>> NewTemplate.Text(text='Hello, {John}!')
     
         Attributes:
             text: Text to send with the header (Up to 60 characters. Supports 1 placeholder).
@@ -252,79 +264,79 @@ class NewTemplate:
             )
 
     @dataclass(slots=True)
-    class ImageHeader(NewTemplateHeaderABC):
+    class Image(NewTemplateHeaderABC):
         """
         Represents an image header.
     
         Example:
             >>> from pywa.types.template import NewTemplate
-            >>> NewTemplate.ImageHeader(examples=["2:c2FtcGxl..."])
+            >>> NewTemplate.Image(examples=["2:c2FtcGxl..."])
     
         Attributes:
-            examples: List of image handles (Use the `Resumable Upload API
-             <https://developers.facebook.com/docs/graph-api/guides/upload>`_ to upload the images)
+            example: An image handles (Use the `Resumable Upload API
+             <https://developers.facebook.com/docs/graph-api/guides/upload>`_ to upload the image)
         """
         type: ComponentType = field(default=ComponentType.HEADER, init=False)
         format: HeaderFormatType = field(default=HeaderFormatType.IMAGE, init=False)
-        examples: Iterable[str]
+        example: str
 
         def to_dict(self) -> dict[str, str | dict[str, tuple[str, ...]]]:
             return dict(
                 type=self.type.value,
                 format=self.format.value,
-                example=dict(header_handle=tuple(self.examples))
+                example=dict(header_handle=(self.example,))
             )
 
     @dataclass(slots=True)
-    class VideoHeader(NewTemplateHeaderABC):
+    class Video(NewTemplateHeaderABC):
         """
         Represents a video header.
     
         Example:
             >>> from pywa.types import NewTemplate
-            >>> NewTemplate.VideoHeader(examples=["2:c2FtcGxl..."])
+            >>> NewTemplate.Video(examples=["2:c2FtcGxl..."])
     
         Attributes:
-            examples: List of video handles (Use the `Resumable Upload API
-             <https://developers.facebook.com/docs/graph-api/guides/upload>`_ to upload the videos)
+            example: A video handle (Use the `Resumable Upload API
+             <https://developers.facebook.com/docs/graph-api/guides/upload>`_ to upload the video)
         """
         type: ComponentType = field(default=ComponentType.HEADER, init=False)
         format: HeaderFormatType = field(default=HeaderFormatType.VIDEO, init=False)
-        examples: Iterable[str]
+        example: str
 
         def to_dict(self) -> dict[str, str | dict[str, tuple[str, ...]]]:
             return dict(
                 type=self.type.value,
                 format=self.format.value,
-                example=dict(header_handle=tuple(self.examples))
+                example=dict(header_handle=(self.example,))
             )
-
+        
     @dataclass(slots=True)
-    class DocumentHeader(NewTemplateHeaderABC):
+    class Document(NewTemplateHeaderABC):
         """
         Represents a document header.
     
         Example:
             >>> from pywa.types import NewTemplate
-            >>> NewTemplate.DocumentHeader(examples=["2:c2FtcGxl..."])
+            >>> NewTemplate.Document(examples=["2:c2FtcGxl..."])
     
         Attributes:
-            examples: List of document handles (Use the `Resumable Upload API
-             <https://developers.facebook.com/docs/graph-api/guides/upload>`_ to upload the documents)
+            example: A document handle (Use the `Resumable Upload API
+             <https://developers.facebook.com/docs/graph-api/guides/upload>`_ to upload the document)
         """
         type: ComponentType = field(default=ComponentType.HEADER, init=False)
         format: HeaderFormatType = field(default=HeaderFormatType.DOCUMENT, init=False)
-        examples: Iterable[str]
+        example: str
 
         def to_dict(self) -> dict[str, str | dict[str, tuple[str, ...]]]:
             return dict(
                 type=self.type.value,
                 format=self.format.value,
-                example=dict(header_handle=tuple(self.examples))
+                example=dict(header_handle=(self.example,))
             )
 
     @dataclass(slots=True)
-    class LocationHeader(NewTemplateHeaderABC):
+    class Location(NewTemplateHeaderABC):
         """
         Location headers appear as generic maps at the top of the template and are useful for order tracking, delivery
         updates, ride hailing pickup/dropoff, locating physical stores, etc. When tapped, the app user's default map app
@@ -334,7 +346,7 @@ class NewTemplate:
     
         Example:
             >>> from pywa.types import NewTemplate
-            >>> NewTemplate.LocationHeader()
+            >>> NewTemplate.Location()
         """
         type: ComponentType = field(default=ComponentType.HEADER, init=False)
         format: HeaderFormatType = field(default=HeaderFormatType.LOCATION, init=False)
@@ -548,7 +560,13 @@ class NewTemplate:
         signature_hash: str | None = None
 
         class OtpType(utils.StrEnum):
-            """The type of the button"""
+            """
+            The type of the button
+
+            Attributes:
+                COPY_CODE: Copy code button copies the one-time password or code to the user's clipboard.
+                ONE_TAP: One-tap autofill button automatically loads and passes your app the one-time password or code.
+            """
             COPY_CODE = 'COPY_CODE'
             ONE_TAP = 'ONE_TAP'
 
@@ -556,7 +574,7 @@ class NewTemplate:
             if self.otp_type == self.OtpType.ONE_TAP and not (self.package_name and self.signature_hash):
                 raise ValueError('`package_name` and `signature_hash` are required for ONE_TAP')
 
-        def to_dict(self) -> dict[str, str | None]:
+        def to_dict(self, placeholder: None = None) -> dict[str, str | None]:
             base = dict(type=self.type.value, otp_type=self.otp_type.value, text=self.title)
             if self.otp_type == self.OtpType.ONE_TAP:
                 base.update(
@@ -565,6 +583,79 @@ class NewTemplate:
                     **(dict(autofill_text=self.autofill_text) if self.autofill_text else {})
                 )
             return base
+
+    @dataclass(slots=True)
+    class MPMButton(NewButtonABC):
+        """
+        Represents a button that can be used to send multi-product message (MPM)
+            - This button required providing header to the new template!
+
+        Example:
+            >>> from pywa.types import NewTemplate
+            >>> NewTemplate.MPMButton()
+        """
+        type: ComponentType = field(default=ButtonType.MPM, init=False)
+
+        def to_dict(self, placeholder: None = None) -> dict[str, str]:
+            return dict(type=self.type.value, text='View items')  # required text for MPM button
+
+    @dataclass(slots=True)
+    class CatalogButton(NewButtonABC):
+        """
+        Represent a button that can be used to display a catalog.
+
+        Example:
+            >>> from pywa.types import NewTemplate
+            >>> NewTemplate.CatalogButton()
+
+        """
+        type: ComponentType = field(default=ButtonType.CATALOG, init=False)
+
+        def to_dict(self, placeholder: None = None) -> dict[str, str]:
+            return dict(type=self.type.value, text='View catalog')  # required text for catalog button
+
+    ###################################################################################################################
+    # Deprecated
+    ###################################################################################################################
+    @dataclass(slots=True)
+    class TextHeader(Text):
+        """Deprecated, use :class:`NewTemplate.Text` instead"""
+        def __new__(cls, *args, **kwargs):
+            warnings.warn('`TextHeader` is deprecated, use `Text` instead', DeprecationWarning, stacklevel=2)
+            return NewTemplate.Text(*args, **kwargs)
+
+    @dataclass(slots=True)
+    class VideoHeader(Video):
+        """Deprecated, use :class:`NewTemplate.Video` instead"""
+        example: str = field(default=None, init=False)
+        examples: Iterable[str]
+
+        def __new__(cls, *args, **kwargs):
+            warnings.warn('`VideoHeader` is deprecated, use `Video` instead', DeprecationWarning, stacklevel=2)
+            return NewTemplate.Video(example=kwargs['examples'][0])
+
+    @dataclass(slots=True)
+    class ImageHeader(Image):
+        """Deprecated, use :class:`NewTemplate.Image` instead"""
+        example: str = field(default=None, init=False)
+        examples: Iterable[str]
+
+        def __new__(cls, *args, **kwargs):
+            warnings.warn('`ImageHeader` is deprecated, use `Image` instead', DeprecationWarning, stacklevel=2)
+            return NewTemplate.Image(example=kwargs['examples'][0])
+
+    @dataclass(slots=True)
+    class DocumentHeader(Document):
+        """Deprecated, use :class:`NewTemplate.Document` instead"""
+        example: str = field(default=None, init=False)
+        examples: Iterable[str]
+
+        def __new__(cls, *args, **kwargs):
+            warnings.warn(
+                '`DocumentHeader` is deprecated, use `Document` instead', DeprecationWarning, stacklevel=2
+            )
+            return NewTemplate.Document(example=kwargs['examples'][0])
+    ####################################################################################################################
 
 
 class ParamType(utils.StrEnum):
@@ -576,11 +667,6 @@ class ParamType(utils.StrEnum):
     VIDEO = 'video'
     LOCATION = 'location'
     BUTTON = 'button'
-
-
-class ButtonSubType(utils.StrEnum):
-    QUICK_REPLY = 'quick_reply'
-    URL = 'url'
 
 
 class ComponentABC(abc.ABC):
@@ -638,13 +724,11 @@ class Template:
     language: str
     body: Iterable[TextValue | Currency | DateTime] | None = None
     header: TextValue | Document | Image | Video | Location | None = None
-    buttons: Iterable[QuickReplyButtonData | UrlButtonValue] | OTPButtonCode | None = None
+    buttons: Iterable[QuickReplyButtonData | UrlButtonValue] | OTPButtonCode | MPMButton | CatalogButton | None = None
 
     def __post_init__(self):
         if isinstance(self.buttons, self.OTPButtonCode):
-            if any((self.header, self.body)):
-                raise ValueError('`body` and `header` are not allowed for AUTHENTICATION')
-            self.body = (self.TextValue(value=self.buttons.code),)
+            self.body = (self.TextValue(value=self.buttons.code),)  # auth template required the code also in the body
 
     def to_dict(self, is_header_url: bool = False) -> dict[str, str | dict[str, str | tuple[dict[str, str], ...]]]:
         return dict(
@@ -664,21 +748,23 @@ class Template:
                     sub_type=b.sub_type.value,
                     index=idx,
                     parameters=(b.to_dict(),)
-                ) for idx, b in enumerate(self.buttons)) if self.buttons is not None else ())
+                ) for idx, b in enumerate(
+                    self.buttons if isinstance(self.buttons, Iterable) else (self.buttons,)  # case of OTPButtonCode
+                )) if self.buttons is not None else ())
             ) if comp is not None)
         )
 
     @dataclass(slots=True)
     class TextValue(ComponentABC):
         """
-        Represents a value to variable in the template.
+        Represents a value to assign to a placeholder in a template.
 
         Example:
             >>> from pywa.types import Template
             >>> Template.TextValue(var='John Doe')  # The template was created with 'Hello, {John}!'
 
         Attributes:
-            value: The value to assign to the variable in the template.
+            value: The value to assign to the placeholder.
         """
         type: ParamType = field(default=ParamType.TEXT, init=False)
         value: str
@@ -809,7 +895,7 @@ class Template:
             data: The data to send when the user taps the button (you can listen for this data in the webhook).
         """
         type: ParamType = field(default=ParamType.BUTTON, init=False)
-        sub_type: ButtonSubType = field(default=ButtonSubType.QUICK_REPLY, init=False)
+        sub_type: ButtonType = field(default=ButtonType.QUICK_REPLY, init=False)
         data: str
 
         def to_dict(self) -> dict[str, str]:
@@ -828,7 +914,7 @@ class Template:
             value: The value to assign to the variable in the template (appended to the end of the URL).
         """
         type: ParamType = field(default=ParamType.BUTTON, init=False)
-        sub_type: ButtonSubType = field(default=ButtonSubType.URL, init=False)
+        sub_type: ButtonType = field(default=ButtonType.URL, init=False)
         value: str
 
         def to_dict(self) -> dict[str, str]:
@@ -847,14 +933,72 @@ class Template:
             code: The code to copy or autofill when the user taps the button.
         """
         type: ParamType = field(default=ParamType.BUTTON, init=False)
-        sub_type: ButtonSubType = field(default=ButtonSubType.URL, init=False)
+        sub_type: ButtonType = field(default=ButtonType.URL, init=False)
         code: str
 
         def to_dict(self) -> dict[str, str]:
             return dict(type='text', text=self.code)
+    
+    @dataclass(slots=True)
+    class MPMButton(ComponentABC):
+        """
+        Represent a multi-product message (MPM) button
 
-        def __iter__(self):
-            yield self
+        Example:
+            >>> from pywa.types import Template
+            >>> Template.MPMButton(
+            ...     thumbnail_product_sku='IPHONE_15',
+            ...     product_sections=[
+            ...         ProductsSection(
+            ...             title='Smartphones',
+            ...             skus=['IPHONE_15', 'GALAXY_S23'],
+            ...         ),
+            ...         ProductsSection(
+            ...             title='Laptops',
+            ...             skus=['MACBOOKPRO', 'SURFACEPRO'],
+            ...         ),
+            ...     ],
+            ... )
 
-        def __next__(self):
-            return self
+        Attributes:
+            thumbnail_product_sku: The thumbnail of this item will be used as the template message's header image.
+            product_sections: The product sections to send with the template.
+        """
+        type: ParamType = field(default=ParamType.BUTTON, init=False)
+        sub_type: ButtonType = field(default=ButtonType.MPM, init=False)
+        thumbnail_product_sku: str
+        product_sections: Iterable[ProductsSection]
+
+        def to_dict(self) -> dict[str, str]:
+            return dict(
+                type='action',
+                action=dict(
+                    thumbnail_product_retailer_id=self.thumbnail_product_sku,
+                    sections=tuple(section.to_dict() for section in self.product_sections)
+                )
+            )
+    
+    @dataclass(slots=True)
+    class CatalogButton(ComponentABC):
+        """
+        Represent a catalog button
+
+        Example:
+            >>> from pywa.types import Template
+            >>> Template.CatalogButton(thumbnail_product_sku='IPHONE_15')
+
+        Attributes:
+            thumbnail_product_sku: The thumbnail of this item will be used as the message's header image. if not
+                provided, the product image of the first item in your catalog will be used.
+        """
+        type: ParamType = field(default=ParamType.BUTTON, init=False)
+        sub_type: ButtonType = field(default=ButtonType.CATALOG, init=False)
+        thumbnail_product_sku: str | None = None
+
+        def to_dict(self) -> dict[str, str]:
+            return dict(
+                type='action',
+                action=dict(
+                    thumbnail_product_retailer_id=self.thumbnail_product_sku,
+                )
+            )

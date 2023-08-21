@@ -64,6 +64,8 @@ All updates have common methods:
      - Reply to the update with a contact message
    * - :meth:`~BaseUpdate.reply_sticker`
      - Reply to the update with a sticker message
+   * - :meth:`~BaseUpdate.reply_template`
+     - Reply to the update with a template message
    * - :meth:`~BaseUpdate.reply_catalog`
      - Reply to the update with a catalog message
    * - :meth:`~BaseUpdate.reply_product`
