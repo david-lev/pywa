@@ -3,6 +3,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Iterable, TYPE_CHECKING, BinaryIO
+
+from .template import Template
 from .others import Metadata, User, Contact, ProductsSection
 
 if TYPE_CHECKING:
@@ -577,6 +579,67 @@ class BaseUpdate(ABC):
             footer=footer,
             reply_to_message_id=self.message_id_to_reply if quote else None
         )
+
+    def reply_template(
+            self,
+            template: Template,
+            quote: bool = False,
+    ) -> str:
+        """
+        Reply to the message with a template.
+
+        -- Shortcut for :py:func:`~pywa.client.WhatsApp.send_template` with ``to`` and ``reply_to_message_id``.
+
+        Example:
+
+            >>> from pywa.types import Template as Temp
+            >>> wa = WhatsApp(...)
+            >>> wa.send_template(
+            ...     to='1234567890',
+            ...         template=Temp(
+            ...         name='buy_new_iphone_x',
+            ...         language='en_US',
+            ...         header=Temp.TextValue(value='15'),
+            ...         body=[
+            ...             Temp.TextValue(value='John Doe'),
+            ...             Temp.TextValue(value='WA_IPHONE_15'),
+            ...             Temp.TextValue(value='15%'),
+            ...         ],
+            ...         buttons=[
+            ...             Temp.UrlButtonValue(value='iphone15'),
+            ...             Temp.QuickReplyButtonData(data='unsubscribe_from_marketing_messages'),
+            ...             Temp.QuickReplyButtonData(data='unsubscribe_from_all_messages'),
+            ...         ],
+            ...     ),
+            ... )
+
+        Example for Authentication Template:
+
+            >>> from pywa.types import Template as Temp
+            >>> msg.reply_template(
+            ...     template=Temp(
+            ...         name='auth_with_otp',
+            ...         language='en_US',
+            ...         buttons=Temp.OTPButtonCode(code='123456'),
+            ...     ),
+            ...     quote=True
+            ... )
+
+        Args:
+            template: The template to send.
+            quote: Whether to quote the replied message (default: False).
+
+        Returns:
+            The ID of the sent reply.
+
+        Raises:
+
+        """
+        return self._client.send_template(
+               to=self.sender,
+               template=template,
+               reply_to_message_id=quote if quote else None
+           )
 
     def mark_as_read(
             self
