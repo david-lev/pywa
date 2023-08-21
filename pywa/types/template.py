@@ -654,7 +654,7 @@ class Template:
                 dict(
                     type=ComponentType.BODY.value,
                     parameters=tuple(component.to_dict() for component in self.body)
-                ),
+                ) if self.body else None,
                 dict(
                     type=ComponentType.HEADER.value,
                     parameters=(self.header.to_dict(is_header_url),)
