@@ -250,8 +250,8 @@ class NewTemplate:
         Attributes:
             text: Text to send with the header (Up to 60 characters. Supports 1 placeholder).
         """
-        type: ComponentType = field(default=ComponentType.HEADER, init=False)
-        format: HeaderFormatType = field(default=HeaderFormatType.TEXT, init=False)
+        type: ComponentType = field(default=ComponentType.HEADER, init=False, repr=False)
+        format: HeaderFormatType = field(default=HeaderFormatType.TEXT, init=False, repr=False)
         text: str
 
         def to_dict(self, placeholder: tuple[str, str] = None) -> dict[str, str | None]:
@@ -276,8 +276,8 @@ class NewTemplate:
             example: An image handles (Use the `Resumable Upload API
              <https://developers.facebook.com/docs/graph-api/guides/upload>`_ to upload the image)
         """
-        type: ComponentType = field(default=ComponentType.HEADER, init=False)
-        format: HeaderFormatType = field(default=HeaderFormatType.IMAGE, init=False)
+        type: ComponentType = field(default=ComponentType.HEADER, init=False, repr=False)
+        format: HeaderFormatType = field(default=HeaderFormatType.IMAGE, init=False, repr=False)
         example: str
 
         def to_dict(self) -> dict[str, str | dict[str, tuple[str, ...]]]:
@@ -300,8 +300,8 @@ class NewTemplate:
             example: A video handle (Use the `Resumable Upload API
              <https://developers.facebook.com/docs/graph-api/guides/upload>`_ to upload the video)
         """
-        type: ComponentType = field(default=ComponentType.HEADER, init=False)
-        format: HeaderFormatType = field(default=HeaderFormatType.VIDEO, init=False)
+        type: ComponentType = field(default=ComponentType.HEADER, init=False, repr=False)
+        format: HeaderFormatType = field(default=HeaderFormatType.VIDEO, init=False, repr=False)
         example: str
 
         def to_dict(self) -> dict[str, str | dict[str, tuple[str, ...]]]:
@@ -324,8 +324,8 @@ class NewTemplate:
             example: A document handle (Use the `Resumable Upload API
              <https://developers.facebook.com/docs/graph-api/guides/upload>`_ to upload the document)
         """
-        type: ComponentType = field(default=ComponentType.HEADER, init=False)
-        format: HeaderFormatType = field(default=HeaderFormatType.DOCUMENT, init=False)
+        type: ComponentType = field(default=ComponentType.HEADER, init=False, repr=False)
+        format: HeaderFormatType = field(default=HeaderFormatType.DOCUMENT, init=False, repr=False)
         example: str
 
         def to_dict(self) -> dict[str, str | dict[str, tuple[str, ...]]]:
@@ -348,8 +348,8 @@ class NewTemplate:
             >>> from pywa.types import NewTemplate
             >>> NewTemplate.Location()
         """
-        type: ComponentType = field(default=ComponentType.HEADER, init=False)
-        format: HeaderFormatType = field(default=HeaderFormatType.LOCATION, init=False)
+        type: ComponentType = field(default=ComponentType.HEADER, init=False, repr=False)
+        format: HeaderFormatType = field(default=HeaderFormatType.LOCATION, init=False, repr=False)
 
         def to_dict(self) -> dict[str, str]:
             return dict(
@@ -373,7 +373,7 @@ class NewTemplate:
         Attributes:
             text: Text to send with the body (Up to 1024 characters. Supports multiple placeholders).
         """
-        type: ComponentType = field(default=ComponentType.BODY, init=False)
+        type: ComponentType = field(default=ComponentType.BODY, init=False, repr=False)
         text: str
 
         def to_dict(self, placeholder: tuple[str, str] = None) -> dict[str, str | None]:
@@ -418,7 +418,7 @@ class NewTemplate:
         Attributes:
             text: Text to send with the footer (Up to 60 characters, no placeholders allowed).
         """
-        type: ComponentType = field(default=ComponentType.FOOTER, init=False)
+        type: ComponentType = field(default=ComponentType.FOOTER, init=False, repr=False)
         text: str
 
         def to_dict(self) -> dict[str, str | None]:
@@ -442,7 +442,7 @@ class NewTemplate:
             phone_number: Alphanumeric string. Business phone number to be (display phone number)
              called when the user taps the button (Up to 20 characters, no placeholders allowed).
         """
-        type: ButtonType = field(default=ButtonType.PHONE_NUMBER, init=False)
+        type: ButtonType = field(default=ButtonType.PHONE_NUMBER, init=False, repr=False)
         title: str
         phone_number: int | str
 
@@ -467,7 +467,7 @@ class NewTemplate:
             url: URL to be loaded when the user taps the button (Up to 2000 characters, supports 1 placeholder, which
              be appended to the end of the URL).
         """
-        type: ComponentType = field(default=ButtonType.URL, init=False)
+        type: ComponentType = field(default=ButtonType.URL, init=False, repr=False)
         title: str
         url: str
 
@@ -508,7 +508,7 @@ class NewTemplate:
         Attributes:
             text: The text to send when the user taps the button (Up to 25 characters, no placeholders allowed).
         """
-        type: ComponentType = field(default=ButtonType.QUICK_REPLY, init=False)
+        type: ComponentType = field(default=ButtonType.QUICK_REPLY, init=False, repr=False)
         text: str
 
         def to_dict(self, placeholder: None = None) -> dict[str, str]:
@@ -552,7 +552,7 @@ class NewTemplate:
              <https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates#app-signing-key-hash>`_
              for more information. Required if ``otp_type`` is ``OtpType.ONE_TAP``.
         """
-        type: ComponentType = field(default=ButtonType.OTP, init=False)
+        type: ComponentType = field(default=ButtonType.OTP, init=False, repr=False)
         otp_type: OtpType
         title: str | None = None
         autofill_text: str | None = None
@@ -594,7 +594,7 @@ class NewTemplate:
             >>> from pywa.types import NewTemplate
             >>> NewTemplate.MPMButton()
         """
-        type: ComponentType = field(default=ButtonType.MPM, init=False)
+        type: ComponentType = field(default=ButtonType.MPM, init=False, repr=False)
 
         def to_dict(self, placeholder: None = None) -> dict[str, str]:
             return dict(type=self.type.value, text='View items')  # required text for MPM button
@@ -609,7 +609,7 @@ class NewTemplate:
             >>> NewTemplate.CatalogButton()
 
         """
-        type: ComponentType = field(default=ButtonType.CATALOG, init=False)
+        type: ComponentType = field(default=ButtonType.CATALOG, init=False, repr=False)
 
         def to_dict(self, placeholder: None = None) -> dict[str, str]:
             return dict(type=self.type.value, text='View catalog')  # required text for catalog button
@@ -766,7 +766,7 @@ class Template:
         Attributes:
             value: The value to assign to the placeholder.
         """
-        type: ParamType = field(default=ParamType.TEXT, init=False)
+        type: ParamType = field(default=ParamType.TEXT, init=False, repr=False)
         value: str
 
         def to_dict(self, is_url: None = None) -> dict[str, str]:
@@ -782,7 +782,7 @@ class Template:
             code: ISO 4217 currency code (e.g. USD, EUR, etc.).
             amount_1000: Amount multiplied by 1000.
         """
-        type: ParamType = field(default=ParamType.CURRENCY, init=False)
+        type: ParamType = field(default=ParamType.CURRENCY, init=False, repr=False)
         fallback_value: str
         code: str
         amount_1000: int
@@ -805,7 +805,7 @@ class Template:
         Attributes:
             fallback_value: Default text if localization fails.
         """
-        type: ParamType = field(default=ParamType.DATE_TIME, init=False)
+        type: ParamType = field(default=ParamType.DATE_TIME, init=False, repr=False)
         fallback_value: str
 
         def to_dict(self) -> dict[str, str]:
@@ -824,7 +824,7 @@ class Template:
         Attributes:
             document: The document to send (PDF only. either a media ID, URL, file path, bytes, or an open file object).
         """
-        type: ParamType = field(default=ParamType.DOCUMENT, init=False)
+        type: ParamType = field(default=ParamType.DOCUMENT, init=False, repr=False)
         document: str | bytes | BinaryIO
 
         def to_dict(self, is_url: bool) -> dict[str, str]:
@@ -838,7 +838,7 @@ class Template:
         Attributes:
             image: The image to send (either a media ID, URL, file path, bytes, or an open file object).
         """
-        type: ParamType = field(default=ParamType.IMAGE, init=False)
+        type: ParamType = field(default=ParamType.IMAGE, init=False, repr=False)
         image: str | bytes | BinaryIO
 
         def to_dict(self, is_url: bool) -> dict[str, str]:
@@ -852,7 +852,7 @@ class Template:
         Attributes:
             video: The video to send (either a media ID, URL, file path, bytes, or an open file object).
         """
-        type: ParamType = field(default=ParamType.VIDEO, init=False)
+        type: ParamType = field(default=ParamType.VIDEO, init=False, repr=False)
         video: str | bytes | BinaryIO
 
         def to_dict(self, is_url: bool) -> dict[str, str]:
@@ -869,7 +869,7 @@ class Template:
             name: The name of the location.
             address: The address of the location.
         """
-        type: ParamType = field(default=ParamType.LOCATION, init=False)
+        type: ParamType = field(default=ParamType.LOCATION, init=False, repr=False)
         latitude: float
         longitude: float
         name: str | None = None
@@ -894,8 +894,8 @@ class Template:
         Attributes:
             data: The data to send when the user taps the button (you can listen for this data in the webhook).
         """
-        type: ParamType = field(default=ParamType.BUTTON, init=False)
-        sub_type: ButtonType = field(default=ButtonType.QUICK_REPLY, init=False)
+        type: ParamType = field(default=ParamType.BUTTON, init=False, repr=False)
+        sub_type: ButtonType = field(default=ButtonType.QUICK_REPLY, init=False, repr=False)
         data: str
 
         def to_dict(self) -> dict[str, str]:
@@ -913,8 +913,8 @@ class Template:
         Attributes:
             value: The value to assign to the variable in the template (appended to the end of the URL).
         """
-        type: ParamType = field(default=ParamType.BUTTON, init=False)
-        sub_type: ButtonType = field(default=ButtonType.URL, init=False)
+        type: ParamType = field(default=ParamType.BUTTON, init=False, repr=False)
+        sub_type: ButtonType = field(default=ButtonType.URL, init=False, repr=False)
         value: str
 
         def to_dict(self) -> dict[str, str]:
@@ -932,8 +932,8 @@ class Template:
         Attributes:
             code: The code to copy or autofill when the user taps the button.
         """
-        type: ParamType = field(default=ParamType.BUTTON, init=False)
-        sub_type: ButtonType = field(default=ButtonType.URL, init=False)
+        type: ParamType = field(default=ParamType.BUTTON, init=False, repr=False)
+        sub_type: ButtonType = field(default=ButtonType.URL, init=False, repr=False)
         code: str
 
         def to_dict(self) -> dict[str, str]:
@@ -964,8 +964,8 @@ class Template:
             thumbnail_product_sku: The thumbnail of this item will be used as the template message's header image.
             product_sections: The product sections to send with the template.
         """
-        type: ParamType = field(default=ParamType.BUTTON, init=False)
-        sub_type: ButtonType = field(default=ButtonType.MPM, init=False)
+        type: ParamType = field(default=ParamType.BUTTON, init=False, repr=False)
+        sub_type: ButtonType = field(default=ButtonType.MPM, init=False, repr=False)
         thumbnail_product_sku: str
         product_sections: Iterable[ProductsSection]
 
@@ -991,8 +991,8 @@ class Template:
             thumbnail_product_sku: The thumbnail of this item will be used as the message's header image. if not
                 provided, the product image of the first item in your catalog will be used.
         """
-        type: ParamType = field(default=ParamType.BUTTON, init=False)
-        sub_type: ButtonType = field(default=ButtonType.CATALOG, init=False)
+        type: ParamType = field(default=ParamType.BUTTON, init=False, repr=False)
+        sub_type: ButtonType = field(default=ButtonType.CATALOG, init=False, repr=False)
         thumbnail_product_sku: str | None = None
 
         def to_dict(self) -> dict[str, str]:

@@ -29,13 +29,13 @@ The supported types of updates are:
 
    * - Type
      - Description
-   * - :class:`~Message`
+   * - :py:class:`~pywa.types.message.Message`
      - A message sent by a user (text, media, order, location, etc.)
-   * - :class:`~CallbackButton`
+   * - :py:class:`~pywa.types.callback.CallbackButton`
      - A callback button pressed by a user
-   * - :class:`~CallbackSelection`
+   * - :py:class:`~pywa.types.callback.CallbackSelection`
      - A callback selection chosen by a user
-   * - :class:`~MessageStatus`
+   * - :py:class:`~pywa.types.message_status.MessageStatus`
      - A message status update (e.g. delivered, seen, etc.)
 
 All updates have common methods:
