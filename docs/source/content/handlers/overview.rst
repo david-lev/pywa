@@ -184,16 +184,16 @@ Available handlers
      - The type of the update
    * - :meth:`~pywa.client.WhatsApp.on_message`
      - :class:`MessageHandler`
-     - :class:`~pywa.types.Message`
+     - :class:`~pywa.types.message.Message`
    * - :meth:`~pywa.client.WhatsApp.on_callback_button`
      - :class:`CallbackButtonHandler`
-     - :class:`~pywa.types.CallbackButton`
+     - :class:`~pywa.types.callback.CallbackButton`
    * - :meth:`~pywa.client.WhatsApp.on_callback_selection`
      - :class:`CallbackSelectionHandler`
-     - :class:`~pywa.types.CallbackSelection`
+     - :class:`~pywa.types.callback.CallbackSelection`
    * - :meth:`~pywa.client.WhatsApp.on_message_status`
      - :class:`MessageStatusHandler`
-     - :class:`~pywa.types.MessageStatus`
+     - :class:`~pywa.types.message_status.MessageStatus`
    * - :meth:`~pywa.client.WhatsApp.on_raw_update`
      - :class:`RawUpdateHandler`
      - :class:`dict`
