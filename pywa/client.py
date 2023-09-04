@@ -71,7 +71,7 @@ class WhatsApp:
             server: The Flask or FastAPI app instance to use for the webhook.
             webhook_endpoint: The endpoint to listen for incoming messages (default: ``/``).
             verify_token: The verify token of the registered webhook (Required when ``server`` is provided).
-            filter_updates: Whether to filter out updates that not sended to this phone number (default: ``True``, does
+            filter_updates: Whether to filter out updates that not sent to this phone number (default: ``True``, does
                 not apply to raw updates).
             business_account_id: The business account ID of the WhatsApp account (optional, required for some API
                 methods).
@@ -124,11 +124,11 @@ class WhatsApp:
     ) -> Callable[[Callable[[WhatsApp, dict], Any]], Callable[[WhatsApp, dict], Any]]:
         """
         Decorator to register a function as a handler for raw updates.
-            - This handler is called for **EVERY** update received from WhatsApp, even if it's not sended to the client phone number.
+            - This handler is called for **EVERY** update received from WhatsApp, even if it's not sent to the client phone number.
             - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.RawUpdateHandler`.
 
         Example:
-            
+
             >>> wa = WhatsApp(...)
             >>> @wa.on_raw_update()
             ... def raw_update_handler(_: WhatsApp, update: dict):

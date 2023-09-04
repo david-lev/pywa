@@ -149,7 +149,7 @@ class MessageStatusHandler(Handler):
 class RawUpdateHandler(Handler):
     """
     A raw update handler.
-        - This handler is called for **EVERY** update received from WhatsApp, even if it's not sended to the client phone number.
+        - This handler is called for **EVERY** update received from WhatsApp, even if it's not sent to the client phone number.
         - You can use the :func:`~pywa.client.WhatsApp.on_raw_update` decorator to register a handler for this type.
 
     Example:
