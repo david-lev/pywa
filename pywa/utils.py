@@ -35,10 +35,10 @@ def get_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 class StrEnum(str, Enum):
     def __str__(self):
-        return f"{self.__class__.__name__}.{self.name}"
+        return self.value
 
     def __repr__(self):
-        return self.__str__()
+        return f"{self.__class__.__name__}.{self.name}"
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

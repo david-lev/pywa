@@ -184,7 +184,7 @@ Now you can continue to the next section and learn how to use the ``pywa`` packa
 
 - The `Updates <updates/overview.html>`_ are the incoming messages and events that the client receives. It contains the available data for each message and event. For example, the :class:`~pywa.types.message.Message` update is arrived user send a text, media, location contact and other types of messages. Every update has it's own methods and properties.
 
-- The `errors <errors/overview.html>`_ errors that the client can raise. For example, if you try to send message from your test number to a number that is not in the recipients list, the client will raise a :class:`~pywa.errors.RecipientNotInAllowedList`.
+- The `errors <errors/overview.html>`_ that the client can raise. For example, if you try to send message from your test number to a number that is not in the recipients list, the client will raise a :class:`~pywa.errors.RecipientNotInAllowedList`.
 
 - The `Examples <examples/overview.html>`_ section contains examples of how to use the package.
 

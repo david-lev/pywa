@@ -1252,7 +1252,7 @@ class WhatsApp:
             ...     template=NewTemp(
             ...         name='buy_new_iphone_x',
             ...         category=NewTemp.Category.MARKETING,
-            ...         language='en_US',
+            ...         language=NewTemp.Language.ENGLISH_US,
             ...         header=NewTemp.Text('The New iPhone {15} is here!'),
             ...         body=NewTemp.Body('Buy now and use the code {WA_IPHONE_15} to get {15%} off!'),
             ...         footer=NewTemp.Footer('Powered by PyWa'),
@@ -1273,7 +1273,7 @@ class WhatsApp:
             ...     template=NewTemp(
             ...         name='auth_with_otp',
             ...         category=NewTemp.Category.AUTHENTICATION,
-            ...         language='en_US',
+            ...         language=NewTemp.Language.ENGLISH_US,
             ...         body=NewTemp.AuthBody(
             ...             code_expiration_minutes=5,
             ...             add_security_recommendation=True,
@@ -1321,7 +1321,7 @@ class WhatsApp:
             ...     to='1234567890',
             ...         template=Temp(
             ...         name='buy_new_iphone_x',
-            ...         language='en_US',
+            ...         language=Temp.Language.ENGLISH_US,
             ...         header=Temp.TextValue(value='15'),
             ...         body=[
             ...             Temp.TextValue(value='John Doe'),
@@ -1344,7 +1344,7 @@ class WhatsApp:
             ...     to='1234567890',
             ...         template=Temp(
             ...         name='auth_with_otp',
-            ...         language='en_US',
+            ...         language=Temp.Language.ENGLISH_US,
             ...         buttons=Temp.OTPButtonCode(code='123456'),
             ...     ),
             ... )

@@ -607,7 +607,7 @@ class BaseUpdate(ABC):
             ...     to='1234567890',
             ...         template=Temp(
             ...         name='buy_new_iphone_x',
-            ...         language='en_US',
+            ...         language=Temp.Language.ENGLISH_US,
             ...         header=Temp.TextValue(value='15'),
             ...         body=[
             ...             Temp.TextValue(value='John Doe'),
@@ -628,7 +628,7 @@ class BaseUpdate(ABC):
             >>> msg.reply_template(
             ...     template=Temp(
             ...         name='auth_with_otp',
-            ...         language='en_US',
+            ...         language=Temp.Language.ENGLISH_US,
             ...         buttons=Temp.OTPButtonCode(code='123456'),
             ...     ),
             ...     quote=True

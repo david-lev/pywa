@@ -83,6 +83,95 @@ class ButtonType(utils.StrEnum):
     OTP = 'OTP'
     MPM = 'MPM'
     CATALOG = 'CATALOG'
+    COPY_CODE = 'COPY_CODE'
+
+
+class Language(utils.StrEnum):
+    """
+    Template language and locale code.
+        - Both :class:`NewTemplate` and :class:`Template` have this class as an attribute.
+
+    >>> from pywa.types import NewTemplate
+    >>> NewTemplate.Language.ENGLISH_US
+
+    >>> from pywa.types import Template
+    >>> Template.Language.ENGLISH_US
+
+    `\`Template language and locale code\` on
+    developers.facebook.com
+    <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/supported-languages>`_
+    """
+    AFRIKAANS = 'af'
+    ALBANIAN = 'sq'
+    ARABIC = 'ar'
+    AZERBAIJANI = 'az'
+    BENGALI = 'bn'
+    BULGARIAN = 'bg'
+    CATALAN = 'ca'
+    CHINESE_CHN = 'zh_CN'
+    CHINESE_HKG = 'zh_HK'
+    CHINESE_TAI = 'zh_TW'
+    CROATIAN = 'hr'
+    CZECH = 'cs'
+    DANISH = 'da'
+    DUTCH = 'nl'
+    ENGLISH = 'en'
+    ENGLISH_UK = 'en_GB'
+    ENGLISH_US = 'en_US'
+    ESTONIAN = 'et'
+    FILIPINO = 'fil'
+    FINNISH = 'fi'
+    FRENCH = 'fr'
+    GEORGIAN = 'ka'
+    GERMAN = 'de'
+    GREEK = 'el'
+    GUJARATI = 'gu'
+    HAUSA = 'ha'
+    HEBREW = 'he'
+    HINDI = 'hi'
+    HUNGARIAN = 'hu'
+    INDONESIAN = 'id'
+    IRISH = 'ga'
+    ITALIAN = 'it'
+    JAPANESE = 'ja'
+    KANNADA = 'kn'
+    KAZAKH = 'kk'
+    KINYARWANDA = 'rw_RW'
+    KOREAN = 'ko'
+    KYRGYZ_KG = 'ky_KG'
+    LAO = 'lo'
+    LATVIAN = 'lv'
+    LITHUANIAN = 'lt'
+    MACEDONIAN = 'mk'
+    MALAY = 'ms'
+    MALAYALAM = 'ml'
+    MARATHI = 'mr'
+    NORWEGIAN = 'nb'
+    PERSIAN = 'fa'
+    POLISH = 'pl'
+    PORTUGUESE_BR = 'pt_BR'
+    PORTUGUESE_POR = 'pt_PT'
+    PUNJABI = 'pa'
+    ROMANIAN = 'ro'
+    RUSSIAN = 'ru'
+    SERBIAN = 'sr'
+    SLOVAK = 'sk'
+    SLOVENIAN = 'sl'
+    SPANISH = 'es'
+    SPANISH_ARG = 'es_AR'
+    SPANISH_SPA = 'es_ES'
+    SPANISH_MEX = 'es_MX'
+    SWAHILI = 'sw'
+    SWEDISH = 'sv'
+    TAMIL = 'ta'
+    TELUGU = 'te'
+    THAI = 'th'
+    TURKISH = 'tr'
+    UKRAINIAN = 'uk'
+    URDU = 'ur'
+    UZBEK = 'uz'
+    VIETNAMESE = 'vi'
+    ZULU = 'zu'
 
 
 class NewTemplateComponentABC(abc.ABC):
@@ -129,7 +218,7 @@ class NewTemplate:
         >>> NewTemp(
         ...     name='buy_new_iphone_x',
         ...     category=NewTemp.Category.MARKETING,
-        ...     language='en_US',
+        ...     language=NewTemp.Language.ENGLISH_US,
         ...     header=NewTemp.Text('The New iPhone {15} is here!'),
         ...     body=NewTemp.Body('Hello {John}! Buy now and use the code {WA_IPHONE_15} to get {15%} off!'),
         ...     footer=NewTemp.Footer('Powered by PyWa'),
@@ -147,7 +236,7 @@ class NewTemplate:
         >>> NewTemp(
         ...     name='auth_with_otp',
         ...     category=NewTemp.Category.AUTHENTICATION,
-        ...     language='en_US',
+        ...     language=NewTemp.Language.ENGLISH_US,
         ...     body=NewTemp.AuthBody(
         ...         code_expiration_minutes=5,
         ...         add_security_recommendation=True
@@ -165,25 +254,17 @@ class NewTemplate:
     organized into two groups: quick reply buttons and non-quick reply buttons. If grouped incorrectly, error will be
     raised when submitting the template.
 
-    Examples of valid groupings:
-        - [``QuickReplyButton``, ``QuickReplyButton``]
-        - [``QuickReplyButton``, ``QuickReplyButton``, ``UrlButton``, ``PhoneNumberButton``]
-        - [``UrlButton``, ``PhoneNumberButton``, ``QuickReplyButton``, ``QuickReplyButton``]
-
-    Examples of invalid groupings:
-        - [``QuickReplyButton``, ``UrlButton``, ``QuickReplyButton``]
-        - [``UrlButton``, ``QuickReplyButton``, ``UrlButton``]
-
     When you send a template that has multiple quick reply buttons, the order in which the buttons appear in the template
     is the order in which they will appear in the delivered message
     """
     name: str
     category: Category
-    language: str
+    language: Language | str
     body: Body | AuthBody
     header: Text | Image | Video | Document | Location | None = None
     footer: Footer | None = None
-    buttons: Iterable[PhoneNumberButton | UrlButton | QuickReplyButton | MPMButton | CatalogButton] | OTPButton | None = None
+    buttons: (Iterable[PhoneNumberButton | UrlButton | QuickReplyButton | CopyCodeButton]
+              | MPMButton | CatalogButton | OTPButton | None) = None
 
     def __post_init__(self):
         if self.category == self.Category.AUTHENTICATION and not (
@@ -210,15 +291,19 @@ class NewTemplate:
                 self.footer.to_dict() if self.footer else None,
                 dict(
                     type=ComponentType.BUTTONS.value,
-                    buttons=tuple(button.to_dict(placeholder) for button in self.buttons)
+                    buttons=tuple(button.to_dict(placeholder) for button in (
+                        self.buttons if isinstance(self.buttons, Iterable) else (self.buttons,)
+                    ))
                 ) if self.buttons else None
             )
         return dict(
             name=self.name,
             category=self.category.value,
-            language=self.language,
+            language=str(self.language),
             components=tuple(component for component in components if component is not None)
         )
+
+    Language = Language
 
     class Category(utils.StrEnum):
         """
@@ -433,6 +518,8 @@ class NewTemplate:
         Phone number buttons call the specified business phone number when tapped by the app user.
         Templates are limited to one phone number button.
 
+        - It seems that no need to provide the phone button when sending the template, it will be added automatically
+
         Example:
             >>> from pywa.types import NewTemplate
             >>> NewTemplate.PhoneNumberButton(title='Call Us', phone_number='12125552368')
@@ -614,6 +701,27 @@ class NewTemplate:
         def to_dict(self, placeholder: None = None) -> dict[str, str]:
             return dict(type=self.type.value, text='View catalog')  # required text for catalog button
 
+    @dataclass(slots=True)
+    class CopyCodeButton(NewButtonABC):
+        """
+        Represents a button that can be used to copy coupon codes to the user's clipboard.
+            - Only one copy code button is allowed per template.
+            - Do not use this button to send one-time passwords (OTPs), Use :class:`NewTemplate.OTPButton` instead.
+
+        Example:
+            >>> from pywa.types import NewTemplate
+            >>> NewTemplate.CopyCodeButton(example='250FF')
+
+
+        Attributes:
+            example: An example of the coupon code (Up to 15 characters).
+        """
+        type: ComponentType = field(default=ButtonType.COPY_CODE, init=False, repr=False)
+        example: str
+
+        def to_dict(self, placeholder: tuple[str, str] = None) -> dict[str, str | None]:
+            return dict(type=self.type.value, example=self.example)
+
     ###################################################################################################################
     # Deprecated
     ###################################################################################################################
@@ -688,7 +796,7 @@ class Template:
     >>> from pywa.types import Template as Temp
     >>> Temp(
     ...     name='buy_new_iphone_x',
-    ...     language='en_US',
+    ...     language=Temp.Language.ENGLISH_US,
     ...     header=TextValue(value='15'),
     ...     body=[
     ...         Temp.TextValue(value='John Doe'),
@@ -707,7 +815,7 @@ class Template:
     >>> from pywa.types import Template as Temp
     >>> Temp(
     ...     name='auth_with_otp',
-    ...     language='en_US',
+    ...     language=Temp.Language.ENGLISH_US,
     ...     buttons=Temp.OTPButtonCode(code='123456'),
     ... )
 
@@ -721,10 +829,11 @@ class Template:
         buttons: The buttons to send with the template (required base on the template you are sending).
     """
     name: str
-    language: str
+    language: Language | str
     body: Iterable[TextValue | Currency | DateTime] | None = None
     header: TextValue | Document | Image | Video | Location | None = None
-    buttons: Iterable[QuickReplyButtonData | UrlButtonValue] | OTPButtonCode | MPMButton | CatalogButton | None = None
+    buttons: (Iterable[QuickReplyButtonData | UrlButtonValue]
+              | OTPButtonCode | MPMButton | CatalogButton | CopyCodeButton | None) = None
 
     def __post_init__(self):
         if isinstance(self.buttons, self.OTPButtonCode):
@@ -733,7 +842,7 @@ class Template:
     def to_dict(self, is_header_url: bool = False) -> dict[str, str | dict[str, str | tuple[dict[str, str], ...]]]:
         return dict(
             name=self.name,
-            language=dict(code=self.language),
+            language=dict(code=str(self.language)),
             components=tuple(comp for comp in (
                 dict(
                     type=ComponentType.BODY.value,
@@ -753,6 +862,8 @@ class Template:
                 )) if self.buttons is not None else ())
             ) if comp is not None)
         )
+
+    Language = Language
 
     @dataclass(slots=True)
     class TextValue(ComponentABC):
@@ -1002,3 +1113,22 @@ class Template:
                     thumbnail_product_retailer_id=self.thumbnail_product_sku,
                 )
             )
+
+    @dataclass(slots=True)
+    class CopyCodeButton(ComponentABC):
+        """
+        Represents a copy code button variable (copies the code to the user's clipboard).
+
+        Example:
+            >>> from pywa.types import Template
+            >>> Template.CopyCodeButton(code='COUPON123')
+
+        Attributes:
+            code: The code to copy when the user taps the button.
+        """
+        type: ParamType = field(default=ParamType.BUTTON, init=False, repr=False)
+        sub_type: ButtonType = field(default=ButtonType.COPY_CODE, init=False, repr=False)
+        code: str
+
+        def to_dict(self) -> dict[str, str]:
+            return dict(type='coupon_code', coupon_code=self.code)
