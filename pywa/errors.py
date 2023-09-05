@@ -3,7 +3,7 @@ This module contains the errors that can be raised by the WhatsApp Cloud API or 
 """
 
 import functools
-from typing import Optional, Type, cast
+from typing import Type, cast
 
 
 class WhatsAppError(Exception):
@@ -22,7 +22,7 @@ class WhatsAppError(Exception):
         status_code: The status code (in case of response, else None).
     """
 
-    __error_codes__: Optional[tuple | range] = ()
+    __error_codes__: tuple | range | None = ()
 
     def __init__(
         self,
@@ -95,7 +95,7 @@ class WhatsAppError(Exception):
 class AuthorizationError(WhatsAppError):
     """Base exception for all authorization errors."""
 
-    __error_codes__: Optional[tuple | range] = None
+    __error_codes__: tuple | range | None = None
 
 
 class AuthException(AuthorizationError):
@@ -134,7 +134,7 @@ class APIPermission(AuthorizationError):
 class ThrottlingError(WhatsAppError):
     """Base exception for all rate limit errors."""
 
-    __error_codes__: Optional[tuple | range] = None
+    __error_codes__: tuple | range | None = None
 
 
 class ToManyAPICalls(ThrottlingError):
@@ -178,7 +178,7 @@ class ToManyMessages(ThrottlingError):
 class IntegrityError(WhatsAppError):
     """Base exception for all integrity errors."""
 
-    __error_codes__: Optional[tuple | range] = None
+    __error_codes__: tuple | range | None = None
 
 
 class TemporarilyBlocked(IntegrityError):
@@ -205,7 +205,7 @@ class AccountLocked(IntegrityError):
 class SendMessageError(WhatsAppError):
     """Base exception for all message errors."""
 
-    __error_codes__: Optional[tuple | range] = None
+    __error_codes__: tuple | range | None = None
 
 
 class MessageUndeliverable(SendMessageError):
