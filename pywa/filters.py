@@ -9,6 +9,7 @@ __all__ = [
     "forwarded_many_times",
     "reply",
     "from_users",
+    "from_countries",
     "text",
     "media",
     "image",
@@ -101,6 +102,21 @@ def from_users(*numbers: str) -> MessageFilterT | CallbackFilterT | MessageStatu
     only_nums_pattern = re.compile(r"\D")
     numbers = tuple(re.sub(only_nums_pattern, "", n) for n in numbers)
     return lambda wa, m: m.from_user.wa_id in numbers
+
+
+def from_countries(*prefixes: str | int) -> MessageFilterT | CallbackFilterT | MessageStatusFilterT:
+    """
+    Filter for messages that are sent from the given country codes.
+
+    - See https://countrycode.org/ for a list of country codes.
+
+    It is always recommended to restrict the countries that can use your bot. remember that you pay for
+    every conversation that you reply to.
+
+    >>> from_countries("972", "1") # Israel and USA
+    """
+    codes = tuple(str(p) for p in prefixes)
+    return lambda wa, m: m.from_user.wa_id.startswith(codes)
 
 
 class _BaseUpdateFilter(ABC):

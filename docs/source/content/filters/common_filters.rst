@@ -7,3 +7,4 @@ Common filters
 .. autofunction:: any_
 .. autofunction:: not_
 .. autofunction:: from_users
+.. autofunction:: from_countries
