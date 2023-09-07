@@ -12,6 +12,7 @@ import warnings
 from dataclasses import dataclass, field
 from typing import Iterable, BinaryIO
 from pywa import utils
+from .callback import CallbackDataT
 from .others import ProductsSection
 
 DEFAULT = object()
@@ -1007,10 +1008,10 @@ class Template:
         """
         type: ParamType = field(default=ParamType.BUTTON, init=False, repr=False)
         sub_type: ButtonType = field(default=ButtonType.QUICK_REPLY, init=False, repr=False)
-        data: str
+        data: CallbackDataT
 
         def to_dict(self) -> dict[str, str]:
-            return dict(type='payload', payload=self.data)
+            return dict(type='payload', payload=self.data)  # TODO convert to str
 
     @dataclass(slots=True)
     class UrlButtonValue(ComponentABC):

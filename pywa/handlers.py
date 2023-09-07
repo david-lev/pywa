@@ -12,11 +12,32 @@ __all__ = [
     "MessageStatusHandler"
 ]
 
-from typing import Callable, Any, TYPE_CHECKING
+from typing import Callable, Any, TYPE_CHECKING, Iterable, cast
+from pywa import filters as fil
 from pywa.types import Message, CallbackButton, CallbackSelection, MessageStatus
+from pywa.types.callback import CallbackDataT, CallbackData, CALLBACK_SEP
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
+
+
+def _resolve_callback_data(factory: CallbackDataT) -> tuple[CallbackDataT, tuple[Callable[[WhatsApp, Any], bool]]]:
+    """Internal function to resolve the callback data into a factory and a filter."""
+    clb_filter = None
+    if issubclass(factory, CallbackData):
+        factories = factory.from_str
+        clb_filter = fil.callback.data_startswith(cast(str, factory.__callback_id__))
+    elif callable(factory):
+        factories = factory
+    elif isinstance(factory, Iterable):
+        _factories = (f.from_str if issubclass(f, CallbackData) else f for f in factory)
+        callback_datas = tuple(bool(issubclass(f, CallbackData)) for f in factory)
+        factories = lambda _, data: tuple(map(lambda f, s: f(s), zip(_factories, data.split(CALLBACK_SEP))))  # noqa
+        if any(callback_datas):
+            clb_filter = fil.callback.data_startswith(factories[callback_datas.index(True)].__callback_id__)
+    else:
+        raise ValueError(f"Unsupported factory type {factory}.")
+    return factories, ((clb_filter,) if clb_filter else ())
 
 
 class Handler:
@@ -82,15 +103,18 @@ class CallbackButtonHandler(Handler):
         handler: The handler function. (gets the WhatsApp instance and the callback as arguments)
         *filters: The filters to apply to the handler. (gets the WhatsApp instance and
             the callback as arguments and returns a boolean)
+        factory: The constructor/s to use to construct the callback data.
     """
     __handler_type__ = "button"
 
     def __init__(
             self,
             handler: Callable[[WhatsApp, CallbackButton], Any],
-            *filters: Callable[[WhatsApp, CallbackButton], bool]
+            *filters: Callable[[WhatsApp, CallbackButton], bool],
+            factory: CallbackDataT = str
     ):
-        super().__init__(handler, *filters)
+        self.factory, clb_filter = _resolve_callback_data(factory)
+        super().__init__(handler, *clb_filter, *filters)
 
 
 class CallbackSelectionHandler(Handler):
@@ -107,16 +131,20 @@ class CallbackSelectionHandler(Handler):
 
     Args:
         handler: The handler function. (gets the WhatsApp instance and the callback as arguments)
-        *filters: The filters to apply to the handler. (gets the WhatsApp instance and
+        *filters: The filters to apply to the handler. (gets the WhatsApp instance and the callback as arguments and
+            returns a boolean)
+        factory: The constructor/s to use to construct the callback data.
     """
     __handler_type__ = "selection"
 
     def __init__(
             self,
             handler: Callable[[WhatsApp, CallbackSelection], Any],
-            *filters: Callable[[WhatsApp, CallbackSelection], bool]
+            *filters: Callable[[WhatsApp, CallbackSelection], bool],
+            factory: CallbackDataT = str
     ):
-        super().__init__(handler, *filters)
+        self.factory, clb_filter = _resolve_callback_data(factory)
+        super().__init__(handler, *clb_filter, *filters)
 
 
 class MessageStatusHandler(Handler):

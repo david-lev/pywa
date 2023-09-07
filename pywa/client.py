@@ -10,6 +10,7 @@ import os
 import requests
 from typing import Callable, Any, Iterable, BinaryIO
 from pywa.api import WhatsAppCloudApi
+from pywa.types.callback import CallbackDataT
 from pywa.webhook import Webhook
 from pywa.handlers import (
     Handler, MessageHandler, CallbackButtonHandler, CallbackSelectionHandler, RawUpdateHandler, MessageStatusHandler
@@ -125,7 +126,7 @@ class WhatsApp:
         """
         Decorator to register a function as a handler for raw updates.
             - This handler is called for **EVERY** update received from WhatsApp, even if it's not sent to the client phone number.
-            - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.RawUpdateHandler`.
+            - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`RawUpdateHandler`.
 
         Example:
 
@@ -148,7 +149,7 @@ class WhatsApp:
     ) -> Callable[[Callable[[WhatsApp, Message], Any]], Callable[[WhatsApp, Message], Any]]:
         """
         Decorator to register a function as a handler for incoming messages.
-            - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.MessageHandler`.
+            - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`MessageHandler`.
 
         Example:
 
@@ -170,11 +171,11 @@ class WhatsApp:
         return decorator
 
     def on_callback_button(
-            self, *filters: Callable[[WhatsApp, CallbackButton], bool]
+            self, *filters: Callable[[WhatsApp, CallbackButton], bool], factory: CallbackDataT = str
     ) -> Callable[[Callable[[WhatsApp, CallbackButton], Any]], Callable[[WhatsApp, CallbackButton], Any]]:
         """
         Decorator to register a function as a handler for incoming callback button presses.
-            - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.CallbackButtonHandler`.
+            - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`CallbackButtonHandler`.
 
         Example:
 
@@ -188,18 +189,19 @@ class WhatsApp:
         Args:
             *filters: Filters to apply to the incoming callback button presses (filters are function that take the
                 WhatsApp client and the incoming callback button and return a boolean).
+            factory: The constructor/s to use for the callback data (default: ``str``).
         """
         def decorator(func: Callable[[WhatsApp, CallbackButton], Any]) -> Callable[[WhatsApp, CallbackButton], Any]:
-            self.add_handlers(CallbackButtonHandler(func, *filters))
+            self.add_handlers(CallbackButtonHandler(func, *filters, factory=factory))
             return func
         return decorator
 
     def on_callback_selection(
-            self, *filters: Callable[[WhatsApp, CallbackSelection], bool]
+            self, *filters: Callable[[WhatsApp, CallbackSelection], bool], factory: CallbackDataT = str
     ) -> Callable[[Callable[[WhatsApp, CallbackSelection], Any]], Callable[[WhatsApp, CallbackSelection], Any]]:
         """
         Decorator to register a function as a handler for incoming callback selections.
-            - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.CallbackSelectionHandler`.
+            - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`CallbackSelectionHandler`.
 
         Example:
 
@@ -213,11 +215,12 @@ class WhatsApp:
         Args:
             *filters: Filters to apply to the incoming callback selections (filters are function that take the
                 WhatsApp client and the incoming callback selection and return a boolean).
+            factory: The constructor/s to use for the callback data (default: ``str``).
         """
         def decorator(
                 func: Callable[[WhatsApp, CallbackSelection], Any]
         ) -> Callable[[WhatsApp, CallbackSelection], Any]:
-            self.add_handlers(CallbackSelectionHandler(func, *filters))
+            self.add_handlers(CallbackSelectionHandler(func, *filters, factory=factory))
             return func
         return decorator
 
@@ -226,7 +229,7 @@ class WhatsApp:
     ) -> Callable[[Callable[[WhatsApp, MessageStatus], Any]], Callable[[WhatsApp, MessageStatus], Any]]:
         """
         Decorator to register a function as a handler for incoming message status changes.
-            - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.MessageStatusHandler`.
+            - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`MessageStatusHandler`.
 
         **DO NOT USE THIS HANDLER TO SEND MESSAGES, IT WILL CAUSE AN INFINITE LOOP!**
 
