@@ -358,7 +358,7 @@ class NewTemplate:
     
         Example:
             >>> from pywa.types.template import NewTemplate
-            >>> NewTemplate.Image(examples=["2:c2FtcGxl..."])
+            >>> NewTemplate.Image(example="2:c2FtcGxl...")
     
         Attributes:
             example: An image handles (Use the `Resumable Upload API
@@ -382,7 +382,7 @@ class NewTemplate:
     
         Example:
             >>> from pywa.types import NewTemplate
-            >>> NewTemplate.Video(examples=["2:c2FtcGxl..."])
+            >>> NewTemplate.Video(example="2:c2FtcGxl...")
     
         Attributes:
             example: A video handle (Use the `Resumable Upload API
@@ -406,7 +406,7 @@ class NewTemplate:
     
         Example:
             >>> from pywa.types import NewTemplate
-            >>> NewTemplate.Document(examples=["2:c2FtcGxl..."])
+            >>> NewTemplate.Document(example="2:c2FtcGxl...")
     
         Attributes:
             example: A document handle (Use the `Resumable Upload API

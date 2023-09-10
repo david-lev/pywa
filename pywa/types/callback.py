@@ -55,8 +55,8 @@ class CallbackData:
         ... )
 
         >>> @wa.on_callback_button(factory=UserData) # Register a handler for the callback data
-        ... def on_video(client: WhatsApp, btn: CallbackButton[User]): # For autocomplete
-        ...     print(btn.data.name) # Access the data object as an attribute
+        ... def on_user_data(client: WhatsApp, btn: CallbackButton[UserData]): # For autocomplete
+        ...    if btn.data.admin): ... # Access the data object as an attribute
     """
 
     __callback_id__: int = 0
@@ -97,7 +97,7 @@ class CallbackData:
     @staticmethod
     def _not_contains(value: Any, *not_) -> str:
         """Internal function to validate that the value does not contain the separator."""
-        if any(sep in (str_val := value) for sep in not_):
+        if any(sep in (str_val := str(value)) for sep in not_):
             raise ValueError(f"Callback data cannot contain the characters {not_}.")
         return str_val
 
