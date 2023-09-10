@@ -12,10 +12,11 @@ __all__ = [
     "MessageStatusHandler"
 ]
 
-from typing import Callable, Any, TYPE_CHECKING, Iterable, cast
+import dataclasses
+from typing import Callable, Any, TYPE_CHECKING, cast
 from pywa import filters as fil
 from pywa.types import Message, CallbackButton, CallbackSelection, MessageStatus
-from pywa.types.callback import CallbackDataT, CallbackData, CALLBACK_SEP
+from pywa.types.callback import CallbackDataT, CallbackData, CLB_SEP
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
@@ -24,17 +25,17 @@ if TYPE_CHECKING:
 def _resolve_callback_data(factory: CallbackDataT) -> tuple[CallbackDataT, tuple[Callable[[WhatsApp, Any], bool]]]:
     """Internal function to resolve the callback data into a factory and a filter."""
     clb_filter = None
-    if issubclass(factory, CallbackData):
+    if callable(factory):
+        factories = factory
+    elif isinstance(factory, list | tuple):
+        callback_datas = tuple(bool(issubclass(f, CallbackData)) for f in factory)
+        factories = lambda _, data: tuple(map(lambda f, s: (f.from_str if issubclass(f, CallbackData) else f)(s), # noqa
+            zip(factory, data.split(CLB_SEP))))
+        if any(callback_datas):
+            clb_filter = fil.callback.data_startswith(factory[callback_datas.index(True)].__callback_id__)
+    elif issubclass(factory, CallbackData):
         factories = factory.from_str
         clb_filter = fil.callback.data_startswith(cast(str, factory.__callback_id__))
-    elif callable(factory):
-        factories = factory
-    elif isinstance(factory, Iterable):
-        _factories = (f.from_str if issubclass(f, CallbackData) else f for f in factory)
-        callback_datas = tuple(bool(issubclass(f, CallbackData)) for f in factory)
-        factories = lambda _, data: tuple(map(lambda f, s: f(s), zip(_factories, data.split(CALLBACK_SEP))))  # noqa
-        if any(callback_datas):
-            clb_filter = fil.callback.data_startswith(factories[callback_datas.index(True)].__callback_id__)
     else:
         raise ValueError(f"Unsupported factory type {factory}.")
     return factories, ((clb_filter,) if clb_filter else ())
@@ -116,6 +117,10 @@ class CallbackButtonHandler(Handler):
         self.factory, clb_filter = _resolve_callback_data(factory)
         super().__init__(handler, *clb_filter, *filters)
 
+    def __call__(self, wa: WhatsApp, data: CallbackButton):
+        if all((f(wa, data) for f in self.filters)):
+            self.handler(wa, dataclasses.replace(data, data=self.factory(wa, data.data)))
+
 
 class CallbackSelectionHandler(Handler):
     """
@@ -145,6 +150,10 @@ class CallbackSelectionHandler(Handler):
     ):
         self.factory, clb_filter = _resolve_callback_data(factory)
         super().__init__(handler, *clb_filter, *filters)
+
+    def __call__(self, wa: WhatsApp, data: CallbackSelection):
+        if all((f(wa, data) for f in self.filters)):
+            self.handler(wa, dataclasses.replace(data, data=self.factory(wa, data.data)))
 
 
 class MessageStatusHandler(Handler):

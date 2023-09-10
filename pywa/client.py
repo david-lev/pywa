@@ -10,7 +10,6 @@ import os
 import requests
 from typing import Callable, Any, Iterable, BinaryIO
 from pywa.api import WhatsAppCloudApi
-from pywa.types.callback import CallbackDataT
 from pywa.webhook import Webhook
 from pywa.handlers import (
     Handler, MessageHandler, CallbackButtonHandler, CallbackSelectionHandler, RawUpdateHandler, MessageStatusHandler
@@ -19,6 +18,7 @@ from pywa.types import (
     Button, SectionList, Message, CallbackButton, CallbackSelection, MessageStatus, Contact, MediaUrlResponse,
     ProductsSection, BusinessProfile, Industry, CommerceSettings, NewTemplate, Template, TemplateResponse
 )
+from pywa.types.callback import CallbackDataT
 
 _MISSING = object()
 

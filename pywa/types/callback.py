@@ -7,11 +7,12 @@ __all__ = [
     'SectionList',
     'CallbackData',
     'CallbackDataT',
-    'CALLBACK_SEP',
+    'CLB_SEP',
 ]
 
 from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
 from typing import TYPE_CHECKING, Iterable, TypeVar, Generic, Callable, Any
 from .base_update import BaseUpdate
 from .others import Metadata, User, ReplyToMessage, MessageType
@@ -19,9 +20,9 @@ from .others import Metadata, User, ReplyToMessage, MessageType
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
 
-ALLOWED_TYPES = (str, int, bool, float, datetime)
-CALLBACK_SEP = ','
-CALLBACK_DATA_SEP = ':'
+ALLOWED_TYPES = (str, int, bool, float)
+CLB_SEP = ';'
+CLB_DATA_SEP = ':'
 
 
 class CallbackData:
@@ -30,28 +31,30 @@ class CallbackData:
 
         If you use dataclasses, which is the recommended way, you should not use ``kw_only=True``.
         This is because we are limited to 200 characters in the callback data, so we need to use positional arguments.
+        So object like User(id=123, name='John') will be converted to ``123:John``.
 
-        Also, use only primitive types (str, int, bool, etc.) in the dataclass, because we need to convert the data to
-        a string.
+        Currently, the following types are supported:
+        ``str``, ``int``, ``bool``, ``float`` (and ``Enum`` that inherits from ``str`` e.g ``class State(str, Enum)``).
+
+        Also, you cannot use the characters ``:`` and ``;`` in the callback data, because they are used as separators.
 
     Example:
 
         >>> from pywa import WhatsApp
         >>> from pywa.types import CallbackData, Button
-        >>> from dataclasses import dataclass # Use dataclass to get free __init__
-        >>> @dataclass(frozen=True) # Do not use kw_only=True
-        >>> class User(CallbackData): # Subclass CallbackData
+        >>> from dataclasses import dataclass # Use dataclass to get free ordered __init__
+        >>> @dataclass(frozen=True, slots=True) # Do not use kw_only=True
+        >>> class UserData(CallbackData): # Subclass CallbackData
         ...     id: int
-        ...     name: str
-        >>> user = User(id=123, name='John')
+        ...     admin: bool
         >>> wa = WhatsApp(...)
         >>> wa.send_message(
         ...     to='972987654321',
         ...     text='Click the button to get the user',
-        ...     buttons=[Button(title='Get user', callback_data=user)]
+        ...     buttons=[Button(title='Get user', callback_data=UserData(id=123, admin=True))]
         ... )
 
-        >>> @wa.on_callback_button(factory=User) # Register a handler for the callback data
+        >>> @wa.on_callback_button(factory=UserData) # Register a handler for the callback data
         ... def on_video(client: WhatsApp, btn: CallbackButton[User]): # For autocomplete
         ...     print(btn.data.name) # Access the data object as an attribute
     """
@@ -59,9 +62,16 @@ class CallbackData:
     __callback_id__: int = 0
 
     def __init_subclass__(cls, **kwargs):
-        """Generate a unique ID for each subclass."""
+        """Validate the callback data class and set a unique ID for it."""
         super().__init_subclass__(**kwargs)
-        cls.__unique_id__ = CallbackData.__callback_id__
+        if not (annotations := cls.__annotations__.items()):
+            raise TypeError(f"Callback data class {cls.__name__} must have at least one field.")
+        if unsupported_fields := {
+            (field_name, field_type) for field_name, field_type in annotations
+            if not issubclass(field_type, ALLOWED_TYPES)
+        }:
+            raise TypeError(f"Unsupported types {unsupported_fields} in callback data. Use one of {ALLOWED_TYPES}.")
+        cls.__callback_id__ = CallbackData.__callback_id__
         CallbackData.__callback_id__ += 1
 
     @classmethod
@@ -77,33 +87,42 @@ class CallbackData:
             return cls(*(
                 annotation(value) for annotation, value in zip(
                     cls.__annotations__.values(),
-                    data.split(CALLBACK_DATA_SEP)[1:],
+                    data.split(CLB_DATA_SEP)[1:],
                     strict=True
                 )
             ))
         except (ValueError, TypeError) as e:
             raise ValueError(f"Invalid callback data for {cls.__name__}: {data}") from e
 
+    @staticmethod
+    def _not_contains(value: Any, *not_) -> str:
+        """Internal function to validate that the value does not contain the separator."""
+        if any(sep in (str_val := value) for sep in not_):
+            raise ValueError(f"Callback data cannot contain the characters {not_}.")
+        return str_val
+
     def to_str(self) -> str:
         """
         Internal function to convert a callback object to a callback string.
         """
-        values = []
-        for annotation, value in zip(self.__annotations__.values(), self.__dict__.values()):
-            if annotation not in ALLOWED_TYPES:
-                raise TypeError(f"Unsupported type {annotation} for callback data. Use one of {ALLOWED_TYPES}.")
-            if issubclass(annotation, bool):
-                value = '1' if value else ''  # convert bool to 1 or empty string
-            values.append(str(value))
-        return CALLBACK_DATA_SEP.join((str(self.__unique_id__), *values))
+        return CLB_DATA_SEP.join((str(self.__callback_id__), *(
+            self._not_contains(getattr(self, field_name), CLB_SEP, CLB_DATA_SEP)
+            if not issubclass(field_type, (bool, Enum)) else (' ' if getattr(self, field_name) else '')
+            if field_type is bool else self._not_contains(getattr(self, field_name).value, CLB_SEP, CLB_DATA_SEP)
+            for field_name, field_type in self.__annotations__.items()
+        )))
 
-    @staticmethod
-    def join_to_str(*datas: Iterable['CallbackData']) -> str:
+    @classmethod
+    def join_to_str(cls, *datas: 'CallbackDataT') -> str:
         """Internal function to join multiple callback objects to a callback string."""
-        return CALLBACK_SEP.join(data.to_str() for data in datas)
+        return CLB_SEP.join(
+            data.to_str() if isinstance(data, CallbackData)
+            else cls._not_contains(data, CLB_DATA_SEP)
+            for data in datas
+        )
 
 
-CallbackDataT = TypeVar('CallbackDataT', bound=CallbackData | Iterable[CallbackData] | Callable[[str], Any])
+CallbackDataT = TypeVar('CallbackDataT', bound=CallbackData | Iterable[CallbackData] | str | Callable[[str], Any])
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -136,7 +155,7 @@ class CallbackButton(BaseUpdate, Generic[CallbackDataT]):
         return self.reply_to_message.message_id
 
     @classmethod
-    def from_dict(cls, client: WhatsApp, data: dict):
+    def from_dict(cls, client: 'WhatsApp', data: dict):
         message = data['messages'][0]
         return cls(
             _client=client,
@@ -178,7 +197,7 @@ class CallbackSelection(BaseUpdate, Generic[CallbackDataT]):
     description: str | None
 
     @classmethod
-    def from_dict(cls, client: WhatsApp, data: dict):
+    def from_dict(cls, client: 'WhatsApp', data: dict):
         message = data['messages'][0]
         return cls(
             _client=client,
@@ -207,7 +226,16 @@ class Button:
     callback_data: CallbackDataT
 
     def to_dict(self) -> dict:
-        return {"type": "reply", "reply": {"id": self.callback_data, "title": self.title}}  #  TODO: convert callback_data to str
+        return {
+            "type": "reply",
+            "reply":
+                {
+                    "id": self.callback_data.to_str()
+                    if isinstance(self.callback_data, CallbackData) else self.callback_data
+                    if isinstance(self.callback_data, str) else self.callback_data.join_to_str(*self.callback_data),
+                    "title": self.title
+                }
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -225,7 +253,12 @@ class SectionRow:
     description: str | None = None
 
     def to_dict(self) -> dict:
-        d = {"id": self.callback_data, "title": self.title}  # TODO: convert callback_data to str
+        d = {
+            "id": self.callback_data.to_str() if isinstance(self.callback_data, CallbackData)
+            else self.callback_data if isinstance(self.callback_data, str)
+            else self.callback_data.join_to_str(*self.callback_data),
+            "title": self.title
+        }
         if self.description:
             d["description"] = self.description
         return d

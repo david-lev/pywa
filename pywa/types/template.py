@@ -10,10 +10,12 @@ import abc
 import re
 import warnings
 from dataclasses import dataclass, field
-from typing import Iterable, BinaryIO
+from typing import Iterable, BinaryIO, TYPE_CHECKING
 from pywa import utils
-from .callback import CallbackDataT
 from .others import ProductsSection
+
+if TYPE_CHECKING:
+    from pywa.types.callback import CallbackDataT, CallbackData
 
 DEFAULT = object()
 
@@ -1011,7 +1013,10 @@ class Template:
         data: CallbackDataT
 
         def to_dict(self) -> dict[str, str]:
-            return dict(type='payload', payload=self.data)  # TODO convert to str
+            return dict(
+                type='payload',
+                payload=self.data.to_str() if isinstance(self.data, CallbackData) else self.data
+            )
 
     @dataclass(slots=True)
     class UrlButtonValue(ComponentABC):
