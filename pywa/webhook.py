@@ -2,12 +2,14 @@ from __future__ import annotations
 from pywa.handlers import (
     Handler, MessageHandler, CallbackButtonHandler, CallbackSelectionHandler, RawUpdateHandler, MessageStatusHandler
 )
+from pywa.utils import FlaskApp, FastAPIApp
+
 """The webhook module contains the Webhook class, which is used to register a webhook to listen for incoming 
 messages."""
 
 import collections
 import threading
-from typing import Union, TYPE_CHECKING, Callable, Any, Type
+from typing import TYPE_CHECKING, Callable, Any, Type
 from pywa.types import Message, CallbackButton, CallbackSelection, MessageStatus
 from pywa.types.base_update import BaseUpdate
 from pywa import utils
@@ -24,7 +26,7 @@ class Webhook:
     def __init__(
             self,
             wa_client: WhatsApp,
-            server: Union["flask.Flask", "fastapi.FastAPI"],
+            server: FlaskApp | FastAPIApp,
             verify_token: str,
             webhook_endpoint: str,
             filter_updates: bool

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, fields
 from enum import Enum
 from importlib import import_module
+from typing import Protocol
 
 
 def is_fastapi_app(app):
@@ -53,3 +54,17 @@ class FromDict:
             k: v for k, v in data.items()
             if k in (f.name for f in fields(cls))
         })
+
+
+class FastAPIApp(Protocol):
+    def get(self, path: str, **kwargs):
+        ...
+
+    def post(self, path: str, **kwargs):
+        ...
+
+
+class FlaskApp(Protocol):
+    def route(self, rule: str, **options):
+        ...
+

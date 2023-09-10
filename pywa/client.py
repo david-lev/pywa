@@ -10,6 +10,7 @@ import os
 import requests
 from typing import Callable, Any, Iterable, BinaryIO
 from pywa.api import WhatsAppCloudApi
+from pywa.utils import FlaskApp, FastAPIApp
 from pywa.webhook import Webhook
 from pywa.handlers import (
     Handler, MessageHandler, CallbackButtonHandler, CallbackSelectionHandler, RawUpdateHandler, MessageStatusHandler
@@ -31,7 +32,7 @@ class WhatsApp:
             base_url: str = "https://graph.facebook.com",
             api_version: float | int = 17.0,
             session: requests.Session | None = None,
-            server: Any | None = None,
+            server: FlaskApp | FastAPIApp | None = None,
             webhook_endpoint: str = "/",
             verify_token: str | None = None,
             filter_updates: bool = True,

@@ -11,6 +11,10 @@ Keyboard
 
 .. autoclass:: SectionRow()
 
+.. autoclass:: CallbackData()
+
+.. autoclass:: CallbackDataT()
+
 ----------------
 
 .. currentmodule:: pywa.types.others

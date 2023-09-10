@@ -39,27 +39,29 @@ class Message(BaseUpdate):
     - `\`Message\` on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/components#messages-object>`_
 
     Attributes:
-        id: The message ID.
+        id: The message ID (If you want to reply to the message, use ``message_id_to_reply`` instead).
         metadata: The metadata of the message (to which phone number it was sent).
-        type: The message type (text, image, video, etc.).
+        type: The message type (See :class:`MessageType`).
         from_user: The user who sent the message.
         timestamp: The timestamp when the message was sent.
-        reply_to_message: The message to which this message is a reply to. (optional)
+        reply_to_message: The message to which this message is a reply to. (Optional)
         forwarded: Whether the message was forwarded.
-        forwarded_many_times: Whether the message was forwarded many times. (when True, ``forwarded`` will be True as well)
-        text: The text of the message (if the message type is text). (optional)
-        image: The image of the message (if the message type is image). (optional)
-        video: The video of the message (if the message type is video). (optional)
-        sticker: The sticker of the message (if the message type is sticker). (optional)
-        document: The document of the message (if the message type is document). (optional)
-        audio: The audio of the message (if the message type is audio). (optional)
-        caption: The caption of the message (if the message type is image, video, or document). (optional)
-        reaction: The reaction of the message (if the message type is reaction). (optional)
-        location: The location of the message (if the message type is location). (optional)
-        contacts: The contacts of the message (if the message type is contacts). (optional)
-        order: The order of the message (if the message type is order). (optional)
-        system: The system update (if the message type is system). (optional)
-        error: The error of the message (if the message type is `unsupported`). (optional)
+        forwarded_many_times: Whether the message was forwarded many times.
+         (when True, ``forwarded`` will be True as well)
+        text: The text of the message (if the message type is :class:`MessageType.TEXT`).
+        image: The image of the message (if the message type is :class:`MessageType.IMAGE`).
+        video: The video of the message (if the message type is :class:`MessageType.VIDEO`).
+        sticker: The sticker of the message (if the message type is :class:`MessageType.STICKER`).
+        document: The document of the message (if the message type is :class:`MessageType.DOCUMENT`).
+        audio: The audio of the message (if the message type is :class:`MessageType.AUDIO`).
+        caption: The caption of the message (Optional, only available for :class:`MessageType.IMAGE`,
+         :class:`MessageType.VIDEO` and :class:`MessageType.DOCUMENT`).
+        reaction: The reaction of the message (if the message type is :class:`MessageType.REACTION`).
+        location: The location of the message (if the message type is :class:`MessageType.LOCATION`).
+        contacts: The contacts of the message (if the message type is :class:`MessageType.CONTACTS`).
+        order: The order of the message (if the message type is :class:`MessageType.ORDER`).
+        system: The system update (if the message type is :class:`MessageType.SYSTEM`).
+        error: The error of the message (if the message type is :class:`MessageType.UNSUPPORTED`).
     """
     id: str
     type: MessageType
@@ -107,7 +109,7 @@ class Message(BaseUpdate):
         msg_type = msg['type']
         context = msg.get('context')
         constructor = _FIELDS_TO_OBJECTS_CONSTRUCTORS.get(msg_type)
-        msg_content = {msg_type: constructor(msg[msg_type], _client=client)} if constructor is not None else {}
+        msg_content = {msg_type: constructor(msg[msg_type], _client=client)} if constructor is not None else {} # noqa
         return cls(
             _client=client,
             id=msg['id'],
