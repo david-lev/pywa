@@ -13,7 +13,7 @@ __all__ = [
 ]
 
 import dataclasses
-from typing import Callable, Any, TYPE_CHECKING, cast
+from typing import Callable, Any, TYPE_CHECKING
 from pywa import filters as fil
 from pywa.types import Message, CallbackButton, CallbackSelection, MessageStatus
 from pywa.types.callback import CallbackDataT, CallbackData, CLB_SEP
@@ -32,10 +32,10 @@ def _resolve_callback_data(factory: CallbackDataT) -> tuple[CallbackDataT, tuple
         factories = lambda _, data: tuple(map(lambda f, s: (f.from_str if issubclass(f, CallbackData) else f)(s), # noqa
             zip(factory, data.split(CLB_SEP))))
         if any(callback_datas):
-            clb_filter = fil.callback.data_startswith(factory[callback_datas.index(True)].__callback_id__)
+            clb_filter = fil.callback.data_startswith(str(factory[callback_datas.index(True)].__callback_id__))
     elif issubclass(factory, CallbackData):
         factories = factory.from_str
-        clb_filter = fil.callback.data_startswith(cast(str, factory.__callback_id__))
+        clb_filter = fil.callback.data_startswith(str(factory.__callback_id__))
     else:
         raise ValueError(f"Unsupported factory type {factory}.")
     return factories, ((clb_filter,) if clb_filter else ())
@@ -119,7 +119,7 @@ class CallbackButtonHandler(Handler):
 
     def __call__(self, wa: WhatsApp, data: CallbackButton):
         if all((f(wa, data) for f in self.filters)):
-            self.handler(wa, dataclasses.replace(data, data=self.factory(wa, data.data)))
+            self.handler(wa, dataclasses.replace(data, data=self.factory(data.data)))
 
 
 class CallbackSelectionHandler(Handler):
@@ -153,7 +153,7 @@ class CallbackSelectionHandler(Handler):
 
     def __call__(self, wa: WhatsApp, data: CallbackSelection):
         if all((f(wa, data) for f in self.filters)):
-            self.handler(wa, dataclasses.replace(data, data=self.factory(wa, data.data)))
+            self.handler(wa, dataclasses.replace(data, data=self.factory(data.data)))
 
 
 class MessageStatusHandler(Handler):
