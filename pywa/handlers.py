@@ -13,10 +13,10 @@ __all__ = [
 ]
 
 import dataclasses
-from typing import Callable, Any, TYPE_CHECKING
+from typing import Callable, Any, TYPE_CHECKING, Iterable, cast
 from pywa import filters as fil
 from pywa.types import Message, CallbackButton, CallbackSelection, MessageStatus
-from pywa.types.callback import CallbackDataT, CallbackData, CLB_SEP
+from pywa.types.callback import CallbackDataT, CallbackData, CLB_SEP, CLB_DATA_SEP
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
@@ -25,15 +25,19 @@ if TYPE_CHECKING:
 def _resolve_callback_data(factory: CallbackDataT) -> tuple[CallbackDataT, tuple[Callable[[WhatsApp, Any], bool]]]:
     """Internal function to resolve the callback data into a factory and a filter."""
     clb_filter = None
-    if isinstance(factory, list | tuple):
-        callback_datas = tuple(bool(issubclass(f, CallbackData)) for f in factory)
-        factories = lambda _, data: tuple(map(lambda f, s: (f.from_str if issubclass(f, CallbackData) else f)(s), # noqa
-            zip(factory, data.split(CLB_SEP))))
-        if any(callback_datas):
-            clb_filter = fil.callback.data_startswith(str(factory[callback_datas.index(True)].__callback_id__))
+    if isinstance(factory, Iterable):
+        factories = lambda data: ( # noqa
+            tuple(map(lambda fs: (fs[0].from_str if issubclass(fs[0], CallbackData) else fs[0])(fs[1]), # noqa
+                      zip(factory, data.split(CLB_SEP))))
+        )
+        if any((callback_datas := tuple(bool(issubclass(f, CallbackData)) for f in factory))):
+            clb_filter = lambda wa, btn: all(  # noqa
+                btn.data.split(CLB_SEP)[i].startswith(str(cast(CallbackData, factory[i]).__callback_id__) + CLB_DATA_SEP)
+                for i, b in enumerate(callback_datas) if b
+            )
     elif issubclass(factory, CallbackData):
         factories = factory.from_str
-        clb_filter = fil.callback.data_startswith(str(factory.__callback_id__))
+        clb_filter = fil.callback.data_startswith(str(factory.__callback_id__) + CLB_DATA_SEP)
     elif callable(factory):
         factories = factory
     else:

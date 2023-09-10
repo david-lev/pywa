@@ -8,6 +8,7 @@ __all__ = [
     'CallbackData',
     'CallbackDataT',
     'CLB_SEP',
+    'CLB_DATA_SEP',
 ]
 
 from dataclasses import dataclass
@@ -113,7 +114,7 @@ class CallbackData:
         )))
 
     @classmethod
-    def join_to_str(cls, *datas: 'CallbackDataT') -> str:
+    def join_to_str(cls, *datas: Any) -> str:
         """Internal function to join multiple callback objects to a callback string."""
         return CLB_SEP.join(
             data.to_str() if isinstance(data, CallbackData)
@@ -122,7 +123,7 @@ class CallbackData:
         )
 
 
-CallbackDataT = TypeVar('CallbackDataT', bound=CallbackData | Iterable[CallbackData] | str | Callable[[str], Any])
+CallbackDataT = TypeVar('CallbackDataT', bound=CallbackData | Iterable[type[CallbackData]] | str | Callable[[str], Any])
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
