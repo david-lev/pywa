@@ -25,9 +25,7 @@ if TYPE_CHECKING:
 def _resolve_callback_data(factory: CallbackDataT) -> tuple[CallbackDataT, tuple[Callable[[WhatsApp, Any], bool]]]:
     """Internal function to resolve the callback data into a factory and a filter."""
     clb_filter = None
-    if callable(factory):
-        factories = factory
-    elif isinstance(factory, list | tuple):
+    if isinstance(factory, list | tuple):
         callback_datas = tuple(bool(issubclass(f, CallbackData)) for f in factory)
         factories = lambda _, data: tuple(map(lambda f, s: (f.from_str if issubclass(f, CallbackData) else f)(s), # noqa
             zip(factory, data.split(CLB_SEP))))
@@ -36,6 +34,8 @@ def _resolve_callback_data(factory: CallbackDataT) -> tuple[CallbackDataT, tuple
     elif issubclass(factory, CallbackData):
         factories = factory.from_str
         clb_filter = fil.callback.data_startswith(str(factory.__callback_id__))
+    elif callable(factory):
+        factories = factory
     else:
         raise ValueError(f"Unsupported factory type {factory}.")
     return factories, ((clb_filter,) if clb_filter else ())
