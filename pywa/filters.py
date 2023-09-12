@@ -196,9 +196,9 @@ class TextFilter(_BaseUpdateFilter):
 
     __message_types__ = (Mt.TEXT,)
 
-    any: MessageFilterT = lambda wa, m: m.type == Mt.TEXT and not TextFilter.is_command(wa, m)
+    any: MessageFilterT = lambda wa, m: m.type == Mt.TEXT
     """
-    Filter for all text messages (excluding commands).
+    Filter for all text messages.
         - Same as ``filters.text``.
     
     >>> filters.text.any
@@ -510,7 +510,7 @@ class ReactionFilter(_BaseUpdateFilter):
 
         >>> reaction.emojis("👍","👎")
         """
-        return lambda wa, m: ReactionFilter._match_type(m) and m.reaction.emojis in emojis
+        return lambda wa, m: ReactionFilter._match_type(m) and m.reaction.emoji in emojis
 
 
 reaction: MessageFilterT | Type[ReactionFilter] = ReactionFilter
