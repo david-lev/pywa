@@ -510,7 +510,7 @@ class ReactionFilter(_BaseUpdateFilter):
 
         >>> reaction.emojis("👍","👎")
         """
-        return lambda wa, m: ReactionFilter._match_type(m) and m.reaction.emojis in emojis
+        return lambda wa, m: ReactionFilter._match_type(m) and m.reaction.emoji in emojis
 
 
 reaction: MessageFilterT | Type[ReactionFilter] = ReactionFilter
