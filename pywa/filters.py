@@ -196,9 +196,9 @@ class TextFilter(_BaseUpdateFilter):
 
     __message_types__ = (Mt.TEXT,)
 
-    any: MessageFilterT = lambda wa, m: m.type == Mt.TEXT and not TextFilter.is_command(wa, m)
+    any: MessageFilterT = lambda wa, m: m.type == Mt.TEXT
     """
-    Filter for all text messages (excluding commands).
+    Filter for all text messages.
         - Same as ``filters.text``.
     
     >>> filters.text.any
