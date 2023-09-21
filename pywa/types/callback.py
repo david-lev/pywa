@@ -6,9 +6,7 @@ __all__ = [
     'Section',
     'SectionList',
     'CallbackData',
-    'CallbackDataT',
-    'CLB_SEP',
-    'CLB_DATA_SEP',
+    'CallbackDataT'
 ]
 
 from dataclasses import dataclass
@@ -20,10 +18,6 @@ from .others import Metadata, User, ReplyToMessage, MessageType
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
-
-ALLOWED_TYPES = (str, int, bool, float)
-CLB_SEP = ';'
-CLB_DATA_SEP = ':'
 
 
 class CallbackData:
@@ -38,6 +32,8 @@ class CallbackData:
         ``str``, ``int``, ``bool``, ``float`` (and ``Enum`` that inherits from ``str`` e.g ``class State(str, Enum)``).
 
         Also, you cannot use the characters ``:`` and ``;`` in the callback data, because they are used as separators.
+        You can change the separators by setting ``CallbackData.__callback_sep__`` and ``CallbackData.__callback_data_sep__``.
+
 
     Example:
 
@@ -48,6 +44,7 @@ class CallbackData:
         >>> class UserData(CallbackData): # Subclass CallbackData
         ...     id: int
         ...     admin: bool
+
         >>> wa = WhatsApp(...)
         >>> wa.send_message(
         ...     to='972987654321',
@@ -57,10 +54,12 @@ class CallbackData:
 
         >>> @wa.on_callback_button(factory=UserData) # Register a handler for the callback data
         ... def on_user_data(client: WhatsApp, btn: CallbackButton[UserData]): # For autocomplete
-        ...    if btn.data.admin): ... # Access the data object as an attribute
+        ...    if btn.data.admin: print(btn.data.id) # Access the data object as an attribute
     """
-
     __callback_id__: int = 0
+    __callback_sep__: str = ';'
+    __callback_data_sep__: str = ':'
+    __allowed_types__: tuple[type, ...] = (str, int, bool, float)
 
     def __init_subclass__(cls, **kwargs):
         """Validate the callback data class and set a unique ID for it."""
@@ -69,9 +68,9 @@ class CallbackData:
             raise TypeError(f"Callback data class {cls.__name__} must have at least one field.")
         if unsupported_fields := {
             (field_name, field_type) for field_name, field_type in annotations
-            if not issubclass(field_type, ALLOWED_TYPES)
+            if not issubclass(field_type, (types := cls.__allowed_types__))
         }:
-            raise TypeError(f"Unsupported types {unsupported_fields} in callback data. Use one of {ALLOWED_TYPES}.")
+            raise TypeError(f"Unsupported types {unsupported_fields} in callback data. Use one of {types}.")
         cls.__callback_id__ = CallbackData.__callback_id__
         CallbackData.__callback_id__ += 1
 
@@ -88,7 +87,7 @@ class CallbackData:
             return cls(*(
                 annotation(value) for annotation, value in zip(
                     cls.__annotations__.values(),
-                    data.split(CLB_DATA_SEP)[1:],
+                    data.split(cls.__callback_data_sep__)[1:],
                     strict=True
                 )
             ))
@@ -99,26 +98,30 @@ class CallbackData:
     def _not_contains(value: Any, *not_) -> str:
         """Internal function to validate that the value does not contain the separator."""
         if any(sep in (str_val := str(value)) for sep in not_):
-            raise ValueError(f"Callback data cannot contain the characters {not_}.")
+            raise ValueError(f"Callback data cannot contain the characters {not_} "
+                             f"Because they are used as separators. \nYou can change the separators by setting "
+                             f"`CallbackData.__callback_sep__` and `CallbackData.__callback_data_sep__`.")
         return str_val
 
     def to_str(self) -> str:
         """
         Internal function to convert a callback object to a callback string.
         """
-        return CLB_DATA_SEP.join((str(self.__callback_id__), *(
-            self._not_contains(getattr(self, field_name), CLB_SEP, CLB_DATA_SEP)
+        return self.__callback_data_sep__.join((str(self.__callback_id__), *(
+            self._not_contains(getattr(self, field_name), self.__callback_sep__, self.__callback_data_sep__)
             if not issubclass(field_type, (bool, Enum)) else (' ' if getattr(self, field_name) else '')
-            if field_type is bool else self._not_contains(getattr(self, field_name).value, CLB_SEP, CLB_DATA_SEP)
+            if field_type is bool else self._not_contains(
+                getattr(self, field_name).value, self.__callback_sep__, self.__callback_data_sep__
+            )
             for field_name, field_type in self.__annotations__.items()
         )))
 
     @classmethod
     def join_to_str(cls, *datas: Any) -> str:
         """Internal function to join multiple callback objects to a callback string."""
-        return CLB_SEP.join(
+        return cls.__callback_sep__.join(
             data.to_str() if isinstance(data, CallbackData)
-            else cls._not_contains(data, CLB_DATA_SEP)
+            else cls._not_contains(data, cls.__callback_data_sep__)
             for data in datas
         )
 
