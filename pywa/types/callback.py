@@ -32,7 +32,8 @@ class CallbackData:
         ``str``, ``int``, ``bool``, ``float`` (and ``Enum`` that inherits from ``str`` e.g ``class State(str, Enum)``).
 
         Also, you cannot use the characters ``:`` and ``;`` in the callback data, because they are used as separators.
-        You can change the separators by setting ``CallbackData.__callback_sep__`` and ``CallbackData.__callback_data_sep__``.
+        You can change the separators by overriding ``__callback_sep__`` (for individual objects) and
+        ``CallbackData.__callback_sep__`` (In the base class level, affects all child classes).
 
 
     Example:
@@ -52,14 +53,18 @@ class CallbackData:
         ...     buttons=[Button(title='Get user', callback_data=UserData(id=123, admin=True))]
         ... )
 
-        >>> @wa.on_callback_button(factory=UserData) # Register a handler for the callback data
+        >>> @wa.on_callback_button(factory=UserData) # Use the factory parameter to convert the callback data
         ... def on_user_data(client: WhatsApp, btn: CallbackButton[UserData]): # For autocomplete
         ...    if btn.data.admin: print(btn.data.id) # Access the data object as an attribute
     """
     __callback_id__: int = 0
+    """Unique ID for each callback data class. Do not override this."""
     __callback_sep__: str = ';'
+    """The separator between multiple callback objects. (e.g ``123:John;456:Jane``)"""
     __callback_data_sep__: str = ':'
+    """The separator between the callback fields, Can be overridden in subclasses (e.g ``123:John``)."""
     __allowed_types__: tuple[type, ...] = (str, int, bool, float)
+    """The allowed types in the callback data."""
 
     def __init_subclass__(cls, **kwargs):
         """Validate the callback data class and set a unique ID for it."""
@@ -99,8 +104,9 @@ class CallbackData:
         """Internal function to validate that the value does not contain the separator."""
         if any(sep in (str_val := str(value)) for sep in not_):
             raise ValueError(f"Callback data cannot contain the characters {not_} "
-                             f"Because they are used as separators. \nYou can change the separators by setting "
-                             f"`CallbackData.__callback_sep__` and `CallbackData.__callback_data_sep__`.")
+                             f"Because they are used as separators. \nYou can change the separators by overriding "
+                             f"``__callback_sep__`` (for individual objects) and ``CallbackData.__callback_sep__`` "
+                             f"(In the base class level, affects all child classes).")
         return str_val
 
     def to_str(self) -> str:
