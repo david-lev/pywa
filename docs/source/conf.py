@@ -13,7 +13,7 @@
 import os
 import sys
 from datetime import date
-from pywa.__version__ import __version__
+import pywa
 
 
 sys.path.insert(0, os.path.abspath('.'))
@@ -26,8 +26,8 @@ project = 'pywa'
 copyright = f"{date.today().year}, David Lev"
 author = 'David Lev'
 
-version = __version__
-release = __version__
+version = pywa.__version__
+release = pywa.__version__
 
 # -- General configuration ---------------------------------------------------
 

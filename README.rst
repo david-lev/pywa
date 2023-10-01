@@ -14,6 +14,10 @@
     :alt: PyPI Version
     :target: https://badge.fury.io/py/pywa
 
+.. image:: https://github.com/david-lev/pywa/actions/workflows/python-app.yml/badge.svg
+    :alt: Tests
+    :target: https://github.com/david-lev/pywa/actions/workflows/python-app.yml
+
 .. image:: https://www.codefactor.io/repository/github/david-lev/pywa/badge/master
    :target: https://www.codefactor.io/repository/github/david-lev/pywa/overview/master
    :alt: CodeFactor
@@ -28,8 +32,8 @@
 
 ________________________
 
-**PyWa is a Fast, Simple and Lightweight Python framework for building WhatsApp bots using the WhatsApp Cloud API.**
-**The library is designed to be easy to use, and handle all the heavy lifting for you.**
+**PyWa is a Fast, Simple, Modern and easy-to-use Python framework for building WhatsApp bots using the WhatsApp Cloud API.**
+
 
 📄 **Quick Documentation Index**
 --------------------------------
@@ -40,6 +44,18 @@ ________________________
 • `Filters <https://pywa.readthedocs.io/en/latest/content/filters/overview.html>`_
 • `Updates <https://pywa.readthedocs.io/en/latest/content/updates/overview.html>`_
 • `Examples <https://pywa.readthedocs.io/en/latest/content/examples.html>`_
+
+------------------------
+
+⚡ **Features**
+---------------
+- 🚀 Fast and simple to use. No need to worry about the low-level details.
+- 💬 Send text messages with interactive keyboards, images, videos, documents, audio, locations, contacts, etc.
+- 📩 Receive messages, callbacks, message status updates, etc.
+- 🔄 Built-in support for webhooks (Flask, FastAPI, etc.)
+- 🔬 Filters for handling incoming updates
+- 📄 Send and create templates
+- ✅ Fully typed, documented and tested
 
 ------------------------
 

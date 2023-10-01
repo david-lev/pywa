@@ -88,7 +88,7 @@ class Webhook:
                 for handler in self.handlers[key.__handler_type__]:
                     handler(self.wa_client, update_obj)
             raise KeyError  # to always skip the except block
-        except (KeyError, IndexError):  # the update not send to this phone id or filter_updates is True
+        except (KeyError, IndexError):  # the update not sent to this phone id or filter_updates is True
             for raw_update_handler in self.handlers[RawUpdateHandler.__handler_type__]:
                 raw_update_handler(self.wa_client, update)
 
