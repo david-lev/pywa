@@ -13,12 +13,12 @@
 import os
 import sys
 from datetime import date
-import pywa
 
 
 sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, '../..')
 
+import pywa
 
 # -- Project information -----------------------------------------------------
 
