@@ -100,8 +100,12 @@ class Message(BaseUpdate):
 
     @property
     def is_reply(self) -> bool:
-        """Whether the message is a reply to another message."""
-        return self.reply_to_message is not None
+        """
+        Whether the message is a reply to another message.
+
+        - Reaction messages are also considered as replies (But ``.reply_to_message`` will be ``None``).
+        """
+        return self.reply_to_message is not None or self.reaction is not None
 
     @classmethod
     def from_dict(cls, client: WhatsApp, value: dict) -> Message:
