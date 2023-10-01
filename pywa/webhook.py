@@ -84,7 +84,7 @@ class Webhook:
                         "phone_number_id"] == self.wa_client.phone_id):
                 update_obj, key = self._convert_dict_to_update(client=self.wa_client, d=update)
                 if key is None:
-                    return
+                    raise KeyError
                 for handler in self.handlers[key.__handler_type__]:
                     handler(self.wa_client, update_obj)
             raise KeyError  # to always skip the except block
@@ -107,4 +107,4 @@ class Webhook:
 
         elif 'statuses' in value:
             return MessageStatus.from_dict(client=client, data=value), MessageStatusHandler
-        return None, None  # the update is not supported
+        return None, None  # the type of the update is not supported
