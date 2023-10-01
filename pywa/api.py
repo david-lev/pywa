@@ -423,7 +423,7 @@ class WhatsAppCloudApi:
     def send_contacts(
             self,
             to: str,
-            contacts: tuple[dict],
+            contacts: tuple[dict[str, Any]],
             reply_to_message_id: str | None = None,
     ) -> dict[str, dict | list]:
         """

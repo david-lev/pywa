@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field, asdict
-from typing import Iterable, TYPE_CHECKING
+from typing import Any, Iterable, TYPE_CHECKING
 from pywa import utils
 
 if TYPE_CHECKING:
@@ -156,7 +156,7 @@ class Contact:
             org=cls.Org.from_dict(data["org"]) if "org" in data else None
         )
 
-    def to_dict(self) -> dict[str, str | dict[str, str] | tuple[dict[str, str]] | None]:
+    def to_dict(self) -> dict[str, Any]:
         """Get the contact as a dict."""
         return {
             "name": asdict(self.name),

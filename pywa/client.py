@@ -13,7 +13,8 @@ from pywa.api import WhatsAppCloudApi
 from pywa.utils import FlaskApp, FastAPIApp
 from pywa.webhook import Webhook
 from pywa.handlers import (
-    Handler, MessageHandler, CallbackButtonHandler, CallbackSelectionHandler, RawUpdateHandler, MessageStatusHandler
+    Handler,  # noqa
+    MessageHandler, CallbackButtonHandler, CallbackSelectionHandler, RawUpdateHandler, MessageStatusHandler
 )
 from pywa.types import (
     Button, SectionList, Message, CallbackButton, CallbackSelection, MessageStatus, Contact, MediaUrlResponse,

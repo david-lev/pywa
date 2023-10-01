@@ -10,7 +10,7 @@ import abc
 import re
 import warnings
 from dataclasses import dataclass, field
-from typing import Iterable, BinaryIO, TYPE_CHECKING
+from typing import Iterable, BinaryIO, TYPE_CHECKING, Any
 from pywa import utils
 from .others import ProductsSection
 
@@ -278,7 +278,7 @@ class NewTemplate:
     def to_dict(
             self,
             placeholder: tuple[str, str] = None
-    ) -> dict[str, str | dict[str, str | tuple[str, ...]] | tuple[dict[str, str | tuple[str, ...]], ...]]:
+    ) -> dict[str, Any]:
         if isinstance(self.buttons, self.OTPButton):
             components = (
                 dict(type=ComponentType.BUTTONS.value, buttons=(self.buttons.to_dict(),)),
@@ -368,7 +368,7 @@ class NewTemplate:
         format: HeaderFormatType = field(default=HeaderFormatType.IMAGE, init=False, repr=False)
         example: str
 
-        def to_dict(self) -> dict[str, str | dict[str, tuple[str, ...]]]:
+        def to_dict(self) -> dict[str, Any]:
             return dict(
                 type=self.type.value,
                 format=self.format.value,
@@ -392,7 +392,7 @@ class NewTemplate:
         format: HeaderFormatType = field(default=HeaderFormatType.VIDEO, init=False, repr=False)
         example: str
 
-        def to_dict(self) -> dict[str, str | dict[str, tuple[str, ...]]]:
+        def to_dict(self) -> dict[str, Any]:
             return dict(
                 type=self.type.value,
                 format=self.format.value,
@@ -416,7 +416,7 @@ class NewTemplate:
         format: HeaderFormatType = field(default=HeaderFormatType.DOCUMENT, init=False, repr=False)
         example: str
 
-        def to_dict(self) -> dict[str, str | dict[str, tuple[str, ...]]]:
+        def to_dict(self) -> dict[str, Any]:
             return dict(
                 type=self.type.value,
                 format=self.format.value,
@@ -842,7 +842,7 @@ class Template:
         if isinstance(self.buttons, self.OTPButtonCode):
             self.body = (self.TextValue(value=self.buttons.code),)  # auth template required the code also in the body
 
-    def to_dict(self, is_header_url: bool = False) -> dict[str, str | dict[str, str | tuple[dict[str, str], ...]]]:
+    def to_dict(self, is_header_url: bool = False) -> dict[str, Any]:
         return dict(
             name=self.name,
             language=dict(code=str(self.language)),
