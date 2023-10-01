@@ -101,6 +101,12 @@ class WhatsApp:
         else:
             self.webhook = None
 
+    def __str__(self) -> str:
+        return f"WhatApp(phone_id={self.phone_id!r})"
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
     def add_handlers(self, *handlers: Handler):
         """
         Add handlers programmatically instead of using decorators.

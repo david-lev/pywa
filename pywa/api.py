@@ -31,6 +31,12 @@ class WhatsAppCloudApi:
             "recipient_type": "individual",
         }
 
+    def __str__(self) -> str:
+        return f"WhatsAppCloudApi(phone_id={self.phone_id!r})"
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
     def _make_request(
             self,
             method: str,
