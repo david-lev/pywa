@@ -69,6 +69,7 @@ class MessageStatus(BaseUpdate):
         timestamp: The timestamp when the status was updated.
         from_user: The user who the message was sent to.
         conversation: The conversation the given status notification belongs to (Optional).
+        pricing_model: Type of pricing model used by the business. Current supported value is CBP.
         error: The error that occurred (if status is ``failed``).
     """
     id: str
@@ -77,6 +78,7 @@ class MessageStatus(BaseUpdate):
     timestamp: datetime
     status: MessageStatusType
     conversation: Conversation | None
+    pricing_model: str
     error: WhatsAppError | None
 
     @classmethod
@@ -91,6 +93,7 @@ class MessageStatus(BaseUpdate):
             timestamp=datetime.fromtimestamp(int(status['timestamp'])),
             from_user=User(wa_id=status['recipient_id'], name=None),
             conversation=Conversation.from_dict(status['conversation']) if 'conversation' in status else None,
+            pricing_model=status['pricing']['pricing_model'],
             error=WhatsAppError.from_incoming_error(status['errors'][0])
             if status_type == MessageStatusType.FAILED else None
         )
@@ -118,5 +121,6 @@ class Conversation:
         return cls(
             id=data['id'],
             category=ConversationCategory(data['origin']['type']),
-            expiration=datetime.fromtimestamp(int(data['expiration_timestamp'])) if 'expiration_timestamp' in data else None
+            expiration=datetime.fromtimestamp(int(data['expiration_timestamp']))
+            if 'expiration_timestamp' in data else None
         )
