@@ -31,7 +31,7 @@ class WhatsApp:
             phone_id: str | int,
             token: str,
             base_url: str = "https://graph.facebook.com",
-            api_version: float | int = 17.0,
+            api_version: float | int = 18.0,
             session: requests.Session | None = None,
             server: FlaskApp | FastAPIApp | None = None,
             webhook_endpoint: str = "/",
@@ -68,7 +68,7 @@ class WhatsApp:
             token: The token of the WhatsApp account (In production, you should
              `use permanent token <https://developers.facebook.com/docs/whatsapp/business-management-api/get-started>`_).
             base_url: The base URL of the WhatsApp API (default: ``https://graph.facebook.com``).
-            api_version: The API version of the WhatsApp API (default: ``17.0``).
+            api_version: The API version of the WhatsApp API (default: ``18.0``).
             session: The session to use for requests (default: new ``requests.Session()``, Do not use the same
              session across multiple WhatsApp clients!)
             server: The Flask or FastAPI app instance to use for the webhook.
