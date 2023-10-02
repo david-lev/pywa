@@ -8,24 +8,20 @@ import hashlib
 import mimetypes
 import os
 import requests
-from typing import Callable, Any, Iterable, BinaryIO
+from typing import Iterable, BinaryIO
 from pywa.api import WhatsAppCloudApi
 from pywa.utils import FlaskApp, FastAPIApp
 from pywa.webhook import Webhook
-from pywa.handlers import (
-    Handler,  # noqa
-    MessageHandler, CallbackButtonHandler, CallbackSelectionHandler, RawUpdateHandler, MessageStatusHandler
-)
+from pywa.handlers import Handler, HandlerDecorators  # noqa
 from pywa.types import (
-    Button, SectionList, Message, CallbackButton, CallbackSelection, MessageStatus, Contact, MediaUrlResponse,
+    Button, SectionList, Message, Contact, MediaUrlResponse,
     ProductsSection, BusinessProfile, Industry, CommerceSettings, NewTemplate, Template, TemplateResponse
 )
-from pywa.types.callback import CallbackDataT
 
 _MISSING = object()
 
 
-class WhatsApp:
+class WhatsApp(HandlerDecorators):
     def __init__(
             self,
             phone_id: str | int,
@@ -114,11 +110,11 @@ class WhatsApp:
         Example:
 
             >>> from pywa.handlers import MessageHandler, CallbackButtonHandler
-            >>> from pywa.filters import text
+            >>> from pywa import filters as fil
             >>> print_message = lambda _, msg: print(msg)
             >>> wa = WhatsApp(...)
             >>> wa.add_handlers(
-            ...     MessageHandler(print_message, text.any),
+            ...     MessageHandler(print_message, fil.text),
             ...     CallbackButtonHandler(print_message),
             ... )
         """
@@ -126,139 +122,7 @@ class WhatsApp:
             raise ValueError("You must initialize the WhatsApp client with an web server"
                              " (Flask or FastAPI) in order to handle incoming messages.")
         for handler in handlers:
-            self.webhook.handlers[handler.__handler_type__].append(handler)
-
-    def on_raw_update(
-            self, *filters: Callable[[WhatsApp, dict], bool]
-    ) -> Callable[[Callable[[WhatsApp, dict], Any]], Callable[[WhatsApp, dict], Any]]:
-        """
-        Decorator to register a function as a handler for raw updates.
-            - This handler is called for **EVERY** update received from WhatsApp, even if it's not sent to the client phone number.
-            - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`RawUpdateHandler`.
-
-        Example:
-
-            >>> wa = WhatsApp(...)
-            >>> @wa.on_raw_update()
-            ... def raw_update_handler(_: WhatsApp, update: dict):
-            ...     print(update)
-
-        Args:
-            *filters: Filters to apply to the incoming updates (filters are function that take the WhatsApp client and
-                the incoming update and return a boolean).
-        """
-        def decorator(func: Callable[[WhatsApp, dict], Any]) -> Callable[[WhatsApp, dict], Any]:
-            self.add_handlers(RawUpdateHandler(func, *filters))
-            return func
-        return decorator
-
-    def on_message(
-            self, *filters: Callable[[WhatsApp, Message], bool]
-    ) -> Callable[[Callable[[WhatsApp, Message], Any]], Callable[[WhatsApp, Message], Any]]:
-        """
-        Decorator to register a function as a handler for incoming messages.
-            - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`MessageHandler`.
-
-        Example:
-
-            >>> from pywa.types import Button
-            >>> from pywa import filters as fil
-            >>> wa = WhatsApp(...)
-            >>> @wa.on_message(fil.text.matches("Hello", "Hi", ignore_case=True))
-            ... def hello_handler(_: WhatsApp, msg: Message):
-            ...     msg.react("👋")
-            ...     msg.reply_text(text="Hello from PyWa!", quote=True, buttons=[Button("Help", data="help")
-
-        Args:
-            *filters: Filters to apply to the incoming messages (filters are function that take the WhatsApp client and
-                the incoming message and return a boolean).
-        """
-        def decorator(func: Callable[[WhatsApp, Message], Any]) -> Callable[[WhatsApp, Message], Any]:
-            self.add_handlers(MessageHandler(func, *filters))
-            return func
-        return decorator
-
-    def on_callback_button(
-            self, *filters: Callable[[WhatsApp, CallbackButton], bool], factory: CallbackDataT = str
-    ) -> Callable[[Callable[[WhatsApp, CallbackButton], Any]], Callable[[WhatsApp, CallbackButton], Any]]:
-        """
-        Decorator to register a function as a handler for incoming callback button presses.
-            - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`CallbackButtonHandler`.
-
-        Example:
-
-            >>> from pywa.types import CallbackButton
-            >>> from pywa import filters as fil
-            >>> wa = WhatsApp(...)
-            >>> @wa.on_callback_button(fil.callback.data_matches("help"))
-            ... def help_handler(_: WhatsApp, btn: CallbackButton):
-            ...     btn.reply_text(text="What can I help you with?")
-
-        Args:
-            *filters: Filters to apply to the incoming callback button presses (filters are function that take the
-                WhatsApp client and the incoming callback button and return a boolean).
-            factory: The constructor/s to use for the callback data (default: ``str``).
-        """
-        def decorator(func: Callable[[WhatsApp, CallbackButton], Any]) -> Callable[[WhatsApp, CallbackButton], Any]:
-            self.add_handlers(CallbackButtonHandler(func, *filters, factory=factory))
-            return func
-        return decorator
-
-    def on_callback_selection(
-            self, *filters: Callable[[WhatsApp, CallbackSelection], bool], factory: CallbackDataT = str
-    ) -> Callable[[Callable[[WhatsApp, CallbackSelection], Any]], Callable[[WhatsApp, CallbackSelection], Any]]:
-        """
-        Decorator to register a function as a handler for incoming callback selections.
-            - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`CallbackSelectionHandler`.
-
-        Example:
-
-            >>> from pywa.types import CallbackSelection
-            >>> from pywa import filters as fil
-            >>> wa = WhatsApp(...)
-            >>> @wa.on_callback_selection(fil.callback.data_startswith("id:"))
-            ... def id_handler(_: WhatsApp, sel: CallbackSelection):
-            ...     sel.reply_text(text=f"Your ID is {sel.data.split(':', 1)[1]}")
-
-        Args:
-            *filters: Filters to apply to the incoming callback selections (filters are function that take the
-                WhatsApp client and the incoming callback selection and return a boolean).
-            factory: The constructor/s to use for the callback data (default: ``str``).
-        """
-        def decorator(
-                func: Callable[[WhatsApp, CallbackSelection], Any]
-        ) -> Callable[[WhatsApp, CallbackSelection], Any]:
-            self.add_handlers(CallbackSelectionHandler(func, *filters, factory=factory))
-            return func
-        return decorator
-
-    def on_message_status(
-            self, *filters: Callable[[WhatsApp, MessageStatus], bool]
-    ) -> Callable[[Callable[[WhatsApp, MessageStatus], Any]], Callable[[WhatsApp, MessageStatus], Any]]:
-        """
-        Decorator to register a function as a handler for incoming message status changes.
-            - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`MessageStatusHandler`.
-
-        **DO NOT USE THIS HANDLER TO SEND MESSAGES, IT WILL CAUSE AN INFINITE LOOP!**
-
-        Example:
-
-            >>> from pywa.types import MessageStatus
-            >>> from pywa import filters as fil
-            >>> wa = WhatsApp(...)
-            >>> @wa.on_message_status(fil.message_status.failed)
-            ... def delivered_handler(client: WhatsApp, status: MessageStatus):
-            ...     print(f"Message {status.id} failed to send to {status.from_user.wa_id}: {status.error.message})
-
-
-        Args:
-            *filters: Filters to apply to the incoming message status changes (filters are function that take the
-                WhatsApp client and the incoming message status change and return a boolean).
-        """
-        def decorator(func: Callable[[WhatsApp, MessageStatus], Any]) -> Callable[[WhatsApp, MessageStatus], Any]:
-            self.add_handlers(MessageStatusHandler(func, *filters))
-            return func
-        return decorator
+            self.webhook.handlers[handler.__class__].append(handler)
 
     def send_message(
             self,
@@ -673,7 +537,7 @@ class WhatsApp:
     ) -> str:
         """
         React to a message with an emoji.
-            - You can react to incoming messages by using the :py:func:`~pywa.types.base_update.BaseUpdate.react` method.
+            - You can react to incoming messages by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.react` method.
 
         Example:
 
@@ -706,7 +570,7 @@ class WhatsApp:
     ) -> str:
         """
         Remove a reaction from a message.
-            - You can remove reactions from incoming messages by using the :py:func:`~pywa.types.base_update.BaseUpdate.unreact` method.
+            - You can remove reactions from incoming messages by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.unreact` method.
 
         Example:
 
@@ -967,7 +831,7 @@ class WhatsApp:
     ) -> bool:
         """
         Mark a message as read.
-            - You can mark incoming messages as read by using the :py:func:`~pywa.types.base_update.BaseUpdate.mark_as_read` method.
+            - You can mark incoming messages as read by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.mark_as_read` method.
 
         Example:
 
