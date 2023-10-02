@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Callable, Any, Iterable
 from pywa.errors import WhatsAppError
 from .callback import Button, SectionList
-from .base_update import BaseUpdate
+from .base_update import BaseUserUpdate
 from .others import ReplyToMessage, Reaction, Location, Contact, User, Metadata, Order, System, MessageType, \
     ProductsSection
 from .media import Image, Video, Sticker, Document, Audio
@@ -32,7 +32,7 @@ _MEDIA_FIELDS = ('image', 'video', 'sticker', 'document', 'audio')
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class Message(BaseUpdate):
+class Message(BaseUserUpdate):
     """
     A message received from a user.
 

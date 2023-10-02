@@ -3,22 +3,17 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Iterable, TYPE_CHECKING, BinaryIO
-from .template import Template
 from .others import Metadata, User, Contact, ProductsSection
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
     from .callback import Button, SectionList
-
-
-def _no_default():
-    raise TypeError('No default value')
+    from .template import Template
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class BaseUpdate(ABC):
     """Base class for all update types."""
-
     _client: WhatsApp = field(repr=False, hash=False, compare=False)
 
     @property
@@ -27,15 +22,19 @@ class BaseUpdate(ABC):
 
     @property
     @abstractmethod
+    def timestamp(self) -> datetime: ...
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class BaseUserUpdate(BaseUpdate, ABC):
+    """Base class for all user-related update types (message, callback, etc.)."""
+    @property
+    @abstractmethod
     def metadata(self) -> Metadata: ...
 
     @property
     @abstractmethod
     def from_user(self) -> User: ...
-
-    @property
-    @abstractmethod
-    def timestamp(self) -> datetime: ...
 
     @property
     def sender(self) -> str:
@@ -151,6 +150,7 @@ class BaseUpdate(ABC):
             reply_to_message_id=self.message_id_to_reply if quote else None,
             preview_url=preview_url,
         )
+    reply = reply_text  # alias
 
     def reply_image(
             self,
@@ -507,7 +507,7 @@ class BaseUpdate(ABC):
         """
         Reply to the message with a product.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.send_product` with ``to`` and ``reply_to_message_id``.
-            - To reply with multiple products, use :py:func:`~BaseUpdate.reply_products`.
+            - To reply with multiple products, use :py:func:`~BaseUserUpdate.reply_products`.
 
         Args:
             catalog_id: The ID of the catalog to send the product from. (To get the catalog ID use
@@ -542,7 +542,7 @@ class BaseUpdate(ABC):
         """
         Reply to the message with a product.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.send_products` with ``to`` and ``reply_to_message_id``.
-            - To reply with multiple products, use :py:func:`~BaseUpdate.reply_products`.
+            - To reply with multiple products, use :py:func:`~BaseUserUpdate.reply_products`.
 
         Example:
 

@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Iterable, TypeVar, Generic, Callable, Any
-from .base_update import BaseUpdate
+from .base_update import BaseUserUpdate
 from .others import Metadata, User, ReplyToMessage, MessageType
 
 if TYPE_CHECKING:
@@ -136,7 +136,7 @@ CallbackDataT = TypeVar('CallbackDataT', bound=CallbackData | Iterable[type[Call
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class CallbackButton(BaseUpdate, Generic[CallbackDataT]):
+class CallbackButton(BaseUserUpdate, Generic[CallbackDataT]):
     """
     Represents a callback button.
 
@@ -181,7 +181,7 @@ class CallbackButton(BaseUpdate, Generic[CallbackDataT]):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class CallbackSelection(BaseUpdate, Generic[CallbackDataT]):
+class CallbackSelection(BaseUserUpdate, Generic[CallbackDataT]):
     """
     Represents a callback selection.
 

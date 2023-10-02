@@ -48,35 +48,35 @@ All updates have common methods:
 
    * - Method
      - Description
-   * - :meth:`~BaseUpdate.reply_text`
+   * - :meth:`~BaseUserUpdate.reply_text`
      - Reply to the update with a text message
-   * - :meth:`~BaseUpdate.reply_image`
+   * - :meth:`~BaseUserUpdate.reply_image`
      - Reply to the update with an image message
-   * - :meth:`~BaseUpdate.reply_video`
+   * - :meth:`~BaseUserUpdate.reply_video`
      - Reply to the update with a video message
-   * - :meth:`~BaseUpdate.reply_audio`
+   * - :meth:`~BaseUserUpdate.reply_audio`
      - Reply to the update with an audio message
-   * - :meth:`~BaseUpdate.reply_document`
+   * - :meth:`~BaseUserUpdate.reply_document`
      - Reply to the update with a document message
-   * - :meth:`~BaseUpdate.reply_location`
+   * - :meth:`~BaseUserUpdate.reply_location`
      - Reply to the update with a location message
-   * - :meth:`~BaseUpdate.reply_contact`
+   * - :meth:`~BaseUserUpdate.reply_contact`
      - Reply to the update with a contact message
-   * - :meth:`~BaseUpdate.reply_sticker`
+   * - :meth:`~BaseUserUpdate.reply_sticker`
      - Reply to the update with a sticker message
-   * - :meth:`~BaseUpdate.reply_template`
+   * - :meth:`~BaseUserUpdate.reply_template`
      - Reply to the update with a template message
-   * - :meth:`~BaseUpdate.reply_catalog`
+   * - :meth:`~BaseUserUpdate.reply_catalog`
      - Reply to the update with a catalog message
-   * - :meth:`~BaseUpdate.reply_product`
+   * - :meth:`~BaseUserUpdate.reply_product`
      - Reply to the update with a product message
-   * - :meth:`~BaseUpdate.reply_products`
+   * - :meth:`~BaseUserUpdate.reply_products`
      - Reply to the update with a list of product messages
-   * - :meth:`~BaseUpdate.react`
+   * - :meth:`~BaseUserUpdate.react`
      - React to the update with a emoji
-   * - :meth:`~BaseUpdate.unreact`
+   * - :meth:`~BaseUserUpdate.unreact`
      - Unreact to the update
-   * - :meth:`~BaseUpdate.mark_as_read`
+   * - :meth:`~BaseUserUpdate.mark_as_read`
      - Mark the update as read
 
 .. toctree::

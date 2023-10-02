@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from pywa.errors import WhatsAppError
 from pywa import utils
-from .base_update import BaseUpdate
+from .base_update import BaseUserUpdate
 from .others import Metadata, User
 
 if TYPE_CHECKING:
@@ -56,7 +56,7 @@ class ConversationCategory(utils.StrEnum):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class MessageStatus(BaseUpdate):
+class MessageStatus(BaseUserUpdate):
     """
     Represents the status of a message.
 
