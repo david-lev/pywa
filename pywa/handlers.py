@@ -245,7 +245,10 @@ class TemplateStatusHandler(Handler):
         >>> from pywa import WhatsApp, filters as fil
         >>> wa = WhatsApp(...)
         >>> print_template_status = lambda _, msg: print(msg)
-        >>> wa.add_handlers(TemplateStatusHandler(print_template_status, fil.template_status.approved))
+        >>> wa.add_handlers(TemplateStatusHandler(
+        ...     print_template_status,
+        ...     fil.template_status.on_event(TemplateStatus.TemplateEvent.APPROVED)
+        ... ))
 
     Args:
         handler: The handler function (gets a :class:`pywa.WhatsApp` instance and a
@@ -273,7 +276,7 @@ class RawUpdateHandler(Handler):
 
     Example:
 
-        >>> from pywa import WhatsApp, filters as fil
+        >>> from pywa import WhatsApp
         >>> wa = WhatsApp(...)
         >>> print_updates = lambda _, data: print(data)
         >>> wa.add_handlers(RawUpdateHandler(print_updates))
@@ -456,7 +459,7 @@ class HandlerDecorators:
             >>> from pywa.types import TemplateStatus
             >>> from pywa import filters as fil
             >>> wa = WhatsApp(...)
-            >>> @wa.on_template_status(fil.template_status.approved)
+            >>> @wa.on_template_status(fil.template_status.on_event(TemplateStatus.TemplateEvent.APPROVED))
             ... def approved_handler(client: WhatsApp, status: TemplateStatus):
             ...     print(f"Template {status.message_template_name} just got approved!")
 

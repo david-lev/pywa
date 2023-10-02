@@ -89,3 +89,4 @@ Built-in Filters
     ./message_filters
     ./callback_filters
     ./message_status_filters
+    ./template_status_filters
