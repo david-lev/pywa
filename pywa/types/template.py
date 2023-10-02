@@ -725,49 +725,6 @@ class NewTemplate:
         def to_dict(self, placeholder: tuple[str, str] = None) -> dict[str, str | None]:
             return dict(type=self.type.value, example=self.example)
 
-    ###################################################################################################################
-    # Deprecated
-    ###################################################################################################################
-    @dataclass(slots=True)
-    class TextHeader(Text):
-        """Deprecated, use :class:`NewTemplate.Text` instead"""
-        def __new__(cls, *args, **kwargs):
-            warnings.warn('`TextHeader` is deprecated, use `Text` instead', DeprecationWarning, stacklevel=2)
-            return NewTemplate.Text(*args, **kwargs)
-
-    @dataclass(slots=True)
-    class VideoHeader(Video):
-        """Deprecated, use :class:`NewTemplate.Video` instead"""
-        example: str = field(default=None, init=False)
-        examples: Iterable[str]
-
-        def __new__(cls, *args, **kwargs):
-            warnings.warn('`VideoHeader` is deprecated, use `Video` instead', DeprecationWarning, stacklevel=2)
-            return NewTemplate.Video(example=kwargs['examples'][0])
-
-    @dataclass(slots=True)
-    class ImageHeader(Image):
-        """Deprecated, use :class:`NewTemplate.Image` instead"""
-        example: str = field(default=None, init=False)
-        examples: Iterable[str]
-
-        def __new__(cls, *args, **kwargs):
-            warnings.warn('`ImageHeader` is deprecated, use `Image` instead', DeprecationWarning, stacklevel=2)
-            return NewTemplate.Image(example=kwargs['examples'][0])
-
-    @dataclass(slots=True)
-    class DocumentHeader(Document):
-        """Deprecated, use :class:`NewTemplate.Document` instead"""
-        example: str = field(default=None, init=False)
-        examples: Iterable[str]
-
-        def __new__(cls, *args, **kwargs):
-            warnings.warn(
-                '`DocumentHeader` is deprecated, use `Document` instead', DeprecationWarning, stacklevel=2
-            )
-            return NewTemplate.Document(example=kwargs['examples'][0])
-    ####################################################################################################################
-
 
 class ParamType(utils.StrEnum):
     TEXT = 'text'
