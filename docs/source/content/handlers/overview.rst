@@ -194,6 +194,9 @@ Available handlers
    * - :meth:`~pywa.client.WhatsApp.on_message_status`
      - :class:`MessageStatusHandler`
      - :class:`~pywa.types.message_status.MessageStatus`
+   * - :meth:`~pywa.client.WhatsApp.on_template_status`
+     - :class:`TemplateStatusHandler`
+     - :class:`~pywa.types.template.TemplateStatus`
    * - :meth:`~pywa.client.WhatsApp.on_raw_update`
      - :class:`RawUpdateHandler`
      - :class:`dict`

@@ -39,6 +39,7 @@ extensions = [
     "sphinx_copybutton",
     "sphinx.ext.doctest",
     "sphinx.ext.intersphinx",
+    "sphinx.ext.todo",
     "sphinxext.opengraph",
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
@@ -147,3 +148,6 @@ ogp_custom_meta_tags = [
 ]
 
 html_extra_path = ["google898e98a538257a96.html"]
+
+# sphinx.ext.todo
+todo_include_todos = True

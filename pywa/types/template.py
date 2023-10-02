@@ -4,18 +4,21 @@ __all__ = [
     'Template',
     'NewTemplate',
     'TemplateResponse',
+    'TemplateStatus'
 ]
 
 import abc
 import re
-import warnings
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Iterable, BinaryIO, TYPE_CHECKING, Any
 from pywa import utils
 from .others import ProductsSection
+from .base_update import BaseUpdate
 
 if TYPE_CHECKING:
     from pywa.types.callback import CallbackDataT, CallbackData
+    from pywa.client import WhatsApp
 
 DEFAULT = object()
 
@@ -1095,3 +1098,99 @@ class Template:
 
         def to_dict(self) -> dict[str, str]:
             return dict(type='coupon_code', coupon_code=self.code)
+
+
+@dataclass(slots=True, frozen=True, kw_only=True)
+class TemplateStatus(BaseUpdate):
+    """
+    Represents status of a template.
+
+    Attributes:
+        id: ID of Whatsapp Business Accounts this update belongs to.
+        timestamp: Timestamp of the update.
+        event: The event that occurred (the template was approved, rejected, etc.).
+        message_template_id: The ID of the template.
+        message_template_name: The name of the template.
+        message_template_language: The language of the template.
+        reason: The reason the template was rejected (if applicable).
+        disable_date: The date the template was disabled (if applicable).
+        other_info: Additional information about the template (if applicable).
+    """
+    id: str
+    timestamp: datetime
+    event: TemplateEvent
+    message_template_id: int
+    message_template_name: str
+    message_template_language: str
+    reason: TemplateRejectionReason
+    disable_date: str | None = None
+    other_info: str | None = None
+
+    @classmethod
+    def from_dict(cls, client: WhatsApp, data: dict) -> TemplateStatus:
+        value = (data := data['entry'][0])['changes'][0]['value']
+        return cls(
+            _client=client,
+            id=data['id'],
+            timestamp=datetime.fromtimestamp(data['time']),
+            event=cls.TemplateEvent(value['event']),
+            message_template_id=value['message_template_id'],
+            message_template_name=value['message_template_name'],
+            message_template_language=value['message_template_language'],
+            reason=cls.TemplateRejectionReason(str(value.get('reason'))),  # _missing_(str(None)) -> .NONE
+            disable_date=value.get('disable_date'),
+            other_info=(str((oi := value['other_info']).get('title')) + ': '
+                        + str(oi.get('description'))) if 'other_info' in value else None,
+        )
+
+    class TemplateEvent(utils.StrEnum):
+        """
+        The event that occurred (the template was approved, rejected, etc.).
+
+        Attributes:
+            APPROVED: The template was approved.
+            DISABLED: The template was disabled.
+            IN_APPEAL: The template is in appeal.
+            PENDING: The template is pending.
+            REINSTATED: The template was reinstated.
+            REJECTED: The template was rejected.
+            PENDING_DELETION: The template is pending deletion.
+            FLAGGED: The template was flagged.
+            PAUSED: The template was paused.
+            UNKNOWN: Unknown event.
+        """
+        APPROVED = 'APPROVED'
+        DISABLED = 'DISABLED'
+        IN_APPEAL = 'IN_APPEAL'
+        PENDING = 'PENDING'
+        REINSTATED = 'REINSTATED'
+        REJECTED = 'REJECTED'
+        PENDING_DELETION = 'PENDING_DELETION'
+        FLAGGED = 'FLAGGED'
+        PAUSED = 'PAUSED'
+        UNKNOWN = 'UNKNOWN'
+
+        @classmethod
+        def _missing_(cls, value: str) -> TemplateStatus.TemplateEvent:
+            return cls.UNKNOWN
+
+    class TemplateRejectionReason(utils.StrEnum):
+        """
+        The reason the template was rejected (if applicable).
+
+        Attributes:
+            ABUSIVE_CONTENT: The template was rejected because it contained abusive content.
+            INCORRECT_CATEGORY: The template was rejected because it was in the wrong category.
+            INVALID_FORMAT: The template was rejected because it was in the wrong format.
+            SCAM: The template was rejected because it was a scam.
+            NONE: The template was not rejected.
+        """
+        ABUSIVE_CONTENT = 'ABUSIVE_CONTENT'
+        INCORRECT_CATEGORY = 'INCORRECT_CATEGORY'
+        INVALID_FORMAT = 'INVALID_FORMAT'
+        SCAM = 'SCAM'
+        NONE = 'NONE'
+
+        @classmethod
+        def _missing_(cls, value: str):
+            return cls.NONE

@@ -2,26 +2,38 @@
 ==========
 
 
-
 .. currentmodule:: pywa.types
 
-In WhatsApp Cloud API, updates are sent to your webhook URL. There are lots of different types of updates,
-but currently, we only support the ``messages`` field. this field contains all the user-related updates (e.g. messages, callbacks, etc.).
+In WhatsApp Cloud API, updates are sent to your webhook URL. PyWa currently supports the following fields:
+
+- ``messages`` (all user related updates)
+- ``message_template_status_update`` (template got approved, rejected, etc.)
+
+.. important::
+
+    You must subscribe to those fields in your webhook settings. Otherwise, you will not receive any updates.
+    To enable it, go to your app dashboard, click on the ``Webhooks`` tab (Or the ``Configuration`` tab > ``Webhook fields``).
+    Then, subscribe to the fields you want to receive.
+
+    .. toggle::
+
+        .. image:: ../../../../_static/guides/webhook-fields.webp
+           :width: 600
+           :alt: Subscribe to webhook fields
+           :align: center
 
 .. tip::
 
-        If you do want to handle other types of updates, you can use the :func:`~pywa.client.WhatsApp.on_raw_update`
-        decorator. This decorator will be called for every update.
+        If you do want to handle other types of updates (fields), you can use the :py:class:`~pywa.handlers.RawUpdateHandler`
+        (or the :func:`~pywa.client.WhatsApp.on_raw_update` decorator) to handle them.
 
 
-.. important::
-    :class: dropdown
 
-    The ``messages`` field must be enabled in your webhook settings. Otherwise, you will not receive any updates.
-    To enable it, go to your app dashboard, click on the ``Webhooks`` tab. Then, subscribe to the ``messages`` field.
+The supported fields are automatically handled by PyWa and converted to the following types:
 
+- To handle updates see `Handlers <../handlers/overview.html>`_
 
-The supported types of updates are:
+User related updates:
 
 .. list-table::
    :widths: 25 75
@@ -38,7 +50,18 @@ The supported types of updates are:
    * - :py:class:`~pywa.types.message_status.MessageStatus`
      - A message status update (e.g. delivered, seen, etc.)
 
-All updates have common methods:
+Account related updates:
+
+.. list-table::
+   :widths: 25 75
+   :header-rows: 1
+
+   * - Type
+     - Description
+   * - :py:class:`~pywa.types.template.TemplateStatus`
+     - A template status update (e.g. approved, rejected, etc.)
+
+All user-related-updates have common methods:
 
 .. currentmodule:: pywa.types.base_update
 
@@ -84,4 +107,5 @@ All updates have common methods:
     callback_button
     callback_selection
     message_status
+    template_status
     common_methods
