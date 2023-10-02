@@ -108,8 +108,8 @@ class Message(BaseUserUpdate):
         return self.reply_to_message is not None or self.reaction is not None
 
     @classmethod
-    def from_dict(cls, client: WhatsApp, value: dict) -> Message:
-        msg = value['messages'][0]
+    def from_update(cls, client: WhatsApp, update: dict) -> Message:
+        msg = (value := update['entry'][0]['changes'][0]['value'])['messages'][0]
         msg_type = msg['type']
         context = msg.get('context')
         constructor = _FIELDS_TO_OBJECTS_CONSTRUCTORS.get(msg_type)

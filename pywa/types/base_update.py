@@ -24,6 +24,9 @@ class BaseUpdate(ABC):
     @abstractmethod
     def timestamp(self) -> datetime: ...
 
+    @abstractmethod
+    def from_update(self, client: WhatsApp, update: dict) -> BaseUpdate: ...
+
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class BaseUserUpdate(BaseUpdate, ABC):

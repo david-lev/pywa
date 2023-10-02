@@ -82,13 +82,13 @@ class MessageStatus(BaseUserUpdate):
     error: WhatsAppError | None
 
     @classmethod
-    def from_dict(cls, client: WhatsApp, data: dict):
-        status = data['statuses'][0]
+    def from_update(cls, client: WhatsApp, update: dict) -> MessageStatus:
+        status = (value := update['entry'][0]['changes'][0]['value'])['statuses'][0]
         status_type = MessageStatusType(status['status'])
         return cls(
             _client=client,
             id=status['id'],
-            metadata=Metadata.from_dict(data['metadata']),
+            metadata=Metadata.from_dict(value['metadata']),
             status=status_type,
             timestamp=datetime.fromtimestamp(int(status['timestamp'])),
             from_user=User(wa_id=status['recipient_id'], name=None),

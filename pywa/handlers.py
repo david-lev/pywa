@@ -33,7 +33,7 @@ def _resolve_callback_data(factory: CallbackDataT) -> tuple[CallbackDataT, tuple
                       zip(factory, data.split(CallbackData.__callback_sep__))))
         )
         if any((callback_datas := tuple(bool(issubclass(f, CallbackData)) for f in factory))):
-            def clb_filter(_: WhatsApp, btn_or_sel: CallbackButton | CallbackSelection) -> bool:
+            def _clb_filter(_: WhatsApp, btn_or_sel: CallbackButton | CallbackSelection) -> bool:
                 data = btn_or_sel.data.split(CallbackData.__callback_sep__)
                 return all(
                     data[i].startswith(
@@ -42,10 +42,11 @@ def _resolve_callback_data(factory: CallbackDataT) -> tuple[CallbackDataT, tuple
                     )
                     for i, b in enumerate(callback_datas) if b
                 )
+            clb_filter = (_clb_filter,)
 
     elif issubclass(factory, CallbackData):
         constractor = factory.from_str
-        clb_filter = fil.callback.data_startswith(str(factory.__callback_id__) + factory.__callback_data_sep__)
+        clb_filter = (fil.callback.data_startswith(str(factory.__callback_id__) + factory.__callback_data_sep__),)
     elif callable(factory):
         constractor = factory
     else:
@@ -102,7 +103,7 @@ class MessageHandler(Handler):
             :class:`pywa.types.Message` and returns a :class:`bool`)
     """
     __field_name__ = "messages:msg"
-    __constructor__ = Message.from_dict
+    __constructor__ = Message.from_update
 
     def __init__(
             self,
@@ -136,7 +137,7 @@ class CallbackButtonHandler(Handler):
         factory: The constructor/s to use to construct the callback data (default: :class:`str`).
     """
     __field_name__ = "messages:btn"
-    __constructor__ = CallbackButton.from_dict
+    __constructor__ = CallbackButton.from_update
 
     def __init__(
             self,
@@ -181,7 +182,7 @@ class CallbackSelectionHandler(Handler):
         factory: The constructor/s to use to construct the callback data (default: :class:`str`).
     """
     __field_name__ = "messages:sel"
-    __constructor__ = CallbackSelection.from_dict
+    __constructor__ = CallbackSelection.from_update
 
     def __init__(
             self,
@@ -223,7 +224,7 @@ class MessageStatusHandler(Handler):
             :class:`pywa.types.MessageStatus` and returns a :class:`bool`)
     """
     __field_name__ = "messages:status"
-    __constructor__ = MessageStatus.from_dict
+    __constructor__ = MessageStatus.from_update
 
     def __init__(
             self,
@@ -257,7 +258,7 @@ class TemplateStatusHandler(Handler):
             :class:`pywa.types.TemplateStatus` and returns a :class:`bool`)
     """
     __field_name__ = "message_template_status_update"
-    __constructor__ = TemplateStatus.from_dict
+    __constructor__ = TemplateStatus.from_update
 
     def __init__(
             self,
@@ -298,6 +299,9 @@ class RawUpdateHandler(Handler):
 
 
 class HandlerDecorators:
+    def __init__(self):
+        raise TypeError("This class cannot be instantiated.")
+
     def on_raw_update(
             self: WhatsApp, *filters: Callable[[WhatsApp, dict], bool]
     ) -> Callable[[Callable[[WhatsApp, dict], Any]], Callable[[WhatsApp, dict], Any]]:

@@ -3,6 +3,7 @@ from __future__ import annotations
 """The webhook module contains the Webhook class, which is used to register a webhook to listen for incoming 
 messages."""
 
+import logging
 import collections
 import threading
 from typing import TYPE_CHECKING, Callable, Any, Type
@@ -31,7 +32,8 @@ class Webhook:
             webhook_endpoint: str,
             filter_updates: bool
     ):
-        self.handlers: dict[Type[Handler], list[Callable[[WhatsApp, BaseUpdate | dict], Any]]] = collections.defaultdict(list)
+        self.handlers: dict[Type[Handler] | None, list[Callable[[WhatsApp, BaseUpdate | dict], Any]]] \
+            = collections.defaultdict(list)
         self.wa_client = wa_client
         self.server = server
         self.verify_token = verify_token
@@ -77,33 +79,32 @@ class Webhook:
 
     def call_handlers(self, update: dict) -> None:
         """Call the handlers for the given update."""
-        try:
-            if not self.filter_updates or (
-                    update["entry"][0]["changes"][0]["value"]["metadata"][
-                        "phone_number_id"] == self.wa_client.phone_id):
-                new_update, handler = self._get_update_and_handler(update=update)
-                for func in self.handlers[handler]:
-                    func(self.wa_client, handler.__constructor__(self.wa_client, new_update))
-            raise KeyError  # to always skip the except block
-        except (KeyError, IndexError):  # the update not sent to this phone id or filter_updates is True
-            for raw_update_func in self.handlers[RawUpdateHandler]:
-                raw_update_func(self.wa_client, update)
+        handler = self._get_handler(update=update)
+        for func in self.handlers[handler]:
+            func(self.wa_client, handler.__constructor__(self.wa_client, update))
+        for raw_update_func in self.handlers[RawUpdateHandler]:
+            raw_update_func(self.wa_client, update)
 
-    @staticmethod
-    def _get_update_and_handler(update: dict) -> tuple[dict, Type[Handler] | None]:
-        """Get the fixed update and the handler for the given update."""
+    def _get_handler(self, update: dict) -> Type[Handler] | None:
+        """Get the handler for the given update."""
         field = update["entry"][0]["changes"][0]["field"]
-        if field == 'messages':  # `messages` field separated to four types in pywa, but in webhook it's one field
-            if 'messages' in (value := update["entry"][0]["changes"][0]["value"]):
-                if value["messages"][0]["type"] != "interactive":
+        value = update["entry"][0]["changes"][0]["value"]
+
+        # The `messages` field needs to be handled differently because it can be a message, button, selection, or status
+        if field == 'messages' and (
+                not self.filter_updates or (value["metadata"]["phone_number_id"] == self.wa_client.phone_id)
+        ):
+            if 'messages' in value:
+                if value["messages"][0]["type"] != "interactive":  # message
                     field = MessageHandler.__field_name__
                 else:
-                    if value["messages"][0]["interactive"]["type"] == "button_reply":
+                    if value["messages"][0]["interactive"]["type"] == "button_reply":  # button
                         field = CallbackButtonHandler.__field_name__
-                    elif value["messages"][0]["interactive"]["type"] == "list_reply":
+                    elif value["messages"][0]["interactive"]["type"] == "list_reply":  # selection
                         field = CallbackSelectionHandler.__field_name__
-            elif 'statuses' in value:
-                field = MessageStatusHandler.__field_name__
-            update = update["entry"][0]["changes"][0]["value"]
-        return update, next((h for h in Handler.__subclasses__() if h.__field_name__ == field), None)
 
+            elif 'statuses' in value:  # status
+                field = MessageStatusHandler.__field_name__
+            else:
+                logging.warning(f"PyWa Webhook: Unknown message type: {value}")
+        return next((h for h in Handler.__subclasses__() if h.__field_name__ == field), None)

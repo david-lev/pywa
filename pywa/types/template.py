@@ -1127,8 +1127,8 @@ class TemplateStatus(BaseUpdate):
     other_info: str | None = None
 
     @classmethod
-    def from_dict(cls, client: WhatsApp, data: dict) -> TemplateStatus:
-        value = (data := data['entry'][0])['changes'][0]['value']
+    def from_update(cls, client: WhatsApp, update: dict) -> TemplateStatus:
+        value = (data := update['entry'][0])['changes'][0]['value']
         return cls(
             _client=client,
             id=data['id'],

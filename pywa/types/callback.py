@@ -172,18 +172,18 @@ class CallbackButton(BaseUserUpdate, Generic[CallbackDataT]):
         return self.reply_to_message.message_id
 
     @classmethod
-    def from_dict(cls, client: 'WhatsApp', data: dict):
-        message = data['messages'][0]
+    def from_update(cls, client: 'WhatsApp', update: dict) -> 'CallbackButton':
+        msg = (value := update['entry'][0]['changes'][0]['value'])['messages'][0]
         return cls(
             _client=client,
-            id=message['id'],
-            metadata=Metadata.from_dict(data['metadata']),
-            type=MessageType(message['type']),
-            from_user=User.from_dict(data['contacts'][0]),
-            timestamp=datetime.fromtimestamp(int(message['timestamp'])),
-            reply_to_message=ReplyToMessage.from_dict(message['context']),
-            data=message['interactive']['button_reply']['id'],
-            title=message['interactive']['button_reply']['title']
+            id=msg['id'],
+            metadata=Metadata.from_dict(value['metadata']),
+            type=MessageType(msg['type']),
+            from_user=User.from_dict(value['contacts'][0]),
+            timestamp=datetime.fromtimestamp(int(msg['timestamp'])),
+            reply_to_message=ReplyToMessage.from_dict(msg['context']),
+            data=msg['interactive']['button_reply']['id'],
+            title=msg['interactive']['button_reply']['title']
         )
 
 
@@ -214,19 +214,19 @@ class CallbackSelection(BaseUserUpdate, Generic[CallbackDataT]):
     description: str | None
 
     @classmethod
-    def from_dict(cls, client: 'WhatsApp', data: dict):
-        message = data['messages'][0]
+    def from_update(cls, client: 'WhatsApp', update: dict) -> 'CallbackSelection':
+        msg = (value := update['entry'][0]['changes'][0]['value'])['messages'][0]
         return cls(
             _client=client,
-            id=message['id'],
-            metadata=Metadata.from_dict(data['metadata']),
-            type=MessageType(message['type']),
-            from_user=User.from_dict(data['contacts'][0]),
-            timestamp=datetime.fromtimestamp(int(message['timestamp'])),
-            reply_to_message=ReplyToMessage.from_dict(message['context']),
-            data=message['interactive']['list_reply']['id'],
-            title=message['interactive']['list_reply']['title'],
-            description=message['interactive']['list_reply'].get('description')
+            id=msg['id'],
+            metadata=Metadata.from_dict(value['metadata']),
+            type=MessageType(msg['type']),
+            from_user=User.from_dict(value['contacts'][0]),
+            timestamp=datetime.fromtimestamp(int(msg['timestamp'])),
+            reply_to_message=ReplyToMessage.from_dict(msg['context']),
+            data=msg['interactive']['list_reply']['id'],
+            title=msg['interactive']['list_reply']['title'],
+            description=msg['interactive']['list_reply'].get('description')
         )
 
 
