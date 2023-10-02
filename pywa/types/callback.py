@@ -24,16 +24,22 @@ class CallbackData:
     """
     Base class for all callback data classes. Subclass this class to create a type-safe callback data class.
 
-        If you use dataclasses, which is the recommended way, you should not use ``kw_only=True``.
+        If you use ``dataclasses``, which is the recommended way (You get free ordered ``__init__`` and extra features),
+        you should not use ``kw_only=True``.
         This is because we are limited to 200 characters in the callback data, so we need to use positional arguments.
-        So object like User(id=123, name='John') will be converted to ``123:John``.
+        So object like ``User(id=123, name='John')`` will be converted to ``123:John``.
 
         Currently, the following types are supported:
-        ``str``, ``int``, ``bool``, ``float`` (and ``Enum`` that inherits from ``str`` e.g ``class State(str, Enum)``).
+        :class:`str`, :class:`int`, :class:`bool`, :class:`float` and :class:`Enum` that
+        inherits from :class:`str` (e.g ``class State(str, Enum)``). You probably won't need more than that to pass
+        state and context in the program.
 
-        Also, you cannot use the characters ``:`` and ``;`` in the callback data, because they are used as separators.
-        You can change the separators by overriding ``__callback_sep__`` (for individual objects) and
+        The characters ``:`` and ``;`` cannot be used when sending callbacks, because they are used as separators.
+        You can change the separators by overriding ``__callback_data_sep__`` (for individual objects) and
         ``CallbackData.__callback_sep__`` (In the base class level, affects all child classes).
+
+        When providing subclassed ``CallbackData`` as a ``factory`` parameter in callback handlers, a basic matching
+        filter (``startswith(callback_id)``) will be added automatically. So no need to create one yourself.
 
 
     Example:
@@ -105,7 +111,7 @@ class CallbackData:
         if any(sep in (str_val := str(value)) for sep in not_):
             raise ValueError(f"Callback data cannot contain the characters {not_} "
                              f"Because they are used as separators. \nYou can change the separators by overriding "
-                             f"``__callback_sep__`` (for individual objects) and ``CallbackData.__callback_sep__`` "
+                             f"``__callback_data_sep__`` (for individual objects) and ``CallbackData.__callback_sep__`` "
                              f"(In the base class level, affects all child classes).")
         return str_val
 
@@ -133,6 +139,7 @@ class CallbackData:
 
 
 CallbackDataT = TypeVar('CallbackDataT', bound=CallbackData | Iterable[type[CallbackData]] | str | Callable[[str], Any])
+"""Type hint for `factory` parameter in callback handlers."""
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -143,11 +150,11 @@ class CallbackButton(BaseUserUpdate, Generic[CallbackDataT]):
     Attributes:
         id: The ID of the message.
         metadata: The metadata of the message (to which phone number it was sent).
-        type: The message type (always ``interactive``).
+        type: The message type (always ``INTERACTIVE``).
         from_user: The user who sent the message.
         timestamp: The timestamp when the message was sent.
         reply_to_message: The message to which this callback button is a reply to.
-        data: The data of the button.
+        data: The data of the button (the ``callback_data`` parameter in :class:`Button`).
         title: The title of the button.
     """
     id: str
@@ -188,11 +195,11 @@ class CallbackSelection(BaseUserUpdate, Generic[CallbackDataT]):
     Attributes:
         id: The ID of the message.
         metadata: The metadata of the message (to which phone number it was sent).
-        type: The message type (always ``interactive``).
+        type: The message type (always ``INTERACTIVE``).
         from_user: The user who sent the message.
         timestamp: The timestamp when the message was sent.
         reply_to_message: The message to which this callback selection is a reply to.
-        data: The data of the selection.
+        data: The data of the selection (the ``callback_data`` parameter in :class:`SectionRow`).
         title: The title of the selection.
         description: The description of the selection (optional).
     """
@@ -230,7 +237,8 @@ class Button:
 
     Attributes:
         title: The title of the button (up to 20 characters).
-        callback_data: The payload to send when the user clicks on the button (up to 256 characters).
+        callback_data: The data to send when the user clicks on the button (up to 256 characters, for complex data
+         You can use :class:`CallbackData`).
     """
     title: str
     callback_data: CallbackDataT
@@ -255,7 +263,8 @@ class SectionRow:
 
     Attributes:
         title: The title of the row (up to 24 characters).
-        callback_data: The payload to send when the user clicks on the row (up to 200 characters).
+        callback_data: The payload to send when the user clicks on the row (up to 200 characters, for complex data
+            You can use :class:`CallbackData`).
         description: The description of the row (optional, up to 72 characters).
     """
     title: str
