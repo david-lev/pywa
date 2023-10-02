@@ -6,7 +6,6 @@ messages."""
 import collections
 import threading
 from typing import TYPE_CHECKING, Callable, Any, Type
-from pywa.types import Message, CallbackButton, CallbackSelection, MessageStatus
 from pywa.types.base_update import BaseUpdate
 from pywa import utils
 from pywa.handlers import (
@@ -32,7 +31,7 @@ class Webhook:
             webhook_endpoint: str,
             filter_updates: bool
     ):
-        self.handlers: dict[str, list[Callable[[WhatsApp, BaseUpdate | dict], Any]]] = collections.defaultdict(list)
+        self.handlers: dict[Type[Handler], list[Callable[[WhatsApp, BaseUpdate | dict], Any]]] = collections.defaultdict(list)
         self.wa_client = wa_client
         self.server = server
         self.verify_token = verify_token
@@ -82,29 +81,29 @@ class Webhook:
             if not self.filter_updates or (
                     update["entry"][0]["changes"][0]["value"]["metadata"][
                         "phone_number_id"] == self.wa_client.phone_id):
-                update_obj, key = self._convert_dict_to_update(client=self.wa_client, d=update)
-                if key is None:
-                    raise KeyError
-                for handler in self.handlers[key.__handler_type__]:
-                    handler(self.wa_client, update_obj)
+                new_update, handler = self._get_update_and_handler(update=update)
+                for func in self.handlers[handler]:
+                    func(self.wa_client, handler.__constructor__(self.wa_client, new_update))
             raise KeyError  # to always skip the except block
         except (KeyError, IndexError):  # the update not sent to this phone id or filter_updates is True
-            for raw_update_handler in self.handlers[RawUpdateHandler.__handler_type__]:
-                raw_update_handler(self.wa_client, update)
+            for raw_update_func in self.handlers[RawUpdateHandler]:
+                raw_update_func(self.wa_client, update)
 
     @staticmethod
-    def _convert_dict_to_update(client: WhatsApp, d: dict) -> tuple[BaseUpdate | None, Type[Handler] | None]:
-        """Convert a webhook dict to a BaseUpdate object."""
-        value = d["entry"][0]["changes"][0]["value"]
-        if 'messages' in value:
-            if value["messages"][0]["type"] != "interactive":
-                return Message.from_dict(client=client, value=value), MessageHandler
-            else:
-                if value["messages"][0]["interactive"]["type"] == "button_reply":
-                    return CallbackButton.from_dict(client=client, data=value), CallbackButtonHandler
-                elif value["messages"][0]["interactive"]["type"] == "list_reply":
-                    return CallbackSelection.from_dict(client=client, data=value), CallbackSelectionHandler
+    def _get_update_and_handler(update: dict) -> tuple[dict, Type[Handler] | None]:
+        """Get the fixed update and the handler for the given update."""
+        field = update["entry"][0]["changes"][0]["field"]
+        if field == 'messages':  # `messages` field separated to four types in pywa, but in webhook it's one field
+            if 'messages' in (value := update["entry"][0]["changes"][0]["value"]):
+                if value["messages"][0]["type"] != "interactive":
+                    field = MessageHandler.__field_name__
+                else:
+                    if value["messages"][0]["interactive"]["type"] == "button_reply":
+                        field = CallbackButtonHandler.__field_name__
+                    elif value["messages"][0]["interactive"]["type"] == "list_reply":
+                        field = CallbackSelectionHandler.__field_name__
+            elif 'statuses' in value:
+                field = MessageStatusHandler.__field_name__
+            update = update["entry"][0]["changes"][0]["value"]
+        return update, next((h for h in Handler.__subclasses__() if h.__field_name__ == field), None)
 
-        elif 'statuses' in value:
-            return MessageStatus.from_dict(client=client, data=value), MessageStatusHandler
-        return None, None  # the type of the update is not supported

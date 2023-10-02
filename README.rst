@@ -6,7 +6,7 @@
 `PyWa <https://github.com/david-lev/pywa>`_ • Python wrapper for the WhatsApp Cloud API
 ########################################################################################
 
-.. image:: https://img.shields.io/pypi/dm/pywa?style=flat-square
+.. image:: https://img.shields.io/pypi/dm/pywa
     :alt: PyPI Downloads
     :target: https://pypi.org/project/pywa/
 
@@ -14,17 +14,22 @@
     :alt: PyPI Version
     :target: https://badge.fury.io/py/pywa
 
-.. image:: https://github.com/david-lev/pywa/actions/workflows/python-app.yml/badge.svg
+.. image:: https://img.shields.io/github/actions/workflow/status/david-lev/pywa/python-app.yml?label=Tests
     :alt: Tests
     :target: https://github.com/david-lev/pywa/actions/workflows/python-app.yml
+
+
+.. image:: https://readthedocs.org/projects/pywa/badge/?version=latest&
+   :target: https://pywa.readthedocs.io
+   :alt: Docs
+
+.. image:: https://img.shields.io/github/license/david-lev/pywa
+    :alt: License
+    :target: https://github.com/david-lev/pywa/blob/master/LICENSE
 
 .. image:: https://www.codefactor.io/repository/github/david-lev/pywa/badge/master
    :target: https://www.codefactor.io/repository/github/david-lev/pywa/overview/master
    :alt: CodeFactor
-
-.. image:: https://readthedocs.org/projects/pywa/badge/?version=latest&style=flat-square
-   :target: https://pywa.readthedocs.io
-   :alt: Docs
 
 .. image:: https://badges.aleen42.com/src/telegram.svg
    :target: https://t.me/py_wa
