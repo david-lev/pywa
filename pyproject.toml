@@ -8,7 +8,7 @@ readme = {file = "README.rst", content-type = "text/x-rst"}
 dependencies = {file = "requirements.txt"}
 
 [tool.setuptools.packages.find]
-include = ["pywa"]
+include = ["pywa*"]
 exclude = ["tests"]
 
 [project]
