@@ -78,7 +78,7 @@ class MessageStatus(BaseUserUpdate):
     timestamp: datetime
     status: MessageStatusType
     conversation: Conversation | None
-    pricing_model: str
+    pricing_model: str | None
     error: WhatsAppError | None
 
     @classmethod
@@ -93,7 +93,7 @@ class MessageStatus(BaseUserUpdate):
             timestamp=datetime.fromtimestamp(int(status['timestamp'])),
             from_user=User(wa_id=status['recipient_id'], name=None),
             conversation=Conversation.from_dict(status['conversation']) if 'conversation' in status else None,
-            pricing_model=status['pricing']['pricing_model'],
+            pricing_model=status.get('pricing', {}).get('pricing_model'),
             error=WhatsAppError.from_incoming_error(status['errors'][0])
             if status_type == MessageStatusType.FAILED else None
         )
