@@ -108,4 +108,4 @@ class Webhook:
                 field = MessageStatusHandler.__field_name__
             else:
                 logging.warning(f"PyWa Webhook: Unknown message type: {value}")
-        return next((h for h in Handler.__subclasses__() if h.__field_name__ == field), None)
+        return Handler.__fields_to_subclasses__().get(field)

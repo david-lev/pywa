@@ -15,6 +15,7 @@ __all__ = [
 
 import dataclasses
 import abc
+import functools
 from typing import Callable, Any, TYPE_CHECKING, Iterable, cast, TypeVar
 from pywa.types import Message, CallbackButton, CallbackSelection, MessageStatus, TemplateStatus
 from pywa.types.base_update import BaseUpdate
@@ -110,6 +111,12 @@ class Handler(abc.ABC):
     def __hash__(self) -> int:
         """Return the hash of the handler field name."""
         return hash(self.__field_name__)
+
+    @staticmethod
+    @functools.cache
+    def __fields_to_subclasses__() -> dict[str, Handler]:
+        """Return a dict of all the subclasses of `Handler` with their field name as the key."""
+        return {h.__field_name__: h for h in Handler.__subclasses__()}
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}(handler={self.handler!r}, filters={self.filters!r})"
