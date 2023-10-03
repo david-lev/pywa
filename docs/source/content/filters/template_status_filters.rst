@@ -1,5 +1,5 @@
-Message Status Filters
-======================
+Template Status Filters
+========================
 
 .. currentmodule:: pywa.filters
 

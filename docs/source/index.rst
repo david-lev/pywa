@@ -1,9 +1,4 @@
 
-.. note::
-
-    THIS DOCS ARE WORK IN PROGRESS
-
-
 .. include:: ../../README.rst
    :start-after: end-logo
 

@@ -9,34 +9,52 @@ __all__ = [
     "CallbackButtonHandler",
     "CallbackSelectionHandler",
     "RawUpdateHandler",
-    "MessageStatusHandler"
+    "MessageStatusHandler",
+    "TemplateStatusHandler",
 ]
 
 import dataclasses
 import abc
-from typing import Callable, Any, TYPE_CHECKING, Iterable, cast
-from pywa import filters as fil
+from typing import Callable, Any, TYPE_CHECKING, Iterable, cast, TypeVar
 from pywa.types import Message, CallbackButton, CallbackSelection, MessageStatus, TemplateStatus
 from pywa.types.base_update import BaseUpdate
-from pywa.types.callback import CallbackDataT, CallbackData
+from pywa.types.callback import CallbackData
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
 
+CallbackDataFactoryT = TypeVar(
+    'CallbackDataFactoryT',
+    bound=type[CallbackData] | Iterable[type[CallbackData]] | type[str] | Callable[[str], Any]
+)
+"""Type hint for the callback data factory."""
 
-def _resolve_callback_data(factory: CallbackDataT) -> tuple[CallbackDataT, tuple[Callable[[WhatsApp, Any], bool]]]:
-    """Internal function to resolve the callback data into a constractor and a filter."""
+
+def _safe_issubclass(obj: type, base: type) -> bool:
+    """Check if an obj is a subclass of another class without raising a TypeError."""
+    try:
+        return issubclass(obj, base)
+    except TypeError:
+        return False
+
+
+def _resolve_callback_data_factory(
+        factory: CallbackDataFactoryT
+) -> tuple[CallbackDataFactoryT, tuple[Callable[[WhatsApp, Any], bool]]]:
+    """Internal function to resolve the callback data factory into a constractor and a filter."""
     clb_filter = tuple()
-    if isinstance(factory, Iterable):
+    if isinstance(factory, Iterable):  # The factory is a iterable of CallbackData subclasses or functions
         constractor = lambda data: ( # noqa
             tuple(map(lambda fs: (fs[0].from_str if issubclass(fs[0], CallbackData) else fs[0])(fs[1]), # noqa
                       zip(factory, data.split(CallbackData.__callback_sep__))))
         )
         if any((callback_datas := tuple(bool(issubclass(f, CallbackData)) for f in factory))):
             def _clb_filter(_: WhatsApp, btn_or_sel: CallbackButton | CallbackSelection) -> bool:
-                data = btn_or_sel.data.split(CallbackData.__callback_sep__)
+                datas = btn_or_sel.data.split(CallbackData.__callback_sep__)
+                if len(datas) != len(factory):
+                    return False
                 return all(
-                    data[i].startswith(
+                    datas[i].startswith(
                         str(cast(CallbackData, factory[i]).__callback_id__) +
                         cast(CallbackData, factory[i]).__callback_data_sep__
                     )
@@ -44,24 +62,35 @@ def _resolve_callback_data(factory: CallbackDataT) -> tuple[CallbackDataT, tuple
                 )
             clb_filter = (_clb_filter,)
 
-    elif issubclass(factory, CallbackData):
+    elif _safe_issubclass(factory, CallbackData):  # The factory is a single CallbackData subclass
         constractor = factory.from_str
-        clb_filter = (fil.callback.data_startswith(str(factory.__callback_id__) + factory.__callback_data_sep__),)
-    elif callable(factory):
+
+        def _clb_filter(_: WhatsApp, btn_or_sel: CallbackButton | CallbackSelection) -> bool:
+            return len(btn_or_sel.data.split(CallbackData.__callback_sep__)) == 1 and \
+                    btn_or_sel.data.startswith(str(factory.__callback_id__) + factory.__callback_data_sep__)
+        clb_filter = (_clb_filter,)
+
+    else:  # The factory is a function or custom type
         constractor = factory
-    else:
-        raise ValueError(f"Unsupported factory type {factory}.")
+
     return constractor, clb_filter
 
 
 class Handler(abc.ABC):
     """Base class for all handlers."""
-    __field_name__: str
-    """The field name of the webhook update
-    https://developers.facebook.com/docs/graph-api/webhooks/reference/whatsapp-business-account"""
 
-    __constructor__: Callable[[WhatsApp, dict], BaseUpdate]
-    """The constructor to use to construct the update object from the webhook update dict."""
+    @property
+    @abc.abstractmethod
+    def __field_name__(self) -> str:
+        """
+        The field name of the webhook update
+        https://developers.facebook.com/docs/graph-api/webhooks/reference/whatsapp-business-account
+        """
+
+    @property
+    @abc.abstractmethod
+    def __update_constructor__(self) -> Callable[[WhatsApp, dict], BaseUpdate]:
+        """The constructor to use to construct the update object from the webhook update dict."""
 
     def __init__(
             self,
@@ -78,9 +107,15 @@ class Handler(abc.ABC):
         if all((f(wa, data) for f in self.filters)):
             self.handler(wa, data)
 
-    @classmethod
-    def __hash__(cls) -> int:
-        return hash(cls.__field_name__)
+    def __hash__(self) -> int:
+        """Return the hash of the handler field name."""
+        return hash(self.__field_name__)
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}(handler={self.handler!r}, filters={self.filters!r})"
+
+    def __repr__(self) -> str:
+        return self.__str__()
 
 
 class MessageHandler(Handler):
@@ -103,7 +138,7 @@ class MessageHandler(Handler):
             :class:`pywa.types.Message` and returns a :class:`bool`)
     """
     __field_name__ = "messages:msg"
-    __constructor__ = Message.from_update
+    __update_constructor__ = Message.from_update
 
     def __init__(
             self,
@@ -137,24 +172,26 @@ class CallbackButtonHandler(Handler):
         factory: The constructor/s to use to construct the callback data (default: :class:`str`).
     """
     __field_name__ = "messages:btn"
-    __constructor__ = CallbackButton.from_update
+    __update_constructor__ = CallbackButton.from_update
 
     def __init__(
             self,
             handler: Callable[[WhatsApp, CallbackButton], Any],
             *filters: Callable[[WhatsApp, CallbackButton], bool],
-            factory: CallbackDataT = str
+            factory: CallbackDataFactoryT = str
     ):
-        self.factory, clb_filter = _resolve_callback_data(factory)
+        self.factory, clb_filter = _resolve_callback_data_factory(factory)
         super().__init__(handler, *clb_filter, *filters)
 
-    def __call__(self, wa: WhatsApp, data: CallbackButton):
-        if all((f(wa, data) for f in self.filters)):
+    def __call__(self, wa: WhatsApp, clb: CallbackButton):
+        if all((f(wa, clb) for f in self.filters)):
             self.handler(
                 wa,
-                dataclasses.replace(data, data=self.factory(data.data))
-                if not issubclass(self.factory, str) else data
+                dataclasses.replace(clb, data=self.factory(clb.data)) if self.factory is not str else clb
             )
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}(handler={self.handler!r}, filters={self.filters!r}, factory={self.factory!r})"
 
 
 class CallbackSelectionHandler(Handler):
@@ -182,24 +219,26 @@ class CallbackSelectionHandler(Handler):
         factory: The constructor/s to use to construct the callback data (default: :class:`str`).
     """
     __field_name__ = "messages:sel"
-    __constructor__ = CallbackSelection.from_update
+    __update_constructor__ = CallbackSelection.from_update
 
     def __init__(
             self,
             handler: Callable[[WhatsApp, CallbackSelection], Any],
             *filters: Callable[[WhatsApp, CallbackSelection], bool],
-            factory: CallbackDataT = str
+            factory: CallbackDataFactoryT = str
     ):
-        self.factory, clb_filter = _resolve_callback_data(factory)
+        self.factory, clb_filter = _resolve_callback_data_factory(factory)
         super().__init__(handler, *clb_filter, *filters)
 
-    def __call__(self, wa: WhatsApp, data: CallbackSelection):
-        if all((f(wa, data) for f in self.filters)):
+    def __call__(self, wa: WhatsApp, sel: CallbackSelection):
+        if all((f(wa, sel) for f in self.filters)):
             self.handler(
                 wa,
-                dataclasses.replace(data, data=self.factory(data.data))
-                if not issubclass(self.factory, str) else data
+                dataclasses.replace(sel, data=self.factory(sel.data)) if self.factory is not str else sel
             )
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}(handler={self.handler!r}, filters={self.filters!r}, factory={self.factory!r})"
 
 
 class MessageStatusHandler(Handler):
@@ -224,7 +263,7 @@ class MessageStatusHandler(Handler):
             :class:`pywa.types.MessageStatus` and returns a :class:`bool`)
     """
     __field_name__ = "messages:status"
-    __constructor__ = MessageStatus.from_update
+    __update_constructor__ = MessageStatus.from_update
 
     def __init__(
             self,
@@ -258,7 +297,7 @@ class TemplateStatusHandler(Handler):
             :class:`pywa.types.TemplateStatus` and returns a :class:`bool`)
     """
     __field_name__ = "message_template_status_update"
-    __constructor__ = TemplateStatus.from_update
+    __update_constructor__ = TemplateStatus.from_update
 
     def __init__(
             self,
@@ -288,7 +327,7 @@ class RawUpdateHandler(Handler):
             returns a :class:`bool`)
     """
     __field_name__ = "raw"
-    __constructor__ = lambda _, data: data  # noqa
+    __update_constructor__ = lambda _, data: data  # noqa
 
     def __init__(
             self,
@@ -356,7 +395,7 @@ class HandlerDecorators:
         return decorator
 
     def on_callback_button(
-            self: WhatsApp, *filters: Callable[[WhatsApp, CallbackButton], bool], factory: CallbackDataT = str
+            self: WhatsApp, *filters: Callable[[WhatsApp, CallbackButton], bool], factory: CallbackDataFactoryT = str
     ) -> Callable[[Callable[[WhatsApp, CallbackButton], Any]], Callable[[WhatsApp, CallbackButton], Any]]:
         """
         Decorator to register a function as a handler when a user clicks on a :class:`pywa.types.Button`.
@@ -387,7 +426,7 @@ class HandlerDecorators:
         return decorator
 
     def on_callback_selection(
-            self: WhatsApp, *filters: Callable[[WhatsApp, CallbackSelection], bool], factory: CallbackDataT = str
+            self: WhatsApp, *filters: Callable[[WhatsApp, CallbackSelection], bool], factory: CallbackDataFactoryT = str
     ) -> Callable[[Callable[[WhatsApp, CallbackSelection], Any]], Callable[[WhatsApp, CallbackSelection], Any]]:
         """
         Decorator to register a function as a handler when a user selects an option from a :class:`pywa.types.SectionList`.

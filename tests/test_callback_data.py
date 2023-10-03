@@ -20,7 +20,7 @@ def test_callback_class_uniqueness():
 
 
 def test_callback_class_not_empty():
-    """Test the callback data."""
+    """Test if the callback data is empty."""
     with pytest.raises(TypeError):
 
         @dataclasses.dataclass(slots=True, frozen=True)
@@ -41,6 +41,7 @@ def test_callback_class_not_empty():
 
 
 def test_callback_supported_types():
+    """Test the supported types of the callback data."""
     with pytest.raises(TypeError):
         @dataclasses.dataclass(slots=True, frozen=True)
         class User(CallbackData):
@@ -76,7 +77,7 @@ def test_data():
 
 
 def test_multiple_data():
-    """Test the callbacks separator."""
+    """Test multiple callback data."""
     @dataclasses.dataclass(slots=True, frozen=True)
     class User(CallbackData):
         id: str
@@ -99,6 +100,7 @@ def test_multiple_data():
 
 
 def test_data_sep():
+    """Test the data separator override."""
     @dataclasses.dataclass(slots=True, frozen=True)
     class User(CallbackData):
         __callback_data_sep__ = '*'
@@ -119,6 +121,7 @@ def test_data_sep():
 
 
 def test_data_sep_multiple_data():
+    """Test the data separator override with multiple data."""
     CallbackData.__callback_sep__ = '^'
 
     @dataclasses.dataclass(slots=True, frozen=True)

@@ -17,7 +17,7 @@ from .others import ProductsSection
 from .base_update import BaseUpdate
 
 if TYPE_CHECKING:
-    from pywa.types.callback import CallbackDataT, CallbackData
+    from pywa.types.callback import CallbackDataT, _resolve_callback_data  # noqa
     from pywa.client import WhatsApp
 
 DEFAULT = object()
@@ -975,7 +975,7 @@ class Template:
         def to_dict(self) -> dict[str, str]:
             return dict(
                 type='payload',
-                payload=self.data.to_str() if isinstance(self.data, CallbackData) else self.data
+                payload=_resolve_callback_data(self.data)
             )
 
     @dataclass(slots=True)

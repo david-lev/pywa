@@ -81,7 +81,8 @@ class Webhook:
         """Call the handlers for the given update."""
         handler = self._get_handler(update=update)
         for func in self.handlers[handler]:
-            func(self.wa_client, handler.__constructor__(self.wa_client, update))
+            # noinspection PyCallingNonCallable
+            func(self.wa_client, handler.__update_constructor__(self.wa_client, update))
         for raw_update_func in self.handlers[RawUpdateHandler]:
             raw_update_func(self.wa_client, update)
 
