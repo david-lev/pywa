@@ -902,7 +902,7 @@ class Template:
         document: str | bytes | BinaryIO
 
         def to_dict(self, is_url: bool) -> dict[str, str]:
-            return dict(type=self.type.value, document=dict(url=self.document) if is_url else dict(id=self.document))
+            return dict(type=self.type.value, document=dict(link=self.document) if is_url else dict(id=self.document))
 
     @dataclass(slots=True)
     class Image(ComponentABC):
@@ -916,7 +916,7 @@ class Template:
         image: str | bytes | BinaryIO
 
         def to_dict(self, is_url: bool) -> dict[str, str]:
-            return dict(type=self.type.value, image=dict(url=self.image) if is_url else dict(id=self.image))
+            return dict(type=self.type.value, image=dict(link=self.image) if is_url else dict(id=self.image))
 
     @dataclass(slots=True)
     class Video(ComponentABC):
@@ -930,7 +930,7 @@ class Template:
         video: str | bytes | BinaryIO
 
         def to_dict(self, is_url: bool) -> dict[str, str]:
-            return dict(type=self.type.value, video=dict(url=self.video) if is_url else dict(id=self.video))
+            return dict(type=self.type.value, video=dict(link=self.video) if is_url else dict(id=self.video))
 
     @dataclass(slots=True)
     class Location(ComponentABC):
