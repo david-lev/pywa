@@ -9,7 +9,7 @@ dependencies = {file = "requirements.txt"}
 
 [tool.setuptools.packages.find]
 include = ["pywa*"]
-exclude = ["tests"]
+exclude = ["tests*"]
 
 [project]
 name = "pywa"
@@ -39,6 +39,7 @@ flask = ['flask']
 fastapi = ['fastapi', 'uvicorn[standard]']
 
 [project.urls]
+"Homepage" = "https://pywa.readthedocs.io/"
 "Documentation" = "https://pywa.readthedocs.io/"
 "Issue Tracker" = "https://github.com/david-lev/pywa/issues"
 "Source Code" = "https://github.com/david-lev/pywa"

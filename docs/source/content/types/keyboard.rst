@@ -15,6 +15,10 @@ Keyboard
 
 .. autoclass:: CallbackDataT()
 
+.. currentmodule:: pywa.handlers
+
+.. autoclass:: CallbackDataFactoryT()
+
 ----------------
 
 .. currentmodule:: pywa.types.others

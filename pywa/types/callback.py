@@ -139,7 +139,7 @@ class CallbackData:
         )
 
 
-CallbackDataT = TypeVar('CallbackDataT', bound=CallbackData | Iterable[CallbackData | Any] | str)
+CallbackDataT = TypeVar('CallbackDataT', bound=str | CallbackData | Iterable[CallbackData | Any])
 """Type hint for ``callback_data`` parameter in :class:`Button` and :class:`SectionRow`."""
 
 
