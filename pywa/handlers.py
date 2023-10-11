@@ -95,7 +95,11 @@ def _call_callback_handler(
         else:
             return
     try:
-        pass_filters = all((f(wa, clb_or_sel) for f in handler.filters))
+        pass_filters = all((f(wa, clb_or_sel) for f in (
+            *((handler.factory_filter,) if not handler.factory_before_filters
+                and handler.factory_filter is not None else tuple()),
+            *handler.filters
+        )))
     except AttributeError as e:
         if not handler.factory_before_filters and isinstance(e.obj, str) and handler.factory is not str:
             raise TypeError("It seems like your filters tried to access a field of the callback data before the factory"
@@ -104,7 +108,7 @@ def _call_callback_handler(
     if pass_filters:
         if not handler.factory_before_filters and handler.factory is not str:
             clb_or_sel = dataclasses.replace(clb_or_sel, data=handler.factory(clb_or_sel.data))
-    handler.handler(wa, clb_or_sel)
+        handler.handler(wa, clb_or_sel)
 
 
 class Handler(abc.ABC):
