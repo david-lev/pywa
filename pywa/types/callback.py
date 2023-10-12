@@ -123,7 +123,7 @@ class CallbackData:
         """
         return self.__callback_data_sep__.join((str(self.__callback_id__), *(
             self._not_contains(getattr(self, field_name), self.__callback_sep__, self.__callback_data_sep__)
-            if not issubclass(field_type, (bool, Enum)) else (' ' if getattr(self, field_name) else '')
+            if not issubclass(field_type, (bool, Enum)) else ('*' if getattr(self, field_name) else '')
             if field_type is bool else self._not_contains(
                 getattr(self, field_name).value, self.__callback_sep__, self.__callback_data_sep__
             )
