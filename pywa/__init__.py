@@ -7,6 +7,6 @@ Python wrapper for the WhatsApp Cloud API.
 
 from pywa.client import WhatsApp
 
-__version__ = "1.7.0"
+__version__ = "1.7.1"
 __author__ = "David Lev"
 __license__ = "MIT"
