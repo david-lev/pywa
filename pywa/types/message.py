@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Callable, Any, Iterable
 from pywa.errors import WhatsAppError
-from .callback import Button, SectionList
+from .callback import Button, SectionList, ButtonUrl
 from .base_update import BaseUserUpdate
 from .others import ReplyToMessage, Reaction, Location, Contact, User, Metadata, Order, System, MessageType, \
     ProductsSection
@@ -168,7 +168,7 @@ class Message(BaseUserUpdate):
             header: str | None = None,
             body: str | None = None,
             footer: str | None = None,
-            keyboard: Iterable[Button] | SectionList | None = None,
+            keyboard: Iterable[Button] | ButtonUrl | SectionList | None = None,
             preview_url: bool = False,
             reply_to_message_id: str = None,
     ) -> str:

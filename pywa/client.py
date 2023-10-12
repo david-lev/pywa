@@ -15,8 +15,51 @@ from pywa.webhook import Webhook
 from pywa.handlers import Handler, HandlerDecorators  # noqa
 from pywa.types import (
     Button, SectionList, Message, Contact, MediaUrlResponse,
-    ProductsSection, BusinessProfile, Industry, CommerceSettings, NewTemplate, Template, TemplateResponse
+    ProductsSection, BusinessProfile, Industry, CommerceSettings, NewTemplate, Template, TemplateResponse, ButtonUrl
 )
+
+
+def resolve_keyboard_param(keyboard: Iterable[Button] | ButtonUrl | SectionList) -> tuple[str, dict]:
+    """
+    Resolve keyboard parameters to a type and an action dict.
+    """
+    if isinstance(keyboard, SectionList):
+        return "list", keyboard.to_dict()
+    elif isinstance(keyboard, ButtonUrl):
+        return "cta_url", keyboard.to_dict()
+    else:
+        return "button", {"buttons": tuple(b.to_dict() for b in keyboard)}
+
+
+def resolve_media_param(
+        wa: WhatsApp,
+        media: str | bytes | BinaryIO,
+        mime_type: str | None,
+        filename: str | None,
+) -> tuple[bool, str]:
+    """
+    Internal method to resolve media parameters. Returns a tuple of (is_url, media_id_or_url).
+    """
+    if isinstance(media, str):
+        if media.startswith(("https://", "http://")):
+            return True, media
+        elif not os.path.isfile(media) and media.isdigit():
+            return False, media  # assume it's a media ID
+        else:  # assume it's a file path
+            if not (mt := mimetypes.guess_type(media)[0] or mime_type):
+                raise ValueError(f"Could not determine the mime type of the file {media!r}. Please provide a mime type.")
+            return False, wa.upload_media(
+                media=media,
+                mime_type=mt,
+                filename=filename or os.path.basename(media)
+            )
+    else:
+        if not mime_type or not filename:
+            msg = "When sending media as bytes or a file object a {} must be provided."
+            raise ValueError(msg.format("mime_type and filename" if not mime_type and not filename else
+                                        ("mime_type" if not mime_type else "filename")))
+        return False, wa.api.upload_media(media=media, mime_type=mime_type, filename=filename)['id']
+
 
 _MISSING = object()
 
@@ -130,7 +173,7 @@ class WhatsApp(HandlerDecorators):
             text: str,
             header: str | None = None,
             footer: str | None = None,
-            keyboard: Iterable[Button] | SectionList | None = None,
+            keyboard: Iterable[Button] | ButtonUrl | SectionList | None = None,
             preview_url: bool = False,
             reply_to_message_id: str | None = None,
     ) -> str:
@@ -223,11 +266,11 @@ class WhatsApp(HandlerDecorators):
                 preview_url=preview_url,
                 reply_to_message_id=reply_to_message_id,
             )['messages'][0]['id']
-        is_list = isinstance(keyboard, SectionList)
+        type_, kb = resolve_keyboard_param(keyboard)
         return self.api.send_interactive_message(
             to=str(to),
-            type_="list" if is_list else "button",
-            action=keyboard.to_dict() if is_list else {"buttons": tuple(b.to_dict() for b in keyboard)},
+            type_=type_,
+            action=kb,
             header={
                 "type": "text",
                 "text": header,
@@ -238,29 +281,6 @@ class WhatsApp(HandlerDecorators):
 
     send_text = send_message  # alias
 
-    def _resolve_media_param(
-            self,
-            media: str | bytes | BinaryIO,
-            mime_type: str,
-            filename: str,
-    ) -> tuple[bool, str]:
-        """
-        Internal method to resolve media parameters to a media ID or URL.
-        """
-        if isinstance(media, str):
-            if media.startswith(("https://", "http://")):
-                return True, media
-            elif not os.path.isfile(media) and media.isdigit():
-                return False, media  # assume it's a media ID
-            else:
-                return False, self.upload_media(
-                    media=media,
-                    mime_type=mimetypes.guess_type(media)[0] or mime_type,
-                    filename=filename or os.path.basename(media)
-                )
-        else:
-            return False, self.api.upload_media(media=media, mime_type=mime_type, filename=filename)['id']
-
     def send_image(
             self,
             to: str | int,
@@ -268,8 +288,9 @@ class WhatsApp(HandlerDecorators):
             caption: str | None = None,
             body: str | None = None,
             footer: str | None = None,
-            buttons: Iterable[Button] | None = None,
+            buttons: Iterable[Button] | ButtonUrl | None = None,
             reply_to_message_id: str | None = None,
+            mime_type: str | None = None,
     ) -> str:
         """
         Send an image to a WhatsApp user.
@@ -286,7 +307,8 @@ class WhatsApp(HandlerDecorators):
 
         Args:
             to: The phone ID of the WhatsApp user.
-            image: The image to send (either a media ID, URL, file path, bytes, or an open file object).
+            image: The image to send (either a media ID, URL, file path, bytes, or an open file object. When buttons are
+             provided, only URL is supported).
             caption: The caption of the image (optional, `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
             body: The body of the message (optional, up to 1024 characters,
              `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed, if buttons are provided and body is not
@@ -295,11 +317,13 @@ class WhatsApp(HandlerDecorators):
              `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the image (optional).
             reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
+            mime_type: The mime type of the image (optional, required when sending an image as bytes or a file object, 
+             or file path that does not have an extension).
 
         Returns:
             The message ID of the sent image message.
         """
-        is_url, image = self._resolve_media_param(media=image, mime_type="image/jpeg", filename="image.jpg")
+        is_url, image = resolve_media_param(wa=self, media=image, mime_type=mime_type, filename="image.jpg")
         if not buttons:
             return self.api.send_media(
                 to=str(to),
@@ -310,10 +334,11 @@ class WhatsApp(HandlerDecorators):
             )['messages'][0]['id']
         if not body and not caption:
             raise ValueError("Either body or caption must be provided when sending an image with buttons.")
+        type_, kb = resolve_keyboard_param(buttons)
         return self.api.send_interactive_message(
             to=str(to),
-            type_="button",
-            action={"buttons": tuple(b.to_dict() for b in buttons)},
+            type_=type_,
+            action=kb,
             header={
                 "type": "image",
                 "image": {
@@ -332,9 +357,9 @@ class WhatsApp(HandlerDecorators):
             caption: str | None = None,
             body: str | None = None,
             footer: str | None = None,
-            buttons: Iterable[Button] | None = None,
+            buttons: Iterable[Button] | ButtonUrl | None = None,
             reply_to_message_id: str | None = None,
-
+            mime_type: str | None = None,
     ) -> str:
         """
         Send a video to a WhatsApp user.
@@ -352,7 +377,8 @@ class WhatsApp(HandlerDecorators):
 
         Args:
             to: The phone ID of the WhatsApp user.
-            video: The video to send (either a media ID, URL, file path, bytes, or an open file object).
+            video: The video to send (either a media ID, URL, file path, bytes, or an open file object. When buttons are
+             provided, only URL is supported).
             caption: The caption of the video (optional, `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
             body: The body of the message (optional, up to 1024 characters,
              `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed, if buttons are provided and body is not
@@ -361,11 +387,13 @@ class WhatsApp(HandlerDecorators):
              `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the video (optional).
             reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
+            mime_type: The mime type of the video (optional, required when sending a video as bytes or a file object,
+             or file path that does not have an extension).
 
         Returns:
             The message ID of the sent video.
         """
-        is_url, video = self._resolve_media_param(media=video, mime_type="video/mp4", filename="video.mp4")
+        is_url, video = resolve_media_param(wa=self, media=video, mime_type=mime_type, filename="video.mp4")
         if not buttons:
             return self.api.send_media(
                 to=str(to),
@@ -376,10 +404,11 @@ class WhatsApp(HandlerDecorators):
             )['messages'][0]['id']
         if not body and not caption:
             raise ValueError("Either body or caption must be provided when sending a video with buttons.")
+        type_, kb = resolve_keyboard_param(buttons)
         return self.api.send_interactive_message(
             to=str(to),
-            type_="button",
-            action={"buttons": tuple(b.to_dict() for b in buttons)},
+            type_=type_,
+            action=kb,
             header={
                 "type": "video",
                 "video": {
@@ -399,8 +428,9 @@ class WhatsApp(HandlerDecorators):
             caption: str | None = None,
             body: str | None = None,
             footer: str | None = None,
-            buttons: Iterable[Button] | None = None,
+            buttons: Iterable[Button] | ButtonUrl | None = None,
             reply_to_message_id: str | None = None,
+            mime_type: str | None = None,
     ) -> str:
         """
         Send a document to a WhatsApp user.
@@ -418,7 +448,8 @@ class WhatsApp(HandlerDecorators):
 
         Args:
             to: The phone ID of the WhatsApp user.
-            document: The document to send (either a media ID, URL, file path, bytes, or an open file object).
+            document: The document to send (either a media ID, URL, file path, bytes, or an open file object. When
+             buttons are provided, only URL is supported).
             filename: The filename of the document (optional, The extension of the filename will specify what format the
              document is displayed as in WhatsApp).
             caption: The caption of the document (optional).
@@ -429,14 +460,17 @@ class WhatsApp(HandlerDecorators):
              `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the document (optional).
             reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
+            mime_type: The mime type of the document (optional, required when sending a document as bytes or a file
+             object, or file path that does not have an extension).
 
         Returns:
             The message ID of the sent document.
         """
-        is_url, document = self._resolve_media_param(
+        is_url, document = resolve_media_param(
+            wa=self,
             media=document,
-            mime_type="text/plain",
-            filename=filename or "file.txt",
+            mime_type=mime_type,
+            filename=filename
         )
         if not buttons:
             return self.api.send_media(
@@ -449,10 +483,11 @@ class WhatsApp(HandlerDecorators):
             )['messages'][0]['id']
         if not body and not caption:
             raise ValueError("Either body or caption must be provided when sending a document with buttons.")
+        type_, kb = resolve_keyboard_param(buttons)
         return self.api.send_interactive_message(
             to=str(to),
-            type_="button",
-            action={"buttons": tuple(b.to_dict() for b in buttons)},
+            type_=type_,
+            action=kb,
             header={
                 "type": "document",
                 "document": {
@@ -469,6 +504,7 @@ class WhatsApp(HandlerDecorators):
             self,
             to: str | int,
             audio: str | bytes | BinaryIO,
+            mime_type: str | None = None,
     ) -> str:
         """
         Send an audio file to a WhatsApp user.
@@ -484,11 +520,13 @@ class WhatsApp(HandlerDecorators):
         Args:
             to: The phone ID of the WhatsApp user.
             audio: The audio file to send (either a media ID, URL, file path, bytes, or an open file object).
+            mime_type: The mime type of the audio file (optional, required when sending an audio file as bytes or a file
+             object, or file path that does not have an extension).
 
         Returns:
             The message ID of the sent audio file.
         """
-        is_url, audio = self._resolve_media_param(media=audio, mime_type="audio/mpeg", filename="audio.mp3")
+        is_url, audio = resolve_media_param(wa=self, media=audio, mime_type=mime_type, filename="audio.mp3")
         return self.api.send_media(
             to=str(to),
             media_id_or_url=audio,
@@ -500,6 +538,7 @@ class WhatsApp(HandlerDecorators):
             self,
             to: str | int,
             sticker: str | bytes | BinaryIO,
+            mime_type: str | None = None,
     ) -> str:
         """
         Send a sticker to a WhatsApp user.
@@ -517,11 +556,13 @@ class WhatsApp(HandlerDecorators):
         Args:
             to: The phone ID of the WhatsApp user.
             sticker: The sticker to send (either a media ID, URL, file path, bytes, or an open file object).
+            mime_type: The mime type of the sticker (optional, required when sending a sticker as bytes or a file
+             object, or file path that does not have an extension).
 
         Returns:
             The message ID of the sent message.
         """
-        is_url, sticker = self._resolve_media_param(media=sticker, mime_type="image/webp", filename="sticker.webp")
+        is_url, sticker = resolve_media_param(wa=self, media=sticker, mime_type=mime_type, filename="sticker.webp")
         return self.api.send_media(
             to=str(to),
             media_id_or_url=sticker,
@@ -1240,16 +1281,16 @@ class WhatsApp(HandlerDecorators):
             case Template.TextValue:
                 pass
             case Template.Image:
-                is_url, template.header.image = self._resolve_media_param(
-                    media=template.header.image, mime_type="image/jpeg", filename="image.jpg"
+                is_url, template.header.image = resolve_media_param(
+                    wa=self, media=template.header.image, mime_type="image/jpeg", filename="image.jpg"
                 )
             case Template.Document:
-                is_url, template.header.document = self._resolve_media_param(
-                    media=template.header.document, mime_type="text/plain", filename="file.pdf"
+                is_url, template.header.document = resolve_media_param(
+                    wa=self, media=template.header.document, mime_type="text/plain", filename="file.pdf"
                 )
             case Template.Video:
-                is_url, template.header.video = self._resolve_media_param(
-                    media=template.header.video, mime_type="video/mp4", filename="video.mp4"
+                is_url, template.header.video = resolve_media_param(
+                    wa=self, media=template.header.video, mime_type="video/mp4", filename="video.mp4"
                 )
         return self.api.send_template(
             to=str(to),

@@ -7,7 +7,7 @@ from .others import Metadata, User, Contact, ProductsSection
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
-    from .callback import Button, SectionList
+    from .callback import Button, SectionList, ButtonUrl
     from .template import Template
 
 
@@ -62,7 +62,7 @@ class BaseUserUpdate(BaseUpdate, ABC):
             text: str,
             header: str | None = None,
             footer: str | None = None,
-            keyboard: Iterable[Button] | SectionList | None = None,
+            keyboard: Iterable[Button] | ButtonUrl | SectionList | None = None,
             quote: bool = False,
             preview_url: bool = False,
     ) -> str:
@@ -161,8 +161,9 @@ class BaseUserUpdate(BaseUpdate, ABC):
             caption: str | None = None,
             body: str | None = None,
             footer: str | None = None,
-            buttons: Iterable[Button] | None = None,
+            buttons: Iterable[Button] | ButtonUrl | None = None,
             quote: bool = False,
+            mime_type: str | None = None,
     ) -> str:
         """
         Reply to the message with an image.
@@ -178,13 +179,16 @@ class BaseUserUpdate(BaseUpdate, ABC):
             ... )
 
         Args:
-            image: The image to reply with (either a media ID, URL, file path, bytes, or an open file object).
+            image: The image to reply with (either a media ID, URL, file path, bytes, or an open file object. When
+             buttons are provided, only URL is supported).
             caption: The caption of the image (optional, markdown allowed).
             body: The body of the reply (optional, up to 1024 characters, markdown allowed,
              if buttons are provided and body is not provided, caption will be used as the body)
             footer: The footer of the reply (if buttons is provided, optional, markdown has no effect).
             buttons: The buttons to send with the image (optional).
             quote: Whether to quote the replied message (default: False).
+            mime_type: The mime type of the image (optional, required when sending a image as bytes or a file object,
+             or file path that does not have an extension).
 
         Returns:
             The ID of the sent reply.
@@ -197,6 +201,7 @@ class BaseUserUpdate(BaseUpdate, ABC):
             footer=footer,
             buttons=buttons,
             reply_to_message_id=self.message_id_to_reply if quote else None,
+            mime_type=mime_type
         )
 
     def reply_video(
@@ -205,8 +210,9 @@ class BaseUserUpdate(BaseUpdate, ABC):
             caption: str | None = None,
             body: str | None = None,
             footer: str | None = None,
-            buttons: Iterable[Button] | None = None,
+            buttons: Iterable[Button] | ButtonUrl | None = None,
             quote: bool = False,
+            mime_type: str | None = None,
     ) -> str:
         """
         Reply to the message with a video.
@@ -223,13 +229,16 @@ class BaseUserUpdate(BaseUpdate, ABC):
             ... )
 
         Args:
-            video: The video to reply with (either a media ID, URL, file path, bytes, or an open file object).
+            video: The video to reply with (either a media ID, URL, file path, bytes, or an open file object. When
+             buttons are provided, only URL is supported).
             caption: The caption of the video (optional, markdown allowed).
             body: The body of the reply (optional, up to 1024 characters, markdown allowed,
-                if buttons are provided and body is not provided, caption will be used as the body)
-            footer: The footer of the reply (if buttons is provided, optional, markdown has no effect).
+             if buttons are provided and body is not provided, caption will be used as the body)
+            footer: The footer of the reply (if buttons are provided, optional, markdown has no effect).
             buttons: The buttons to send with the video (optional).
             quote: Whether to quote the replied message (default: False).
+            mime_type: The mime type of the video (optional, required when sending a video as bytes or a file object,
+             or file path that does not have an extension).
 
         Returns:
             The ID of the sent reply.
@@ -241,7 +250,8 @@ class BaseUserUpdate(BaseUpdate, ABC):
             reply_to_message_id=self.message_id_to_reply if quote else None,
             buttons=buttons,
             body=body,
-            footer=footer
+            footer=footer,
+            mime_type=mime_type
         )
 
     def reply_document(
@@ -251,8 +261,9 @@ class BaseUserUpdate(BaseUpdate, ABC):
             caption: str | None = None,
             body: str | None = None,
             footer: str | None = None,
-            buttons: Iterable[Button] | None = None,
+            buttons: Iterable[Button] | ButtonUrl | None = None,
             quote: bool = False,
+            mime_type: str | None = None,
     ) -> str:
         """
         Reply to the message with a document.
@@ -269,15 +280,18 @@ class BaseUserUpdate(BaseUpdate, ABC):
 
 
         Args:
-            document: The document to reply with (either a media ID, URL, file path, bytes, or an open file object).
+            document: The document to reply with (either a media ID, URL, file path, bytes, or an open file object. When
+             buttons are provided, only URL is supported).
             filename: The filename of the document (optional, The extension of the filename will specify what format the
              document is displayed as in WhatsApp).
             caption: The caption of the document (optional).
             body: The body of the reply (optional, up to 1024 characters, markdown allowed,
-                if buttons are provided and body is not provided, caption will be used as the body)
+             if buttons are provided and body is not provided, caption will be used as the body)
             footer: The footer of the reply (if buttons is provided, optional, markdown has no effect).
             buttons: The buttons to send with the document (optional).
             quote: Whether to quote the replied message (default: False).
+            mime_type: The mime type of the document (optional, required when sending a document as bytes or a file
+             object, or file path that does not have an extension).
 
         Returns:
             The ID of the sent reply.
@@ -290,12 +304,14 @@ class BaseUserUpdate(BaseUpdate, ABC):
             reply_to_message_id=self.message_id_to_reply if quote else None,
             buttons=buttons,
             body=body,
-            footer=footer
+            footer=footer,
+            mime_type=mime_type
         )
 
     def reply_audio(
             self,
             audio: str | bytes | BinaryIO,
+            mime_type: str | None = None,
     ) -> str:
         """
         Reply to the message with an audio.
@@ -309,6 +325,8 @@ class BaseUserUpdate(BaseUpdate, ABC):
 
         Args:
             audio: The audio file to reply with (either a media ID, URL, file path, bytes, or an open file object).
+            mime_type: The mime type of the audio (optional, required when sending a audio as bytes or a file object,
+             or file path that does not have an extension).
 
         Returns:
             The ID of the sent message.
@@ -316,11 +334,13 @@ class BaseUserUpdate(BaseUpdate, ABC):
         return self._client.send_audio(
             to=self.sender,
             audio=audio,
+            mime_type=mime_type,
         )
 
     def reply_sticker(
             self,
             sticker: str | bytes | BinaryIO,
+            mime_type: str | None = None,
     ) -> str:
         """
         Reply to the message with a sticker.
@@ -336,6 +356,8 @@ class BaseUserUpdate(BaseUpdate, ABC):
 
         Args:
             sticker: The sticker to reply with (either a media ID, URL, file path, bytes, or an open file object).
+            mime_type: The mime type of the sticker (optional, required when sending a sticker as bytes or a file
+             object, or file path that does not have an extension).
 
         Returns:
             The ID of the sent reply.
@@ -343,6 +365,7 @@ class BaseUserUpdate(BaseUpdate, ABC):
         return self._client.send_sticker(
             to=self.sender,
             sticker=sticker,
+            mime_type=mime_type,
         )
 
     def reply_location(
@@ -419,10 +442,7 @@ class BaseUserUpdate(BaseUpdate, ABC):
             reply_to_message_id=self.message_id_to_reply if quote else None
         )
 
-    def react(
-            self,
-            emoji: str,
-    ) -> str:
+    def react(self, emoji: str) -> str:
         """
         React to the message with an emoji.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.send_reaction` with ``to`` and ``message_id``.
@@ -443,9 +463,7 @@ class BaseUserUpdate(BaseUpdate, ABC):
             message_id=self.message_id_to_reply
         )
 
-    def unreact(
-            self,
-    ) -> str:
+    def unreact(self) -> str:
         """
         Remove the reaction from the message.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.remove_reaction` with ``to`` and ``message_id``.
