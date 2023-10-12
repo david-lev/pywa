@@ -35,9 +35,9 @@ class CallbackData:
         inherits from :class:`str` (e.g ``class State(str, Enum)``). You probably won't need more than that to pass
         state and context in the program.
 
-        The characters ``:`` and ``;`` cannot be used when sending callbacks, because they are used as separators.
-        You can change the separators by overriding ``__callback_data_sep__`` (for individual objects) and
-        ``CallbackData.__callback_sep__`` (In the base class level, affects all child classes).
+        The characters ``¶`` and ``~`` cannot be used when sending callbacks, because they are used as separators.
+        You can change the separators by overriding ``__callback_data_sep__`` (``~`` for individual objects) and
+        ``CallbackData.__callback_sep__`` (``¶`` in the base class level, affects all child classes).
 
         When providing subclassed ``CallbackData`` as a ``factory`` parameter in callback handlers, a basic matching
         filter (``startswith(callback_id)``) will be added automatically. So no need to create one yourself.
@@ -67,10 +67,10 @@ class CallbackData:
     """
     __callback_id__: int = 0
     """Unique ID for each callback data class. Do not override this."""
-    __callback_sep__: str = ';'
-    """The separator between multiple callback objects. (e.g ``123:John;456:Jane``)"""
-    __callback_data_sep__: str = ':'
-    """The separator between the callback fields, Can be overridden in subclasses (e.g ``123:John``)."""
+    __callback_sep__: str = '¶'
+    """The separator between multiple callback objects, Can be overridden globally. (Default ``¶``)"""
+    __callback_data_sep__: str = '~'
+    """The separator between the callback fields, Can be overridden individually. (Default ``~``)"""
     __allowed_types__: tuple[type, ...] = (str, int, bool, float)
     """The allowed types in the callback data."""
 
@@ -123,7 +123,7 @@ class CallbackData:
         """
         return self.__callback_data_sep__.join((str(self.__callback_id__), *(
             self._not_contains(getattr(self, field_name), self.__callback_sep__, self.__callback_data_sep__)
-            if not issubclass(field_type, (bool, Enum)) else ('*' if getattr(self, field_name) else '')
+            if not issubclass(field_type, (bool, Enum)) else ('§' if getattr(self, field_name) else '')
             if field_type is bool else self._not_contains(
                 getattr(self, field_name).value, self.__callback_sep__, self.__callback_data_sep__
             )
