@@ -10,7 +10,7 @@ import os
 import requests
 from typing import Iterable, BinaryIO
 from pywa.api import WhatsAppCloudApi
-from pywa.utils import FlaskApp, FastAPIApp
+from pywa.utils import Flask, FastAPI
 from pywa.webhook import Webhook
 from pywa.handlers import Handler, HandlerDecorators  # noqa
 from pywa.types import (
@@ -29,7 +29,7 @@ class WhatsApp(HandlerDecorators):
             base_url: str = "https://graph.facebook.com",
             api_version: float | int = 18.0,
             session: requests.Session | None = None,
-            server: FlaskApp | FastAPIApp | None = None,
+            server: Flask | FastAPI | None = None,
             webhook_endpoint: str = "/",
             verify_token: str | None = None,
             filter_updates: bool = True,

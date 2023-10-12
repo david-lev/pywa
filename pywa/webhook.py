@@ -13,7 +13,7 @@ from pywa.handlers import (
     Handler,  # noqa
     MessageHandler, CallbackButtonHandler, CallbackSelectionHandler, RawUpdateHandler, MessageStatusHandler
 )
-from pywa.utils import FlaskApp, FastAPIApp
+from pywa.utils import Flask, FastAPI
 
 if TYPE_CHECKING:
     from pywa import WhatsApp
@@ -27,7 +27,7 @@ class Webhook:
     def __init__(
             self,
             wa_client: WhatsApp,
-            server: FlaskApp | FastAPIApp,
+            server: Flask | FastAPI,
             verify_token: str,
             webhook_endpoint: str,
             filter_updates: bool

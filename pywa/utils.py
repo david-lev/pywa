@@ -56,7 +56,7 @@ class FromDict:
         })
 
 
-class FastAPIApp(Protocol):
+class FastAPI(Protocol):
     def get(self, path: str) -> Callable:
         ...
 
@@ -64,7 +64,7 @@ class FastAPIApp(Protocol):
         ...
 
 
-class FlaskApp(Protocol):
+class Flask(Protocol):
     def route(self, rule: str, **options: Any) -> Callable:
         ...
 
