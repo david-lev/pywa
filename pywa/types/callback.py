@@ -213,11 +213,6 @@ class CallbackButton(BaseUserUpdate, Generic[CallbackDataT]):
     data: CallbackDataT
     title: str
 
-    @property
-    def message_id_to_reply(self) -> str:
-        """The ID of the message to reply to."""
-        return self.reply_to_message.message_id
-
     @classmethod
     def from_update(cls, client: 'WhatsApp', update: dict) -> 'CallbackButton':
         msg = (value := update['entry'][0]['changes'][0]['value'])['messages'][0]
