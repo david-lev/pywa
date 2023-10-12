@@ -5,6 +5,8 @@ Keyboard
 
 .. autoclass:: Button()
 
+.. autoclass:: ButtonUrl()
+
 .. autoclass:: SectionList()
 
 .. autoclass:: Section()

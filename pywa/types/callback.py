@@ -2,6 +2,7 @@ __all__ = [
     'CallbackButton',
     'CallbackSelection',
     'Button',
+    'ButtonUrl',
     'SectionRow',
     'Section',
     'SectionList',
@@ -12,7 +13,7 @@ __all__ = [
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Iterable, TypeVar, Generic, Callable, Any
+from typing import TYPE_CHECKING, Iterable, TypeVar, Generic, Any
 from .base_update import BaseUserUpdate
 from .others import Metadata, User, ReplyToMessage, MessageType
 
@@ -360,11 +361,32 @@ class Button:
     def to_dict(self) -> dict:
         return {
             "type": "reply",
-            "reply":
-                {
-                    "id": _resolve_callback_data(self.callback_data),
-                    "title": self.title
-                }
+            "reply": {
+                "id": _resolve_callback_data(self.callback_data),
+                "title": self.title
+            }
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class ButtonUrl:
+    """
+    Represents a button in the bottom of the message that opens a URL.
+
+    Attributes:
+        title: The title of the button (up to 20 characters).
+        url: The URL to open when the user clicks on the button.
+    """
+    title: str
+    url: str
+
+    def to_dict(self) -> dict:
+        return {
+            "name": "cta_url",
+            "parameters": {
+                "display_text": self.title,
+                "url": self.url
+            }
         }
 
 
