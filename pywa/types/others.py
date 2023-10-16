@@ -53,6 +53,7 @@ class MessageType(utils.StrEnum):
         SYSTEM: A system message.
         UNKNOWN: An unknown message.
         UNSUPPORTED: An unsupported message.
+        BUTTON: A message sent in response to a button press
     """
     AUDIO = "audio"
     DOCUMENT = "document"
@@ -68,6 +69,7 @@ class MessageType(utils.StrEnum):
     SYSTEM = "system"
     UNKNOWN = "unknown"
     UNSUPPORTED = "unsupported"
+    BUTTON = "button"
 
     @classmethod
     def _missing_(cls, value: str) -> MessageType:

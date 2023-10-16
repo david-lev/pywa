@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
 _FIELDS_TO_OBJECTS_CONSTRUCTORS: dict[str, Callable[[dict, WhatsApp], Any]] = dict(
     text=lambda m, _client: m['body'],
+    button=lambda m, _client: m['text'],
     image=Image.from_dict,
     video=Video.from_dict,
     sticker=Sticker.from_dict,
@@ -49,6 +50,7 @@ class Message(BaseUserUpdate):
         forwarded_many_times: Whether the message was forwarded many times.
          (when True, ``forwarded`` will be True as well)
         text: The text of the message (if the message type is :class:`MessageType.TEXT`).
+        button: The text of the button message (if the message type is :class:`MessageType.BUTTON`).
         image: The image of the message (if the message type is :class:`MessageType.IMAGE`).
         video: The video of the message (if the message type is :class:`MessageType.VIDEO`).
         sticker: The sticker of the message (if the message type is :class:`MessageType.STICKER`).
@@ -72,6 +74,7 @@ class Message(BaseUserUpdate):
     forwarded: bool
     forwarded_many_times: bool
     text: str | None = None
+    button: str | None = None
     image: Image | None = None
     video: Video | None = None
     sticker: Sticker | None = None

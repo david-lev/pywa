@@ -25,6 +25,7 @@ __all__ = [
     "callback",
     "message_status",
     "template_status",
+    "button",
 ]
 
 import re
@@ -843,3 +844,106 @@ class TemplateStatusFilter(_BaseUpdateFilter):
 
 
 template_status: TemplateStatusFilterT | Type[TemplateStatusFilter] = TemplateStatusFilter
+
+
+class ButtonFilter(_BaseUpdateFilter):
+    """Useful filters for button messages. Alias: ``filters.button``."""
+
+    __message_types__ = (Mt.BUTTON,)
+
+    any: MessageFilterT = lambda _, m: m.type == Mt.BUTTON
+    """
+    Filter for all button messages.
+        - Same as ``filters.button``.
+
+    >>> filters.button.any
+    """
+
+    @staticmethod
+    def matches(*matches: str, ignore_case: bool = False) -> MessageFilterT:
+        """
+        Filter for button messages that match exactly the given text/s.
+
+        >>> button.matches("Hello","Hi")
+
+        Args:
+            *matches: The text/s to filter for.
+            ignore_case: Whether to ignore case when matching (default: ``False``).
+        """
+        matches = tuple(m.lower() for m in matches) if ignore_case else matches
+        return lambda _, m: ButtonFilter._match_type(m) and (m.button.lower() if ignore_case else m.button) in matches
+
+    @staticmethod
+    def contains(*matches: str, ignore_case: bool = False) -> MessageFilterT:
+        """
+        Filter for button messages that contain the given text/s.
+
+        >>> button.contains("Cat","Dog",ignore_case=True)
+
+        Args:
+            *matches: The text/s to filter for.
+            ignore_case: Whether to ignore case when matching. (default: ``False``).
+        """
+        matches = tuple(m.lower() for m in matches) if ignore_case else matches
+        return lambda _, m: ButtonFilter._match_type(m) and any(
+            t in (m.button.lower() if ignore_case else m.button) for t in matches
+        )
+
+    @staticmethod
+    def startswith(*matches: str, ignore_case: bool = False) -> MessageFilterT:
+        """
+        Filter for button messages that start with the given text/s.
+
+        >>> button.startswith("What", "When", ignore_case=True)
+
+        Args:
+            *matches: The text/s to filter for.
+            ignore_case: Whether to ignore case when matching (default: ``False``).
+        """
+        matches = tuple(m.lower() for m in matches) if ignore_case else matches
+        return lambda _, m: ButtonFilter._match_type(m) and (m.button.lower() if ignore_case else m.button).startswith(
+            matches)
+
+    @staticmethod
+    def endswith(*matches: str, ignore_case: bool = False) -> MessageFilterT:
+        """
+        Filter for button messages that end with the given text/s.
+
+        >>> button.endswith("Bye", "See you", ignore_case=True)
+
+        Args:
+            *matches: The text/s to filter for.
+            ignore_case: Whether to ignore case when matching (default: ``False``).
+        """
+        matches = tuple(m.lower() for m in matches) if ignore_case else matches
+        return lambda _, m: ButtonFilter._match_type(m) and (m.button.lower() if ignore_case else m.button).endswith(matches)
+
+    @staticmethod
+    def regex(*patterns: str | re.Pattern, flags: int = 0) -> MessageFilterT:
+        """
+        Filter for button messages that match the given regex/regexes.
+
+        >>> button.regex(r"Hello\s+World", r"Bye\s+World", flags=re.IGNORECASE)
+
+        Args:
+            *patterns: The regex/regexes to filter for.
+            flags: The regex flags to use (default: ``0``).
+        """
+        patterns = tuple(re.compile(p, flags) if isinstance(p, str) else p for p in patterns)
+        return lambda _, m: ButtonFilter._match_type(m) and any(re.match(p, m.button, flags) for p in patterns)
+
+    @staticmethod
+    def length(*lengths: tuple[int, int]) -> MessageFilterT:
+        """
+        Filter for buttons messages that have a length between the given range/s.
+
+        >>> button.length((1, 10), (50, 100))
+
+        Args:
+            *lengths: The length range/s to filter for (e.g. (1, 10), (50, 100)).
+        """
+        return lambda _, m: ButtonFilter._match_type(m) and any(i[0] <= len(m.button_text) <= i[1] for i in lengths)
+
+
+
+button: MessageFilterT | Type[ButtonFilter] = ButtonFilter
