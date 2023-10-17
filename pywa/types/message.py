@@ -207,6 +207,16 @@ class Message(BaseUserUpdate):
                     keyboard=keyboard,
                     reply_to_message_id=reply_to_message_id,
                 )
+            case MessageType.BUTTON:
+                return self._client.send_message(
+                    to=to,
+                    text=self.button,
+                    preview_url=preview_url,
+                    header=header,
+                    footer=footer,
+                    keyboard=keyboard,
+                    reply_to_message_id=reply_to_message_id,
+                )
             case MessageType.DOCUMENT:
                 return self._client.send_document(
                     to=to,
