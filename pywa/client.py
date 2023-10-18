@@ -4,18 +4,26 @@ from __future__ import annotations
 
 __all__ = ["WhatsApp"]
 
+import collections
 import hashlib
+import logging
 import mimetypes
 import os
+import threading
 import requests
-from typing import Iterable, BinaryIO
+from typing import Iterable, BinaryIO, Callable, Any
+from pywa import utils
 from pywa.api import WhatsAppCloudApi
+from pywa.types.base_update import BaseUpdate
 from pywa.utils import Flask, FastAPI
-from pywa.webhook import Webhook
-from pywa.handlers import Handler, HandlerDecorators  # noqa
+from pywa.handlers import (
+    Handler, HandlerDecorators,
+    RawUpdateHandler, CallbackButtonHandler, CallbackSelectionHandler, MessageHandler, MessageStatusHandler
+)
 from pywa.types import (
     Button, SectionList, Message, Contact, MediaUrlResponse,
-    ProductsSection, BusinessProfile, Industry, CommerceSettings, NewTemplate, Template, TemplateResponse, ButtonUrl
+    ProductsSection, BusinessProfile, Industry, CommerceSettings, NewTemplate, Template, TemplateResponse, ButtonUrl,
+    MessageType
 )
 
 
@@ -65,6 +73,14 @@ _MISSING = object()
 
 
 class WhatsApp(HandlerDecorators):
+    __slots__ = (
+        'phone_id',
+        'filter_updates',
+        'business_account_id',
+        'api',
+        'handlers',
+    )
+
     # noinspection PyMissingConstructor
     def __init__(
             self,
@@ -75,12 +91,16 @@ class WhatsApp(HandlerDecorators):
             session: requests.Session | None = None,
             server: Flask | FastAPI | None = None,
             webhook_endpoint: str = "/",
+            callback_url: str | None = None,
+            fields: Iterable[str] | None = None,
+            app_id: int | None = None,
+            app_secret: str | None = None,
             verify_token: str | None = None,
             filter_updates: bool = True,
             business_account_id: str | int | None = None,
     ) -> None:
         """
-        Initialize the WhatsApp client.
+        The WhatsApp client.
             - Full documentation on `pywa.readthedocs.io <https://pywa.readthedocs.io>`_.
 
         Example without webhook:
@@ -113,13 +133,19 @@ class WhatsApp(HandlerDecorators):
              session across multiple WhatsApp clients!)
             server: The Flask or FastAPI app instance to use for the webhook.
             webhook_endpoint: The endpoint to listen for incoming messages (default: ``/``).
+            callback_url: The callback URL to register (optional).
+            fields: The fields to register for the callback URL (optional, if not provided, all supported fields will be
+             registered).
+            app_id: The ID of the WhatsApp App (optional, required when registering a ``callback_url``).
+            app_secret: The secret of the WhatsApp App (optional, required when registering a ``callback_url``).
             verify_token: The verify token of the registered webhook (Required when ``server`` is provided).
-            filter_updates: Whether to filter out updates that not sent to this phone number (default: ``True``, does
-                not apply to raw updates).
+            filter_updates: Whether to filter out user updates that not sent to this phone_id (default: ``True``, does
+             not apply to raw updates or updates that are not user-related).
             business_account_id: The business account ID of the WhatsApp account (optional, required for some API
-                methods).
+             methods).
         """
         self.phone_id = str(phone_id)
+        self.filter_updates = filter_updates
         self.business_account_id = str(business_account_id) if business_account_id is not None else None
         self.api = WhatsAppCloudApi(
             phone_id=self.phone_id,
@@ -128,18 +154,102 @@ class WhatsApp(HandlerDecorators):
             base_url=base_url,
             api_version=float(api_version),
         )
+        self.handlers = None
         if server is not None:
             if verify_token is None:
                 raise ValueError("When listening for incoming messages, a verify token must be provided.")
-            self.webhook = Webhook(
-                wa_client=self,
-                server=server,
-                verify_token=verify_token,
-                webhook_endpoint=webhook_endpoint,
-                filter_updates=filter_updates,
-            )
-        else:
-            self.webhook = None
+            self.handlers: dict[type[Handler] | None, list[Callable[[WhatsApp, BaseUpdate | dict], Any]]] \
+                = collections.defaultdict(list)
+
+            hub_vt = "hub.verify_token"
+            hub_ch = "hub.challenge"
+
+            if utils.is_flask_app(server):
+                import flask
+
+                @server.route(webhook_endpoint, methods=["GET"])
+                def verify():
+                    if flask.request.args.get(hub_vt) == verify_token:
+                        return flask.request.args.get(hub_ch), 200
+                    return "Error, invalid verification token", 403
+
+                @server.route(webhook_endpoint, methods=["POST"])
+                def webhook():
+                    threading.Thread(target=self._call_handlers, args=(flask.request.json,)).start()
+                    return "ok", 200
+
+            elif utils.is_fastapi_app(server):
+                import fastapi
+
+                @server.get(webhook_endpoint)
+                def verify(
+                    vt: str = fastapi.Query(..., alias=hub_vt),
+                    ch: str = fastapi.Query(..., alias=hub_ch)
+                ):
+                    if vt == verify_token:
+                        return fastapi.Response(content=ch, status_code=200)
+                    return fastapi.Response(content="Error, invalid verification token", status_code=403)
+
+                @server.post(webhook_endpoint)
+                def webhook(payload: dict = fastapi.Body(...)):
+                    threading.Thread(target=self._call_handlers, args=(payload,)).start()
+                    return fastapi.Response(content="ok", status_code=200)
+
+            else:
+                raise ValueError("The server must be a Flask or FastAPI app.")
+
+            if callback_url is not None:
+                if app_id is None or app_secret is None:
+                    raise ValueError("When providing a callback URL, an app ID and app secret must be provided.")
+
+                def register_callback():
+                    app_access_token = self.api.get_app_access_token(app_id=app_id, app_secret=app_secret)
+                    if not self.api.set_callback_url(
+                        app_id=app_id,
+                        app_access_token=app_access_token['access_token'],
+                        callback_url=f'{callback_url}/{webhook_endpoint}',
+                        verify_token=verify_token,
+                        fields=tuple(fields or Handler.__fields_to_subclasses__().keys()),
+                    )['success']:
+                        raise ValueError("Failed to register callback URL.")
+                threading.Thread(target=register_callback).start()
+
+    def _call_handlers(self, update: dict) -> None:
+        """Call the handlers for the given update."""
+        handler = self._get_handler(update=update)
+        for func in self.handlers[handler]:
+            # noinspection PyCallingNonCallable
+            func(self, handler.__update_constructor__(self, update))
+        for raw_update_func in self.handlers[RawUpdateHandler]:
+            raw_update_func(self, update)
+
+    def _get_handler(self, update: dict) -> type[Handler] | None:
+        """Get the handler for the given update."""
+        field = update["entry"][0]["changes"][0]["field"]
+        value = update["entry"][0]["changes"][0]["value"]
+
+        # The `messages` field needs to be handled differently because it can be a message, button, selection, or status
+        # This check must return handler or None *BEFORE* getting the handler from the dict!!
+        if field == 'messages':
+            if not self.filter_updates or (value["metadata"]["phone_number_id"] == self.phone_id):
+                if 'messages' in value:
+                    match value["messages"][0]["type"]:
+                        case MessageType.INTERACTIVE:
+                            if (_type := value["messages"][0]["interactive"]["type"]) == "button_reply":  # button
+                                return CallbackButtonHandler
+                            elif _type == "list_reply":  # selection
+                                return CallbackSelectionHandler
+                            logging.warning("PyWa Webhook: Unknown interactive message type: %s" % _type)
+                        case MessageType.BUTTON:  # button (quick reply from template)
+                            return CallbackButtonHandler
+                        case _:  # message
+                            return MessageHandler
+                elif 'statuses' in value:  # status
+                    return MessageStatusHandler
+                logging.warning("PyWa Webhook: Unknown message type: %s" % value)
+            return None
+
+        return Handler.__fields_to_subclasses__().get(field)
 
     def __str__(self) -> str:
         return f"WhatApp(phone_id={self.phone_id!r})"
@@ -162,11 +272,11 @@ class WhatsApp(HandlerDecorators):
             ...     CallbackButtonHandler(print_message),
             ... )
         """
-        if self.webhook is None:
+        if self.handlers is None:
             raise ValueError("You must initialize the WhatsApp client with an web server"
-                             " (Flask or FastAPI) in order to handle incoming messages.")
+                             " (Flask or FastAPI) in order to handle incoming updates.")
         for handler in handlers:
-            self.webhook.handlers[handler.__class__].append(handler)
+            self.handlers[handler.__class__].append(handler)
 
     def send_message(
             self,
