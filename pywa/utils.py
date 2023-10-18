@@ -22,18 +22,6 @@ def is_flask_app(app):
         return False
 
 
-def get_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """
-    Calculate the distance between two points on Earth using the Haversine formula.
-    """
-    math = import_module("math")
-    lon1, lat1, lon2, lat2 = map(math.radians, [lon1, lat1, lon2, lat2])
-    return (2 * math.asin(
-        math.sqrt(
-            math.sin((lat2 - lat1) / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2)
-    )) * 6371
-
-
 class StrEnum(str, Enum):
     def __str__(self):
         return self.value

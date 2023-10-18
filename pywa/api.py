@@ -1,8 +1,8 @@
 """The internal API for the WhatsApp client."""
 
 import requests
+import requests_toolbelt
 from typing import BinaryIO, Any
-from requests_toolbelt import MultipartEncoder
 from pywa.errors import WhatsAppError
 
 
@@ -130,7 +130,7 @@ class WhatsAppCloudApi:
             A dict with the ID of the uploaded media file.
         """
         headers = self._session.headers.copy()
-        form_data = MultipartEncoder(
+        form_data = requests_toolbelt.MultipartEncoder(
             {
                 "file": (
                     filename,

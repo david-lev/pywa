@@ -1,7 +1,10 @@
 from __future__ import annotations
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from datetime import datetime
+
+"""This module contains the base types for all update types."""
+
+import abc
+import dataclasses
+import datetime as dt
 from typing import Iterable, TYPE_CHECKING, BinaryIO
 from .others import Metadata, User, Contact, ProductsSection
 
@@ -11,32 +14,32 @@ if TYPE_CHECKING:
     from .template import Template
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class BaseUpdate(ABC):
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class BaseUpdate(abc.ABC):
     """Base class for all update types."""
-    _client: WhatsApp = field(repr=False, hash=False, compare=False)
+    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
 
     @property
-    @abstractmethod
+    @abc.abstractmethod
     def id(self) -> str: ...
 
     @property
-    @abstractmethod
-    def timestamp(self) -> datetime: ...
+    @abc.abstractmethod
+    def timestamp(self) -> dt.datetime: ...
 
-    @abstractmethod
+    @abc.abstractmethod
     def from_update(self, client: WhatsApp, update: dict) -> BaseUpdate: ...
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class BaseUserUpdate(BaseUpdate, ABC):
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class BaseUserUpdate(BaseUpdate, abc.ABC):
     """Base class for all user-related update types (message, callback, etc.)."""
     @property
-    @abstractmethod
+    @abc.abstractmethod
     def metadata(self) -> Metadata: ...
 
     @property
-    @abstractmethod
+    @abc.abstractmethod
     def from_user(self) -> User: ...
 
     @property

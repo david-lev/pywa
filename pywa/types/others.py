@@ -1,20 +1,25 @@
 from __future__ import annotations
-from dataclasses import dataclass, field, asdict
+
+"""Types for other objects."""
+
+import dataclasses
+import importlib
 from typing import Any, Iterable, TYPE_CHECKING
 from pywa import utils
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
+    from message_status import MessageStatus
 
 
-@dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(frozen=True, slots=True)
 class User:
     """
     Represents a WhatsApp user.
 
     Attributes:
         wa_id: The WhatsApp ID of the user (The phone number with the country code).
-        name: The name of the user (``None`` on MessageStatus).
+        name: The name of the user (``None`` on :class:`MessageStatus`).
     """
     wa_id: str
     name: str | None
@@ -77,7 +82,7 @@ class MessageType(utils.StrEnum):
         return cls.UNSUPPORTED
 
 
-@dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(frozen=True, slots=True)
 class Reaction(utils.FromDict):
     """
     Represents a reaction to a message.
@@ -90,7 +95,7 @@ class Reaction(utils.FromDict):
     emoji: str | None = None
 
 
-@dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(frozen=True, slots=True)
 class Location(utils.FromDict):
     """
     Represents a location.
@@ -122,10 +127,15 @@ class Location(utils.FromDict):
             lon: The longitude of the other location.
             radius: The radius in kilometers.
         """
-        return utils.get_distance(lat1=self.latitude, lon1=self.longitude, lat2=lat, lon2=lon) <= radius
+        math = importlib.import_module("math")
+        lon1, lat1, lon2, lat2 = map(math.radians, [self.longitude, self.latitude, lon, lat])
+        return ((2 * math.asin(
+            math.sqrt(
+                math.sin((lat2 - lat1) / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2)
+        )) * 6371) <= radius
 
 
-@dataclass(slots=True)
+@dataclasses.dataclass(slots=True)
 class Contact:
     """
     Represents a contact.
@@ -141,10 +151,10 @@ class Contact:
     """
     name: Name
     birthday: str | None = None
-    phones: Iterable[Phone] = field(default_factory=tuple)
-    emails: Iterable[Email] = field(default_factory=tuple)
-    urls: Iterable[Url] = field(default_factory=tuple)
-    addresses: Iterable[Address] = field(default_factory=tuple)
+    phones: Iterable[Phone] = dataclasses.field(default_factory=tuple)
+    emails: Iterable[Email] = dataclasses.field(default_factory=tuple)
+    urls: Iterable[Url] = dataclasses.field(default_factory=tuple)
+    addresses: Iterable[Address] = dataclasses.field(default_factory=tuple)
     org: Org | None = None
 
     @classmethod
@@ -162,13 +172,13 @@ class Contact:
     def to_dict(self) -> dict[str, Any]:
         """Get the contact as a dict."""
         return {
-            "name": asdict(self.name),
+            "name": dataclasses.asdict(self.name),
             "birthday": self.birthday,
-            "phones": tuple(asdict(phone) for phone in self.phones),
-            "emails": tuple(asdict(email) for email in self.emails),
-            "urls": tuple(asdict(url) for url in self.urls),
-            "addresses": tuple(asdict(address) for address in self.addresses),
-            "org": asdict(self.org) if self.org else None,
+            "phones": tuple(dataclasses.asdict(phone) for phone in self.phones),
+            "emails": tuple(dataclasses.asdict(email) for email in self.emails),
+            "urls": tuple(dataclasses.asdict(url) for url in self.urls),
+            "addresses": tuple(dataclasses.asdict(address) for address in self.addresses),
+            "org": dataclasses.asdict(self.org) if self.org else None,
         }
 
     def as_vcard(self) -> str:
@@ -186,7 +196,7 @@ class Contact:
             "END:VCARD"
         ) if s is not None)
 
-    @dataclass(frozen=True, slots=True)
+    @dataclasses.dataclass(frozen=True, slots=True)
     class Name(utils.FromDict):
         """
         Represents a contact's name.
@@ -208,7 +218,7 @@ class Contact:
         suffix: str | None = None
         prefix: str | None = None
 
-    @dataclass(frozen=True, slots=True)
+    @dataclasses.dataclass(frozen=True, slots=True)
     class Phone(utils.FromDict):
         """
         Represents a contact's phone number.
@@ -222,7 +232,7 @@ class Contact:
         type: str | None = None
         wa_id: str | None = None
 
-    @dataclass(frozen=True, slots=True)
+    @dataclasses.dataclass(frozen=True, slots=True)
     class Email(utils.FromDict):
         """
         Represents a contact's email address.
@@ -234,7 +244,7 @@ class Contact:
         email: str | None = None
         type: str | None = None
 
-    @dataclass(frozen=True, slots=True)
+    @dataclasses.dataclass(frozen=True, slots=True)
     class Url(utils.FromDict):
         """
         Represents a contact's URL.
@@ -246,7 +256,7 @@ class Contact:
         url: str | None = None
         type: str | None = None
 
-    @dataclass(frozen=True, slots=True)
+    @dataclasses.dataclass(frozen=True, slots=True)
     class Org(utils.FromDict):
         """
         Represents a contact's organization.
@@ -260,7 +270,7 @@ class Contact:
         department: str | None = None
         title: str | None = None
 
-    @dataclass(frozen=True, slots=True)
+    @dataclasses.dataclass(frozen=True, slots=True)
     class Address(utils.FromDict):
         """
         Represents a contact's address.
@@ -283,7 +293,7 @@ class Contact:
         type: str | None = None
 
 
-@dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(frozen=True, slots=True)
 class ReplyToMessage:
     """
     Represents a message that was replied to.
@@ -303,7 +313,7 @@ class ReplyToMessage:
         ) if (data and 'id' in data) else None
 
 
-@dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(frozen=True, slots=True)
 class Metadata(utils.FromDict):
     """
     Represents the metadata of a message.
@@ -316,7 +326,7 @@ class Metadata(utils.FromDict):
     phone_number_id: str
 
 
-@dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(frozen=True, slots=True)
 class Product:
     """
     Represents a product in an order.
@@ -347,7 +357,7 @@ class Product:
         return self.quantity * self.price
 
 
-@dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(frozen=True, slots=True)
 class Order:
     """
     Represents an order.
@@ -378,7 +388,7 @@ class Order:
         return sum(p.total_price for p in self.products)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(frozen=True, slots=True)
 class System:
     """
     Represents a system update (A customer has updated their phone number or profile information).
@@ -407,7 +417,7 @@ class System:
         )
 
 
-@dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(frozen=True, slots=True)
 class ProductsSection:
     """
     Represents a section in a section list.
@@ -476,7 +486,7 @@ class Industry(utils.StrEnum):
         return None
 
 
-@dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(frozen=True, slots=True)
 class BusinessProfile:
     """
     Represents a business profile.
@@ -512,7 +522,7 @@ class BusinessProfile:
         )
 
 
-@dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(frozen=True, slots=True)
 class CommerceSettings:
     """
     Represents the WhatsApp commerce settings.

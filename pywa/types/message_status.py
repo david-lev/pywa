@@ -1,6 +1,16 @@
 from __future__ import annotations
-from dataclasses import dataclass
-from datetime import datetime
+
+"""This module contains the types related to message status updates."""
+
+__all__ = [
+    'MessageStatus',
+    'MessageStatusType',
+    'Conversation',
+    'ConversationCategory'
+]
+
+import dataclasses
+import datetime as dt
 from typing import TYPE_CHECKING
 from pywa.errors import WhatsAppError
 from pywa import utils
@@ -55,7 +65,7 @@ class ConversationCategory(utils.StrEnum):
         return cls.UNKNOWN
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class MessageStatus(BaseUserUpdate):
     """
     Represents the status of a message.
@@ -75,7 +85,7 @@ class MessageStatus(BaseUserUpdate):
     id: str
     metadata: Metadata
     from_user: User
-    timestamp: datetime
+    timestamp: dt.datetime
     status: MessageStatusType
     conversation: Conversation | None
     pricing_model: str | None
@@ -90,7 +100,7 @@ class MessageStatus(BaseUserUpdate):
             id=status['id'],
             metadata=Metadata.from_dict(value['metadata']),
             status=status_type,
-            timestamp=datetime.fromtimestamp(int(status['timestamp'])),
+            timestamp=dt.datetime.fromtimestamp(int(status['timestamp'])),
             from_user=User(wa_id=status['recipient_id'], name=None),
             conversation=Conversation.from_dict(status['conversation']) if 'conversation' in status else None,
             pricing_model=status.get('pricing', {}).get('pricing_model'),
@@ -99,7 +109,7 @@ class MessageStatus(BaseUserUpdate):
         )
 
 
-@dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(frozen=True, slots=True)
 class Conversation:
     """
     Represents a conversation.
@@ -114,13 +124,13 @@ class Conversation:
     """
     id: str
     category: ConversationCategory
-    expiration: datetime | None
+    expiration: dt.datetime | None
 
     @classmethod
     def from_dict(cls, data: dict):
         return cls(
             id=data['id'],
             category=ConversationCategory(data['origin']['type']),
-            expiration=datetime.fromtimestamp(int(data['expiration_timestamp']))
+            expiration=dt.datetime.fromtimestamp(int(data['expiration_timestamp']))
             if 'expiration_timestamp' in data else None
         )

@@ -1,7 +1,19 @@
 from __future__ import annotations
+
+"""This module contains the types related to media."""
+
+__all__ = [
+    'Image',
+    'Video',
+    'Sticker',
+    'Document',
+    'Audio',
+    'MediaUrlResponse'
+]
+
 import mimetypes
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+import dataclasses
+import abc
 from typing import TYPE_CHECKING
 from pywa import utils
 
@@ -9,22 +21,22 @@ if TYPE_CHECKING:
     from pywa.client import WhatsApp
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class MediaBase(ABC, utils.FromDict):
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class MediaBase(abc.ABC, utils.FromDict):
     """Base class for all media types."""
 
-    _client: WhatsApp = field(repr=False, hash=False, compare=False)
+    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
 
     @property
-    @abstractmethod
+    @abc.abstractmethod
     def id(self) -> str: ...
 
     @property
-    @abstractmethod
+    @abc.abstractmethod
     def sha256(self) -> str: ...
 
     @property
-    @abstractmethod
+    @abc.abstractmethod
     def mime_type(self) -> str: ...
 
     def get_media_url(self) -> str:
@@ -64,7 +76,7 @@ class MediaBase(ABC, utils.FromDict):
         )
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Image(MediaBase):
     """
     Represents an image.
@@ -79,7 +91,7 @@ class Image(MediaBase):
     mime_type: str
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Video(MediaBase):
     """
     Represents a video.
@@ -94,7 +106,7 @@ class Video(MediaBase):
     mime_type: str
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Sticker(MediaBase):
     """
     Represents a sticker.
@@ -111,7 +123,7 @@ class Sticker(MediaBase):
     animated: bool
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Document(MediaBase):
     """
     Represents a document.
@@ -128,7 +140,7 @@ class Document(MediaBase):
     filename: str | None = None
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Audio(MediaBase):
     """
     Represents an audio.
@@ -145,7 +157,7 @@ class Audio(MediaBase):
     voice: bool
 
 
-@dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(frozen=True, slots=True)
 class MediaUrlResponse(utils.FromDict):
     """
     Represents a media response.
@@ -157,7 +169,7 @@ class MediaUrlResponse(utils.FromDict):
         sha256: The SHA256 hash of the media.
         file_size: The size of the media in bytes.
     """
-    _client: WhatsApp = field(repr=False, hash=False, compare=False)
+    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
     id: str
     url: str
     mime_type: str

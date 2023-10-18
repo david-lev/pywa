@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+"""This module contains the types related to templates."""
+
 __all__ = [
     'Template',
     'NewTemplate',
@@ -9,15 +11,15 @@ __all__ = [
 
 import abc
 import re
-from dataclasses import dataclass, field
+import dataclasses
 from datetime import datetime
 from typing import Iterable, BinaryIO, TYPE_CHECKING, Any
 from pywa import utils
 from .others import ProductsSection
 from .base_update import BaseUpdate
+from .callback import CallbackDataT, _resolve_callback_data  # noqa
 
 if TYPE_CHECKING:
-    from pywa.types.callback import CallbackDataT, _resolve_callback_data  # noqa
     from pywa.client import WhatsApp
 
 DEFAULT = object()
@@ -53,7 +55,7 @@ def _get_examples_from_placeholders(
     return string, tuple(examples)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(frozen=True, slots=True)
 class TemplateResponse(utils.FromDict):
     """
 
@@ -201,7 +203,7 @@ class NewButtonABC(abc.ABC):
     def to_dict(self, placeholder: tuple[str, str] = None) -> dict[str, str | None]: ...
 
 
-@dataclass(slots=True)
+@dataclasses.dataclass(slots=True)
 class NewTemplate:
     """
     Represents a new template.
@@ -328,7 +330,7 @@ class NewTemplate:
         MARKETING = 'MARKETING'
         UTILITY = 'UTILITY'
 
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class Text(NewTemplateHeaderABC):
         """
         Represents a text header.
@@ -341,8 +343,8 @@ class NewTemplate:
         Attributes:
             text: Text to send with the header (Up to 60 characters. Supports 1 placeholder).
         """
-        type: ComponentType = field(default=ComponentType.HEADER, init=False, repr=False)
-        format: HeaderFormatType = field(default=HeaderFormatType.TEXT, init=False, repr=False)
+        type: ComponentType = dataclasses.field(default=ComponentType.HEADER, init=False, repr=False)
+        format: HeaderFormatType = dataclasses.field(default=HeaderFormatType.TEXT, init=False, repr=False)
         text: str
 
         def to_dict(self, placeholder: tuple[str, str] = None) -> dict[str, str | None]:
@@ -354,7 +356,7 @@ class NewTemplate:
                 **(dict(example=dict(header_text=examples)) if examples else {})
             )
 
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class Image(NewTemplateHeaderABC):
         """
         Represents an image header.
@@ -367,8 +369,8 @@ class NewTemplate:
             example: An image handles (Use the `Resumable Upload API
              <https://developers.facebook.com/docs/graph-api/guides/upload>`_ to upload the image)
         """
-        type: ComponentType = field(default=ComponentType.HEADER, init=False, repr=False)
-        format: HeaderFormatType = field(default=HeaderFormatType.IMAGE, init=False, repr=False)
+        type: ComponentType = dataclasses.field(default=ComponentType.HEADER, init=False, repr=False)
+        format: HeaderFormatType = dataclasses.field(default=HeaderFormatType.IMAGE, init=False, repr=False)
         example: str
 
         def to_dict(self) -> dict[str, Any]:
@@ -378,7 +380,7 @@ class NewTemplate:
                 example=dict(header_handle=(self.example,))
             )
 
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class Video(NewTemplateHeaderABC):
         """
         Represents a video header.
@@ -391,8 +393,8 @@ class NewTemplate:
             example: A video handle (Use the `Resumable Upload API
              <https://developers.facebook.com/docs/graph-api/guides/upload>`_ to upload the video)
         """
-        type: ComponentType = field(default=ComponentType.HEADER, init=False, repr=False)
-        format: HeaderFormatType = field(default=HeaderFormatType.VIDEO, init=False, repr=False)
+        type: ComponentType = dataclasses.field(default=ComponentType.HEADER, init=False, repr=False)
+        format: HeaderFormatType = dataclasses.field(default=HeaderFormatType.VIDEO, init=False, repr=False)
         example: str
 
         def to_dict(self) -> dict[str, Any]:
@@ -402,7 +404,7 @@ class NewTemplate:
                 example=dict(header_handle=(self.example,))
             )
         
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class Document(NewTemplateHeaderABC):
         """
         Represents a document header.
@@ -415,8 +417,8 @@ class NewTemplate:
             example: A document handle (Use the `Resumable Upload API
              <https://developers.facebook.com/docs/graph-api/guides/upload>`_ to upload the document)
         """
-        type: ComponentType = field(default=ComponentType.HEADER, init=False, repr=False)
-        format: HeaderFormatType = field(default=HeaderFormatType.DOCUMENT, init=False, repr=False)
+        type: ComponentType = dataclasses.field(default=ComponentType.HEADER, init=False, repr=False)
+        format: HeaderFormatType = dataclasses.field(default=HeaderFormatType.DOCUMENT, init=False, repr=False)
         example: str
 
         def to_dict(self) -> dict[str, Any]:
@@ -426,7 +428,7 @@ class NewTemplate:
                 example=dict(header_handle=(self.example,))
             )
 
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class Location(NewTemplateHeaderABC):
         """
         Location headers appear as generic maps at the top of the template and are useful for order tracking, delivery
@@ -439,8 +441,8 @@ class NewTemplate:
             >>> from pywa.types import NewTemplate
             >>> NewTemplate.Location()
         """
-        type: ComponentType = field(default=ComponentType.HEADER, init=False, repr=False)
-        format: HeaderFormatType = field(default=HeaderFormatType.LOCATION, init=False, repr=False)
+        type: ComponentType = dataclasses.field(default=ComponentType.HEADER, init=False, repr=False)
+        format: HeaderFormatType = dataclasses.field(default=HeaderFormatType.LOCATION, init=False, repr=False)
 
         def to_dict(self) -> dict[str, str]:
             return dict(
@@ -448,7 +450,7 @@ class NewTemplate:
                 format=self.format.value,
             )
 
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class Body(NewTemplateComponentABC):
         """
         Represents a template body.
@@ -464,7 +466,7 @@ class NewTemplate:
         Attributes:
             text: Text to send with the body (Up to 1024 characters. Supports multiple placeholders).
         """
-        type: ComponentType = field(default=ComponentType.BODY, init=False, repr=False)
+        type: ComponentType = dataclasses.field(default=ComponentType.BODY, init=False, repr=False)
         text: str
 
         def to_dict(self, placeholder: tuple[str, str] = None) -> dict[str, str | None]:
@@ -475,7 +477,7 @@ class NewTemplate:
                 **(dict(example=dict(body_text=(examples,))) if examples else {})
             )
 
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class AuthBody:
         """
         Represents the configuration for an authentication template.
@@ -497,7 +499,7 @@ class NewTemplate:
         code_expiration_minutes: int | None = None
         add_security_recommendation: bool = False
 
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class Footer(NewTemplateComponentABC):
         """
         Represents a template footer.
@@ -509,7 +511,7 @@ class NewTemplate:
         Attributes:
             text: Text to send with the footer (Up to 60 characters, no placeholders allowed).
         """
-        type: ComponentType = field(default=ComponentType.FOOTER, init=False, repr=False)
+        type: ComponentType = dataclasses.field(default=ComponentType.FOOTER, init=False, repr=False)
         text: str
 
         def to_dict(self) -> dict[str, str | None]:
@@ -518,7 +520,7 @@ class NewTemplate:
                 text=self.text
             )
 
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class PhoneNumberButton(NewButtonABC):
         """
         Phone number buttons call the specified business phone number when tapped by the app user.
@@ -535,14 +537,14 @@ class NewTemplate:
             phone_number: Alphanumeric string. Business phone number to be (display phone number)
              called when the user taps the button (Up to 20 characters, no placeholders allowed).
         """
-        type: ButtonType = field(default=ButtonType.PHONE_NUMBER, init=False, repr=False)
+        type: ButtonType = dataclasses.field(default=ButtonType.PHONE_NUMBER, init=False, repr=False)
         title: str
         phone_number: int | str
 
         def to_dict(self, placeholder: None = None) -> dict[str, str]:
             return dict(type=self.type.value, text=self.title, phone_number=str(self.phone_number))
 
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class UrlButton(NewButtonABC):
         """
         URL buttons load the specified URL in the device's default web browser when tapped by the app user.
@@ -560,7 +562,7 @@ class NewTemplate:
             url: URL to be loaded when the user taps the button (Up to 2000 characters, supports 1 placeholder, which
              be appended to the end of the URL).
         """
-        type: ComponentType = field(default=ButtonType.URL, init=False, repr=False)
+        type: ComponentType = dataclasses.field(default=ButtonType.URL, init=False, repr=False)
         title: str
         url: str
 
@@ -579,7 +581,7 @@ class NewTemplate:
                 **(dict(example=examples if examples else {}))
             )
 
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class QuickReplyButton(NewButtonABC):
         """
         Quick reply buttons are custom text-only buttons that immediately message you with the specified text string when
@@ -601,13 +603,13 @@ class NewTemplate:
         Attributes:
             text: The text to send when the user taps the button (Up to 25 characters, no placeholders allowed).
         """
-        type: ComponentType = field(default=ButtonType.QUICK_REPLY, init=False, repr=False)
+        type: ComponentType = dataclasses.field(default=ButtonType.QUICK_REPLY, init=False, repr=False)
         text: str
 
         def to_dict(self, placeholder: None = None) -> dict[str, str]:
             return dict(type=self.type.value, text=self.text)
 
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class OTPButton(NewButtonABC):
         """
         Represents a button that can be used to send an OTP.
@@ -645,7 +647,7 @@ class NewTemplate:
              <https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates#app-signing-key-hash>`_
              for more information. Required if ``otp_type`` is ``OtpType.ONE_TAP``.
         """
-        type: ComponentType = field(default=ButtonType.OTP, init=False, repr=False)
+        type: ComponentType = dataclasses.field(default=ButtonType.OTP, init=False, repr=False)
         otp_type: OtpType
         title: str | None = None
         autofill_text: str | None = None
@@ -677,7 +679,7 @@ class NewTemplate:
                 )
             return base
 
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class MPMButton(NewButtonABC):
         """
         Represents a button that can be used to send multi-product message (MPM)
@@ -687,12 +689,12 @@ class NewTemplate:
             >>> from pywa.types import NewTemplate
             >>> NewTemplate.MPMButton()
         """
-        type: ComponentType = field(default=ButtonType.MPM, init=False, repr=False)
+        type: ComponentType = dataclasses.field(default=ButtonType.MPM, init=False, repr=False)
 
         def to_dict(self, placeholder: None = None) -> dict[str, str]:
             return dict(type=self.type.value, text='View items')  # required text for MPM button
 
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class CatalogButton(NewButtonABC):
         """
         Represent a button that can be used to display a catalog.
@@ -702,12 +704,12 @@ class NewTemplate:
             >>> NewTemplate.CatalogButton()
 
         """
-        type: ComponentType = field(default=ButtonType.CATALOG, init=False, repr=False)
+        type: ComponentType = dataclasses.field(default=ButtonType.CATALOG, init=False, repr=False)
 
         def to_dict(self, placeholder: None = None) -> dict[str, str]:
             return dict(type=self.type.value, text='View catalog')  # required text for catalog button
 
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class CopyCodeButton(NewButtonABC):
         """
         Represents a button that can be used to copy coupon codes to the user's clipboard.
@@ -722,7 +724,7 @@ class NewTemplate:
         Attributes:
             example: An example of the coupon code (Up to 15 characters).
         """
-        type: ComponentType = field(default=ButtonType.COPY_CODE, init=False, repr=False)
+        type: ComponentType = dataclasses.field(default=ButtonType.COPY_CODE, init=False, repr=False)
         example: str
 
         def to_dict(self, placeholder: tuple[str, str] = None) -> dict[str, str | None]:
@@ -746,7 +748,7 @@ class ComponentABC(abc.ABC):
     def type(self) -> ParamType: ...
 
 
-@dataclass(slots=True)
+@dataclasses.dataclass(slots=True)
 class Template:
     """
     The template to send.
@@ -828,7 +830,7 @@ class Template:
 
     Language = Language
 
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class TextValue(ComponentABC):
         """
         Represents a value to assign to a placeholder in a template.
@@ -840,13 +842,13 @@ class Template:
         Attributes:
             value: The value to assign to the placeholder.
         """
-        type: ParamType = field(default=ParamType.TEXT, init=False, repr=False)
+        type: ParamType = dataclasses.field(default=ParamType.TEXT, init=False, repr=False)
         value: str
 
         def to_dict(self, is_url: None = None) -> dict[str, str]:
             return dict(type=self.type.value, text=self.value)
 
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class Currency(ComponentABC):
         """
         Represents a currency variable.
@@ -856,7 +858,7 @@ class Template:
             code: ISO 4217 currency code (e.g. USD, EUR, etc.).
             amount_1000: Amount multiplied by 1000.
         """
-        type: ParamType = field(default=ParamType.CURRENCY, init=False, repr=False)
+        type: ParamType = dataclasses.field(default=ParamType.CURRENCY, init=False, repr=False)
         fallback_value: str
         code: str
         amount_1000: int
@@ -871,7 +873,7 @@ class Template:
                 )
             )
 
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class DateTime(ComponentABC):
         """
         Represents a date time variable.
@@ -879,7 +881,7 @@ class Template:
         Attributes:
             fallback_value: Default text if localization fails.
         """
-        type: ParamType = field(default=ParamType.DATE_TIME, init=False, repr=False)
+        type: ParamType = dataclasses.field(default=ParamType.DATE_TIME, init=False, repr=False)
         fallback_value: str
 
         def to_dict(self) -> dict[str, str]:
@@ -890,7 +892,7 @@ class Template:
                 )
             )
 
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class Document(ComponentABC):
         """
         Represents a document.
@@ -898,13 +900,13 @@ class Template:
         Attributes:
             document: The document to send (PDF only. either a media ID, URL, file path, bytes, or an open file object).
         """
-        type: ParamType = field(default=ParamType.DOCUMENT, init=False, repr=False)
+        type: ParamType = dataclasses.field(default=ParamType.DOCUMENT, init=False, repr=False)
         document: str | bytes | BinaryIO
 
         def to_dict(self, is_url: bool) -> dict[str, str]:
             return dict(type=self.type.value, document=dict(link=self.document) if is_url else dict(id=self.document))
 
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class Image(ComponentABC):
         """
         Represents an image.
@@ -912,13 +914,13 @@ class Template:
         Attributes:
             image: The image to send (either a media ID, URL, file path, bytes, or an open file object).
         """
-        type: ParamType = field(default=ParamType.IMAGE, init=False, repr=False)
+        type: ParamType = dataclasses.field(default=ParamType.IMAGE, init=False, repr=False)
         image: str | bytes | BinaryIO
 
         def to_dict(self, is_url: bool) -> dict[str, str]:
             return dict(type=self.type.value, image=dict(link=self.image) if is_url else dict(id=self.image))
 
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class Video(ComponentABC):
         """
         Represents a video.
@@ -926,13 +928,13 @@ class Template:
         Attributes:
             video: The video to send (either a media ID, URL, file path, bytes, or an open file object).
         """
-        type: ParamType = field(default=ParamType.VIDEO, init=False, repr=False)
+        type: ParamType = dataclasses.field(default=ParamType.VIDEO, init=False, repr=False)
         video: str | bytes | BinaryIO
 
         def to_dict(self, is_url: bool) -> dict[str, str]:
             return dict(type=self.type.value, video=dict(link=self.video) if is_url else dict(id=self.video))
 
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class Location(ComponentABC):
         """
         Represents a location.
@@ -943,7 +945,7 @@ class Template:
             name: The name of the location.
             address: The address of the location.
         """
-        type: ParamType = field(default=ParamType.LOCATION, init=False, repr=False)
+        type: ParamType = dataclasses.field(default=ParamType.LOCATION, init=False, repr=False)
         latitude: float
         longitude: float
         name: str | None = None
@@ -960,16 +962,17 @@ class Template:
                 )
             )
 
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class QuickReplyButtonData(ComponentABC):
         """
         Represents a quick reply button.
 
         Attributes:
-            data: The data to send when the user taps the button (you can listen for this data in the webhook).
+            data: The data to send when the user taps the button
+             (you can listen for this data with @on_callback_button decorator).
         """
-        type: ParamType = field(default=ParamType.BUTTON, init=False, repr=False)
-        sub_type: ButtonType = field(default=ButtonType.QUICK_REPLY, init=False, repr=False)
+        type: ParamType = dataclasses.field(default=ParamType.BUTTON, init=False, repr=False)
+        sub_type: ButtonType = dataclasses.field(default=ButtonType.QUICK_REPLY, init=False, repr=False)
         data: CallbackDataT
 
         def to_dict(self) -> dict[str, str]:
@@ -978,7 +981,7 @@ class Template:
                 payload=_resolve_callback_data(self.data)
             )
 
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class UrlButtonValue(ComponentABC):
         """
         Represents a URL button variable.
@@ -990,14 +993,14 @@ class Template:
         Attributes:
             value: The value to assign to the variable in the template (appended to the end of the URL).
         """
-        type: ParamType = field(default=ParamType.BUTTON, init=False, repr=False)
-        sub_type: ButtonType = field(default=ButtonType.URL, init=False, repr=False)
+        type: ParamType = dataclasses.field(default=ParamType.BUTTON, init=False, repr=False)
+        sub_type: ButtonType = dataclasses.field(default=ButtonType.URL, init=False, repr=False)
         value: str
 
         def to_dict(self) -> dict[str, str]:
             return dict(type='text', text=self.value)
 
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class OTPButtonCode(ComponentABC):
         """
         Represents an OTP button variable.
@@ -1009,14 +1012,14 @@ class Template:
         Attributes:
             code: The code to copy or autofill when the user taps the button.
         """
-        type: ParamType = field(default=ParamType.BUTTON, init=False, repr=False)
-        sub_type: ButtonType = field(default=ButtonType.URL, init=False, repr=False)
+        type: ParamType = dataclasses.field(default=ParamType.BUTTON, init=False, repr=False)
+        sub_type: ButtonType = dataclasses.field(default=ButtonType.URL, init=False, repr=False)
         code: str
 
         def to_dict(self) -> dict[str, str]:
             return dict(type='text', text=self.code)
     
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class MPMButton(ComponentABC):
         """
         Represent a multi-product message (MPM) button
@@ -1041,8 +1044,8 @@ class Template:
             thumbnail_product_sku: The thumbnail of this item will be used as the template message's header image.
             product_sections: The product sections to send with the template.
         """
-        type: ParamType = field(default=ParamType.BUTTON, init=False, repr=False)
-        sub_type: ButtonType = field(default=ButtonType.MPM, init=False, repr=False)
+        type: ParamType = dataclasses.field(default=ParamType.BUTTON, init=False, repr=False)
+        sub_type: ButtonType = dataclasses.field(default=ButtonType.MPM, init=False, repr=False)
         thumbnail_product_sku: str
         product_sections: Iterable[ProductsSection]
 
@@ -1055,7 +1058,7 @@ class Template:
                 )
             )
     
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class CatalogButton(ComponentABC):
         """
         Represent a catalog button
@@ -1068,8 +1071,8 @@ class Template:
             thumbnail_product_sku: The thumbnail of this item will be used as the message's header image. if not
                 provided, the product image of the first item in your catalog will be used.
         """
-        type: ParamType = field(default=ParamType.BUTTON, init=False, repr=False)
-        sub_type: ButtonType = field(default=ButtonType.CATALOG, init=False, repr=False)
+        type: ParamType = dataclasses.field(default=ParamType.BUTTON, init=False, repr=False)
+        sub_type: ButtonType = dataclasses.field(default=ButtonType.CATALOG, init=False, repr=False)
         thumbnail_product_sku: str | None = None
 
         def to_dict(self) -> dict[str, str]:
@@ -1080,7 +1083,7 @@ class Template:
                 )
             )
 
-    @dataclass(slots=True)
+    @dataclasses.dataclass(slots=True)
     class CopyCodeButton(ComponentABC):
         """
         Represents a copy code button variable (copies the code to the user's clipboard).
@@ -1092,15 +1095,15 @@ class Template:
         Attributes:
             code: The code to copy when the user taps the button.
         """
-        type: ParamType = field(default=ParamType.BUTTON, init=False, repr=False)
-        sub_type: ButtonType = field(default=ButtonType.COPY_CODE, init=False, repr=False)
+        type: ParamType = dataclasses.field(default=ParamType.BUTTON, init=False, repr=False)
+        sub_type: ButtonType = dataclasses.field(default=ButtonType.COPY_CODE, init=False, repr=False)
         code: str
 
         def to_dict(self) -> dict[str, str]:
             return dict(type='coupon_code', coupon_code=self.code)
 
 
-@dataclass(slots=True, frozen=True, kw_only=True)
+@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
 class TemplateStatus(BaseUpdate):
     """
     Represents status of a template.

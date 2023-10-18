@@ -1,13 +1,18 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime
+"""This module contains the types related to messages."""
+
+__all__ = ['Message']
+
+import dataclasses
+import datetime as dt
 from typing import TYPE_CHECKING, Callable, Any, Iterable
 from pywa.errors import WhatsAppError
 from .callback import Button, SectionList, ButtonUrl
 from .base_update import BaseUserUpdate
-from .others import ReplyToMessage, Reaction, Location, Contact, User, Metadata, Order, System, MessageType, \
-    ProductsSection
+from .others import (
+    ReplyToMessage, Reaction, Location, Contact, User, Metadata, Order, System, MessageType, ProductsSection
+)
 from .media import Image, Video, Sticker, Document, Audio
 
 if TYPE_CHECKING:
@@ -31,7 +36,7 @@ _FIELDS_TO_OBJECTS_CONSTRUCTORS: dict[str, Callable[[dict, WhatsApp], Any]] = di
 _MEDIA_FIELDS = ('image', 'video', 'sticker', 'document', 'audio')
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Message(BaseUserUpdate):
     """
     A message received from a user.
@@ -67,7 +72,7 @@ class Message(BaseUserUpdate):
     type: MessageType
     metadata: Metadata
     from_user: User
-    timestamp: datetime
+    timestamp: dt.datetime
     reply_to_message: ReplyToMessage | None
     forwarded: bool
     forwarded_many_times: bool
@@ -120,7 +125,7 @@ class Message(BaseUserUpdate):
             type=MessageType(msg['type']),
             **msg_content,
             from_user=User.from_dict(value['contacts'][0]),
-            timestamp=datetime.fromtimestamp(int(msg['timestamp'])),
+            timestamp=dt.datetime.fromtimestamp(int(msg['timestamp'])),
             metadata=Metadata.from_dict(value['metadata']),
             forwarded=any(context.get(key) for key in ('forwarded', 'frequently_forwarded')) if context else False,
             forwarded_many_times=context.get('frequently_forwarded', False) if context else False,

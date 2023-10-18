@@ -28,9 +28,8 @@ __all__ = [
 ]
 
 import re
-from abc import ABC, abstractmethod
+import abc
 from typing import Callable, TYPE_CHECKING, Iterable, TypeVar, TypeAlias, Type
-from pywa import utils
 from pywa.errors import WhatsAppError, ReEngagementMessage
 from pywa.types import MessageType as Mt, Message as Msg, MessageStatus as Ms, MessageStatusType as Mst, \
     CallbackButton, CallbackSelection, TemplateStatus as Ts
@@ -121,7 +120,7 @@ def from_countries(*prefixes: str | int) -> MessageFilterT | CallbackFilterT | M
     return lambda _, m: m.from_user.wa_id.startswith(codes)
 
 
-class _BaseUpdateFilter(ABC):
+class _BaseUpdateFilter(abc.ABC):
     """
     Base class for all filters.
     """
@@ -131,13 +130,13 @@ class _BaseUpdateFilter(ABC):
         return cls.any(wa, m)
 
     @property
-    @abstractmethod
+    @abc.abstractmethod
     def __message_types__(self) -> tuple[Mt, ...]:
         """The message types that the filter is for."""
         ...
 
     @staticmethod
-    @abstractmethod
+    @abc.abstractmethod
     def any(wa: Wa, m: T) -> bool:
         """Filter for all updates of this type."""
         ...
@@ -180,7 +179,7 @@ class MediaFilter(_BaseUpdateFilter):
 media: MessageFilterT | Type[MediaFilter] = MediaFilter
 
 
-class _MediaWithCaptionFilter(MediaFilter, ABC):
+class _MediaWithCaptionFilter(MediaFilter, abc.ABC):
     @classmethod
     def _has_caption(cls, _: Wa, m: Msg) -> bool:
         return cls._match_type(m) and m.caption is not None
@@ -468,9 +467,7 @@ class LocationFilter(_BaseUpdateFilter):
 
         def _in_radius(_: Wa, msg: Msg) -> bool:
             return LocationFilter._match_type(msg) and \
-                utils.get_distance(
-                    lat1=lat, lon1=lon, lat2=msg.location.latitude, lon2=msg.location.longitude
-                ) <= radius
+                msg.location.in_radius(lat=lat, lon=lon, radius=radius)
 
         return _in_radius
 
