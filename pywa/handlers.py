@@ -396,6 +396,7 @@ class HandlerDecorators:
             *filters: Filters to apply to the incoming updates (filters are function that take a :class:`pywa.WhatsApp`
              instance and the incoming update :class:`dict` and return a :class:`bool` if the update should be handled).
         """
+        @functools.wraps(self.on_raw_update)
         def decorator(func: Callable[[WhatsApp, dict], Any]) -> Callable[[WhatsApp, dict], Any]:
             self.add_handlers(RawUpdateHandler(func, *filters))
             return func
@@ -423,6 +424,7 @@ class HandlerDecorators:
             *filters: Filters to apply to the incoming messages (filters are function that take a :class:`pywa.WhatsApp`
              instance and the incoming :class:`pywa.types.Message` and return a boolean).
         """
+        @functools.wraps(self.on_message)
         def decorator(func: Callable[[WhatsApp, Message], Any]) -> Callable[[WhatsApp, Message], Any]:
             self.add_handlers(MessageHandler(func, *filters))
             return func
@@ -456,6 +458,7 @@ class HandlerDecorators:
             factory_before_filters: Whether to apply the factory before the filters (default: ``False``. If ``True``, the
              filters will get the callback data after the factory is applied).
         """
+        @functools.wraps(self.on_callback_button)
         def decorator(func: Callable[[WhatsApp, CallbackButton], Any]) -> Callable[[WhatsApp, CallbackButton], Any]:
             self.add_handlers(
                 CallbackButtonHandler(
@@ -493,6 +496,7 @@ class HandlerDecorators:
             factory_before_filters: Whether to apply the factory before the filters (default: ``False``. If ``True``, the
              filters will get the callback data after the factory is applied).
         """
+        @functools.wraps(self.on_callback_selection)
         def decorator(
                 func: Callable[[WhatsApp, CallbackSelection], Any]
         ) -> Callable[[WhatsApp, CallbackSelection], Any]:
@@ -529,6 +533,7 @@ class HandlerDecorators:
             *filters: Filters to apply to the incoming message status changes (filters are function that take a
              :class:`pywa.WhatsApp` instance and the incoming :class:`pywa.types.MessageStatus` and return :class:`bool`).
         """
+        @functools.wraps(self.on_message_status)
         def decorator(func: Callable[[WhatsApp, MessageStatus], Any]) -> Callable[[WhatsApp, MessageStatus], Any]:
             self.add_handlers(MessageStatusHandler(func, *filters))
             return func
@@ -557,6 +562,7 @@ class HandlerDecorators:
             *filters: Filters to apply to the incoming template status changes (filters are function that take a
                 :class:`pywa.WhatsApp` instance and the incoming :class:`pywa.types.TemplateStatus` and return :class:`bool`).
         """
+        @functools.wraps(self.on_template_status)
         def decorator(func: Callable[[WhatsApp, TemplateStatus], Any]) -> Callable[[WhatsApp, TemplateStatus], Any]:
             self.add_handlers(TemplateStatusHandler(func, *filters))
             return func
