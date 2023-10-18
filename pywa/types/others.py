@@ -39,35 +39,38 @@ class MessageType(utils.StrEnum):
     Message types.
 
     Attributes:
-        AUDIO: An audio message.
-        DOCUMENT: A document message.
         TEXT: A text message.
         IMAGE: An image message.
-        STICKER: A sticker message.
         VIDEO: A video message.
+        DOCUMENT: A document message.
+        AUDIO: An audio message.
+        STICKER: A sticker message.
         REACTION: A reaction to a message.
         LOCATION: A location message.
         CONTACTS: A contacts message.
-        INTERACTIVE: An interactive message (callback).
         ORDER: An order message.
         SYSTEM: A system message.
         UNKNOWN: An unknown message.
         UNSUPPORTED: An unsupported message.
+        INTERACTIVE: An interactive message (callback).
+        BUTTON: Quick reply button (in a template message).
     """
-    AUDIO = "audio"
-    DOCUMENT = "document"
     TEXT = "text"
     IMAGE = "image"
-    STICKER = "sticker"
     VIDEO = "video"
+    DOCUMENT = "document"
+    AUDIO = "audio"
+    STICKER = "sticker"
     REACTION = "reaction"
     LOCATION = "location"
     CONTACTS = "contacts"
-    INTERACTIVE = "interactive"
     ORDER = "order"
     SYSTEM = "system"
     UNKNOWN = "unknown"
     UNSUPPORTED = "unsupported"
+
+    INTERACTIVE = "interactive"
+    BUTTON = "button"
 
     @classmethod
     def _missing_(cls, value: str) -> MessageType:

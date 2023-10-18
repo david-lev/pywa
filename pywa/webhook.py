@@ -13,6 +13,7 @@ from pywa.handlers import (
     Handler,  # noqa
     MessageHandler, CallbackButtonHandler, CallbackSelectionHandler, RawUpdateHandler, MessageStatusHandler
 )
+from pywa.types import MessageType
 from pywa.utils import Flask, FastAPI
 
 if TYPE_CHECKING:
@@ -93,19 +94,23 @@ class Webhook:
 
         # The `messages` field needs to be handled differently because it can be a message, button, selection, or status
         if field == 'messages' and (
-                not self.filter_updates or (value["metadata"]["phone_number_id"] == self.wa_client.phone_id)
+            not self.filter_updates or (value["metadata"]["phone_number_id"] == self.wa_client.phone_id)
         ):
             if 'messages' in value:
-                if value["messages"][0]["type"] != "interactive":  # message
-                    field = MessageHandler.__field_name__
-                else:
-                    if value["messages"][0]["interactive"]["type"] == "button_reply":  # button
-                        field = CallbackButtonHandler.__field_name__
-                    elif value["messages"][0]["interactive"]["type"] == "list_reply":  # selection
-                        field = CallbackSelectionHandler.__field_name__
+                match value["messages"][0]["type"]:
+                    case MessageType.INTERACTIVE:
+                        if (_type := value["messages"][0]["interactive"]["type"]) == "button_reply":  # button
+                            return CallbackButtonHandler
+                        elif _type == "list_reply":  # selection
+                            return CallbackSelectionHandler
+                        logging.warning("PyWa Webhook: Unknown interactive message type: %s" % _type)
+                    case MessageType.BUTTON:  # button (quick reply from template)
+                        return CallbackButtonHandler
+                    case _:  # message
+                        return MessageHandler
 
             elif 'statuses' in value:  # status
-                field = MessageStatusHandler.__field_name__
+                return MessageStatusHandler
             else:
-                logging.warning(f"PyWa Webhook: Unknown message type: {value}")
+                logging.warning("PyWa Webhook: Unknown message type: %s" % value)
         return Handler.__fields_to_subclasses__().get(field)

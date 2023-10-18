@@ -1,3 +1,5 @@
+"""This module contains the callback types."""
+
 __all__ = [
     'CallbackButton',
     'CallbackSelection',
@@ -10,14 +12,15 @@ __all__ = [
     'CallbackDataT'
 ]
 
-from dataclasses import dataclass
-from datetime import datetime
-from enum import Enum
+import dataclasses
+import datetime as dt
+import enum
 from typing import TYPE_CHECKING, Iterable, TypeVar, Generic, Any
 from .base_update import BaseUserUpdate
 from .others import Metadata, User, ReplyToMessage, MessageType
 
 if TYPE_CHECKING:
+    from .template import Template
     from pywa.client import WhatsApp
 
 
@@ -31,7 +34,7 @@ class CallbackData:
         So object like ``User(id=123, name='John')`` will be converted to ``123:John``.
 
         Currently, the following types are supported:
-        :class:`str`, :class:`int`, :class:`bool`, :class:`float` and :class:`Enum` that
+        :class:`str`, :class:`int`, :class:`bool`, :class:`float` and :class:`enum.Enum` that
         inherits from :class:`str` (e.g ``class State(str, Enum)``). You probably won't need more than that to pass
         state and context in the program.
 
@@ -123,7 +126,7 @@ class CallbackData:
         """
         return self.__callback_data_sep__.join((str(self.__callback_id__), *(
             self._not_contains(getattr(self, field_name), self.__callback_sep__, self.__callback_data_sep__)
-            if not issubclass(field_type, (bool, Enum)) else ('§' if getattr(self, field_name) else '')
+            if not issubclass(field_type, (bool, enum.Enum)) else ('§' if getattr(self, field_name) else '')
             if field_type is bool else self._not_contains(
                 getattr(self, field_name).value, self.__callback_sep__, self.__callback_data_sep__
             )
@@ -144,7 +147,7 @@ CallbackDataT = TypeVar('CallbackDataT', bound=str | CallbackData | Iterable[Cal
 """Type hint for ``callback_data`` parameter in :class:`Button` and :class:`SectionRow`."""
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class CallbackButton(BaseUserUpdate, Generic[CallbackDataT]):
     """
     Represents a callback button.
@@ -197,18 +200,21 @@ class CallbackButton(BaseUserUpdate, Generic[CallbackDataT]):
     Attributes:
         id: The ID of the message.
         metadata: The metadata of the message (to which phone number it was sent).
-        type: The message type (always ``INTERACTIVE``).
+        type: The message type (:class:`MessageType.INTERACTIVE` for :class:`Button` presses or
+        type: The message type (:class:`MessageType.INTERACTIVE` for :class:`Button` presses or
+         :class:`MessageType.BUTTON` for :class:`Template.QuickReplyButtonData` choices).
         from_user: The user who sent the message.
         timestamp: The timestamp when the message was sent.
         reply_to_message: The message to which this callback button is a reply to.
-        data: The data of the button (the ``callback_data`` parameter you provided in :class:`Button`).
+        data: The data of the button (the ``callback_data`` parameter you provided in :class:`Button` or
+         :class:`Template.QuickReplyButtonData`).
         title: The title of the button.
     """
     id: str
     type: MessageType
     metadata: Metadata
     from_user: User
-    timestamp: datetime
+    timestamp: dt.datetime
     reply_to_message: ReplyToMessage
     data: CallbackDataT
     title: str
@@ -216,20 +222,29 @@ class CallbackButton(BaseUserUpdate, Generic[CallbackDataT]):
     @classmethod
     def from_update(cls, client: 'WhatsApp', update: dict) -> 'CallbackButton':
         msg = (value := update['entry'][0]['changes'][0]['value'])['messages'][0]
+        match (msg_type := msg['type']):
+            case MessageType.INTERACTIVE:
+                title = msg['interactive']['button_reply']['title']
+                data = msg['interactive']['button_reply']['id']
+            case MessageType.BUTTON:
+                title = msg['button']['text']
+                data = msg['button']['payload']
+            case _:
+                raise ValueError(f"Invalid message type {msg_type}")
         return cls(
             _client=client,
             id=msg['id'],
             metadata=Metadata.from_dict(value['metadata']),
-            type=MessageType(msg['type']),
+            type=MessageType(msg_type),
             from_user=User.from_dict(value['contacts'][0]),
-            timestamp=datetime.fromtimestamp(int(msg['timestamp'])),
+            timestamp=dt.datetime.fromtimestamp(int(msg['timestamp'])),
             reply_to_message=ReplyToMessage.from_dict(msg['context']),
-            data=msg['interactive']['button_reply']['id'],
-            title=msg['interactive']['button_reply']['title']
+            data=data,
+            title=title
         )
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class CallbackSelection(BaseUserUpdate, Generic[CallbackDataT]):
     """
     Represents a callback selection.
@@ -293,7 +308,7 @@ class CallbackSelection(BaseUserUpdate, Generic[CallbackDataT]):
     Attributes:
         id: The ID of the message.
         metadata: The metadata of the message (to which phone number it was sent).
-        type: The message type (always ``INTERACTIVE``).
+        type: The message type (always :class:`MessageType.INTERACTIVE`).
         from_user: The user who sent the message.
         timestamp: The timestamp when the message was sent.
         reply_to_message: The message to which this callback selection is a reply to.
@@ -305,7 +320,7 @@ class CallbackSelection(BaseUserUpdate, Generic[CallbackDataT]):
     type: MessageType
     metadata: Metadata
     from_user: User
-    timestamp: datetime
+    timestamp: dt.datetime
     reply_to_message: ReplyToMessage
     data: CallbackDataT
     title: str
@@ -320,7 +335,7 @@ class CallbackSelection(BaseUserUpdate, Generic[CallbackDataT]):
             metadata=Metadata.from_dict(value['metadata']),
             type=MessageType(msg['type']),
             from_user=User.from_dict(value['contacts'][0]),
-            timestamp=datetime.fromtimestamp(int(msg['timestamp'])),
+            timestamp=dt.datetime.fromtimestamp(int(msg['timestamp'])),
             reply_to_message=ReplyToMessage.from_dict(msg['context']),
             data=msg['interactive']['list_reply']['id'],
             title=msg['interactive']['list_reply']['title'],
@@ -340,7 +355,7 @@ def _resolve_callback_data(data: CallbackDataT) -> str:
     raise TypeError(f"Invalid callback data type {type(data)}")
 
 
-@dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(frozen=True, slots=True)
 class Button:
     """
     Represents a button in the button list.
@@ -363,7 +378,7 @@ class Button:
         }
 
 
-@dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(frozen=True, slots=True)
 class ButtonUrl:
     """
     Represents a button in the bottom of the message that opens a URL.
@@ -385,7 +400,7 @@ class ButtonUrl:
         }
 
 
-@dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(frozen=True, slots=True)
 class SectionRow:
     """
     Represents a row in a section.
@@ -410,7 +425,7 @@ class SectionRow:
         return d
 
 
-@dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(frozen=True, slots=True)
 class Section:
     """
     Represents a section in a section list.
@@ -429,7 +444,7 @@ class Section:
         }
 
 
-@dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(frozen=True, slots=True)
 class SectionList:
     """
     Represents a section list in an interactive message.
