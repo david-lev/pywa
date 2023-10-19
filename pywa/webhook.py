@@ -42,7 +42,7 @@ class Webhook:
         if server is not None:
             if not verify_token:
                 raise ValueError(
-                    "When listening for incoming messages, a verify token must be provided.\n>> The verify token can "
+                    "When listening for incoming updates, a verify token must be provided.\n>> The verify token can "
                     "be any string. It is used to challenge the webhook endpoint to verify that the endpoint is valid."
                 )
             self._handlers: dict[type[Handler] | None, list[Callable[[WhatsApp, BaseUpdate | dict], Any]]] \

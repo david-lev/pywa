@@ -33,14 +33,14 @@ class WhatsApp(Webhook, HandlerDecorators):
             session: requests.Session | None = None,
             server: Flask | FastAPI | None = None,
             webhook_endpoint: str = '/',
+            verify_token: str | None = None,
+            filter_updates: bool = True,
+            business_account_id: str | int | None = None,
             callback_url: str | None = None,
             fields: Iterable[str] | None = None,
             app_id: int | None = None,
             app_secret: str | None = None,
-            verify_token: str | None = None,
             verify_timeout: int | None = None,
-            filter_updates: bool = True,
-            business_account_id: str | int | None = None,
     ) -> None:
         """
         The WhatsApp client.
@@ -60,11 +60,14 @@ class WhatsApp(Webhook, HandlerDecorators):
             ...     phone_id="100944",
             ...     token="EAADKQl9oJxx",
             ...     server=flask_app,
-            ...     verify_token="my_verify_token",
+            ...     callback_url='https://6b3e.ngrok.io',
+            ...     verify_token="XYZ123",
+            ...     app_id=1234567890,
+            ...     app_secret="my_app_secret",
             ... )
             >>> @wa.on_message()
             ... def message_handler(_: WhatsApp, msg: Message): print(msg)
-            >>> flask_app.run()  # or by using a WSGI server (e.g. gunicorn, waitress, etc.)
+            >>> flask_app.run(port=8000)
 
         Args:
             phone_id: The Phone number ID (Not the phone number itself, the ID can be found in the App settings).
@@ -75,18 +78,24 @@ class WhatsApp(Webhook, HandlerDecorators):
             session: The session to use for requests (default: new ``requests.Session()``, Do not use the same
              session across multiple WhatsApp clients!)
             server: The Flask or FastAPI app instance to use for the webhook.
-            webhook_endpoint: The endpoint to listen for incoming messages (if you using the server for another purpose
-             and you're already using the ``/`` endpoint, you can change it to something else).
             callback_url: The callback URL to register (optional, only if you want pywa to register the callback URL for
              you).
+            verify_token: The verify token of the registered ``callback_url`` (Required when ``server`` is provided.
+             The verify token can be any string. It is used to challenge the webhook endpoint to verify that the
+             endpoint is valid).
             fields: The fields to register for the callback URL (optional, if not provided, all supported fields will be
-             registered).
-            app_id: The ID of the WhatsApp App (optional, required when registering a ``callback_url``).
-            app_secret: The secret of the WhatsApp App (optional, required when registering a ``callback_url``).
-            verify_token: The verify token of the registered webhook (Required when ``server`` is provided).
-            filter_updates: Whether to filter out user updates that not sent to this phone_id (default: ``True``, does
+             registered. modify this if you want to reduce the number of unused requests to your server).
+            app_id: The ID of the app in the
+             `App Basic Settings <https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings>`_
+             (optional, required when registering a ``callback_url``).
+            app_secret: The secret of the app in the
+             `App Basic Settings <https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings>`_
+             (optional, required when registering a ``callback_url``).
+            webhook_endpoint: The endpoint to listen for incoming messages (if you're using the server for another purpose,
+             and you're already using the ``/`` endpoint, you can change it to something else).
+            filter_updates: Whether to filter out user updates that are not sent to this phone_id (default: ``True``, does
              not apply to raw updates or updates that are not user-related).
-            business_account_id: The business account ID of the WhatsApp account (optional, required for some API
+            business_account_id: The business account ID that owns the app (optional, required for some API
              methods).
         """
         self.phone_id = str(phone_id)

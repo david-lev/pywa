@@ -86,6 +86,8 @@ ________________________
 
 - Create a WhatsApp client, pass a web server app (Flask in this example) and start the webhook:
 
+    > See `Handlers <https://pywa.readthedocs.io/en/latest/content/handlers/overview.html>`_ for more information.
+
 .. code-block:: python
 
     from pywa import WhatsApp
@@ -96,9 +98,12 @@ ________________________
     flask_app = Flask(__name__)
     wa = WhatsApp(
         phone_id='1234567890',
-        token='xxxxxxxxxxxxxxx',
+        token='xxxxxxx',
         server=flask_app,
-        verify_token='XYZXYZ',
+        callback_url='https://6b3e-18.ngrok.io',
+        verify_token='XYZ123',
+        app_id=123456,
+        app_secret='yyyyyy'
     )
 
     @wa.on_message(text.matches('Hello', 'Hi'))

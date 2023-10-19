@@ -22,7 +22,7 @@ authors = [
 ]
 keywords = ['whatsapp', 'whatsapp-api', 'whatsapp-cloud-api', 'whatsapp-cloud', 'whatsapp-api-python',
     'whatsapp-cloud-api-python', 'pywa', 'wapy', 'wa', 'wa-api', 'wa-cloud-api', 'wa-cloud', 'wa-api-python',
-    'wa-cloud-api-python'
+    'wa-cloud-api-python', 'whatsapp-webhook', 'whatsapp-webhook-python', 'whatsapp-webhook-api',
 ]
 classifiers = [
     'Topic :: Communications :: Chat',
@@ -39,7 +39,6 @@ flask = ['flask']
 fastapi = ['fastapi', 'uvicorn[standard]']
 
 [project.urls]
-"Homepage" = "https://pywa.readthedocs.io/"
 "Documentation" = "https://pywa.readthedocs.io/"
 "Issue Tracker" = "https://github.com/david-lev/pywa/issues"
 "Source Code" = "https://github.com/david-lev/pywa"
