@@ -40,8 +40,11 @@ class Webhook:
         verify_timeout: int | None = None,
     ):
         if server is not None:
-            if verify_token is None:
-                raise ValueError("When listening for incoming messages, a verify token must be provided.")
+            if not verify_token:
+                raise ValueError(
+                    "When listening for incoming messages, a verify token must be provided.\n>> The verify token can "
+                    "be any string. It is used to challenge the webhook endpoint to verify that the endpoint is valid."
+                )
             self._handlers: dict[type[Handler] | None, list[Callable[[WhatsApp, BaseUpdate | dict], Any]]] \
                 = collections.defaultdict(list)
 
@@ -84,7 +87,11 @@ class Webhook:
 
             if callback_url is not None:
                 if app_id is None or app_secret is None:
-                    raise ValueError("When providing a callback URL, an app ID and app secret must be provided.")
+                    raise ValueError(
+                        "When registering a callback URL, the app ID and app secret must be provided.\n>> See here how "
+                        "to get them: "
+                        "https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings/"
+                    )
 
                 # This is a non-blocking function that registers the callback URL.
                 # It must be called after the server is running so that the challenge can be verified.
@@ -102,7 +109,7 @@ class Webhook:
                         )['success']:
                             raise ValueError("Failed to register callback URL.")
                     except WhatsAppError as e:
-                        raise ValueError("Failed to register callback URL. Error: %s" % e)
+                        raise ValueError(f"Failed to register callback URL. Error: {e}")
                 threading.Thread(target=register_callback_url).start()
 
     def _call_handlers(self: WhatsApp, update: dict) -> None:
