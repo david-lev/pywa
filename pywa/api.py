@@ -62,6 +62,75 @@ class WhatsAppCloudApi:
             raise WhatsAppError.from_response(status_code=res.status_code, error=res.json()["error"])
         return res.json()
 
+    def get_app_access_token(self, app_id: int, app_secret: str) -> dict[str, str]:
+        """
+        Get an access token for an app.
+
+        Return example::
+
+            {
+                'access_token': 'xyzxyzxyz',
+                'token_type': 'bearer'
+            }
+
+
+        Args:
+            app_id: The ID of the app.
+            app_secret: The secret of the app.
+
+        Returns:
+            The access token and its type.
+
+        """
+        return self._make_request(
+            method="GET",
+            endpoint="/oauth/access_token",
+            params={
+                "grant_type": "client_credentials",
+                "client_id": app_id,
+                "client_secret": app_secret
+            }
+        )
+
+    def set_callback_url(
+            self,
+            app_id: int,
+            app_access_token: str,
+            callback_url: str,
+            verify_token: str,
+            fields: tuple[str, ...],
+    ) -> dict[str, bool]:
+        """
+        Set the callback URL for the webhook.
+
+        Return example::
+
+            {
+                'success': True
+            }
+
+        Args:
+            app_id: The ID of the app.
+            app_access_token: The access token of the app (from ``get_app_access_token``).
+            callback_url: The URL to set.
+            verify_token: The verify token to challenge the webhook with.
+            fields: The fields to subscribe to.
+
+        Returns:
+            The success of the operation.
+        """
+        return self._make_request(
+            method="POST",
+            endpoint=f"/{app_id}/subscriptions",
+            params={
+                "object": "whatsapp_business_account",
+                "callback_url": callback_url,
+                "verify_token": verify_token,
+                "fields": ",".join(fields),
+                "access_token": app_access_token
+            }
+        )
+
     def send_text_message(
             self,
             to: str,

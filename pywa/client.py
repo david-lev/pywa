@@ -10,77 +10,40 @@ import os
 import requests
 from typing import Iterable, BinaryIO
 from pywa.api import WhatsAppCloudApi
-from pywa.utils import Flask, FastAPI
-from pywa.webhook import Webhook
 from pywa.handlers import Handler, HandlerDecorators  # noqa
 from pywa.types import (
     Button, SectionList, Message, Contact, MediaUrlResponse,
     ProductsSection, BusinessProfile, Industry, CommerceSettings, NewTemplate, Template, TemplateResponse, ButtonUrl
 )
-
-
-def _resolve_keyboard_param(keyboard: Iterable[Button] | ButtonUrl | SectionList) -> tuple[str, dict]:
-    """
-    Resolve keyboard parameters to a type and an action dict.
-    """
-    if isinstance(keyboard, SectionList):
-        return "list", keyboard.to_dict()
-    elif isinstance(keyboard, ButtonUrl):
-        return "cta_url", keyboard.to_dict()
-    else:
-        return "button", {"buttons": tuple(b.to_dict() for b in keyboard)}
-
-
-def _resolve_media_param(
-        wa: WhatsApp,
-        media: str | bytes | BinaryIO,
-        mime_type: str | None,
-        filename: str | None,
-) -> tuple[bool, str]:
-    """
-    Internal method to resolve media parameters. Returns a tuple of (is_url, media_id_or_url).
-    """
-    if isinstance(media, str):
-        if media.startswith(("https://", "http://")):
-            return True, media
-        elif not os.path.isfile(media) and media.isdigit():
-            return False, media  # assume it's a media ID
-        else:  # assume it's a file path
-            if not (mt := mimetypes.guess_type(media)[0] or mime_type):
-                raise ValueError(f"Could not determine the mime type of the file {media!r}. Please provide a mime type.")
-            return False, wa.upload_media(
-                media=media,
-                mime_type=mt,
-                filename=filename or os.path.basename(media)
-            )
-    else:
-        if not mime_type or not filename:
-            msg = "When sending media as bytes or a file object a {} must be provided."
-            raise ValueError(msg.format("mime_type and filename" if not mime_type and not filename else
-                                        ("mime_type" if not mime_type else "filename")))
-        return False, wa.api.upload_media(media=media, mime_type=mime_type, filename=filename)['id']
-
+from pywa.utils import Flask, FastAPI
+from pywa.webhook import Webhook
 
 _MISSING = object()
 
 
-class WhatsApp(HandlerDecorators):
+class WhatsApp(Webhook, HandlerDecorators):
+
     # noinspection PyMissingConstructor
     def __init__(
             self,
             phone_id: str | int,
             token: str,
-            base_url: str = "https://graph.facebook.com",
+            base_url: str = 'https://graph.facebook.com',
             api_version: float | int = 18.0,
             session: requests.Session | None = None,
             server: Flask | FastAPI | None = None,
-            webhook_endpoint: str = "/",
+            webhook_endpoint: str = '/',
+            callback_url: str | None = None,
+            fields: Iterable[str] | None = None,
+            app_id: int | None = None,
+            app_secret: str | None = None,
             verify_token: str | None = None,
+            verify_timeout: int | None = None,
             filter_updates: bool = True,
             business_account_id: str | int | None = None,
     ) -> None:
         """
-        Initialize the WhatsApp client.
+        The WhatsApp client.
             - Full documentation on `pywa.readthedocs.io <https://pywa.readthedocs.io>`_.
 
         Example without webhook:
@@ -112,14 +75,22 @@ class WhatsApp(HandlerDecorators):
             session: The session to use for requests (default: new ``requests.Session()``, Do not use the same
              session across multiple WhatsApp clients!)
             server: The Flask or FastAPI app instance to use for the webhook.
-            webhook_endpoint: The endpoint to listen for incoming messages (default: ``/``).
+            webhook_endpoint: The endpoint to listen for incoming messages (if you using the server for another purpose
+             and you're already using the ``/`` endpoint, you can change it to something else).
+            callback_url: The callback URL to register (optional, only if you want pywa to register the callback URL for
+             you).
+            fields: The fields to register for the callback URL (optional, if not provided, all supported fields will be
+             registered).
+            app_id: The ID of the WhatsApp App (optional, required when registering a ``callback_url``).
+            app_secret: The secret of the WhatsApp App (optional, required when registering a ``callback_url``).
             verify_token: The verify token of the registered webhook (Required when ``server`` is provided).
-            filter_updates: Whether to filter out updates that not sent to this phone number (default: ``True``, does
-                not apply to raw updates).
+            filter_updates: Whether to filter out user updates that not sent to this phone_id (default: ``True``, does
+             not apply to raw updates or updates that are not user-related).
             business_account_id: The business account ID of the WhatsApp account (optional, required for some API
-                methods).
+             methods).
         """
         self.phone_id = str(phone_id)
+        self.filter_updates = filter_updates
         self.business_account_id = str(business_account_id) if business_account_id is not None else None
         self.api = WhatsAppCloudApi(
             phone_id=self.phone_id,
@@ -128,18 +99,17 @@ class WhatsApp(HandlerDecorators):
             base_url=base_url,
             api_version=float(api_version),
         )
-        if server is not None:
-            if verify_token is None:
-                raise ValueError("When listening for incoming messages, a verify token must be provided.")
-            self.webhook = Webhook(
-                wa_client=self,
-                server=server,
-                verify_token=verify_token,
-                webhook_endpoint=webhook_endpoint,
-                filter_updates=filter_updates,
-            )
-        else:
-            self.webhook = None
+        self._handlers = None
+        super().__init__(
+            server=server,
+            webhook_endpoint=webhook_endpoint,
+            callback_url=callback_url,
+            fields=fields,
+            app_id=app_id,
+            app_secret=app_secret,
+            verify_token=verify_token,
+            verify_timeout=verify_timeout,
+        )
 
     def __str__(self) -> str:
         return f"WhatApp(phone_id={self.phone_id!r})"
@@ -162,11 +132,11 @@ class WhatsApp(HandlerDecorators):
             ...     CallbackButtonHandler(print_message),
             ... )
         """
-        if self.webhook is None:
+        if self._handlers is None:
             raise ValueError("You must initialize the WhatsApp client with an web server"
-                             " (Flask or FastAPI) in order to handle incoming messages.")
+                             " (Flask or FastAPI) in order to handle incoming updates.")
         for handler in handlers:
-            self.webhook.handlers[handler.__class__].append(handler)
+            self._handlers[handler.__class__].append(handler)
 
     def send_message(
             self,
@@ -1293,3 +1263,45 @@ class WhatsApp(HandlerDecorators):
             template=template.to_dict(is_header_url=is_url),
             reply_to_message_id=reply_to_message_id,
         )['messages'][0]['id']
+
+
+def _resolve_keyboard_param(keyboard: Iterable[Button] | ButtonUrl | SectionList) -> tuple[str, dict]:
+    """
+    Resolve keyboard parameters to a type and an action dict.
+    """
+    if isinstance(keyboard, SectionList):
+        return "list", keyboard.to_dict()
+    elif isinstance(keyboard, ButtonUrl):
+        return "cta_url", keyboard.to_dict()
+    else:
+        return "button", {"buttons": tuple(b.to_dict() for b in keyboard)}
+
+
+def _resolve_media_param(
+        wa: WhatsApp,
+        media: str | bytes | BinaryIO,
+        mime_type: str | None,
+        filename: str | None,
+) -> tuple[bool, str]:
+    """
+    Internal method to resolve media parameters. Returns a tuple of (is_url, media_id_or_url).
+    """
+    if isinstance(media, str):
+        if media.startswith(("https://", "http://")):
+            return True, media
+        elif not os.path.isfile(media) and media.isdigit():
+            return False, media  # assume it's a media ID
+        else:  # assume it's a file path
+            if not (mt := mimetypes.guess_type(media)[0] or mime_type):
+                raise ValueError(f"Could not determine the mime type of the file {media!r}. Please provide a mime type.")
+            return False, wa.upload_media(
+                media=media,
+                mime_type=mt,
+                filename=filename or os.path.basename(media)
+            )
+    else:
+        if not mime_type or not filename:
+            msg = "When sending media as bytes or a file object a {} must be provided."
+            raise ValueError(msg.format("mime_type and filename" if not mime_type and not filename else
+                                        ("mime_type" if not mime_type else "filename")))
+        return False, wa.api.upload_media(media=media, mime_type=mime_type, filename=filename)['id']

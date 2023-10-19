@@ -116,7 +116,7 @@ class Handler(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def __field_name__(self) -> str:
+    def __field_name__(self) -> str | None:
         """
         The field name of the webhook update
         https://developers.facebook.com/docs/graph-api/webhooks/reference/whatsapp-business-account
@@ -142,15 +142,20 @@ class Handler(abc.ABC):
         if all((f(wa, data) for f in self.filters)):
             self.handler(wa, data)
 
-    def __hash__(self) -> int:
-        """Return the hash of the handler field name."""
-        return hash(self.__field_name__)
-
     @staticmethod
     @functools.cache
     def __fields_to_subclasses__() -> dict[str, Handler]:
-        """Return a dict of all the subclasses of `Handler` with their field name as the key."""
-        return {h.__field_name__: h for h in Handler.__subclasses__()}
+        """
+        Return a dict of all the subclasses of `Handler` with their field name as the key.
+        (e.g. ``{'messages': MessageHandler}``)
+
+        **IMPORTANT:** This function is for internal use only, DO NOT USE IT to get the available handlers
+        (use ``Handler.__subclasses__()`` instead).
+
+        **IMPORTANT:** This function is cached, so if you subclass `Handler` after calling this function, the new class
+        will not be included in the returned dict.
+        """
+        return {h.__field_name__: h for h in Handler.__subclasses__() if h.__field_name__ is not None}
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}(handler={self.handler!r}, filters={self.filters!r})"
@@ -178,13 +183,13 @@ class MessageHandler(Handler):
         *filters: The filters to apply to the handler (gets a :class:`pywa.WhatsApp` instance and a
          :class:`pywa.types.Message` and returns a :class:`bool`)
     """
-    __field_name__ = "messages:msg"
+    __field_name__ = 'messages'
     __update_constructor__ = Message.from_update
 
     def __init__(
-            self,
-            handler: Callable[[WhatsApp, Message], Any],
-            *filters: Callable[[WhatsApp, Message], bool]
+        self,
+        handler: Callable[[WhatsApp, Message], Any],
+        *filters: Callable[[WhatsApp, Message], bool]
     ):
         super().__init__(handler, *filters)
 
@@ -211,15 +216,15 @@ class CallbackButtonHandler(Handler):
         factory_before_filters: Whether to apply the factory before the filters (default: ``False``. If ``True``, the
          filters will get the callback data after the factory is applied).
     """
-    __field_name__ = "messages:btn"
+    __field_name__ = 'messages'
     __update_constructor__ = CallbackButton.from_update
 
     def __init__(
-            self,
-            handler: Callable[[WhatsApp, CallbackButton], Any],
-            *filters: Callable[[WhatsApp, CallbackButton], bool],
-            factory: CallbackDataFactoryT = str,
-            factory_before_filters: bool = False
+        self,
+        handler: Callable[[WhatsApp, CallbackButton], Any],
+        *filters: Callable[[WhatsApp, CallbackButton], bool],
+        factory: CallbackDataFactoryT = str,
+        factory_before_filters: bool = False
     ):
         self.factory, self.factory_filter = _resolve_callback_data_factory(factory)
         self.factory_before_filters = factory_before_filters
@@ -255,15 +260,15 @@ class CallbackSelectionHandler(Handler):
         factory_before_filters: Whether to apply the factory before the filters (default: ``False``. If ``True``, the
          filters will get the callback data after the factory is applied).
     """
-    __field_name__ = "messages:sel"
+    __field_name__ = 'messages'
     __update_constructor__ = CallbackSelection.from_update
 
     def __init__(
-            self,
-            handler: Callable[[WhatsApp, CallbackSelection], Any],
-            *filters: Callable[[WhatsApp, CallbackSelection], bool],
-            factory: CallbackDataFactoryT = str,
-            factory_before_filters: bool = False
+        self,
+        handler: Callable[[WhatsApp, CallbackSelection], Any],
+        *filters: Callable[[WhatsApp, CallbackSelection], bool],
+        factory: CallbackDataFactoryT = str,
+        factory_before_filters: bool = False
     ):
         self.factory, self.factory_filter = _resolve_callback_data_factory(factory)
         self.factory_before_filters = factory_before_filters
@@ -297,13 +302,13 @@ class MessageStatusHandler(Handler):
         *filters: The filters to apply to the handler (gets a :class:`pywa.WhatsApp` instance and a
             :class:`pywa.types.MessageStatus` and returns a :class:`bool`)
     """
-    __field_name__ = "messages:status"
+    __field_name__ = 'messages'
     __update_constructor__ = MessageStatus.from_update
 
     def __init__(
-            self,
-            handler: Callable[[WhatsApp, MessageStatus], Any],
-            *filters: Callable[[WhatsApp, MessageStatus], bool]
+        self,
+        handler: Callable[[WhatsApp, MessageStatus], Any],
+        *filters: Callable[[WhatsApp, MessageStatus], bool]
     ):
         super().__init__(handler, *filters)
 
@@ -331,13 +336,13 @@ class TemplateStatusHandler(Handler):
         *filters: The filters to apply to the handler (gets a :class:`pywa.WhatsApp` instance and a
             :class:`pywa.types.TemplateStatus` and returns a :class:`bool`)
     """
-    __field_name__ = "message_template_status_update"
+    __field_name__ = 'message_template_status_update'
     __update_constructor__ = TemplateStatus.from_update
 
     def __init__(
-            self,
-            handler: Callable[[WhatsApp, TemplateStatus], Any],
-            *filters: Callable[[WhatsApp, TemplateStatus], bool]
+        self,
+        handler: Callable[[WhatsApp, TemplateStatus], Any],
+        *filters: Callable[[WhatsApp, TemplateStatus], bool]
     ):
         super().__init__(handler, *filters)
 
@@ -361,19 +366,21 @@ class RawUpdateHandler(Handler):
         *filters: The filters to apply to the handler (gets a :class:`pywa.WhatsApp` instance and a :class:`dict` and
             returns a :class:`bool`)
     """
-    __field_name__ = "raw"
+    __field_name__ = None
     __update_constructor__ = lambda _, data: data  # noqa
 
     def __init__(
-            self,
-            handler: Callable[[WhatsApp, dict], Any],
-            *filters: Callable[[WhatsApp, dict], bool]
+        self,
+        handler: Callable[[WhatsApp, dict], Any],
+        *filters: Callable[[WhatsApp, dict], bool]
     ):
         super().__init__(handler, *filters)
 
 
 class HandlerDecorators:
-    def __init__(self):
+    """This class is used by the :class:`WhatsApp` client to register handlers using decorators."""
+
+    def __init__(self: WhatsApp):
         raise TypeError("This class cannot be instantiated.")
 
     def on_raw_update(
