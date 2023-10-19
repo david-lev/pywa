@@ -378,6 +378,8 @@ class RawUpdateHandler(Handler):
 
 
 class HandlerDecorators:
+    """This class is used by the :class:`WhatsApp` client to register handlers using decorators."""
+
     def __init__(self: WhatsApp):
         raise TypeError("This class cannot be instantiated.")
 

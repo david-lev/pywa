@@ -126,7 +126,7 @@ class WhatsAppCloudApi:
                 "object": "whatsapp_business_account",
                 "callback_url": callback_url,
                 "verify_token": verify_token,
-                "fields": fields,
+                "fields": ",".join(fields),
                 "access_token": app_access_token
             }
         )
