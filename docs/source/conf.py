@@ -138,14 +138,11 @@ intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 
 # sphinxext.opengraph
 ogp_site_url = "https://pywa.readthedocs.io/"
-ogp_site_name = "pywa documentation"
+ogp_site_name = "PyWa Documentation"
 ogp_image = "https://pywa.readthedocs.io/en/latest/_static/pywa-ogp.png"
-ogp_image_alt = "pywa logo"
+ogp_image_alt = "PyWa Logo"
 ogp_description_length = 300
 ogp_type = "website"
-ogp_custom_meta_tags = [
-    '<meta property="og:description" content="pywa • Python wrapper for the WhatsApp Cloud API" /> '
-]
 
 html_extra_path = ["google898e98a538257a96.html"]
 
