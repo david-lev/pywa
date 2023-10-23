@@ -7,40 +7,51 @@ __all__ = ["WhatsApp"]
 import hashlib
 import mimetypes
 import os
+from typing import BinaryIO, Iterable
+
 import requests
-from typing import Iterable, BinaryIO
+
 from pywa.api import WhatsAppCloudApi
 from pywa.handlers import Handler, HandlerDecorators  # noqa
 from pywa.types import (
-    Button, SectionList, Message, Contact, MediaUrlResponse,
-    ProductsSection, BusinessProfile, Industry, CommerceSettings, NewTemplate, Template, TemplateResponse, ButtonUrl
+    BusinessProfile,
+    Button,
+    ButtonUrl,
+    CommerceSettings,
+    Contact,
+    Industry,
+    MediaUrlResponse,
+    Message,
+    NewTemplate,
+    ProductsSection,
+    SectionList,
+    Template,
+    TemplateResponse,
 )
-from pywa.utils import Flask, FastAPI
+from pywa.utils import FastAPI, Flask
 from pywa.webhook import Webhook
 
 _MISSING = object()
 
 
 class WhatsApp(Webhook, HandlerDecorators):
-
-    # noinspection PyMissingConstructor
     def __init__(
-            self,
-            phone_id: str | int,
-            token: str,
-            base_url: str = 'https://graph.facebook.com',
-            api_version: float | int = 18.0,
-            session: requests.Session | None = None,
-            server: Flask | FastAPI | None = None,
-            webhook_endpoint: str = '/',
-            verify_token: str | None = None,
-            filter_updates: bool = True,
-            business_account_id: str | int | None = None,
-            callback_url: str | None = None,
-            fields: Iterable[str] | None = None,
-            app_id: int | None = None,
-            app_secret: str | None = None,
-            verify_timeout: int | None = None,
+        self,
+        phone_id: str | int,
+        token: str,
+        base_url: str = "https://graph.facebook.com",
+        api_version: float | int = 18.0,
+        session: requests.Session | None = None,
+        server: Flask | FastAPI | None = None,
+        webhook_endpoint: str = "/",
+        verify_token: str | None = None,
+        filter_updates: bool = True,
+        business_account_id: str | int | None = None,
+        callback_url: str | None = None,
+        fields: Iterable[str] | None = None,
+        app_id: int | None = None,
+        app_secret: str | None = None,
+        verify_timeout: int | None = None,
     ) -> None:
         """
         The WhatsApp client.
@@ -100,7 +111,9 @@ class WhatsApp(Webhook, HandlerDecorators):
         """
         self.phone_id = str(phone_id)
         self.filter_updates = filter_updates
-        self.business_account_id = str(business_account_id) if business_account_id is not None else None
+        self.business_account_id = (
+            str(business_account_id) if business_account_id is not None else None
+        )
         self.api = WhatsAppCloudApi(
             phone_id=self.phone_id,
             token=token,
@@ -142,20 +155,22 @@ class WhatsApp(Webhook, HandlerDecorators):
             ... )
         """
         if self._handlers is None:
-            raise ValueError("You must initialize the WhatsApp client with an web server"
-                             " (Flask or FastAPI) in order to handle incoming updates.")
+            raise ValueError(
+                "You must initialize the WhatsApp client with an web server"
+                " (Flask or FastAPI) in order to handle incoming updates."
+            )
         for handler in handlers:
             self._handlers[handler.__class__].append(handler)
 
     def send_message(
-            self,
-            to: str | int,
-            text: str,
-            header: str | None = None,
-            footer: str | None = None,
-            keyboard: Iterable[Button] | ButtonUrl | SectionList | None = None,
-            preview_url: bool = False,
-            reply_to_message_id: str | None = None,
+        self,
+        to: str | int,
+        text: str,
+        header: str | None = None,
+        footer: str | None = None,
+        keyboard: Iterable[Button] | ButtonUrl | SectionList | None = None,
+        preview_url: bool = False,
+        reply_to_message_id: str | None = None,
     ) -> str:
         """
         Send a message to a WhatsApp user.
@@ -245,7 +260,7 @@ class WhatsApp(Webhook, HandlerDecorators):
                 text=text,
                 preview_url=preview_url,
                 reply_to_message_id=reply_to_message_id,
-            )['messages'][0]['id']
+            )["messages"][0]["id"]
         type_, kb = _resolve_keyboard_param(keyboard)
         return self.api.send_interactive_message(
             to=str(to),
@@ -254,23 +269,25 @@ class WhatsApp(Webhook, HandlerDecorators):
             header={
                 "type": "text",
                 "text": header,
-            } if header else None,
+            }
+            if header
+            else None,
             body=text,
             footer=footer,
-        )['messages'][0]['id']
+        )["messages"][0]["id"]
 
     send_text = send_message  # alias
 
     def send_image(
-            self,
-            to: str | int,
-            image: str | bytes | BinaryIO,
-            caption: str | None = None,
-            body: str | None = None,
-            footer: str | None = None,
-            buttons: Iterable[Button] | ButtonUrl | None = None,
-            reply_to_message_id: str | None = None,
-            mime_type: str | None = None,
+        self,
+        to: str | int,
+        image: str | bytes | BinaryIO,
+        caption: str | None = None,
+        body: str | None = None,
+        footer: str | None = None,
+        buttons: Iterable[Button] | ButtonUrl | None = None,
+        reply_to_message_id: str | None = None,
+        mime_type: str | None = None,
     ) -> str:
         """
         Send an image to a WhatsApp user.
@@ -297,13 +314,18 @@ class WhatsApp(Webhook, HandlerDecorators):
              `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the image (optional).
             reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
-            mime_type: The mime type of the image (optional, required when sending an image as bytes or a file object, 
+            mime_type: The mime type of the image (optional, required when sending an image as bytes or a file object,
              or file path that does not have an extension).
 
         Returns:
             The message ID of the sent image message.
         """
-        is_url, image = _resolve_media_param(wa=self, media=image, mime_type=mime_type, filename="image.jpg")
+        is_url, image = _resolve_media_param(
+            wa=self,
+            media=image,
+            mime_type=mime_type,
+            filename="image.jpg",
+        )
         if not buttons:
             return self.api.send_media(
                 to=str(to),
@@ -311,9 +333,11 @@ class WhatsApp(Webhook, HandlerDecorators):
                 is_url=is_url,
                 media_type="image",
                 caption=caption,
-            )['messages'][0]['id']
+            )["messages"][0]["id"]
         if not body and not caption:
-            raise ValueError("Either body or caption must be provided when sending an image with buttons.")
+            raise ValueError(
+                "Either body or caption must be provided when sending an image with buttons."
+            )
         type_, kb = _resolve_keyboard_param(buttons)
         return self.api.send_interactive_message(
             to=str(to),
@@ -323,23 +347,23 @@ class WhatsApp(Webhook, HandlerDecorators):
                 "type": "image",
                 "image": {
                     "link" if is_url else "id": image,
-                }
+                },
             },
             body=body or caption,
             footer=footer,
             reply_to_message_id=reply_to_message_id,
-        )['messages'][0]['id']
+        )["messages"][0]["id"]
 
     def send_video(
-            self,
-            to: str | int,
-            video: str | bytes | BinaryIO,
-            caption: str | None = None,
-            body: str | None = None,
-            footer: str | None = None,
-            buttons: Iterable[Button] | ButtonUrl | None = None,
-            reply_to_message_id: str | None = None,
-            mime_type: str | None = None,
+        self,
+        to: str | int,
+        video: str | bytes | BinaryIO,
+        caption: str | None = None,
+        body: str | None = None,
+        footer: str | None = None,
+        buttons: Iterable[Button] | ButtonUrl | None = None,
+        reply_to_message_id: str | None = None,
+        mime_type: str | None = None,
     ) -> str:
         """
         Send a video to a WhatsApp user.
@@ -373,7 +397,12 @@ class WhatsApp(Webhook, HandlerDecorators):
         Returns:
             The message ID of the sent video.
         """
-        is_url, video = _resolve_media_param(wa=self, media=video, mime_type=mime_type, filename="video.mp4")
+        is_url, video = _resolve_media_param(
+            wa=self,
+            media=video,
+            mime_type=mime_type,
+            filename="video.mp4",
+        )
         if not buttons:
             return self.api.send_media(
                 to=str(to),
@@ -381,9 +410,11 @@ class WhatsApp(Webhook, HandlerDecorators):
                 is_url=is_url,
                 media_type="video",
                 caption=caption,
-            )['messages'][0]['id']
+            )["messages"][0]["id"]
         if not body and not caption:
-            raise ValueError("Either body or caption must be provided when sending a video with buttons.")
+            raise ValueError(
+                "Either body or caption must be provided when sending a video with buttons."
+            )
         type_, kb = _resolve_keyboard_param(buttons)
         return self.api.send_interactive_message(
             to=str(to),
@@ -393,24 +424,24 @@ class WhatsApp(Webhook, HandlerDecorators):
                 "type": "video",
                 "video": {
                     "link" if is_url else "id": video,
-                }
+                },
             },
             body=body or caption,
             footer=footer,
             reply_to_message_id=reply_to_message_id,
-        )['messages'][0]['id']
+        )["messages"][0]["id"]
 
     def send_document(
-            self,
-            to: str | int,
-            document: str | bytes | BinaryIO,
-            filename: str | None = None,
-            caption: str | None = None,
-            body: str | None = None,
-            footer: str | None = None,
-            buttons: Iterable[Button] | ButtonUrl | None = None,
-            reply_to_message_id: str | None = None,
-            mime_type: str | None = None,
+        self,
+        to: str | int,
+        document: str | bytes | BinaryIO,
+        filename: str | None = None,
+        caption: str | None = None,
+        body: str | None = None,
+        footer: str | None = None,
+        buttons: Iterable[Button] | ButtonUrl | None = None,
+        reply_to_message_id: str | None = None,
+        mime_type: str | None = None,
     ) -> str:
         """
         Send a document to a WhatsApp user.
@@ -446,7 +477,12 @@ class WhatsApp(Webhook, HandlerDecorators):
         Returns:
             The message ID of the sent document.
         """
-        is_url, document = _resolve_media_param(wa=self, media=document, mime_type=mime_type, filename=filename)
+        is_url, document = _resolve_media_param(
+            wa=self,
+            media=document,
+            mime_type=mime_type,
+            filename=filename,
+        )
         if not buttons:
             return self.api.send_media(
                 to=str(to),
@@ -455,9 +491,11 @@ class WhatsApp(Webhook, HandlerDecorators):
                 media_type="document",
                 caption=caption,
                 filename=filename,
-            )['messages'][0]['id']
+            )["messages"][0]["id"]
         if not body and not caption:
-            raise ValueError("Either body or caption must be provided when sending a document with buttons.")
+            raise ValueError(
+                "Either body or caption must be provided when sending a document with buttons."
+            )
         type_, kb = _resolve_keyboard_param(buttons)
         return self.api.send_interactive_message(
             to=str(to),
@@ -468,18 +506,18 @@ class WhatsApp(Webhook, HandlerDecorators):
                 "document": {
                     "link" if is_url else "id": document,
                     "filename": filename,
-                }
+                },
             },
             body=body or caption,
             footer=footer,
             reply_to_message_id=reply_to_message_id,
-        )['messages'][0]['id']
+        )["messages"][0]["id"]
 
     def send_audio(
-            self,
-            to: str | int,
-            audio: str | bytes | BinaryIO,
-            mime_type: str | None = None,
+        self,
+        to: str | int,
+        audio: str | bytes | BinaryIO,
+        mime_type: str | None = None,
     ) -> str:
         """
         Send an audio file to a WhatsApp user.
@@ -501,19 +539,24 @@ class WhatsApp(Webhook, HandlerDecorators):
         Returns:
             The message ID of the sent audio file.
         """
-        is_url, audio = _resolve_media_param(wa=self, media=audio, mime_type=mime_type, filename="audio.mp3")
+        is_url, audio = _resolve_media_param(
+            wa=self,
+            media=audio,
+            mime_type=mime_type,
+            filename="audio.mp3",
+        )
         return self.api.send_media(
             to=str(to),
             media_id_or_url=audio,
             is_url=is_url,
             media_type="audio",
-        )['messages'][0]['id']
+        )["messages"][0]["id"]
 
     def send_sticker(
-            self,
-            to: str | int,
-            sticker: str | bytes | BinaryIO,
-            mime_type: str | None = None,
+        self,
+        to: str | int,
+        sticker: str | bytes | BinaryIO,
+        mime_type: str | None = None,
     ) -> str:
         """
         Send a sticker to a WhatsApp user.
@@ -537,19 +580,24 @@ class WhatsApp(Webhook, HandlerDecorators):
         Returns:
             The message ID of the sent message.
         """
-        is_url, sticker = _resolve_media_param(wa=self, media=sticker, mime_type=mime_type, filename="sticker.webp")
+        is_url, sticker = _resolve_media_param(
+            wa=self,
+            media=sticker,
+            mime_type=mime_type,
+            filename="sticker.webp",
+        )
         return self.api.send_media(
             to=str(to),
             media_id_or_url=sticker,
             is_url=is_url,
             media_type="sticker",
-        )['messages'][0]['id']
+        )["messages"][0]["id"]
 
     def send_reaction(
-            self,
-            to: str | int,
-            emoji: str,
-            message_id: str,
+        self,
+        to: str | int,
+        emoji: str,
+        message_id: str,
     ) -> str:
         """
         React to a message with an emoji.
@@ -577,12 +625,14 @@ class WhatsApp(Webhook, HandlerDecorators):
             to=str(to),
             emoji=emoji,
             message_id=message_id,
-        )['messages'][0]['id']
+        )[
+            "messages"
+        ][0]["id"]
 
     def remove_reaction(
-            self,
-            to: str | int,
-            message_id: str,
+        self,
+        to: str | int,
+        message_id: str,
     ) -> str:
         """
         Remove a reaction from a message.
@@ -600,19 +650,17 @@ class WhatsApp(Webhook, HandlerDecorators):
             The message ID of the reaction (You can't use this message id to re-react or perform any other action on it.
             instead, use the message ID of the message you unreacted to).
         """
-        return self.api.send_reaction(
-            to=str(to),
-            emoji="",
-            message_id=message_id
-        )['messages'][0]['id']
+        return self.api.send_reaction(to=str(to), emoji="", message_id=message_id)[
+            "messages"
+        ][0]["id"]
 
     def send_location(
-            self,
-            to: str | int,
-            latitude: float,
-            longitude: float,
-            name: str | None = None,
-            address: str | None = None,
+        self,
+        to: str | int,
+        latitude: float,
+        longitude: float,
+        name: str | None = None,
+        address: str | None = None,
     ) -> str:
         """
         Send a location to a WhatsApp user.
@@ -644,13 +692,13 @@ class WhatsApp(Webhook, HandlerDecorators):
             longitude=longitude,
             name=name,
             address=address,
-        )['messages'][0]['id']
+        )["messages"][0]["id"]
 
     def send_contact(
-            self,
-            to: str | int,
-            contact: Contact | Iterable[Contact],
-            reply_to_message_id: str | None = None,
+        self,
+        to: str | int,
+        contact: Contact | Iterable[Contact],
+        reply_to_message_id: str | None = None,
     ) -> str:
         """
         Send a contact/s to a WhatsApp user.
@@ -679,17 +727,19 @@ class WhatsApp(Webhook, HandlerDecorators):
         """
         return self.api.send_contacts(
             to=str(to),
-            contacts=tuple(c.to_dict() for c in contact) if isinstance(contact, Iterable) else (contact.to_dict()),
+            contacts=tuple(c.to_dict() for c in contact)
+            if isinstance(contact, Iterable)
+            else (contact.to_dict()),
             reply_to_message_id=reply_to_message_id,
-        )['messages'][0]['id']
+        )["messages"][0]["id"]
 
     def send_catalog(
-            self,
-            to: str | int,
-            body: str,
-            footer: str | None = None,
-            thumbnail_product_sku: str | None = None,
-            reply_to_message_id: str | None = None,
+        self,
+        to: str | int,
+        body: str,
+        footer: str | None = None,
+        thumbnail_product_sku: str | None = None,
+        reply_to_message_id: str | None = None,
     ) -> str:
         """
         Send the business catalog to a WhatsApp user.
@@ -720,23 +770,29 @@ class WhatsApp(Webhook, HandlerDecorators):
             type_="catalog_message",
             action={
                 "name": "catalog_message",
-                **({"parameters": {
-                    "thumbnail_product_retailer_id": thumbnail_product_sku,
-                }} if thumbnail_product_sku else {}),
+                **(
+                    {
+                        "parameters": {
+                            "thumbnail_product_retailer_id": thumbnail_product_sku,
+                        }
+                    }
+                    if thumbnail_product_sku
+                    else {}
+                ),
             },
             body=body,
             footer=footer,
-            reply_to_message_id=reply_to_message_id
-        )['messages'][0]['id']
+            reply_to_message_id=reply_to_message_id,
+        )["messages"][0]["id"]
 
     def send_product(
-            self,
-            to: str | int,
-            catalog_id: str,
-            sku: str,
-            body: str | None = None,
-            footer: str | None = None,
-            reply_to_message_id: str | None = None,
+        self,
+        to: str | int,
+        catalog_id: str,
+        sku: str,
+        body: str | None = None,
+        footer: str | None = None,
+        reply_to_message_id: str | None = None,
     ) -> str:
         """
         Send a product from a business catalog to a WhatsApp user.
@@ -775,18 +831,18 @@ class WhatsApp(Webhook, HandlerDecorators):
             },
             body=body,
             footer=footer,
-            reply_to_message_id=reply_to_message_id
-        )['messages'][0]['id']
+            reply_to_message_id=reply_to_message_id,
+        )["messages"][0]["id"]
 
     def send_products(
-            self,
-            to: str | int,
-            catalog_id: str,
-            product_sections: Iterable[ProductsSection],
-            title: str,
-            body: str,
-            footer: str | None = None,
-            reply_to_message_id: str | None = None,
+        self,
+        to: str | int,
+        catalog_id: str,
+        product_sections: Iterable[ProductsSection],
+        title: str,
+        body: str,
+        footer: str | None = None,
+        reply_to_message_id: str | None = None,
     ) -> str:
         """
         Send products from a business catalog to a WhatsApp user.
@@ -838,12 +894,12 @@ class WhatsApp(Webhook, HandlerDecorators):
             header={"type": "text", "text": title},
             body=body,
             footer=footer,
-            reply_to_message_id=reply_to_message_id
-        )['messages'][0]['id']
+            reply_to_message_id=reply_to_message_id,
+        )["messages"][0]["id"]
 
     def mark_message_as_read(
-            self,
-            message_id: str,
+        self,
+        message_id: str,
     ) -> bool:
         """
         Mark a message as read.
@@ -860,13 +916,13 @@ class WhatsApp(Webhook, HandlerDecorators):
         Returns:
             Whether the message was marked as read.
         """
-        return self.api.mark_message_as_read(message_id=message_id)['success']
+        return self.api.mark_message_as_read(message_id=message_id)["success"]
 
     def upload_media(
-            self,
-            media: str | bytes | BinaryIO,
-            mime_type: str,
-            filename: str | None = None,
+        self,
+        media: str | bytes | BinaryIO,
+        mime_type: str,
+        filename: str | None = None,
     ) -> str:
         """
         Upload media to WhatsApp servers.
@@ -893,29 +949,32 @@ class WhatsApp(Webhook, HandlerDecorators):
         """
         if isinstance(media, str):
             if os.path.isfile(media):
-                file, filename, mime_type = \
-                    open(media, 'rb'), os.path.basename(media), (mimetypes.guess_type(media)[0] or mime_type)
+                file, filename, mime_type = (
+                    open(media, "rb"),
+                    os.path.basename(media),
+                    (mimetypes.guess_type(media)[0] or mime_type),
+                )
             elif media.startswith(("https://", "http://")):
                 res = requests.get(media)
                 res.raise_for_status()
-                file, filename, mime_type = \
-                    res.content, os.path.basename(media) or filename, (res.headers['Content-Type'] or mime_type)
+                file, filename, mime_type = (
+                    res.content,
+                    os.path.basename(media) or filename,
+                    (res.headers["Content-Type"] or mime_type),
+                )
             else:
-                raise ValueError(f'File not found or invalid URL: {media}')
+                raise ValueError(f"File not found or invalid URL: {media}")
         else:
             file = media
             if filename is None:
-                raise ValueError('filename is required if media is bytes')
+                raise ValueError("filename is required if media is bytes")
         return self.api.upload_media(
             filename=filename,
             media=file,
             mime_type=mime_type,
-        )['id']
+        )["id"]
 
-    def get_media_url(
-            self,
-            media_id: str
-    ) -> MediaUrlResponse:
+    def get_media_url(self, media_id: str) -> MediaUrlResponse:
         """
         Get the URL of a media.
             - The URL is valid for 5 minutes.
@@ -935,19 +994,19 @@ class WhatsApp(Webhook, HandlerDecorators):
         res = self.api.get_media_url(media_id=media_id)
         return MediaUrlResponse(
             _client=self,
-            id=res['id'],
-            url=res['url'],
-            mime_type=res['mime_type'],
-            sha256=res['sha256'],
-            file_size=res['file_size'],
+            id=res["id"],
+            url=res["url"],
+            mime_type=res["mime_type"],
+            sha256=res["sha256"],
+            file_size=res["file_size"],
         )
 
     def download_media(
-            self,
-            url: str,
-            path: str | None = None,
-            filename: str | None = None,
-            in_memory: bool = False,
+        self,
+        url: str,
+        path: str | None = None,
+        filename: str | None = None,
+        in_memory: bool = False,
     ) -> str | bytes:
         """
         Download a media file from WhatsApp servers.
@@ -976,7 +1035,11 @@ class WhatsApp(Webhook, HandlerDecorators):
         if path is None:
             path = os.getcwd()
         if filename is None:
-            filename = hashlib.sha256(url.encode()).hexdigest() + mimetypes.guess_extension(mimetype) or '.bin'
+            filename = (
+                hashlib.sha256(url.encode()).hexdigest()
+                + mimetypes.guess_extension(mimetype)
+                or ".bin"
+            )
         path = os.path.join(path, filename)
         with open(path, "wb") as f:
             f.write(content)
@@ -994,17 +1057,19 @@ class WhatsApp(Webhook, HandlerDecorators):
         Returns:
             The business profile.
         """
-        return BusinessProfile.from_dict(data=self.api.get_business_profile()['data'][0])
+        return BusinessProfile.from_dict(
+            data=self.api.get_business_profile()["data"][0]
+        )
 
     def update_business_profile(
-            self,
-            about: str | None = _MISSING,
-            address: str | None = _MISSING,
-            description: str | None = _MISSING,
-            email: str | None = _MISSING,
-            profile_picture_handle: str | None = _MISSING,
-            industry: Industry | None = _MISSING,
-            websites: Iterable[str] | None = _MISSING
+        self,
+        about: str | None = _MISSING,
+        address: str | None = _MISSING,
+        description: str | None = _MISSING,
+        email: str | None = _MISSING,
+        profile_picture_handle: str | None = _MISSING,
+        industry: Industry | None = _MISSING,
+        websites: Iterable[str] | None = _MISSING,
     ) -> bool:
         """
         Update the business profile of the WhatsApp Business account.
@@ -1043,17 +1108,19 @@ class WhatsApp(Webhook, HandlerDecorators):
             Whether the business profile was updated.
         """
         data = {
-            key: value or '' for key, value in {
-                'about': about,
-                'address': address,
-                'description': description,
-                'email': email,
-                'profile_picture_handle': profile_picture_handle,
-                'vertical': industry,
-                'websites': websites,
-            }.items() if value is not _MISSING
+            key: value or ""
+            for key, value in {
+                "about": about,
+                "address": address,
+                "description": description,
+                "email": email,
+                "profile_picture_handle": profile_picture_handle,
+                "vertical": industry,
+                "websites": websites,
+            }.items()
+            if value is not _MISSING
         }
-        return self.api.update_business_profile(data)['success']
+        return self.api.update_business_profile(data)["success"]
 
     def get_commerce_settings(self) -> CommerceSettings:
         """
@@ -1067,12 +1134,14 @@ class WhatsApp(Webhook, HandlerDecorators):
         Returns:
             The commerce settings.
         """
-        return CommerceSettings.from_dict(data=self.api.get_commerce_settings()['data'][0])
+        return CommerceSettings.from_dict(
+            data=self.api.get_commerce_settings()["data"][0]
+        )
 
     def update_commerce_settings(
-            self,
-            is_catalog_visible: bool = None,
-            is_cart_enabled: bool = None,
+        self,
+        is_catalog_visible: bool = None,
+        is_cart_enabled: bool = None,
     ) -> bool:
         """
         Update the commerce settings of the WhatsApp Business account.
@@ -1096,14 +1165,16 @@ class WhatsApp(Webhook, HandlerDecorators):
             ValueError: If no arguments are provided.
         """
         data = {
-            key: value for key, value in {
-                'is_cart_enabled': is_cart_enabled,
-                'is_catalog_visible': is_catalog_visible,
-            }.items() if value is not None
+            key: value
+            for key, value in {
+                "is_cart_enabled": is_cart_enabled,
+                "is_catalog_visible": is_catalog_visible,
+            }.items()
+            if value is not None
         }
         if not data:
-            raise ValueError('At least one argument must be provided')
-        return self.api.update_commerce_settings(data)['success']
+            raise ValueError("At least one argument must be provided")
+        return self.api.update_commerce_settings(data)["success"]
 
     def _validate_business_account_id_provided(self):
         """Internal method to validate that the business account ID was provided."""
@@ -1114,12 +1185,12 @@ class WhatsApp(Webhook, HandlerDecorators):
             )
 
     def create_template(
-            self,
-            template: NewTemplate,
-            placeholder: tuple[str, str] | None = None,
+        self,
+        template: NewTemplate,
+        placeholder: tuple[str, str] | None = None,
     ) -> TemplateResponse:
         """
-        `\`Create Templates\` on developers.facebook.com
+        `'Create Templates' on developers.facebook.com
         <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates>`_.
 
         - To send a template, use :py:func:`~pywa.client.WhatsApp.send_template`.
@@ -1188,16 +1259,18 @@ class WhatsApp(Webhook, HandlerDecorators):
             The template created response. containing the template ID, status and category.
         """
         self._validate_business_account_id_provided()
-        return TemplateResponse(**self.api.create_template(
-            business_account_id=self.business_account_id,
-            template=template.to_dict(placeholder=placeholder)
-        ))
+        return TemplateResponse(
+            **self.api.create_template(
+                business_account_id=self.business_account_id,
+                template=template.to_dict(placeholder=placeholder),
+            )
+        )
 
     def send_template(
-            self,
-            to: str | int,
-            template: Template,
-            reply_to_message_id: str | None = None,
+        self,
+        to: str | int,
+        template: Template,
+        reply_to_message_id: str | None = None,
     ) -> str:
         """
         Send a template to a WhatsApp user.
@@ -1257,24 +1330,35 @@ class WhatsApp(Webhook, HandlerDecorators):
                 pass
             case Template.Image:
                 is_url, template.header.image = _resolve_media_param(
-                    wa=self, media=template.header.image, mime_type="image/jpeg", filename="image.jpg"
+                    wa=self,
+                    media=template.header.image,
+                    mime_type="image/jpeg",
+                    filename="image.jpg",
                 )
             case Template.Document:
                 is_url, template.header.document = _resolve_media_param(
-                    wa=self, media=template.header.document, mime_type="text/plain", filename="file.pdf"
+                    wa=self,
+                    media=template.header.document,
+                    mime_type="text/plain",
+                    filename="file.pdf",
                 )
             case Template.Video:
                 is_url, template.header.video = _resolve_media_param(
-                    wa=self, media=template.header.video, mime_type="video/mp4", filename="video.mp4"
+                    wa=self,
+                    media=template.header.video,
+                    mime_type="video/mp4",
+                    filename="video.mp4",
                 )
         return self.api.send_template(
             to=str(to),
             template=template.to_dict(is_header_url=is_url),
             reply_to_message_id=reply_to_message_id,
-        )['messages'][0]['id']
+        )["messages"][0]["id"]
 
 
-def _resolve_keyboard_param(keyboard: Iterable[Button] | ButtonUrl | SectionList) -> tuple[str, dict]:
+def _resolve_keyboard_param(
+    keyboard: Iterable[Button] | ButtonUrl | SectionList,
+) -> tuple[str, dict]:
     """
     Resolve keyboard parameters to a type and an action dict.
     """
@@ -1287,10 +1371,10 @@ def _resolve_keyboard_param(keyboard: Iterable[Button] | ButtonUrl | SectionList
 
 
 def _resolve_media_param(
-        wa: WhatsApp,
-        media: str | bytes | BinaryIO,
-        mime_type: str | None,
-        filename: str | None,
+    wa: WhatsApp,
+    media: str | bytes | BinaryIO,
+    mime_type: str | None,
+    filename: str | None,
 ) -> tuple[bool, str]:
     """
     Internal method to resolve media parameters. Returns a tuple of (is_url, media_id_or_url).
@@ -1302,15 +1386,27 @@ def _resolve_media_param(
             return False, media  # assume it's a media ID
         else:  # assume it's a file path
             if not (mt := mimetypes.guess_type(media)[0] or mime_type):
-                raise ValueError(f"Could not determine the mime type of the file {media!r}. Please provide a mime type.")
+                raise ValueError(
+                    f"Could not determine the mime type of the file {media!r}. Please provide a mime type."
+                )
             return False, wa.upload_media(
                 media=media,
                 mime_type=mt,
-                filename=filename or os.path.basename(media)
+                filename=filename or os.path.basename(media),
             )
     else:
         if not mime_type or not filename:
             msg = "When sending media as bytes or a file object a {} must be provided."
-            raise ValueError(msg.format("mime_type and filename" if not mime_type and not filename else
-                                        ("mime_type" if not mime_type else "filename")))
-        return False, wa.api.upload_media(media=media, mime_type=mime_type, filename=filename)['id']
+            raise ValueError(
+                msg.format(
+                    "mime_type and filename"
+                    if not mime_type and not filename
+                    else ("mime_type" if not mime_type else "filename")
+                )
+            )
+        return (
+            False,
+            wa.api.upload_media(media=media, mime_type=mime_type, filename=filename)[
+                "id"
+            ],
+        )

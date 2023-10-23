@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, fields
 from enum import Enum
 from importlib import import_module
-from typing import Protocol, Any, Callable
+from typing import Any, Callable, Protocol
 
 
 def is_fastapi_app(app):
@@ -38,10 +38,9 @@ class FromDict:
     @classmethod
     def from_dict(cls, data: dict, **kwargs):
         data.update(kwargs)
-        return cls(**{
-            k: v for k, v in data.items()
-            if k in (f.name for f in fields(cls))
-        })
+        return cls(
+            **{k: v for k, v in data.items() if k in (f.name for f in fields(cls))}
+        )
 
 
 class FastAPI(Protocol):
@@ -55,4 +54,3 @@ class FastAPI(Protocol):
 class Flask(Protocol):
     def route(self, rule: str, **options: Any) -> Callable:
         ...
-

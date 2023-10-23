@@ -9,4 +9,3 @@ Message Status Filters
 .. autoattribute:: message_status.read
 .. autoattribute:: message_status.failed
 .. automethod:: message_status.failed_with
-

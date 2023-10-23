@@ -2,45 +2,106 @@ from __future__ import annotations
 
 """This module contains the base types for all update types."""
 
+__all__ = [
+    "StopHandling",
+]
+
 import abc
 import dataclasses
 import datetime as dt
-from typing import Iterable, TYPE_CHECKING, BinaryIO
-from .others import Metadata, User, Contact, ProductsSection
+from typing import TYPE_CHECKING, BinaryIO, Iterable
+
+from .others import Contact, Metadata, ProductsSection, User
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
-    from .callback import Button, SectionList, ButtonUrl
+
+    from .callback import Button, ButtonUrl, SectionList
     from .template import Template
+
+
+class StopHandling(Exception):
+    """
+    Raise this exception to stop handling an update.
+
+    You can call ``.stop_handling()`` on every update object to raise this exception.
+
+    Example:
+
+            >>> from pywa import WhatsApp
+            >>> from pywa.types import Message
+            >>> wa = WhatsApp(...)
+
+            >>> @wa.on_message()
+            ... def handler(_: WhatsApp, msg: Message):
+            ...     msg.reply_text("Hello from PyWa!")
+            ...     msg.stop_handling()  # or raise StopHandling
+
+            >>> @wa.on_message()
+            ... def not_called(_: WhatsApp, msg: Message):
+            ...     msg.reply_text("This message will not be sent")
+    """
+
+    pass
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class BaseUpdate(abc.ABC):
     """Base class for all update types."""
+
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
 
     @property
     @abc.abstractmethod
-    def id(self) -> str: ...
+    def id(self) -> str:
+        ...
 
     @property
     @abc.abstractmethod
-    def timestamp(self) -> dt.datetime: ...
+    def timestamp(self) -> dt.datetime:
+        ...
 
     @abc.abstractmethod
-    def from_update(self, client: WhatsApp, update: dict) -> BaseUpdate: ...
+    def from_update(self, client: WhatsApp, update: dict) -> BaseUpdate:
+        ...
+
+    def stop_handling(self) -> None:
+        """
+        Call this method to break out of the handler loop. other handlers will not be called.
+
+        This method just raises :class:`StopHandling` which is caught by the handler loop and breaks out of it.
+
+        Example:
+
+            >>> from pywa import WhatsApp
+            >>> from pywa.types import Message
+            >>> wa = WhatsApp(...)
+
+            >>> @wa.on_message()
+            ... def handler(_: WhatsApp, msg: Message):
+            ...     msg.reply_text("Hello from PyWa!")
+            ...     msg.stop_handling()
+
+            >>> @wa.on_message()
+            ... def not_called(_: WhatsApp, msg: Message):
+            ...     msg.reply_text("This message will not be sent")
+        """
+        raise StopHandling
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class BaseUserUpdate(BaseUpdate, abc.ABC):
     """Base class for all user-related update types (message, callback, etc.)."""
-    @property
-    @abc.abstractmethod
-    def metadata(self) -> Metadata: ...
 
     @property
     @abc.abstractmethod
-    def from_user(self) -> User: ...
+    def metadata(self) -> Metadata:
+        ...
+
+    @property
+    @abc.abstractmethod
+    def from_user(self) -> User:
+        ...
 
     @property
     def sender(self) -> str:
@@ -61,13 +122,13 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         return self.id
 
     def reply_text(
-            self,
-            text: str,
-            header: str | None = None,
-            footer: str | None = None,
-            keyboard: Iterable[Button] | ButtonUrl | SectionList | None = None,
-            quote: bool = False,
-            preview_url: bool = False,
+        self,
+        text: str,
+        header: str | None = None,
+        footer: str | None = None,
+        keyboard: Iterable[Button] | ButtonUrl | SectionList | None = None,
+        quote: bool = False,
+        preview_url: bool = False,
     ) -> str:
         """
         Reply to the message with text.
@@ -156,17 +217,18 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             reply_to_message_id=self.message_id_to_reply if quote else None,
             preview_url=preview_url,
         )
+
     reply = reply_text  # alias
 
     def reply_image(
-            self,
-            image: str | bytes | BinaryIO,
-            caption: str | None = None,
-            body: str | None = None,
-            footer: str | None = None,
-            buttons: Iterable[Button] | ButtonUrl | None = None,
-            quote: bool = False,
-            mime_type: str | None = None,
+        self,
+        image: str | bytes | BinaryIO,
+        caption: str | None = None,
+        body: str | None = None,
+        footer: str | None = None,
+        buttons: Iterable[Button] | ButtonUrl | None = None,
+        quote: bool = False,
+        mime_type: str | None = None,
     ) -> str:
         """
         Reply to the message with an image.
@@ -204,18 +266,18 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             footer=footer,
             buttons=buttons,
             reply_to_message_id=self.message_id_to_reply if quote else None,
-            mime_type=mime_type
+            mime_type=mime_type,
         )
 
     def reply_video(
-            self,
-            video: str | bytes | BinaryIO,
-            caption: str | None = None,
-            body: str | None = None,
-            footer: str | None = None,
-            buttons: Iterable[Button] | ButtonUrl | None = None,
-            quote: bool = False,
-            mime_type: str | None = None,
+        self,
+        video: str | bytes | BinaryIO,
+        caption: str | None = None,
+        body: str | None = None,
+        footer: str | None = None,
+        buttons: Iterable[Button] | ButtonUrl | None = None,
+        quote: bool = False,
+        mime_type: str | None = None,
     ) -> str:
         """
         Reply to the message with a video.
@@ -254,19 +316,19 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             buttons=buttons,
             body=body,
             footer=footer,
-            mime_type=mime_type
+            mime_type=mime_type,
         )
 
     def reply_document(
-            self,
-            document: str | bytes | BinaryIO,
-            filename: str | None = None,
-            caption: str | None = None,
-            body: str | None = None,
-            footer: str | None = None,
-            buttons: Iterable[Button] | ButtonUrl | None = None,
-            quote: bool = False,
-            mime_type: str | None = None,
+        self,
+        document: str | bytes | BinaryIO,
+        filename: str | None = None,
+        caption: str | None = None,
+        body: str | None = None,
+        footer: str | None = None,
+        buttons: Iterable[Button] | ButtonUrl | None = None,
+        quote: bool = False,
+        mime_type: str | None = None,
     ) -> str:
         """
         Reply to the message with a document.
@@ -308,13 +370,13 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             buttons=buttons,
             body=body,
             footer=footer,
-            mime_type=mime_type
+            mime_type=mime_type,
         )
 
     def reply_audio(
-            self,
-            audio: str | bytes | BinaryIO,
-            mime_type: str | None = None,
+        self,
+        audio: str | bytes | BinaryIO,
+        mime_type: str | None = None,
     ) -> str:
         """
         Reply to the message with an audio.
@@ -341,9 +403,9 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         )
 
     def reply_sticker(
-            self,
-            sticker: str | bytes | BinaryIO,
-            mime_type: str | None = None,
+        self,
+        sticker: str | bytes | BinaryIO,
+        mime_type: str | None = None,
     ) -> str:
         """
         Reply to the message with a sticker.
@@ -372,11 +434,11 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         )
 
     def reply_location(
-            self,
-            latitude: float,
-            longitude: float,
-            name: str | None = None,
-            address: str | None = None,
+        self,
+        latitude: float,
+        longitude: float,
+        name: str | None = None,
+        address: str | None = None,
     ) -> str:
         """
         Reply to the message with a location.
@@ -406,13 +468,13 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             latitude=latitude,
             longitude=longitude,
             name=name,
-            address=address
+            address=address,
         )
 
     def reply_contact(
-            self,
-            contact: Contact | Iterable[Contact],
-            quote: bool = False,
+        self,
+        contact: Contact | Iterable[Contact],
+        quote: bool = False,
     ) -> str:
         """
         Reply to the message with a contact/s.
@@ -442,7 +504,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         return self._client.send_contact(
             to=self.sender,
             contact=contact,
-            reply_to_message_id=self.message_id_to_reply if quote else None
+            reply_to_message_id=self.message_id_to_reply if quote else None,
         )
 
     def react(self, emoji: str) -> str:
@@ -463,7 +525,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         return self._client.send_reaction(
             to=self.sender,
             emoji=emoji,
-            message_id=self.message_id_to_reply
+            message_id=self.message_id_to_reply,
         )
 
     def unreact(self) -> str:
@@ -479,16 +541,15 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             The ID of the sent unreaction.
         """
         return self._client.remove_reaction(
-            to=self.sender,
-            message_id=self.message_id_to_reply
+            to=self.sender, message_id=self.message_id_to_reply
         )
 
     def reply_catalog(
-            self,
-            body: str,
-            footer: str | None = None,
-            thumbnail_product_sku: str | None = None,
-            quote: bool = False,
+        self,
+        body: str,
+        footer: str | None = None,
+        thumbnail_product_sku: str | None = None,
+        quote: bool = False,
     ) -> str:
         """
         Reply to the message with a catalog.
@@ -517,16 +578,16 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             body=body,
             footer=footer,
             thumbnail_product_sku=thumbnail_product_sku,
-            reply_to_message_id=self.message_id_to_reply if quote else None
+            reply_to_message_id=self.message_id_to_reply if quote else None,
         )
 
     def reply_product(
-            self,
-            catalog_id: str,
-            sku: str,
-            body: str | None = None,
-            footer: str | None = None,
-            quote: bool = False,
+        self,
+        catalog_id: str,
+        sku: str,
+        body: str | None = None,
+        footer: str | None = None,
+        quote: bool = False,
     ) -> str:
         """
         Reply to the message with a product.
@@ -551,17 +612,17 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             sku=sku,
             body=body,
             footer=footer,
-            reply_to_message_id=self.message_id_to_reply if quote else None
+            reply_to_message_id=self.message_id_to_reply if quote else None,
         )
 
     def reply_products(
-            self,
-            catalog_id: str,
-            product_sections: Iterable[ProductsSection],
-            title: str,
-            body: str,
-            footer: str | None = None,
-            quote: bool = False,
+        self,
+        catalog_id: str,
+        product_sections: Iterable[ProductsSection],
+        title: str,
+        body: str,
+        footer: str | None = None,
+        quote: bool = False,
     ) -> str:
         """
         Reply to the message with a product.
@@ -609,13 +670,13 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             title=title,
             body=body,
             footer=footer,
-            reply_to_message_id=self.message_id_to_reply if quote else None
+            reply_to_message_id=self.message_id_to_reply if quote else None,
         )
 
     def reply_template(
-            self,
-            template: Template,
-            quote: bool = False,
+        self,
+        template: Template,
+        quote: bool = False,
     ) -> str:
         """
         Reply to the message with a template.
@@ -668,14 +729,12 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
 
         """
         return self._client.send_template(
-               to=self.sender,
-               template=template,
-               reply_to_message_id=quote if quote else None
-           )
+            to=self.sender,
+            template=template,
+            reply_to_message_id=quote if quote else None,
+        )
 
-    def mark_as_read(
-            self
-    ) -> bool:
+    def mark_as_read(self) -> bool:
         """
         Mark the message as read.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.mark_message_as_read` with ``message_id``.
@@ -683,6 +742,4 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         Returns:
             Whether it was successful.
         """
-        return self._client.mark_message_as_read(
-            message_id=self.message_id_to_reply
-        )
+        return self._client.mark_message_as_read(message_id=self.message_id_to_reply)

@@ -13,26 +13,34 @@ __all__ = [
     "TemplateStatusHandler",
 ]
 
-import dataclasses
 import abc
+import dataclasses
 import functools
-from typing import Callable, Any, TYPE_CHECKING, cast, TypeVar
-from pywa.types import Message, CallbackButton, CallbackSelection, MessageStatus, TemplateStatus
-from pywa.types.base_update import BaseUpdate
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast
+
+from pywa.types import (
+    CallbackButton,
+    CallbackSelection,
+    Message,
+    MessageStatus,
+    TemplateStatus,
+)
 from pywa.types.callback import CallbackData
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
+    from pywa.types.base_update import BaseUpdate
+
 
 CallbackDataFactoryT = TypeVar(
-    'CallbackDataFactoryT',
+    "CallbackDataFactoryT",
     bound=(
-            type[str] |
-            type[CallbackData] |
-            tuple[type[CallbackData | Any], ...] |
-            list[type[CallbackData | Any], ...] |
-            Callable[[str], Any]
-    )
+        type[str]
+        | type[CallbackData]
+        | tuple[type[CallbackData | Any], ...]
+        | list[type[CallbackData | Any], ...]
+        | Callable[[str], Any]
+    ),
 )
 """Type hint for the callback data factory."""
 
@@ -46,36 +54,63 @@ def _safe_issubclass(obj: type, base: type) -> bool:
 
 
 def _resolve_callback_data_factory(
-        factory: CallbackDataFactoryT
+    factory: CallbackDataFactoryT,
 ) -> tuple[CallbackDataFactoryT, Callable[[WhatsApp, Any], bool] | None]:
     """Internal function to resolve the callback data factory into a constractor and a filter."""
     clb_filter = None
-    if isinstance(factory, (tuple, list)):  # The factory is a tuple|list of CallbackData subclasses or functions
+    if isinstance(
+        factory, (tuple, list)
+    ):  # The factory is a tuple|list of CallbackData subclasses or functions
         constractor = lambda data: (  # noqa
             factory.__class__(
-                map(lambda fs: (fs[0].from_str if issubclass(fs[0], CallbackData) else fs[0])(fs[1]),  # noqa
-                    zip(factory, data.split(CallbackData.__callback_sep__))))
+                map(
+                    lambda fs: (
+                        fs[0].from_str if issubclass(fs[0], CallbackData) else fs[0]
+                    )(fs[1]),
+                    zip(
+                        factory,
+                        data.split(CallbackData.__callback_sep__),
+                    ),
+                )
+            )
         )
-        if any((callback_datas := tuple(bool(issubclass(f, CallbackData)) for f in factory))):
+        if any(
+            (
+                callback_datas := tuple(
+                    bool(issubclass(f, CallbackData)) for f in factory
+                )
+            )
+        ):
 
-            def clb_filter(_: WhatsApp, btn_or_sel: CallbackButton | CallbackSelection) -> bool:
+            def clb_filter(
+                _: WhatsApp,
+                btn_or_sel: CallbackButton | CallbackSelection,
+            ) -> bool:
                 datas = btn_or_sel.data.split(CallbackData.__callback_sep__)
                 if len(datas) != len(factory):
                     return False
                 return all(
                     datas[i].startswith(
-                        str(cast(CallbackData, factory[i]).__callback_id__) +
-                        cast(CallbackData, factory[i]).__callback_data_sep__
+                        str(cast(CallbackData, factory[i]).__callback_id__)
+                        + cast(CallbackData, factory[i]).__callback_data_sep__
                     )
-                    for i, b in enumerate(callback_datas) if b
+                    for i, b in enumerate(callback_datas)
+                    if b
                 )
 
-    elif _safe_issubclass(factory, CallbackData):  # The factory is a single CallbackData subclass
+    elif _safe_issubclass(
+        factory, CallbackData
+    ):  # The factory is a single CallbackData subclass
         constractor = factory.from_str
 
-        def clb_filter(_: WhatsApp, btn_or_sel: CallbackButton | CallbackSelection) -> bool:
-            return len(btn_or_sel.data.split(CallbackData.__callback_sep__)) == 1 and \
-                btn_or_sel.data.startswith(str(factory.__callback_id__) + factory.__callback_data_sep__)
+        def clb_filter(
+            _: WhatsApp, btn_or_sel: CallbackButton | CallbackSelection
+        ) -> bool:
+            return len(
+                btn_or_sel.data.split(CallbackData.__callback_sep__)
+            ) == 1 and btn_or_sel.data.startswith(
+                str(factory.__callback_id__) + factory.__callback_data_sep__
+            )
 
     else:  # The factory is a function or custom type
         constractor = factory
@@ -86,28 +121,47 @@ def _resolve_callback_data_factory(
 def _call_callback_handler(
     handler: CallbackButtonHandler | CallbackSelectionHandler,
     wa: WhatsApp,
-    clb_or_sel: CallbackButton | CallbackSelection
+    clb_or_sel: CallbackButton | CallbackSelection,
 ):
     """Internal function to call a callback handler."""
     if handler.factory_before_filters and handler.factory_filter is not None:
         if handler.factory_filter(wa, clb_or_sel):
-            clb_or_sel = dataclasses.replace(clb_or_sel, data=handler.factory(clb_or_sel.data))
+            clb_or_sel = dataclasses.replace(
+                clb_or_sel, data=handler.factory(clb_or_sel.data)
+            )
         else:
             return
     try:
-        pass_filters = all((f(wa, clb_or_sel) for f in (
-            *((handler.factory_filter,) if not handler.factory_before_filters
-                and handler.factory_filter is not None else tuple()),
-            *handler.filters
-        )))
+        pass_filters = all(
+            (
+                f(wa, clb_or_sel)
+                for f in (
+                    *(
+                        (handler.factory_filter,)
+                        if not handler.factory_before_filters
+                        and handler.factory_filter is not None
+                        else tuple()
+                    ),
+                    *handler.filters,
+                )
+            )
+        )
     except AttributeError as e:
-        if not handler.factory_before_filters and isinstance(e.obj, str) and handler.factory is not str:
-            raise TypeError("It seems like your filters tried to access a field of the callback data before the factory"
-                            " was applied. Please set `factory_before_filters=True` in the handler constructor.") from e
+        if (
+            not handler.factory_before_filters
+            and isinstance(e.obj, str)
+            and handler.factory is not str
+        ):
+            raise TypeError(
+                "It seems like your filters tried to access a field of the callback data before the factory"
+                " was applied. Please set `factory_before_filters=True` in the handler constructor."
+            ) from e
         raise
     if pass_filters:
         if not handler.factory_before_filters and handler.factory is not str:
-            clb_or_sel = dataclasses.replace(clb_or_sel, data=handler.factory(clb_or_sel.data))
+            clb_or_sel = dataclasses.replace(
+                clb_or_sel, data=handler.factory(clb_or_sel.data)
+            )
         handler.handler(wa, clb_or_sel)
 
 
@@ -124,13 +178,15 @@ class Handler(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def __update_constructor__(self) -> Callable[[WhatsApp, dict], BaseUpdate]:
+    def __update_constructor__(
+        self,
+    ) -> Callable[[WhatsApp, dict], BaseUpdate]:
         """The constructor to use to construct the update object from the webhook update dict."""
 
     def __init__(
-            self,
-            handler: Callable[[WhatsApp, Any], Any],
-            *filters: Callable[[WhatsApp, Any], bool]
+        self,
+        handler: Callable[[WhatsApp, Any], Any],
+        *filters: Callable[[WhatsApp, Any], bool],
     ):
         """
         Initialize a new handler.
@@ -155,7 +211,11 @@ class Handler(abc.ABC):
         **IMPORTANT:** This function is cached, so if you subclass `Handler` after calling this function, the new class
         will not be included in the returned dict.
         """
-        return {h.__field_name__: h for h in Handler.__subclasses__() if h.__field_name__ is not None}
+        return {
+            h.__field_name__: h
+            for h in Handler.__subclasses__()
+            if h.__field_name__ is not None
+        }
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}(handler={self.handler!r}, filters={self.filters!r})"
@@ -183,13 +243,14 @@ class MessageHandler(Handler):
         *filters: The filters to apply to the handler (gets a :class:`pywa.WhatsApp` instance and a
          :class:`pywa.types.Message` and returns a :class:`bool`)
     """
-    __field_name__ = 'messages'
+
+    __field_name__ = "messages"
     __update_constructor__ = Message.from_update
 
     def __init__(
         self,
         handler: Callable[[WhatsApp, Message], Any],
-        *filters: Callable[[WhatsApp, Message], bool]
+        *filters: Callable[[WhatsApp, Message], bool],
     ):
         super().__init__(handler, *filters)
 
@@ -216,7 +277,8 @@ class CallbackButtonHandler(Handler):
         factory_before_filters: Whether to apply the factory before the filters (default: ``False``. If ``True``, the
          filters will get the callback data after the factory is applied).
     """
-    __field_name__ = 'messages'
+
+    __field_name__ = "messages"
     __update_constructor__ = CallbackButton.from_update
 
     def __init__(
@@ -224,9 +286,12 @@ class CallbackButtonHandler(Handler):
         handler: Callable[[WhatsApp, CallbackButton], Any],
         *filters: Callable[[WhatsApp, CallbackButton], bool],
         factory: CallbackDataFactoryT = str,
-        factory_before_filters: bool = False
+        factory_before_filters: bool = False,
     ):
-        self.factory, self.factory_filter = _resolve_callback_data_factory(factory)
+        (
+            self.factory,
+            self.factory_filter,
+        ) = _resolve_callback_data_factory(factory)
         self.factory_before_filters = factory_before_filters
         super().__init__(handler, *filters)
 
@@ -260,7 +325,8 @@ class CallbackSelectionHandler(Handler):
         factory_before_filters: Whether to apply the factory before the filters (default: ``False``. If ``True``, the
          filters will get the callback data after the factory is applied).
     """
-    __field_name__ = 'messages'
+
+    __field_name__ = "messages"
     __update_constructor__ = CallbackSelection.from_update
 
     def __init__(
@@ -268,9 +334,12 @@ class CallbackSelectionHandler(Handler):
         handler: Callable[[WhatsApp, CallbackSelection], Any],
         *filters: Callable[[WhatsApp, CallbackSelection], bool],
         factory: CallbackDataFactoryT = str,
-        factory_before_filters: bool = False
+        factory_before_filters: bool = False,
     ):
-        self.factory, self.factory_filter = _resolve_callback_data_factory(factory)
+        (
+            self.factory,
+            self.factory_filter,
+        ) = _resolve_callback_data_factory(factory)
         self.factory_before_filters = factory_before_filters
         super().__init__(handler, *filters)
 
@@ -302,13 +371,14 @@ class MessageStatusHandler(Handler):
         *filters: The filters to apply to the handler (gets a :class:`pywa.WhatsApp` instance and a
             :class:`pywa.types.MessageStatus` and returns a :class:`bool`)
     """
-    __field_name__ = 'messages'
+
+    __field_name__ = "messages"
     __update_constructor__ = MessageStatus.from_update
 
     def __init__(
         self,
         handler: Callable[[WhatsApp, MessageStatus], Any],
-        *filters: Callable[[WhatsApp, MessageStatus], bool]
+        *filters: Callable[[WhatsApp, MessageStatus], bool],
     ):
         super().__init__(handler, *filters)
 
@@ -336,13 +406,14 @@ class TemplateStatusHandler(Handler):
         *filters: The filters to apply to the handler (gets a :class:`pywa.WhatsApp` instance and a
             :class:`pywa.types.TemplateStatus` and returns a :class:`bool`)
     """
-    __field_name__ = 'message_template_status_update'
+
+    __field_name__ = "message_template_status_update"
     __update_constructor__ = TemplateStatus.from_update
 
     def __init__(
         self,
         handler: Callable[[WhatsApp, TemplateStatus], Any],
-        *filters: Callable[[WhatsApp, TemplateStatus], bool]
+        *filters: Callable[[WhatsApp, TemplateStatus], bool],
     ):
         super().__init__(handler, *filters)
 
@@ -366,13 +437,14 @@ class RawUpdateHandler(Handler):
         *filters: The filters to apply to the handler (gets a :class:`pywa.WhatsApp` instance and a :class:`dict` and
             returns a :class:`bool`)
     """
+
     __field_name__ = None
     __update_constructor__ = lambda _, data: data  # noqa
 
     def __init__(
         self,
         handler: Callable[[WhatsApp, dict], Any],
-        *filters: Callable[[WhatsApp, dict], bool]
+        *filters: Callable[[WhatsApp, dict], bool],
     ):
         super().__init__(handler, *filters)
 
@@ -384,8 +456,8 @@ class HandlerDecorators:
         raise TypeError("This class cannot be instantiated.")
 
     def on_raw_update(
-            self: WhatsApp, *filters: Callable[[WhatsApp, dict], bool]
-    ) -> Callable[[Callable[[WhatsApp, dict], Any]], Callable[[WhatsApp, dict], Any]]:
+        self: WhatsApp, *filters: Callable[[WhatsApp, dict], bool]
+    ) -> Callable[[Callable[[WhatsApp, dict], Any]], Callable[[WhatsApp, dict], Any],]:
         """
         Decorator to register a function as a handler for raw updates (:class:`dict`).
 
@@ -403,15 +475,22 @@ class HandlerDecorators:
             *filters: Filters to apply to the incoming updates (filters are function that take a :class:`pywa.WhatsApp`
              instance and the incoming update :class:`dict` and return a :class:`bool` if the update should be handled).
         """
+
         @functools.wraps(self.on_raw_update)
-        def decorator(func: Callable[[WhatsApp, dict], Any]) -> Callable[[WhatsApp, dict], Any]:
+        def decorator(
+            func: Callable[[WhatsApp, dict], Any]
+        ) -> Callable[[WhatsApp, dict], Any]:
             self.add_handlers(RawUpdateHandler(func, *filters))
             return func
+
         return decorator
 
     def on_message(
-            self: WhatsApp, *filters: Callable[[WhatsApp, Message], bool]
-    ) -> Callable[[Callable[[WhatsApp, Message], Any]], Callable[[WhatsApp, Message], Any]]:
+        self: WhatsApp, *filters: Callable[[WhatsApp, Message], bool]
+    ) -> Callable[
+        [Callable[[WhatsApp, Message], Any]],
+        Callable[[WhatsApp, Message], Any],
+    ]:
         """
         Decorator to register a function as a handler for incoming :class:`pywa.types.Message` (User sends a message).
 
@@ -431,18 +510,25 @@ class HandlerDecorators:
             *filters: Filters to apply to the incoming messages (filters are function that take a :class:`pywa.WhatsApp`
              instance and the incoming :class:`pywa.types.Message` and return a boolean).
         """
+
         @functools.wraps(self.on_message)
-        def decorator(func: Callable[[WhatsApp, Message], Any]) -> Callable[[WhatsApp, Message], Any]:
+        def decorator(
+            func: Callable[[WhatsApp, Message], Any]
+        ) -> Callable[[WhatsApp, Message], Any]:
             self.add_handlers(MessageHandler(func, *filters))
             return func
+
         return decorator
 
     def on_callback_button(
-            self: WhatsApp,
-            *filters: Callable[[WhatsApp, CallbackButton], bool],
-            factory: CallbackDataFactoryT = str,
-            factory_before_filters: bool = False
-    ) -> Callable[[Callable[[WhatsApp, CallbackButton], Any]], Callable[[WhatsApp, CallbackButton], Any]]:
+        self: WhatsApp,
+        *filters: Callable[[WhatsApp, CallbackButton], bool],
+        factory: CallbackDataFactoryT = str,
+        factory_before_filters: bool = False,
+    ) -> Callable[
+        [Callable[[WhatsApp, CallbackButton], Any]],
+        Callable[[WhatsApp, CallbackButton], Any],
+    ]:
         """
         Decorator to register a function as a handler when a user clicks on a :class:`pywa.types.Button`.
 
@@ -465,22 +551,32 @@ class HandlerDecorators:
             factory_before_filters: Whether to apply the factory before the filters (default: ``False``. If ``True``, the
              filters will get the callback data after the factory is applied).
         """
+
         @functools.wraps(self.on_callback_button)
-        def decorator(func: Callable[[WhatsApp, CallbackButton], Any]) -> Callable[[WhatsApp, CallbackButton], Any]:
+        def decorator(
+            func: Callable[[WhatsApp, CallbackButton], Any]
+        ) -> Callable[[WhatsApp, CallbackButton], Any]:
             self.add_handlers(
                 CallbackButtonHandler(
-                    func, *filters, factory=factory, factory_before_filters=factory_before_filters
+                    func,
+                    *filters,
+                    factory=factory,
+                    factory_before_filters=factory_before_filters,
                 )
             )
             return func
+
         return decorator
 
     def on_callback_selection(
-            self: WhatsApp,
-            *filters: Callable[[WhatsApp, CallbackSelection], bool],
-            factory: CallbackDataFactoryT = str,
-            factory_before_filters: bool = False
-    ) -> Callable[[Callable[[WhatsApp, CallbackSelection], Any]], Callable[[WhatsApp, CallbackSelection], Any]]:
+        self: WhatsApp,
+        *filters: Callable[[WhatsApp, CallbackSelection], bool],
+        factory: CallbackDataFactoryT = str,
+        factory_before_filters: bool = False,
+    ) -> Callable[
+        [Callable[[WhatsApp, CallbackSelection], Any]],
+        Callable[[WhatsApp, CallbackSelection], Any],
+    ]:
         """
         Decorator to register a function as a handler when a user selects an option from a :class:`pywa.types.SectionList`.
 
@@ -503,21 +599,30 @@ class HandlerDecorators:
             factory_before_filters: Whether to apply the factory before the filters (default: ``False``. If ``True``, the
              filters will get the callback data after the factory is applied).
         """
+
         @functools.wraps(self.on_callback_selection)
         def decorator(
-                func: Callable[[WhatsApp, CallbackSelection], Any]
+            func: Callable[[WhatsApp, CallbackSelection], Any]
         ) -> Callable[[WhatsApp, CallbackSelection], Any]:
             self.add_handlers(
                 CallbackSelectionHandler(
-                    func, *filters, factory=factory, factory_before_filters=factory_before_filters
+                    func,
+                    *filters,
+                    factory=factory,
+                    factory_before_filters=factory_before_filters,
                 )
             )
             return func
+
         return decorator
 
     def on_message_status(
-            self: WhatsApp, *filters: Callable[[WhatsApp, MessageStatus], bool]
-    ) -> Callable[[Callable[[WhatsApp, MessageStatus], Any]], Callable[[WhatsApp, MessageStatus], Any]]:
+        self: WhatsApp,
+        *filters: Callable[[WhatsApp, MessageStatus], bool],
+    ) -> Callable[
+        [Callable[[WhatsApp, MessageStatus], Any]],
+        Callable[[WhatsApp, MessageStatus], Any],
+    ]:
         """
         Decorator to register a function as a handler for incoming message status changes (Message is sent, delivered,
         read, failed, etc...).
@@ -540,16 +645,23 @@ class HandlerDecorators:
             *filters: Filters to apply to the incoming message status changes (filters are function that take a
              :class:`pywa.WhatsApp` instance and the incoming :class:`pywa.types.MessageStatus` and return :class:`bool`).
         """
+
         @functools.wraps(self.on_message_status)
-        def decorator(func: Callable[[WhatsApp, MessageStatus], Any]) -> Callable[[WhatsApp, MessageStatus], Any]:
+        def decorator(
+            func: Callable[[WhatsApp, MessageStatus], Any]
+        ) -> Callable[[WhatsApp, MessageStatus], Any]:
             self.add_handlers(MessageStatusHandler(func, *filters))
             return func
 
         return decorator
 
     def on_template_status(
-            self: WhatsApp, *filters: Callable[[WhatsApp, TemplateStatus], bool]
-    ) -> Callable[[Callable[[WhatsApp, TemplateStatus], Any]], Callable[[WhatsApp, TemplateStatus], Any]]:
+        self: WhatsApp,
+        *filters: Callable[[WhatsApp, TemplateStatus], bool],
+    ) -> Callable[
+        [Callable[[WhatsApp, TemplateStatus], Any]],
+        Callable[[WhatsApp, TemplateStatus], Any],
+    ]:
         """
         Decorator to register a function as a handler for :class:`pywa.types.TemplateStatus` updates (Template message
         is approved, rejected etc...).
@@ -569,8 +681,12 @@ class HandlerDecorators:
             *filters: Filters to apply to the incoming template status changes (filters are function that take a
                 :class:`pywa.WhatsApp` instance and the incoming :class:`pywa.types.TemplateStatus` and return :class:`bool`).
         """
+
         @functools.wraps(self.on_template_status)
-        def decorator(func: Callable[[WhatsApp, TemplateStatus], Any]) -> Callable[[WhatsApp, TemplateStatus], Any]:
+        def decorator(
+            func: Callable[[WhatsApp, TemplateStatus], Any]
+        ) -> Callable[[WhatsApp, TemplateStatus], Any]:
             self.add_handlers(TemplateStatusHandler(func, *filters))
             return func
+
         return decorator

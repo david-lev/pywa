@@ -1,27 +1,29 @@
 """This module contains the callback types."""
 
 __all__ = [
-    'CallbackButton',
-    'CallbackSelection',
-    'Button',
-    'ButtonUrl',
-    'SectionRow',
-    'Section',
-    'SectionList',
-    'CallbackData',
-    'CallbackDataT'
+    "CallbackButton",
+    "CallbackSelection",
+    "Button",
+    "ButtonUrl",
+    "SectionRow",
+    "Section",
+    "SectionList",
+    "CallbackData",
+    "CallbackDataT",
 ]
 
 import dataclasses
 import datetime as dt
 import enum
-from typing import TYPE_CHECKING, Iterable, TypeVar, Generic, Any
+from typing import TYPE_CHECKING, Any, Generic, Iterable, TypeVar
+
 from .base_update import BaseUserUpdate
-from .others import Metadata, User, ReplyToMessage, MessageType
+from .others import MessageType, Metadata, ReplyToMessage, User
 
 if TYPE_CHECKING:
-    from .template import Template
     from pywa.client import WhatsApp
+
+    from .template import Template
 
 
 class CallbackData:
@@ -68,11 +70,12 @@ class CallbackData:
         ... def on_user_data(client: WhatsApp, btn: CallbackButton[UserData]): # For autocomplete
         ...    if btn.data.admin: print(btn.data.id) # Access the data object as an attribute
     """
+
     __callback_id__: int = 0
     """Unique ID for each callback data class. Do not override this."""
-    __callback_sep__: str = '¶'
+    __callback_sep__: str = "¶"
     """The separator between multiple callback objects, Can be overridden globally. (Default ``¶``)"""
-    __callback_data_sep__: str = '~'
+    __callback_data_sep__: str = "~"
     """The separator between the callback fields, Can be overridden individually. (Default ``~``)"""
     __allowed_types__: tuple[type, ...] = (str, int, bool, float)
     """The allowed types in the callback data."""
@@ -81,32 +84,40 @@ class CallbackData:
         """Validate the callback data class and set a unique ID for it."""
         super().__init_subclass__(**kwargs)
         if not (annotations := cls.__annotations__.items()):
-            raise TypeError(f"Callback data class {cls.__name__} must have at least one field.")
+            raise TypeError(
+                f"Callback data class {cls.__name__} must have at least one field."
+            )
         if unsupported_fields := {
-            (field_name, field_type) for field_name, field_type in annotations
+            (field_name, field_type)
+            for field_name, field_type in annotations
             if not issubclass(field_type, (types := cls.__allowed_types__))
         }:
-            raise TypeError(f"Unsupported types {unsupported_fields} in callback data. Use one of {types}.")
+            raise TypeError(
+                f"Unsupported types {unsupported_fields} in callback data. Use one of {types}."
+            )
         cls.__callback_id__ = CallbackData.__callback_id__
         CallbackData.__callback_id__ += 1
 
     @classmethod
     def from_str(
-            cls,
-            data: str,
-    ) -> 'CallbackData':
+        cls,
+        data: str,
+    ) -> "CallbackData":
         """
         Internal function to convert a callback string to a callback object.
         """
         try:
             # noinspection PyArgumentList
-            return cls(*(
-                annotation(value) for annotation, value in zip(
-                    cls.__annotations__.values(),
-                    data.split(cls.__callback_data_sep__)[1:],
-                    strict=True
+            return cls(
+                *(
+                    annotation(value)
+                    for annotation, value in zip(
+                        cls.__annotations__.values(),
+                        data.split(cls.__callback_data_sep__)[1:],
+                        strict=True,
+                    )
                 )
-            ))
+            )
         except (ValueError, TypeError) as e:
             raise ValueError(f"Invalid callback data for {cls.__name__}: {data}") from e
 
@@ -114,36 +125,55 @@ class CallbackData:
     def _not_contains(value: Any, *not_) -> str:
         """Internal function to validate that the value does not contain the separator."""
         if any(sep in (str_val := str(value)) for sep in not_):
-            raise ValueError(f"Callback data cannot contain the characters {not_} "
-                             f"Because they are used as separators. \nYou can change the separators by overriding "
-                             f"``__callback_data_sep__`` (for individual objects) and ``CallbackData.__callback_sep__`` "
-                             f"(In the base class level, affects all child classes).")
+            raise ValueError(
+                f"Callback data cannot contain the characters {not_} "
+                f"Because they are used as separators. \nYou can change the separators by overriding "
+                f"``__callback_data_sep__`` (for individual objects) and ``CallbackData.__callback_sep__`` "
+                f"(In the base class level, affects all child classes)."
+            )
         return str_val
 
     def to_str(self) -> str:
         """
         Internal function to convert a callback object to a callback string.
         """
-        return self.__callback_data_sep__.join((str(self.__callback_id__), *(
-            self._not_contains(getattr(self, field_name), self.__callback_sep__, self.__callback_data_sep__)
-            if not issubclass(field_type, (bool, enum.Enum)) else ('§' if getattr(self, field_name) else '')
-            if field_type is bool else self._not_contains(
-                getattr(self, field_name).value, self.__callback_sep__, self.__callback_data_sep__
+        return self.__callback_data_sep__.join(
+            (
+                str(self.__callback_id__),
+                *(
+                    self._not_contains(
+                        getattr(self, field_name),
+                        self.__callback_sep__,
+                        self.__callback_data_sep__,
+                    )
+                    if not issubclass(field_type, (bool, enum.Enum))
+                    else ("§" if getattr(self, field_name) else "")
+                    if field_type is bool
+                    else self._not_contains(
+                        getattr(self, field_name).value,
+                        self.__callback_sep__,
+                        self.__callback_data_sep__,
+                    )
+                    for field_name, field_type in self.__annotations__.items()
+                ),
             )
-            for field_name, field_type in self.__annotations__.items()
-        )))
+        )
 
     @classmethod
     def join_to_str(cls, *datas: Any) -> str:
         """Internal function to join multiple callback objects to a callback string."""
         return cls.__callback_sep__.join(
-            data.to_str() if isinstance(data, CallbackData)
+            data.to_str()
+            if isinstance(data, CallbackData)
             else cls._not_contains(data, cls.__callback_data_sep__)
             for data in datas
         )
 
 
-CallbackDataT = TypeVar('CallbackDataT', bound=str | CallbackData | Iterable[CallbackData | Any])
+CallbackDataT = TypeVar(
+    "CallbackDataT",
+    bound=str | CallbackData | Iterable[CallbackData | Any],
+)
 """Type hint for ``callback_data`` parameter in :class:`Button` and :class:`SectionRow`."""
 
 
@@ -210,6 +240,7 @@ class CallbackButton(BaseUserUpdate, Generic[CallbackDataT]):
          :class:`Template.QuickReplyButtonData`).
         title: The title of the button.
     """
+
     id: str
     type: MessageType
     metadata: Metadata
@@ -220,27 +251,27 @@ class CallbackButton(BaseUserUpdate, Generic[CallbackDataT]):
     title: str
 
     @classmethod
-    def from_update(cls, client: 'WhatsApp', update: dict) -> 'CallbackButton':
-        msg = (value := update['entry'][0]['changes'][0]['value'])['messages'][0]
-        match (msg_type := msg['type']):
+    def from_update(cls, client: "WhatsApp", update: dict) -> "CallbackButton":
+        msg = (value := update["entry"][0]["changes"][0]["value"])["messages"][0]
+        match (msg_type := msg["type"]):
             case MessageType.INTERACTIVE:
-                title = msg['interactive']['button_reply']['title']
-                data = msg['interactive']['button_reply']['id']
+                title = msg["interactive"]["button_reply"]["title"]
+                data = msg["interactive"]["button_reply"]["id"]
             case MessageType.BUTTON:
-                title = msg['button']['text']
-                data = msg['button']['payload']
+                title = msg["button"]["text"]
+                data = msg["button"]["payload"]
             case _:
                 raise ValueError(f"Invalid message type {msg_type}")
         return cls(
             _client=client,
-            id=msg['id'],
-            metadata=Metadata.from_dict(value['metadata']),
+            id=msg["id"],
+            metadata=Metadata.from_dict(value["metadata"]),
             type=MessageType(msg_type),
-            from_user=User.from_dict(value['contacts'][0]),
-            timestamp=dt.datetime.fromtimestamp(int(msg['timestamp'])),
-            reply_to_message=ReplyToMessage.from_dict(msg['context']),
+            from_user=User.from_dict(value["contacts"][0]),
+            timestamp=dt.datetime.fromtimestamp(int(msg["timestamp"])),
+            reply_to_message=ReplyToMessage.from_dict(msg["context"]),
             data=data,
-            title=title
+            title=title,
         )
 
 
@@ -316,6 +347,7 @@ class CallbackSelection(BaseUserUpdate, Generic[CallbackDataT]):
         title: The title of the selection.
         description: The description of the selection (optional).
     """
+
     id: str
     type: MessageType
     metadata: Metadata
@@ -327,19 +359,19 @@ class CallbackSelection(BaseUserUpdate, Generic[CallbackDataT]):
     description: str | None
 
     @classmethod
-    def from_update(cls, client: 'WhatsApp', update: dict) -> 'CallbackSelection':
-        msg = (value := update['entry'][0]['changes'][0]['value'])['messages'][0]
+    def from_update(cls, client: "WhatsApp", update: dict) -> "CallbackSelection":
+        msg = (value := update["entry"][0]["changes"][0]["value"])["messages"][0]
         return cls(
             _client=client,
-            id=msg['id'],
-            metadata=Metadata.from_dict(value['metadata']),
-            type=MessageType(msg['type']),
-            from_user=User.from_dict(value['contacts'][0]),
-            timestamp=dt.datetime.fromtimestamp(int(msg['timestamp'])),
-            reply_to_message=ReplyToMessage.from_dict(msg['context']),
-            data=msg['interactive']['list_reply']['id'],
-            title=msg['interactive']['list_reply']['title'],
-            description=msg['interactive']['list_reply'].get('description')
+            id=msg["id"],
+            metadata=Metadata.from_dict(value["metadata"]),
+            type=MessageType(msg["type"]),
+            from_user=User.from_dict(value["contacts"][0]),
+            timestamp=dt.datetime.fromtimestamp(int(msg["timestamp"])),
+            reply_to_message=ReplyToMessage.from_dict(msg["context"]),
+            data=msg["interactive"]["list_reply"]["id"],
+            title=msg["interactive"]["list_reply"]["title"],
+            description=msg["interactive"]["list_reply"].get("description"),
         )
 
 
@@ -365,6 +397,7 @@ class Button:
         callback_data: The data to send when the user clicks on the button (up to 256 characters, for complex data
          You can use :class:`CallbackData`).
     """
+
     title: str
     callback_data: CallbackDataT
 
@@ -373,8 +406,8 @@ class Button:
             "type": "reply",
             "reply": {
                 "id": _resolve_callback_data(self.callback_data),
-                "title": self.title
-            }
+                "title": self.title,
+            },
         }
 
 
@@ -387,16 +420,14 @@ class ButtonUrl:
         title: The title of the button (up to 20 characters).
         url: The URL to open when the user clicks on the button.
     """
+
     title: str
     url: str
 
     def to_dict(self) -> dict:
         return {
             "name": "cta_url",
-            "parameters": {
-                "display_text": self.title,
-                "url": self.url
-            }
+            "parameters": {"display_text": self.title, "url": self.url},
         }
 
 
@@ -411,6 +442,7 @@ class SectionRow:
             You can use :class:`CallbackData`).
         description: The description of the row (optional, up to 72 characters).
     """
+
     title: str
     callback_data: CallbackDataT
     description: str | None = None
@@ -418,7 +450,7 @@ class SectionRow:
     def to_dict(self) -> dict:
         d = {
             "id": _resolve_callback_data(self.callback_data),
-            "title": self.title
+            "title": self.title,
         }
         if self.description:
             d["description"] = self.description
@@ -434,13 +466,14 @@ class Section:
         title: The title of the section (up to 24 characters).
         rows: The rows in the section (at least 1, no more than 10).
     """
+
     title: str
     rows: Iterable[SectionRow]
 
     def to_dict(self) -> dict:
         return {
             "title": self.title,
-            "rows": tuple(row.to_dict() for row in self.rows)
+            "rows": tuple(row.to_dict() for row in self.rows),
         }
 
 
@@ -453,11 +486,12 @@ class SectionList:
         button_title: The title of the button that opens the section list (up to 20 characters).
         sections: The sections in the section list (at least 1, no more than 10).
     """
+
     button_title: str
     sections: Iterable[Section]
 
     def to_dict(self) -> dict:
         return {
             "button": self.button_title,
-            "sections": tuple(section.to_dict() for section in self.sections)
+            "sections": tuple(section.to_dict() for section in self.sections),
         }

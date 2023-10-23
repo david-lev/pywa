@@ -14,17 +14,16 @@ import os
 import sys
 from datetime import date
 
+sys.path.insert(0, os.path.abspath("."))
+sys.path.insert(0, "../..")
 
-sys.path.insert(0, os.path.abspath('.'))
-sys.path.insert(0, '../..')
-
-import pywa
+import pywa  # noqa: E402
 
 # -- Project information -----------------------------------------------------
 
-project = 'pywa'
+project = "pywa"
 copyright = f"{date.today().year}, David Lev"
-author = 'David Lev'
+author = "David Lev"
 
 version = pywa.__version__
 release = pywa.__version__
@@ -44,17 +43,17 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
     "sphinx_togglebutton",
-    "sphinx.ext.autosectionlabel"
+    "sphinx.ext.autosectionlabel",
 ]
 
 # The suffix of source filenames.
-source_suffix = '.rst'
+source_suffix = ".rst"
 
 # The master toctree document.
-master_doc = 'index'
+master_doc = "index"
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -67,7 +66,7 @@ suppress_warnings = ["image.not_readable"]
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['../static']
+html_static_path = ["../static"]
 html_favicon = "favicon.ico"
 
 # sphinx.ext.autodoc
@@ -81,7 +80,9 @@ napoleon_numpy_docstring = False
 napoleon_use_ivar = True
 
 # sphinx-copybutton
-copybutton_prompt_text = r">>> |\.\.\. |> |\$ |\# | In \[\d*\]: | {2,5}\.\.\.: | {5,8}: "
+copybutton_prompt_text = (
+    r">>> |\.\.\. |> |\$ |\# | In \[\d*\]: | {2,5}\.\.\.: | {5,8}: "
+)
 copybutton_prompt_is_regexp = True
 copybutton_remove_prompts = True
 
@@ -128,7 +129,7 @@ html_theme_options = {
             "name": "Issues",
             "url": "https://github.com/david-lev/pywa/issues",
             "icon": "fas fa-bug",
-        }
+        },
     ],
     "use_download_button": True,
 }

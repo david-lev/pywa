@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import dataclasses
 import importlib
-from typing import Any, Iterable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Iterable
+
 from pywa import utils
 
 if TYPE_CHECKING:
-    from pywa.client import WhatsApp
     from message_status import MessageStatus
+
+    from pywa.client import WhatsApp
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -21,6 +23,7 @@ class User:
         wa_id: The WhatsApp ID of the user (The phone number with the country code).
         name: The name of the user (``None`` on :class:`MessageStatus`).
     """
+
     wa_id: str
     name: str | None
 
@@ -30,13 +33,15 @@ class User:
 
     def as_vcard(self) -> str:
         """Get the user as a vCard."""
-        return "\n".join((
-            "BEGIN:VCARD",
-            "VERSION:3.0",
-            f"FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:{self.name}",
-            f"TEL;type=CELL;type=VOICE:+{self.wa_id}",
-            "END:VCARD"
-        ))
+        return "\n".join(
+            (
+                "BEGIN:VCARD",
+                "VERSION:3.0",
+                f"FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:{self.name}",
+                f"TEL;type=CELL;type=VOICE:+{self.wa_id}",
+                "END:VCARD",
+            )
+        )
 
 
 class MessageType(utils.StrEnum):
@@ -60,6 +65,7 @@ class MessageType(utils.StrEnum):
         INTERACTIVE: An interactive message (callback).
         BUTTON: Quick reply button (in a template message).
     """
+
     TEXT = "text"
     IMAGE = "image"
     VIDEO = "video"
@@ -91,6 +97,7 @@ class Reaction(utils.FromDict):
         message_id: The ID of the message that was reacted to.
         emoji: The emoji that was used to react to the message (optional, ``None`` if removed).
     """
+
     message_id: str
     emoji: str | None = None
 
@@ -107,6 +114,7 @@ class Location(utils.FromDict):
         address: The address of the location (optional).
         url: The URL of the location (optional).
     """
+
     latitude: float
     longitude: float
     name: str | None = None
@@ -128,11 +136,23 @@ class Location(utils.FromDict):
             radius: The radius in kilometers.
         """
         math = importlib.import_module("math")
-        lon1, lat1, lon2, lat2 = map(math.radians, [self.longitude, self.latitude, lon, lat])
-        return ((2 * math.asin(
-            math.sqrt(
-                math.sin((lat2 - lat1) / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2)
-        )) * 6371) <= radius
+        lon1, lat1, lon2, lat2 = map(
+            math.radians, [self.longitude, self.latitude, lon, lat]
+        )
+        return (
+            (
+                2
+                * math.asin(
+                    math.sqrt(
+                        math.sin((lat2 - lat1) / 2) ** 2
+                        + math.cos(lat1)
+                        * math.cos(lat2)
+                        * math.sin((lon2 - lon1) / 2) ** 2
+                    )
+                )
+            )
+            * 6371
+        ) <= radius
 
 
 @dataclasses.dataclass(slots=True)
@@ -149,6 +169,7 @@ class Contact:
         addresses: The addresses of the contact.
         org: The organization of the contact (optional).
     """
+
     name: Name
     birthday: str | None = None
     phones: Iterable[Phone] = dataclasses.field(default_factory=tuple)
@@ -162,11 +183,17 @@ class Contact:
         return cls(
             name=cls.Name.from_dict(data["name"]),
             birthday=data.get("birthday"),
-            phones=tuple(cls.Phone.from_dict(phone) for phone in data.get("phones", ())),
-            emails=tuple(cls.Email.from_dict(email) for email in data.get("emails", ())),
+            phones=tuple(
+                cls.Phone.from_dict(phone) for phone in data.get("phones", ())
+            ),
+            emails=tuple(
+                cls.Email.from_dict(email) for email in data.get("emails", ())
+            ),
             urls=tuple(cls.Url.from_dict(url) for url in data.get("urls", ())),
-            addresses=tuple(cls.Address.from_dict(address) for address in data.get("addresses", ())),
-            org=cls.Org.from_dict(data["org"]) if "org" in data else None
+            addresses=tuple(
+                cls.Address.from_dict(address) for address in data.get("addresses", ())
+            ),
+            org=cls.Org.from_dict(data["org"]) if "org" in data else None,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -177,24 +204,44 @@ class Contact:
             "phones": tuple(dataclasses.asdict(phone) for phone in self.phones),
             "emails": tuple(dataclasses.asdict(email) for email in self.emails),
             "urls": tuple(dataclasses.asdict(url) for url in self.urls),
-            "addresses": tuple(dataclasses.asdict(address) for address in self.addresses),
+            "addresses": tuple(
+                dataclasses.asdict(address) for address in self.addresses
+            ),
             "org": dataclasses.asdict(self.org) if self.org else None,
         }
 
     def as_vcard(self) -> str:
         """Get the contact as a vCard."""
-        return "\n".join(s for s in (
-            "BEGIN:VCARD",
-            "VERSION:3.0",
-            f"FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:{self.name.formatted_name}",
-            f"BDAY:{self.birthday}" if self.birthday else None,
-            "\n".join(f"TEL;type={phone.type}:{phone.phone}" for phone in self.phones) if self.phones else None,
-            "\n".join(f"EMAIL;type={email.type}:{email.email}" for email in self.emails) if self.emails else None,
-            "\n".join(f"URL;type={url.type}:{url.url}" for url in self.urls) if self.urls else None,
-            "\n".join(f"ADR;type={a.type}:;;{';'.join((getattr(a, f) or '') for f in ('street', 'city', 'state', 'zip', 'country') )}"
-                      for a in self.addresses) if self.addresses else None,
-            "END:VCARD"
-        ) if s is not None)
+        return "\n".join(
+            s
+            for s in (
+                "BEGIN:VCARD",
+                "VERSION:3.0",
+                f"FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:{self.name.formatted_name}",
+                f"BDAY:{self.birthday}" if self.birthday else None,
+                "\n".join(
+                    f"TEL;type={phone.type}:{phone.phone}" for phone in self.phones
+                )
+                if self.phones
+                else None,
+                "\n".join(
+                    f"EMAIL;type={email.type}:{email.email}" for email in self.emails
+                )
+                if self.emails
+                else None,
+                "\n".join(f"URL;type={url.type}:{url.url}" for url in self.urls)
+                if self.urls
+                else None,
+                "\n".join(
+                    f"ADR;type={a.type}:;;{';'.join((getattr(a, f) or '') for f in ('street', 'city', 'state', 'zip', 'country') )}"
+                    for a in self.addresses
+                )
+                if self.addresses
+                else None,
+                "END:VCARD",
+            )
+            if s is not None
+        )
 
     @dataclasses.dataclass(frozen=True, slots=True)
     class Name(utils.FromDict):
@@ -211,6 +258,7 @@ class Contact:
             suffix: The suffix of the contact (optional).
             prefix: The prefix of the contact (optional).
         """
+
         formatted_name: str
         first_name: str | None = None
         last_name: str | None = None
@@ -228,6 +276,7 @@ class Contact:
             type: The type of the phone number (Standard Values are CELL, MAIN, IPHONE, HOME, and WORK. optional).
             wa_id: The WhatsApp ID of the contact (optional).
         """
+
         phone: str | None = None
         type: str | None = None
         wa_id: str | None = None
@@ -241,6 +290,7 @@ class Contact:
             email: The email address.
             type: The type of the email address (Standard Values are WORK and HOME. optional).
         """
+
         email: str | None = None
         type: str | None = None
 
@@ -253,6 +303,7 @@ class Contact:
             url: The URL.
             type: The type of the URL (Standard Values are WORK and HOME. optional).
         """
+
         url: str | None = None
         type: str | None = None
 
@@ -266,6 +317,7 @@ class Contact:
             department: The department of the contact (optional).
             title: The title of the business contact (optional).
         """
+
         company: str | None = None
         department: str | None = None
         title: str | None = None
@@ -284,6 +336,7 @@ class Contact:
             country_code: Two-letter country abbreviation (e.g. US, GB, IN. optional).
             type: The type of the address (Standard Values are WORK and HOME. optional).
         """
+
         street: str | None = None
         city: str | None = None
         state: str | None = None
@@ -302,15 +355,17 @@ class ReplyToMessage:
         message_id: The ID of the message that was replied to.
         from_user_id: The ID of the user who sent the message that was replied to.
     """
+
     message_id: str
     from_user_id: str
 
     @classmethod
     def from_dict(cls, data: dict | None) -> ReplyToMessage | None:
-        return cls(
-            message_id=data['id'],
-            from_user_id=data['from']
-        ) if (data and 'id' in data) else None
+        return (
+            cls(message_id=data["id"], from_user_id=data["from"])
+            if (data and "id" in data)
+            else None
+        )
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -322,6 +377,7 @@ class Metadata(utils.FromDict):
         display_phone_number: The phone number to which the message was sent.
         phone_number_id: The ID of the phone number to which the message was sent.
     """
+
     display_phone_number: str
     phone_number_id: str
 
@@ -337,6 +393,7 @@ class Product:
         price: Price of the item.
         currency: Currency of the price.
     """
+
     sku: str
     quantity: int
     price: float
@@ -348,7 +405,7 @@ class Product:
             sku=data["product_retailer_id"],
             quantity=data["quantity"],
             price=data["item_price"],
-            currency=data["currency"]
+            currency=data["currency"],
         )
 
     @property
@@ -370,6 +427,7 @@ class Order:
     Properties:
         total_price: Total price of the order.
     """
+
     catalog_id: str
     products: tuple[Product]
     text: str | None
@@ -377,9 +435,9 @@ class Order:
     @classmethod
     def from_dict(cls, data: dict, _client: WhatsApp) -> Order:
         return cls(
-            catalog_id=data['catalog_id'],
-            text=data.get('text'),
-            products=tuple(Product.from_dict(p) for p in data['product_items'])
+            catalog_id=data["catalog_id"],
+            text=data.get("text"),
+            products=tuple(Product.from_dict(p) for p in data["product_items"]),
         )
 
     @property
@@ -400,6 +458,7 @@ class System:
         wa_id: The WhatsApp ID for the customer prior to the update.
         new_wa_id: New WhatsApp ID for the customer when their phone number is updated.
     """
+
     type: str
     body: str
     identity: str
@@ -409,11 +468,11 @@ class System:
     @classmethod
     def from_dict(cls, data: dict, _client: WhatsApp) -> System:
         return cls(
-            type=data['type'],
-            body=data['body'],
-            identity=data['identity'],
-            wa_id=data['customer'],
-            new_wa_id=data.get('wa_id')
+            type=data["type"],
+            body=data["body"],
+            identity=data["identity"],
+            wa_id=data["customer"],
+            new_wa_id=data.get("wa_id"),
         )
 
 
@@ -426,13 +485,14 @@ class ProductsSection:
         title: The title of the products section (up to 24 characters).
         skus: The SKUs of the products in the section (at least 1, no more than 30).
     """
+
     title: str
     skus: Iterable[str]
 
     def to_dict(self) -> dict:
         return {
             "title": self.title,
-            "product_items": tuple({"product_retailer_id": sku} for sku in self.skus)
+            "product_items": tuple({"product_retailer_id": sku} for sku in self.skus),
         }
 
 
@@ -461,6 +521,7 @@ class Industry(utils.StrEnum):
         RESTAURANT: Restaurant.
         NOT_A_BIZ: Not a business.
     """
+
     UNDEFINED = "UNDEFINED"
     OTHER = "OTHER"
     AUTO = "AUTO"
@@ -501,6 +562,7 @@ class BusinessProfile:
         websites: The URLs associated with the business. For instance, a website, Facebook Page, or Instagram.
          There is a maximum of 2 websites with a maximum of 256 characters each.
     """
+
     about: str
     address: str | None
     industry: Industry
@@ -512,13 +574,13 @@ class BusinessProfile:
     @classmethod
     def from_dict(cls, data: dict) -> BusinessProfile:
         return cls(
-            about=data['about'],
-            address=data.get('address'),
-            industry=Industry(data['vertical']),
-            description=data.get('description'),
-            email=data.get('email'),
-            profile_picture_url=data.get('profile_picture_url'),
-            websites=tuple(data.get('websites', [])) or None
+            about=data["about"],
+            address=data.get("address"),
+            industry=Industry(data["vertical"]),
+            description=data.get("description"),
+            email=data.get("email"),
+            profile_picture_url=data.get("profile_picture_url"),
+            websites=tuple(data.get("websites", [])) or None,
         )
 
 
@@ -532,6 +594,7 @@ class CommerceSettings:
         is_catalog_visible: Whether the catalog is visible to customers.
         is_cart_enabled: Whether the cart is enabled.
     """
+
     catalog_id: str
     is_catalog_visible: bool
     is_cart_enabled: bool
@@ -539,8 +602,7 @@ class CommerceSettings:
     @classmethod
     def from_dict(cls, data: dict) -> CommerceSettings:
         return cls(
-            catalog_id=data['id'],
-            is_catalog_visible=data['is_catalog_visible'],
-            is_cart_enabled=data['is_cart_enabled']
+            catalog_id=data["id"],
+            is_catalog_visible=data["is_catalog_visible"],
+            is_cart_enabled=data["is_cart_enabled"],
         )
-

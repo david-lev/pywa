@@ -187,4 +187,3 @@ Now you can continue to the next section and learn how to use the ``pywa`` packa
 - The `errors <errors/overview.html>`_ that the client can raise. For example, if you try to send message from your test number to a number that is not in the recipients list, the client will raise a :class:`~pywa.errors.RecipientNotInAllowedList`.
 
 - The `Examples <examples/overview.html>`_ section contains examples of how to use the package.
-
