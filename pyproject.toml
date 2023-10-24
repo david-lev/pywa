@@ -43,3 +43,4 @@ fastapi = ['fastapi', 'uvicorn[standard]']
 "Issue Tracker" = "https://github.com/david-lev/pywa/issues"
 "Source Code" = "https://github.com/david-lev/pywa"
 "Funding" = "https://github.com/sponsors/david-lev"
+"Changelog" = "https://github.com/david-lev/pywa/blob/master/CHANGELOG.md"
