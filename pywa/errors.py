@@ -3,7 +3,9 @@ This module contains the errors that can be raised by the WhatsApp Cloud API or 
 """
 
 import functools
-from typing import Type, cast
+from typing import Iterable, Type
+
+import requests
 
 
 class WhatsAppError(Exception):
@@ -19,10 +21,11 @@ class WhatsAppError(Exception):
         details: The error details (optional).
         fbtrace_id: The Facebook trace ID (optional).
         href: The href to the documentation (optional).
-        status_code: The status code (in case of response, else None).
+        raw_response: The :class:`requests.Response` obj that returned the error (optional, only if the error was raised
+         from an API call).
     """
 
-    __error_codes__: tuple | range | None = ()
+    __error_codes__: Iterable[int] | None
 
     def __init__(
         self,
@@ -31,32 +34,27 @@ class WhatsAppError(Exception):
         details: str | None,
         fbtrace_id: str | None,
         href: str | None,
-        status_code: int | None,
+        raw_response: requests.Response | None,
     ) -> None:
         self.error_code = error_code
         self.message = message
         self.details = details
         self.fbtrace_id = fbtrace_id
         self.href = href
-        self.status_code = status_code
+        self.raw_response = raw_response
+
+    @property
+    def status_code(self) -> int | None:
+        """The status code (in case of raw_response, else None)."""
+        return self.raw_response.status_code if self.raw_response is not None else None
 
     @classmethod
-    def from_response(cls, status_code: int, error: dict) -> "WhatsAppError":
+    def from_dict(
+        cls, error: dict, response: requests.Response | None = None
+    ) -> "WhatsAppError":
         """Create an error from a response."""
         return cls._get_exception(error["code"])(
-            status_code=status_code,
-            error_code=error["code"],
-            message=error["message"],
-            details=error.get("error_data", {}).get("details", None),
-            fbtrace_id=error.get("fbtrace_id"),
-            href=error.get("href"),
-        )
-
-    @classmethod
-    def from_incoming_error(cls, error: dict) -> "WhatsAppError":
-        """Create an error from an incoming error."""
-        return cls._get_exception(error["code"])(
-            status_code=None,
+            raw_response=response,
             error_code=error["code"],
             message=error["message"],
             details=error.get("error_data", {}).get("details", None),
@@ -77,11 +75,7 @@ class WhatsAppError(Exception):
     def _get_exception(code: int) -> Type["WhatsAppError"]:
         """Get the exception class from the error code."""
         return next(
-            (
-                e
-                for e in WhatsAppError._all_exceptions()
-                if code in cast(tuple, e.__error_codes__)
-            ),
+            (e for e in WhatsAppError._all_exceptions() if code in e.__error_codes__),
             WhatsAppError,
         )
 
@@ -95,7 +89,7 @@ class WhatsAppError(Exception):
 class AuthorizationError(WhatsAppError):
     """Base exception for all authorization errors."""
 
-    __error_codes__: tuple | range | None = None
+    __error_codes__ = None
 
 
 class AuthException(AuthorizationError):
@@ -134,7 +128,7 @@ class APIPermission(AuthorizationError):
 class ThrottlingError(WhatsAppError):
     """Base exception for all rate limit errors."""
 
-    __error_codes__: tuple | range | None = None
+    __error_codes__ = None
 
 
 class ToManyAPICalls(ThrottlingError):
@@ -178,7 +172,7 @@ class ToManyMessages(ThrottlingError):
 class IntegrityError(WhatsAppError):
     """Base exception for all integrity errors."""
 
-    __error_codes__: tuple | range | None = None
+    __error_codes__ = None
 
 
 class TemporarilyBlocked(IntegrityError):
@@ -205,7 +199,7 @@ class AccountLocked(IntegrityError):
 class SendMessageError(WhatsAppError):
     """Base exception for all message errors."""
 
-    __error_codes__: tuple | range | None = None
+    __error_codes__ = None
 
 
 class MessageUndeliverable(SendMessageError):

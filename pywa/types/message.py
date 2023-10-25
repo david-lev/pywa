@@ -157,7 +157,7 @@ class Message(BaseUserUpdate):
             caption=msg[msg_type].get("caption")
             if msg_type in ("image", "video", "document")
             else None,
-            error=WhatsAppError.from_incoming_error(msg["errors"][0])
+            error=WhatsAppError.from_dict(error=msg["errors"][0])
             if "errors" in msg
             else None,
         )

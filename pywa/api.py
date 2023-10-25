@@ -43,7 +43,7 @@ class WhatsAppCloudApi:
 
     def _make_request(self, method: str, endpoint: str, **kwargs) -> dict | list:
         """
-        Internal method to make a request to the WhatsApp API.
+        Internal method to make a request to the WhatsApp Cloud API.
 
         Args:
             method: The HTTP method to use.
@@ -60,9 +60,7 @@ class WhatsAppCloudApi:
             method=method, url=f"{self._base_url}{endpoint}", **kwargs
         )
         if res.status_code >= 400:
-            raise WhatsAppError.from_response(
-                status_code=res.status_code, error=res.json()["error"]
-            )
+            raise WhatsAppError.from_dict(error=res.json()["error"], response=res)
         return res.json()
 
     def get_app_access_token(self, app_id: int, app_secret: str) -> dict[str, str]:

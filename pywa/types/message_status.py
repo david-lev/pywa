@@ -111,7 +111,7 @@ class MessageStatus(BaseUserUpdate):
             if "conversation" in status
             else None,
             pricing_model=status.get("pricing", {}).get("pricing_model"),
-            error=WhatsAppError.from_incoming_error(status["errors"][0])
+            error=WhatsAppError.from_dict(error=status["errors"][0])
             if status_type == MessageStatusType.FAILED
             else None,
         )
