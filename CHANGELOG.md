@@ -3,6 +3,12 @@ Changelog
 
 NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 1.9.0 (2023-10-25)
+
+- [handlers] add `StopHandling` to raise if you want to stop handling the update
+- [errors] include `requests.Response` with all api errors
+- [client] mark `keyboard` argument in `.send_message` as deprecated. use `buttons` instead
+
 ### 1.8.0 (2023-10-20)
 
 - [webhook] allow to register callback url by @david-lev in #18
