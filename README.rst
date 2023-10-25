@@ -111,7 +111,7 @@ ________________________
         msg.react('👋')
         msg.reply_text(
             text=f'Hello {msg.from_user.name}!',
-            keyboard=[
+            buttons=[
                 Button(
                     title='Click me!',
                     callback_data='id:123'

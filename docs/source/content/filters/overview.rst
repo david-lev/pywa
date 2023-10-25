@@ -41,7 +41,7 @@ Here is an example of how to use them:
 
     @wa.on_message(text.matches('hello', 'hi', ignore_case=True))
     def handle_hello(wa: WhatsApp, msg: Message):
-        msg.reply(f'Hello {msg.from_user.name}!', keyboard=[Button('Click me!', 'click')])
+        msg.reply(f'Hello {msg.from_user.name}!', buttons=[Button('Click me!', 'click')])
 
     @wa.on_callback(callback.data_matches('click'))
     def handle_click(wa: WhatsApp, clb: CallbackButton):

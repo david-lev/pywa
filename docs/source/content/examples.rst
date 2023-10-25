@@ -86,7 +86,7 @@ Send a message with selection keyboard
         header='Select your favorite color',
         text='Tap a button to select your favorite color:',
         footer='⚡ Powered by PyWa',
-        keyboard=SectionList(
+        buttons=SectionList(
             button_title='Colors',
             sections=[
                 Section(
