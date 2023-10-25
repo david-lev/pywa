@@ -7,6 +7,7 @@ __all__ = ["WhatsApp"]
 import hashlib
 import mimetypes
 import os
+import warnings
 from typing import BinaryIO, Iterable
 
 import requests
@@ -168,9 +169,10 @@ class WhatsApp(Webhook, HandlerDecorators):
         text: str,
         header: str | None = None,
         footer: str | None = None,
-        keyboard: Iterable[Button] | ButtonUrl | SectionList | None = None,
+        buttons: Iterable[Button] | ButtonUrl | SectionList | None = None,
         preview_url: bool = False,
         reply_to_message_id: str | None = None,
+        keyboard: None = None,
     ) -> str:
         """
         Send a message to a WhatsApp user.
@@ -193,7 +195,7 @@ class WhatsApp(Webhook, HandlerDecorators):
             ...     header="Hello from PyWa!",
             ...     text="What can I help you with?",
             ...     footer="Powered by PyWa",
-            ...     keyboard=[
+            ...     buttons=[
             ...         Button("Help", data="help"),
             ...         Button("About", data="about"),
             ...     ],
@@ -207,7 +209,7 @@ class WhatsApp(Webhook, HandlerDecorators):
             ...     header="Hello from PyWa!",
             ...     text="What can I help you with?",
             ...     footer="Powered by PyWa",
-            ...     keyboard=SectionList(
+            ...     buttons=SectionList(
             ...         button_title="Choose an option",
             ...         sections=[
             ...             Section(
@@ -247,21 +249,29 @@ class WhatsApp(Webhook, HandlerDecorators):
              no `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
             footer: The footer of the message (if keyboard is provided, optional, up to 60 characters,
              `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
-            keyboard: The keyboard to send with the message (optional).
+            buttons: The buttons to send with the message (optional).
             preview_url: Whether to show a preview of the URL in the message (if any).
             reply_to_message_id: The message ID to reply to (optional).
+            keyboard: Deprecated and will be removed in a future version, use ``buttons`` instead.
 
         Returns:
             The message ID of the sent message.
         """
-        if not keyboard:
+        if keyboard is not None:
+            buttons = keyboard
+            warnings.simplefilter("always", DeprecationWarning)
+            warnings.warn(
+                "The `keyboard` parameter is deprecated and will be removed in a future version, use `buttons` instead.",
+                DeprecationWarning,
+            )
+        if not buttons:
             return self.api.send_text_message(
                 to=str(to),
                 text=text,
                 preview_url=preview_url,
                 reply_to_message_id=reply_to_message_id,
             )["messages"][0]["id"]
-        type_, kb = _resolve_keyboard_param(keyboard)
+        type_, kb = _resolve_keyboard_param(buttons)
         return self.api.send_interactive_message(
             to=str(to),
             type_=type_,

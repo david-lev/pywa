@@ -126,9 +126,10 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         text: str,
         header: str | None = None,
         footer: str | None = None,
-        keyboard: Iterable[Button] | ButtonUrl | SectionList | None = None,
+        buttons: Iterable[Button] | ButtonUrl | SectionList | None = None,
         quote: bool = False,
         preview_url: bool = False,
+        keyboard: None = None,
     ) -> str:
         """
         Reply to the message with text.
@@ -148,7 +149,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             ...     header="Hello from PyWa!",
             ...     text="What can I help you with?",
             ...     footer="Powered by PyWa",
-            ...     keyboard=[
+            ...     buttons=[
             ...         Button("Help", data="help"),
             ...         Button("About", data="about"),
             ...     ],
@@ -162,7 +163,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             ...     header="Hello from PyWa!",
             ...     text="What can I help you with?",
             ...     footer="Powered by PyWa",
-            ...     keyboard=SectionList(
+            ...     buttons=SectionList(
             ...         button_title="Choose an option",
             ...         sections=[
             ...             Section(
@@ -179,7 +180,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             ...                         description="Learn more about PyWa",
             ...                     ),
             ...                 ],
-            ...             ),
+            ...            ),
             ...            Section(
             ...                 title="Other",
             ...                 rows=[
@@ -197,13 +198,14 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
 
         Args:
             text: The text to reply with (markdown allowed, max 4096 characters).
-            header: The header of the reply (if keyboard is provided, optional, up to 60 characters,
+            header: The header of the reply (if buttons are provided, optional, up to 60 characters,
              no markdown allowed).
-            footer: The footer of the reply (if keyboard is provided, optional, up to 60 characters,
+            footer: The footer of the reply (if buttons are provided, optional, up to 60 characters,
              markdown has no effect).
-            keyboard: The keyboard to send with the reply (optional).
+            buttons: The buttons to send with the message (optional).
             quote: Whether to quote the replied message (default: False).
             preview_url: Whether to show a preview of the URL in the message (if any).
+            keyboard: Deprecated and will be removed in a future version, use ``buttons`` instead.
 
         Returns:
             The ID of the sent reply.
@@ -213,9 +215,10 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             text=text,
             header=header,
             footer=footer,
-            keyboard=keyboard,
+            buttons=buttons,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             preview_url=preview_url,
+            keyboard=keyboard,
         )
 
     reply = reply_text  # alias
@@ -249,7 +252,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             caption: The caption of the image (optional, markdown allowed).
             body: The body of the reply (optional, up to 1024 characters, markdown allowed,
              if buttons are provided and body is not provided, caption will be used as the body)
-            footer: The footer of the reply (if buttons is provided, optional, markdown has no effect).
+            footer: The footer of the reply (if buttons are provided, optional, markdown has no effect).
             buttons: The buttons to send with the image (optional).
             quote: Whether to quote the replied message (default: False).
             mime_type: The mime type of the image (optional, required when sending a image as bytes or a file object,

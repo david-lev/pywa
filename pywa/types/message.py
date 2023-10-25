@@ -133,7 +133,7 @@ class Message(BaseUserUpdate):
         context = msg.get("context")
         constructor = _FIELDS_TO_OBJECTS_CONSTRUCTORS.get(msg_type)
         msg_content = (
-            {msg_type: constructor(msg[msg_type], _client=client)}
+            {msg_type: constructor(msg[msg_type], _client=client)}  # noqa
             if constructor is not None
             else {}
         )  # noqa
@@ -212,9 +212,10 @@ class Message(BaseUserUpdate):
         header: str | None = None,
         body: str | None = None,
         footer: str | None = None,
-        keyboard: Iterable[Button] | ButtonUrl | SectionList | None = None,
+        buttons: Iterable[Button] | ButtonUrl | SectionList | None = None,
         preview_url: bool = False,
         reply_to_message_id: str = None,
+        keyboard: None = None,
     ) -> str:
         """
         Copy incoming message to another chat
@@ -225,10 +226,11 @@ class Message(BaseUserUpdate):
             header: The header of the message (if keyboard is provided, optional, up to 60 characters, no markdown allowed).
             body: The body of the message (if keyboard are provided, optional, up to 1024 characters, markdown allowed).
             footer: The footer of the message (if keyboard is provided, optional, markdown has no effect).
-            keyboard: The buttons to send with the message (only in case of message from type ``text``, ``document``,
+            buttons: The buttons to send with the message (only in case of message from type ``text``, ``document``,
              ``video`` and ``image``. also, the ``SectionList`` is only available to ``text`` type)
             reply_to_message_id:  The message ID to reply to (optional).
             preview_url: Whether to show a preview of the URL in the message (if any).
+            keyboard: Deprecated and will be removed in a future version, use ``buttons`` instead.
 
         Returns:
             The ID of the sent message.
@@ -245,8 +247,9 @@ class Message(BaseUserUpdate):
                     preview_url=preview_url,
                     header=header,
                     footer=footer,
-                    keyboard=keyboard,
+                    buttons=buttons,
                     reply_to_message_id=reply_to_message_id,
+                    keyboard=keyboard,
                 )
             case MessageType.DOCUMENT:
                 return self._client.send_document(
@@ -337,7 +340,7 @@ class Message(BaseUserUpdate):
                     text=self.system.body,
                     header=header,
                     footer=footer,
-                    keyboard=keyboard,
+                    buttons=keyboard,
                     reply_to_message_id=reply_to_message_id,
                 )
             case _:

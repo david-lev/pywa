@@ -63,7 +63,7 @@ class CallbackData:
         >>> wa.send_message(
         ...     to='972987654321',
         ...     text='Click the button to get the user',
-        ...     keyboard=[Button(title='Get user', callback_data=UserData(id=123, admin=True))]
+        ...     buttons=[Button(title='Get user', callback_data=UserData(id=123, admin=True))]
         ... )
 
         >>> @wa.on_callback_button(factory=UserData) # Use the factory parameter to convert the callback data
@@ -201,7 +201,7 @@ class CallbackButton(BaseUserUpdate, Generic[CallbackDataT]):
         >>> wa.send_message(
         ...     to='972987654321',
         ...     text='Click the button to get the user',
-        ...     keyboard=[Button(title='Get user', callback_data=UserData(id=123, name='david', admin=True))]
+        ...     buttons=[Button(title='Get user', callback_data=UserData(id=123, name='david', admin=True))]
         ... )                                     # Here ^^^ we use the UserData class as the callback data
 
         >>> @wa.on_callback_button(factory=UserData) # Use the factory parameter to convert the callback data
@@ -218,7 +218,7 @@ class CallbackButton(BaseUserUpdate, Generic[CallbackDataT]):
         >>> wa.send_message(
         ...     to='972987654321',
         ...     text='Click the button to get the user and state',
-        ...     keyboard=[Button(title='Get user', callback_data=(UserData(id=123, name='david', admin=True), State.START))]
+        ...     buttons=[Button(title='Get user', callback_data=(UserData(id=123, name='david', admin=True), State.START))]
         ... )                                     # Here ^^^ we send a tuple of UserData and State
 
         >>> @wa.on_callback_button(factory=(UserData, State)) # Use the factory parameter to convert the callback data
@@ -299,7 +299,7 @@ class CallbackSelection(BaseUserUpdate, Generic[CallbackDataT]):
         >>> wa.send_message(
         ...     to='972987654321',
         ...     text='Click the button to get the user',
-        ...     keyboard=SectionList(
+        ...     buttons=SectionList(
         ...         button_title='Get user', sections=[
         ...             Section(title='Users', rows=[
         ...                 SectionRow(title='Get user', callback_data=UserData(id=123, name='david', admin=True))
@@ -322,7 +322,7 @@ class CallbackSelection(BaseUserUpdate, Generic[CallbackDataT]):
         >>> wa.send_message(
         ...     to='972987654321',
         ...     text='Click the button to get the user and state',
-        ...     keyboard=SectionList(
+        ...     buttons=SectionList(
         ...         button_title='Get user', sections=[
         ...             Section(title='Users', rows=[
         ...                 SectionRow(title='Get user', callback_data=(UserData(id=123, name='david', admin=True), State.START))
