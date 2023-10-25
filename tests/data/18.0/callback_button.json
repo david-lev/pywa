@@ -1,0 +1,94 @@
+{
+  "button": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "5467539754836534",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "972123456789",
+                "phone_number_id": "1122334455667"
+              },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321"
+                }
+              ],
+              "messages": [
+                {
+                  "context": {
+                    "from": "1122334455667",
+                    "id": "wamid.xyzxyz"
+                  },
+                  "from": "972987654321",
+                  "id": "wamid.xyzxyz",
+                  "timestamp": "1698266730",
+                  "type": "interactive",
+                  "interactive": {
+                    "type": "button_reply",
+                    "button_reply": {
+                      "id": "callback_data",
+                      "title": "title"
+                    }
+                  }
+                }
+              ]
+            },
+            "field": "messages"
+          }
+        ]
+      }
+    ]
+  },
+  "quick_reply": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "5467539754836534",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "972123456789",
+                "phone_number_id": "1122334455667"
+              },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321"
+                }
+              ],
+              "messages": [
+                {
+                  "context": {
+                    "from": "972123456789",
+                    "id": "wamid.xyzxyz=="
+                  },
+                  "from": "972987654321",
+                  "id": "wamid.xsidjw",
+                  "timestamp": "1698269027",
+                  "type": "button",
+                  "button": {
+                    "payload": "callback_data",
+                    "text": "title"
+                  }
+                }
+              ]
+            },
+            "field": "messages"
+          }
+        ]
+      }
+    ]
+  }
+
+}

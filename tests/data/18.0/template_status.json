@@ -1,0 +1,23 @@
+{
+  "approved": {
+    "entry": [
+      {
+        "id": "0",
+        "time": 1698268000,
+        "changes": [
+          {
+            "field": "message_template_status_update",
+            "value": {
+              "event": "APPROVED",
+              "message_template_id": 12345678,
+              "message_template_name": "my_message_template",
+              "message_template_language": "pt-BR",
+              "reason": null
+            }
+          }
+        ]
+      }
+    ],
+    "object": "whatsapp_business_account"
+  }
+}
