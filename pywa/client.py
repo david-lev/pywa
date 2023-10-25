@@ -635,9 +635,7 @@ class WhatsApp(Webhook, HandlerDecorators):
             to=str(to),
             emoji=emoji,
             message_id=message_id,
-        )[
-            "messages"
-        ][0]["id"]
+        )["messages"][0]["id"]
 
     def remove_reaction(
         self,

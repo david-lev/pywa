@@ -922,6 +922,6 @@ class TemplateStatusFilter(_BaseUpdateFilter):
         return lambda _, s: s.reason in reasons
 
 
-template_status: TemplateStatusFilterT | type[
-    TemplateStatusFilter
-] = TemplateStatusFilter
+template_status: (
+    TemplateStatusFilterT | type[TemplateStatusFilter]
+) = TemplateStatusFilter

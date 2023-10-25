@@ -29,20 +29,20 @@ def test_callback_class_not_empty():
     with pytest.raises(TypeError):
 
         @dataclasses.dataclass(slots=True, frozen=True)
-        class User(CallbackData):
+        class User1(CallbackData):
             pass
 
     with pytest.raises(TypeError):
 
         @dataclasses.dataclass(slots=True, frozen=True)
-        class User(CallbackData):
+        class User2(CallbackData):
             id: str
             name: str
             is_admin: bool
             x: int
 
         @dataclasses.dataclass(slots=True, frozen=True)
-        class UserChild(User):
+        class UserChild(User2):
             pass
 
 

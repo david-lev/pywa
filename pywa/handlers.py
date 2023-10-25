@@ -457,7 +457,10 @@ class HandlerDecorators:
 
     def on_raw_update(
         self: WhatsApp, *filters: Callable[[WhatsApp, dict], bool]
-    ) -> Callable[[Callable[[WhatsApp, dict], Any]], Callable[[WhatsApp, dict], Any],]:
+    ) -> Callable[
+        [Callable[[WhatsApp, dict], Any]],
+        Callable[[WhatsApp, dict], Any],
+    ]:
         """
         Decorator to register a function as a handler for raw updates (:class:`dict`).
 

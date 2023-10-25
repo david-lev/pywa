@@ -253,7 +253,7 @@ class CallbackButton(BaseUserUpdate, Generic[CallbackDataT]):
     @classmethod
     def from_update(cls, client: "WhatsApp", update: dict) -> "CallbackButton":
         msg = (value := update["entry"][0]["changes"][0]["value"])["messages"][0]
-        match (msg_type := msg["type"]):
+        match msg_type := msg["type"]:
             case MessageType.INTERACTIVE:
                 title = msg["interactive"]["button_reply"]["title"]
                 data = msg["interactive"]["button_reply"]["id"]
