@@ -101,6 +101,10 @@ class Reaction(utils.FromDict):
     message_id: str
     emoji: str | None = None
 
+    @classmethod
+    def from_dict(cls, data: dict, **kwargs) -> Reaction:
+        return cls(message_id=data["message_id"], emoji=data["emoji"] or None)
+
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class Location(utils.FromDict):
