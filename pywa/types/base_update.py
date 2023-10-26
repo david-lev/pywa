@@ -61,8 +61,9 @@ class BaseUpdate(abc.ABC):
     def timestamp(self) -> dt.datetime:
         ...
 
+    @classmethod
     @abc.abstractmethod
-    def from_update(self, client: WhatsApp, update: dict) -> BaseUpdate:
+    def from_update(cls, client: WhatsApp, update: dict) -> BaseUpdate:
         ...
 
     def stop_handling(self) -> None:
