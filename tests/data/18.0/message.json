@@ -381,6 +381,46 @@
       }
     ]
   },
+  "unreaction": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "1234567890987654321",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "972123456789",
+                "phone_number_id": "1122334455667"
+              },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321"
+                }
+              ],
+              "messages": [
+                {
+                  "from": "972987654321",
+                  "id": "wamid.xyzxyz",
+                  "timestamp": "1697044456",
+                  "type": "reaction",
+                  "reaction": {
+                    "message_id": "wamid.yzxyzx=",
+                    "emoji": ""
+                  }
+                }
+              ]
+            },
+            "field": "messages"
+          }
+        ]
+      }
+    ]
+  },
   "location": {
     "object": "whatsapp_business_account",
     "entry": [
@@ -632,6 +672,10 @@
               ],
               "messages": [
                 {
+                  "context": {
+                    "from": "972123456789",
+                    "id": "wamid.xyzxyz=="
+                  },
                   "from": "972987654321",
                   "id": "wamid.xyzxyz",
                   "timestamp": "1697044746",
