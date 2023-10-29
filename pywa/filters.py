@@ -189,9 +189,7 @@ class MediaFilter(_BaseUpdateFilter):
         >>> video.mimetypes("video/mp4")
         >>> audio.mimetypes("audio/mpeg")
         """
-        return lambda _, m: cls._match_type(m) and any(
-            t == getattr(m, cls.__message_types__[0].value).mime_type for t in mimetypes
-        )
+        return lambda _, m: cls._match_type(m) and m.media.mime_type in mimetypes
 
 
 media: MessageFilterT | type[MediaFilter] = MediaFilter
@@ -236,7 +234,7 @@ class TextFilter(_BaseUpdateFilter):
     @staticmethod
     def matches(*matches: str, ignore_case: bool = False) -> MessageFilterT:
         """
-        Filter for text messages that match exactly the given text/s.
+        Filter for text messages that match exactly any of the given text/s.
 
         >>> text.matches("Hello","Hi")
 
@@ -253,7 +251,7 @@ class TextFilter(_BaseUpdateFilter):
     @staticmethod
     def contains(*matches: str, ignore_case: bool = False) -> MessageFilterT:
         """
-        Filter for text messages that contain the given text/s.
+        Filter for text messages that contain any of the given text/s.
 
         >>> text.contains("Cat","Dog",ignore_case=True)
 
@@ -269,7 +267,7 @@ class TextFilter(_BaseUpdateFilter):
     @staticmethod
     def startswith(*matches: str, ignore_case: bool = False) -> MessageFilterT:
         """
-        Filter for text messages that start with the given text/s.
+        Filter for text messages that start with any of the given text/s.
 
         >>> text.startswith("What", "When", ignore_case=True)
 
@@ -285,7 +283,7 @@ class TextFilter(_BaseUpdateFilter):
     @staticmethod
     def endswith(*matches: str, ignore_case: bool = False) -> MessageFilterT:
         """
-        Filter for text messages that end with the given text/s.
+        Filter for text messages that end with any of the given text/s.
 
         >>> text.endswith("Bye", "See you", ignore_case=True)
 
@@ -301,7 +299,7 @@ class TextFilter(_BaseUpdateFilter):
     @staticmethod
     def regex(*patterns: str | re.Pattern, flags: int = 0) -> MessageFilterT:
         """
-        Filter for text messages that match the given regex/regexes.
+        Filter for text messages that match any of the given regexes.
 
         >>> text.regex(r"Hello\s+World", r"Bye\s+World", flags=re.IGNORECASE)
 
@@ -319,7 +317,7 @@ class TextFilter(_BaseUpdateFilter):
     @staticmethod
     def length(*lengths: tuple[int, int]) -> MessageFilterT:
         """
-        Filter for text messages that have a length between the given range/s.
+        Filter for text messages that have a length between any of the given ranges.
 
         >>> text.length((1, 10), (50, 100))
 
