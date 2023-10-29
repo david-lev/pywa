@@ -3,6 +3,12 @@ Changelog
 
 NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 1.10.0 (2023-10-29)
+
+- [template] adding support for `OtpType.ZERO_TAP` in new authentication template
+- [callback] adding support for optional fields in `CallbackData`
+- [tests] update `CallbackData` tests
+
 ### 1.9.0 (2023-10-25)
 
 - [handlers] add `StopHandling` to raise if you want to stop handling the update
