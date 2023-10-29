@@ -140,17 +140,17 @@ class Webhook:
     def _call_handlers(self: WhatsApp, update: dict) -> None:
         """Call the handlers for the given update."""
         handler = self._get_handler(update=update)
-        for func in self._handlers[handler]:
+        for callback in self._handlers[handler]:
             try:
                 # noinspection PyCallingNonCallable
-                func(self, handler.__update_constructor__(self, update))
+                callback(self, handler.__update_constructor__(self, update))  # __call__
             except Exception as e:
                 if isinstance(e, StopHandling):
                     break
                 _logger.exception(e)
-        for raw_update_func in self._handlers[RawUpdateHandler]:
+        for raw_update_callback in self._handlers[RawUpdateHandler]:
             try:
-                raw_update_func(self, update)
+                raw_update_callback(self, update)
             except Exception as e:
                 if isinstance(e, StopHandling):
                     break

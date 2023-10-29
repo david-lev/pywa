@@ -33,7 +33,7 @@ class StopHandling(Exception):
             >>> wa = WhatsApp(...)
 
             >>> @wa.on_message()
-            ... def handler(_: WhatsApp, msg: Message):
+            ... def callback(_: WhatsApp, msg: Message):
             ...     msg.reply_text("Hello from PyWa!")
             ...     msg.stop_handling()  # or raise StopHandling
 
@@ -79,12 +79,12 @@ class BaseUpdate(abc.ABC):
             >>> wa = WhatsApp(...)
 
             >>> @wa.on_message()
-            ... def handler(_: WhatsApp, msg: Message):
+            ... def callback(_: WhatsApp, msg: Message):
             ...     msg.reply_text("Hello from PyWa!")
             ...     msg.stop_handling()
 
             >>> @wa.on_message()
-            ... def not_called(_: WhatsApp, msg: Message):
+            ... def callback_not_called(_: WhatsApp, msg: Message):
             ...     msg.reply_text("This message will not be sent")
         """
         raise StopHandling
