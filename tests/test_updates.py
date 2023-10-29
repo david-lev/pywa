@@ -75,7 +75,7 @@ UPDATES: dict[tuple[str, type[T]], dict[str, list[Callable[[T], bool]]]] = {
 
 
 def test_types():
-    client = WhatsApp(phone_id="1234567890", token="xyzxyzxyz")
+    client = WhatsApp(phone_id="1234567890", token="xyzxyzxyz", filter_updates=False)
     for version in API_VERSIONS:
         for (update_filename, update_class), examples in UPDATES.items():
             with open(
@@ -84,9 +84,14 @@ def test_types():
                 examples_data: dict[str, Any] = json.load(update_file)
             for test_name, test_funcs in examples.items():
                 try:
-                    update_obj = update_class.from_update(
-                        client=client, update=examples_data[test_name]
-                    )  # noqa
+                    update_dict = examples_data[test_name]
+                    handler = client._get_handler(update_dict)
+                    assert (
+                        handler.__field_name__
+                        == update_dict["entry"][0]["changes"][0]["field"]
+                    )
+                    update_obj = handler.__update_constructor__(client, update_dict)  # noqa
+                    assert isinstance(update_obj, update_class)
                     for test_func in test_funcs:
                         assert test_func(update_obj)
                 except Exception as e:
