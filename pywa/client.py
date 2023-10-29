@@ -1252,7 +1252,7 @@ class WhatsApp(Webhook, HandlerDecorators):
             ...             add_security_recommendation=True,
             ...         ),
             ...         buttons=NewTemp.OTPButton(
-            ...             otp_type=NewTemp.OTPButton.OtpType.ONE_TAP,
+            ...             otp_type=NewTemp.OTPButton.OtpType.ZERO_TAP,
             ...             title='Copy Code',
             ...             autofill_text='Autofill',
             ...             package_name='com.example.app',

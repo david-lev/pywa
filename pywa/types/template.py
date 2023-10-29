@@ -724,11 +724,13 @@ class NewTemplate:
             title: Copy code button text. If omitted, the text will default to a pre-set value localized to the template's
              language. For example, ``Copy Code`` for English (US).
             autofill_text: One-tap autofill button text. If omitted, the text will default to a pre-set value localized to
-                the template's language. For example, ``Autofill`` for English (US).
-            package_name: Android package name of your app. Required if ``otp_type`` is ``OtpType.ONE_TAP``.
+             the template's language. For example, ``Autofill`` for English (US).
+            package_name: Android package name of your app. Required if ``otp_type`` is ``OtpType.ONE_TAP`` or ``OtpType.ZERO_TAP``.
             signature_hash: Your app signing key hash. See `App Signing Key Hash
              <https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates#app-signing-key-hash>`_
-             for more information. Required if ``otp_type`` is ``OtpType.ONE_TAP``.
+             for more information. Required if ``otp_type`` is ``OtpType.ONE_TAP`` or ``OtpType.ZERO_TAP``.
+            zero_tap_terms_accepted: Acceptance of the WhatsApp Business API Terms of Service. Required if ``otp_type`` is
+             ``OtpType.ZERO_TAP``. Defaults to ``True``.
         """
 
         type: ComponentType = dataclasses.field(
@@ -739,6 +741,7 @@ class NewTemplate:
         autofill_text: str | None = None
         package_name: str | None = None
         signature_hash: str | None = None
+        zero_tap_terms_accepted: bool = True
 
         class OtpType(utils.StrEnum):
             """
@@ -747,17 +750,19 @@ class NewTemplate:
             Attributes:
                 COPY_CODE: Copy code button copies the one-time password or code to the user's clipboard.
                 ONE_TAP: One-tap autofill button automatically loads and passes your app the one-time password or code.
+                ZERO_TAP: Zero-tap autofill button automatically loads and passes your app the one-time password or code
             """
 
             COPY_CODE = "COPY_CODE"
             ONE_TAP = "ONE_TAP"
+            ZERO_TAP = "ZERO_TAP"
 
         def __post_init__(self):
-            if self.otp_type == self.OtpType.ONE_TAP and not (
+            if self.otp_type in (self.OtpType.ONE_TAP, self.OtpType.ZERO_TAP) and not (
                 self.package_name and self.signature_hash
             ):
                 raise ValueError(
-                    "`package_name` and `signature_hash` are required for ONE_TAP"
+                    "`package_name` and `signature_hash` are required for ONE_TAP and ZERO_TAP"
                 )
 
         def to_dict(self, placeholder: None = None) -> dict[str, str | None]:
@@ -766,13 +771,18 @@ class NewTemplate:
                 otp_type=self.otp_type.value,
                 text=self.title,
             )
-            if self.otp_type == self.OtpType.ONE_TAP:
+            if self.otp_type in (self.OtpType.ONE_TAP, self.OtpType.ZERO_TAP):
                 base.update(
                     package_name=self.package_name,
                     signature_hash=self.signature_hash,
                     **(
                         dict(autofill_text=self.autofill_text)
                         if self.autofill_text
+                        else {}
+                    ),
+                    **(
+                        dict(zero_tap_terms_accepted=self.zero_tap_terms_accepted)
+                        if self.otp_type == self.OtpType.ZERO_TAP
                         else {}
                     ),
                 )
