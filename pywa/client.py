@@ -261,9 +261,12 @@ class WhatsApp(Webhook, HandlerDecorators):
             buttons = keyboard
             warnings.simplefilter("always", DeprecationWarning)
             warnings.warn(
-                "The `keyboard` parameter is deprecated and will be removed in a future version, use `buttons` instead.",
-                DeprecationWarning,
+                message="send_message | reply_text: "
+                "`keyboard` is deprecated and will be removed in a future version, use `buttons` instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
             )
+
         if not buttons:
             return self.api.send_text_message(
                 to=str(to),
