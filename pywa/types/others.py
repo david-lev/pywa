@@ -463,19 +463,19 @@ class System:
         new_wa_id: New WhatsApp ID for the customer when their phone number is updated.
     """
 
-    type: str
-    body: str
-    identity: str
-    wa_id: str
+    type: str | None
+    body: str | None
+    identity: str | None
+    wa_id: str | None
     new_wa_id: str | None
 
     @classmethod
     def from_dict(cls, data: dict, _client: WhatsApp) -> System:
         return cls(
-            type=data["type"],
-            body=data["body"],
-            identity=data["identity"],
-            wa_id=data["customer"],
+            type=data.get("type"),
+            body=data.get("body"),
+            identity=data.get("identity"),
+            wa_id=data.get("customer"),
             new_wa_id=data.get("wa_id"),
         )
 
