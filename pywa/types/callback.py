@@ -16,7 +16,17 @@ import dataclasses
 import datetime as dt
 import enum
 import types
-from typing import TYPE_CHECKING, Any, Generic, Iterable, TypeVar, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    Iterable,
+    TypeVar,
+    cast,
+    get_origin,
+    Union,
+    get_args,
+)
 
 from .base_update import BaseUserUpdate
 from .others import MessageType, Metadata, ReplyToMessage, User
@@ -58,7 +68,7 @@ class CallbackData:
         >>> class UserData(CallbackData): # Subclass CallbackData
         ...     id: int
         ...     name: str | None
-        ...     admin: bool
+        ...     admin: bool = False
 
         >>> from pywa import WhatsApp
         >>> from pywa.types import Button
@@ -124,16 +134,17 @@ class CallbackData:
             )
         unsupported_fields = set[tuple[str, type]]()
         for field_name, field_type in cls.__annotations__.items():
-            if isinstance(field_type, types.UnionType):
-                if len(field_type.__args__) > 2:
+            if get_origin(field_type) in (types.UnionType, Union):
+                if len(union_args := get_args(field_type)) > 2:
                     raise TypeError(
                         f"Field {field_name} in `{cls.__name__}` must be a Union of 2 types at most."
                     )
-                if types.NoneType not in field_type.__args__:
+                if types.NoneType not in union_args:
                     raise TypeError(
-                        f"Field `{field_name}` in `{cls.__name__}` must be a Union with None."
+                        f"Field `{field_name}` in `{cls.__name__}` must be an Optional[x] or Union[x, None]. "
+                        f"(e.g. int | None)"
                     )
-                field_type = next(a for a in field_type.__args__ if a is not None)
+                field_type = next((a for a in union_args if a is not types.NoneType))
             if issubclass(field_type, enum.Enum) and not issubclass(field_type, str):
                 raise TypeError(
                     f"Field `{field_name}` in `{cls.__name__}` must be an Enum that inherits from str."
@@ -162,11 +173,13 @@ class CallbackData:
                 data.split(cls.__callback_data_sep__)[1:],
                 strict=True,
             ):
-                if isinstance(annotation, types.UnionType):
+                if get_origin(annotation) in (types.UnionType, Union):
                     if value == cls.__callback_null__:
                         positional_args.append(None)
                         continue
-                    annotation = next(a for a in annotation.__args__ if a is not None)
+                    annotation = next(
+                        a for a in get_args(annotation) if a is not types.NoneType
+                    )
                 if isinstance(annotation, bool):
                     if value == cls.__callback_bool_true__:
                         positional_args.append(True)
