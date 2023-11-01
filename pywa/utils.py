@@ -37,9 +37,12 @@ class FromDict:
     # noinspection PyArgumentList
     @classmethod
     def from_dict(cls, data: dict, **kwargs):
-        data.update(kwargs)
         return cls(
-            **{k: v for k, v in data.items() if k in (f.name for f in fields(cls))}
+            **{
+                k: v
+                for k, v in (data | kwargs).items()
+                if k in (f.name for f in fields(cls))
+            }
         )
 
 
