@@ -3,6 +3,12 @@ Changelog
 
 NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 1.11.0 (2023-11-01)
+
+- [callback] adding support for `Optional[x]` annotation in `CallbackData` subclasses
+- [media] allowing to pass `pathlib.Path` as a media file path
+- [system] make all fields nullable in system update
+
 ### 1.10.0 (2023-10-29)
 
 - [template] adding support for `OtpType.ZERO_TAP` in new authentication template
