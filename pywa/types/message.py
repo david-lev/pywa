@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, Callable, Iterable
 
 from pywa.errors import WhatsAppError
 
-from .base_update import BaseUserUpdate
+from .base_update import BaseUserUpdate  # noqa
 from .callback import Button, ButtonUrl, SectionList
 from .media import Audio, Document, Image, Sticker, Video
 from .others import (
@@ -184,6 +184,7 @@ class Message(BaseUserUpdate):
         filepath: str | None = None,
         filename: str | None = None,
         in_memory: bool = False,
+        **kwargs,
     ) -> str | bytes:
         """
         Download a media file from WhatsApp servers (image, video, sticker, document or audio).
@@ -192,6 +193,7 @@ class Message(BaseUserUpdate):
             filepath: The path where to save the file (if not provided, the current working directory will be used).
             filename: The name of the file (if not provided, it will be guessed from the URL + extension).
             in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
+            **kwargs: Additional arguments to pass to requests.get.
 
         Returns:
             The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
@@ -201,7 +203,7 @@ class Message(BaseUserUpdate):
         """
         try:
             return self.media.download(
-                path=filepath, filename=filename, in_memory=in_memory
+                path=filepath, filename=filename, in_memory=in_memory, **kwargs
             )
         except AttributeError:
             raise ValueError("Message does not contain any media.")

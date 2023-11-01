@@ -46,96 +46,92 @@ class Webhook:
         verify_token: str | None = None,
         verify_timeout: int | None = None,
     ):
-        if server is not None:
-            if not verify_token:
-                raise ValueError(
-                    "When listening for incoming updates, a verify token must be provided.\n>> The verify token can "
-                    "be any string. It is used to challenge the webhook endpoint to verify that the endpoint is valid."
+        if server is None:
+            return
+        if not verify_token:
+            raise ValueError(
+                "When listening for incoming updates, a verify token must be provided.\n>> The verify token can "
+                "be any string. It is used to challenge the webhook endpoint to verify that the endpoint is valid."
+            )
+        self._handlers: dict[
+            type[Handler] | None,
+            list[Callable[[WhatsApp, BaseUpdate | dict], Any]],
+        ] = collections.defaultdict(list)
+
+        hub_vt = "hub.verify_token"
+        hub_ch = "hub.challenge"
+
+        if utils.is_flask_app(server):
+            import flask
+
+            @server.route(webhook_endpoint, methods=["GET"])
+            def challenge():
+                if flask.request.args.get(hub_vt) == verify_token:
+                    return flask.request.args.get(hub_ch), 200
+                return "Error, invalid verification token", 403
+
+            @server.route(webhook_endpoint, methods=["POST"])
+            def webhook():
+                threading.Thread(
+                    target=self._call_handlers,
+                    args=(flask.request.json,),
+                ).start()
+                return "ok", 200
+
+        elif utils.is_fastapi_app(server):
+            import fastapi
+
+            @server.get(webhook_endpoint)
+            def challenge(
+                vt: str = fastapi.Query(..., alias=hub_vt),
+                ch: str = fastapi.Query(..., alias=hub_ch),
+            ):
+                if vt == verify_token:
+                    return fastapi.Response(content=ch, status_code=200)
+                return fastapi.Response(
+                    content="Error, invalid verification token",
+                    status_code=403,
                 )
-            self._handlers: dict[
-                type[Handler] | None,
-                list[Callable[[WhatsApp, BaseUpdate | dict], Any]],
-            ] = collections.defaultdict(list)
 
-            hub_vt = "hub.verify_token"
-            hub_ch = "hub.challenge"
+            @server.post(webhook_endpoint)
+            def webhook(payload: dict = fastapi.Body(...)):
+                threading.Thread(target=self._call_handlers, args=(payload,)).start()
+                return fastapi.Response(content="ok", status_code=200)
 
-            if utils.is_flask_app(server):
-                import flask
+        else:
+            raise ValueError("The server must be a Flask or FastAPI app.")
 
-                @server.route(webhook_endpoint, methods=["GET"])
-                def challenge():
-                    if flask.request.args.get(hub_vt) == verify_token:
-                        return flask.request.args.get(hub_ch), 200
-                    return "Error, invalid verification token", 403
+        if callback_url is not None:
+            if app_id is None or app_secret is None:
+                raise ValueError(
+                    "When registering a callback URL, the app ID and app secret must be provided.\n>> See here how "
+                    "to get them: "
+                    "https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings/"
+                )
 
-                @server.route(webhook_endpoint, methods=["POST"])
-                def webhook():
-                    threading.Thread(
-                        target=self._call_handlers,
-                        args=(flask.request.json,),
-                    ).start()
-                    return "ok", 200
-
-            elif utils.is_fastapi_app(server):
-                import fastapi
-
-                @server.get(webhook_endpoint)
-                def challenge(
-                    vt: str = fastapi.Query(..., alias=hub_vt),
-                    ch: str = fastapi.Query(..., alias=hub_ch),
-                ):
-                    if vt == verify_token:
-                        return fastapi.Response(content=ch, status_code=200)
-                    return fastapi.Response(
-                        content="Error, invalid verification token",
-                        status_code=403,
+            # This is a non-blocking function that registers the callback URL.
+            # It must be called after the server is running so that the challenge can be verified.
+            def register_callback_url():
+                if verify_timeout is not None and verify_timeout > _VERIFY_TIMEOUT_SEC:
+                    time.sleep(verify_timeout - _VERIFY_TIMEOUT_SEC)
+                try:
+                    app_access_token = self.api.get_app_access_token(
+                        app_id=app_id, app_secret=app_secret
                     )
+                    if not self.api.set_callback_url(
+                        app_id=app_id,
+                        app_access_token=app_access_token["access_token"],
+                        callback_url=f"{callback_url}/{webhook_endpoint}",
+                        verify_token=verify_token,
+                        fields=tuple(
+                            fields or Handler.__fields_to_subclasses__().keys()
+                        ),
+                    )["success"]:
+                        raise ValueError("Failed to register callback URL.")
+                except WhatsAppError as e:
+                    raise ValueError(f"Failed to register callback URL. Error: {e}")
 
-                @server.post(webhook_endpoint)
-                def webhook(payload: dict = fastapi.Body(...)):
-                    threading.Thread(
-                        target=self._call_handlers, args=(payload,)
-                    ).start()
-                    return fastapi.Response(content="ok", status_code=200)
-
-            else:
-                raise ValueError("The server must be a Flask or FastAPI app.")
-
-            if callback_url is not None:
-                if app_id is None or app_secret is None:
-                    raise ValueError(
-                        "When registering a callback URL, the app ID and app secret must be provided.\n>> See here how "
-                        "to get them: "
-                        "https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings/"
-                    )
-
-                # This is a non-blocking function that registers the callback URL.
-                # It must be called after the server is running so that the challenge can be verified.
-                def register_callback_url():
-                    if (
-                        verify_timeout is not None
-                        and verify_timeout > _VERIFY_TIMEOUT_SEC
-                    ):
-                        time.sleep(verify_timeout - _VERIFY_TIMEOUT_SEC)
-                    try:
-                        app_access_token = self.api.get_app_access_token(
-                            app_id=app_id, app_secret=app_secret
-                        )
-                        if not self.api.set_callback_url(
-                            app_id=app_id,
-                            app_access_token=app_access_token["access_token"],
-                            callback_url=f"{callback_url}/{webhook_endpoint}",
-                            verify_token=verify_token,
-                            fields=tuple(
-                                fields or Handler.__fields_to_subclasses__().keys()
-                            ),
-                        )["success"]:
-                            raise ValueError("Failed to register callback URL.")
-                    except WhatsAppError as e:
-                        raise ValueError(f"Failed to register callback URL. Error: {e}")
-
-                threading.Thread(target=register_callback_url).start()
+            threading.Thread(target=register_callback_url).start()
 
     def _call_handlers(self: WhatsApp, update: dict) -> None:
         """Call the handlers for the given update."""

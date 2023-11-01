@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+
 """This module contains the types related to templates."""
 
 __all__ = [
@@ -12,7 +13,8 @@ __all__ = [
 import abc
 import dataclasses
 import re
-from datetime import datetime
+import pathlib
+import datetime as dt
 from typing import TYPE_CHECKING, Any, BinaryIO, Iterable
 
 from pywa import utils
@@ -1059,17 +1061,23 @@ class Template:
 
         Attributes:
             document: The document to send (PDF only. either a media ID, URL, file path, bytes, or an open file object).
+            caption: The caption of the document.
+            filename: The filename of the document (Required if sending bytes or an open file object).
         """
 
         type: ParamType = dataclasses.field(
             default=ParamType.DOCUMENT, init=False, repr=False
         )
-        document: str | bytes | BinaryIO
+        document: str | pathlib.Path | bytes | BinaryIO
+        caption: str | None = None
+        filename: str | None = None
 
         def to_dict(self, is_url: bool) -> dict[str, str]:
             return dict(
                 type=self.type.value,
-                document=dict(link=self.document) if is_url else dict(id=self.document),
+                document={"link" if is_url else "id": self.document}
+                | (dict(caption=self.caption) if self.caption else {})
+                | (dict(filename=self.filename) if self.filename else {}),
             )
 
     @dataclasses.dataclass(slots=True)
@@ -1079,17 +1087,22 @@ class Template:
 
         Attributes:
             image: The image to send (either a media ID, URL, file path, bytes, or an open file object).
+            caption: The caption of the image.
+            mime_type: The mime type of the image (Required if sending bytes or an open file object).
         """
 
         type: ParamType = dataclasses.field(
             default=ParamType.IMAGE, init=False, repr=False
         )
-        image: str | bytes | BinaryIO
+        image: str | pathlib.Path | bytes | BinaryIO
+        caption: str | None = None
+        mime_type: str | None = None
 
         def to_dict(self, is_url: bool) -> dict[str, str]:
             return dict(
                 type=self.type.value,
-                image=dict(link=self.image) if is_url else dict(id=self.image),
+                image={"link" if is_url else "id": self.image}
+                | (dict(caption=self.caption) if self.caption else {}),
             )
 
     @dataclasses.dataclass(slots=True)
@@ -1099,17 +1112,22 @@ class Template:
 
         Attributes:
             video: The video to send (either a media ID, URL, file path, bytes, or an open file object).
+            caption: The caption of the video.
+            mime_type: The mime type of the video (Required if sending bytes or an open file object).
         """
 
         type: ParamType = dataclasses.field(
             default=ParamType.VIDEO, init=False, repr=False
         )
-        video: str | bytes | BinaryIO
+        video: str | pathlib.Path | bytes | BinaryIO
+        caption: str | None = None
+        mime_type: str | None = None
 
         def to_dict(self, is_url: bool) -> dict[str, str]:
             return dict(
                 type=self.type.value,
-                video=dict(link=self.video) if is_url else dict(id=self.video),
+                video={"link" if is_url else "id": self.video}
+                | (dict(caption=self.caption) if self.caption else {}),
             )
 
     @dataclasses.dataclass(slots=True)
@@ -1334,7 +1352,7 @@ class TemplateStatus(BaseUpdate):
     """
 
     id: str
-    timestamp: datetime
+    timestamp: dt.datetime
     event: TemplateEvent
     message_template_id: int
     message_template_name: str
@@ -1349,7 +1367,7 @@ class TemplateStatus(BaseUpdate):
         return cls(
             _client=client,
             id=data["id"],
-            timestamp=datetime.fromtimestamp(data["time"]),
+            timestamp=dt.datetime.fromtimestamp(data["time"]),
             event=cls.TemplateEvent(value["event"]),
             message_template_id=value["message_template_id"],
             message_template_name=value["message_template_name"],

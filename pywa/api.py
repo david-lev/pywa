@@ -1,10 +1,11 @@
 """The internal API for the WhatsApp client."""
 
-from typing import Any, BinaryIO
+from typing import Any
 
 import requests
 import requests_toolbelt
 
+import pywa
 from pywa.errors import WhatsAppError
 
 
@@ -29,6 +30,7 @@ class WhatsAppCloudApi:
         self._session.headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {token}",
+            "User-Agent": f"PyWa/{pywa.__version__}",
         }
         self._common_keys = {
             "messaging_product": "whatsapp",
@@ -176,7 +178,7 @@ class WhatsAppCloudApi:
 
     def upload_media(
         self,
-        media: bytes | BinaryIO,
+        media: bytes,
         mime_type: str,
         filename: str,
     ) -> dict[str, str]:
@@ -240,19 +242,21 @@ class WhatsAppCloudApi:
     def get_media_bytes(
         self,
         media_url: str,
+        **kwargs,
     ) -> tuple[bytes, str | None]:
         """
         Get the bytes of a media file from WhatsApp servers.
 
         Args:
             media_url: The URL of the media file (from ``get_media_url``).
+            **kwargs: Additional arguments to pass to the request.
 
         Returns:
             The media file bytes and the MIME type (if available).
         """
         headers = self._session.headers.copy()
         del headers["Content-Type"]
-        res = self._session.get(media_url, headers=headers)
+        res = self._session.get(media_url, headers=headers, **kwargs)
         res.raise_for_status()
         return res.content, res.headers.get("Content-Type")
 

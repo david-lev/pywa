@@ -1,12 +1,14 @@
+"""This module contains the base types for all update types."""
+
 from __future__ import annotations
 
-"""This module contains the base types for all update types."""
 
 __all__ = [
     "StopHandling",
 ]
 
 import abc
+import pathlib
 import dataclasses
 import datetime as dt
 from typing import TYPE_CHECKING, BinaryIO, Iterable
@@ -226,7 +228,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
 
     def reply_image(
         self,
-        image: str | bytes | BinaryIO,
+        image: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
         body: str | None = None,
         footer: str | None = None,
@@ -275,7 +277,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
 
     def reply_video(
         self,
-        video: str | bytes | BinaryIO,
+        video: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
         body: str | None = None,
         footer: str | None = None,
@@ -325,7 +327,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
 
     def reply_document(
         self,
-        document: str | bytes | BinaryIO,
+        document: str | pathlib.Path | bytes | BinaryIO,
         filename: str | None = None,
         caption: str | None = None,
         body: str | None = None,
@@ -379,7 +381,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
 
     def reply_audio(
         self,
-        audio: str | bytes | BinaryIO,
+        audio: str | pathlib.Path | bytes | BinaryIO,
         mime_type: str | None = None,
     ) -> str:
         """
@@ -408,7 +410,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
 
     def reply_sticker(
         self,
-        sticker: str | bytes | BinaryIO,
+        sticker: str | pathlib.Path | bytes | BinaryIO,
         mime_type: str | None = None,
     ) -> str:
         """

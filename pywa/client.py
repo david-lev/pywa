@@ -7,8 +7,9 @@ __all__ = ["WhatsApp"]
 import hashlib
 import mimetypes
 import os
+import pathlib
 import warnings
-from typing import BinaryIO, Iterable
+from typing import BinaryIO, Iterable, Literal
 
 import requests
 
@@ -110,7 +111,7 @@ class WhatsApp(Webhook, HandlerDecorators):
             business_account_id: The business account ID that owns the app (optional, required for some API
              methods).
         """
-        self.phone_id = str(phone_id)
+        self._phone_id = str(phone_id)
         self.filter_updates = filter_updates
         self.business_account_id = (
             str(business_account_id) if business_account_id is not None else None
@@ -139,6 +140,17 @@ class WhatsApp(Webhook, HandlerDecorators):
 
     def __repr__(self) -> str:
         return self.__str__()
+
+    @property
+    def phone_id(self) -> str:
+        """The phone ID of the WhatsApp account."""
+        return self._phone_id
+
+    @phone_id.setter
+    def phone_id(self, value: str | int) -> None:
+        """Update the phone ID in API calls."""
+        self._phone_id = str(value)
+        self.api.phone_id = self._phone_id
 
     def add_handlers(self, *handlers: Handler):
         """
@@ -274,7 +286,7 @@ class WhatsApp(Webhook, HandlerDecorators):
                 preview_url=preview_url,
                 reply_to_message_id=reply_to_message_id,
             )["messages"][0]["id"]
-        type_, kb = _resolve_keyboard_param(buttons)
+        type_, kb = _resolve_buttons_param(buttons)
         return self.api.send_interactive_message(
             to=str(to),
             type_=type_,
@@ -294,7 +306,7 @@ class WhatsApp(Webhook, HandlerDecorators):
     def send_image(
         self,
         to: str | int,
-        image: str | bytes | BinaryIO,
+        image: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
         body: str | None = None,
         footer: str | None = None,
@@ -337,7 +349,8 @@ class WhatsApp(Webhook, HandlerDecorators):
             wa=self,
             media=image,
             mime_type=mime_type,
-            filename="image.jpg",
+            media_type="image",
+            filename=None,
         )
         if not buttons:
             return self.api.send_media(
@@ -351,7 +364,7 @@ class WhatsApp(Webhook, HandlerDecorators):
             raise ValueError(
                 "Either body or caption must be provided when sending an image with buttons."
             )
-        type_, kb = _resolve_keyboard_param(buttons)
+        type_, kb = _resolve_buttons_param(buttons)
         return self.api.send_interactive_message(
             to=str(to),
             type_=type_,
@@ -370,7 +383,7 @@ class WhatsApp(Webhook, HandlerDecorators):
     def send_video(
         self,
         to: str | int,
-        video: str | bytes | BinaryIO,
+        video: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
         body: str | None = None,
         footer: str | None = None,
@@ -414,7 +427,8 @@ class WhatsApp(Webhook, HandlerDecorators):
             wa=self,
             media=video,
             mime_type=mime_type,
-            filename="video.mp4",
+            media_type="video",
+            filename=None,
         )
         if not buttons:
             return self.api.send_media(
@@ -428,7 +442,7 @@ class WhatsApp(Webhook, HandlerDecorators):
             raise ValueError(
                 "Either body or caption must be provided when sending a video with buttons."
             )
-        type_, kb = _resolve_keyboard_param(buttons)
+        type_, kb = _resolve_buttons_param(buttons)
         return self.api.send_interactive_message(
             to=str(to),
             type_=type_,
@@ -447,7 +461,7 @@ class WhatsApp(Webhook, HandlerDecorators):
     def send_document(
         self,
         to: str | int,
-        document: str | bytes | BinaryIO,
+        document: str | pathlib.Path | bytes | BinaryIO,
         filename: str | None = None,
         caption: str | None = None,
         body: str | None = None,
@@ -495,6 +509,7 @@ class WhatsApp(Webhook, HandlerDecorators):
             media=document,
             mime_type=mime_type,
             filename=filename,
+            media_type=None,
         )
         if not buttons:
             return self.api.send_media(
@@ -509,7 +524,7 @@ class WhatsApp(Webhook, HandlerDecorators):
             raise ValueError(
                 "Either body or caption must be provided when sending a document with buttons."
             )
-        type_, kb = _resolve_keyboard_param(buttons)
+        type_, kb = _resolve_buttons_param(buttons)
         return self.api.send_interactive_message(
             to=str(to),
             type_=type_,
@@ -529,7 +544,7 @@ class WhatsApp(Webhook, HandlerDecorators):
     def send_audio(
         self,
         to: str | int,
-        audio: str | bytes | BinaryIO,
+        audio: str | pathlib.Path | bytes | BinaryIO,
         mime_type: str | None = None,
     ) -> str:
         """
@@ -556,7 +571,8 @@ class WhatsApp(Webhook, HandlerDecorators):
             wa=self,
             media=audio,
             mime_type=mime_type,
-            filename="audio.mp3",
+            media_type="audio",
+            filename=None,
         )
         return self.api.send_media(
             to=str(to),
@@ -568,7 +584,7 @@ class WhatsApp(Webhook, HandlerDecorators):
     def send_sticker(
         self,
         to: str | int,
-        sticker: str | bytes | BinaryIO,
+        sticker: str | pathlib.Path | bytes | BinaryIO,
         mime_type: str | None = None,
     ) -> str:
         """
@@ -597,7 +613,8 @@ class WhatsApp(Webhook, HandlerDecorators):
             wa=self,
             media=sticker,
             mime_type=mime_type,
-            filename="sticker.webp",
+            filename=None,
+            media_type="sticker",
         )
         return self.api.send_media(
             to=str(to),
@@ -931,8 +948,8 @@ class WhatsApp(Webhook, HandlerDecorators):
 
     def upload_media(
         self,
-        media: str | bytes | BinaryIO,
-        mime_type: str,
+        media: str | pathlib.Path | bytes | BinaryIO,
+        mime_type: str | None = None,
         filename: str | None = None,
     ) -> str:
         """
@@ -955,30 +972,40 @@ class WhatsApp(Webhook, HandlerDecorators):
             The media ID.
 
         Raises:
-            ValueError: If the file is not found or the URL is invalid or if the media is bytes and the filename is not
-             provided.
+            ValueError:
+                - If provided ``media`` is file path and the file does not exist.
+                - If provided ``media`` is URL and the URL is invalid or media cannot be downloaded.
+                - If provided ``media`` is bytes and ``filename`` or ``mime_type`` is not provided.
         """
-        if isinstance(media, str):
-            if os.path.isfile(media):
+        if isinstance(media, (str, pathlib.Path)):
+            if (path := pathlib.Path(media)).is_file():
                 file, filename, mime_type = (
-                    open(media, "rb"),
-                    os.path.basename(media),
-                    (mimetypes.guess_type(media)[0] or mime_type),
+                    open(path, "rb"),
+                    filename or path.name,
+                    mime_type or mimetypes.guess_type(path)[0],
                 )
-            elif media.startswith(("https://", "http://")):
-                res = requests.get(media)
-                res.raise_for_status()
+            elif (url := str(media)).startswith(("https://", "http://")):
+                res = requests.get(url)
+                try:
+                    res.raise_for_status()
+                except requests.HTTPError as e:
+                    raise ValueError(
+                        f"An error occurred while downloading from {url}"
+                    ) from e
                 file, filename, mime_type = (
                     res.content,
-                    os.path.basename(media) or filename,
-                    (res.headers["Content-Type"] or mime_type),
+                    filename or os.path.basename(media),
+                    mime_type or res.headers["Content-Type"],
                 )
             else:
                 raise ValueError(f"File not found or invalid URL: {media}")
         else:
             file = media
-            if filename is None:
-                raise ValueError("filename is required if media is bytes")
+
+        if filename is None:
+            raise ValueError("`filename` is required if media is bytes")
+        if mime_type is None:
+            raise ValueError("`mime_type` is required if media is bytes")
         return self.api.upload_media(
             filename=filename,
             media=file,
@@ -1018,6 +1045,7 @@ class WhatsApp(Webhook, HandlerDecorators):
         path: str | None = None,
         filename: str | None = None,
         in_memory: bool = False,
+        **kwargs,
     ) -> str | bytes:
         """
         Download a media file from WhatsApp servers.
@@ -1036,11 +1064,12 @@ class WhatsApp(Webhook, HandlerDecorators):
             path: The path where to save the file (if not provided, the current working directory will be used).
             filename: The name of the file (if not provided, it will be guessed from the URL + extension).
             in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
+            **kwargs: Additional arguments to pass to :py:func:`requests.get`.
 
         Returns:
             The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
         """
-        content, mimetype = self.api.get_media_bytes(media_url=url)
+        content, mimetype = self.api.get_media_bytes(media_url=url, **kwargs)
         if in_memory:
             return content
         if path is None:
@@ -1337,28 +1366,29 @@ class WhatsApp(Webhook, HandlerDecorators):
         """
         is_url = None
         match type(template.header):
-            case Template.TextValue:
-                pass
             case Template.Image:
                 is_url, template.header.image = _resolve_media_param(
                     wa=self,
                     media=template.header.image,
-                    mime_type="image/jpeg",
-                    filename="image.jpg",
+                    mime_type=template.header.mime_type,
+                    media_type="image",
+                    filename=None,
                 )
             case Template.Document:
                 is_url, template.header.document = _resolve_media_param(
                     wa=self,
                     media=template.header.document,
-                    mime_type="text/plain",
-                    filename="file.pdf",
+                    mime_type="application/pdf",  # the only supported mime type in template's document header
+                    filename=template.header.filename,
+                    media_type=None,
                 )
             case Template.Video:
                 is_url, template.header.video = _resolve_media_param(
                     wa=self,
                     media=template.header.video,
-                    mime_type="video/mp4",
-                    filename="video.mp4",
+                    mime_type=template.header.mime_type,
+                    media_type="video",
+                    filename=None,
                 )
         return self.api.send_template(
             to=str(to),
@@ -1367,57 +1397,46 @@ class WhatsApp(Webhook, HandlerDecorators):
         )["messages"][0]["id"]
 
 
-def _resolve_keyboard_param(
-    keyboard: Iterable[Button] | ButtonUrl | SectionList,
+def _resolve_buttons_param(
+    buttons: Iterable[Button] | ButtonUrl | SectionList,
 ) -> tuple[str, dict]:
     """
-    Resolve keyboard parameters to a type and an action dict.
+    Internal method to resolve `buttons` parameter. Returns a tuple of (type, buttons).
     """
-    if isinstance(keyboard, SectionList):
-        return "list", keyboard.to_dict()
-    elif isinstance(keyboard, ButtonUrl):
-        return "cta_url", keyboard.to_dict()
+    if isinstance(buttons, SectionList):
+        return "list", buttons.to_dict()
+    elif isinstance(buttons, ButtonUrl):
+        return "cta_url", buttons.to_dict()
     else:
-        return "button", {"buttons": tuple(b.to_dict() for b in keyboard)}
+        return "button", {"buttons": tuple(b.to_dict() for b in buttons)}
+
+
+_media_types_default_filenames = {
+    "image": "image.jpg",
+    "video": "video.mp4",
+    "audio": "audio.mp3",
+    "sticker": "sticker.webp",
+}
 
 
 def _resolve_media_param(
     wa: WhatsApp,
-    media: str | bytes | BinaryIO,
+    media: str | pathlib.Path | bytes | BinaryIO,
     mime_type: str | None,
     filename: str | None,
+    media_type: Literal["image", "video", "audio", "sticker"] | None,
 ) -> tuple[bool, str]:
     """
-    Internal method to resolve media parameters. Returns a tuple of (is_url, media_id_or_url).
+    Internal method to resolve the `media` parameter. Returns a tuple of (is_url, media_id_or_url).
     """
-    if isinstance(media, str):
-        if media.startswith(("https://", "http://")):
+    if isinstance(media, (str, pathlib.Path)):
+        if str(media).startswith(("https://", "http://")):
             return True, media
-        elif not os.path.isfile(media) and media.isdigit():
+        elif str(media).isdigit() and not pathlib.Path(media).is_file():
             return False, media  # assume it's a media ID
-        else:  # assume it's a file path
-            if not (mt := mimetypes.guess_type(media)[0] or mime_type):
-                raise ValueError(
-                    f"Could not determine the mime type of the file {media!r}. Please provide a mime type."
-                )
-            return False, wa.upload_media(
-                media=media,
-                mime_type=mt,
-                filename=filename or os.path.basename(media),
-            )
-    else:
-        if not mime_type or not filename:
-            msg = "When sending media as bytes or a file object a {} must be provided."
-            raise ValueError(
-                msg.format(
-                    "mime_type and filename"
-                    if not mime_type and not filename
-                    else ("mime_type" if not mime_type else "filename")
-                )
-            )
-        return (
-            False,
-            wa.api.upload_media(media=media, mime_type=mime_type, filename=filename)[
-                "id"
-            ],
-        )
+    # assume its bytes or a file path
+    return False, wa.upload_media(
+        media=media,
+        mime_type=mime_type,
+        filename=_media_types_default_filenames.get(media_type, filename),
+    )
