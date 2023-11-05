@@ -1075,10 +1075,8 @@ class WhatsApp(Webhook, HandlerDecorators):
         if path is None:
             path = os.getcwd()
         if filename is None:
-            filename = (
-                hashlib.sha256(url.encode()).hexdigest()
-                + mimetypes.guess_extension(mimetype)
-                or ".bin"
+            filename = hashlib.sha256(url.encode()).hexdigest() + (
+                mimetypes.guess_extension(mimetype) or ".bin"
             )
         path = os.path.join(path, filename)
         with open(path, "wb") as f:
