@@ -103,7 +103,9 @@ class Reaction(utils.FromDict):
 
     @classmethod
     def from_dict(cls, data: dict, **kwargs) -> Reaction:
-        return cls(message_id=data["message_id"], emoji=data["emoji"] or None)
+        return cls(
+            message_id=data["message_id"], emoji=data.get("emoji") or None
+        )  # sometimes it's empty string 🤦‍
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
