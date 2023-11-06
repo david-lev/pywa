@@ -32,41 +32,39 @@ import re
 from typing import TYPE_CHECKING, Callable, Iterable, TypeAlias, TypeVar
 
 from pywa.errors import ReEngagementMessage, WhatsAppError
-from pywa.types import CallbackButton, CallbackSelection
-from pywa.types import Message as Msg
-from pywa.types import MessageStatus as Ms
-from pywa.types import MessageStatusType as Mst
-from pywa.types import MessageType as Mt
-from pywa.types import TemplateStatus as Ts
-from pywa.types.base_update import BaseUpdate  # noqa
+from pywa.types import CallbackButton as _Clb, CallbackSelection as _Cls
+from pywa.types import Message as _Msg
+from pywa.types import MessageStatus as _Ms
+from pywa.types import MessageStatusType as _Mst
+from pywa.types import MessageType as _Mt
+from pywa.types import TemplateStatus as _Ts
+from pywa.types.base_update import BaseUpdate as _BaseUpdate  # noqa
 
 if TYPE_CHECKING:
     from pywa import WhatsApp as Wa
 
-    MessageFilterT: TypeAlias = Callable[[Wa, Msg], bool]
-    CallbackFilterT: TypeAlias = Callable[
-        [Wa, CallbackButton | CallbackSelection], bool
-    ]
-    MessageStatusFilterT: TypeAlias = Callable[[Wa, Ms], bool]
-    TemplateStatusFilterT: TypeAlias = Callable[[Wa, Ts], bool]
+    _MessageFilterT: TypeAlias = Callable[[Wa, _Msg], bool]
+    _CallbackFilterT: TypeAlias = Callable[[Wa, _Clb | _Cls], bool]
+    _MessageStatusFilterT: TypeAlias = Callable[[Wa, _Ms], bool]
+    _TemplateStatusFilterT: TypeAlias = Callable[[Wa, _Ts], bool]
 
-T = TypeVar("T", bound=BaseUpdate)
+_T = TypeVar("_T", bound=_BaseUpdate)
 
-forwarded: MessageFilterT = lambda _, m: m.forwarded  # Filter for forwarded messages.
+forwarded: _MessageFilterT = lambda _, m: m.forwarded  # Filter for forwarded messages.
 """
 Filter for forwarded messages.
 
 >>> filters.forwarded
 """
 
-forwarded_many_times: MessageFilterT = lambda _, m: m.forwarded_many_times
+forwarded_many_times: _MessageFilterT = lambda _, m: m.forwarded_many_times
 """
 Filter for messages that have been forwarded many times.
 
 >>> filters.forwarded_many_times
 """
 
-reply: MessageFilterT = lambda _, m: m.reply_to_message is not None
+reply: _MessageFilterT = lambda _, m: m.reply_to_message is not None
 """
 Filter for messages that reply to another message.
 
@@ -74,7 +72,7 @@ Filter for messages that reply to another message.
 """
 
 
-def all_(*filters: Callable[[Wa, T], bool]) -> Callable[[Wa, T], bool]:
+def all_(*filters: Callable[[Wa, _T], bool]) -> Callable[[Wa, _T], bool]:
     """
     Filter for updates that pass all the given filters.
 
@@ -83,7 +81,7 @@ def all_(*filters: Callable[[Wa, T], bool]) -> Callable[[Wa, T], bool]:
     return lambda wa, m: all(f(wa, m) for f in filters)
 
 
-def any_(*filters: Callable[[Wa, T], bool]) -> Callable[[Wa, T], bool]:
+def any_(*filters: Callable[[Wa, _T], bool]) -> Callable[[Wa, _T], bool]:
     """
     Filter for updates that pass any of the given filters.
 
@@ -92,7 +90,7 @@ def any_(*filters: Callable[[Wa, T], bool]) -> Callable[[Wa, T], bool]:
     return lambda wa, m: any(f(wa, m) for f in filters)
 
 
-def not_(fil: Callable[[Wa, T], bool]) -> Callable[[Wa, T], bool]:
+def not_(fil: Callable[[Wa, _T], bool]) -> Callable[[Wa, _T], bool]:
     """
     Filter for updates that don't pass the given filter.
 
@@ -103,7 +101,7 @@ def not_(fil: Callable[[Wa, T], bool]) -> Callable[[Wa, T], bool]:
 
 def from_users(
     *numbers: str,
-) -> MessageFilterT | CallbackFilterT | MessageStatusFilterT:
+) -> _MessageFilterT | _CallbackFilterT | _MessageStatusFilterT:
     """
     Filter for messages that are sent from the given numbers.
 
@@ -116,7 +114,7 @@ def from_users(
 
 def from_countries(
     *prefixes: str | int,
-) -> MessageFilterT | CallbackFilterT | MessageStatusFilterT:
+) -> _MessageFilterT | _CallbackFilterT | _MessageStatusFilterT:
     """
     Filter for messages that are sent from the given country codes.
 
@@ -131,46 +129,46 @@ def from_countries(
     return lambda _, m: m.from_user.wa_id.startswith(codes)
 
 
-class _BaseUpdateFilter(abc.ABC):
+class _BaseUpdateFilters(abc.ABC):
     """
     Base class for all filters.
     """
 
-    def __new__(cls, wa: Wa, m: T) -> bool:
+    def __new__(cls, wa: Wa, m: _T) -> bool:
         """When instantiated, call the ``any`` method."""
         return cls.any(wa, m)
 
     @property
     @abc.abstractmethod
-    def __message_types__(self) -> tuple[Mt, ...]:
+    def __message_types__(self) -> tuple[_Mt, ...]:
         """The message types that the filter is for."""
         ...
 
     @staticmethod
     @abc.abstractmethod
-    def any(wa: Wa, m: T) -> bool:
+    def any(wa: Wa, m: _T) -> bool:
         """Filter for all updates of this type."""
         ...
 
     @classmethod
-    def _match_type(cls, m: Msg) -> bool:
+    def _match_type(cls, m: _Msg) -> bool:
         return m.type in cls.__message_types__
 
 
-class MediaFilter(_BaseUpdateFilter):
+class _MediaFilters(_BaseUpdateFilters):
     """
     Useful filters for media messages. Alias: ``filters.media``.
     """
 
     __message_types__ = (
-        Mt.IMAGE,
-        Mt.VIDEO,
-        Mt.AUDIO,
-        Mt.DOCUMENT,
-        Mt.STICKER,
+        _Mt.IMAGE,
+        _Mt.VIDEO,
+        _Mt.AUDIO,
+        _Mt.DOCUMENT,
+        _Mt.STICKER,
     )
 
-    any: MessageFilterT = lambda _, m: m.has_media
+    any: _MessageFilterT = lambda _, m: m.has_media
     """
     Filter for all media messages.
         - Same as ``filters.media``.
@@ -179,7 +177,7 @@ class MediaFilter(_BaseUpdateFilter):
     """
 
     @classmethod
-    def mimetypes(cls, *mimetypes: str) -> MessageFilterT:
+    def mimetypes(cls, *mimetypes: str) -> _MessageFilterT:
         """
         Filter for media messages that match any of the given mime types.
 
@@ -191,29 +189,41 @@ class MediaFilter(_BaseUpdateFilter):
         """
         return lambda _, m: cls._match_type(m) and m.media.mime_type in mimetypes
 
-
-media: MessageFilterT | type[MediaFilter] = MediaFilter
-
-
-class _MediaWithCaptionFilter(MediaFilter, abc.ABC):
     @classmethod
-    def _has_caption(cls, _: Wa, m: Msg) -> bool:
+    def extensions(cls, *extensions: str) -> _MessageFilterT:
+        """
+        Filter for media messages that match any of the given extensions.
+
+        >>> media.extensions(".pdf", ".png")
+        >>> video.extensions(".mp4")
+        >>> document.extensions(".pdf")
+        """
+        return lambda _, m: cls._match_type(m) and m.media.extension in extensions
+
+
+media: _MessageFilterT | type[_MediaFilters] = _MediaFilters
+
+
+class _MediaWithCaptionFilters(_MediaFilters, abc.ABC):
+    @classmethod
+    def _has_caption(cls, _: Wa, m: _Msg) -> bool:
         return cls._match_type(m) and m.caption is not None
 
-    has_caption: MessageFilterT = _has_caption
+    has_caption: _MessageFilterT = _has_caption
     """
     Filter for media messages that have a caption.
 
-    >>> filters.media.has_caption
+    >>> filters.image.has_caption
+    >>> filters.video.has_caption
     """
 
 
-class TextFilter(_BaseUpdateFilter):
+class _TextFilters(_BaseUpdateFilters):
     """Useful filters for text messages. Alias: ``filters.text``."""
 
-    __message_types__ = (Mt.TEXT,)
+    __message_types__ = (_Mt.TEXT,)
 
-    any: MessageFilterT = lambda _, m: m.type == Mt.TEXT
+    any: _MessageFilterT = lambda _, m: m.type == _Mt.TEXT
     """
     Filter for all text messages.
         - Same as ``filters.text``.
@@ -221,18 +231,18 @@ class TextFilter(_BaseUpdateFilter):
     >>> filters.text.any
     """
 
-    is_command: MessageFilterT = lambda _, m: m.type == Mt.TEXT and m.text.startswith(
+    is_command: _MessageFilterT = lambda _, m: m.type == _Mt.TEXT and m.text.startswith(
         ("!", "/", "#")
     )
     """
     Filter for text messages that are commands (start with ``!``, ``/``, or ``#``).
-        - Use TextFilter.command if you want to filter for specific commands or prefixes.
+        - Use _TextFilter.command if you want to filter for specific commands or prefixes.
 
     >>> filters.text.is_command
     """
 
     @staticmethod
-    def matches(*matches: str, ignore_case: bool = False) -> MessageFilterT:
+    def matches(*matches: str, ignore_case: bool = False) -> _MessageFilterT:
         """
         Filter for text messages that match exactly any of the given text/s.
 
@@ -244,12 +254,12 @@ class TextFilter(_BaseUpdateFilter):
         """
         matches = tuple(m.lower() for m in matches) if ignore_case else matches
         return (
-            lambda _, m: TextFilter._match_type(m)
+            lambda _, m: _TextFilters._match_type(m)
             and (m.text.lower() if ignore_case else m.text) in matches
         )
 
     @staticmethod
-    def contains(*matches: str, ignore_case: bool = False) -> MessageFilterT:
+    def contains(*matches: str, ignore_case: bool = False) -> _MessageFilterT:
         """
         Filter for text messages that contain any of the given text/s.
 
@@ -260,12 +270,12 @@ class TextFilter(_BaseUpdateFilter):
             ignore_case: Whether to ignore case when matching. (default: ``False``).
         """
         matches = tuple(m.lower() for m in matches) if ignore_case else matches
-        return lambda _, m: TextFilter._match_type(m) and any(
+        return lambda _, m: _TextFilters._match_type(m) and any(
             t in (m.text.lower() if ignore_case else m.text) for t in matches
         )
 
     @staticmethod
-    def startswith(*matches: str, ignore_case: bool = False) -> MessageFilterT:
+    def startswith(*matches: str, ignore_case: bool = False) -> _MessageFilterT:
         """
         Filter for text messages that start with any of the given text/s.
 
@@ -276,12 +286,12 @@ class TextFilter(_BaseUpdateFilter):
             ignore_case: Whether to ignore case when matching (default: ``False``).
         """
         matches = tuple(m.lower() for m in matches) if ignore_case else matches
-        return lambda _, m: TextFilter._match_type(m) and (
+        return lambda _, m: _TextFilters._match_type(m) and (
             m.text.lower() if ignore_case else m.text
         ).startswith(matches)
 
     @staticmethod
-    def endswith(*matches: str, ignore_case: bool = False) -> MessageFilterT:
+    def endswith(*matches: str, ignore_case: bool = False) -> _MessageFilterT:
         """
         Filter for text messages that end with any of the given text/s.
 
@@ -292,12 +302,12 @@ class TextFilter(_BaseUpdateFilter):
             ignore_case: Whether to ignore case when matching (default: ``False``).
         """
         matches = tuple(m.lower() for m in matches) if ignore_case else matches
-        return lambda _, m: TextFilter._match_type(m) and (
+        return lambda _, m: _TextFilters._match_type(m) and (
             m.text.lower() if ignore_case else m.text
         ).endswith(matches)
 
     @staticmethod
-    def regex(*patterns: str | re.Pattern, flags: int = 0) -> MessageFilterT:
+    def regex(*patterns: str | re.Pattern, flags: int = 0) -> _MessageFilterT:
         """
         Filter for text messages that match any of the given regexes.
 
@@ -310,12 +320,12 @@ class TextFilter(_BaseUpdateFilter):
         patterns = tuple(
             re.compile(p, flags) if isinstance(p, str) else p for p in patterns
         )
-        return lambda _, m: TextFilter._match_type(m) and any(
+        return lambda _, m: _TextFilters._match_type(m) and any(
             re.match(p, m.text, flags) for p in patterns
         )
 
     @staticmethod
-    def length(*lengths: tuple[int, int]) -> MessageFilterT:
+    def length(*lengths: tuple[int, int]) -> _MessageFilterT:
         """
         Filter for text messages that have a length between any of the given ranges.
 
@@ -324,7 +334,7 @@ class TextFilter(_BaseUpdateFilter):
         Args:
             *lengths: The length range/s to filter for (e.g. (1, 10), (50, 100)).
         """
-        return lambda _, m: TextFilter._match_type(m) and any(
+        return lambda _, m: _TextFilters._match_type(m) and any(
             i[0] <= len(m.text) <= i[1] for i in lengths
         )
 
@@ -333,7 +343,7 @@ class TextFilter(_BaseUpdateFilter):
         *cmds: str,
         prefixes: str | Iterable[str] = "!",
         ignore_case: bool = False,
-    ) -> MessageFilterT:
+    ) -> _MessageFilterT:
         """
         Filter for text messages that are commands.
 
@@ -345,21 +355,21 @@ class TextFilter(_BaseUpdateFilter):
             ignore_case: Whether to ignore case when matching (default: ``False``).
         """
         cmds = tuple(c.lower() for c in cmds) if ignore_case else cmds
-        return lambda _, m: TextFilter._match_type(m) and (
+        return lambda _, m: _TextFilters._match_type(m) and (
             m.text[0] in prefixes
             and (m.text[1:].lower() if ignore_case else m.text[1:]).startswith(cmds)
         )
 
 
-text: MessageFilterT | type[TextFilter] = TextFilter
+text: _MessageFilterT | type[_TextFilters] = _TextFilters
 
 
-class ImageFilter(_MediaWithCaptionFilter):
+class _ImageFilters(_MediaWithCaptionFilters):
     """Useful filters for image messages. Alias: ``filters.image``."""
 
-    __message_types__ = (Mt.IMAGE,)
+    __message_types__ = (_Mt.IMAGE,)
 
-    any: MessageFilterT = lambda _, m: ImageFilter._match_type(m)
+    any: _MessageFilterT = lambda _, m: _ImageFilters._match_type(m)
     """
     Filter for all image messages.
         - Same as ``filters.image``.
@@ -368,15 +378,15 @@ class ImageFilter(_MediaWithCaptionFilter):
     """
 
 
-image: MessageFilterT | type[ImageFilter] = ImageFilter
+image: _MessageFilterT | type[_ImageFilters] = _ImageFilters
 
 
-class VideoFilter(_MediaWithCaptionFilter):
+class _VideoFilters(_MediaWithCaptionFilters):
     """Useful filters for video messages. Alias: ``filters.video``."""
 
-    __message_types__ = (Mt.VIDEO,)
+    __message_types__ = (_Mt.VIDEO,)
 
-    any: MessageFilterT = lambda _, m: VideoFilter._match_type(m)
+    any: _MessageFilterT = lambda _, m: _VideoFilters._match_type(m)
     """
     Filter for all video messages.
         - Same as ``filters.video``.
@@ -385,15 +395,15 @@ class VideoFilter(_MediaWithCaptionFilter):
     """
 
 
-video: MessageFilterT | type[VideoFilter] = VideoFilter
+video: _MessageFilterT | type[_VideoFilters] = _VideoFilters
 
 
-class DocumentFilter(_MediaWithCaptionFilter):
+class _DocumentFilters(_MediaWithCaptionFilters):
     """Useful filters for document messages. Alias: ``filters.document``."""
 
-    __message_types__ = (Mt.DOCUMENT,)
+    __message_types__ = (_Mt.DOCUMENT,)
 
-    any: MessageFilterT = lambda _, m: DocumentFilter._match_type(m)
+    any: _MessageFilterT = lambda _, m: _DocumentFilters._match_type(m)
     """
     Filter for all document messages.
         - Same as ``filters.document``.
@@ -402,15 +412,15 @@ class DocumentFilter(_MediaWithCaptionFilter):
     """
 
 
-document: MessageFilterT | type[DocumentFilter] = DocumentFilter
+document: _MessageFilterT | type[_DocumentFilters] = _DocumentFilters
 
 
-class AudioFilter(MediaFilter):
+class _AudioFilters(_MediaFilters):
     """Useful filters for audio messages. Alias: ``filters.audio``."""
 
-    __message_types__ = (Mt.AUDIO,)
+    __message_types__ = (_Mt.AUDIO,)
 
-    any: MessageFilterT = lambda _, m: AudioFilter._match_type(m)
+    any: _MessageFilterT = lambda _, m: _AudioFilters._match_type(m)
     """
     Filter for all audio messages (voice notes and audio files).
         - Same as ``filters.audio``.
@@ -418,15 +428,15 @@ class AudioFilter(MediaFilter):
     >>> filters.audio.any
     """
 
-    voice: MessageFilterT = lambda _, m: AudioFilter._match_type(m) and m.audio.voice
+    voice: _MessageFilterT = lambda _, m: _AudioFilters._match_type(m) and m.audio.voice
     """
     Filter for audio messages that are voice notes.
 
     >>> filters.audio.voice
     """
 
-    audio: MessageFilterT = (
-        lambda _, m: AudioFilter._match_type(m) and not m.audio.voice
+    audio: _MessageFilterT = (
+        lambda _, m: _AudioFilters._match_type(m) and not m.audio.voice
     )
     """
     Filter for audio messages that are audio files.
@@ -435,15 +445,15 @@ class AudioFilter(MediaFilter):
     """
 
 
-audio: MessageFilterT | type[AudioFilter] = AudioFilter
+audio: _MessageFilterT | type[_AudioFilters] = _AudioFilters
 
 
-class StickerFilter(MediaFilter):
+class _StickerFilters(_MediaFilters):
     """Useful filters for sticker messages. Alias: ``filters.sticker``."""
 
-    __message_types__ = (Mt.STICKER,)
+    __message_types__ = (_Mt.STICKER,)
 
-    any: MessageFilterT = lambda _, m: StickerFilter._match_type(m)
+    any: _MessageFilterT = lambda _, m: _StickerFilters._match_type(m)
     """
     Filter for all sticker messages.
         - Same as ``filters.sticker``.
@@ -451,8 +461,8 @@ class StickerFilter(MediaFilter):
     >>> filters.sticker.any
     """
 
-    animated: MessageFilterT = (
-        lambda _, m: StickerFilter._match_type(m) and m.sticker.animated
+    animated: _MessageFilterT = (
+        lambda _, m: _StickerFilters._match_type(m) and m.sticker.animated
     )
     """
     Filter for animated sticker messages.
@@ -460,8 +470,8 @@ class StickerFilter(MediaFilter):
     >>> filters.sticker.animated
     """
 
-    static: MessageFilterT = (
-        lambda _, m: StickerFilter._match_type(m) and not m.sticker.animated
+    static: _MessageFilterT = (
+        lambda _, m: _StickerFilters._match_type(m) and not m.sticker.animated
     )
     """
     Filter for static sticker messages.
@@ -470,15 +480,15 @@ class StickerFilter(MediaFilter):
     """
 
 
-sticker: MessageFilterT | type[StickerFilter] = StickerFilter
+sticker: _MessageFilterT | type[_StickerFilters] = _StickerFilters
 
 
-class LocationFilter(_BaseUpdateFilter):
+class _LocationFilters(_BaseUpdateFilters):
     """Useful filters for location messages. Alias: ``filters.location``."""
 
-    __message_types__ = (Mt.LOCATION,)
+    __message_types__ = (_Mt.LOCATION,)
 
-    any: MessageFilterT = lambda _, m: LocationFilter._match_type(m)
+    any: _MessageFilterT = lambda _, m: _LocationFilters._match_type(m)
     """
     Filter for all location messages.
         - Same as ``filters.location``.
@@ -486,8 +496,8 @@ class LocationFilter(_BaseUpdateFilter):
     >>> filters.location.any
     """
 
-    current_location: MessageFilterT = (
-        lambda _, m: LocationFilter._match_type(m) and m.location.current_location
+    current_location: _MessageFilterT = (
+        lambda _, m: _LocationFilters._match_type(m) and m.location.current_location
     )
     """
     Filter for location messages that are the current location of the user and not just selected manually.
@@ -496,7 +506,7 @@ class LocationFilter(_BaseUpdateFilter):
     """
 
     @staticmethod
-    def in_radius(lat: float, lon: float, radius: float | int) -> MessageFilterT:
+    def in_radius(lat: float, lon: float, radius: float | int) -> _MessageFilterT:
         """
         Filter for location messages that are in a given radius.
 
@@ -508,23 +518,23 @@ class LocationFilter(_BaseUpdateFilter):
             radius: Radius in kilometers.
         """
 
-        def _in_radius(_: Wa, msg: Msg) -> bool:
-            return LocationFilter._match_type(msg) and msg.location.in_radius(
+        def _in_radius(_: Wa, msg: _Msg) -> bool:
+            return _LocationFilters._match_type(msg) and msg.location.in_radius(
                 lat=lat, lon=lon, radius=radius
             )
 
         return _in_radius
 
 
-location: MessageFilterT | type[LocationFilter] = LocationFilter
+location: _MessageFilterT | type[_LocationFilters] = _LocationFilters
 
 
-class ReactionFilter(_BaseUpdateFilter):
+class _ReactionFilters(_BaseUpdateFilters):
     """Useful filters for reaction messages. Alias: ``filters.reaction``."""
 
-    __message_types__ = (Mt.REACTION,)
+    __message_types__ = (_Mt.REACTION,)
 
-    any: MessageFilterT = lambda _, m: ReactionFilter._match_type(m)
+    any: _MessageFilterT = lambda _, m: _ReactionFilters._match_type(m)
     """
     Filter for all reaction updates (added or removed).
         - Same as ``filters.reaction``.
@@ -532,8 +542,8 @@ class ReactionFilter(_BaseUpdateFilter):
     >>> filters.reaction.any
     """
 
-    added: MessageFilterT = (
-        lambda _, m: ReactionFilter._match_type(m) and m.reaction.emojis is not None
+    added: _MessageFilterT = (
+        lambda _, m: _ReactionFilters._match_type(m) and m.reaction.emojis is not None
     )
     """
     Filter for reaction messages that were added.
@@ -541,8 +551,8 @@ class ReactionFilter(_BaseUpdateFilter):
     >>> filters.reaction.added
     """
 
-    removed: MessageFilterT = (
-        lambda _, m: ReactionFilter._match_type(m) and m.reaction.emojis is None
+    removed: _MessageFilterT = (
+        lambda _, m: _ReactionFilters._match_type(m) and m.reaction.emojis is None
     )
     """
     Filter for reaction messages that were removed.
@@ -551,24 +561,26 @@ class ReactionFilter(_BaseUpdateFilter):
     """
 
     @staticmethod
-    def emojis(*emojis: str) -> MessageFilterT:
+    def emojis(*emojis: str) -> _MessageFilterT:
         """
         Filter for custom reaction messages. pass emojis as strings.
 
         >>> reaction.emojis("👍","👎")
         """
-        return lambda _, m: ReactionFilter._match_type(m) and m.reaction.emoji in emojis
+        return (
+            lambda _, m: _ReactionFilters._match_type(m) and m.reaction.emoji in emojis
+        )
 
 
-reaction: MessageFilterT | type[ReactionFilter] = ReactionFilter
+reaction: _MessageFilterT | type[_ReactionFilters] = _ReactionFilters
 
 
-class ContactsFilter(_BaseUpdateFilter):
+class _ContactsFilters(_BaseUpdateFilters):
     """Useful filters for contact messages. Alias: ``filters.contacts``."""
 
-    __message_types__ = (Mt.CONTACTS,)
+    __message_types__ = (_Mt.CONTACTS,)
 
-    any: MessageFilterT = lambda _, m: ContactsFilter._match_type(m)
+    any: _MessageFilterT = lambda _, m: _ContactsFilters._match_type(m)
     """
     Filter for all contacts messages.
         - Same as ``filters.contacts``.
@@ -576,7 +588,7 @@ class ContactsFilter(_BaseUpdateFilter):
     >>> filters.contacts.any
     """
 
-    has_wa: MessageFilterT = lambda _, m: ContactsFilter._match_type(m) and (
+    has_wa: _MessageFilterT = lambda _, m: _ContactsFilters._match_type(m) and (
         any(
             (
                 p.wa_id
@@ -591,7 +603,7 @@ class ContactsFilter(_BaseUpdateFilter):
     """
 
     @staticmethod
-    def count(min_count: int, max_count: int) -> MessageFilterT:
+    def count(min_count: int, max_count: int) -> _MessageFilterT:
         """
         Filter for contacts messages that have a number of contacts between min_count and max_count.
 
@@ -599,12 +611,12 @@ class ContactsFilter(_BaseUpdateFilter):
         >>> contacts.count(1, 5) # between 1 and 5 contacts
         """
         return (
-            lambda _, m: ContactsFilter._match_type(m)
+            lambda _, m: _ContactsFilters._match_type(m)
             and min_count <= len(m.contacts) <= max_count
         )
 
     @staticmethod
-    def phones(*phones: str) -> MessageFilterT:
+    def phones(*phones: str) -> _MessageFilterT:
         """
         Filter for contacts messages that have the given phone number/s.
 
@@ -612,7 +624,7 @@ class ContactsFilter(_BaseUpdateFilter):
         """
         only_nums_pattern = re.compile(r"\D")
         phones = [re.sub(only_nums_pattern, "", p) for p in phones]
-        return lambda _, m: ContactsFilter._match_type(m) and (
+        return lambda _, m: _ContactsFilters._match_type(m) and (
             any(
                 re.sub(only_nums_pattern, "", p.phones) in phones
                 for contact in m.contacts
@@ -621,15 +633,15 @@ class ContactsFilter(_BaseUpdateFilter):
         )
 
 
-contacts: MessageFilterT | type[ContactsFilter] = ContactsFilter
+contacts: _MessageFilterT | type[_ContactsFilters] = _ContactsFilters
 
 
-class OrderFilter(_BaseUpdateFilter):
+class _OrderFilters(_BaseUpdateFilters):
     """Useful filters for order messages. Alias: ``filters.order``."""
 
-    __message_types__ = (Mt.ORDER,)
+    __message_types__ = (_Mt.ORDER,)
 
-    any: MessageFilterT = lambda _, m: OrderFilter._match_type(m)
+    any: _MessageFilterT = lambda _, m: _OrderFilters._match_type(m)
     """
     Filter for all order messages.
         - Same as ``filters.order``.
@@ -638,7 +650,7 @@ class OrderFilter(_BaseUpdateFilter):
     """
 
     @staticmethod
-    def price(min_price: float, max_price: float) -> MessageFilterT:
+    def price(min_price: float, max_price: float) -> _MessageFilterT:
         """
         Filter for order messages that have a total price between min_price and max_price.
 
@@ -649,12 +661,12 @@ class OrderFilter(_BaseUpdateFilter):
         >>> order.price(1, 100) # total price between 1 and 100
         """
         return (
-            lambda _, m: OrderFilter._match_type(m)
+            lambda _, m: _OrderFilters._match_type(m)
             and min_price <= m.order.total_price <= max_price
         )
 
     @staticmethod
-    def count(min_count: int, max_count: int) -> MessageFilterT:
+    def count(min_count: int, max_count: int) -> _MessageFilterT:
         """
         Filter for order messages that have a number of items between min_count and max_count.
 
@@ -665,12 +677,12 @@ class OrderFilter(_BaseUpdateFilter):
         >>> order.count(1, 5) # between 1 and 5 items
         """
         return (
-            lambda _, m: OrderFilter._match_type(m)
+            lambda _, m: _OrderFilters._match_type(m)
             and min_count <= len(m.order.products) <= max_count
         )
 
     @staticmethod
-    def has_product(*skus: str) -> MessageFilterT:
+    def has_product(*skus: str) -> _MessageFilterT:
         """
         Filter for order messages that have the given product/s.
 
@@ -679,23 +691,23 @@ class OrderFilter(_BaseUpdateFilter):
 
         >>> order.has_product("pizza_1","pizza_2")
         """
-        return lambda _, m: OrderFilter._match_type(m) and (
+        return lambda _, m: _OrderFilters._match_type(m) and (
             any(p.sku in skus for p in m.order.products)
         )
 
 
-order: MessageFilterT | type[OrderFilter] = OrderFilter
+order: _MessageFilterT | type[_OrderFilters] = _OrderFilters
 
 
-class UnsupportedMsgFilter(_BaseUpdateFilter):
+class _UnsupportedMsgFilters(_BaseUpdateFilters):
     """Useful filters for unsupported messages. Alias: ``filters.unsupported``."""
 
-    __message_types__ = (Mt.UNSUPPORTED,)
+    __message_types__ = (_Mt.UNSUPPORTED,)
 
     def __new__(cls):
         return cls.any
 
-    any: MessageFilterT = lambda _, m: m.type == Mt.UNSUPPORTED
+    any: _MessageFilterT = lambda _, m: m.type == _Mt.UNSUPPORTED
     """
     Filter for all unsupported messages.
         - Same as ``filters.unsupported``.
@@ -704,18 +716,18 @@ class UnsupportedMsgFilter(_BaseUpdateFilter):
     """
 
 
-unsupported: MessageFilterT | type[UnsupportedMsgFilter] = UnsupportedMsgFilter
+unsupported: _MessageFilterT | type[_UnsupportedMsgFilters] = _UnsupportedMsgFilters
 
 
-class CallbackFilter(_BaseUpdateFilter):
+class _CallbackFilters(_BaseUpdateFilters):
     """Useful filters for callback queries. Alias: ``filters.callback``."""
 
-    __message_types__ = (Mt.INTERACTIVE,)
+    __message_types__ = (_Mt.INTERACTIVE,)
 
     def __new__(cls):
         return cls.any
 
-    any: CallbackFilterT = lambda _, __: True
+    any: _CallbackFilterT = lambda _, __: True
     """
     Filter for all callback queries (the default).
         - Same as ``filters.callback``.
@@ -724,7 +736,7 @@ class CallbackFilter(_BaseUpdateFilter):
     """
 
     @staticmethod
-    def data_matches(*matches: str, ignore_case: bool = False) -> CallbackFilterT:
+    def data_matches(*matches: str, ignore_case: bool = False) -> _CallbackFilterT:
         """
         Filter for callbacks their data match exactly the given string/s.
 
@@ -739,7 +751,7 @@ class CallbackFilter(_BaseUpdateFilter):
         return lambda _, c: (c.data.lower() if ignore_case else c.data) in matches
 
     @staticmethod
-    def data_startswith(*matches: str, ignore_case: bool = False) -> CallbackFilterT:
+    def data_startswith(*matches: str, ignore_case: bool = False) -> _CallbackFilterT:
         """
         Filter for callbacks their data starts with the given string/s.
 
@@ -755,7 +767,7 @@ class CallbackFilter(_BaseUpdateFilter):
         )
 
     @staticmethod
-    def data_endswith(*matches: str, ignore_case: bool = False) -> CallbackFilterT:
+    def data_endswith(*matches: str, ignore_case: bool = False) -> _CallbackFilterT:
         """
         Filter for callbacks their data ends with the given string/s.
 
@@ -771,7 +783,7 @@ class CallbackFilter(_BaseUpdateFilter):
         )
 
     @staticmethod
-    def data_contains(*matches: str, ignore_case: bool = False) -> CallbackFilterT:
+    def data_contains(*matches: str, ignore_case: bool = False) -> _CallbackFilterT:
         """
         Filter for callbacks their data contains the given string/s.
 
@@ -787,7 +799,7 @@ class CallbackFilter(_BaseUpdateFilter):
         )
 
     @staticmethod
-    def data_regex(*patterns: str | re.Pattern, flags: int = 0) -> CallbackFilterT:
+    def data_regex(*patterns: str | re.Pattern, flags: int = 0) -> _CallbackFilterT:
         """
         Filter for callbacks their data matches the given regex/regexes.
 
@@ -801,15 +813,15 @@ class CallbackFilter(_BaseUpdateFilter):
         return lambda _, c: any((re.match(p, c.data, flags) for p in patterns))
 
 
-callback: CallbackFilterT | type[CallbackFilter] = CallbackFilter
+callback: _CallbackFilterT | type[_CallbackFilters] = _CallbackFilters
 
 
-class MessageStatusFilter(_BaseUpdateFilter):
+class _MessageStatusFilters(_BaseUpdateFilters):
     """Useful filters for message status updates. Alias: ``filters.message_status``."""
 
     __message_types__ = ()
 
-    any: MessageStatusFilterT = lambda _, __: True
+    any: _MessageStatusFilterT = lambda _, __: True
     """
     Filter for all message status updates (the default).
         - Same as ``filters.message_status``.
@@ -817,28 +829,28 @@ class MessageStatusFilter(_BaseUpdateFilter):
     >>> filters.message_status.any
     """
 
-    sent: MessageStatusFilterT = lambda _, s: s.status == Mst.SENT
+    sent: _MessageStatusFilterT = lambda _, s: s.status == _Mst.SENT
     """
     Filter for messages that have been sent.
 
     >>> filters.message_status.sent
     """
 
-    delivered: MessageStatusFilterT = lambda _, s: s.status == Mst.DELIVERED
+    delivered: _MessageStatusFilterT = lambda _, s: s.status == _Mst.DELIVERED
     """
     Filter for messages that have been delivered.
 
     >>> filters.message_status.delivered
     """
 
-    read: MessageStatusFilterT = lambda _, s: s.status == Mst.READ
+    read: _MessageStatusFilterT = lambda _, s: s.status == _Mst.READ
     """
     Filter for messages that have been read.
 
     >>> filters.message_status.read
     """
 
-    failed: MessageStatusFilterT = lambda _, s: s.status == Mst.FAILED
+    failed: _MessageStatusFilterT = lambda _, s: s.status == _Mst.FAILED
     """
     Filter for status updates of messages that have failed to send.
 
@@ -848,7 +860,7 @@ class MessageStatusFilter(_BaseUpdateFilter):
     @staticmethod
     def failed_with(
         *errors: type[WhatsAppError] | int,
-    ) -> MessageStatusFilterT:
+    ) -> _MessageStatusFilterT:
         """
         Filter for status updates of messages that have failed to send with the given error/s.
 
@@ -862,21 +874,23 @@ class MessageStatusFilter(_BaseUpdateFilter):
         exceptions = tuple(
             e for e in errors if e not in error_codes and issubclass(e, WhatsAppError)
         )
-        return lambda _, s: s.status == Mst.FAILED and (
+        return lambda _, s: s.status == _Mst.FAILED and (
             any((isinstance(s.error, e) for e in exceptions))
             or s.error.error_code in error_codes
         )
 
 
-message_status: MessageStatusFilterT | type[MessageStatusFilter] = MessageStatusFilter
+message_status: _MessageStatusFilterT | type[
+    _MessageStatusFilters
+] = _MessageStatusFilters
 
 
-class TemplateStatusFilter(_BaseUpdateFilter):
+class _TemplateStatusFilters(_BaseUpdateFilters):
     """Useful filters for template status updates. Alias: ``filters.template_status``."""
 
     __message_types__ = ()
 
-    any: TemplateStatusFilterT = lambda _, __: True
+    any: _TemplateStatusFilterT = lambda _, __: True
     """
     Filter for all template status updates (the default).
         - Same as ``filters.template_status``.
@@ -884,7 +898,7 @@ class TemplateStatusFilter(_BaseUpdateFilter):
     >>> filters.template_status.any
     """
 
-    template_name: lambda name: TemplateStatusFilterT = (
+    template_name: lambda name: _TemplateStatusFilterT = (
         lambda name: lambda _, s: s.template_name == name
     )
     """
@@ -894,32 +908,32 @@ class TemplateStatusFilter(_BaseUpdateFilter):
     """
 
     @staticmethod
-    def on_event(*events: Ts.TemplateEvent) -> TemplateStatusFilterT:
+    def on_event(*events: _Ts.TemplateEvent) -> _TemplateStatusFilterT:
         """
         Filter for template status updates that are for the given event/s.
 
         Args:
             *events: The template events to filter for.
 
-        >>> template_status.on_event(Ts.TemplateEvent.APPROVED)
+        >>> template_status.on_event(_Ts.TemplateEvent.APPROVED)
         """
         return lambda _, s: s.event in events
 
     @staticmethod
     def on_rejection_reason(
-        *reasons: Ts.TemplateRejectionReason,
-    ) -> TemplateStatusFilterT:
+        *reasons: _Ts.TemplateRejectionReason,
+    ) -> _TemplateStatusFilterT:
         """
         Filter for template status updates that are for the given reason/s.
 
         Args:
             *reasons: The template reasons to filter for.
 
-        >>> template_status.on_rejection_reason(Ts.TemplateRejectionReason.INCORRECT_CATEGORY)
+        >>> template_status.on_rejection_reason(_Ts.TemplateRejectionReason.INCORRECT_CATEGORY)
         """
         return lambda _, s: s.reason in reasons
 
 
 template_status: (
-    TemplateStatusFilterT | type[TemplateStatusFilter]
-) = TemplateStatusFilter
+    _TemplateStatusFilterT | type[_TemplateStatusFilters]
+) = _TemplateStatusFilters

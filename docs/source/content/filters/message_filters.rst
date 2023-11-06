@@ -23,6 +23,7 @@ Message Filters
 
 .. autoclass:: media
 .. automethod:: media.mimetypes
+.. automethod:: media.extensions
 
 .. autoclass:: image
 .. autoattribute:: image.has_caption
