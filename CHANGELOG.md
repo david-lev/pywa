@@ -3,6 +3,11 @@ Changelog
 
 NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 1.11.1 (2023-11-07)
+
+- [reaction] hot-fix for reaction when "unreacting" to a message
+- [filters] adding `.extensions(...)` filter for all media filters
+
 ### 1.11.0 (2023-11-01)
 
 - [callback] adding support for `Optional[x]` annotation in `CallbackData` subclasses
