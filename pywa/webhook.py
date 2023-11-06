@@ -1,6 +1,7 @@
+"""This module contains the Webhook class, which is used to set up a webhook for receiving incoming messages."""
+
 from __future__ import annotations
 
-"""This module contains the Webhook class, which is used to set up a webhook for receiving incoming messages."""
 
 __all__ = ["Webhook"]
 

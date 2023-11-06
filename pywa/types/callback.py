@@ -246,10 +246,11 @@ CallbackDataT = TypeVar(
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class CallbackButton(BaseUserUpdate, Generic[CallbackDataT]):
     """
-    Represents a callback button.
+    Represents a callback button (Incoming update when user clicks on :class:`Button` or chooses
+    :class:`Template.QuickReplyButtonData`).
 
     ``CallbackButton`` is a generic class, so when providing a ``factory`` parameter in callback handlers, you can
-    specify the type of the factory to get autocomplete.
+    specify the type of the factory to get autocomplete in the ``data`` attribute.
 
     Here is an example:
 
@@ -344,10 +345,10 @@ class CallbackButton(BaseUserUpdate, Generic[CallbackDataT]):
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class CallbackSelection(BaseUserUpdate, Generic[CallbackDataT]):
     """
-    Represents a callback selection.
+    Represents a callback selection (Incoming update when user clicks on :class:`SectionRow` in :class:`SectionList`).
 
     ``CallbackSelection`` is a generic class, so when providing a ``factory`` parameter in callback handlers, you can
-    specify the type of the factory to get autocomplete.
+    specify the type of the factory to get autocomplete in the ``data`` attribute.
 
     Here is an example:
 

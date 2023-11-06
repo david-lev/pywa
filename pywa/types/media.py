@@ -1,6 +1,7 @@
+"""This module contains the types related to media."""
+
 from __future__ import annotations
 
-"""This module contains the types related to media."""
 
 __all__ = [
     "Image",
@@ -23,7 +24,7 @@ if TYPE_CHECKING:
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class MediaBase(abc.ABC, utils.FromDict):
+class BaseMedia(abc.ABC, utils.FromDict):
     """Base class for all media types."""
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
@@ -84,12 +85,12 @@ class MediaBase(abc.ABC, utils.FromDict):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Image(MediaBase):
+class Image(BaseMedia):
     """
-    Represents an image.
+    Represents an received image.
 
     Attributes:
-        id: The ID of the image.
+        id: The ID of the file (can be used to download or re-send the image).
         sha256: The SHA256 hash of the image.
         mime_type: The MIME type of the image.
     """
@@ -100,12 +101,12 @@ class Image(MediaBase):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Video(MediaBase):
+class Video(BaseMedia):
     """
     Represents a video.
 
     Attributes:
-        id: The ID of the video.
+        id: The ID of the file (can be used to download or re-send the video).
         sha256: The SHA256 hash of the video.
         mime_type: The MIME type of the video.
     """
@@ -116,12 +117,12 @@ class Video(MediaBase):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Sticker(MediaBase):
+class Sticker(BaseMedia):
     """
     Represents a sticker.
 
     Attributes:
-        id: The ID of the sticker.
+        id: The ID of the file (can be used to download or re-send the sticker).
         sha256: The SHA256 hash of the sticker.
         mime_type: The MIME type of the sticker.
         animated: Whether the sticker is animated.
@@ -134,12 +135,12 @@ class Sticker(MediaBase):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Document(MediaBase):
+class Document(BaseMedia):
     """
     Represents a document.
 
     Attributes:
-        id: The ID of the document.
+        id: The ID of the file (can be used to download or re-send the document).
         sha256: The SHA256 hash of the document.
         mime_type: The MIME type of the document.
         filename: The filename of the document (optional).
@@ -152,12 +153,12 @@ class Document(MediaBase):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Audio(MediaBase):
+class Audio(BaseMedia):
     """
     Represents an audio.
 
     Attributes:
-        id: The ID of the audio.
+        id: The ID of the file (can be used to download or re-send the audio).
         sha256: The SHA256 hash of the audio.
         mime_type: The MIME type of the audio.
         voice: Whether the audio is a voice message or just an audio file.

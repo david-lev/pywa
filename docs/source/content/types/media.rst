@@ -17,9 +17,9 @@ Media
 
 **Every media type has the following properties and methods:**
 
-.. autoproperty:: MediaBase.extension
-.. automethod:: MediaBase.get_media_url
-.. automethod:: MediaBase.download
+.. autoproperty:: BaseMedia.extension
+.. automethod:: BaseMedia.get_media_url
+.. automethod:: BaseMedia.download
 
 ----------------
 
