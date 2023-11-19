@@ -107,9 +107,9 @@ class CallbackData:
     )
     """The allowed types in the callback data."""
 
-    def __init_subclass__(cls, **kwargs):
+    def __init_subclass__(cls, *args, **kwargs):
         """Validate the callback data class and set a unique ID for it."""
-        super().__init_subclass__(**kwargs)
+        super().__init_subclass__(*args, **kwargs)
         if (
             len(
                 set(

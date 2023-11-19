@@ -951,6 +951,7 @@ class WhatsApp(Webhook, HandlerDecorators):
         media: str | pathlib.Path | bytes | BinaryIO,
         mime_type: str | None = None,
         filename: str | None = None,
+        dl_session: requests.Session | None = None,
     ) -> str:
         """
         Upload media to WhatsApp servers.
@@ -967,6 +968,8 @@ class WhatsApp(Webhook, HandlerDecorators):
             media: The media to upload (can be a URL, bytes, or a file path).
             mime_type: The MIME type of the media (required if media is bytes or a file path).
             filename: The file name of the media (required if media is bytes).
+            dl_session: A requests session to use when downloading the media from a URL (optional, if not provided, a
+             new session will be created).
 
         Returns:
             The media ID.
@@ -985,7 +988,7 @@ class WhatsApp(Webhook, HandlerDecorators):
                     mime_type or mimetypes.guess_type(path)[0],
                 )
             elif (url := str(media)).startswith(("https://", "http://")):
-                res = requests.get(url)
+                res = (dl_session or requests).get(url)
                 try:
                     res.raise_for_status()
                 except requests.HTTPError as e:
