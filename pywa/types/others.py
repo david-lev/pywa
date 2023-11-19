@@ -353,6 +353,32 @@ class Contact:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
+class ReferredProduct:
+    """
+    Represents a product this message is referring to.
+
+    Attributes:
+        catalog_id:
+        sku: Unique identifier of the product in a catalog (also referred to as ``Content ID`` or ``Retailer ID``).
+
+    """
+
+    catalog_id: str
+    sku: str
+
+    @classmethod
+    def from_dict(cls, data: dict | None) -> ReferredProduct | None:
+        return (
+            cls(
+                catalog_id=data["catalog_id"],
+                sku=data["product_retailer_id"],
+            )
+            if data
+            else None
+        )
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
 class ReplyToMessage:
     """
     Represents a message that was replied to.
@@ -360,15 +386,23 @@ class ReplyToMessage:
     Attributes:
         message_id: The ID of the message that was replied to.
         from_user_id: The ID of the user who sent the message that was replied to.
+        referred_product: Referred product describing the product the user is requesting information about.
     """
 
     message_id: str
     from_user_id: str
+    referred_product: ReferredProduct | None
 
     @classmethod
     def from_dict(cls, data: dict | None) -> ReplyToMessage | None:
         return (
-            cls(message_id=data["id"], from_user_id=data["from"])
+            cls(
+                message_id=data["id"],
+                from_user_id=data["from"],
+                referred_product=ReferredProduct.from_dict(
+                    data.get("referred_product")
+                ),
+            )
             if (data and "id" in data)
             else None
         )

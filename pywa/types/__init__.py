@@ -34,6 +34,7 @@ from .others import (
     ProductsSection,
     Reaction,
     ReplyToMessage,
+    ReferredProduct,
     System,
     User,
 )
