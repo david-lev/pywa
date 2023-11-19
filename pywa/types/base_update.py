@@ -68,6 +68,10 @@ class BaseUpdate(abc.ABC):
     def from_update(cls, client: WhatsApp, update: dict) -> BaseUpdate:
         ...
 
+    def __hash__(self):
+        """Return the hash of the update ID."""
+        return hash(self.id)
+
     def stop_handling(self) -> None:
         """
         Call this method to break out of the handler loop. other handlers will not be called.
