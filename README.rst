@@ -100,8 +100,8 @@ ________________________
         phone_id='1234567890',
         token='xxxxxxx',
         server=flask_app,
-        callback_url='https://6b3e-18.ngrok.io',
-        verify_token='XYZ123',
+        callback_url='https://xyz.ngrok-free.app',
+        verify_token='xyz123',
         app_id=123456,
         app_secret='yyyyyy'
     )

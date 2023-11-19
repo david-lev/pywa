@@ -158,12 +158,18 @@ class SpamRateLimitHit(ThrottlingError):
     __error_codes__ = (131048,)
 
 
-class ToManyMessages(ThrottlingError):
+class TooManyMessages(ThrottlingError):
     """
     Too many messages sent from the sender phone number to the same recipient phone number in a short period of time.
     """
 
     __error_codes__ = (131056,)
+
+
+class ToManyMessages(TooManyMessages):
+    """Deprecated, use :class:`TooManyMessages` instead."""
+
+    pass
 
 
 # ====================================================================================================
