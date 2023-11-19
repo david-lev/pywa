@@ -454,7 +454,7 @@ def _resolve_callback_data(data: CallbackDataT) -> str:
     raise TypeError(f"Invalid callback data type {type(data)}")
 
 
-@dataclasses.dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(slots=True)
 class Button:
     """
     Represents a button in the button list.
@@ -478,7 +478,7 @@ class Button:
         }
 
 
-@dataclasses.dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(slots=True)
 class ButtonUrl:
     """
     Represents a button in the bottom of the message that opens a URL.
@@ -498,7 +498,7 @@ class ButtonUrl:
         }
 
 
-@dataclasses.dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(slots=True)
 class SectionRow:
     """
     Represents a row in a section.
@@ -524,7 +524,7 @@ class SectionRow:
         return d
 
 
-@dataclasses.dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(slots=True)
 class Section:
     """
     Represents a section in a section list.
@@ -544,7 +544,7 @@ class Section:
         }
 
 
-@dataclasses.dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(slots=True)
 class SectionList:
     """
     Represents a section list in an interactive message.

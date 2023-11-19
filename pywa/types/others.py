@@ -482,7 +482,7 @@ class System:
         )
 
 
-@dataclasses.dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(slots=True)
 class ProductsSection:
     """
     Represents a section in a section list.
