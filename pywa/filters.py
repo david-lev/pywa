@@ -8,6 +8,7 @@ __all__ = [
     "forwarded",
     "forwarded_many_times",
     "reply",
+    "has_referred_product",
     "from_users",
     "from_countries",
     "text",
@@ -41,12 +42,12 @@ from pywa.types import TemplateStatus as _Ts
 from pywa.types.base_update import BaseUpdate as _BaseUpdate  # noqa
 
 if TYPE_CHECKING:
-    from pywa import WhatsApp as Wa
+    from pywa import WhatsApp as _Wa
 
-    _MessageFilterT: TypeAlias = Callable[[Wa, _Msg], bool]
-    _CallbackFilterT: TypeAlias = Callable[[Wa, _Clb | _Cls], bool]
-    _MessageStatusFilterT: TypeAlias = Callable[[Wa, _Ms], bool]
-    _TemplateStatusFilterT: TypeAlias = Callable[[Wa, _Ts], bool]
+    _MessageFilterT: TypeAlias = Callable[[_Wa, _Msg], bool]
+    _CallbackFilterT: TypeAlias = Callable[[_Wa, _Clb | _Cls], bool]
+    _MessageStatusFilterT: TypeAlias = Callable[[_Wa, _Ms], bool]
+    _TemplateStatusFilterT: TypeAlias = Callable[[_Wa, _Ts], bool]
 
 _T = TypeVar("_T", bound=_BaseUpdate)
 
@@ -71,8 +72,17 @@ Filter for messages that reply to another message.
 >>> filters.reply
 """
 
+has_referred_product: _MessageFilterT = lambda _, m: (
+    m.reply_to_message is not None and m.reply_to_message.referred_product is not None
+)
+"""
+Filter for messages that user sends to ask about a product
 
-def all_(*filters: Callable[[Wa, _T], bool]) -> Callable[[Wa, _T], bool]:
+>>> filters.referred_product
+"""
+
+
+def all_(*filters: Callable[[_Wa, _T], bool]) -> Callable[[_Wa, _T], bool]:
     """
     Filter for updates that pass all the given filters.
 
@@ -81,7 +91,7 @@ def all_(*filters: Callable[[Wa, _T], bool]) -> Callable[[Wa, _T], bool]:
     return lambda wa, m: all(f(wa, m) for f in filters)
 
 
-def any_(*filters: Callable[[Wa, _T], bool]) -> Callable[[Wa, _T], bool]:
+def any_(*filters: Callable[[_Wa, _T], bool]) -> Callable[[_Wa, _T], bool]:
     """
     Filter for updates that pass any of the given filters.
 
@@ -90,7 +100,7 @@ def any_(*filters: Callable[[Wa, _T], bool]) -> Callable[[Wa, _T], bool]:
     return lambda wa, m: any(f(wa, m) for f in filters)
 
 
-def not_(fil: Callable[[Wa, _T], bool]) -> Callable[[Wa, _T], bool]:
+def not_(fil: Callable[[_Wa, _T], bool]) -> Callable[[_Wa, _T], bool]:
     """
     Filter for updates that don't pass the given filter.
 
@@ -134,7 +144,7 @@ class _BaseUpdateFilters(abc.ABC):
     Base class for all filters.
     """
 
-    def __new__(cls, wa: Wa, m: _T) -> bool:
+    def __new__(cls, wa: _Wa, m: _T) -> bool:
         """When instantiated, call the ``any`` method."""
         return cls.any(wa, m)
 
@@ -146,7 +156,7 @@ class _BaseUpdateFilters(abc.ABC):
 
     @staticmethod
     @abc.abstractmethod
-    def any(wa: Wa, m: _T) -> bool:
+    def any(wa: _Wa, m: _T) -> bool:
         """Filter for all updates of this type."""
         ...
 
@@ -206,7 +216,7 @@ media: _MessageFilterT | type[_MediaFilters] = _MediaFilters
 
 class _MediaWithCaptionFilters(_MediaFilters, abc.ABC):
     @classmethod
-    def _has_caption(cls, _: Wa, m: _Msg) -> bool:
+    def _has_caption(cls, _: _Wa, m: _Msg) -> bool:
         return cls._match_type(m) and m.caption is not None
 
     has_caption: _MessageFilterT = _has_caption
@@ -518,7 +528,7 @@ class _LocationFilters(_BaseUpdateFilters):
             radius: Radius in kilometers.
         """
 
-        def _in_radius(_: Wa, msg: _Msg) -> bool:
+        def _in_radius(_: _Wa, msg: _Msg) -> bool:
             return _LocationFilters._match_type(msg) and msg.location.in_radius(
                 lat=lat, lon=lon, radius=radius
             )

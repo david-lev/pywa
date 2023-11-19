@@ -6,6 +6,7 @@ Message Filters
 .. autoattribute:: pywa.filters.forwarded
 .. autoattribute:: pywa.filters.forwarded_many_times
 .. autoattribute:: pywa.filters.reply
+.. autoattribute:: pywa.filters.has_referred_product
 
 ----------------
 
