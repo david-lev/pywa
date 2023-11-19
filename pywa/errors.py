@@ -289,6 +289,42 @@ class TemplateTextTooLong(SendMessageError):
     __error_codes__ = (132005,)
 
 
+class TemplateContentPolicyViolation(SendMessageError):
+    """The template content violates a WhatsApp policy."""
+
+    __error_codes__ = (132007,)
+
+
+class TemplateParamValueInvalid(SendMessageError):
+    """Variable parameter values formatted incorrectly."""
+
+    __error_codes__ = (132008,)
+
+
+class TemplatePaused(SendMessageError):
+    """Template is paused due to low quality so it cannot be sent in a template message."""
+
+    __error_codes__ = (132015,)
+
+
+class TemplateDisabled(SendMessageError):
+    """Template has been paused too many times due to low quality and is now permanently disabled."""
+
+    __error_codes__ = (132016,)
+
+
+class FlowBlocked(SendMessageError):
+    """Flow is in blocked state."""
+
+    __error_codes__ = (132068,)
+
+
+class FlowThrottled(SendMessageError):
+    """Flow is in throttled state and 10 messages using this flow were already sent in the last hour."""
+
+    __error_codes__ = (132069,)
+
+
 class GenericError(SendMessageError):
     """Generic error."""
 
