@@ -3,6 +3,15 @@ Changelog
 
 NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 1.12.0 (2023-11-20)
+
+- [reply_to_msg] adding `ReferredProduct` to message context
+- [filters] adding filter for messages that has `referred_product` in their context
+- [types] unfrozen editable types
+- [base_update] hash updates by their update ID
+- [client] adding `dl_session` param of type `requests.Session` to `.upload_media` when uploading locally from URL
+- [errors] adding more `template` and `flow` exceptions; fix typo in `TooManyMessages`
+
 ### 1.11.1 (2023-11-07)
 
 - [reaction] hot-fix for reaction when "unreacting" to a message
