@@ -9,7 +9,7 @@ import collections
 import logging
 import threading
 import time
-from typing import TYPE_CHECKING, Any, Callable, Iterable
+from typing import TYPE_CHECKING, Any, Callable
 
 from pywa import utils
 from pywa.errors import WhatsAppError
@@ -38,14 +38,14 @@ class Webhook:
 
     def __init__(
         self: WhatsApp,
-        server: Flask | FastAPI | None = None,
-        webhook_endpoint: str = "/",
-        callback_url: str | None = None,
-        fields: Iterable[str] | None = None,
-        app_id: int | None = None,
-        app_secret: str | None = None,
-        verify_token: str | None = None,
-        verify_timeout: int | None = None,
+        server: Flask | FastAPI | None,
+        webhook_endpoint: str,
+        callback_url: str | None,
+        fields: tuple[str] | None,
+        app_id: int | None,
+        app_secret: str | None,
+        verify_token: str | None,
+        verify_timeout: int | None,
     ):
         if server is None:
             return
@@ -62,16 +62,23 @@ class Webhook:
         hub_vt = "hub.verify_token"
         hub_ch = "hub.challenge"
 
+        def _rename_func(func: Callable) -> Callable[[Any], Any]:
+            """Rename the function to avoid conflicts when multiple WhatsApp instances are running."""
+            func.__name__ = f"{func.__name__}_{self.phone_id}"
+            return func
+
         if utils.is_flask_app(server):
             import flask
 
             @server.route(webhook_endpoint, methods=["GET"])
+            @_rename_func
             def challenge():
                 if flask.request.args.get(hub_vt) == verify_token:
                     return flask.request.args.get(hub_ch), 200
                 return "Error, invalid verification token", 403
 
             @server.route(webhook_endpoint, methods=["POST"])
+            @_rename_func
             def webhook():
                 threading.Thread(
                     target=self._call_handlers,
@@ -83,6 +90,7 @@ class Webhook:
             import fastapi
 
             @server.get(webhook_endpoint)
+            @_rename_func
             def challenge(
                 vt: str = fastapi.Query(..., alias=hub_vt),
                 ch: str = fastapi.Query(..., alias=hub_ch),
@@ -95,6 +103,7 @@ class Webhook:
                 )
 
             @server.post(webhook_endpoint)
+            @_rename_func
             def webhook(payload: dict = fastapi.Body(...)):
                 threading.Thread(target=self._call_handlers, args=(payload,)).start()
                 return fastapi.Response(content="ok", status_code=200)
