@@ -85,7 +85,7 @@ class MessageType(utils.StrEnum):
 
     @classmethod
     def _missing_(cls, value: str) -> MessageType:
-        return cls.UNSUPPORTED
+        return cls.UNKNOWN
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
