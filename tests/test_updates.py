@@ -56,6 +56,9 @@ UPDATES: dict[tuple[str, type[T]], dict[str, list[Callable[[T], bool]]]] = {
         "reply": [lambda m: m.is_reply],
         "forwarded": [lambda m: m.forwarded],
         "forwarded_many_times": [lambda m: m.forwarded_many_times],
+        "interactive_message_with_err": [
+            lambda m: m.type == MessageType.INTERACTIVE and m.error is not None
+        ],
     },
     ("callback_button", CallbackButton): {
         "button": [lambda b: b.type == MessageType.INTERACTIVE],

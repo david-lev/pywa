@@ -814,5 +814,55 @@
         ]
       }
     ]
+  },
+  "interactive_message_with_err": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "1234567890987654321",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "972123456789",
+                "phone_number_id": "1122334455667"
+              },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321"
+                }
+              ],
+              "messages": [
+                {
+                  "context": {
+                    "from": "972123456789",
+                    "id": "wamid.gvwegfretge=="
+                  },
+                  "from": "972987654321",
+                  "id": "wamid.wegrchytvwcggt=",
+                  "timestamp": "1700505494",
+                  "type": "interactive"
+                }
+              ],
+              "errors": [
+                {
+                  "code": 131000,
+                  "title": "Something went wrong",
+                  "message": "Something went wrong",
+                  "error_data": {
+                    "details": "Unsupported webhook payload"
+                  }
+                }
+              ]
+            },
+            "field": "messages"
+          }
+        ]
+      }
+    ]
   }
 }

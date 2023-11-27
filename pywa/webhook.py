@@ -176,15 +176,19 @@ class Webhook:
                 if "messages" in value:
                     match value["messages"][0]["type"]:
                         case MessageType.INTERACTIVE:
-                            if (
-                                _type := value["messages"][0]["interactive"]["type"]
-                            ) == "button_reply":  # button
+                            try:
+                                interactive_type = value["messages"][0]["interactive"][
+                                    "type"
+                                ]
+                            except KeyError:  # value with errors, when a user tries to send the interactive msg again
+                                return MessageHandler
+                            if interactive_type == "button_reply":  # button
                                 return CallbackButtonHandler
-                            elif _type == "list_reply":  # selection
+                            elif interactive_type == "list_reply":  # selection
                                 return CallbackSelectionHandler
                             _logger.warning(
                                 "PyWa Webhook: Unknown interactive message type: %s"
-                                % _type
+                                % interactive_type
                             )
                         case MessageType.BUTTON:  # button (quick reply from template)
                             return CallbackButtonHandler
