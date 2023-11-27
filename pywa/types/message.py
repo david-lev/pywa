@@ -44,7 +44,7 @@ _FIELDS_TO_OBJECTS_CONSTRUCTORS: dict[str, Callable[[dict, WhatsApp], Any]] = di
     system=System.from_dict,
 )
 
-_MEDIA_FIELDS = ("image", "video", "sticker", "document", "audio")
+_MEDIA_FIELDS = {"image", "video", "sticker", "document", "audio"}
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -129,8 +129,9 @@ class Message(BaseUserUpdate):
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> Message:
         msg = (value := update["entry"][0]["changes"][0]["value"])["messages"][0]
+        error = value.get("errors", msg.get("errors", (None,)))[0]
         msg_type = msg["type"]
-        context = msg.get("context")
+        context = msg.get("context", {})
         constructor = _FIELDS_TO_OBJECTS_CONSTRUCTORS.get(msg_type)
         msg_content = (
             {msg_type: constructor(msg[msg_type], _client=client)}  # noqa
@@ -140,26 +141,19 @@ class Message(BaseUserUpdate):
         return cls(
             _client=client,
             id=msg["id"],
-            type=MessageType(msg["type"]),
+            type=MessageType(msg_type),
             **msg_content,
             from_user=User.from_dict(value["contacts"][0]),
             timestamp=dt.datetime.fromtimestamp(int(msg["timestamp"])),
             metadata=Metadata.from_dict(value["metadata"]),
-            forwarded=any(
-                context.get(key) for key in ("forwarded", "frequently_forwarded")
-            )
-            if context
-            else False,
-            forwarded_many_times=context.get("frequently_forwarded", False)
-            if context
-            else False,
+            forwarded=context.get("forwarded", False)
+            or context.get("frequently_forwarded", False),
+            forwarded_many_times=context.get("frequently_forwarded", False),
             reply_to_message=ReplyToMessage.from_dict(context),
-            caption=msg[msg_type].get("caption")
-            if msg_type in ("image", "video", "document")
+            caption=msg.get(msg_type, {}).get("caption")
+            if msg_type in _MEDIA_FIELDS
             else None,
-            error=WhatsAppError.from_dict(error=msg["errors"][0])
-            if "errors" in msg
-            else None,
+            error=WhatsAppError.from_dict(error=error) if error is not None else None,
         )
 
     @property

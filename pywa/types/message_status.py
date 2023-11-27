@@ -99,21 +99,19 @@ class MessageStatus(BaseUserUpdate):
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> MessageStatus:
         status = (value := update["entry"][0]["changes"][0]["value"])["statuses"][0]
-        status_type = MessageStatusType(status["status"])
+        error = value.get("errors", status.get("errors", (None,)))[0]
         return cls(
             _client=client,
             id=status["id"],
             metadata=Metadata.from_dict(value["metadata"]),
-            status=status_type,
+            status=MessageStatusType(status["status"]),
             timestamp=dt.datetime.fromtimestamp(int(status["timestamp"])),
             from_user=User(wa_id=status["recipient_id"], name=None),
             conversation=Conversation.from_dict(status["conversation"])
             if "conversation" in status
             else None,
             pricing_model=status.get("pricing", {}).get("pricing_model"),
-            error=WhatsAppError.from_dict(error=status["errors"][0])
-            if status_type == MessageStatusType.FAILED
-            else None,
+            error=WhatsAppError.from_dict(error=error) if error else None,
         )
 
 
