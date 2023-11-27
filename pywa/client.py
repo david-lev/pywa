@@ -83,19 +83,22 @@ class WhatsApp(Webhook, HandlerDecorators):
             >>> flask_app.run(port=8000)
 
         Args:
-            phone_id: The Phone number ID (Not the phone number itself, the ID can be found in the App settings).
-            token: The token of the WhatsApp account (In production, you should
+            phone_id: The Phone number ID (Not the phone number itself, the ID can be found in the App dashboard).
+            token: The token of the WhatsApp business account (In production, you should
              `use permanent token <https://developers.facebook.com/docs/whatsapp/business-management-api/get-started>`_).
-            base_url: The base URL of the WhatsApp API (default: ``https://graph.facebook.com``).
+            base_url: The base URL of the WhatsApp API (Do not change unless you know what you're doing).
             api_version: The API version of the WhatsApp API (default: ``18.0``).
-            session: The session to use for requests (default: new ``requests.Session()``, Do not use the same
-             session across multiple WhatsApp clients!)
-            server: The Flask or FastAPI app instance to use for the webhook.
+            session: The session to use for requests (default: new ``requests.Session()``, For cases where you want to
+             use a custom session, e.g. for proxy support. Do not use the same session across multiple WhatsApp clients!).
+            server: The Flask or FastAPI app instance to use for the webhook. required when you want to handle incoming
+             updates.
             callback_url: The callback URL to register (optional, only if you want pywa to register the callback URL for
              you).
             verify_token: The verify token of the registered ``callback_url`` (Required when ``server`` is provided.
              The verify token can be any string. It is used to challenge the webhook endpoint to verify that the
              endpoint is valid).
+            verify_timeout: The timeout (in seconds) to wait for the verify token to be sent to the server (optional,
+             for cases where the server/network is slow or the server is taking a long time to start).
             fields: The fields to register for the callback URL (optional, if not provided, all supported fields will be
              registered. modify this if you want to reduce the number of unused requests to your server).
             app_id: The ID of the app in the
@@ -105,12 +108,15 @@ class WhatsApp(Webhook, HandlerDecorators):
              `App Basic Settings <https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings>`_
              (optional, required when registering a ``callback_url``).
             webhook_endpoint: The endpoint to listen for incoming messages (if you're using the server for another purpose,
-             and you're already using the ``/`` endpoint, you can change it to something else).
+             or for multiple WhatsApp clients, you can change this to avoid conflicts).
             filter_updates: Whether to filter out user updates that are not sent to this phone_id (default: ``True``, does
              not apply to raw updates or updates that are not user-related).
             business_account_id: The business account ID that owns the app (optional, required for some API
              methods).
         """
+        if not phone_id or not token:
+            raise ValueError("phone_id and token must be provided.")
+
         self._phone_id = str(phone_id)
         self.filter_updates = filter_updates
         self.business_account_id = (
