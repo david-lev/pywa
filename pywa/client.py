@@ -136,7 +136,7 @@ class WhatsApp(Webhook, HandlerDecorators):
         )
 
     def __str__(self) -> str:
-        return f"WhatApp(phone_id={self.phone_id!r})"
+        return f"WhatsApp(phone_id={self.phone_id!r})"
 
     def __repr__(self) -> str:
         return self.__str__()
