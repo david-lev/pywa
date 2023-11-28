@@ -9,6 +9,7 @@ __all__ = [
     "forwarded_many_times",
     "reply",
     "has_referred_product",
+    "sent_to",
     "from_users",
     "from_countries",
     "text",
@@ -107,6 +108,27 @@ def not_(fil: Callable[[_Wa, _T], bool]) -> Callable[[_Wa, _T], bool]:
     >>> not_(text.contains("Hello"))
     """
     return lambda wa, m: not fil(wa, m)
+
+
+def sent_to(*, display_phone_number: str = None, phone_number_id: str = None):
+    """
+    Filter for updates that are sent to the given phone number.
+
+    - Use this filter when you choose not filter updates (e.g. ``WhatsApp(..., filter_updates=False)``) so you can still filter for messages that are sent to specific phone numbers.
+
+
+    >>> sent_to(display_phone_number="+1 555-555-5555")
+    >>> sent_to(phone_number_id="123456789")
+    """
+    if not (display_phone_number or phone_number_id):
+        raise ValueError(
+            "You must provide either display_phone_number or phone_number_id"
+        )
+    return lambda _, m: (
+        m.metadata.display_phone_number == display_phone_number
+        if display_phone_number
+        else m.metadata.phone_number_id == phone_number_id
+    )
 
 
 def from_users(
