@@ -3,6 +3,14 @@ Changelog
 
 NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 1.12.1 (2023-11-29)
+
+- [filters] adding new filter called `sent_to` to filter updates even if `WhatsApp(..., filter_updates=False)`
+- [webhook] renaming route callbacks names to allow multiple `WhatsApp` instances to use the same server
+- [message_type] default missing to `UNKNOWN`
+- [bugs] fix bug on interactive message without data
+
+
 ### 1.12.0 (2023-11-20)
 
 - [reply_to_msg] adding `ReferredProduct` to message context
