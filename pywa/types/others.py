@@ -107,6 +107,11 @@ class Reaction(utils.FromDict):
             message_id=data["message_id"], emoji=data.get("emoji") or None
         )  # sometimes it's empty string 🤦‍
 
+    @property
+    def is_removed(self) -> bool:
+        """Check if the reaction is removed."""
+        return self.emoji is None
+
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class Location(utils.FromDict):

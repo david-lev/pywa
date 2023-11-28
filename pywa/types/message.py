@@ -214,8 +214,11 @@ class Message(BaseUserUpdate):
         keyboard: None = None,
     ) -> str:
         """
-        Copy incoming message to another chat
-            - The WhatsApp Cloud API does not offer a `real` forward option so this is just copy the message content.
+        Send the message to another user.
+
+            - The WhatsApp Cloud API does not offer a `real` forward option, so this method will send a new message with the same content as the original message.
+            - Supported message types: ``TEXT``, ``DOCUMENT``, ``IMAGE``, ``VIDEO``, ``STICKER``, ``LOCATION``, ``AUDIO``, ``CONTACTS``, ``ORDER`` and ``SYSTEM``.
+            - If the message type is ``reaction``, you must provide ``reply_to_message_id``.
 
         Args:
             to: The phone ID of the WhatsApp user to copy the message to.
@@ -255,7 +258,7 @@ class Message(BaseUserUpdate):
                     caption=self.caption,
                     body=body,
                     footer=footer,
-                    buttons=keyboard,
+                    buttons=keyboard or buttons,
                     reply_to_message_id=reply_to_message_id,
                 )
             case MessageType.IMAGE:
@@ -265,7 +268,7 @@ class Message(BaseUserUpdate):
                     caption=self.caption,
                     body=body,
                     footer=footer,
-                    buttons=keyboard,
+                    buttons=keyboard or buttons,
                     reply_to_message_id=reply_to_message_id,
                 )
             case MessageType.VIDEO:
@@ -273,7 +276,7 @@ class Message(BaseUserUpdate):
                     to=to,
                     video=self.video.id,
                     caption=self.caption,
-                    buttons=keyboard,
+                    buttons=keyboard or buttons,
                     body=body,
                     footer=footer,
                     reply_to_message_id=reply_to_message_id,
