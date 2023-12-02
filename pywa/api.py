@@ -408,16 +408,30 @@ class WhatsAppCloudApi:
 
     def send_raw_request(self, method: str, endpoint: str, **kwargs) -> Any:
         """
-        Send a raw JSON message to a WhatsApp Cloud API.
+        Send a raw request to WhatsApp Cloud API.
 
-        - The endpoint can contain path parameters (e.g. ``/v1/messages/{phone_id}``). only ``phone_id`` is supported.
-        - Every request will automatically include the ``Authorization`` and ``Content-Type`` headers. you can override
-            them by passing them in ``kwargs`` (headers={...}).
+        - Use this method if you want to send a request that is not yet supported by pywa.
+        - The endpoint can contain path parameters (e.g. ``/{phone_id}/messages/``). only ``phone_id`` is supported.
+        - Every request will automatically include the ``Authorization`` and ``Content-Type`` headers. you can override them by passing them in ``kwargs`` (headers={...}).
 
         Args:
             method: The HTTP method to use (e.g. ``POST``, ``GET``, etc.).
-            endpoint: The endpoint to send the message to (e.g. ``/v1/messages``).
-            **kwargs: Additional arguments to send with the message (e.g. ``json={...}``, headers={...}, etc.).
+            endpoint: The endpoint to send the message to (e.g. ``/{phone_id}/messages/``).
+            **kwargs: Additional arguments to send with the request (e.g. ``json={...}, headers={...}``).
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.api.send_raw_request(
+            ..   method="POST",
+            ..   endpoint="/{phone_id}/messages",
+            ..   json={"to": "1234567890", "type": "text", "text": {"body": "Hello, World!"}}
+            .. )
+            {
+                'messaging_product': 'whatsapp',
+                'contacts': [{'input': '1234567890', 'wa_id': '1234567890'}],
+                'messages': [{'id': 'wamid.XXXXXXXXXXXXXXXX=='}]
+            }
 
         Returns:
             The response from the WhatsApp Cloud API.

@@ -10,7 +10,7 @@ Message Fields
     :members: current_location, in_radius
 
 .. autoclass:: Contact()
-    :members: as_vcard, as_dict, Name, Phone, Email, Url, Address, Org
+    :members: as_vcard, to_dict, Name, Phone, Email, Url, Address, Org
 
 .. autoclass:: Product()
     :members: total_price

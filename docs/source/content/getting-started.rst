@@ -11,28 +11,18 @@
 ================================
 
 
-Setup
-=======
-
-.. note::
-
-    This guide will explain how to setup the WhatsApp Business API and how to use the ``pywa`` package.
-
-
 Create a WhatsApp Application
 =============================
 
     You already have an app? skip to `Setup the WhatsApp Business API <#id1>`_.
 
-In order to use the WhatsApp Business API, you need to create a Facebook App. For that you need to have a Facebook developer account.
-If you don't have one, `you can register here <https://developers.facebook.com/>`_.
-
-After that you need to create a new app. Follow the steps below:
+In order to use the WhatsApp Cloud API, you need to create a Facebook App.
+To do that you need a Facebook Developer account. If you don't have one, `you can register here <https://developers.facebook.com/>`_.
 
 1. Go to `Meta for Developers > My Apps <https://developers.facebook.com/apps/>`_ and create a new app
     - Click `here <https://developers.facebook.com/apps/creation/>`_ to go directly to the app creation page
 
-2. Select **Other** as the use case and hit next
+2. Select **Other** as the use case and hit **Next**
 
 .. toggle::
 
@@ -43,7 +33,7 @@ After that you need to create a new app. Follow the steps below:
 
 --------------------
 
-3. Select **Business** as the app type and hit next
+3. Select **Business** as the app type and click on **Next**
 
 .. toggle::
 
@@ -54,7 +44,7 @@ After that you need to create a new app. Follow the steps below:
 
 --------------------
 
-4. Fill the app name and the email and hit create app
+4. Fill the app name and the email and hit **Create App**
 
 .. toggle::
 
@@ -77,7 +67,7 @@ After that you need to create a new app. Follow the steps below:
 --------------------
 
 6. At this point you will be asked to select a **Meta Business Account**. If you have one - select it and hit **Next**.
-Accept the terms and conditions and hit **Submit**.
+Accept the terms and conditions and hit **Submit**. If you don't have a Business Account, you will need to create one.
 
 .. toggle::
 
@@ -106,9 +96,9 @@ Setup the WhatsApp Business API
 
 --------------------
 
-In the top you will see a **Temporary access token**. This is the token you will use to connect to the WhatsApp Business API.
+In the top you will see a **Temporary access token**. This is the token you will use to interact with the WhatsApp Cloud API.
 Right below it you will see the **Send and receive messages**. Below it you will see the **Phone number ID**. This is the ID
-of the phone number you will use to send and receive messages. You will need to use them in the next step.
+of the phone number you will use to send and receive messages. You will need to use both of them in the next step.
 
 .. note::
 
@@ -120,9 +110,8 @@ of the phone number you will use to send and receive messages. You will need to 
 
     If you haven't connected a real phone number to your app, you have the option to use a test phone number.
     This is a phone number that is provided by Meta and can be used for testing purposes only. You can send messages
-    up to 5 different numbers and you must authenticate every one of them (Select the **Test number** in the ``From`` field
-    and add the number you want to send the message to in the ``To`` field. Then click on **Send**. You will receive a
-    6 digit code to the WhatsApp account of the number you added. Copy the code and paste it in the **Verification code** field and hit **Next**).
+    up to 5 different numbers and you must add them to the **Allowed Numbers** list. (Select the **Test number** in the ``From`` field
+    and then in the **To** field, go to **Manage phone number list** and add the numbers you want to send messages to).
 
     .. toggle::
 
@@ -144,8 +133,8 @@ So now you have a ``phone id`` and a ``token``. You can use them to send message
     from pywa import WhatsApp
 
     wa = WhatsApp(
-        phone_id='YOUR_PHONE_ID',
-        token='YOUR_TOKEN'
+        phone_id='YOUR_PHONE_ID',  # The phone id you got from the API Setup
+        token='YOUR_TOKEN'  # The token you got from the API Setup
     )
 
 And that's it! You are ready to send messages!
