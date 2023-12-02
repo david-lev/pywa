@@ -14,7 +14,7 @@
 Create a WhatsApp Application
 =============================
 
-    You already have an app? skip to `Setup the WhatsApp Business API <#id1>`_.
+    You already have an app? skip to `Setup the App <#id1>`_.
 
 In order to use the WhatsApp Cloud API, you need to create a Facebook App.
 To do that you need a Facebook Developer account. If you don't have one, `you can register here <https://developers.facebook.com/>`_.
@@ -78,8 +78,8 @@ Accept the terms and conditions and hit **Submit**. If you don't have a Business
 
 --------------------
 
-Setup the WhatsApp Business API
-===============================
+Setup the App
+=============
 
 
     You already have **Phone ID** and **Token**? skip to `Send a Message <#id2>`_.
