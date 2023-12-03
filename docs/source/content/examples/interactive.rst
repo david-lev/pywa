@@ -1,55 +1,6 @@
-💡 Examples
-==============
+Sending Interactive Messages
+============================
 
-.. note::
-
-    WORK IN PROGRESS
-
-Send a text message
--------------------
-
-.. code-block:: python
-    :caption: Text message
-    :linenos:
-
-    from pywa import WhatsApp
-
-    wa = WhatsApp(phone_id='972123456789', token='xxxxx')
-
-    recipient = '972987654321'
-    wa.send_message(to=recipient, text='Hello world!')
-
-    # Message with link preview
-    wa.send_message(
-        to=recipient,
-        text='PyWa Documentation: https://pywa.readthedocs.io',
-        preview_url=True
-    )
-
-Send a message with a media
----------------------------
-
-.. code-block:: python
-    :caption: Media message
-    :linenos:
-
-    from pywa import WhatsApp
-
-    wa = WhatsApp(phone_id='972123456789', token='xxxxx')
-    recipient = '972987654321'
-
-    # - From URL
-    wa.send_image(to=recipient, image='https://cdn.pixabay.com/photo/2014/10/01/10/44/animal-468228_1280.jpg')
-
-    # - From local file
-    wa.send_video(to=recipient, video='/path/to/video.mp4')
-
-    # - From file id (You need to upload the media first with WhatsApp.upload_media to get the file id)
-    wa.send_audio(to=recipient, audio='audio_file_id')
-
-    # - From bytes
-    content = requests.get('https://cdn.pixabay.com/photo/2014/10/01/10/44/animal-468228_1280.jpg').content
-    wa.send_document(to=recipient, document=content)
 
 Send a message with selection keyboard
 --------------------------------------
@@ -61,13 +12,13 @@ Send a message with selection keyboard
 
     .. tip:: How the message displayed in WhatsApp:
 
-        .. image:: ../../_static/examples/selection-message.webp
+        .. image:: ../../../../_static/examples/selection-message.webp
             :alt: Selection message example
             :width: 90%
 
     .. tip:: How the keyboard displayed in WhatsApp:
 
-        .. image:: ../../_static/examples/selection-keyboard.webp
+        .. image:: ../../../../_static/examples/selection-keyboard.webp
             :alt: Selection keyboard example
             :width: 90%
 
@@ -144,7 +95,7 @@ Send a message with buttons keyboard
 
     .. tip:: How the message displayed in WhatsApp:
 
-        .. image:: ../../_static/examples/buttons-message.webp
+        .. image:: ../../../../_static/examples/buttons-message.webp
             :alt: Buttons message example
             :width: 90%
 
