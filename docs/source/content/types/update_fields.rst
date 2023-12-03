@@ -26,8 +26,6 @@ Message Fields
 
 .. autoclass:: ReplyToMessage()
 
-.. autoclass:: ReferredProduct()
-
 .. autoclass:: Metadata()
 
 .. currentmodule:: pywa.types.message_status

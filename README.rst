@@ -48,7 +48,7 @@ ________________________
 • `Handlers <https://pywa.readthedocs.io/en/latest/content/handlers/overview.html>`_
 • `Filters <https://pywa.readthedocs.io/en/latest/content/filters/overview.html>`_
 • `Updates <https://pywa.readthedocs.io/en/latest/content/updates/overview.html>`_
-• `Examples <https://pywa.readthedocs.io/en/latest/content/examples.html>`_
+• `Examples <https://pywa.readthedocs.io/en/latest/content/examples/overview.html>`_
 
 ------------------------
 
@@ -164,12 +164,12 @@ See the `Documentation <https://pywa.readthedocs.io/>`_ for detailed instruction
 
 ☑️ **TODO**
 ------------
-- Add tests
+
+- Add support for Flows
 - Add support for async
-- Move from threading
-- Add support for more web frameworks (``Django``, etc.)
-- Add support for more types of updates (``account_alerts``, ``message_template_status_updates``, etc.)
-- Add more examples
+- Add support for more web frameworks (``Django``, ``Starlette``, etc.)
+- Add support for more types of updates (``account_alerts``, ``phone_number_quality_updates``, ``template_category_updates``, etc.)
+- Add more examples and guides
 
 Feel free to open an issue if you have any suggestions. or even better - submit a PR!
 

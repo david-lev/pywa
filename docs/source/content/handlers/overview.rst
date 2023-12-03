@@ -209,7 +209,7 @@ and the verify token that you used when initializing the WhatsApp client.
         - ``message_template_status_update`` (template got approved, rejected, etc.)
 
     You can subscribe to all the other fields, but they will not be handled by pywa, they can still be handled manually by
-    registering a callback for the ``on_raw_update`` decorator (or the ``RawUpdateHandler`` handler).
+    registering a callback for the :meth:`~pywa.client.WhatsApp.on_raw_update` decorator (or the :class:`RawUpdateHandler` handler).
 
     .. toggle::
 
@@ -245,8 +245,8 @@ Here is an example of a callback function that prints messages
     def print_message(client: WhatsApp, msg: Message):
         print(msg)
 
-    def react_to_msg(client: WhatsApp, msg: Message):
-        msg.react('❤️')
+    def react_to_button(client: WhatsApp, clb: CallbackButton):
+        clb.react('❤️')
 
 Once you define the callback function, you have two ways to register it:
 

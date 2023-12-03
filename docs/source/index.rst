@@ -19,4 +19,5 @@
     /content/filters/overview
     /content/errors/overview
     /content/types/overview
-    /content/examples
+    /content/examples/overview
+    /content/guides/overview
