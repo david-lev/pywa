@@ -66,8 +66,7 @@ To do that you need a Facebook Developer account. If you don't have one, `you ca
 
 --------------------
 
-6. At this point you will be asked to select a **Meta Business Account**. If you have one - select it and hit **Next**.
-Accept the terms and conditions and hit **Submit**. If you don't have a Business Account, you will need to create one.
+6. At this point you will be asked to select a **Meta Business Account**. If you have one - select it and hit **Next**. Accept the terms and conditions and hit **Submit**. If you don't have a Business Account, you will need to create one.
 
 .. toggle::
 
@@ -165,14 +164,14 @@ Quick Start
 
 Now you can continue to the next section and learn how to use the ``pywa`` package. here is a quick overview of the package:
 
-- The `WhatsApp <client/overview.html>`_ Client: is the core of the package. It is used to send and receive messages and media, handle orders, manage the business profile and settings and more.
+- The `WhatsApp <client/overview.html>`_ Client: is the core of the package. It is used to send and receive messages and media, register callbacks, manage profile and business settings and more.
 
-- The `Handlers <handlers/overview.html>`_ are used to handle incoming messages and events. This way you can register a handler to a specific event and handle it.
+- The `Handlers <handlers/overview.html>`_: Learn how to register callbacks and handle incoming updates (messages, callbacks and more).
 
-- The `Filters <filters/overview.html>`_ section will explain how to provide filters to the handlers. Filters are used to filter the incoming messages and events. For example, you can register a handler to handle all the text message that starts with ``Hello`` or ``Hi``.
+- The `Filters <filters/overview.html>`_: Learn how to handle specific updates by applying filters and conditions (for example, handle only text messages that contains the word "Hello").
 
-- The `Updates <updates/overview.html>`_ are the incoming messages and events that the client receives. It contains the available data for each message and event. For example, the :class:`~pywa.types.message.Message` update is arrived user send a text, media, location contact and other types of messages. Every update has it's own methods and properties.
+- The `Updates <updates/overview.html>`_: Learn about the different types of updates that the client can receive, their attributes and properties and how to use them.
 
-- The `errors <errors/overview.html>`_ that the client can raise. For example, if you try to send message from your test number to a number that is not in the recipients list, the client will raise a :class:`~pywa.errors.RecipientNotInAllowedList`.
+- The `errors <errors/overview.html>`_: Learn about the different types of errors in the package and how to handle them.
 
-- The `Examples <examples/overview.html>`_ section contains examples of how to use the package.
+- The `Examples <examples/overview.html>`_: See some examples of how to use the package.
