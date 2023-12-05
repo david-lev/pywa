@@ -16,7 +16,7 @@ Usage:
 .. code-block:: python
 
     from pywa import WhatsApp
-    from flask import Flask
+    from flask import Flask  # pip3 install flask
 
     flask_app = Flask(__name__)
 
@@ -66,5 +66,6 @@ Usage:
 3. Run the server:
 
 .. code-block:: python
+    :linenos:
 
     flask_app.run()

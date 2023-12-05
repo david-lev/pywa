@@ -9,3 +9,4 @@
 .. toctree::
 
     calculator-bot
+    translator-bot
