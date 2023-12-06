@@ -20,4 +20,3 @@
     /content/errors/overview
     /content/types/overview
     /content/examples/overview
-    /content/guides/overview
