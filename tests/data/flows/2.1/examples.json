@@ -1,0 +1,1850 @@
+{
+  "customer-satisfaction-survey": {
+    "version": "2.1",
+    "screens": [
+      {
+        "id": "RECOMMEND",
+        "title": "Feedback 1 of 2",
+        "data": {},
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "Form",
+              "name": "form",
+              "children": [
+                {
+                  "type": "TextSubheading",
+                  "text": "Would you recommend us to a friend?"
+                },
+                {
+                  "type": "RadioButtonsGroup",
+                  "label": "Choose one",
+                  "name": "recommend_radio",
+                  "data-source": [
+                    {
+                      "id": "0",
+                      "title": "Yes"
+                    },
+                    {
+                      "id": "1",
+                      "title": "No"
+                    }
+                  ],
+                  "required": true
+                },
+                {
+                  "type": "TextSubheading",
+                  "text": "How could we do better?"
+                },
+                {
+                  "type": "TextArea",
+                  "label": "Leave a comment",
+                  "required": false,
+                  "name": "comment_text"
+                },
+                {
+                  "type": "Footer",
+                  "label": "Continue",
+                  "on-click-action": {
+                    "name": "navigate",
+                    "next": {
+                      "type": "screen",
+                      "name": "RATE"
+                    },
+                    "payload": {
+                      "recommend_radio": "${form.recommend_radio}",
+                      "comment_text": "${form.comment_text}"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "RATE",
+        "title": "Feedback 2 of 2",
+        "data": {
+          "recommend_radio": {
+            "type": "string",
+            "__example__": "Example"
+          },
+          "comment_text": {
+            "type": "string",
+            "__example__": "Example"
+          }
+        },
+        "terminal": true,
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "Form",
+              "name": "form",
+              "children": [
+                {
+                  "type": "TextSubheading",
+                  "text": "Rate the following: "
+                },
+                {
+                  "type": "Dropdown",
+                  "label": "Purchase experience",
+                  "required": true,
+                  "name": "purchase_rating",
+                  "data-source": [
+                    {
+                      "id": "0",
+                      "title": "★★★★★ • Excellent (5/5)"
+                    },
+                    {
+                      "id": "1",
+                      "title": "★★★★☆ • Good (4/5)"
+                    },
+                    {
+                      "id": "2",
+                      "title": "★★★☆☆ • Average (3/5)"
+                    },
+                    {
+                      "id": "3",
+                      "title": "★★☆☆☆ • Poor (2/5)"
+                    },
+                    {
+                      "id": "4",
+                      "title": "★☆☆☆☆ • Very Poor (1/5)"
+                    }
+                  ]
+                },
+                {
+                  "type": "Dropdown",
+                  "label": "Delivery and setup",
+                  "required": true,
+                  "name": "delivery_rating",
+                  "data-source": [
+                    {
+                      "id": "0",
+                      "title": "★★★★★ • Excellent (5/5)"
+                    },
+                    {
+                      "id": "1",
+                      "title": "★★★★☆ • Good (4/5)"
+                    },
+                    {
+                      "id": "2",
+                      "title": "★★★☆☆ • Average (3/5)"
+                    },
+                    {
+                      "id": "3",
+                      "title": "★★☆☆☆ • Poor (2/5)"
+                    },
+                    {
+                      "id": "4",
+                      "title": "★☆☆☆☆ • Very Poor (1/5)"
+                    }
+                  ]
+                },
+                {
+                  "type": "Dropdown",
+                  "label": "Customer service",
+                  "required": true,
+                  "name": "cs_rating",
+                  "data-source": [
+                    {
+                      "id": "0",
+                      "title": "★★★★★ • Excellent (5/5)"
+                    },
+                    {
+                      "id": "1",
+                      "title": "★★★★☆ • Good (4/5)"
+                    },
+                    {
+                      "id": "2",
+                      "title": "★★★☆☆ • Average (3/5)"
+                    },
+                    {
+                      "id": "3",
+                      "title": "★★☆☆☆ • Poor (2/5)"
+                    },
+                    {
+                      "id": "4",
+                      "title": "★☆☆☆☆ • Very Poor (1/5)"
+                    }
+                  ]
+                },
+                {
+                  "type": "Footer",
+                  "label": "Done",
+                  "on-click-action": {
+                    "name": "complete",
+                    "payload": {
+                      "purchase_rating": "${form.purchase_rating}",
+                      "delivery_rating": "${form.delivery_rating}",
+                      "cs_rating": "${form.cs_rating}",
+                      "recommend_radio": "${data.recommend_radio}",
+                      "comment_text": "${data.comment_text}"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "load-re-engagement": {
+    "version": "2.1",
+    "screens": [
+      {
+        "id": "SIGN_UP",
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "Form",
+              "name": "form",
+              "children": [
+                {
+                  "type": "TextInput",
+                  "name": "firstName",
+                  "label": "First Name",
+                  "input-type": "text",
+                  "required": true,
+                  "visible": true
+                },
+                {
+                  "type": "TextInput",
+                  "name": "lastName",
+                  "label": "Last Name",
+                  "input-type": "text",
+                  "required": true,
+                  "visible": true
+                },
+                {
+                  "type": "TextInput",
+                  "name": "email",
+                  "label": "Email Address",
+                  "input-type": "email",
+                  "required": true,
+                  "visible": true
+                },
+                {
+                  "type": "Footer",
+                  "label": "Done",
+                  "on-click-action": {
+                    "name": "complete",
+                    "payload": {
+                      "firstName": "${form.firstName}",
+                      "lastName": "${form.lastName}",
+                      "email": "${form.email}"
+                    }
+                  },
+                  "enabled": true
+                }
+              ]
+            }
+          ]
+        },
+        "terminal": true,
+        "data": {},
+        "title": "Finish Sign Up"
+      }
+    ]
+  },
+  "costumer-engagement": {
+    "version": "2.1",
+    "screens": [
+      {
+        "id": "QUESTION_ONE",
+        "title": "Question 1 of 3",
+        "data": {},
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "Form",
+              "name": "form",
+              "children": [
+                {
+                  "type": "TextHeading",
+                  "text": "You've found the perfect deal, what do you do next?"
+                },
+                {
+                  "type": "CheckboxGroup",
+                  "label": "Choose all that apply:",
+                  "required": true,
+                  "name": "question1Checkbox",
+                  "data-source": [
+                    {
+                      "id": "0",
+                      "title": "Buy it right away"
+                    },
+                    {
+                      "id": "1",
+                      "title": "Check reviews before buying"
+                    },
+                    {
+                      "id": "2",
+                      "title": "Share it with friends + family"
+                    },
+                    {
+                      "id": "3",
+                      "title": "Buy multiple, while its cheap"
+                    },
+                    {
+                      "id": "4",
+                      "title": "None of the above"
+                    }
+                  ]
+                },
+                {
+                  "type": "Footer",
+                  "label": "Continue",
+                  "on-click-action": {
+                    "name": "navigate",
+                    "next": {
+                      "type": "screen",
+                      "name": "QUESTION_TWO"
+                    },
+                    "payload": {
+                      "question1Checkbox": "${form.question1Checkbox}"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "QUESTION_TWO",
+        "title": "Question 2 of 3",
+        "data": {
+          "question1Checkbox": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "__example__": []
+          }
+        },
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "Form",
+              "name": "form",
+              "children": [
+                {
+                  "type": "TextHeading",
+                  "text": "Its your birthday in two weeks, how might you prepare?"
+                },
+                {
+                  "type": "RadioButtonsGroup",
+                  "label": "Choose all that apply:",
+                  "required": true,
+                  "name": "question2RadioButtons",
+                  "data-source": [
+                    {
+                      "id": "0",
+                      "title": "Buy something new"
+                    },
+                    {
+                      "id": "1",
+                      "title": "Wear the same, as usual"
+                    },
+                    {
+                      "id": "2",
+                      "title": "Look for a deal online"
+                    }
+                  ]
+                },
+                {
+                  "type": "Footer",
+                  "label": "Continue",
+                  "on-click-action": {
+                    "name": "navigate",
+                    "next": {
+                      "type": "screen",
+                      "name": "QUESTION_THREE"
+                    },
+                    "payload": {
+                      "question2RadioButtons": "${form.question2RadioButtons}",
+                      "question1Checkbox": "${data.question1Checkbox}"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "QUESTION_THREE",
+        "title": "Question 3 of 3",
+        "data": {
+          "question2RadioButtons": {
+            "type": "string",
+            "__example__": "Example"
+          },
+          "question1Checkbox": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "__example__": []
+          }
+        },
+        "terminal": true,
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "Form",
+              "name": "form",
+              "children": [
+                {
+                  "type": "TextHeading",
+                  "text": "What's the best gift for a friend?"
+                },
+                {
+                  "type": "CheckboxGroup",
+                  "label": "Choose all that apply:",
+                  "required": true,
+                  "name": "question3Checkbox",
+                  "data-source": [
+                    {
+                      "id": "0",
+                      "title": "A gift voucher"
+                    },
+                    {
+                      "id": "1",
+                      "title": "A new outfit "
+                    },
+                    {
+                      "id": "2",
+                      "title": "A bouquet of flowers"
+                    },
+                    {
+                      "id": "3",
+                      "title": "A meal out together"
+                    }
+                  ]
+                },
+                {
+                  "type": "Footer",
+                  "label": "Done",
+                  "on-click-action": {
+                    "name": "complete",
+                    "payload": {
+                      "question1Checkbox": "${data.question1Checkbox}",
+                      "question2RadioButtons": "${data.question2RadioButtons}",
+                      "question3Checkbox": "${form.question3Checkbox}"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "support-request": {
+    "version": "2.1",
+    "screens": [
+      {
+        "id": "DETAILS",
+        "title": "Get help",
+        "data": {},
+        "terminal": true,
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "Form",
+              "name": "form",
+              "children": [
+                {
+                  "type": "TextInput",
+                  "name": "name",
+                  "label": "Name",
+                  "input-type": "text",
+                  "required": true
+                },
+                {
+                  "type": "TextInput",
+                  "label": "Order number",
+                  "name": "orderNumber",
+                  "input-type": "number",
+                  "required": true,
+                  "helper-text": ""
+                },
+                {
+                  "type": "RadioButtonsGroup",
+                  "label": "Choose a topic",
+                  "name": "topicRadio",
+                  "data-source": [
+                    {
+                      "id": "0",
+                      "title": "Orders and payments"
+                    },
+                    {
+                      "id": "1",
+                      "title": "Maintenance"
+                    },
+                    {
+                      "id": "2",
+                      "title": "Delivery"
+                    },
+                    {
+                      "id": "3",
+                      "title": "Returns"
+                    },
+                    {
+                      "id": "4",
+                      "title": "Other"
+                    }
+                  ],
+                  "required": true
+                },
+                {
+                  "type": "TextArea",
+                  "label": "Description of issue",
+                  "required": false,
+                  "name": "description"
+                },
+                {
+                  "type": "Footer",
+                  "label": "Done",
+                  "on-click-action": {
+                    "name": "complete",
+                    "payload": {
+                      "name": "${form.name}",
+                      "orderNumber": "${form.orderNumber}",
+                      "topicRadio": "${form.topicRadio}",
+                      "description": "${form.description}"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "communication-preferences": {
+    "version": "2.1",
+    "screens": [
+      {
+        "id": "PREFERENCES",
+        "title": "Update Preferences",
+        "data": {},
+        "terminal": true,
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "Form",
+              "name": "form",
+              "children": [
+                {
+                  "type": "CheckboxGroup",
+                  "label": "Communication types",
+                  "required": true,
+                  "name": "communicationTypes",
+                  "data-source": [
+                    {
+                      "id": "0",
+                      "title": "Special offers and promotions"
+                    },
+                    {
+                      "id": "1",
+                      "title": "Changes to my subscription"
+                    },
+                    {
+                      "id": "2",
+                      "title": "News and events"
+                    },
+                    {
+                      "id": "3",
+                      "title": "New products"
+                    }
+                  ]
+                },
+                {
+                  "type": "CheckboxGroup",
+                  "label": "Contact Preferences",
+                  "required": false,
+                  "name": "contactPrefs",
+                  "data-source": [
+                    {
+                      "id": "0",
+                      "title": "Whatsapp"
+                    },
+                    {
+                      "id": "1",
+                      "title": "Email"
+                    },
+                    {
+                      "id": "2",
+                      "title": "SMS"
+                    }
+                  ]
+                },
+                {
+                  "type": "Footer",
+                  "label": "Done",
+                  "on-click-action": {
+                    "name": "complete",
+                    "payload": {
+                      "communicationTypes": "${form.communicationTypes}",
+                      "contactPrefs": "${form.contactPrefs}"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "register-for-an-event": {
+    "version": "2.1",
+    "screens": [
+      {
+        "id": "SIGN_UP",
+        "title": "Sign Up",
+        "data": {},
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "Form",
+              "name": "form",
+              "children": [
+                {
+                  "type": "TextHeading",
+                  "text": "Join our next webinar!"
+                },
+                {
+                  "type": "TextBody",
+                  "text": "First, we'll need a few details from you."
+                },
+                {
+                  "type": "TextInput",
+                  "name": "firstName",
+                  "label": "First Name",
+                  "input-type": "text",
+                  "required": true
+                },
+                {
+                  "type": "TextInput",
+                  "label": "Last Name",
+                  "name": "lastName",
+                  "input-type": "text",
+                  "required": true
+                },
+                {
+                  "type": "TextInput",
+                  "label": "Email Address",
+                  "name": "email",
+                  "input-type": "email",
+                  "required": true
+                },
+                {
+                  "type": "Footer",
+                  "label": "Continue",
+                  "on-click-action": {
+                    "name": "navigate",
+                    "next": {
+                      "type": "screen",
+                      "name": "SURVEY"
+                    },
+                    "payload": {
+                      "firstName": "${form.firstName}",
+                      "lastName": "${form.lastName}",
+                      "email": "${form.email}"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "SURVEY",
+        "title": "Thank you",
+        "data": {
+          "firstName": {
+            "type": "string",
+            "__example__": "Example"
+          },
+          "lastName": {
+            "type": "string",
+            "__example__": "Example"
+          },
+          "email": {
+            "type": "string",
+            "__example__": "Example"
+          }
+        },
+        "terminal": true,
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "Form",
+              "name": "form",
+              "children": [
+                {
+                  "type": "TextHeading",
+                  "text": "Before you go"
+                },
+                {
+                  "type": "TextBody",
+                  "text": "How did you hear about us?"
+                },
+                {
+                  "type": "RadioButtonsGroup",
+                  "label": "Choose one",
+                  "required": false,
+                  "name": "source",
+                  "data-source": [
+                    {
+                      "id": "0",
+                      "title": "Friend's recommendation"
+                    },
+                    {
+                      "id": "1",
+                      "title": "TV advertisement"
+                    },
+                    {
+                      "id": "2",
+                      "title": "Search engine"
+                    },
+                    {
+                      "id": "3",
+                      "title": "Social media"
+                    }
+                  ]
+                },
+                {
+                  "type": "Footer",
+                  "label": "Done",
+                  "on-click-action": {
+                    "name": "complete",
+                    "payload": {
+                      "source": "${form.source}",
+                      "firstName": "${data.firstName}",
+                      "lastName": "${data.lastName}",
+                      "email": "${data.email}"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "sign-in": {
+    "version": "2.1",
+    "data_api_version": "3.0",
+    "data_channel_uri": "https://example.com",
+    "routing_model": {
+      "SIGN_IN": [
+        "SIGN_UP",
+        "FORGOT_PASSWORD"
+      ],
+      "SIGN_UP": [
+        "TERMS_AND_CONDITIONS"
+      ],
+      "FORGOT_PASSWORD": [],
+      "TERMS_AND_CONDITIONS": []
+    },
+    "screens": [
+      {
+        "id": "SIGN_IN",
+        "title": "Sign in",
+        "terminal": true,
+        "data": {},
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "Form",
+              "name": "sign_in_form",
+              "children": [
+                {
+                  "type": "TextInput",
+                  "required": true,
+                  "label": "Email address",
+                  "name": "email",
+                  "input-type": "email"
+                },
+                {
+                  "type": "TextInput",
+                  "required": true,
+                  "label": "Password",
+                  "name": "password",
+                  "input-type": "password"
+                },
+                {
+                  "type": "EmbeddedLink",
+                  "text": "Don't have an account? Sign up",
+                  "on-click-action": {
+                    "name": "navigate",
+                    "next": {
+                      "type": "screen",
+                      "name": "SIGN_UP"
+                    },
+                    "payload": {}
+                  }
+                },
+                {
+                  "type": "EmbeddedLink",
+                  "text": "Forgot password",
+                  "on-click-action": {
+                    "name": "navigate",
+                    "next": {
+                      "type": "screen",
+                      "name": "FORGOT_PASSWORD"
+                    },
+                    "payload": {
+                      "body": "Example"
+                    }
+                  }
+                },
+                {
+                  "type": "Footer",
+                  "label": "Sign in",
+                  "on-click-action": {
+                    "name": "data_exchange",
+                    "payload": {
+                      "email": "${form.email}",
+                      "password": "${form.password}"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "SIGN_UP",
+        "title": "Sign up",
+        "data": {},
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "Form",
+              "name": "sign_up_form",
+              "children": [
+                {
+                  "type": "TextInput",
+                  "required": true,
+                  "label": "First Name",
+                  "name": "first_name",
+                  "input-type": "text"
+                },
+                {
+                  "type": "TextInput",
+                  "required": true,
+                  "label": "Last Name",
+                  "name": "last_name",
+                  "input-type": "text"
+                },
+                {
+                  "type": "TextInput",
+                  "required": true,
+                  "label": "Email address",
+                  "name": "email",
+                  "input-type": "email"
+                },
+                {
+                  "type": "TextInput",
+                  "required": true,
+                  "label": "Set password",
+                  "name": "password",
+                  "input-type": "password"
+                },
+                {
+                  "type": "TextInput",
+                  "required": true,
+                  "label": "Confirm password",
+                  "name": "confirm_password",
+                  "input-type": "password"
+                },
+                {
+                  "type": "OptIn",
+                  "name": "terms_agreement",
+                  "label": "I agree with the terms.",
+                  "required": true,
+                  "on-click-action": {
+                    "name": "navigate",
+                    "next": {
+                      "type": "screen",
+                      "name": "TERMS_AND_CONDITIONS"
+                    },
+                    "payload": {}
+                  }
+                },
+                {
+                  "type": "OptIn",
+                  "name": "offers_acceptance",
+                  "label": "I would like to receive news and offers."
+                },
+                {
+                  "type": "Footer",
+                  "label": "Continue",
+                  "on-click-action": {
+                    "name": "data_exchange",
+                    "payload": {
+                      "first_name": "${form.first_name}",
+                      "last_name": "${form.last_name}",
+                      "email": "${form.email}",
+                      "password": "${form.password}",
+                      "confirm_password": "${form.confirm_password}",
+                      "terms_agreement": "${form.terms_agreement}",
+                      "offers_acceptance": "${form.offers_acceptance}"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "FORGOT_PASSWORD",
+        "title": "Forgot password",
+        "terminal": true,
+        "data": {
+          "body": {
+            "type": "string",
+            "__example__": "Enter your email address for your account and we'll send a reset link. The single-use link will expire after 24 hours."
+          }
+        },
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "Form",
+              "name": "forgot_password_form",
+              "children": [
+                {
+                  "type": "TextBody",
+                  "text": "${data.body}"
+                },
+                {
+                  "type": "TextInput",
+                  "required": true,
+                  "label": "Email address",
+                  "name": "email",
+                  "input-type": "email"
+                },
+                {
+                  "type": "Footer",
+                  "label": "Sign in",
+                  "on-click-action": {
+                    "name": "data_exchange",
+                    "payload": {
+                      "email": "${form.email}"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "TERMS_AND_CONDITIONS",
+        "title": "Terms and conditions",
+        "data": {},
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "TextHeading",
+              "text": "Our Terms"
+            },
+            {
+              "type": "TextSubheading",
+              "text": "Data usage"
+            },
+            {
+              "type": "TextBody",
+              "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed vitae odio dui. Praesent ut nulla tincidunt, scelerisque augue malesuada, volutpat lorem. Aliquam iaculis ex at diam posuere mollis. Suspendisse eget purus ac tellus interdum pharetra. In quis dolor turpis. Fusce in porttitor enim, vitae efficitur nunc. Fusce dapibus finibus volutpat. Fusce velit mi, ullamcorper ac gravida vitae, blandit quis ex. Fusce ultrices diam et justo blandit, quis consequat nisl euismod. Vestibulum pretium est sem, vitae convallis justo sollicitudin non. Morbi bibendum purus mattis quam condimentum, a scelerisque erat bibendum. Nullam sit amet bibendum lectus."
+            },
+            {
+              "type": "TextSubheading",
+              "text": "Privacy policy"
+            },
+            {
+              "type": "TextBody",
+              "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed vitae odio dui. Praesent ut nulla tincidunt, scelerisque augue malesuada, volutpat lorem. Aliquam iaculis ex at diam posuere mollis. Suspendisse eget purus ac tellus interdum pharetra. In quis dolor turpis. Fusce in porttitor enim, vitae efficitur nunc. Fusce dapibus finibus volutpat. Fusce velit mi, ullamcorper ac gravida vitae, blandit quis ex. Fusce ultrices diam et justo blandit, quis consequat nisl euismod. Vestibulum pretium est sem, vitae convallis justo sollicitudin non. Morbi bibendum purus mattis quam condimentum, a scelerisque erat bibendum. Nullam sit amet bibendum lectus."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "register": {
+    "version": "2.1",
+    "data_api_version": "3.0",
+    "data_channel_uri": "https://example.com",
+    "routing_model": {
+      "REGISTER": [
+        "TERMS_AND_CONDITIONS"
+      ],
+      "TERMS_AND_CONDITIONS": []
+    },
+    "screens": [
+      {
+        "id": "REGISTER",
+        "title": "Register for an account",
+        "terminal": true,
+        "data": {
+          "error_messages": {
+            "type": "object",
+            "__example__": {
+              "confirm_password": "Passwords don't match."
+            }
+          }
+        },
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "Form",
+              "name": "register_form",
+              "error-messages": "${data.error_messages}",
+              "children": [
+                {
+                  "type": "TextInput",
+                  "required": true,
+                  "label": "First name",
+                  "name": "first_name",
+                  "input-type": "text"
+                },
+                {
+                  "type": "TextInput",
+                  "required": true,
+                  "label": "Last name",
+                  "name": "last_name",
+                  "input-type": "text"
+                },
+                {
+                  "type": "TextInput",
+                  "required": true,
+                  "label": "Email address",
+                  "name": "email",
+                  "input-type": "email"
+                },
+                {
+                  "type": "TextInput",
+                  "required": true,
+                  "label": "Set password",
+                  "name": "password",
+                  "input-type": "password"
+                },
+                {
+                  "type": "TextInput",
+                  "required": true,
+                  "label": "Confirm password",
+                  "name": "confirm_password",
+                  "input-type": "password"
+                },
+                {
+                  "type": "OptIn",
+                  "name": "terms_agreement",
+                  "label": "I agree with the terms.",
+                  "required": true,
+                  "on-click-action": {
+                    "name": "navigate",
+                    "next": {
+                      "type": "screen",
+                      "name": "TERMS_AND_CONDITIONS"
+                    },
+                    "payload": {}
+                  }
+                },
+                {
+                  "type": "OptIn",
+                  "name": "offers_acceptance",
+                  "label": "I would like to receive news and offers."
+                },
+                {
+                  "type": "Footer",
+                  "label": "Continue",
+                  "on-click-action": {
+                    "name": "data_exchange",
+                    "payload": {
+                      "first_name": "${form.first_name}",
+                      "last_name": "${form.last_name}",
+                      "email": "${form.email}",
+                      "password": "${form.password}",
+                      "confirm_password": "${form.confirm_password}",
+                      "terms_agreement": "${form.terms_agreement}",
+                      "offers_acceptance": "${form.offers_acceptance}"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "TERMS_AND_CONDITIONS",
+        "title": "Terms and conditions",
+        "data": {},
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "TextHeading",
+              "text": "Our Terms"
+            },
+            {
+              "type": "TextSubheading",
+              "text": "Data usage"
+            },
+            {
+              "type": "TextBody",
+              "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed vitae odio dui. Praesent ut nulla tincidunt, scelerisque augue malesuada, volutpat lorem. Aliquam iaculis ex at diam posuere mollis. Suspendisse eget purus ac tellus interdum pharetra. In quis dolor turpis. Fusce in porttitor enim, vitae efficitur nunc. Fusce dapibus finibus volutpat. Fusce velit mi, ullamcorper ac gravida vitae, blandit quis ex. Fusce ultrices diam et justo blandit, quis consequat nisl euismod. Vestibulum pretium est sem, vitae convallis justo sollicitudin non. Morbi bibendum purus mattis quam condimentum, a scelerisque erat bibendum. Nullam sit amet bibendum lectus."
+            },
+            {
+              "type": "TextSubheading",
+              "text": "Privacy policy"
+            },
+            {
+              "type": "TextBody",
+              "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed vitae odio dui. Praesent ut nulla tincidunt, scelerisque augue malesuada, volutpat lorem. Aliquam iaculis ex at diam posuere mollis. Suspendisse eget purus ac tellus interdum pharetra. In quis dolor turpis. Fusce in porttitor enim, vitae efficitur nunc. Fusce dapibus finibus volutpat. Fusce velit mi, ullamcorper ac gravida vitae, blandit quis ex. Fusce ultrices diam et justo blandit, quis consequat nisl euismod. Vestibulum pretium est sem, vitae convallis justo sollicitudin non. Morbi bibendum purus mattis quam condimentum, a scelerisque erat bibendum. Nullam sit amet bibendum lectus."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "book-a-table": {
+    "version": "2.1",
+    "data_api_version": "3.0",
+    "data_channel_uri": "https://example.com",
+    "routing_model": {
+      "BOOK_TABLE": [
+        "BOOKING_DETAILS"
+      ],
+      "BOOKING_DETAILS": [
+        "BOOKING_CONFIRMATION"
+      ],
+      "BOOKING_CONFIRMATION": [
+        "TERMS_AND_CONDITIONS"
+      ],
+      "TERMS_AND_CONDITIONS": []
+    },
+    "screens": [
+      {
+        "id": "BOOK_TABLE",
+        "title": "Book a table",
+        "data": {
+          "min_date": {
+            "type": "string",
+            "__example__": "1696892400000"
+          },
+          "max_date": {
+            "type": "string",
+            "__example__": "1760050800000"
+          },
+          "unavailable_dates": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "__example__": [
+              "1760310000000"
+            ]
+          },
+          "time": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                }
+              }
+            },
+            "__example__": [
+              {
+                "id": "1",
+                "title": "12:30"
+              },
+              {
+                "id": "2",
+                "title": "13:30"
+              },
+              {
+                "id": "3",
+                "title": "18:30"
+              },
+              {
+                "id": "4",
+                "title": "19:30"
+              },
+              {
+                "id": "5",
+                "title": "20:30"
+              }
+            ]
+          },
+          "people": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                }
+              }
+            },
+            "__example__": [
+              {
+                "id": "1",
+                "title": "1"
+              },
+              {
+                "id": "2",
+                "title": "2"
+              },
+              {
+                "id": "3",
+                "title": "3"
+              },
+              {
+                "id": "4",
+                "title": "4"
+              },
+              {
+                "id": "5",
+                "title": "5"
+              },
+              {
+                "id": "6",
+                "title": "6"
+              },
+              {
+                "id": "7+",
+                "title": "7+"
+              }
+            ]
+          },
+          "location": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                }
+              }
+            },
+            "__example__": [
+              {
+                "id": "1",
+                "title": "Shorty Heights, Light City, 59923"
+              }
+            ]
+          }
+        },
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "Form",
+              "name": "book_table_form",
+              "children": [
+                {
+                  "type": "Dropdown",
+                  "label": "Location",
+                  "name": "location",
+                  "data-source": "${data.location}",
+                  "required": true,
+                  "on-select-action": {
+                    "name": "data_exchange",
+                    "payload": {
+                      "location": "${form.location}"
+                    }
+                  }
+                },
+                {
+                  "type": "Dropdown",
+                  "label": "People",
+                  "name": "people",
+                  "data-source": "${data.people}",
+                  "required": true,
+                  "on-select-action": {
+                    "name": "data_exchange",
+                    "payload": {
+                      "people": "${form.people}"
+                    }
+                  }
+                },
+                {
+                  "type": "DatePicker",
+                  "name": "date",
+                  "label": "Date",
+                  "min-date": "${data.min_date}",
+                  "max-date": "${data.max_date}",
+                  "unavailable-dates": "${data.unavailable_dates}",
+                  "required": true,
+                  "on-select-action": {
+                    "name": "data_exchange",
+                    "payload": {
+                      "date": "${form.date}"
+                    }
+                  }
+                },
+                {
+                  "type": "Dropdown",
+                  "label": "Time",
+                  "name": "time",
+                  "data-source": "${data.time}",
+                  "required": true
+                },
+                {
+                  "type": "Footer",
+                  "label": "Continue",
+                  "on-click-action": {
+                    "name": "navigate",
+                    "next": {
+                      "type": "screen",
+                      "name": "BOOKING_DETAILS"
+                    },
+                    "payload": {}
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "BOOKING_DETAILS",
+        "title": "Booking details",
+        "data": {},
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "Form",
+              "name": "booking_details_form",
+              "children": [
+                {
+                  "type": "TextInput",
+                  "label": "Name",
+                  "name": "name",
+                  "required": true
+                },
+                {
+                  "type": "Dropdown",
+                  "label": "Special occasion",
+                  "name": "special_occasion",
+                  "data-source": [
+                    {
+                      "id": "1",
+                      "title": "Birthday"
+                    },
+                    {
+                      "id": "2",
+                      "title": "Anniversary"
+                    },
+                    {
+                      "id": "3",
+                      "title": "Engagement"
+                    },
+                    {
+                      "id": "4",
+                      "title": "Graduation"
+                    },
+                    {
+                      "id": "5",
+                      "title": "Other"
+                    }
+                  ],
+                  "required": false
+                },
+                {
+                  "type": "TextArea",
+                  "label": "Requirements",
+                  "name": "requirements",
+                  "helper-text": "e.g. Dietary or accessibility",
+                  "required": false
+                },
+                {
+                  "type": "Footer",
+                  "label": "Continue",
+                  "on-click-action": {
+                    "name": "data_exchange",
+                    "payload": {
+                      "name": "${form.name}",
+                      "special_occasion": "${form.special_occasion}",
+                      "requirements": "${form.requirements}"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "BOOKING_CONFIRMATION",
+        "title": "Booking confirmation",
+        "terminal": true,
+        "data": {
+          "date": {
+            "type": "string",
+            "__example__": "Date: Saturday, June 7 2023"
+          },
+          "time": {
+            "type": "string",
+            "__example__": "Time: 19:30"
+          },
+          "people": {
+            "type": "string",
+            "__example__": "People: 4"
+          },
+          "location": {
+            "type": "string",
+            "__example__": "Location: Shorty Heights, Light City, 59923"
+          },
+          "name": {
+            "type": "string",
+            "__example__": "Name: John Doe"
+          },
+          "special_occasion": {
+            "type": "string",
+            "__example__": "Special Occasion: Birthday"
+          }
+        },
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "Form",
+              "name": "confirmation_form",
+              "children": [
+                {
+                  "type": "TextBody",
+                  "text": "${data.date}"
+                },
+                {
+                  "type": "TextBody",
+                  "text": "${data.time}"
+                },
+                {
+                  "type": "TextBody",
+                  "text": "${data.people}"
+                },
+                {
+                  "type": "TextBody",
+                  "text": "${data.location}"
+                },
+                {
+                  "type": "TextBody",
+                  "text": "${data.name}"
+                },
+                {
+                  "type": "TextBody",
+                  "text": "${data.special_occasion}"
+                },
+                {
+                  "type": "OptIn",
+                  "name": "privacy_policy",
+                  "label": "Accept our Privacy Policy",
+                  "required": true,
+                  "on-click-action": {
+                    "name": "navigate",
+                    "next": {
+                      "type": "screen",
+                      "name": "TERMS_AND_CONDITIONS"
+                    },
+                    "payload": {}
+                  }
+                },
+                {
+                  "type": "Footer",
+                  "label": "Confirm booking",
+                  "on-click-action": {
+                    "name": "data_exchange",
+                    "payload": {}
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "TERMS_AND_CONDITIONS",
+        "title": "Terms and conditions",
+        "data": {},
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "TextHeading",
+              "text": "Our Terms"
+            },
+            {
+              "type": "TextSubheading",
+              "text": "Data usage"
+            },
+            {
+              "type": "TextBody",
+              "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed vitae odio dui. Praesent ut nulla tincidunt, scelerisque augue malesuada, volutpat lorem. Aliquam iaculis ex at diam posuere mollis. Suspendisse eget purus ac tellus interdum pharetra. In quis dolor turpis. Fusce in porttitor enim, vitae efficitur nunc. Fusce dapibus finibus volutpat. Fusce velit mi, ullamcorper ac gravida vitae, blandit quis ex. Fusce ultrices diam et justo blandit, quis consequat nisl euismod. Vestibulum pretium est sem, vitae convallis justo sollicitudin non. Morbi bibendum purus mattis quam condimentum, a scelerisque erat bibendum. Nullam sit amet bibendum lectus."
+            },
+            {
+              "type": "TextSubheading",
+              "text": "Privacy policy"
+            },
+            {
+              "type": "TextBody",
+              "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed vitae odio dui. Praesent ut nulla tincidunt, scelerisque augue malesuada, volutpat lorem. Aliquam iaculis ex at diam posuere mollis. Suspendisse eget purus ac tellus interdum pharetra. In quis dolor turpis. Fusce in porttitor enim, vitae efficitur nunc. Fusce dapibus finibus volutpat. Fusce velit mi, ullamcorper ac gravida vitae, blandit quis ex. Fusce ultrices diam et justo blandit, quis consequat nisl euismod. Vestibulum pretium est sem, vitae convallis justo sollicitudin non. Morbi bibendum purus mattis quam condimentum, a scelerisque erat bibendum. Nullam sit amet bibendum lectus."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "get-a-quote": {
+    "version": "2.1",
+    "data_api_version": "3.0",
+    "data_channel_uri": "https://example.com",
+    "routing_model": {
+      "DETAILS": [
+        "COVER"
+      ],
+      "COVER": [
+        "QUOTE"
+      ],
+      "QUOTE": [
+        "TERMS_AND_CONDITIONS"
+      ],
+      "TERMS_AND_CONDITIONS": []
+    },
+    "screens": [
+      {
+        "id": "DETAILS",
+        "title": "Your details",
+        "data": {
+          "city": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                }
+              }
+            },
+            "__example__": [
+              {
+                "id": "1",
+                "title": "Light City, SO"
+              }
+            ]
+          }
+        },
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "Form",
+              "name": "details_form",
+              "children": [
+                {
+                  "type": "TextInput",
+                  "label": "Your name",
+                  "input-type": "text",
+                  "name": "name",
+                  "required": true
+                },
+                {
+                  "type": "TextInput",
+                  "label": "Street address",
+                  "input-type": "text",
+                  "name": "address",
+                  "required": true
+                },
+                {
+                  "type": "Dropdown",
+                  "label": "City, State",
+                  "name": "city",
+                  "data-source": "${data.city}",
+                  "required": true
+                },
+                {
+                  "type": "TextInput",
+                  "label": "Zip code",
+                  "input-type": "text",
+                  "name": "zip_code",
+                  "required": true
+                },
+                {
+                  "type": "TextInput",
+                  "label": "Country/Region",
+                  "input-type": "text",
+                  "name": "country_region",
+                  "required": true
+                },
+                {
+                  "type": "Footer",
+                  "label": "Continue",
+                  "on-click-action": {
+                    "name": "data_exchange",
+                    "payload": {
+                      "name": "${form.name}",
+                      "address": "${form.address}",
+                      "city": "${form.city}",
+                      "zip_code": "${form.zip_code}",
+                      "country_region": "${form.country_region}"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "COVER",
+        "title": "Your cover",
+        "data": {
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                }
+              }
+            },
+            "__example__": [
+              {
+                "id": "1",
+                "title": "Fire and theft",
+                "description": "Cover your home against incidents of theft or accidental fires"
+              },
+              {
+                "id": "2",
+                "title": "Natural disaster",
+                "description": "Protect your home against disasters including earthquakes, floods and storms"
+              },
+              {
+                "id": "3",
+                "title": "Liability",
+                "description": "Protect yourself from legal liabilities that occur from accidents on your property"
+              }
+            ]
+          }
+        },
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "Form",
+              "name": "cover_form",
+              "children": [
+                {
+                  "type": "CheckboxGroup",
+                  "name": "options",
+                  "data-source": "${data.options}",
+                  "label": "Options",
+                  "required": true
+                },
+                {
+                  "type": "Footer",
+                  "label": "Continue",
+                  "on-click-action": {
+                    "name": "data_exchange",
+                    "payload": {
+                      "options": "${form.options}"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "QUOTE",
+        "title": "Your quote",
+        "terminal": true,
+        "data": {
+          "excess": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                }
+              }
+            },
+            "__example__": [
+              {
+                "id": "1",
+                "title": "$250"
+              }
+            ]
+          },
+          "total": {
+            "type": "string",
+            "__example__": "$47.98 per month"
+          }
+        },
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "Form",
+              "name": "quote_form",
+              "init-values": {
+                "payment_options": "1"
+              },
+              "children": [
+                {
+                  "type": "Dropdown",
+                  "label": "Excess",
+                  "name": "excess",
+                  "data-source": "${data.excess}",
+                  "on-select-action": {
+                    "name": "data_exchange",
+                    "payload": {
+                      "excess": "${form.excess}"
+                    }
+                  },
+                  "required": true
+                },
+                {
+                  "type": "RadioButtonsGroup",
+                  "data-source": [
+                    {
+                      "id": "1",
+                      "title": "Monthly"
+                    },
+                    {
+                      "id": "2",
+                      "title": "Annually (Save $115)"
+                    }
+                  ],
+                  "name": "payment_options",
+                  "label": "Payment options",
+                  "on-select-action": {
+                    "name": "data_exchange",
+                    "payload": {
+                      "payment_options": "${form.payment_options}"
+                    }
+                  },
+                  "required": true
+                },
+                {
+                  "type": "TextHeading",
+                  "text": "${data.total}"
+                },
+                {
+                  "type": "OptIn",
+                  "name": "privacy_policy",
+                  "label": "Accept our Privacy Policy",
+                  "required": true,
+                  "on-click-action": {
+                    "name": "navigate",
+                    "next": {
+                      "type": "screen",
+                      "name": "TERMS_AND_CONDITIONS"
+                    },
+                    "payload": {}
+                  }
+                },
+                {
+                  "type": "Footer",
+                  "label": "Choose quote",
+                  "on-click-action": {
+                    "name": "data_exchange",
+                    "payload": {
+                      "privacy_policy": "${form.privacy_policy}"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "TERMS_AND_CONDITIONS",
+        "title": "Terms and conditions",
+        "data": {},
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "TextHeading",
+              "text": "Our Terms"
+            },
+            {
+              "type": "TextSubheading",
+              "text": "Data usage"
+            },
+            {
+              "type": "TextBody",
+              "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed vitae odio dui. Praesent ut nulla tincidunt, scelerisque augue malesuada, volutpat lorem. Aliquam iaculis ex at diam posuere mollis. Suspendisse eget purus ac tellus interdum pharetra. In quis dolor turpis. Fusce in porttitor enim, vitae efficitur nunc. Fusce dapibus finibus volutpat. Fusce velit mi, ullamcorper ac gravida vitae, blandit quis ex. Fusce ultrices diam et justo blandit, quis consequat nisl euismod. Vestibulum pretium est sem, vitae convallis justo sollicitudin non. Morbi bibendum purus mattis quam condimentum, a scelerisque erat bibendum. Nullam sit amet bibendum lectus."
+            },
+            {
+              "type": "TextSubheading",
+              "text": "Privacy policy"
+            },
+            {
+              "type": "TextBody",
+              "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed vitae odio dui. Praesent ut nulla tincidunt, scelerisque augue malesuada, volutpat lorem. Aliquam iaculis ex at diam posuere mollis. Suspendisse eget purus ac tellus interdum pharetra. In quis dolor turpis. Fusce in porttitor enim, vitae efficitur nunc. Fusce dapibus finibus volutpat. Fusce velit mi, ullamcorper ac gravida vitae, blandit quis ex. Fusce ultrices diam et justo blandit, quis consequat nisl euismod. Vestibulum pretium est sem, vitae convallis justo sollicitudin non. Morbi bibendum purus mattis quam condimentum, a scelerisque erat bibendum. Nullam sit amet bibendum lectus."
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

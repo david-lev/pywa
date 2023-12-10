@@ -83,7 +83,7 @@ def test_types():
     for version in API_VERSIONS:
         for (update_filename, update_class), examples in UPDATES.items():
             with open(
-                f"tests/data/{version}/{update_filename}.json", "r"
+                f"tests/data/updates/{version}/{update_filename}.json", "r"
             ) as update_file:
                 examples_data: dict[str, Any] = json.load(update_file)
             for test_name, test_funcs in examples.items():
