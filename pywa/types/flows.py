@@ -2,21 +2,24 @@ from __future__ import annotations
 
 import abc
 import dataclasses
-from typing import Iterable
+from typing import Iterable, Literal
 
 from pywa import utils
 
 __all__ = [
+    "FlowCategory",
     "Flow",
-    "FlowData",
     "Screen",
     "Layout",
     "LayoutType",
+    "Form",
     "TextHeading",
     "TextSubheading",
     "TextBody",
     "TextCaption",
+    "FontWeight",
     "TextInput",
+    "InputType",
     "TextArea",
     "CheckboxGroup",
     "RadioButtonsGroup",
@@ -31,210 +34,272 @@ __all__ = [
 ]
 
 
-@dataclasses.dataclass
-class FlowData(abc.ABC):
-    __types__ = {
-        str: "string",
-        int: "number",
-        float: "number",
-        bool: "boolean",
-        list: "array",
-        tuple: "array",
-        set: "array",
-        dict: "object",
-    }
+class FlowCategory(utils.StrEnum):
+    """The category of the flow"""
 
-    @classmethod
-    def to_dict(cls):
-        data = {}
-        for field in dataclasses.fields(cls):
-            try:
-                data[field.name] = {
-                    "type": cls.__types__[field.type],
-                    "__example__": field.default,
-                }
-            except KeyError:
-                raise TypeError(
-                    f"Field {field.name} has wrong type. use one of {cls.__types__.keys()}"
-                )
-        return {"data": data}
+    SIGN_UP = "SIGN_UP"
+    SIGN_IN = "SIGN_IN"
+    APPOINTMENT_BOOKING = "APPOINTMENT_BOOKING"
+    LEAD_GENERATION = "LEAD_GENERATION"
+    CONTACT_US = "CONTACT_US"
+    CUSTOMER_SUPPORT = "CUSTOMER_SUPPORT"
+    SURVEY = "SURVEY"
+    OTHER = "OTHER"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class Flow:
-    version: str | float
-    screens: Iterable[Screen]
+    """Flow is the top level component that holds the screens."""
+
+    version: str
+    screens: list[Screen] | tuple[Screen]
+    data_api_version: str | None = None
+    data_channel_uri: str | None = None
+    routing_model: dict[str, Iterable[str]] | None = None
+
+    def to_dict(self):
+        """"""
+        return dataclasses.asdict(
+            obj=self,
+            dict_factory=lambda d: {
+                k.replace("_", "-"): v for (k, v) in d if v is not None
+            },
+        )
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class Screen:
+    """Screen is a top level component that holds the data and layout."""
+
     id: str
     layout: Layout
-    terminal: bool | None = None
-    data: Iterable[type[FlowData]] | None = None
     title: str | None = None
-    refresh_on_back: bool = False
+    data: dict[str, dict] | None = None
+    terminal: bool | None = None
+    refresh_on_back: bool | None = None
 
 
 class LayoutType(utils.StrEnum):
+    """LayoutType is the type of layout that is used to display the components."""
+
     SINGLE_COLUMN = "SingleColumnLayout"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class Layout:
+    """Layout holds the components that are displayed on a screen."""
+
     type: LayoutType = LayoutType.SINGLE_COLUMN
-    children: Iterable[Component]
+    children: list[Component] | tuple[Component]
 
 
 class Component(abc.ABC):
-    @abc.abstractmethod
+    """Base class for all components"""
+
     @property
-    def type(self) -> utils.StrEnum:
+    @abc.abstractmethod
+    def type(self) -> ComponentType:
         ...
 
-    @abc.abstractmethod
     @property
-    def visible(self) -> bool:
+    @abc.abstractmethod
+    def visible(self) -> bool | str | None:
         ...
 
-    class Type(utils.StrEnum):
-        TEXT_HEADING = "TextHeading"
-        TEXT_SUBHEADING = "TextSubheading"
-        TEXT_BODY = "TextBody"
-        TEXT_CAPTION = "TextCaption"
-        TEXT_INPUT = "TextInput"
-        TEXT_AREA = "TextArea"
-        CHECKBOX_GROUP = "CheckboxGroup"
-        RADIO_BUTTONS_GROUP = "RadioButtonsGroup"
-        FOOTER = "Footer"
-        OPT_IN = "OptIn"
-        DROPDOWN = "Dropdown"
-        EMBEDDED_LINK = "EmbeddedLink"
-        DATE_PICKER = "DatePicker"
-        IMAGE = "Image"
+
+class ComponentType(utils.StrEnum):
+    """Internal component types"""
+
+    FORM = "Form"
+    TEXT_HEADING = "TextHeading"
+    TEXT_SUBHEADING = "TextSubheading"
+    TEXT_BODY = "TextBody"
+    TEXT_CAPTION = "TextCaption"
+    TEXT_INPUT = "TextInput"
+    TEXT_AREA = "TextArea"
+    CHECKBOX_GROUP = "CheckboxGroup"
+    RADIO_BUTTONS_GROUP = "RadioButtonsGroup"
+    FOOTER = "Footer"
+    OPT_IN = "OptIn"
+    DROPDOWN = "Dropdown"
+    EMBEDDED_LINK = "EmbeddedLink"
+    DATE_PICKER = "DatePicker"
+    IMAGE = "Image"
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class Form(Component):
+    """Form component is the top level component that can hold other components."""
+
+    type: ComponentType = dataclasses.field(default=ComponentType.FORM, init=False)
+    visible: None = dataclasses.field(default=None, init=False)
+    name: str
+    children: Iterable[Component]
+    init_values: dict[str, str | list[str, ...] | tuple[str, ...]] | str | None = None
+    error_messages: dict[str, str] | str | None = None
 
 
 class TextComponent(Component, abc.ABC):
-    @abc.abstractmethod
+    """
+    Base class for all text components
+
+    https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#text
+    """
+
     @property
+    @abc.abstractmethod
     def text(self) -> str:
         ...
 
-    class FontWeight(utils.StrEnum):
-        BOLD = "bold"
-        ITALIC = "italic"
-        BOLD_ITALIC = "bold_italic"
-        NORMAL = "normal"
+
+class FontWeight(utils.StrEnum):
+    """The text weight"""
+
+    BOLD = "bold"
+    ITALIC = "italic"
+    BOLD_ITALIC = "bold_italic"
+    NORMAL = "normal"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class TextHeading(TextComponent):
-    type: TextComponent.Type = dataclasses.field(
-        default=TextComponent.Type.TEXT_HEADING, init=False
+    """
+    This is the top level title of a page.
+
+    https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#heading
+    """
+
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.TEXT_HEADING, init=False
     )
     text: str
-    visible: bool = True
+    visible: bool | str | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class TextSubheading(TextComponent):
-    type: TextComponent.Type = dataclasses.field(
-        default=TextComponent.Type.TEXT_SUBHEADING, init=False
+    """
+    This is a subheading of a page.
+
+    https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#subheading
+    """
+
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.TEXT_SUBHEADING, init=False
     )
     text: str
-    visible: bool = True
+    visible: bool | str | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class TextBody(TextComponent):
-    type: TextComponent.Type = dataclasses.field(
-        default=TextComponent.Type.TEXT_BODY, init=False
-    )
-    text: str
-    visible: bool = True
-    font_weight: FontWeight | str = TextComponent.FontWeight.NORMAL
-    strikethrough: bool = False
+    """
+    This is the main body text of a page.
 
-    FontWeight = TextComponent.FontWeight
+    https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#body
+    """
+
+    type: ComponentType = dataclasses.field(default=ComponentType.TEXT_BODY, init=False)
+    text: str
+    font_weight: FontWeight | str | None = None
+    strikethrough: bool | str | None = None
+    visible: bool | str | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class TextCaption(TextComponent):
-    type: TextComponent.Type = dataclasses.field(
-        default=TextComponent.Type.TEXT_CAPTION, init=False
+    """
+    This is a caption text of a page.
+
+    https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#caption
+    """
+
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.TEXT_CAPTION, init=False
     )
     text: str
-    visible: bool = True
-    font_weight: FontWeight | str = TextComponent.FontWeight.NORMAL
-    strikethrough: bool = False
-
-    FontWeight = TextComponent.FontWeight
+    font_weight: FontWeight | str | None = None
+    strikethrough: bool | str | None = None
+    visible: bool | str | None = None
 
 
 class TextEntryComponent(Component, abc.ABC):
-    @abc.abstractmethod
-    @property
-    def label(self) -> str:
-        ...
+    """
+    Base class for all text entry components
 
-    @abc.abstractmethod
-    @property
-    def required(self) -> bool:
-        ...
+    https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#textentry
+    """
 
-    @abc.abstractmethod
     @property
+    @abc.abstractmethod
     def name(self) -> str:
         ...
 
-    @abc.abstractmethod
     @property
-    def visible(self) -> bool:
+    @abc.abstractmethod
+    def label(self) -> str:
         ...
 
-    @abc.abstractmethod
     @property
-    def helper_text(self) -> str:
+    @abc.abstractmethod
+    def required(self) -> bool | str | None:
         ...
 
-    class InputType(utils.StrEnum):
-        TEXT = "text"
-        NUMBER = "number"
-        EMAIL = "email"
-        PASSWORD = "password"
-        PASSCODE = "passcode"
-        PHONE = "phone"
+    @property
+    @abc.abstractmethod
+    def helper_text(self) -> str | None:
+        ...
+
+
+class InputType(utils.StrEnum):
+    """The input type"""
+
+    TEXT = "text"
+    NUMBER = "number"
+    EMAIL = "email"
+    PASSWORD = "password"
+    PASSCODE = "passcode"
+    PHONE = "phone"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class TextInput(TextEntryComponent):
-    type: TextEntryComponent.Type = dataclasses.field(
-        default=TextEntryComponent.Type.TEXT_INPUT, init=False
-    )
-    label: str
-    input_type: TextInput.InputType | str
-    required: bool
-    min_chars: int | str
-    max_chars: int | str
-    helper_text: str
-    visible: bool
-    name: str
+    """
+    This is a text entry component that allows for a single line of text.
 
-    InputType = TextEntryComponent.InputType
+    https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#textinput
+    """
+
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.TEXT_INPUT, init=False
+    )
+    name: str
+    label: str
+    input_type: InputType | str | None = None
+    required: bool | str | None = None
+    min_chars: int | str | None = None
+    max_chars: int | str | None = None
+    helper_text: str | None = None
+    enabled: bool | str | None = None
+    visible: bool | str | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class TextArea(TextEntryComponent):
-    type: TextEntryComponent.Type = dataclasses.field(
-        default=TextEntryComponent.Type.TEXT_AREA, init=False
-    )
+    """
+    This is a text entry component that allows for multiple lines of text.
+
+    https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#textarea
+    """
+
+    type: ComponentType = dataclasses.field(default=ComponentType.TEXT_AREA, init=False)
     name: str
     label: str
-    required: bool | None = None
+    required: bool | str | None = None
     max_length: int | str | None = None
     helper_text: str | None = None
-    enabled: bool = True
-    visible: bool = True
+    enabled: bool | str | None = None
+    visible: bool | str | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -248,104 +313,153 @@ class DataSource:
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class CheckboxGroup(Component):
-    type: Component.Type = dataclasses.field(
-        default=Component.Type.CHECKBOX_GROUP, init=False
+    """
+    CheckboxGroup component allows users to pick multiple selections from a list of options.
+
+    https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#checkbox
+    """
+
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.CHECKBOX_GROUP, init=False
     )
     name: str
-    label: str
-    required: bool
-    visible: bool
-    min_selected_items: int
-    max_selected_items: int
-    data_source: list[DataSource]
+    data_source: list[DataSource] | tuple[DataSource] | str
+    label: str | None = None
+    min_selected_items: int | str | None = None
+    max_selected_items: int | str | None = None
+    required: bool | str | None = None
+    visible: bool | str | None = None
+    enabled: bool | str | None = None
     on_select_action: Action | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class RadioButtonsGroup(Component):
-    type: Component.Type = dataclasses.field(
-        default=Component.Type.RADIO_BUTTONS_GROUP, init=False
+    """
+    RadioButtonsGroup component allows users to pick a single selection from a list of options.
+
+    https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#radio
+    """
+
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.RADIO_BUTTONS_GROUP, init=False
     )
     name: str
-    label: str
-    required: bool = True
-    visible: bool = True
-    data_source: list[DataSource]
+    data_source: list[DataSource] | tuple[DataSource] | str
+    label: str | None = None
+    required: bool | str | None = None
+    visible: bool | str | None = None
+    enabled: bool | str | None = None
     on_select_action: Action | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class Footer(Component):
-    type: Component.Type = dataclasses.field(default=Component.Type.FOOTER, init=False)
+    """
+    Footer component allows users to navigate to other screens or submit the flow.
+
+    https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#foot
+    """
+
+    type: ComponentType = dataclasses.field(default=ComponentType.FOOTER, init=False)
+    visible: None = dataclasses.field(default=None, init=False)
     label: str
-    left_caption: str
-    center_caption: str
-    right_caption: str
-    enabled: bool
-    visible: bool
     on_click_action: Action
+    left_caption: str | None = None
+    center_caption: str | None = None
+    right_caption: str | None = None
+    enabled: bool | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class OptIn(Component):
-    type: Component.Type = dataclasses.field(default=Component.Type.OPT_IN, init=False)
-    label: str
-    required: bool
+    """
+    OptIn component allows users to check a box to opt in for a specific purpose.
+
+    https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#opt
+    """
+
+    type: ComponentType = dataclasses.field(default=ComponentType.OPT_IN, init=False)
     name: str
+    label: str
+    required: bool | str | None = None
+    visible: bool | str | None = None
     on_click_action: Action | None = None
-    visible: bool = True
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class Dropdown(Component):
-    type: Component.Type = dataclasses.field(
-        default=Component.Type.DROPDOWN, init=False
-    )
-    label: str
-    data_source: list[DataSource]
+    """
+    Dropdown component allows users to pick a single selection from a list of options.
+
+    https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#drop
+    """
+
+    type: ComponentType = dataclasses.field(default=ComponentType.DROPDOWN, init=False)
     name: str
-    enabled: bool
-    required: bool
-    visible: bool
+    label: str
+    data_source: list[DataSource] | tuple[DataSource] | str
+    enabled: bool | str | None = None
+    required: bool | str | None = None
+    visible: bool | str | None = None
     on_select_action: Action | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class EmbeddedLink(Component):
-    type: Component.Type = dataclasses.field(
-        default=Component.Type.EMBEDDED_LINK, init=False
+    """
+    EmbeddedLink component allows users to click on a link that opens a web page.
+
+    https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#embed
+    """
+
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.EMBEDDED_LINK, init=False
     )
     text: str
-    on_click_action: Action | None = None
-    visible: bool
+    on_click_action: Action
+    visible: bool | str | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class DatePicker(Component):
-    type: Component.Type = dataclasses.field(
-        default=Component.Type.DATE_PICKER, init=False
+    """
+    DatePicker component allows users to select a date
+
+    https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#dp
+    """
+
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.DATE_PICKER, init=False
     )
-    label: str
-    min_date: str
-    max_date: str
     name: str
-    unavailable_dates: list[str]
-    visible: bool
-    helper_text: str
-    enabled: bool
+    label: str
+    min_date: str | str | None = None
+    max_date: str | str | None = None
+    unavailable_dates: Iterable[str] | str | None = None
+    helper_text: str | None = None
+    enabled: bool | str | None = None
+    required: bool | str | None = None
+    visible: bool | str | None = None
     on_select_action: Action | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class Image(Component):
-    type: Component.Type = dataclasses.field(default=Component.Type.IMAGE, init=False)
+    """
+    Image component allows users to pick multiple selections from a list of options.
+
+    https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#img
+    """
+
+    type: ComponentType = dataclasses.field(default=ComponentType.IMAGE, init=False)
     src: str
-    width: int
-    height: int
-    scale_type: str
-    aspect_ratio: int
-    alt_text: str
-    visible: bool
+    width: int | str | None = None
+    height: int | str | None = None
+    scale_type: Literal["cover", "contain"] | None = None
+    aspect_ratio: int | str
+    alt_text: str | None = None
+    visible: bool | str | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)

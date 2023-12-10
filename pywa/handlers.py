@@ -475,7 +475,7 @@ class HandlerDecorators:
 
         @functools.wraps(self.on_raw_update)
         def decorator(
-            callback: Callable[[WhatsApp, dict], Any]
+            callback: Callable[[WhatsApp, dict], Any],
         ) -> Callable[[WhatsApp, dict], Any]:
             self.add_handlers(RawUpdateHandler(callback, *filters))
             return callback
@@ -510,7 +510,7 @@ class HandlerDecorators:
 
         @functools.wraps(self.on_message)
         def decorator(
-            callback: Callable[[WhatsApp, Message], Any]
+            callback: Callable[[WhatsApp, Message], Any],
         ) -> Callable[[WhatsApp, Message], Any]:
             self.add_handlers(MessageHandler(callback, *filters))
             return callback
@@ -551,7 +551,7 @@ class HandlerDecorators:
 
         @functools.wraps(self.on_callback_button)
         def decorator(
-            callback: Callable[[WhatsApp, CallbackButton], Any]
+            callback: Callable[[WhatsApp, CallbackButton], Any],
         ) -> Callable[[WhatsApp, CallbackButton], Any]:
             self.add_handlers(
                 CallbackButtonHandler(
@@ -599,7 +599,7 @@ class HandlerDecorators:
 
         @functools.wraps(self.on_callback_selection)
         def decorator(
-            callback: Callable[[WhatsApp, CallbackSelection], Any]
+            callback: Callable[[WhatsApp, CallbackSelection], Any],
         ) -> Callable[[WhatsApp, CallbackSelection], Any]:
             self.add_handlers(
                 CallbackSelectionHandler(
@@ -645,7 +645,7 @@ class HandlerDecorators:
 
         @functools.wraps(self.on_message_status)
         def decorator(
-            callback: Callable[[WhatsApp, MessageStatus], Any]
+            callback: Callable[[WhatsApp, MessageStatus], Any],
         ) -> Callable[[WhatsApp, MessageStatus], Any]:
             self.add_handlers(MessageStatusHandler(callback, *filters))
             return callback
@@ -681,7 +681,7 @@ class HandlerDecorators:
 
         @functools.wraps(self.on_template_status)
         def decorator(
-            callback: Callable[[WhatsApp, TemplateStatus], Any]
+            callback: Callable[[WhatsApp, TemplateStatus], Any],
         ) -> Callable[[WhatsApp, TemplateStatus], Any]:
             self.add_handlers(TemplateStatusHandler(callback, *filters))
             return callback
