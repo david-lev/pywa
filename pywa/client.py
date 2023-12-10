@@ -111,7 +111,7 @@ class WhatsApp(Webhook, HandlerDecorators):
              or for multiple WhatsApp clients, you can change this to avoid conflicts).
             filter_updates: Whether to filter out user updates that are not sent to this phone_id (default: ``True``, does
              not apply to raw updates or updates that are not user-related).
-            business_account_id: The business account ID that owns the app (optional, required for some API
+            business_account_id: The WhatsApp business account ID that owns the phone ID (optional, required for some API
              methods).
         """
         if not phone_id or not token:
@@ -1227,8 +1227,8 @@ class WhatsApp(Webhook, HandlerDecorators):
         """Internal method to validate that the business account ID was provided."""
         if self.business_account_id is None:
             raise ValueError(
-                "You must provide the business account ID when using this method. "
-                "You can provide it when initializing the client or by setting the business_account_id attribute."
+                "You must provide the WhatsApp business account ID when using this method. "
+                "You can provide it when initializing the client or by setting the `business_account_id` attribute."
             )
 
     def create_template(

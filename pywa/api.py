@@ -710,3 +710,131 @@ class WhatsAppCloudApi:
             endpoint=f"/{self.phone_id}/messages",
             json=data,
         )
+
+    def create_flow(
+        self,
+        business_account_id: str,
+        name: str,
+        categories: tuple[str],
+        clone_flow_id: str | None = None,
+    ) -> dict[str, str]:
+        """
+        Create or clone a flow.
+
+        Args:
+            business_account_id: The ID of the business account.
+            name: The name of the flow.
+            categories: The categories of the flow.
+            clone_flow_id: The ID of the flow to clone.
+
+        Return example::
+
+            {
+              "id": "<Flow-ID>"
+            }
+        """
+        data = {
+            "name": name,
+            "categories": categories,
+            **({"clone_flow_id": clone_flow_id} if clone_flow_id else {}),
+        }
+        return self._make_request(
+            method="POST",
+            endpoint=f"/{business_account_id}/flows",
+            json=data,
+        )
+
+    def update_flow_metadata(
+        self,
+        business_account_id: str,
+        flow_id: str,
+        name: str | None = None,
+        categories: tuple[str] | None = None,
+    ) -> dict[str, bool]:
+        """
+        Update the metadata of a flow.
+
+        Args:
+            business_account_id: The ID of the business account.
+            flow_id: The ID of the flow.
+            name: The name of the flow.
+            categories: The categories of the flow.
+
+        Return example::
+
+            {
+              "success": True
+            }
+        """
+        data = {
+            **({"name": name} if name else {}),
+            **({"categories": categories} if categories else {}),
+        }
+        return self._make_request(
+            method="POST",
+            endpoint=f"/{flow_id}",
+            json=data,
+        )
+
+    def update_flow_json(self, flow_id: str, flow_json: str) -> dict:
+        """
+        Update the JSON of a flow.
+
+        Args:
+            flow_id: The ID of the flow.
+            flow_json: The JSON of the flow.
+
+        Return example::
+
+            {
+              "success": true,
+              "validation_errors": [
+                {
+                  "error": "INVALID_PROPERTY",
+                  "error_type": "JSON_SCHEMA_ERROR",
+                  "message": "The property \"initial-text\" cannot be specified at \"$root/screens/0/layout/children/2/children/0\".",
+                  "line_start": 46,
+                  "line_end": 46,
+                  "column_start": 17,
+                  "column_end": 30
+                }
+              ]
+            }
+        """
+        form_data = requests_toolbelt.MultipartEncoder(
+            {
+                "file": ("flow.json", flow_json, "application/json"),
+                "name": "flow.json",
+                "asset_type": "FLOW_JSON",
+                "messaging_product": "whatsapp",
+            }
+        )
+        headers = self._session.headers.copy()
+        headers["Content-Type"] = form_data.content_type
+        return self._make_request(
+            method="POST",
+            endpoint=f"/{flow_id}/assets",
+            headers=headers,
+            data=form_data,
+        )
+
+    def publish_flow(
+        self,
+        flow_id: str,
+    ) -> dict[str, bool]:
+        """
+        Publish a flow.
+
+        Args:
+            flow_id: The ID of the flow.
+
+        Return example::
+
+            {
+              "success": true
+            }
+        """
+        return self._make_request(
+            method="POST",
+            endpoint=f"/{flow_id}/publish",
+        )
