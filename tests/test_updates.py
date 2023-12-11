@@ -1,24 +1,16 @@
-import json
-from typing import Any, TypeVar, Callable
+from typing import Any, Callable
 
-from pywa import WhatsApp
 from pywa.types import (
-    Message,
-    CallbackButton,
-    CallbackSelection,
-    MessageStatus,
-    TemplateStatus,
     MessageType,
     MessageStatusType,
+    TemplateStatus,
 )
-from pywa.types.base_update import BaseUpdate
 from pywa.types.media import Image, Video, Document, Audio
+from .common import UPDATES
 
-API_VERSIONS: list[float] = [18.0]
-T = TypeVar("T", bound=BaseUpdate)
-
-UPDATES: dict[tuple[str, type[T]], dict[str, list[Callable[[T], bool]]]] = {
-    ("message", Message): {
+# {filename: {test_name: [test_funcs]}}
+TYPES: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
+    "message": {
         "text": [lambda m: m.text is not None],
         "image": [
             lambda m: m.image is not None,
@@ -49,7 +41,8 @@ UPDATES: dict[tuple[str, type[T]], dict[str, list[Callable[[T], bool]]]] = {
         ],
         "unreaction_empty": [lambda m: m.reaction.emoji is None],
         "unreaction_no_emoji": [lambda m: m.reaction.emoji is None],
-        "location": [lambda m: m.location is not None],
+        "current_location": [lambda m: m.location.current_location],
+        "chosen_location": [lambda m: not m.location.current_location],
         "contacts": [lambda m: m.contacts is not None],
         "order": [lambda m: m.order is not None],
         "unsupported": [lambda m: m.error is not None],
@@ -60,45 +53,33 @@ UPDATES: dict[tuple[str, type[T]], dict[str, list[Callable[[T], bool]]]] = {
             lambda m: m.type == MessageType.INTERACTIVE and m.error is not None
         ],
     },
-    ("callback_button", CallbackButton): {
+    "callback_button": {
         "button": [lambda b: b.type == MessageType.INTERACTIVE],
         "quick_reply": [lambda b: b.type == MessageType.BUTTON],
     },
-    ("callback_selection", CallbackSelection): {
+    "callback_selection": {
         "callback": [lambda s: s.data is not None],
         "description": [lambda s: s.description is not None],
     },
-    ("message_status", MessageStatus): {
+    "message_status": {
         "sent": [lambda s: s.status == MessageStatusType.SENT],
         "failed": [lambda s: s.error is not None],
     },
-    ("template_status", TemplateStatus): {
+    "template_status": {
         "approved": [lambda s: s.event == TemplateStatus.TemplateEvent.APPROVED],
     },
 }
 
 
 def test_types():
-    client = WhatsApp(phone_id="1234567890", token="xyzxyzxyz", filter_updates=False)
-    for version in API_VERSIONS:
-        for (update_filename, update_class), examples in UPDATES.items():
-            with open(
-                f"tests/data/{version}/{update_filename}.json", "r"
-            ) as update_file:
-                examples_data: dict[str, Any] = json.load(update_file)
-            for test_name, test_funcs in examples.items():
-                try:
-                    update_dict = examples_data[test_name]
-                    handler = client._get_handler(update_dict)
-                    assert (
-                        handler.__field_name__
-                        == update_dict["entry"][0]["changes"][0]["field"]
-                    )
-                    update_obj = handler.__update_constructor__(client, update_dict)  # noqa
-                    assert isinstance(update_obj, update_class)
-                    for test_func in test_funcs:
-                        assert test_func(update_obj)
-                except Exception as e:
-                    raise AssertionError(
-                        f"Failed to parse update='{update_filename}', test='{test_name}', v={version}, error={e}"
-                    )
+    for version, files in UPDATES.items():
+        for filename, tests in files.items():
+            for test in tests:
+                for test_name, update in test.items():
+                    for test_func in TYPES[filename][test_name]:
+                        try:
+                            assert test_func(update)
+                        except AssertionError as e:
+                            raise AssertionError(
+                                f"Failed to assert test='{test_name}', v={version}, error={e}"
+                            )

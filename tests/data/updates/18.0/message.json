@@ -460,7 +460,7 @@
       }
     ]
   },
-  "location": {
+  "current_location": {
     "object": "whatsapp_business_account",
     "entry": [
       {
@@ -492,6 +492,52 @@
                   "location": {
                     "latitude": 12.25089,
                     "longitude": 43.90539
+                  },
+                  "type": "location"
+                }
+              ]
+            },
+            "field": "messages"
+          }
+        ]
+      }
+    ]
+  },
+  "chosen_location": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "1234567890987654321",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "972123456789",
+                "phone_number_id": "1122334455667"
+              },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321"
+                }
+              ],
+              "messages": [
+                {
+                  "context": {
+                    "forwarded": true
+                  },
+                  "from": "972987654321",
+                  "id": "wamid.xyzxyz",
+                  "timestamp": "1697044557",
+                  "location": {
+                    "latitude": 37.4611978,
+                    "longitude": -122.2164385,
+                    "name": "Facebook HQ",
+                    "address": "1 Hacker Way, Menlo Park, CA 94025",
+                    "url": "https://maps.google.com/?cid=2000000000000000000"
                   },
                   "type": "location"
                 }
