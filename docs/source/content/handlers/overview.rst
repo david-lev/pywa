@@ -3,7 +3,7 @@
 .. currentmodule:: pywa.handlers
 
 To handle the updates from WhatsApp, you need a way to receive them. This is done by starting a web server that
-will receive the updates from WhatsApp and then register a callback functions that will be called when an update is received.
+will receive the updates from WhatsApp and then call your callback function to handle them.
 
 
 To allow maximum flexibility, ``pywa`` does not start the server. This allows the server to be
@@ -126,6 +126,68 @@ AFTER you start the server, so pywa can handle the verification request from Wha
 
 So, start the server:
 
+- Example using Flask
+
+.. toggle::
+
+    - Install `Flask <https://flask.palletsprojects.com/>`_ (``pip3 install -U "pywa[flask]"``):
+
+    .. code-block:: python
+        :caption: main.py
+        :emphasize-lines: 9, 10
+
+        from flask import Flask
+        from pywa import WhatsApp
+
+        flask_app = Flask(__name__)
+
+        wa = WhatsApp(
+            phone_id='1234567890',
+            token='xxxxxx',
+            server=flask_app,
+            verify_token='XYZ123',
+        )
+
+        ... # register the handlers
+
+        if __name__ == '__main__':
+            # start the server with flask or gunicorn, waitress, etc.
+            flask_app.run(port=8000)
+
+    The port that flask is running on (``8000`` in the example above) must be the same port that the callback url is listening on (e.g. ``ngrok http 8000``).
+
+- Example using FastAPI
+
+.. toggle::
+
+    - Install `FastAPI <https://fastapi.tiangolo.com/>`_ (``pip3 install -U "pywa[fastapi]"``):
+
+    .. code-block:: python
+        :caption: main.py
+        :emphasize-lines: 10, 11
+
+        import uvicorn
+        from fastapi import FastAPI
+        from pywa import WhatsApp
+
+        fastapi_app = FastAPI()
+
+        wa = WhatsApp(
+            phone_id='1234567890',
+            token='xxxxxx',
+            server=fastapi_app,
+            verify_token='XYZ123',
+        )
+
+        ... # register the handlers
+
+        if __name__ == '__main__':
+            # start the server with
+            uvicorn.run(fastapi_app, port=8000)
+
+    The port that fastapi is running on (``8000`` in the example above) must be the same port that the callback url is listening on (e.g. ``ngrok http 8000``).
+
+Then, register the callback url in the WhatsApp App Dashboard.
 
 The registration can be done in the ``App Dashboard > WhatsApp > Configuration > Callback URL``. You need to enter the webhook url
 and the verify token that you used when initializing the WhatsApp client.
@@ -138,7 +200,7 @@ and the verify token that you used when initializing the WhatsApp client.
 
 .. important::
 
-    In this method, you must subscribe to webhook fields in your webhook settings. Otherwise, you will not receive any updates.
+    When registering the callback url manually, you must subscribe to webhook fields in your webhook settings. Otherwise, you will not receive any updates.
     To enable it, go to your app dashboard, click on the ``Webhooks`` tab (Or the ``Configuration`` tab > ``Webhook fields``).
     Then, subscribe to the fields you want to receive.
 
@@ -147,7 +209,7 @@ and the verify token that you used when initializing the WhatsApp client.
         - ``message_template_status_update`` (template got approved, rejected, etc.)
 
     You can subscribe to all the other fields, but they will not be handled by pywa, they can still be handled manually by
-    registering a callback for the ``on_raw_update`` decorator (or the ``RawUpdateHandler`` handler).
+    registering a callback for the :meth:`~pywa.client.WhatsApp.on_raw_update` decorator (or the :class:`RawUpdateHandler` handler).
 
     .. toggle::
 
@@ -163,16 +225,30 @@ If everything is correct, WhatsApp will start sending the updates to the webhook
 Registering a callback function
 -------------------------------
 
-
-After you start the server and register the webhook url, you need to register a callback function that will be called
-when an update is received from WhatsApp.
+To handle the incoming updates, you need to register a callback function. This function will be called whenever an update
+is received from WhatsApp.
 
 .. attention::
     :class: dropdown
 
     All callback functions must be registered before starting the server. Otherwise, the updates will not be handled!
 
-There are two ways to register a callback function:
+A callback function is a function that takes two (positional) arguments:
+    - The WhatsApp client object (:class:`~pywa.client.WhatsApp`)
+    - The update object (:class:`~pywa.types.Message`, :class:`~pywa.types.CallbackButton`, etc.)
+
+Here is an example of a callback function that prints messages
+
+.. code-block:: python
+    :emphasize-lines: 1, 4
+
+    def print_message(client: WhatsApp, msg: Message):
+        print(msg)
+
+    def react_to_button(client: WhatsApp, clb: CallbackButton):
+        clb.react('❤️')
+
+Once you define the callback function, you have two ways to register it:
 
 Using decorators
 ^^^^^^^^^^^^^^^^
@@ -183,8 +259,10 @@ The easiest way to register a callback function is to use the ``on_message`` and
 
     from pywa import WhatsApp
     from pywa.types import Message, CallbackButton
+    from flask import Flask
 
-    wa = WhatsApp(...)  # initialize the WhatsApp client and provide web server (e.g. flask, fastapi, etc.)
+    flask_app = Flask(__name__)
+    wa = WhatsApp(..., server=flask_app)
 
     @wa.on_message()
     def handle_message(client: WhatsApp, message: Message):
@@ -196,7 +274,7 @@ The easiest way to register a callback function is to use the ``on_message`` and
         print(clb.data)
 
     if __name__ == '__main__':
-        # start the server
+        flask_app.run(port=8000)  # start the server
 
 
 Using ``Handler`` objects
@@ -225,8 +303,10 @@ main code, or when you want to dynamically register handlers programmatically.
     from pywa import WhatsApp
     from pywa.handlers import MessageHandler, CallbackButtonHandler
     from my_handlers import handle_message, handle_callback_button
+    from flask import Flask
 
-    wa = WhatsApp(...)  # initialize the WhatsApp client and provide web server (e.g. flask, fastapi, etc.)
+    flask_app = Flask(__name__)
+    wa = WhatsApp(..., server=flask_app)
 
     wa.add_handlers(
         MessageHandler(handle_message),
@@ -234,10 +314,9 @@ main code, or when you want to dynamically register handlers programmatically.
     )
 
     if __name__ == '__main__':
-        # start the server
+        flask_app.run(port=8000)  # start the server
 
 .. seealso::
-    :class: dropdown
 
     See how to filter updates in `Filters <filters/overview.html>`_.
 

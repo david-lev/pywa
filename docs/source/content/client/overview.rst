@@ -8,7 +8,9 @@
     WORK IN PROGRESS
 
 
-The :class:`~WhatsApp` client has two responsibilities. Sending messages & handling updates. You can use both or only one of them.
+The :class:`~WhatsApp` client has two responsibilities. Sending messages & handling updates.
+
+
 
 .. autoclass:: WhatsApp()
     :members: __init__
@@ -51,3 +53,4 @@ The available methods are:
 
 .. toctree::
     client_reference
+    api_reference

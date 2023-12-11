@@ -11,28 +11,18 @@
 ================================
 
 
-Setup
-=======
-
-.. note::
-
-    This guide will explain how to setup the WhatsApp Business API and how to use the ``pywa`` package.
-
-
 Create a WhatsApp Application
 =============================
 
-    You already have an app? skip to `Setup the WhatsApp Business API <#id1>`_.
+    You already have an app? skip to `Setup the App <#id1>`_.
 
-In order to use the WhatsApp Business API, you need to create a Facebook App. For that you need to have a Facebook developer account.
-If you don't have one, `you can register here <https://developers.facebook.com/>`_.
-
-After that you need to create a new app. Follow the steps below:
+In order to use the WhatsApp Cloud API, you need to create a Facebook App.
+To do that you need a Facebook Developer account. If you don't have one, `you can register here <https://developers.facebook.com/>`_.
 
 1. Go to `Meta for Developers > My Apps <https://developers.facebook.com/apps/>`_ and create a new app
     - Click `here <https://developers.facebook.com/apps/creation/>`_ to go directly to the app creation page
 
-2. Select **Other** as the use case and hit next
+2. Select **Other** as the use case and hit **Next**
 
 .. toggle::
 
@@ -43,7 +33,7 @@ After that you need to create a new app. Follow the steps below:
 
 --------------------
 
-3. Select **Business** as the app type and hit next
+3. Select **Business** as the app type and click on **Next**
 
 .. toggle::
 
@@ -54,7 +44,7 @@ After that you need to create a new app. Follow the steps below:
 
 --------------------
 
-4. Fill the app name and the email and hit create app
+4. Fill the app name and the email and hit **Create App**
 
 .. toggle::
 
@@ -76,8 +66,7 @@ After that you need to create a new app. Follow the steps below:
 
 --------------------
 
-6. At this point you will be asked to select a **Meta Business Account**. If you have one - select it and hit **Next**.
-Accept the terms and conditions and hit **Submit**.
+6. At this point you will be asked to select a **Meta Business Account**. If you have one - select it and hit **Next**. Accept the terms and conditions and hit **Submit**. If you don't have a Business Account, you will need to create one.
 
 .. toggle::
 
@@ -88,8 +77,8 @@ Accept the terms and conditions and hit **Submit**.
 
 --------------------
 
-Setup the WhatsApp Business API
-===============================
+Setup the App
+=============
 
 
     You already have **Phone ID** and **Token**? skip to `Send a Message <#id2>`_.
@@ -106,9 +95,9 @@ Setup the WhatsApp Business API
 
 --------------------
 
-In the top you will see a **Temporary access token**. This is the token you will use to connect to the WhatsApp Business API.
+In the top you will see a **Temporary access token**. This is the token you will use to interact with the WhatsApp Cloud API.
 Right below it you will see the **Send and receive messages**. Below it you will see the **Phone number ID**. This is the ID
-of the phone number you will use to send and receive messages. You will need to use them in the next step.
+of the phone number you will use to send and receive messages. You will need to use both of them in the next step.
 
 .. note::
 
@@ -120,9 +109,8 @@ of the phone number you will use to send and receive messages. You will need to 
 
     If you haven't connected a real phone number to your app, you have the option to use a test phone number.
     This is a phone number that is provided by Meta and can be used for testing purposes only. You can send messages
-    up to 5 different numbers and you must authenticate every one of them (Select the **Test number** in the ``From`` field
-    and add the number you want to send the message to in the ``To`` field. Then click on **Send**. You will receive a
-    6 digit code to the WhatsApp account of the number you added. Copy the code and paste it in the **Verification code** field and hit **Next**).
+    up to 5 different numbers and you must add them to the **Allowed Numbers** list. (Select the **Test number** in the ``From`` field
+    and then in the **To** field, go to **Manage phone number list** and add the numbers you want to send messages to).
 
     .. toggle::
 
@@ -144,8 +132,8 @@ So now you have a ``phone id`` and a ``token``. You can use them to send message
     from pywa import WhatsApp
 
     wa = WhatsApp(
-        phone_id='YOUR_PHONE_ID',
-        token='YOUR_TOKEN'
+        phone_id='YOUR_PHONE_ID',  # The phone id you got from the API Setup
+        token='YOUR_TOKEN'  # The token you got from the API Setup
     )
 
 And that's it! You are ready to send messages!
@@ -176,14 +164,14 @@ Quick Start
 
 Now you can continue to the next section and learn how to use the ``pywa`` package. here is a quick overview of the package:
 
-- The `WhatsApp <client/overview.html>`_ Client: is the core of the package. It is used to send and receive messages and media, handle orders, manage the business profile and settings and more.
+- The `WhatsApp <client/overview.html>`_ Client: is the core of the package. It is used to send and receive messages and media, register callbacks, manage profile and business settings and more.
 
-- The `Handlers <handlers/overview.html>`_ are used to handle incoming messages and events. This way you can register a handler to a specific event and handle it.
+- The `Handlers <handlers/overview.html>`_: Learn how to register callbacks and handle incoming updates (messages, callbacks and more).
 
-- The `Filters <filters/overview.html>`_ section will explain how to provide filters to the handlers. Filters are used to filter the incoming messages and events. For example, you can register a handler to handle all the text message that starts with ``Hello`` or ``Hi``.
+- The `Filters <filters/overview.html>`_: Learn how to handle specific updates by applying filters and conditions (for example, handle only text messages that contains the word "Hello").
 
-- The `Updates <updates/overview.html>`_ are the incoming messages and events that the client receives. It contains the available data for each message and event. For example, the :class:`~pywa.types.message.Message` update is arrived user send a text, media, location contact and other types of messages. Every update has it's own methods and properties.
+- The `Updates <updates/overview.html>`_: Learn about the different types of updates that the client can receive, their attributes and properties and how to use them.
 
-- The `errors <errors/overview.html>`_ that the client can raise. For example, if you try to send message from your test number to a number that is not in the recipients list, the client will raise a :class:`~pywa.errors.RecipientNotInAllowedList`.
+- The `errors <errors/overview.html>`_: Learn about the different types of errors in the package and how to handle them.
 
-- The `Examples <examples/overview.html>`_ section contains examples of how to use the package.
+- The `Examples <examples/overview.html>`_: See some examples of how to use the package.

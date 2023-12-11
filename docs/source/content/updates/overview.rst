@@ -4,15 +4,20 @@
 
 .. currentmodule:: pywa.types
 
-In WhatsApp Cloud API, updates are sent to your webhook URL. PyWa currently supports the following fields:
+Updates are the incoming events from WhatsApp Cloud API. They are sent to your webhook URL and constructed by the library
+to be easily and type-safely to handle.
 
-- ``messages`` (all user related updates)
+In WhatsApp Cloud API, the updates called ``fields`` and need to be subscribed to in order to receive them to your webhook URL.
+
+The currently supported fields by PyWa are:
+
+- ``messages`` (all user related updates: messages, callbacks and message status updates)
 - ``message_template_status_update`` (template got approved, rejected, etc.)
 
 .. important::
 
-    You must subscribe to those fields in your webhook settings. Otherwise, you will not receive any updates.
-    To enable it, go to your app dashboard, click on the ``Webhooks`` tab (Or the ``Configuration`` tab > ``Webhook fields``).
+    If you register your callback URL manually (not using PyWa), you need to subscribe to the fields you want to receive.
+    Go to your app dashboard, click on the ``Webhooks`` tab (Or the ``Configuration`` tab > ``Webhook fields``).
     Then, subscribe to the fields you want to receive.
 
     .. toggle::
@@ -26,7 +31,6 @@ In WhatsApp Cloud API, updates are sent to your webhook URL. PyWa currently supp
 
         If you do want to handle other types of updates (fields), you can use the :py:class:`~pywa.handlers.RawUpdateHandler`
         (or the :func:`~pywa.client.WhatsApp.on_raw_update` decorator) to handle them.
-
 
 
 The supported fields are automatically handled by PyWa and converted to the following types:
@@ -44,9 +48,9 @@ User related updates:
    * - :py:class:`~pywa.types.message.Message`
      - A message sent by a user (text, media, order, location, etc.)
    * - :py:class:`~pywa.types.callback.CallbackButton`
-     - A callback button pressed by a user
+     - A :py:class:`~pywa.types.callback.Button` pressed by a user
    * - :py:class:`~pywa.types.callback.CallbackSelection`
-     - A callback selection chosen by a user
+     - A :py:class:`~pywa.types.callback.SectionRow` chosen by a user
    * - :py:class:`~pywa.types.message_status.MessageStatus`
      - A message status update (e.g. delivered, seen, etc.)
 

@@ -575,7 +575,7 @@ class _ReactionFilters(_BaseUpdateFilters):
     """
 
     added: _MessageFilterT = (
-        lambda _, m: _ReactionFilters._match_type(m) and m.reaction.emojis is not None
+        lambda _, m: _ReactionFilters._match_type(m) and m.reaction.emoji is not None
     )
     """
     Filter for reaction messages that were added.
@@ -584,7 +584,7 @@ class _ReactionFilters(_BaseUpdateFilters):
     """
 
     removed: _MessageFilterT = (
-        lambda _, m: _ReactionFilters._match_type(m) and m.reaction.emojis is None
+        lambda _, m: _ReactionFilters._match_type(m) and m.reaction.emoji is None
     )
     """
     Filter for reaction messages that were removed.
@@ -658,7 +658,7 @@ class _ContactsFilters(_BaseUpdateFilters):
         phones = [re.sub(only_nums_pattern, "", p) for p in phones]
         return lambda _, m: _ContactsFilters._match_type(m) and (
             any(
-                re.sub(only_nums_pattern, "", p.phones) in phones
+                re.sub(only_nums_pattern, "", p.phone) in phones
                 for contact in m.contacts
                 for p in contact.phones
             )
@@ -735,9 +735,6 @@ class _UnsupportedMsgFilters(_BaseUpdateFilters):
     """Useful filters for unsupported messages. Alias: ``filters.unsupported``."""
 
     __message_types__ = (_Mt.UNSUPPORTED,)
-
-    def __new__(cls):
-        return cls.any
 
     any: _MessageFilterT = lambda _, m: m.type == _Mt.UNSUPPORTED
     """
