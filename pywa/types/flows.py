@@ -31,6 +31,9 @@ __all__ = [
     "Image",
     "DataSource",
     "Action",
+    "ActionType",
+    "ActionNext",
+    "ActionNextType",
 ]
 
 
@@ -47,6 +50,14 @@ class FlowCategory(utils.StrEnum):
     OTHER = "OTHER"
 
 
+_UNDERSCORE_FIELDS = {
+    "routing_model",
+    "data_api_version",
+    "data_channel_uri",
+    "refresh_on_back",
+}
+
+
 @dataclasses.dataclass(slots=True, kw_only=True)
 class Flow:
     """Flow is the top level component that holds the screens."""
@@ -58,11 +69,12 @@ class Flow:
     routing_model: dict[str, Iterable[str]] | None = None
 
     def to_dict(self):
-        """"""
         return dataclasses.asdict(
             obj=self,
             dict_factory=lambda d: {
-                k.replace("_", "-"): v for (k, v) in d if v is not None
+                k.replace("_", "-") if k not in _UNDERSCORE_FIELDS else k: v
+                for (k, v) in d
+                if v is not None
             },
         )
 
@@ -462,18 +474,25 @@ class Image(Component):
     visible: bool | str | None = None
 
 
+class ActionType(utils.StrEnum):
+    COMPLETE = "complete"
+    DATA_EXCHANGE = "data_exchange"
+    NAVIGATE = "navigate"
+
+
+class ActionNextType(utils.StrEnum):
+    SCREEN = "screen"
+    PLUGIN = "plugin"
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class ActionNext:
+    type: ActionNextType | str
+    name: str
+
+
 @dataclasses.dataclass(slots=True, kw_only=True)
 class Action:
-    name: Type | str
-    next: Next | None = None
+    name: ActionType | str
+    next: ActionNext | None = None
     payload: dict[str, str] | None = None
-
-    class Type(utils.StrEnum):
-        COMPLETE = "complete"
-        DATA_EXCHANGE = "data_exchange"
-        NAVIGATE = "navigate"
-
-    @dataclasses.dataclass(slots=True, kw_only=True)
-    class Next:
-        type: str
-        name: str
