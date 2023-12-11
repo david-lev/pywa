@@ -1,5 +1,5 @@
 {
-  "customer-satisfaction-survey": {
+  "customer_satisfaction_survey": {
     "version": "2.1",
     "screens": [
       {
@@ -193,7 +193,7 @@
       }
     ]
   },
-  "load-re-engagement": {
+  "load_re_engagement": {
     "version": "2.1",
     "screens": [
       {
@@ -252,7 +252,7 @@
       }
     ]
   },
-  "costumer-engagement": {
+  "costumer_engagement": {
     "version": "2.1",
     "screens": [
       {
@@ -451,7 +451,7 @@
       }
     ]
   },
-  "support-request": {
+  "support_request": {
     "version": "2.1",
     "screens": [
       {
@@ -535,7 +535,7 @@
       }
     ]
   },
-  "communication-preferences": {
+  "communication_preferences": {
     "version": "2.1",
     "screens": [
       {
@@ -612,7 +612,7 @@
       }
     ]
   },
-  "register-for-an-event": {
+  "register_for_an_event": {
     "version": "2.1",
     "screens": [
       {
@@ -753,7 +753,7 @@
       }
     ]
   },
-  "sign-in": {
+  "sign_in": {
     "version": "2.1",
     "data_api_version": "3.0",
     "data_channel_uri": "https://example.com",
@@ -1136,7 +1136,7 @@
       }
     ]
   },
-  "book-a-table": {
+  "book_a_table": {
     "version": "2.1",
     "data_api_version": "3.0",
     "data_channel_uri": "https://example.com",
@@ -1536,7 +1536,7 @@
       }
     ]
   },
-  "get-a-quote": {
+  "get_a_quote": {
     "version": "2.1",
     "data_api_version": "3.0",
     "data_channel_uri": "https://example.com",
