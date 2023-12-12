@@ -21,7 +21,7 @@ from pywa.handlers import (
     MessageStatusHandler,
     RawUpdateHandler,
 )
-from pywa.types import MessageType
+from pywa.types import MessageType, FlowDataExchangeRequest, FlowDataExchangeResponse
 from pywa.types.base_update import BaseUpdate, StopHandling  # noqa
 from pywa.utils import FastAPI, Flask
 
@@ -46,9 +46,13 @@ class Webhook:
         app_secret: str | None,
         verify_token: str | None,
         verify_timeout: int | None,
+        private_key: str | None,
     ):
         if server is None:
             return
+        self._server = server
+        self._private_key = private_key
+
         if not verify_token:
             raise ValueError(
                 "When listening for incoming updates, a verify token must be provided.\n>> The verify token can "
@@ -62,23 +66,18 @@ class Webhook:
         hub_vt = "hub.verify_token"
         hub_ch = "hub.challenge"
 
-        def _rename_func(func: Callable) -> Callable[[Any], Any]:
-            """Rename the function to avoid conflicts when multiple WhatsApp instances are running."""
-            func.__name__ = f"{func.__name__}_{self.phone_id}"
-            return func
-
-        if utils.is_flask_app(server):
+        if utils.is_flask_app(self._server):
             import flask
 
-            @server.route(webhook_endpoint, methods=["GET"])
-            @_rename_func
+            @self._server.route(webhook_endpoint, methods=["GET"])
+            @utils.rename_func(f"({self.phone_id})")
             def challenge():
                 if flask.request.args.get(hub_vt) == verify_token:
                     return flask.request.args.get(hub_ch), 200
                 return "Error, invalid verification token", 403
 
-            @server.route(webhook_endpoint, methods=["POST"])
-            @_rename_func
+            @self._server.route(webhook_endpoint, methods=["POST"])
+            @utils.rename_func(f"({self.phone_id})")
             def webhook():
                 threading.Thread(
                     target=self._call_handlers,
@@ -86,11 +85,11 @@ class Webhook:
                 ).start()
                 return "ok", 200
 
-        elif utils.is_fastapi_app(server):
+        elif utils.is_fastapi_app(self._server):
             import fastapi
 
-            @server.get(webhook_endpoint)
-            @_rename_func
+            @self._server.get(webhook_endpoint)
+            @utils.rename_func(f"({self.phone_id})")
             def challenge(
                 vt: str = fastapi.Query(..., alias=hub_vt),
                 ch: str = fastapi.Query(..., alias=hub_ch),
@@ -102,8 +101,8 @@ class Webhook:
                     status_code=403,
                 )
 
-            @server.post(webhook_endpoint)
-            @_rename_func
+            @self._server.post(webhook_endpoint)
+            @utils.rename_func(f"({self.phone_id})")
             def webhook(payload: dict = fastapi.Body(...)):
                 threading.Thread(target=self._call_handlers, args=(payload,)).start()
                 return fastapi.Response(content="ok", status_code=200)
@@ -200,3 +199,78 @@ class Webhook:
             return None
 
         return Handler.__fields_to_subclasses__().get(field)
+
+    def register_flow_endpoint_callback(
+        self: WhatsApp,
+        endpoint: str,
+        callback: Callable[
+            [WhatsApp, FlowDataExchangeRequest], FlowDataExchangeResponse
+        ],
+        acknowledge_errors: bool,
+        handle_health_check: bool,
+        private_key: str | None,
+    ):
+        if not private_key and not self._private_key:
+            raise ValueError(
+                "A private key must be provided to register a flow endpoint callback."
+            )
+
+        def flow_endpoint(payload: dict):
+            decrypted_request, aes_key, iv = utils.decrypt_request(
+                encrypted_flow_data_b64=payload["encrypted_flow_data"],
+                encrypted_aes_key_b64=payload["encrypted_aes_key"],
+                initial_vector_b64=payload["initial_vector"],
+                private_key=private_key or self._private_key,
+            )
+            if handle_health_check and decrypted_request.get("health_check"):
+                return utils.encrypt_response(
+                    response={
+                        "version": decrypted_request["version"],
+                        "data": {
+                            "acknowledged": True,
+                        },
+                    },
+                    aes_key=aes_key,
+                    iv=iv,
+                )
+            request = FlowDataExchangeRequest(**decrypted_request)
+            response = callback(self, request)
+            if acknowledge_errors and request.has_error:
+                return utils.encrypt_response(
+                    {
+                        "version": request.version,
+                        "data": {
+                            "acknowledged": True,
+                        },
+                    },
+                    aes_key=aes_key,
+                    iv=iv,
+                )
+            if not isinstance(response, FlowDataExchangeResponse):
+                raise ValueError(
+                    f"Flow endpoint callback must return a FlowDataExchangeResponse, not {type(response)}"
+                )
+            return utils.encrypt_response(
+                response=response.to_dict(),
+                aes_key=aes_key,
+                iv=iv,
+            )
+
+        if utils.is_flask_app(self._server):
+            import flask
+
+            @self._server.route(endpoint, methods=["POST"])
+            @utils.rename_func(f"({endpoint})")
+            def flow():
+                return flow_endpoint(flask.request.json), 200
+
+        elif utils.is_fastapi_app(self._server):
+            import fastapi
+
+            @self._server.post(endpoint)
+            @utils.rename_func(f"({endpoint})")
+            def flow(payload: dict = fastapi.Body(...)):
+                return fastapi.Response(
+                    content=flow_endpoint(payload),
+                    status_code=200,
+                )

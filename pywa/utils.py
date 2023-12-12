@@ -118,3 +118,13 @@ def encrypt_response(response: dict, aes_key: bytes, iv: bytes) -> str:
         + encryptor.finalize()
         + encryptor.tag
     ).decode("utf-8")
+
+
+def rename_func(extended_with: str) -> Callable:
+    """Rename function to avoid conflicts when registering the same function multiple times."""
+
+    def inner(func: Callable):
+        func.__name__ = f"{func.__name__}{extended_with}"
+        return func
+
+    return inner
