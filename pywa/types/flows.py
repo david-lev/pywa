@@ -2,12 +2,22 @@ from __future__ import annotations
 
 import abc
 import dataclasses
-from typing import Iterable
+import datetime
+from typing import Iterable, TYPE_CHECKING
 
 from pywa import utils
+from pywa.types.others import WhatsAppBusinessAccount, FacebookApplication
+
+if TYPE_CHECKING:
+    from pywa import WhatsApp
 
 __all__ = [
     "FlowCategory",
+    "FlowDetails",
+    "FlowStatus",
+    "FlowPreview",
+    "FlowValidationError",
+    "FlowAsset",
     "Flow",
     "Screen",
     "Layout",
@@ -38,6 +48,40 @@ __all__ = [
 ]
 
 
+class FlowStatus(utils.StrEnum):
+    """
+    The status of the flow
+
+    Attributes:
+        DRAFT: This is the initial status. The Flow is still under development.
+         The Flow can only be sent with "mode": "draft" for testing.
+        PUBLISHED: The Flow has been marked as published by the developer so now it can be sent to customers.
+         This Flow cannot be deleted or updated afterwards.
+        DEPRECATED: The developer has marked the Flow as deprecated (since it cannot be deleted after publishing).
+         This prevents sending and opening the Flow, to allow the developer to retire their endpoint.
+         Deprecated Flows cannot be deleted or undeprecated.
+        BLOCKED: Monitoring detected that the endpoint is unhealthy and set the status to Blocked.
+         The Flow cannot be sent or opened in this state; the developer needs to fix the endpoint to get it back to
+         Published state (more details in Flows Health and Monitoring).
+        THROTTLED: Monitoring detected that the endpoint is unhealthy and set the status to Throttled.
+         Flows with throttled status can be opened, however only 10 messages of the Flow could be sent per hour.
+         The developer needs to fix the endpoint to get it back to the PUBLISHED state
+         (more details in Flows Health and Monitoring
+         on `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/qualmgmtwebhook>`_).
+    """
+
+    DRAFT = "DRAFT"
+    PUBLISHED = "PUBLISHED"
+    DEPRECATED = "DEPRECATED"
+    BLOCKED = "BLOCKED"
+    THROTTLED = "THROTTLED"
+    UNKNOWN = "UNKNOWN"
+
+    @classmethod
+    def _missing_(cls, value):
+        return cls.UNKNOWN
+
+
 class FlowCategory(utils.StrEnum):
     """
     The category of the flow
@@ -61,6 +105,120 @@ class FlowCategory(utils.StrEnum):
     CUSTOMER_SUPPORT = "CUSTOMER_SUPPORT"
     SURVEY = "SURVEY"
     OTHER = "OTHER"
+
+    @classmethod
+    def _missing_(cls, value):
+        return cls.OTHER
+
+
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+class FlowValidationError(Exception, utils.FromDict):
+    """Represents a validation error of a flow."""
+
+    error: str
+    error_type: str
+    message: str
+    line_start: int
+    line_end: int
+    column_start: int
+    column_end: int
+
+
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+class FlowPreview:
+    """Represents the preview of a flow."""
+
+    preview_url: str
+    expires_at: datetime.datetime
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            preview_url=data["preview_url"],
+            expires_at=datetime.datetime.fromisoformat(data["expires_at"]),
+        )
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class FlowDetails:
+    """Represents the details of a flow."""
+
+    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
+    id: str
+    name: str
+    status: FlowStatus
+    json_version: str
+    data_api_version: str | None
+    categories: tuple[FlowCategory, ...]
+    validation_errors: tuple[FlowValidationError, ...] | None
+    endpoint_uri: str | None
+    preview: FlowPreview | None
+    whatsapp_business_account: WhatsAppBusinessAccount | None
+    application: FacebookApplication | None
+
+    @classmethod
+    def from_dict(cls, data: dict, client: WhatsApp) -> FlowDetails:
+        return cls(
+            _client=client,
+            id=data["id"],
+            name=data["name"],
+            status=FlowStatus(data["status"]),
+            categories=tuple(FlowCategory(c) for c in data["categories"]),
+            validation_errors=tuple(
+                FlowValidationError.from_dict(e) for e in data["validation_errors"]
+            )
+            or None,
+            json_version=data["json_version"],
+            data_api_version=data.get("data_api_version"),
+            endpoint_uri=data.get("endpoint_uri")
+            or data.get("data_channel_uri"),  # data_channel_uri removed at v19.0
+            preview=FlowPreview.from_dict(data["preview"])
+            if data.get("preview")
+            else None,
+            whatsapp_business_account=WhatsAppBusinessAccount.from_dict(
+                data["whatsapp_business_account"]
+            )
+            if data.get("whatsapp_business_account")
+            else None,
+            application=FacebookApplication.from_dict(data["application"])
+            if data.get("application")
+            else None,
+        )
+
+    def publish(self) -> bool:
+        if self._client.publish_flow(self.id):
+            self.status = FlowStatus.PUBLISHED
+            return True
+        return False
+
+    def delete(self) -> bool:
+        if self._client.delete_flow(self.id):
+            self.status = FlowStatus.DEPRECATED
+            return True
+        return False
+
+    def deprecate(self) -> bool:
+        if self._client.deprecate_flow(self.id):
+            self.status = FlowStatus.DEPRECATED
+            return True
+        return False
+
+
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+class FlowAsset:
+    """Represents an asset in a flow."""
+
+    name: str
+    type: str
+    url: str
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            name=data["name"],
+            type=data["asset_type"],
+            url=data["download_url"],
+        )
 
 
 _UNDERSCORE_FIELDS = {
