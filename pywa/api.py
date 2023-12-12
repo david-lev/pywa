@@ -760,19 +760,19 @@ class WhatsAppCloudApi:
 
     def update_flow_metadata(
         self,
-        business_account_id: str,
         flow_id: str,
         name: str | None = None,
         categories: tuple[str] | None = None,
+        endpoint_uri: str | None = None,
     ) -> dict[str, bool]:
         """
         Update the metadata of a flow.
 
         Args:
-            business_account_id: The ID of the business account.
             flow_id: The ID of the flow.
             name: The name of the flow.
             categories: The categories of the flow.
+            endpoint_uri: The endpoint URI of the flow.
 
         Return example::
 
@@ -782,6 +782,7 @@ class WhatsAppCloudApi:
         """
         data = {
             **({"name": name} if name else {}),
+            **({"endpoint_uri": endpoint_uri} if endpoint_uri else {}),
             **({"categories": categories} if categories else {}),
         }
         return self._make_request(
@@ -851,4 +852,163 @@ class WhatsAppCloudApi:
         return self._make_request(
             method="POST",
             endpoint=f"/{flow_id}/publish",
+        )
+
+    def delete_flow(
+        self,
+        flow_id: str,
+    ) -> dict[str, bool]:
+        """
+        Delete a flow.
+
+        Args:
+            flow_id: The ID of the flow.
+
+        Return example::
+
+            {
+              "success": true
+            }
+        """
+
+        return self._make_request(
+            method="DELETE",
+            endpoint=f"/{flow_id}",
+        )
+
+    def deprecate_flow(
+        self,
+        flow_id: str,
+    ) -> dict[str, bool]:
+        """
+        Deprecate a flow.
+
+        Args:
+            flow_id: The ID of the flow.
+
+        Return example::
+
+            {
+              "success": true
+            }
+        """
+
+        return self._make_request(
+            method="POST",
+            endpoint=f"/{flow_id}/deprecate",
+        )
+
+    def get_flow(
+        self,
+        flow_id: str,
+        fields: tuple[str, ...] | None = None,
+    ) -> dict[str, Any]:
+        """
+        Get a flow.
+
+        Args:
+            flow_id: The ID of the flow.
+            fields: The fields to get.
+
+        Return example::
+
+            {
+              "id": "<Flow-ID>",
+              "name": "<Flow-Name>",
+              "status": "DRAFT",
+              "categories": [ "LEAD_GENERATION" ],
+              "validation_errors": [],
+              "json_version": "3.0",
+              "data_api_version": "3.0",
+              "endpoint_uri": "https://example.com",
+              "preview": {
+                "preview_url": "https://business.facebook.com/wa/manage/flows/55000..../preview/?token=b9d6.....",
+                "expires_at": "2023-05-21T11:18:09+0000"
+              },
+              "whatsapp_business_account": {
+                ...
+              },
+              "application": {
+                ...
+              }
+            }
+        """
+        endpoint = f"/{flow_id}"
+        if fields:
+            endpoint += f"?fields={','.join(fields)}"
+        return self._make_request(
+            method="GET",
+            endpoint=endpoint,
+        )
+
+    def get_flows(
+        self,
+        business_account_id: str,
+        fields: tuple[str, ...] | None = None,
+    ) -> dict[str, list[dict[str, Any]]]:
+        """
+        Get all flows.
+
+        Args:
+            business_account_id: The ID of the business account.
+            fields: The fields to get.
+
+        Return example::
+
+            {
+              "data": [
+                {
+                  "id": "<Flow-ID>",
+                  "name": "<Flow-Name>",
+                  "status": "DRAFT",
+                  "categories": [ "LEAD_GENERATION" ]
+                },
+                {
+                    "id": "<Flow-ID>",
+                    "name": "<Flow-Name>",
+                    "status": "DRAFT",
+                    "categories": [ "LEAD_GENERATION" ]
+                }
+              ]
+            }
+        """
+        endpoint = f"/{business_account_id}/flows"
+        if fields:
+            endpoint += f"?fields={','.join(fields)}"
+        return self._make_request(
+            method="GET",
+            endpoint=endpoint,
+        )
+
+    def get_flow_assets(
+        self,
+        flow_id: str,
+    ) -> dict[str, list | dict]:
+        """
+        Get all assets of a flow.
+
+        Args:
+            flow_id: The ID of the flow.
+
+        Return example::
+
+            {
+              "data": [
+                {
+                  "name": "flow.json",
+                  "asset_type": "FLOW_JSON",
+                  "download_url": "https://scontent.xx.fbcdn.net/m1/v/t0.57323-24/An_Hq0jnfJ..."
+                }
+              ],
+              "paging": {
+                "cursors": {
+                  "before": "QVFIU...",
+                  "after": "QVFIU..."
+                }
+              }
+            }
+        """
+        return self._make_request(
+            method="GET",
+            endpoint=f"/{flow_id}/assets",
         )
