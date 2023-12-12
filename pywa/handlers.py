@@ -24,6 +24,8 @@ from pywa.types import (
     Message,
     MessageStatus,
     TemplateStatus,
+    FlowDataExchangeRequest,
+    FlowDataExchangeResponse,
 )
 from pywa.types.callback import CallbackData
 
@@ -684,6 +686,48 @@ class HandlerDecorators:
             callback: Callable[[WhatsApp, TemplateStatus], Any],
         ) -> Callable[[WhatsApp, TemplateStatus], Any]:
             self.add_handlers(TemplateStatusHandler(callback, *filters))
+            return callback
+
+        return decorator
+
+    def on_flow_data_exchange_request(
+        self: WhatsApp,
+        endpoint: str,
+        *,
+        acknowledge_errors: bool = True,
+        handle_health_check: bool = True,
+        private_key: str,
+    ) -> Callable[
+        [Callable[[WhatsApp, FlowDataExchangeRequest], FlowDataExchangeResponse]],
+        Callable[[WhatsApp, FlowDataExchangeRequest], FlowDataExchangeResponse],
+    ]:
+        """
+        Decorator to register a function to handle and respond to incoming Flow Data Exchange requests.
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.register_flow_endpoint_callback`.
+
+        Args:
+            endpoint: The endpoint to listen to.
+            acknowledge_errors: Whether to acknowledge errors (It will be ignore from the callback return value and
+             the pywa will acknowledge the error automatically).
+            handle_health_check: Whether to handle health checks (The callback will not be called for health checks).
+            private_key: The private key to use to decrypt the requests (Override the global private key, the one set
+             in the :class:`pywa.client.WhatsApp` instance).
+        """
+
+        @functools.wraps(self.on_flow_data_exchange_request)
+        def decorator(
+            callback: Callable[
+                [WhatsApp, FlowDataExchangeRequest], FlowDataExchangeResponse
+            ],
+        ) -> Callable[[WhatsApp, FlowDataExchangeRequest], FlowDataExchangeResponse]:
+            self.register_flow_endpoint_callback(
+                endpoint=endpoint,
+                callback=callback,
+                acknowledge_errors=acknowledge_errors,
+                handle_health_check=handle_health_check,
+                private_key=private_key,
+            )
             return callback
 
         return decorator
