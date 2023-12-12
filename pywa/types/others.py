@@ -651,3 +651,37 @@ class CommerceSettings:
             is_catalog_visible=data["is_catalog_visible"],
             is_cart_enabled=data["is_cart_enabled"],
         )
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class WhatsAppBusinessAccount(utils.FromDict):
+    """
+    Represents a WhatsApp Business Account.
+
+    Attributes:
+        id: The ID of the account.
+        message_template_namespace: The namespace of the message templates.
+        name: The name of the account.
+        timezone_id: The timezone ID of the account.
+    """
+
+    id: str
+    message_template_namespace: str
+    name: str
+    timezone_id: str
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class FacebookApplication(utils.FromDict):
+    """
+    Represents a Facebook Application.
+
+    Attributes:
+        id: The ID of the application.
+        name: The name of the application.
+        link: The link to the application.
+    """
+
+    id: str
+    name: str
+    link: str
