@@ -63,6 +63,7 @@ class WhatsApp(Webhook, HandlerDecorators):
         app_id: int | None = None,
         app_secret: str | None = None,
         verify_timeout: int | None = None,
+        business_private_key: str | None = None,
     ) -> None:
         """
         The WhatsApp client.
@@ -148,6 +149,7 @@ class WhatsApp(Webhook, HandlerDecorators):
             app_secret=app_secret,
             verify_token=verify_token,
             verify_timeout=verify_timeout,
+            business_private_key=business_private_key,
         )
 
     def __str__(self) -> str:
@@ -219,7 +221,6 @@ class WhatsApp(Webhook, HandlerDecorators):
             >>> wa = WhatsApp(...)
             >>> wa.send_message(
             ...     to="1234567890",
-            ...     header="Hello from PyWa!",
             ...     text="What can I help you with?",
             ...     footer="Powered by PyWa",
             ...     buttons=[
@@ -228,12 +229,26 @@ class WhatsApp(Webhook, HandlerDecorators):
             ...     ],
             ... )
 
+        Example with a button url:
+
+            >>> from pywa.types import ButtonUrl
+            >>> wa = WhatsApp(...)
+            >>> wa.send_message(
+            ...     to="1234567890",
+            ...     text="Hello from PyWa!",
+            ...     footer="Powered by PyWa",
+            ...     buttons=ButtonUrl(
+            ...         title="PyWa GitHub",
+            ...         url="https://github.com/david-lev/pywa",
+            ...     )
+            ... )
+
         Example with a section list:
+
             >>> from pywa.types import SectionList, Section, SectionRow
             >>> wa = WhatsApp(...)
             >>> wa.send_message(
             ...     to="1234567890",
-            ...     header="Hello from PyWa!",
             ...     text="What can I help you with?",
             ...     footer="Powered by PyWa",
             ...     buttons=SectionList(
@@ -267,6 +282,22 @@ class WhatsApp(Webhook, HandlerDecorators):
             ...         ],
             ...     ),
             ... )
+
+        Example with a flow button:
+
+            >>> from pywa.types import FlowButton, ActionType
+            >>> wa = WhatsApp(...)
+            >>> wa.send_message(
+            ...     to="1234567890",
+            ...     text="We love to get feedback!",
+            ...     footer="Powered by PyWa",
+            ...     buttons=FlowButton(
+            ...         title="Feedback",
+            ...         flow_id="1234567890",
+            ...         flow_token="AQAAAAACS5FpgQ_cAAAAAD0QI3s.",
+            ...         flow_message_version="3",
+            ...         flow_action_type=ActionType.NAVIGATE,x
+
 
 
         Args:
@@ -1415,7 +1446,7 @@ class WhatsApp(Webhook, HandlerDecorators):
     def create_flow(
         self,
         name: str,
-        categories: Iterable[FlowCategory],
+        categories: Iterable[FlowCategory | str],
         clone_flow_id: str | None = None,
     ) -> str:
         """
@@ -1443,7 +1474,7 @@ class WhatsApp(Webhook, HandlerDecorators):
         self._validate_business_account_id_provided()
         return self.api.create_flow(
             name=name,
-            categories=tuple(c.value for c in categories),
+            categories=tuple(map(str, categories)),
             clone_flow_id=clone_flow_id,
             business_account_id=self.business_account_id,
         )["id"]
@@ -1453,7 +1484,7 @@ class WhatsApp(Webhook, HandlerDecorators):
         flow_id: str | int,
         *,
         name: str | None = None,
-        categories: Iterable[FlowCategory] | None = None,
+        categories: Iterable[FlowCategory | str] | None = None,
         endpoint_uri: str | None = None,
     ) -> bool:
         """
@@ -1482,12 +1513,12 @@ class WhatsApp(Webhook, HandlerDecorators):
         Raises:
             ValueError: If neither ``name`` nor ``categories`` are provided.
         """
-        if name is None and categories is None:
+        if name is None and categories is None and endpoint_uri is None:
             raise ValueError("At least one argument must be provided")
         return self.api.update_flow_metadata(
             flow_id=str(flow_id),
             name=name,
-            categories=tuple(c.value for c in categories) if categories else None,
+            categories=tuple(map(str, categories)) if categories else None,
             endpoint_uri=endpoint_uri,
         )["success"]
 

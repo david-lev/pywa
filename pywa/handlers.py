@@ -696,7 +696,7 @@ class HandlerDecorators:
         *,
         acknowledge_errors: bool = True,
         handle_health_check: bool = True,
-        private_key: str,
+        private_key: str | None = None,
     ) -> Callable[
         [Callable[[WhatsApp, FlowDataExchangeRequest], FlowDataExchangeResponse]],
         Callable[[WhatsApp, FlowDataExchangeRequest], FlowDataExchangeResponse],

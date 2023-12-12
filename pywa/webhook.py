@@ -46,12 +46,12 @@ class Webhook:
         app_secret: str | None,
         verify_token: str | None,
         verify_timeout: int | None,
-        private_key: str | None,
+        business_private_key: str | None,
     ):
         if server is None:
             return
         self._server = server
-        self._private_key = private_key
+        self._private_key = business_private_key
 
         if not verify_token:
             raise ValueError(
