@@ -50,4 +50,6 @@ from .flows import (
     Flow,
     FlowDataExchangeRequest,
     FlowDataExchangeResponse,
+    ActionType,
+    FlowStatus,
 )

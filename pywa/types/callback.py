@@ -590,7 +590,7 @@ class FlowButton:
     flow_token: str
     flow_action_type: Literal[
         ActionType.NAVIGATE, ActionType.DATA_EXCHANGE
-    ] | str = ActionType.NAVIGATE
+    ] | str | None = None
     flow_action_screen: str | None = None
     flow_action_payload: dict[str, Any] | None = None
     flow_message_version: int | str = 3
@@ -612,13 +612,17 @@ class FlowButton:
                 "flow_token": self.flow_token,
                 "flow_id": self.flow_id,
                 "flow_cta": self.title,
-                "flow_action": self.flow_action_type.value,
+                **(
+                    {"flow_action": str(self.flow_action_type)}
+                    if self.flow_action_type is not None
+                    else {}
+                ),
                 **(
                     {
                         "flow_action_payload": {
                             "screen": self.flow_action_screen,
                             **(
-                                self.flow_action_payload
+                                {"data": self.flow_action_payload}
                                 if self.flow_action_payload is not None
                                 else {}
                             ),
