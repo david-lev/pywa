@@ -30,6 +30,7 @@ from pywa.types import (
     SectionList,
     Template,
     TemplateResponse,
+    FlowButton,
 )
 from pywa.types.flows import (
     FlowCategory,
@@ -195,7 +196,7 @@ class WhatsApp(Webhook, HandlerDecorators):
         text: str,
         header: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | SectionList | None = None,
+        buttons: Iterable[Button] | ButtonUrl | SectionList | FlowButton | None = None,
         preview_url: bool = False,
         reply_to_message_id: str | None = None,
         keyboard: None = None,
@@ -324,7 +325,7 @@ class WhatsApp(Webhook, HandlerDecorators):
         caption: str | None = None,
         body: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | None = None,
+        buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
     ) -> str:
@@ -401,7 +402,7 @@ class WhatsApp(Webhook, HandlerDecorators):
         caption: str | None = None,
         body: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | None = None,
+        buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
     ) -> str:
@@ -480,7 +481,7 @@ class WhatsApp(Webhook, HandlerDecorators):
         caption: str | None = None,
         body: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | None = None,
+        buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
     ) -> str:
@@ -1693,7 +1694,7 @@ class WhatsApp(Webhook, HandlerDecorators):
 
 
 def _resolve_buttons_param(
-    buttons: Iterable[Button] | ButtonUrl | SectionList,
+    buttons: Iterable[Button] | ButtonUrl | FlowButton | SectionList,
 ) -> tuple[str, dict]:
     """
     Internal method to resolve `buttons` parameter. Returns a tuple of (type, buttons).
@@ -1702,7 +1703,9 @@ def _resolve_buttons_param(
         return "list", buttons.to_dict()
     elif isinstance(buttons, ButtonUrl):
         return "cta_url", buttons.to_dict()
-    else:
+    elif isinstance(buttons, FlowButton):
+        return "flow", buttons.to_dict()
+    else:  # assume its a list of buttons
         return "button", {"buttons": tuple(b.to_dict() for b in buttons)}
 
 
