@@ -134,6 +134,31 @@ class WhatsAppCloudApi:
             },
         )
 
+    def set_business_public_key(
+        self,
+        public_key: str,
+    ) -> dict[str, bool]:
+        """
+        Set the public key of the business.
+
+        Return example::
+
+            {
+                'success': True
+            }
+
+        Args:
+            public_key: The public key to set.
+
+        Returns:
+            The success of the operation.
+        """
+        return self._make_request(
+            method="POST",
+            endpoint=f"/{self.phone_id}/whatsapp_business_encryption",
+            data={"business_public_key": public_key},
+        )
+
     def send_text_message(
         self,
         to: str,
@@ -729,7 +754,7 @@ class WhatsAppCloudApi:
         self,
         business_account_id: str,
         name: str,
-        categories: tuple[str],
+        categories: tuple[str, ...],
         clone_flow_id: str | None = None,
     ) -> dict[str, str]:
         """
@@ -762,7 +787,7 @@ class WhatsAppCloudApi:
         self,
         flow_id: str,
         name: str | None = None,
-        categories: tuple[str] | None = None,
+        categories: tuple[str, ...] | None = None,
         endpoint_uri: str | None = None,
     ) -> dict[str, bool]:
         """
