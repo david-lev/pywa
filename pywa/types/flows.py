@@ -3,7 +3,7 @@ from __future__ import annotations
 import abc
 import dataclasses
 import datetime
-from typing import Iterable, TYPE_CHECKING
+from typing import Iterable, TYPE_CHECKING, Any
 
 from pywa import utils
 from pywa.types.others import WhatsAppBusinessAccount, FacebookApplication
@@ -12,6 +12,8 @@ if TYPE_CHECKING:
     from pywa import WhatsApp
 
 __all__ = [
+    "FlowDataExchangeRequest",
+    "FlowDataExchangeResponse",
     "FlowCategory",
     "FlowDetails",
     "FlowStatus",
@@ -46,6 +48,107 @@ __all__ = [
     "ActionNext",
     "ActionNextType",
 ]
+
+
+class DataExchangeType(utils.StrEnum):
+    """
+    The type of the data exchange action.
+
+    Attributes:
+        INIT: if the request is triggered when opening the Flow
+        BACK: if the request is triggered when pressing "back"
+        DATA_EXCHANGE: if the request is triggered when submitting the screen
+    """
+
+    INIT = "INIT"
+    BACK = "BACK"
+    DATA_EXCHANGE = "data_exchange"
+    PING = "ping"
+
+
+@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
+class FlowDataExchangeRequest(utils.FromDict):
+    """
+    Represents a flow data exchange request.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/guides/implementingyourflowendpoint#data_exchange_request>`_.
+
+    Attributes:
+        version: The version of the data exchange.
+        screen
+    """
+
+    version: str
+    flow_token: str
+    action: DataExchangeType
+    screen: str | None = None
+    data: dict[str, Any] | None
+
+    @property
+    def has_error(self) -> bool:
+        """
+        Check if the request has an error.
+        When True, if flow endpoint register with ``acknowledge_errors=True``,
+        pywa will acknowledge the error and ignore the response from the callback. The callback still be called.
+        """
+        return any(key in self.data for key in ("error_message", "error") if self.data)
+
+    @property
+    def is_health_check(self) -> bool:
+        """
+        Check if the request is a health check.
+        When True, if flow endpoint register with ``handle_health_check=True``,
+        pywa will not call the callback and will return a health check response.
+        """
+        return self.action == DataExchangeType.PING
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class FlowDataExchangeResponse:
+    """
+    Represents a flow data exchange response.
+
+    Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/guides/implementingyourflowendpoint#data_exchange_request>`_.
+
+    Attributes:
+        version: The version of the data exchange.
+        screen: The screen to display (if the flow is not closed).
+        data: The data to send to the screen or to add to flow completion message (received to the webhook).
+        error_message: This will redirect the user to ``screen`` and will trigger a snackbar error with the error_message present (if the flow is not closed).
+        flow_token: The flow token to close the flow (if the flow is closed).
+        close_flow: Whether to close the flow or just navigate to the screen.
+    """
+
+    version: str
+    data: dict[str, Any]
+    screen: str | None = None
+    error_message: str | None = None
+    flow_token: str | None = None
+    close_flow: bool = False
+
+    def to_dict(self) -> dict[str, str | dict]:
+        if not self.close_flow and not self.screen:
+            raise ValueError(
+                "When the response not close the flow, the screen must be provided."
+            )
+        if self.close_flow and not self.flow_token:
+            raise ValueError(
+                "When the response close the flow, the flow token must be provided."
+            )
+        data = self.data.copy()
+        if not self.close_flow and self.error_message:
+            data["error_message"] = self.error_message
+        return {
+            "version": self.version,
+            "screen": self.screen if not self.close_flow else "SUCCESS",
+            "data": data
+            if not self.close_flow
+            else {
+                "extension_message_response": {
+                    "params": {"flow_token": self.flow_token, **data}
+                }
+            },
+        }
 
 
 class FlowStatus(utils.StrEnum):

@@ -46,4 +46,8 @@ from .template import (
     TemplateStatus,
 )
 
-from .flows import Flow
+from .flows import (
+    Flow,
+    FlowDataExchangeRequest,
+    FlowDataExchangeResponse,
+)
