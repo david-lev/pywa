@@ -52,6 +52,7 @@ class Webhook:
         flows_response_encryptor: utils.FlowResponseEncryptor | None,
     ):
         if server is None:
+            self._server = None
             return
         self._server = server
         self._private_key = business_private_key
@@ -64,10 +65,6 @@ class Webhook:
                 "When listening for incoming updates, a verify token must be provided.\n>> The verify token can "
                 "be any string. It is used to challenge the webhook endpoint to verify that the endpoint is valid."
             )
-        self._handlers: dict[
-            type[Handler] | None,
-            list[Callable[[WhatsApp, BaseUpdate | dict], Any]],
-        ] = collections.defaultdict(list)
 
         hub_vt = "hub.verify_token"
         hub_ch = "hub.challenge"
@@ -219,6 +216,11 @@ class Webhook:
         request_decryptor: utils.FlowRequestDecryptor | None = None,
         response_encryptor: utils.FlowResponseEncryptor | None = None,
     ):
+        if self._server is None:
+            raise ValueError(
+                "You must initialize the WhatsApp client with an web server"
+                " (Flask or FastAPI) in order to handle incoming flow requests."
+            )
         if not private_key and not self._private_key:
             raise ValueError(
                 "A private key must be provided to register a flow endpoint callback."

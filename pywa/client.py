@@ -4,13 +4,14 @@ from __future__ import annotations
 
 __all__ = ["WhatsApp"]
 
+import collections
 import hashlib
 import json
 import mimetypes
 import os
 import pathlib
 import warnings
-from typing import BinaryIO, Iterable, Literal
+from typing import BinaryIO, Iterable, Literal, Callable, Any
 
 import requests
 
@@ -33,6 +34,7 @@ from pywa.types import (
     TemplateResponse,
     FlowButton,
 )
+from pywa.types.base_update import BaseUpdate
 from pywa.types.flows import (
     FlowCategory,
     FlowJSON,
@@ -143,7 +145,12 @@ class WhatsApp(Webhook, HandlerDecorators):
             base_url=base_url,
             api_version=float(api_version),
         )
-        self._handlers = None
+
+        self._handlers: dict[
+            type[Handler] | None,
+            list[Callable[[WhatsApp, BaseUpdate | dict], Any]],
+        ] = collections.defaultdict(list)
+
         super().__init__(
             server=server,
             webhook_endpoint=webhook_endpoint,
@@ -191,7 +198,7 @@ class WhatsApp(Webhook, HandlerDecorators):
             ...     CallbackButtonHandler(print_message),
             ... )
         """
-        if self._handlers is None:
+        if self._server is None:
             raise ValueError(
                 "You must initialize the WhatsApp client with an web server"
                 " (Flask or FastAPI) in order to handle incoming updates."
