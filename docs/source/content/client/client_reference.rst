@@ -26,3 +26,12 @@ Client Reference
 .. automethod:: WhatsApp.get_commerce_settings
 .. automethod:: WhatsApp.update_commerce_settings
 .. automethod:: WhatsApp.create_template
+.. automethod:: WhatsApp.create_flow
+.. automethod:: WhatsApp.update_flow_metadata
+.. automethod:: WhatsApp.update_flow_json
+.. automethod:: WhatsApp.publish_flow
+.. automethod:: WhatsApp.delete_flow
+.. automethod:: WhatsApp.deprecate_flow
+.. automethod:: WhatsApp.get_flow
+.. automethod:: WhatsApp.get_flows
+.. automethod:: WhatsApp.get_flow_assets

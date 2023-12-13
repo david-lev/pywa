@@ -33,7 +33,7 @@ from pywa.types.flows import FlowCompletion
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
-    from pywa.types.base_update import BaseUpdate
+    from pywa.types.base_update import BaseUpdate  # noqa
 
 
 CallbackDataFactoryT = TypeVar(
@@ -209,11 +209,14 @@ class Handler(abc.ABC):
         **IMPORTANT:** This function is cached, so if you subclass `Handler` after calling this function, the new class
         will not be included in the returned dict.
         """
-        return {
-            h.__field_name__: h
-            for h in Handler.__subclasses__()
-            if h.__field_name__ is not None
-        }
+        return cast(
+            dict[str, Handler],
+            {
+                h.__field_name__: h
+                for h in Handler.__subclasses__()
+                if h.__field_name__ is not None
+            },
+        )
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}(callback={self.callback!r}, filters={self.filters!r})"

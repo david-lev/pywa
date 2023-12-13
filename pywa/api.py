@@ -1,12 +1,15 @@
 """The internal API for the WhatsApp client."""
 
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import requests
 import requests_toolbelt
 
 import pywa
 from pywa.errors import WhatsAppError
+
+if TYPE_CHECKING:
+    from pywa import WhatsApp
 
 
 class WhatsAppCloudApi:

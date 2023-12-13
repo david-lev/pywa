@@ -51,6 +51,8 @@ User related updates:
      - A :py:class:`~pywa.types.callback.Button` pressed by a user
    * - :py:class:`~pywa.types.callback.CallbackSelection`
      - A :py:class:`~pywa.types.callback.SectionRow` chosen by a user
+   * - :py:class:`~pywa.types.flows.FlowCompletion`
+     - A flow completed by a user
    * - :py:class:`~pywa.types.message_status.MessageStatus`
      - A message status update (e.g. delivered, seen, etc.)
 
@@ -110,6 +112,7 @@ All user-related-updates have common methods:
     message
     callback_button
     callback_selection
+    flow_completion
     message_status
     template_status
     common_methods

@@ -340,6 +340,9 @@ Available handlers
    * - :meth:`~pywa.client.WhatsApp.on_callback_selection`
      - :class:`CallbackSelectionHandler`
      - :class:`~pywa.types.callback.CallbackSelection`
+   * - :meth:`~pywa.client.WhatsApp.on_flow_completion`
+     - :class:`FlowCompletionHandler`
+     - :class:`~pywa.types.flows.FlowCompletion`
    * - :meth:`~pywa.client.WhatsApp.on_message_status`
      - :class:`MessageStatusHandler`
      - :class:`~pywa.types.message_status.MessageStatus`

@@ -1460,9 +1460,11 @@ class WhatsApp(Webhook, HandlerDecorators):
     ) -> str:
         """
         Create a flow.
-            - New Flows are created in DRAFT status.
-            - To update the flow json, use :py:func:`~pywa.client.WhatsApp.update_flow`.
-            - To send a flow, use :py:func:`~pywa.client.WhatsApp.send_flow`.
+
+        - New Flows are created in DRAFT status.
+        - To update the flow json, use :py:func:`~pywa.client.WhatsApp.update_flow`.
+        - To send a flow, use :py:func:`~pywa.client.WhatsApp.send_flow`.
+
         Args:
             name: The name of the flow.
             categories: The categories of the flow.

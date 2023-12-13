@@ -12,6 +12,7 @@ Handler Objects
 .. autoclass:: MessageHandler
 .. autoclass:: CallbackButtonHandler
 .. autoclass:: CallbackSelectionHandler
+.. autoclass:: FlowCompletionHandler
 .. autoclass:: MessageStatusHandler
 .. autoclass:: TemplateStatusHandler
 .. autoclass:: RawUpdateHandler
