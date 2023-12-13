@@ -35,7 +35,7 @@ from pywa.types import (
 )
 from pywa.types.flows import (
     FlowCategory,
-    Flow,
+    FlowJSON,
     FlowDetails,
     FlowValidationError,
     FlowAsset,
@@ -292,7 +292,7 @@ class WhatsApp(Webhook, HandlerDecorators):
 
         Example with a flow button:
 
-            >>> from pywa.types import FlowButton, ActionType
+            >>> from pywa.types import FlowButton, FlowActionType
             >>> wa = WhatsApp(...)
             >>> wa.send_message(
             ...     to="1234567890",
@@ -303,8 +303,10 @@ class WhatsApp(Webhook, HandlerDecorators):
             ...         flow_id="1234567890",
             ...         flow_token="AQAAAAACS5FpgQ_cAAAAAD0QI3s.",
             ...         flow_message_version="3",
-            ...         flow_action_type=ActionType.NAVIGATE,x
-
+            ...         flow_action_type=FlowActionType.NAVIGATE,
+            ...         flow_action_screen="RECOMMENDED"
+            ...     ),
+            ... )
 
 
         Args:
@@ -1501,8 +1503,8 @@ class WhatsApp(Webhook, HandlerDecorators):
             flow_id: The flow ID.
             name: The name of the flow (optional).
             categories: The new categories of the flow (optional).
-            endpoint_uri: The URL of the WA Flow Endpoint. Starting from Flow JSON version 3.0 this property should be
-             specified only via API. Do not provide this field if you are cloning a Flow with Flow JSON version below 3.0.
+            endpoint_uri: The URL of the WA FlowJSON Endpoint. Starting from FlowJSON JSON version 3.0 this property should be
+             specified only via API. Do not provide this field if you are cloning a FlowJSON with FlowJSON JSON version below 3.0.
 
         Example:
 
@@ -1532,14 +1534,14 @@ class WhatsApp(Webhook, HandlerDecorators):
     def update_flow_json(
         self,
         flow_id: str | int,
-        flow_json: Flow | dict | str | pathlib.Path | bytes | BinaryIO,
+        flow_json: FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO,
     ) -> tuple[bool, tuple[FlowValidationError, ...]]:
         """
         Update the json of a flow.
 
         Args:
             flow_id: The flow ID.
-            flow_json: The new json of the flow. Can be a Flow object, dict, json string, json file path or json bytes.
+            flow_json: The new json of the flow. Can be a FlowJSON object, dict, json string, json file path or json bytes.
 
         Examples:
 
@@ -1547,10 +1549,10 @@ class WhatsApp(Webhook, HandlerDecorators):
 
             - Using a Flow object:
 
-            >>> from pywa.types.flows import Flow, Screen
+            >>> from pywa.types.flows import *
             >>> wa.update_flow_json(
             ...     flow_id='1234567890',
-            ...     flow_json=Flow(version='2.1', screens=[Screen(...)])
+            ...     flow_json=FlowJSON(version='2.1', screens=[Screen(...)])
             ... )
 
             - From a json file path:
@@ -1578,7 +1580,7 @@ class WhatsApp(Webhook, HandlerDecorators):
             if as_path.is_file():
                 with open(as_path, "r") as f:
                     json_str = f.read()
-        elif isinstance(flow_json, Flow):
+        elif isinstance(flow_json, FlowJSON):
             to_dump = flow_json.to_dict()
         elif isinstance(flow_json, dict):
             to_dump = flow_json

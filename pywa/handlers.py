@@ -11,6 +11,7 @@ __all__ = [
     "RawUpdateHandler",
     "MessageStatusHandler",
     "TemplateStatusHandler",
+    "FlowCompletionHandler",
 ]
 
 import abc
@@ -28,6 +29,7 @@ from pywa.types import (
     FlowResponse,
 )
 from pywa.types.callback import CallbackData
+from pywa.types.flows import FlowCompletion
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
@@ -414,6 +416,36 @@ class TemplateStatusHandler(Handler):
         super().__init__(callback, *filters)
 
 
+class FlowCompletionHandler(Handler):
+    """
+    Handler for :class:`pywa.types.FlowCompletion` updates (Flow is completed).
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_flow_completion` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_flow = lambda _, flow: print(flow)
+        >>> wa.add_handlers(FlowCompletionHandler(print_flow)
+
+    Args:
+        callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a
+            :class:`pywa.types.Flow` as arguments)
+
+    """
+
+    __field_name__ = "messages"
+    __update_constructor__ = FlowCompletion.from_update
+
+    def __init__(
+        self,
+        callback: Callable[[WhatsApp, FlowCompletion], Any],
+        *filters: Callable[[WhatsApp, FlowCompletion], bool],
+    ):
+        super().__init__(callback, *filters)
+
+
 class RawUpdateHandler(Handler):
     """
     A raw update callback.
@@ -686,6 +718,41 @@ class HandlerDecorators:
             callback: Callable[[WhatsApp, TemplateStatus], Any],
         ) -> Callable[[WhatsApp, TemplateStatus], Any]:
             self.add_handlers(TemplateStatusHandler(callback, *filters))
+            return callback
+
+        return decorator
+
+    def on_flow_completion(
+        self: WhatsApp,
+        *filters: Callable[[WhatsApp, FlowCompletion], bool],
+    ) -> Callable[
+        [Callable[[WhatsApp, FlowCompletion], Any]],
+        Callable[[WhatsApp, FlowCompletion], Any],
+    ]:
+        """
+        Decorator to register a function as a callback for :class:`pywa.types.FlowCompletion` updates (Flow is completed).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`FlowCompletionHandler`.
+
+        Example:
+
+            >>> from pywa.types import FlowCompletion
+            >>> from pywa import filters as fil
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_flow_completion()
+            ... def flow_handler(client: WhatsApp, flow: FlowCompletion):
+            ...     print(f"Flow {flow.token} just got completed!. Flow data: {flow.response}")
+
+        Args:
+            *filters: Filters to apply to the incoming flow completion (filters are function that take a
+                :class:`pywa.WhatsApp` instance and the incoming :class:`pywa.types.FlowCompletion` and return :class:`bool`).
+        """
+
+        @functools.wraps(self.on_flow_completion)
+        def decorator(
+            callback: Callable[[WhatsApp, FlowCompletion], Any],
+        ) -> Callable[[WhatsApp, FlowCompletion], Any]:
+            self.add_handlers(FlowCompletionHandler(callback, *filters))
             return callback
 
         return decorator

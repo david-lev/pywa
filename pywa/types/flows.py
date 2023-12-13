@@ -3,15 +3,26 @@ from __future__ import annotations
 import abc
 import dataclasses
 import datetime
-from typing import Iterable, TYPE_CHECKING, Any
+import json
+import pathlib
+from typing import Iterable, TYPE_CHECKING, Any, BinaryIO
 
 from pywa import utils
-from pywa.types.others import WhatsAppBusinessAccount, FacebookApplication
+from pywa.types.base_update import BaseUserUpdate  # noqa
+from pywa.types.others import (
+    WhatsAppBusinessAccount,
+    FacebookApplication,
+    MessageType,
+    Metadata,
+    User,
+    ReplyToMessage,
+)
 
 if TYPE_CHECKING:
     from pywa import WhatsApp
 
 __all__ = [
+    "FlowCompletion",
     "FlowRequest",
     "FlowResponse",
     "FlowCategory",
@@ -20,7 +31,7 @@ __all__ = [
     "FlowPreview",
     "FlowValidationError",
     "FlowAsset",
-    "Flow",
+    "FlowJSON",
     "Screen",
     "Layout",
     "LayoutType",
@@ -44,10 +55,57 @@ __all__ = [
     "ScaleType",
     "DataSource",
     "Action",
-    "ActionType",
+    "FlowActionType",
     "ActionNext",
     "ActionNextType",
 ]
+
+
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+class FlowCompletion(BaseUserUpdate):
+    """
+    A flow completion message. This update arrives when a user completes a flow.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/gettingstarted/receiveflowresponse>`_.
+
+    Attributes:
+        id: The message ID (If you want to reply to the message, use ``message_id_to_reply`` instead).
+        metadata: The metadata of the message (to which phone number it was sent).
+        type: The message type (Always ``MessageType.INTERACTIVE``).
+        from_user: The user who sent the message.
+        timestamp: The timestamp when the message was sent.
+        reply_to_message: The message to which this message is a reply to.
+        body: The body of the message.
+        token: The token of the flow.
+        response: The response from the flow.
+    """
+
+    id: str
+    type: MessageType
+    metadata: Metadata
+    from_user: User
+    timestamp: datetime.datetime
+    reply_to_message: ReplyToMessage | None
+    body: str
+    token: str
+    response: dict[str, Any]
+
+    @classmethod
+    def from_update(cls, client: WhatsApp, update: dict) -> FlowCompletion:
+        msg = (value := update["entry"][0]["changes"][0]["value"])["messages"][0]
+        response = json.loads(msg["interactive"]["nfm_reply"]["response_json"])
+        return cls(
+            _client=client,
+            id=msg["id"],
+            type=MessageType(msg["type"]),
+            metadata=Metadata.from_dict(value["metadata"]),
+            from_user=User.from_dict(value["contacts"][0]),
+            timestamp=datetime.datetime.fromtimestamp(int(msg["timestamp"])),
+            reply_to_message=ReplyToMessage.from_dict(msg["context"]),
+            body=msg["interactive"]["nfm_reply"]["body"],
+            token=response["flow_token"],
+            response=response,
+        )
 
 
 class FlowRequestActionType(utils.StrEnum):
@@ -233,7 +291,18 @@ class FlowCategory(utils.StrEnum):
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
 class FlowValidationError(Exception, utils.FromDict):
-    """Represents a validation error of a flow."""
+    """
+    Represents a validation error of a flow.
+
+    Attributes:
+        error: The error code.
+        error_type: The type of the error.
+        message: The error message.
+        line_start: The start line of the error.
+        line_end: The end line of the error.
+        column_start: The start column of the error.
+        column_end: The end column of the error.
+    """
 
     error: str
     error_type: str
@@ -246,15 +315,21 @@ class FlowValidationError(Exception, utils.FromDict):
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
 class FlowPreview:
-    """Represents the preview of a flow."""
+    """
+    Represents the preview of a flow.
 
-    preview_url: str
+    Attributes:
+        url: The URL to the preview.
+        expires_at: The expiration date of the preview.
+    """
+
+    url: str
     expires_at: datetime.datetime
 
     @classmethod
     def from_dict(cls, data: dict):
         return cls(
-            preview_url=data["preview_url"],
+            url=data["preview_url"],
             expires_at=datetime.datetime.fromisoformat(data["expires_at"]),
         )
 
@@ -323,6 +398,32 @@ class FlowDetails:
             return True
         return False
 
+    def get_assets(self) -> tuple[FlowAsset, ...]:
+        return self._client.get_flow_assets(self.id)
+
+    def update_metadata(
+        self,
+        name: str | None = None,
+        categories: Iterable[FlowCategory | str] | None = None,
+        endpoint_uri: str | None = None,
+    ) -> bool:
+        return self._client.update_flow_metadata(
+            flow_id=self.id,
+            name=name,
+            categories=categories,
+            endpoint_uri=endpoint_uri,
+        )
+
+    def update_json(
+        self, flow_json: FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO
+    ) -> bool:
+        is_success, errors = self._client.update_flow_json(
+            flow_id=self.id,
+            flow_json=flow_json,
+        )
+        self.validation_errors = errors
+        return is_success
+
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
 class FlowAsset:
@@ -350,9 +451,9 @@ _UNDERSCORE_FIELDS = {
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
-class Flow:
+class FlowJSON:
     """
-    Represents a WhatsApp flow which is a collection of screens.
+    Represents a WhatsApp Flow JSON.
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson>`_.
 
@@ -981,7 +1082,7 @@ class Image(Component):
     visible: bool | str | None = None
 
 
-class ActionType(utils.StrEnum):
+class FlowActionType(utils.StrEnum):
     """
     Flow JSON provides a generic way to trigger asynchronous actions handled by a client through interactive UI elements.
 
@@ -1038,10 +1139,10 @@ class Action:
 
     Attributes:
         name: The type of the action
-        next: The next action (only for ``ActionType.NAVIGATE``)
+        next: The next action (only for ``FlowActionType.NAVIGATE``)
         payload: The payload of the action
     """
 
-    name: ActionType | str
+    name: FlowActionType | str
     next: ActionNext | None = None
     payload: dict[str, str] | None = None

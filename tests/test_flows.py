@@ -1,7 +1,7 @@
 import json
 
 from pywa.types.flows import (
-    Flow,
+    FlowJSON,
     Screen,
     Layout,
     LayoutType,
@@ -10,7 +10,7 @@ from pywa.types.flows import (
     InputType,
     Footer,
     Action,
-    ActionType,
+    FlowActionType,
     ActionNext,
     ActionNextType,
     TextHeading,
@@ -27,7 +27,7 @@ from pywa.types.flows import (
 
 FLOWS_VERSION = "2.1"
 
-customer_satisfaction_survey = Flow(
+customer_satisfaction_survey = FlowJSON(
     version="2.1",
     screens=[
         Screen(
@@ -59,7 +59,7 @@ customer_satisfaction_survey = Flow(
                             Footer(
                                 label="Continue",
                                 on_click_action=Action(
-                                    name=ActionType.NAVIGATE,
+                                    name=FlowActionType.NAVIGATE,
                                     next=ActionNext(
                                         type=ActionNextType.SCREEN, name="RATE"
                                     ),
@@ -128,7 +128,7 @@ customer_satisfaction_survey = Flow(
                             Footer(
                                 label="Done",
                                 on_click_action=Action(
-                                    name=ActionType.COMPLETE,
+                                    name=FlowActionType.COMPLETE,
                                     payload={
                                         "purchase_rating": "${form.purchase_rating}",
                                         "delivery_rating": "${form.delivery_rating}",
@@ -146,7 +146,7 @@ customer_satisfaction_survey = Flow(
     ],
 )
 
-load_re_engagement = Flow(
+load_re_engagement = FlowJSON(
     version="2.1",
     screens=[
         Screen(
@@ -185,7 +185,7 @@ load_re_engagement = Flow(
                                 label="Done",
                                 enabled=True,
                                 on_click_action=Action(
-                                    name=ActionType.COMPLETE,
+                                    name=FlowActionType.COMPLETE,
                                     payload={
                                         "firstName": "${form.firstName}",
                                         "lastName": "${form.lastName}",
@@ -201,7 +201,7 @@ load_re_engagement = Flow(
     ],
 )
 
-costumer_engagement = Flow(
+costumer_engagement = FlowJSON(
     version="2.1",
     screens=[
         Screen(
@@ -238,7 +238,7 @@ costumer_engagement = Flow(
                             Footer(
                                 label="Continue",
                                 on_click_action=Action(
-                                    name=ActionType.NAVIGATE,
+                                    name=FlowActionType.NAVIGATE,
                                     next=ActionNext(
                                         type=ActionNextType.SCREEN, name="QUESTION_TWO"
                                     ),
@@ -284,7 +284,7 @@ costumer_engagement = Flow(
                             Footer(
                                 label="Continue",
                                 on_click_action=Action(
-                                    name=ActionType.NAVIGATE,
+                                    name=FlowActionType.NAVIGATE,
                                     next=ActionNext(
                                         type=ActionNextType.SCREEN,
                                         name="QUESTION_THREE",
@@ -333,7 +333,7 @@ costumer_engagement = Flow(
                             Footer(
                                 label="Done",
                                 on_click_action=Action(
-                                    name=ActionType.COMPLETE,
+                                    name=FlowActionType.COMPLETE,
                                     payload={
                                         "question1Checkbox": "${data.question1Checkbox}",
                                         "question2RadioButtons": "${data.question2RadioButtons}",
@@ -349,7 +349,7 @@ costumer_engagement = Flow(
     ],
 )
 
-support_request = Flow(
+support_request = FlowJSON(
     version="2.1",
     screens=[
         Screen(
@@ -396,7 +396,7 @@ support_request = Flow(
                             Footer(
                                 label="Done",
                                 on_click_action=Action(
-                                    name=ActionType.COMPLETE,
+                                    name=FlowActionType.COMPLETE,
                                     payload={
                                         "name": "${form.name}",
                                         "orderNumber": "${form.orderNumber}",
@@ -413,7 +413,7 @@ support_request = Flow(
     ],
 )
 
-communication_preferences = Flow(
+communication_preferences = FlowJSON(
     version="2.1",
     screens=[
         Screen(
@@ -455,7 +455,7 @@ communication_preferences = Flow(
                             Footer(
                                 label="Done",
                                 on_click_action=Action(
-                                    name=ActionType.COMPLETE,
+                                    name=FlowActionType.COMPLETE,
                                     payload={
                                         "communicationTypes": "${form.communicationTypes}",
                                         "contactPrefs": "${form.contactPrefs}",
@@ -470,7 +470,7 @@ communication_preferences = Flow(
     ],
 )
 
-register_for_an_event = Flow(
+register_for_an_event = FlowJSON(
     version="2.1",
     screens=[
         Screen(
@@ -506,7 +506,7 @@ register_for_an_event = Flow(
                             Footer(
                                 label="Continue",
                                 on_click_action=Action(
-                                    name=ActionType.NAVIGATE,
+                                    name=FlowActionType.NAVIGATE,
                                     next=ActionNext(
                                         type=ActionNextType.SCREEN, name="SURVEY"
                                     ),
@@ -553,7 +553,7 @@ register_for_an_event = Flow(
                             Footer(
                                 label="Done",
                                 on_click_action=Action(
-                                    name=ActionType.COMPLETE,
+                                    name=FlowActionType.COMPLETE,
                                     payload={
                                         "source": "${form.source}",
                                         "firstName": "${data.firstName}",
@@ -570,7 +570,7 @@ register_for_an_event = Flow(
     ],
 )
 
-sign_in = Flow(
+sign_in = FlowJSON(
     version="2.1",
     data_api_version="3.0",
     data_channel_uri="https://example.com",
@@ -607,7 +607,7 @@ sign_in = Flow(
                             EmbeddedLink(
                                 text="Don't have an account? Sign up",
                                 on_click_action=Action(
-                                    name=ActionType.NAVIGATE,
+                                    name=FlowActionType.NAVIGATE,
                                     next=ActionNext(
                                         type=ActionNextType.SCREEN, name="SIGN_UP"
                                     ),
@@ -617,7 +617,7 @@ sign_in = Flow(
                             EmbeddedLink(
                                 text="Forgot password",
                                 on_click_action=Action(
-                                    name=ActionType.NAVIGATE,
+                                    name=FlowActionType.NAVIGATE,
                                     next=ActionNext(
                                         type=ActionNextType.SCREEN,
                                         name="FORGOT_PASSWORD",
@@ -628,7 +628,7 @@ sign_in = Flow(
                             Footer(
                                 label="Sign in",
                                 on_click_action=Action(
-                                    name=ActionType.DATA_EXCHANGE,
+                                    name=FlowActionType.DATA_EXCHANGE,
                                     payload={
                                         "email": "${form.email}",
                                         "password": "${form.password}",
@@ -685,7 +685,7 @@ sign_in = Flow(
                                 label="I agree with the terms.",
                                 required=True,
                                 on_click_action=Action(
-                                    name=ActionType.NAVIGATE,
+                                    name=FlowActionType.NAVIGATE,
                                     next=ActionNext(
                                         type=ActionNextType.SCREEN,
                                         name="TERMS_AND_CONDITIONS",
@@ -700,7 +700,7 @@ sign_in = Flow(
                             Footer(
                                 label="Continue",
                                 on_click_action=Action(
-                                    name=ActionType.DATA_EXCHANGE,
+                                    name=FlowActionType.DATA_EXCHANGE,
                                     payload={
                                         "first_name": "${form.first_name}",
                                         "last_name": "${form.last_name}",
@@ -743,7 +743,7 @@ sign_in = Flow(
                             Footer(
                                 label="Sign in",
                                 on_click_action=Action(
-                                    name=ActionType.DATA_EXCHANGE,
+                                    name=FlowActionType.DATA_EXCHANGE,
                                     payload={"email": "${form.email}"},
                                 ),
                             ),
@@ -774,7 +774,7 @@ sign_in = Flow(
     ],
 )
 
-register = Flow(
+register = FlowJSON(
     version="2.1",
     data_api_version="3.0",
     data_channel_uri="https://example.com",
@@ -832,7 +832,7 @@ register = Flow(
                                 label="I agree with the terms.",
                                 required=True,
                                 on_click_action=Action(
-                                    name=ActionType.NAVIGATE,
+                                    name=FlowActionType.NAVIGATE,
                                     next=ActionNext(
                                         type=ActionNextType.SCREEN,
                                         name="TERMS_AND_CONDITIONS",
@@ -847,7 +847,7 @@ register = Flow(
                             Footer(
                                 label="Continue",
                                 on_click_action=Action(
-                                    name=ActionType.DATA_EXCHANGE,
+                                    name=FlowActionType.DATA_EXCHANGE,
                                     payload={
                                         "first_name": "${form.first_name}",
                                         "last_name": "${form.last_name}",
@@ -887,7 +887,7 @@ register = Flow(
 )
 
 
-get_a_quote = Flow(
+get_a_quote = FlowJSON(
     version="2.1",
     data_api_version="3.0",
     data_channel_uri="https://example.com",
@@ -953,7 +953,7 @@ get_a_quote = Flow(
                             Footer(
                                 label="Continue",
                                 on_click_action=Action(
-                                    name=ActionType.DATA_EXCHANGE,
+                                    name=FlowActionType.DATA_EXCHANGE,
                                     payload={
                                         "name": "${form.name}",
                                         "address": "${form.address}",
@@ -1016,7 +1016,7 @@ get_a_quote = Flow(
                             Footer(
                                 label="Continue",
                                 on_click_action=Action(
-                                    name=ActionType.DATA_EXCHANGE,
+                                    name=FlowActionType.DATA_EXCHANGE,
                                     payload={"options": "${form.options}"},
                                 ),
                             ),
@@ -1055,7 +1055,7 @@ get_a_quote = Flow(
                                 name="excess",
                                 data_source="${data.excess}",
                                 on_select_action=Action(
-                                    name=ActionType.DATA_EXCHANGE,
+                                    name=FlowActionType.DATA_EXCHANGE,
                                     payload={"excess": "${form.excess}"},
                                 ),
                                 required=True,
@@ -1068,7 +1068,7 @@ get_a_quote = Flow(
                                     DataSource(id="2", title="Annually (Save $115)"),
                                 ],
                                 on_select_action=Action(
-                                    name=ActionType.DATA_EXCHANGE,
+                                    name=FlowActionType.DATA_EXCHANGE,
                                     payload={
                                         "payment_options": "${form.payment_options}"
                                     },
@@ -1081,7 +1081,7 @@ get_a_quote = Flow(
                                 label="Accept our Privacy Policy",
                                 required=True,
                                 on_click_action=Action(
-                                    name=ActionType.NAVIGATE,
+                                    name=FlowActionType.NAVIGATE,
                                     next=ActionNext(
                                         type=ActionNextType.SCREEN,
                                         name="TERMS_AND_CONDITIONS",
@@ -1092,7 +1092,7 @@ get_a_quote = Flow(
                             Footer(
                                 label="Choose quote",
                                 on_click_action=Action(
-                                    name=ActionType.DATA_EXCHANGE,
+                                    name=FlowActionType.DATA_EXCHANGE,
                                     payload={
                                         "privacy_policy": "${form.privacy_policy}"
                                     },

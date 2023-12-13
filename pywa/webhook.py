@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from pywa import utils
 from pywa.errors import WhatsAppError
-from pywa.handlers import Handler  # noqa
+from pywa.handlers import Handler, FlowCompletionHandler  # noqa
 from pywa.handlers import (
     CallbackButtonHandler,
     CallbackSelectionHandler,
@@ -191,6 +191,8 @@ class Webhook:
                                 return CallbackButtonHandler
                             elif interactive_type == "list_reply":  # selection
                                 return CallbackSelectionHandler
+                            elif interactive_type == "nfm_reply":  # flow
+                                return FlowCompletionHandler
                             _logger.warning(
                                 "PyWa Webhook: Unknown interactive message type: %s"
                                 % interactive_type

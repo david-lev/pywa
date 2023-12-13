@@ -47,9 +47,10 @@ from .template import (
 )
 
 from .flows import (
-    Flow,
+    FlowCompletion,
     FlowRequest,
     FlowResponse,
-    ActionType,
+    FlowJSON,
+    FlowActionType,
     FlowStatus,
 )

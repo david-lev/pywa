@@ -30,8 +30,8 @@ from typing import (
     Literal,
 )
 
-from .base_update import BaseUserUpdate
-from .flows import FlowStatus, ActionType
+from .base_update import BaseUserUpdate  # noqa
+from .flows import FlowStatus, FlowActionType
 from .others import MessageType, Metadata, ReplyToMessage, User
 
 if TYPE_CHECKING:
@@ -579,9 +579,9 @@ class FlowButton:
         flow_message_version: Version of the flow message. Currently, the value must be 3.
         flow_action_type: Type of action to be performed when the user clicks on the CTA button.
         flow_action_screen: The ID of the first Screen.
-         Required when ``flow_action_type`` is ``ActionType.NAVIGATE`` (default).
+         Required when ``flow_action_type`` is ``FlowActionType.NAVIGATE`` (default).
         flow_action_payload: The payload to send when the user clicks on the button
-         (optional, only when ``flow_action_type`` is ``ActionType.NAVIGATE``).
+         (optional, only when ``flow_action_type`` is ``FlowActionType.NAVIGATE``).
         mode: The mode of the flow. ``FlowStatus.PUBLISHED`` (default) or ``FlowStatus.DRAFT`` (for testing).
     """
 
@@ -589,7 +589,7 @@ class FlowButton:
     flow_id: str | int
     flow_token: str
     flow_action_type: Literal[
-        ActionType.NAVIGATE, ActionType.DATA_EXCHANGE
+        FlowActionType.NAVIGATE, FlowActionType.DATA_EXCHANGE
     ] | str | None = None
     flow_action_screen: str | None = None
     flow_action_payload: dict[str, Any] | None = None
@@ -598,11 +598,11 @@ class FlowButton:
 
     def to_dict(self) -> dict:
         if (
-            self.flow_action_type == ActionType.NAVIGATE
+            self.flow_action_type == FlowActionType.NAVIGATE
             and self.flow_action_screen is None
         ):
             raise ValueError(
-                "flow_action_screen cannot be None when flow_action_type is ActionType.NAVIGATE"
+                "flow_action_screen cannot be None when flow_action_type is FlowActionType.NAVIGATE"
             )
         return {
             "name": "flow",
@@ -628,7 +628,7 @@ class FlowButton:
                             ),
                         }
                     }
-                    if self.flow_action_type == ActionType.NAVIGATE
+                    if self.flow_action_type == FlowActionType.NAVIGATE
                     else {}
                 ),
             },
