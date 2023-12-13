@@ -24,8 +24,8 @@ from pywa.types import (
     Message,
     MessageStatus,
     TemplateStatus,
-    FlowDataExchangeRequest,
-    FlowDataExchangeResponse,
+    FlowRequest,
+    FlowResponse,
 )
 from pywa.types.callback import CallbackData
 
@@ -697,13 +697,15 @@ class HandlerDecorators:
         acknowledge_errors: bool = True,
         handle_health_check: bool = True,
         private_key: str | None = None,
+        private_key_password: str | None = None,
+        request_decryptor: Callable[
+            [str, str, str, str, str | None], tuple[dict, bytes, bytes]
+        ]
+        | None = None,
+        response_encryptor: Callable[[dict, bytes, bytes], str] | None = None,
     ) -> Callable[
-        [
-            Callable[
-                [WhatsApp, FlowDataExchangeRequest], FlowDataExchangeResponse | dict
-            ]
-        ],
-        Callable[[WhatsApp, FlowDataExchangeRequest], FlowDataExchangeResponse | dict],
+        [Callable[[WhatsApp, FlowRequest], FlowResponse | dict]],
+        Callable[[WhatsApp, FlowRequest], FlowResponse | dict],
     ]:
         """
         Decorator to register a function to handle and respond to incoming Flow Data Exchange requests.
@@ -715,24 +717,25 @@ class HandlerDecorators:
             acknowledge_errors: Whether to acknowledge errors (It will be ignore from the callback return value and
              the pywa will acknowledge the error automatically).
             handle_health_check: Whether to handle health checks (The callback will not be called for health checks).
-            private_key: The private key to use to decrypt the requests (Override the global private key, the one set
-             in the :class:`pywa.client.WhatsApp` instance).
+            private_key: The private key to use to decrypt the requests (Override the global ``business_private_key``).
+            private_key_password: The password to use to decrypt the private key (Override the global ``business_private_key_password``).
+            request_decryptor: The function to use to decrypt the requests (Override the global ``flows_request_decryptor``)
+            response_encryptor: The function to use to encrypt the responses (Override the global ``flows_response_encryptor``)
         """
 
         @functools.wraps(self.on_flow_data_exchange_request)
         def decorator(
-            callback: Callable[
-                [WhatsApp, FlowDataExchangeRequest], FlowDataExchangeResponse | dict
-            ],
-        ) -> Callable[
-            [WhatsApp, FlowDataExchangeRequest], FlowDataExchangeResponse | dict
-        ]:
+            callback: Callable[[WhatsApp, FlowRequest], FlowResponse | dict],
+        ) -> Callable[[WhatsApp, FlowRequest], FlowResponse | dict]:
             self.register_flow_endpoint_callback(
                 endpoint=endpoint,
                 callback=callback,
                 acknowledge_errors=acknowledge_errors,
                 handle_health_check=handle_health_check,
                 private_key=private_key,
+                private_key_password=private_key_password,
+                request_decryptor=request_decryptor,
+                response_encryptor=response_encryptor,
             )
             return callback
 

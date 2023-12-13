@@ -48,8 +48,8 @@ from .template import (
 
 from .flows import (
     Flow,
-    FlowDataExchangeRequest,
-    FlowDataExchangeResponse,
+    FlowRequest,
+    FlowResponse,
     ActionType,
     FlowStatus,
 )

@@ -21,7 +21,7 @@ from pywa.handlers import (
     MessageStatusHandler,
     RawUpdateHandler,
 )
-from pywa.types import MessageType, FlowDataExchangeRequest, FlowDataExchangeResponse
+from pywa.types import MessageType, FlowRequest, FlowResponse
 from pywa.types.base_update import BaseUpdate, StopHandling  # noqa
 from pywa.utils import FastAPI, Flask
 
@@ -47,11 +47,17 @@ class Webhook:
         verify_token: str | None,
         verify_timeout: int | None,
         business_private_key: str | None,
+        business_private_key_password: str | None,
+        flows_request_decryptor: utils.FlowRequestDecryptor | None,
+        flows_response_encryptor: utils.FlowResponseEncryptor | None,
     ):
         if server is None:
             return
         self._server = server
         self._private_key = business_private_key
+        self._private_key_password = business_private_key_password
+        self._flows_request_decryptor = flows_request_decryptor
+        self._flows_response_encryptor = flows_response_encryptor
 
         if not verify_token:
             raise ValueError(
@@ -203,27 +209,41 @@ class Webhook:
     def register_flow_endpoint_callback(
         self: WhatsApp,
         endpoint: str,
-        callback: Callable[
-            [WhatsApp, FlowDataExchangeRequest], FlowDataExchangeResponse | dict
-        ],
-        acknowledge_errors: bool,
-        handle_health_check: bool,
-        private_key: str | None,
+        callback: Callable[[WhatsApp, FlowRequest], FlowResponse | dict],
+        acknowledge_errors: bool = True,
+        handle_health_check: bool = True,
+        private_key: str | None = None,
+        private_key_password: str | None = None,
+        request_decryptor: utils.FlowRequestDecryptor | None = None,
+        response_encryptor: utils.FlowResponseEncryptor | None = None,
     ):
         if not private_key and not self._private_key:
             raise ValueError(
                 "A private key must be provided to register a flow endpoint callback."
             )
+        if not request_decryptor and not self._flows_request_decryptor:
+            raise ValueError(
+                "A request decryptor must be provided in order to decrypt incoming requests."
+            )
+        if not response_encryptor and not self._flows_response_encryptor:
+            raise ValueError(
+                "A response encryptor must be provided in order to encrypt outgoing responses."
+            )
 
-        def flow_endpoint(payload: dict):
-            decrypted_request, aes_key, iv = utils.decrypt_request(
+        def flow_endpoint(payload: dict) -> str:
+            # noinspection PyArgumentList
+            decrypted_request, aes_key, iv = (
+                request_decryptor or self._flows_request_decryptor
+            )(
                 encrypted_flow_data_b64=payload["encrypted_flow_data"],
                 encrypted_aes_key_b64=payload["encrypted_aes_key"],
                 initial_vector_b64=payload["initial_vector"],
                 private_key=private_key or self._private_key,
+                password=private_key_password or self._private_key_password,
             )
             if handle_health_check and decrypted_request["action"] == "ping":
-                return utils.encrypt_response(
+                # noinspection PyArgumentList
+                return (response_encryptor or self._flows_response_encryptor)(
                     response={
                         "version": decrypted_request["version"],
                         "data": {"status": "active"},
@@ -231,10 +251,11 @@ class Webhook:
                     aes_key=aes_key,
                     iv=iv,
                 )
-            request = FlowDataExchangeRequest(**decrypted_request)
+            request = FlowRequest.from_dict(decrypted_request)
             response = callback(self, request)
             if acknowledge_errors and request.has_error:
-                return utils.encrypt_response(
+                # noinspection PyArgumentList
+                return (response_encryptor or self._flows_response_encryptor)(
                     {
                         "version": request.version,
                         "data": {
@@ -244,13 +265,14 @@ class Webhook:
                     aes_key=aes_key,
                     iv=iv,
                 )
-            if not isinstance(response, (FlowDataExchangeResponse | dict)):
+            if not isinstance(response, (FlowResponse | dict)):
                 raise ValueError(
-                    f"Flow endpoint callback must return a FlowDataExchangeResponse or dict, not {type(response)}"
+                    f"Flow endpoint callback must return a FlowResponse or dict, not {type(response)}"
                 )
-            return utils.encrypt_response(
+            # noinspection PyArgumentList
+            return (response_encryptor or self._flows_response_encryptor)(
                 response=response.to_dict()
-                if isinstance(response, FlowDataExchangeResponse)
+                if isinstance(response, FlowResponse)
                 else response,
                 aes_key=aes_key,
                 iv=iv,

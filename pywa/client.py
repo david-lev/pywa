@@ -14,6 +14,7 @@ from typing import BinaryIO, Iterable, Literal
 
 import requests
 
+from pywa import utils
 from pywa.api import WhatsAppCloudApi
 from pywa.handlers import Handler, HandlerDecorators  # noqa
 from pywa.types import (
@@ -64,6 +65,9 @@ class WhatsApp(Webhook, HandlerDecorators):
         app_secret: str | None = None,
         verify_timeout: int | None = None,
         business_private_key: str | None = None,
+        business_private_key_password: str | None = None,
+        flows_request_decryptor: utils.FlowRequestDecryptor = utils.default_flow_request_decryptor,
+        flows_response_encryptor: utils.FlowResponseEncryptor = utils.default_flow_response_encryptor,
     ) -> None:
         """
         The WhatsApp client.
@@ -150,6 +154,9 @@ class WhatsApp(Webhook, HandlerDecorators):
             verify_token=verify_token,
             verify_timeout=verify_timeout,
             business_private_key=business_private_key,
+            business_private_key_password=business_private_key_password,
+            flows_request_decryptor=flows_request_decryptor,
+            flows_response_encryptor=flows_response_encryptor,
         )
 
     def __str__(self) -> str:

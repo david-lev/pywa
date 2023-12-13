@@ -12,8 +12,8 @@ if TYPE_CHECKING:
     from pywa import WhatsApp
 
 __all__ = [
-    "FlowDataExchangeRequest",
-    "FlowDataExchangeResponse",
+    "FlowRequest",
+    "FlowResponse",
     "FlowCategory",
     "FlowDetails",
     "FlowStatus",
@@ -50,15 +50,15 @@ __all__ = [
 ]
 
 
-class DataExchangeType(utils.StrEnum):
+class FlowRequestActionType(utils.StrEnum):
     """
-    The type of the data exchange action.
+    The type the action that triggered the request.
 
     Attributes:
         INIT: if the request is triggered when opening the Flow
-        BACK: if the request is triggered when pressing "back"
+        BACK: if the request is triggered when pressing "back" (The screen has ``refresh_on_back`` set to ``True``)
         DATA_EXCHANGE: if the request is triggered when submitting the screen
-        PING: if the request is triggered by a health check
+        PING: if the request is triggered by a health check (ignore this requests by leaving ``handle_health_check`` to ``True``)
     """
 
     INIT = "INIT"
@@ -68,7 +68,7 @@ class DataExchangeType(utils.StrEnum):
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
-class FlowDataExchangeRequest(utils.FromDict):
+class FlowRequest:
     """
     Represents a flow data exchange request. This request is sent to the flow endpoint when a user interacts with a
     flow and perform an :class:`Action` that trigger a data exchange.
@@ -77,18 +77,28 @@ class FlowDataExchangeRequest(utils.FromDict):
 
     Attributes:
         version: The version of the data exchange.
-        flow_token: The flow token used to create the flow. ``None`` if action is ``DataExchangeType.PING``.
+        flow_token: The flow token used to create the flow. ``None`` if action is ``FlowRequestActionType.PING``.
         action: The action that triggered the request.
-        screen: The screen that triggered the request. ``None`` if action is ``DataExchangeType.PING``.
-        data: The data sent from the screen. ``None`` if action is ``DataExchangeType.PING`` and optional if action is
-         ``DataExchangeType.BACK`` or ``DataExchangeType.INIT``.
+        screen: The screen that triggered the request. ``None`` if action is ``FlowRequestActionType.PING``.
+        data: The data sent from the screen. ``None`` if action is ``FlowRequestActionType.PING`` and optional if action is
+         ``FlowRequestActionType.BACK`` or ``FlowRequestActionType.INIT``.
     """
 
     version: str
-    action: DataExchangeType
+    action: FlowRequestActionType
     flow_token: str | None = None
     screen: str | None = None
     data: dict[str, Any] | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            version=data["version"],
+            action=FlowRequestActionType(data["action"]),
+            flow_token=data.get("flow_token"),
+            screen=data.get("screen") or None,  # can be empty string
+            data=data.get("data") or None,  # can be empty dict
+        )
 
     @property
     def has_error(self) -> bool:
@@ -106,11 +116,11 @@ class FlowDataExchangeRequest(utils.FromDict):
         When True, if flow endpoint register with ``handle_health_check=True``,
         pywa will not call the callback and will return a health check response.
         """
-        return self.action == DataExchangeType.PING
+        return self.action == FlowRequestActionType.PING
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
-class FlowDataExchangeResponse:
+class FlowResponse:
     """
     Represents a flow data exchange response. This response is sent to the flow endpoint to determine the next screen
     to display or to close the flow. You should return this response from your flow endpoint callback.
@@ -169,7 +179,7 @@ class FlowStatus(utils.StrEnum):
          This Flow cannot be deleted or updated afterwards.
         DEPRECATED: The developer has marked the Flow as deprecated (since it cannot be deleted after publishing).
          This prevents sending and opening the Flow, to allow the developer to retire their endpoint.
-         Deprecated Flows cannot be deleted or undeprecated.
+         Deprecated Flows cannot be deleted or deprecated.
         BLOCKED: Monitoring detected that the endpoint is unhealthy and set the status to Blocked.
          The Flow cannot be sent or opened in this state; the developer needs to fix the endpoint to get it back to
          Published state (more details in Flows Health and Monitoring).

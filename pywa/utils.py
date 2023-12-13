@@ -5,7 +5,7 @@ import json
 import dataclasses
 import enum
 import importlib
-from typing import Any, Callable, Protocol
+from typing import Any, Callable, Protocol, TypeVar
 
 from cryptography.hazmat.primitives.asymmetric.padding import OAEP, MGF1, hashes
 from cryptography.hazmat.primitives.ciphers import algorithms, Cipher, modes
@@ -65,14 +65,25 @@ class Flask(Protocol):
         ...
 
 
-def decrypt_request(
+FlowRequestDecryptor = TypeVar(
+    "FlowRequestDecryptor",
+    bound=Callable[[str, str, str, str, str | None], tuple[dict, bytes, bytes]],
+)
+
+
+def default_flow_request_decryptor(
     encrypted_flow_data_b64: str,
     encrypted_aes_key_b64: str,
     initial_vector_b64: str,
     private_key: str,
+    password: str = None,
 ) -> tuple[dict, bytes, bytes]:
     """
-    Decrypts the request from WhatsApp Flow.
+    The default decryption function for WhatsApp Flow.
+
+    - This implementation was taken from the official documentation at
+      `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/guides/implementingyourflowendpoint#python-django-example>`_.
+
 
     Returns:
         decrypted_data: decrypted data from the request
@@ -82,7 +93,10 @@ def decrypt_request(
     flow_data = base64.b64decode(encrypted_flow_data_b64)
     iv = base64.b64decode(initial_vector_b64)
     encrypted_aes_key = base64.b64decode(encrypted_aes_key_b64)
-    private_key = load_pem_private_key(private_key.encode("utf-8"), password=None)
+    private_key = load_pem_private_key(
+        data=private_key.encode("utf-8"),
+        password=password.encode("utf-8") if password else None,
+    )
     aes_key = private_key.decrypt(
         encrypted_aes_key,
         OAEP(
@@ -101,9 +115,17 @@ def decrypt_request(
     return decrypted_data, aes_key, iv
 
 
-def encrypt_response(response: dict, aes_key: bytes, iv: bytes) -> str:
+FlowResponseEncryptor = TypeVar(
+    "FlowResponseEncryptor", bound=Callable[[dict, bytes, bytes], str]
+)
+
+
+def default_flow_response_encryptor(response: dict, aes_key: bytes, iv: bytes) -> str:
     """
-    Encrypts the response to WhatsApp Flow.
+    The default encryption function for WhatsApp Flow.
+
+    - This implementation was taken from the official documentation at
+      `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/guides/implementingyourflowendpoint#python-django-example>`_.
 
     Returns:
         encrypted_response: encrypted response to send back to WhatsApp Flow
