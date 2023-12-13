@@ -204,7 +204,7 @@ class Webhook:
         self: WhatsApp,
         endpoint: str,
         callback: Callable[
-            [WhatsApp, FlowDataExchangeRequest], FlowDataExchangeResponse
+            [WhatsApp, FlowDataExchangeRequest], FlowDataExchangeResponse | dict
         ],
         acknowledge_errors: bool,
         handle_health_check: bool,
@@ -222,13 +222,11 @@ class Webhook:
                 initial_vector_b64=payload["initial_vector"],
                 private_key=private_key or self._private_key,
             )
-            if handle_health_check and decrypted_request.get("health_check"):
+            if handle_health_check and decrypted_request["action"] == "ping":
                 return utils.encrypt_response(
                     response={
                         "version": decrypted_request["version"],
-                        "data": {
-                            "acknowledged": True,
-                        },
+                        "data": {"status": "active"},
                     },
                     aes_key=aes_key,
                     iv=iv,
@@ -246,12 +244,14 @@ class Webhook:
                     aes_key=aes_key,
                     iv=iv,
                 )
-            if not isinstance(response, FlowDataExchangeResponse):
+            if not isinstance(response, (FlowDataExchangeResponse | dict)):
                 raise ValueError(
-                    f"Flow endpoint callback must return a FlowDataExchangeResponse, not {type(response)}"
+                    f"Flow endpoint callback must return a FlowDataExchangeResponse or dict, not {type(response)}"
                 )
             return utils.encrypt_response(
-                response=response.to_dict(),
+                response=response.to_dict()
+                if isinstance(response, FlowDataExchangeResponse)
+                else response,
                 aes_key=aes_key,
                 iv=iv,
             )

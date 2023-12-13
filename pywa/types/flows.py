@@ -58,6 +58,7 @@ class DataExchangeType(utils.StrEnum):
         INIT: if the request is triggered when opening the Flow
         BACK: if the request is triggered when pressing "back"
         DATA_EXCHANGE: if the request is triggered when submitting the screen
+        PING: if the request is triggered by a health check
     """
 
     INIT = "INIT"
@@ -69,20 +70,25 @@ class DataExchangeType(utils.StrEnum):
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
 class FlowDataExchangeRequest(utils.FromDict):
     """
-    Represents a flow data exchange request.
+    Represents a flow data exchange request. This request is sent to the flow endpoint when a user interacts with a
+    flow and perform an :class:`Action` that trigger a data exchange.
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/guides/implementingyourflowendpoint#data_exchange_request>`_.
 
     Attributes:
         version: The version of the data exchange.
-        screen
+        flow_token: The flow token used to create the flow. ``None`` if action is ``DataExchangeType.PING``.
+        action: The action that triggered the request.
+        screen: The screen that triggered the request. ``None`` if action is ``DataExchangeType.PING``.
+        data: The data sent from the screen. ``None`` if action is ``DataExchangeType.PING`` and optional if action is
+         ``DataExchangeType.BACK`` or ``DataExchangeType.INIT``.
     """
 
     version: str
-    flow_token: str
     action: DataExchangeType
+    flow_token: str | None = None
     screen: str | None = None
-    data: dict[str, Any] | None
+    data: dict[str, Any] | None = None
 
     @property
     def has_error(self) -> bool:
@@ -106,7 +112,8 @@ class FlowDataExchangeRequest(utils.FromDict):
 @dataclasses.dataclass(slots=True, kw_only=True)
 class FlowDataExchangeResponse:
     """
-    Represents a flow data exchange response.
+    Represents a flow data exchange response. This response is sent to the flow endpoint to determine the next screen
+    to display or to close the flow. You should return this response from your flow endpoint callback.
 
     Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/guides/implementingyourflowendpoint#data_exchange_request>`_.
 

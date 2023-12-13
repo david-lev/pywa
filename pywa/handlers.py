@@ -698,8 +698,12 @@ class HandlerDecorators:
         handle_health_check: bool = True,
         private_key: str | None = None,
     ) -> Callable[
-        [Callable[[WhatsApp, FlowDataExchangeRequest], FlowDataExchangeResponse]],
-        Callable[[WhatsApp, FlowDataExchangeRequest], FlowDataExchangeResponse],
+        [
+            Callable[
+                [WhatsApp, FlowDataExchangeRequest], FlowDataExchangeResponse | dict
+            ]
+        ],
+        Callable[[WhatsApp, FlowDataExchangeRequest], FlowDataExchangeResponse | dict],
     ]:
         """
         Decorator to register a function to handle and respond to incoming Flow Data Exchange requests.
@@ -718,9 +722,11 @@ class HandlerDecorators:
         @functools.wraps(self.on_flow_data_exchange_request)
         def decorator(
             callback: Callable[
-                [WhatsApp, FlowDataExchangeRequest], FlowDataExchangeResponse
+                [WhatsApp, FlowDataExchangeRequest], FlowDataExchangeResponse | dict
             ],
-        ) -> Callable[[WhatsApp, FlowDataExchangeRequest], FlowDataExchangeResponse]:
+        ) -> Callable[
+            [WhatsApp, FlowDataExchangeRequest], FlowDataExchangeResponse | dict
+        ]:
             self.register_flow_endpoint_callback(
                 endpoint=endpoint,
                 callback=callback,
