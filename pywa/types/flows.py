@@ -426,12 +426,20 @@ class FlowDetails:
         categories: Iterable[FlowCategory | str] | None = None,
         endpoint_uri: str | None = None,
     ) -> bool:
-        return self._client.update_flow_metadata(
+        success = self._client.update_flow_metadata(
             flow_id=self.id,
             name=name,
             categories=categories,
             endpoint_uri=endpoint_uri,
         )
+        if success:
+            if name:
+                self.name = name
+            if categories:
+                self.categories = tuple(FlowCategory(c) for c in categories)
+            if endpoint_uri:
+                self.endpoint_uri = endpoint_uri
+        return success
 
     def update_json(
         self, flow_json: FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO
