@@ -48,6 +48,7 @@ ________________________
 • `Handlers <https://pywa.readthedocs.io/en/latest/content/handlers/overview.html>`_
 • `Filters <https://pywa.readthedocs.io/en/latest/content/filters/overview.html>`_
 • `Updates <https://pywa.readthedocs.io/en/latest/content/updates/overview.html>`_
+• `Flows <https://pywa.readthedocs.io/en/latest/content/flows/overview.html>`_
 • `Examples <https://pywa.readthedocs.io/en/latest/content/examples/overview.html>`_
 
 ------------------------
@@ -57,6 +58,7 @@ ________________________
 - 🚀 Fast and simple to use. No need to worry about the low-level details.
 - 💬 Send text messages with interactive keyboards, images, videos, documents, audio, locations, contacts, etc.
 - 📩 Receive messages, callbacks, message status updates, etc.
+- ♻️ Create, send and listen to Flows (NEW!)
 - 🔄 Built-in support for webhooks (Flask, FastAPI, etc.)
 - 🔬 Filters for handling incoming updates
 - 📄 Send and create templates

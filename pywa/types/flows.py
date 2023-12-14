@@ -361,7 +361,7 @@ class FlowDetails:
     id: str
     name: str
     status: FlowStatus
-    json_version: str
+    json_version: str | None
     data_api_version: str | None
     categories: tuple[FlowCategory, ...]
     validation_errors: tuple[FlowValidationError, ...] | None
@@ -382,7 +382,7 @@ class FlowDetails:
                 FlowValidationError.from_dict(e) for e in data["validation_errors"]
             )
             or None,
-            json_version=data["json_version"],
+            json_version=data.get("json_version"),
             data_api_version=data.get("data_api_version"),
             endpoint_uri=data.get("endpoint_uri")
             or data.get("data_channel_uri"),  # data_channel_uri removed at v19.0
