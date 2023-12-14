@@ -7,72 +7,80 @@ Flows
 
 .. currentmodule:: pywa.types.flows
 
-.. autoclass:: FlowRequest
+.. autoclass:: FlowRequest()
+    :members: has_error, is_health_check
 
-.. autoclass:: FlowResponse
+.. autoclass:: FlowResponse()
 
-.. autoclass:: FlowCategory
+.. autoclass:: FlowCategory()
 
-.. autoclass:: FlowDetails
+.. autoclass:: FlowDetails()
+    :members: publish, delete, deprecate, get_assets, update_metadata, update_json
 
-.. autoclass:: FlowStatus
+.. autoclass:: FlowStatus()
 
-.. autoclass:: FlowPreview
+.. autoclass:: FlowPreview()
 
-.. autoclass:: FlowValidationError
+.. autoclass:: FlowValidationError()
 
-.. autoclass:: FlowAsset
+.. autoclass:: FlowAsset()
 
-.. autoclass:: FlowJSON
+.. autoclass:: FlowJSON()
 
-.. autoclass:: Screen
+.. autoclass:: Screen()
 
-.. autoclass:: Layout
+.. autoclass:: Layout()
 
-.. autoclass:: LayoutType
+.. autoclass:: LayoutType()
 
-.. autoclass:: Form
+.. autoclass:: Form()
 
-.. autoclass:: TextHeading
+.. autoclass:: TextHeading()
 
-.. autoclass:: TextSubheading
+.. autoclass:: TextSubheading()
 
-.. autoclass:: TextBody
+.. autoclass:: TextBody()
 
-.. autoclass:: TextCaption
+.. autoclass:: TextCaption()
 
-.. autoclass:: FontWeight
+.. autoclass:: FontWeight()
 
-.. autoclass:: TextInput
+.. autoclass:: TextInput()
 
-.. autoclass:: InputType
+.. autoclass:: InputType()
 
-.. autoclass:: TextArea
+.. autoclass:: TextArea()
 
-.. autoclass:: CheckboxGroup
+.. autoclass:: CheckboxGroup()
 
-.. autoclass:: RadioButtonsGroup
+.. autoclass:: RadioButtonsGroup()
 
-.. autoclass:: Footer
+.. autoclass:: Footer()
 
-.. autoclass:: OptIn
+.. autoclass:: OptIn()
 
-.. autoclass:: Dropdown
+.. autoclass:: Dropdown()
 
-.. autoclass:: EmbeddedLink
+.. autoclass:: EmbeddedLink()
 
-.. autoclass:: DatePicker
+.. autoclass:: DatePicker()
 
-.. autoclass:: Image
+.. autoclass:: Image()
 
-.. autoclass:: ScaleType
+.. autoclass:: ScaleType()
 
-.. autoclass:: DataSource
+.. autoclass:: DataSource()
 
-.. autoclass:: Action
+.. autoclass:: Action()
 
-.. autoclass:: FlowActionType
+.. autoclass:: FlowActionType()
 
-.. autoclass:: ActionNext
+.. autoclass:: ActionNext()
 
-.. autoclass:: ActionNextType
+.. autoclass:: ActionNextType()
+
+.. currentmodule:: pywa.utils
+
+.. autoclass:: FlowRequestDecryptor()
+
+.. autoclass:: FlowResponseEncryptor()

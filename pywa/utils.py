@@ -69,6 +69,23 @@ FlowRequestDecryptor = TypeVar(
     "FlowRequestDecryptor",
     bound=Callable[[str, str, str, str, str | None], tuple[dict, bytes, bytes]],
 )
+"""
+Type hint for the function that decrypts the request from WhatsApp Flow.
+
+- All parameters need to be positional.
+
+    Args:
+        encrypted_flow_data_b64 (str): encrypted flow data
+        encrypted_aes_key_b64 (str): encrypted AES key
+        initial_vector_b64 (str): initial vector
+        private_key (str): private key
+        password (str, optional): password for the private key. Optional.
+
+    Returns:
+        decrypted_data (dict): decrypted data from the request
+        aes_key (bytes): AES key you should use to encrypt the response
+        iv (bytes): initial vector you should use to encrypt the response
+"""
 
 
 def default_flow_request_decryptor(
@@ -118,6 +135,19 @@ def default_flow_request_decryptor(
 FlowResponseEncryptor = TypeVar(
     "FlowResponseEncryptor", bound=Callable[[dict, bytes, bytes], str]
 )
+"""
+Type hint for the function that encrypts the response to WhatsApp Flow.
+
+- All parameters need to be positional.
+
+    Args:
+        response (dict): response to encrypt
+        aes_key (bytes): AES key
+        iv (bytes): initial vector
+
+    Returns:
+        encrypted_response (str): encrypted response to send back to WhatsApp Flow
+"""
 
 
 def default_flow_response_encryptor(response: dict, aes_key: bytes, iv: bytes) -> str:

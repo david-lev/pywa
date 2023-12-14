@@ -336,7 +336,24 @@ class FlowPreview:
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class FlowDetails:
-    """Represents the details of a flow."""
+    """
+    Represents the details of a flow.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowsapi#details>`_.
+
+    Attributes:
+        id: The ID of the flow.
+        name: The name of the flow.
+        status: The status of the flow.
+        json_version: The version of the flow JSON.
+        data_api_version: The version to use during communication with the WhatsApp Flows Data Endpoint.
+        categories: The categories of the flow.
+        validation_errors: The validation errors of the flow.
+        endpoint_uri: The endpoint URI of the flow.
+        preview: The preview of the flow.
+        whatsapp_business_account: The WhatsApp Business Account that owns the flow.
+        application: The application that owns the flow.
+    """
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
     id: str
