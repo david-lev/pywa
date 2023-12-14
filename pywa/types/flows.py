@@ -96,6 +96,7 @@ class FlowCompletion(BaseUserUpdate):
         response = json.loads(msg["interactive"]["nfm_reply"]["response_json"])
         return cls(
             _client=client,
+            raw=update,
             id=msg["id"],
             type=MessageType(msg["type"]),
             metadata=Metadata.from_dict(value["metadata"]),
@@ -147,15 +148,19 @@ class FlowRequest:
     flow_token: str | None = None
     screen: str | None = None
     data: dict[str, Any] | None = None
+    raw: dict[str, Any]
+    raw_encrypted: dict[str, str]
 
     @classmethod
-    def from_dict(cls, data: dict):
+    def from_dict(cls, data: dict, raw_encrypted: dict):
         return cls(
             version=data["version"],
             action=FlowRequestActionType(data["action"]),
             flow_token=data.get("flow_token"),
             screen=data.get("screen") or None,  # can be empty string
             data=data.get("data") or None,  # can be empty dict
+            raw=data,
+            raw_encrypted=raw_encrypted,
         )
 
     @property

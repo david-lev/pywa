@@ -102,6 +102,7 @@ class MessageStatus(BaseUserUpdate):
         error = value.get("errors", status.get("errors", (None,)))[0]
         return cls(
             _client=client,
+            raw=update,
             id=status["id"],
             metadata=Metadata.from_dict(value["metadata"]),
             status=MessageStatusType(status["status"]),

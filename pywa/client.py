@@ -129,6 +129,10 @@ class WhatsApp(Webhook, HandlerDecorators):
              not apply to raw updates or updates that are not user-related).
             business_account_id: The WhatsApp business account ID that owns the phone ID (optional, required for some API
              methods).
+            business_private_key: The global private key to use in the ``flows_request_decryptor``
+            business_private_key_password: The global private key password (if needed) to use in the ``flows_request_decryptor``
+            flows_request_decryptor: The global flows requests decryptor implementation to use to decrypt Flows requests.
+            flows_response_encryptor: The global flows response encryptor implementation to use to encrypt Flows responses.
         """
         if not phone_id or not token:
             raise ValueError("phone_id and token must be provided.")

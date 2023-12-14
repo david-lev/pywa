@@ -1366,6 +1366,7 @@ class TemplateStatus(BaseUpdate):
         value = (data := update["entry"][0])["changes"][0]["value"]
         return cls(
             _client=client,
+            raw=update,
             id=data["id"],
             timestamp=dt.datetime.fromtimestamp(data["time"]),
             event=cls.TemplateEvent(value["event"]),

@@ -334,6 +334,7 @@ class CallbackButton(BaseUserUpdate, Generic[CallbackDataT]):
                 raise ValueError(f"Invalid message type {msg_type}")
         return cls(
             _client=client,
+            raw=update,
             id=msg["id"],
             metadata=Metadata.from_dict(value["metadata"]),
             type=MessageType(msg_type),
@@ -433,6 +434,7 @@ class CallbackSelection(BaseUserUpdate, Generic[CallbackDataT]):
         msg = (value := update["entry"][0]["changes"][0]["value"])["messages"][0]
         return cls(
             _client=client,
+            raw=update,
             id=msg["id"],
             metadata=Metadata.from_dict(value["metadata"]),
             type=MessageType(msg["type"]),

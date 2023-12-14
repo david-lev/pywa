@@ -67,8 +67,8 @@ Now you can start building the flow structure.
 
 A flow is collection of screens containing components. screens can exchange data with each other and with your server.
 
-Flow can be compliantly static; all the components are predefined and no interaction is required from your server.
-Or it can be dynamic; your server can respond to screen actions and determine the next screen to display and the data to provide to it.
+Flow can be static; all the components settings are predefined and no interaction is required from your server.
+Or it can be dynamic; your server can respond to screen actions and determine the next screen to display (or close the flow) and the data to provide to it.
 
 .. note::
 

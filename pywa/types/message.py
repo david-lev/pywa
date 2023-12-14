@@ -140,6 +140,7 @@ class Message(BaseUserUpdate):
         )  # noqa
         return cls(
             _client=client,
+            raw=update,
             id=msg["id"],
             type=MessageType(msg_type),
             **msg_content,

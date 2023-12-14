@@ -52,20 +52,24 @@ class BaseUpdate(abc.ABC):
     """Base class for all update types."""
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
+    raw: dict = dataclasses.field(repr=False, hash=False, compare=False)
 
     @property
     @abc.abstractmethod
     def id(self) -> str:
+        """The id of the update"""
         ...
 
     @property
     @abc.abstractmethod
     def timestamp(self) -> dt.datetime:
+        """The timestamp the update was sent"""
         ...
 
     @classmethod
     @abc.abstractmethod
     def from_update(cls, client: WhatsApp, update: dict) -> BaseUpdate:
+        """Create an update object from a raw update dict."""
         ...
 
     def __hash__(self):

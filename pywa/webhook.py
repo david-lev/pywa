@@ -260,7 +260,9 @@ class Webhook:
                     aes_key,
                     iv,
                 )
-            request = FlowRequest.from_dict(decrypted_request)
+            request = FlowRequest.from_dict(
+                data=decrypted_request, raw_encrypted=payload
+            )
             response = callback(self, request)
             if acknowledge_errors and request.has_error:
                 return (response_encryptor or self._flows_response_encryptor)(
