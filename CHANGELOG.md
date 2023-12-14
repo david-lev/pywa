@@ -3,6 +3,10 @@ Changelog
 
 NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 1.13.0-rc.1 (2023-12-14)
+
+- [flows] Adding beta support for [WhatsApp Flows](https://business.whatsapp.com/products/whatsapp-flows)!
+
 ### 1.12.1 (2023-11-29)
 
 - [filters] adding new filter called `sent_to` to filter updates even if `WhatsApp(..., filter_updates=False)`
