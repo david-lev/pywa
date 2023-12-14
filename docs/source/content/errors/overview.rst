@@ -136,6 +136,7 @@ Base Exception
 .. toctree::
 
     ./sending_messages_errors
+    ./flows_errors
     ./authorization_errors
     ./rate_limit_errors
     ./integrity_errors

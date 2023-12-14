@@ -13,7 +13,7 @@ class WhatsAppError(Exception):
     Base exception for all WhatsApp errors.
 
     - `'Cloud API Error Codes' on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/support/error-codes>`_.
-
+    - `'Flow Error Codes' on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/error-codes>`_.
 
     Attributes:
         error_code: The error code.
@@ -359,3 +359,92 @@ class BusinessPaymentIssue(SendMessageError):
     """Message failed to send because there were one or more errors related to your payment method."""
 
     __error_codes__ = (131042,)
+
+
+# ====================================================================================================
+
+
+class FlowError(WhatsAppError):
+    """
+    Base exception for all flow errors.
+
+     Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/error-codes>`_.
+    """
+
+    __error_codes__ = None
+
+
+class FlowInvalidError(FlowError):
+    """
+    Flow is invalid.
+
+    - Flow name is not unique
+    - Invalid Flow JSON version
+    - Invalid Flow JSON data_api_version
+    - Flow with specified ID does not exist
+    - Only one clone source can be set
+    - Specify Endpoint Uri in Flow JSON
+    - Invalid Endpoint URI
+    """
+
+    __error_codes__ = (100,)
+
+
+class FlowBlockedByIntegrity(FlowError):
+    """Unfortunately, we've identified an issue with integrity in your account and have prevented you from creating
+    or publishing your Flow."""
+
+    __error_codes__ = (139000,)
+
+
+class FlowUpdatingError(FlowError):
+    """
+    Flow failed to update
+
+    - Flow can't be updated (You attempted to update a Flow that has already been published.)
+    - Error while processing Flow JSON.
+    - Specify Endpoint Uri in Flow JSON (You provided endpoint_uri param for a Flow with Flow JSON version below 3.0.)
+    """
+
+    __error_codes__ = (139001,)
+
+
+class FlowPublishingError(FlowError):
+    """
+    Flow failed to publish.
+
+    - Publishing Flow in invalid state
+    - Publishing Flow with validation errors
+    - Publishing Flow without data_channel_uri
+    - Publishing without specifying endpoint_uri is forbidden
+      (Starting from Flow JSON version 3.0 endpoint_uri should be specified via API.)
+    - Versions in Flow JSON file are not available for publishing
+    - No Phone Number connected to WhatsApp Business Account
+    - Missing Flows Signed Public Key
+    - No Application Connected to the Flow
+    - Endpoint Not Available
+    - WhatsApp Business Account is not subscribed to Flows Webhooks
+    """
+
+    __error_codes__ = (139002,)
+
+
+class FlowDeprecatingError(FlowError):
+    """
+    Flow failed to deprecate.
+
+    - Can't deprecate unpublished flow
+    - Flow is already deprecated
+    """
+
+    __error_codes__ = (139003,)
+
+
+class FlowDeletingError(FlowError):
+    """
+    Flow failed to delete.
+
+    - Can't delete published Flow
+    """
+
+    __error_codes__ = (139004,)
