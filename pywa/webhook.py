@@ -54,6 +54,7 @@ class Webhook:
             self._server = None
             return
         self._server = server
+        self._webhook_endpoint = webhook_endpoint
         self._private_key = business_private_key
         self._private_key_password = business_private_key_password
         self._flows_request_decryptor = flows_request_decryptor
@@ -71,14 +72,14 @@ class Webhook:
         if utils.is_flask_app(self._server):
             import flask
 
-            @self._server.route(webhook_endpoint, methods=["GET"])
+            @self._server.route(self._webhook_endpoint, methods=["GET"])
             @utils.rename_func(f"({self.phone_id})")
             def challenge() -> tuple[str, int]:
                 if flask.request.args.get(hub_vt) == verify_token:
                     return flask.request.args.get(hub_ch), 200
                 return "Error, invalid verification token", 403
 
-            @self._server.route(webhook_endpoint, methods=["POST"])
+            @self._server.route(self._webhook_endpoint, methods=["POST"])
             @utils.rename_func(f"({self.phone_id})")
             def webhook() -> tuple[str, int]:
                 threading.Thread(
@@ -90,7 +91,7 @@ class Webhook:
         elif utils.is_fastapi_app(self._server):
             import fastapi
 
-            @self._server.get(webhook_endpoint)
+            @self._server.get(self._webhook_endpoint)
             @utils.rename_func(f"({self.phone_id})")
             def challenge(
                 vt: str = fastapi.Query(..., alias=hub_vt),
@@ -103,7 +104,7 @@ class Webhook:
                     status_code=403,
                 )
 
-            @self._server.post(webhook_endpoint)
+            @self._server.post(self._webhook_endpoint)
             @utils.rename_func(f"({self.phone_id})")
             def webhook(payload: dict = fastapi.Body(...)):
                 threading.Thread(target=self._call_handlers, args=(payload,)).start()
@@ -132,7 +133,7 @@ class Webhook:
                     if not self.api.set_callback_url(
                         app_id=app_id,
                         app_access_token=app_access_token["access_token"],
-                        callback_url=f"{callback_url}/{webhook_endpoint}",
+                        callback_url=f"{callback_url}/{self._webhook_endpoint}",
                         verify_token=verify_token,
                         fields=tuple(
                             fields or Handler.__fields_to_subclasses__().keys()
@@ -234,6 +235,10 @@ class Webhook:
         if not response_encryptor and not self._flows_response_encryptor:
             raise ValueError(
                 "A response encryptor must be provided in order to encrypt outgoing responses."
+            )
+        if endpoint == self._webhook_endpoint:
+            raise ValueError(
+                "The flow endpoint cannot be the same as the webhook endpoint."
             )
 
         def flow_endpoint(payload: dict) -> str:
