@@ -760,7 +760,7 @@ class HandlerDecorators:
 
         return decorator
 
-    def on_flow_data_exchange_request(
+    def on_flow_request(
         self: WhatsApp,
         endpoint: str,
         *,
@@ -780,10 +780,23 @@ class HandlerDecorators:
         """
         Decorator to register a function to handle and respond to incoming Flow Data Exchange requests.
 
-        - Shortcut for :func:`~pywa.client.WhatsApp.register_flow_endpoint_callback`.
+        Example:
+
+            >>> from pywa import WhatsApp
+            >>> wa = WhatsApp(..., business_private_key='...')
+            >>> @wa.on_flow_request('/feedback_flow')
+            ... def feedback_flow_handler(_: WhatsApp, flow: FlowRequest) -> FlowResponse:
+            ...     return FlowResponse(
+            ...         version=flow.version,
+            ...         screen="SURVEY",
+            ...         data={
+            ...             "default_text": "Please rate your experience with our service",
+            ...             "text_required": True
+            ...         }
+            ...     )
 
         Args:
-            endpoint: The endpoint to listen to.
+            endpoint: The endpoint to listen to (The data_channel_uri provided when creating the flow).
             acknowledge_errors: Whether to acknowledge errors (It will be ignore from the callback return value and
              the pywa will acknowledge the error automatically).
             handle_health_check: Whether to handle health checks (The callback will not be called for health checks).
@@ -793,11 +806,11 @@ class HandlerDecorators:
             response_encryptor: The function to use to encrypt the responses (Override the global ``flows_response_encryptor``)
         """
 
-        @functools.wraps(self.on_flow_data_exchange_request)
+        @functools.wraps(self.on_flow_request)
         def decorator(
             callback: Callable[[WhatsApp, FlowRequest], FlowResponse | dict],
         ) -> Callable[[WhatsApp, FlowRequest], FlowResponse | dict]:
-            self.register_flow_endpoint_callback(
+            self._register_flow_endpoint_callback(
                 endpoint=endpoint,
                 callback=callback,
                 acknowledge_errors=acknowledge_errors,

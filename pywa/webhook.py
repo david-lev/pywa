@@ -208,16 +208,16 @@ class Webhook:
 
         return Handler.__fields_to_subclasses__().get(field)
 
-    def register_flow_endpoint_callback(
+    def _register_flow_endpoint_callback(
         self: WhatsApp,
         endpoint: str,
         callback: Callable[[WhatsApp, FlowRequest], FlowResponse | dict],
-        acknowledge_errors: bool = True,
-        handle_health_check: bool = True,
-        private_key: str | None = None,
-        private_key_password: str | None = None,
-        request_decryptor: utils.FlowRequestDecryptor | None = None,
-        response_encryptor: utils.FlowResponseEncryptor | None = None,
+        acknowledge_errors: bool,
+        handle_health_check: bool,
+        private_key: str | None,
+        private_key_password: str | None,
+        request_decryptor: utils.FlowRequestDecryptor | None,
+        response_encryptor: utils.FlowResponseEncryptor | None,
     ) -> None:
         if self._server is None:
             raise ValueError(
