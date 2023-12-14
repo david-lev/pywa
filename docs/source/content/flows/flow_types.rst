@@ -6,6 +6,8 @@ Flow Types
 .. autoclass:: FlowRequest()
     :members: has_error, is_health_check
 
+.. autoclass:: FlowRequestActionType()
+
 .. autoclass:: FlowResponse()
 
 .. autoclass:: FlowCategory()
@@ -20,6 +22,10 @@ Flow Types
 .. autoclass:: FlowValidationError()
 
 .. autoclass:: FlowAsset()
+
+.. autoclass:: FlowTokenNoLongerValid()
+
+.. autoclass:: FlowRequestSignatureAuthenticationFailed()
 
 .. currentmodule:: pywa.utils
 

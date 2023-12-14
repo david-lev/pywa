@@ -22,6 +22,11 @@ from pywa.handlers import (
 )
 from pywa.types import MessageType, FlowRequest, FlowResponse
 from pywa.types.base_update import BaseUpdate, StopHandling  # noqa
+from pywa.types.flows import (
+    FlowRequestCannotBeDecrypted,
+    FlowResponseError,  # noqa
+    FlowTokenNoLongerValid,
+)
 from pywa.utils import FastAPI, Flask
 
 if TYPE_CHECKING:
@@ -219,6 +224,7 @@ class Webhook:
         request_decryptor: utils.FlowRequestDecryptor | None,
         response_encryptor: utils.FlowResponseEncryptor | None,
     ) -> None:
+        """Internal function to register a flow endpoint callback."""
         if self._server is None:
             raise ValueError(
                 "You must initialize the WhatsApp client with an web server"
@@ -241,29 +247,45 @@ class Webhook:
                 "The flow endpoint cannot be the same as the webhook endpoint."
             )
 
-        def flow_endpoint(payload: dict) -> str:
-            decrypted_request, aes_key, iv = (
-                request_decryptor or self._flows_request_decryptor
-            )(
-                payload["encrypted_flow_data"],
-                payload["encrypted_aes_key"],
-                payload["initial_vector"],
-                private_key or self._private_key,
-                private_key_password or self._private_key_password,
-            )
-            if handle_health_check and decrypted_request["action"] == "ping":
-                return (response_encryptor or self._flows_response_encryptor)(
-                    {
-                        "version": decrypted_request["version"],
-                        "data": {"status": "active"},
-                    },
-                    aes_key,
-                    iv,
+        def flow_endpoint(payload: dict) -> tuple[str, int]:
+            """The actual registered endpoint callback. returns response, status code"""
+            try:
+                decrypted_request, aes_key, iv = (
+                    request_decryptor or self._flows_request_decryptor
+                )(
+                    payload["encrypted_flow_data"],
+                    payload["encrypted_aes_key"],
+                    payload["initial_vector"],
+                    private_key or self._private_key,
+                    private_key_password or self._private_key_password,
                 )
+                if handle_health_check and decrypted_request["action"] == "ping":
+                    return (response_encryptor or self._flows_response_encryptor)(
+                        {
+                            "version": decrypted_request["version"],
+                            "data": {"status": "active"},
+                        },
+                        aes_key,
+                        iv,
+                    ), 200
+            except Exception as e:
+                _logger.exception(e)
+                return "Decryption failed", FlowRequestCannotBeDecrypted.status_code
             request = FlowRequest.from_dict(
                 data=decrypted_request, raw_encrypted=payload
             )
-            response = callback(self, request)
+            try:
+                response = callback(self, request)
+                if isinstance(response, FlowResponseError):
+                    raise response
+            except FlowTokenNoLongerValid as e:
+                return (
+                    """{"error_msg": %s}""" % e.error_message,
+                    FlowTokenNoLongerValid.status_code,
+                )
+            except FlowResponseError as e:
+                return e.__class__.__name__, e.status_code
+
             if acknowledge_errors and request.has_error:
                 return (response_encryptor or self._flows_response_encryptor)(
                     {
@@ -274,7 +296,7 @@ class Webhook:
                     },
                     aes_key,
                     iv,
-                )
+                ), 200
             if not isinstance(response, (FlowResponse | dict)):
                 raise ValueError(
                     f"Flow endpoint callback must return a FlowResponse or dict, not {type(response)}"
@@ -283,7 +305,7 @@ class Webhook:
                 response.to_dict() if isinstance(response, FlowResponse) else response,
                 aes_key,
                 iv,
-            )
+            ), 200
 
         if utils.is_flask_app(self._server):
             import flask
@@ -291,7 +313,7 @@ class Webhook:
             @self._server.route(endpoint, methods=["POST"])
             @utils.rename_func(f"({endpoint})")
             def flow() -> tuple[str, int]:
-                return flow_endpoint(flask.request.json), 200
+                return flow_endpoint(flask.request.json)
 
         elif utils.is_fastapi_app(self._server):
             import fastapi
@@ -299,7 +321,8 @@ class Webhook:
             @self._server.post(endpoint)
             @utils.rename_func(f"({endpoint})")
             def flow(payload: dict = fastapi.Body(...)):
+                response, status_code = flow_endpoint(payload)
                 return fastapi.Response(
-                    content=flow_endpoint(payload),
-                    status_code=200,
+                    content=response,
+                    status_code=status_code,
                 )

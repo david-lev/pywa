@@ -27,6 +27,9 @@ __all__ = [
     "FlowCompletion",
     "FlowRequest",
     "FlowResponse",
+    "FlowRequestCannotBeDecrypted",
+    "FlowRequestSignatureAuthenticationFailed",
+    "FlowTokenNoLongerValid",
     "FlowCategory",
     "FlowDetails",
     "FlowStatus",
@@ -233,6 +236,53 @@ class FlowResponse:
                 }
             },
         }
+
+
+class FlowResponseError(Exception):
+    """Base class for all flow response errors"""
+
+    status_code: int
+
+
+class FlowRequestCannotBeDecrypted(FlowResponseError):
+    """
+    - The payload cannot be decrypted due to a private key being updated by your business.
+
+    - This error is returned automatically by pywa when the request cannot be decrypted.
+      The exception from the decryption function will still be logged.
+
+    - The WhatsApp client will re-fetch a public key and re-send the request.
+      If the request fails, an error modal appears with an acknowledge button which directs the user back
+      to your chat thread.
+    """
+
+    status_code = 421
+
+
+class FlowRequestSignatureAuthenticationFailed(FlowResponseError):
+    """
+    This exception need to be returned or raised from the flow endpoint callback when the request signature authentication fails.
+
+    - A generic error will be shown on the client.
+    """
+
+    status_code = 432
+
+
+class FlowTokenNoLongerValid(FlowResponseError):
+    """
+    This exception need to be returned or raised from the flow endpoint callback when the Flow token is no longer valid.
+
+    - The layout will be closed and the ``FlowButton`` will be disabled for the user.
+      You can send a new message to the user generating a new Flow token.
+      This action may be used to prevent users from initiating the same Flow again.
+    - You are able to set an error message to display to the user. e.g. “The order has already been placed”
+    """
+
+    status_code = 427
+
+    def __init__(self, error_message: str):
+        self.error_message = error_message
 
 
 class FlowStatus(utils.StrEnum):
