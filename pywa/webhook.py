@@ -5,11 +5,10 @@ from __future__ import annotations
 
 __all__ = ["Webhook"]
 
-import collections
 import logging
 import threading
 import time
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Callable
 
 from pywa import utils
 from pywa.errors import WhatsAppError
@@ -74,14 +73,14 @@ class Webhook:
 
             @self._server.route(webhook_endpoint, methods=["GET"])
             @utils.rename_func(f"({self.phone_id})")
-            def challenge():
+            def challenge() -> tuple[str, int]:
                 if flask.request.args.get(hub_vt) == verify_token:
                     return flask.request.args.get(hub_ch), 200
                 return "Error, invalid verification token", 403
 
             @self._server.route(webhook_endpoint, methods=["POST"])
             @utils.rename_func(f"({self.phone_id})")
-            def webhook():
+            def webhook() -> tuple[str, int]:
                 threading.Thread(
                     target=self._call_handlers,
                     args=(flask.request.json,),
@@ -123,7 +122,7 @@ class Webhook:
 
             # This is a non-blocking function that registers the callback URL.
             # It must be called after the server is running so that the challenge can be verified.
-            def register_callback_url():
+            def register_callback_url() -> None:
                 if verify_timeout is not None and verify_timeout > _VERIFY_TIMEOUT_SEC:
                     time.sleep(verify_timeout - _VERIFY_TIMEOUT_SEC)
                 try:
@@ -166,8 +165,11 @@ class Webhook:
 
     def _get_handler(self: WhatsApp, update: dict) -> type[Handler] | None:
         """Get the handler for the given update."""
-        field = update["entry"][0]["changes"][0]["field"]
-        value = update["entry"][0]["changes"][0]["value"]
+        try:
+            field = update["entry"][0]["changes"][0]["field"]
+            value = update["entry"][0]["changes"][0]["value"]
+        except (KeyError, IndexError):  # this endpoint got non-expected data
+            raise ValueError(f"Invalid update: {update}")
 
         # The `messages` field needs to be handled differently because it can be a message, button, selection, or status
         # This check must return handler or None *BEFORE* getting the handler from the dict!!
@@ -215,7 +217,7 @@ class Webhook:
         private_key_password: str | None = None,
         request_decryptor: utils.FlowRequestDecryptor | None = None,
         response_encryptor: utils.FlowResponseEncryptor | None = None,
-    ):
+    ) -> None:
         if self._server is None:
             raise ValueError(
                 "You must initialize the WhatsApp client with an web server"
@@ -235,30 +237,27 @@ class Webhook:
             )
 
         def flow_endpoint(payload: dict) -> str:
-            # noinspection PyArgumentList
             decrypted_request, aes_key, iv = (
                 request_decryptor or self._flows_request_decryptor
             )(
-                encrypted_flow_data_b64=payload["encrypted_flow_data"],
-                encrypted_aes_key_b64=payload["encrypted_aes_key"],
-                initial_vector_b64=payload["initial_vector"],
-                private_key=private_key or self._private_key,
-                password=private_key_password or self._private_key_password,
+                payload["encrypted_flow_data"],
+                payload["encrypted_aes_key"],
+                payload["initial_vector"],
+                private_key or self._private_key,
+                private_key_password or self._private_key_password,
             )
             if handle_health_check and decrypted_request["action"] == "ping":
-                # noinspection PyArgumentList
                 return (response_encryptor or self._flows_response_encryptor)(
-                    response={
+                    {
                         "version": decrypted_request["version"],
                         "data": {"status": "active"},
                     },
-                    aes_key=aes_key,
-                    iv=iv,
+                    aes_key,
+                    iv,
                 )
             request = FlowRequest.from_dict(decrypted_request)
             response = callback(self, request)
             if acknowledge_errors and request.has_error:
-                # noinspection PyArgumentList
                 return (response_encryptor or self._flows_response_encryptor)(
                     {
                         "version": request.version,
@@ -266,20 +265,17 @@ class Webhook:
                             "acknowledged": True,
                         },
                     },
-                    aes_key=aes_key,
-                    iv=iv,
+                    aes_key,
+                    iv,
                 )
             if not isinstance(response, (FlowResponse | dict)):
                 raise ValueError(
                     f"Flow endpoint callback must return a FlowResponse or dict, not {type(response)}"
                 )
-            # noinspection PyArgumentList
             return (response_encryptor or self._flows_response_encryptor)(
-                response=response.to_dict()
-                if isinstance(response, FlowResponse)
-                else response,
-                aes_key=aes_key,
-                iv=iv,
+                response.to_dict() if isinstance(response, FlowResponse) else response,
+                aes_key,
+                iv,
             )
 
         if utils.is_flask_app(self._server):
@@ -287,7 +283,7 @@ class Webhook:
 
             @self._server.route(endpoint, methods=["POST"])
             @utils.rename_func(f"({endpoint})")
-            def flow():
+            def flow() -> tuple[str, int]:
                 return flow_endpoint(flask.request.json), 200
 
         elif utils.is_fastapi_app(self._server):
