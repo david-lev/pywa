@@ -3,6 +3,11 @@ Changelog
 
 NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 1.13.0-rc.3 (2023-12-15)
+
+- [errors] adding flows specific errors
+- [flows] allow to `@on_flow_request` callbacks to return or raise `FlowResponseError` subclasses
+
 ### 1.13.0-rc.2 (2023-12-14)
 
 - [base_update] adding `.raw` attr to hold the original update

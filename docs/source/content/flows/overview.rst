@@ -10,7 +10,7 @@
     The ``Flows`` in pywa are still in beta and not fully tested.
     Install the RC version of pywa to use it:
 
-    >>> pip3 install "pywa[cryptography]==1.13.0rc2"
+    >>> pip3 install "pywa[cryptography]==1.13.0rc3"
 
     The ``cryptography`` extra is required for the default implementation of the decryption and encryption of the flow requests and responses.
 
@@ -814,6 +814,9 @@ We need to provide our business private key to decrypt the request and encrypt t
 
 After that. we are registering a callback function to handle the request.
 The callback function will receive the :class:`FlowRequest` object and should return :class:`FlowResponse` object.
+
+        A callback function can be return or raise :class:`FlowTokenNoLongerValid` or :class:`FlowRequestSignatureAuthenticationFailed`
+        to indicate that the flow token is no longer valid or the request signature authentication failed.
 
 In our example, we returning our dynamic data to the ``DETAILS`` screen.
 
