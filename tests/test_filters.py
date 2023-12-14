@@ -230,6 +230,7 @@ FILTERS: dict[
             (same, fil.template_status.on_event(TemplateStatus.TemplateEvent.APPROVED))
         ],
     },
+    "flow_completion": {"completion": []},
 }
 
 RANDOM_API_VER = random.choice(API_VERSIONS)

@@ -12,6 +12,7 @@ from .callback import (
     Section,
     SectionList,
     SectionRow,
+    FlowButton,
 )
 from .media import MediaUrlResponse
 from .message import Message
@@ -43,4 +44,13 @@ from .template import (
     Template,
     TemplateResponse,
     TemplateStatus,
+)
+
+from .flows import (
+    FlowCompletion,
+    FlowRequest,
+    FlowResponse,
+    FlowJSON,
+    FlowActionType,
+    FlowStatus,
 )

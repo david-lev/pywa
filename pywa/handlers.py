@@ -11,6 +11,7 @@ __all__ = [
     "RawUpdateHandler",
     "MessageStatusHandler",
     "TemplateStatusHandler",
+    "FlowCompletionHandler",
 ]
 
 import abc
@@ -24,12 +25,15 @@ from pywa.types import (
     Message,
     MessageStatus,
     TemplateStatus,
+    FlowRequest,
+    FlowResponse,
 )
 from pywa.types.callback import CallbackData
+from pywa.types.flows import FlowCompletion
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
-    from pywa.types.base_update import BaseUpdate
+    from pywa.types.base_update import BaseUpdate  # noqa
 
 
 CallbackDataFactoryT = TypeVar(
@@ -205,11 +209,14 @@ class Handler(abc.ABC):
         **IMPORTANT:** This function is cached, so if you subclass `Handler` after calling this function, the new class
         will not be included in the returned dict.
         """
-        return {
-            h.__field_name__: h
-            for h in Handler.__subclasses__()
-            if h.__field_name__ is not None
-        }
+        return cast(
+            dict[str, Handler],
+            {
+                h.__field_name__: h
+                for h in Handler.__subclasses__()
+                if h.__field_name__ is not None
+            },
+        )
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}(callback={self.callback!r}, filters={self.filters!r})"
@@ -408,6 +415,36 @@ class TemplateStatusHandler(Handler):
         self,
         callback: Callable[[WhatsApp, TemplateStatus], Any],
         *filters: Callable[[WhatsApp, TemplateStatus], bool],
+    ):
+        super().__init__(callback, *filters)
+
+
+class FlowCompletionHandler(Handler):
+    """
+    Handler for :class:`pywa.types.FlowCompletion` updates (Flow is completed).
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_flow_completion` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_flow = lambda _, flow: print(flow)
+        >>> wa.add_handlers(FlowCompletionHandler(print_flow)
+
+    Args:
+        callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a
+            :class:`pywa.types.Flow` as arguments)
+
+    """
+
+    __field_name__ = "messages"
+    __update_constructor__ = FlowCompletion.from_update
+
+    def __init__(
+        self,
+        callback: Callable[[WhatsApp, FlowCompletion], Any],
+        *filters: Callable[[WhatsApp, FlowCompletion], bool],
     ):
         super().__init__(callback, *filters)
 
@@ -684,6 +721,105 @@ class HandlerDecorators:
             callback: Callable[[WhatsApp, TemplateStatus], Any],
         ) -> Callable[[WhatsApp, TemplateStatus], Any]:
             self.add_handlers(TemplateStatusHandler(callback, *filters))
+            return callback
+
+        return decorator
+
+    def on_flow_completion(
+        self: WhatsApp,
+        *filters: Callable[[WhatsApp, FlowCompletion], bool],
+    ) -> Callable[
+        [Callable[[WhatsApp, FlowCompletion], Any]],
+        Callable[[WhatsApp, FlowCompletion], Any],
+    ]:
+        """
+        Decorator to register a function as a callback for :class:`pywa.types.FlowCompletion` updates (Flow is completed).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`FlowCompletionHandler`.
+
+        Example:
+
+            >>> from pywa.types import FlowCompletion
+            >>> from pywa import filters as fil
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_flow_completion()
+            ... def flow_handler(client: WhatsApp, flow: FlowCompletion):
+            ...     print(f"Flow {flow.token} just got completed!. Flow data: {flow.response}")
+
+        Args:
+            *filters: Filters to apply to the incoming flow completion (filters are function that take a
+                :class:`pywa.WhatsApp` instance and the incoming :class:`pywa.types.FlowCompletion` and return :class:`bool`).
+        """
+
+        @functools.wraps(self.on_flow_completion)
+        def decorator(
+            callback: Callable[[WhatsApp, FlowCompletion], Any],
+        ) -> Callable[[WhatsApp, FlowCompletion], Any]:
+            self.add_handlers(FlowCompletionHandler(callback, *filters))
+            return callback
+
+        return decorator
+
+    def on_flow_request(
+        self: WhatsApp,
+        endpoint: str,
+        *,
+        acknowledge_errors: bool = True,
+        handle_health_check: bool = True,
+        private_key: str | None = None,
+        private_key_password: str | None = None,
+        request_decryptor: Callable[
+            [str, str, str, str, str | None], tuple[dict, bytes, bytes]
+        ]
+        | None = None,
+        response_encryptor: Callable[[dict, bytes, bytes], str] | None = None,
+    ) -> Callable[
+        [Callable[[WhatsApp, FlowRequest], FlowResponse | dict]],
+        Callable[[WhatsApp, FlowRequest], FlowResponse | dict],
+    ]:
+        """
+        Decorator to register a function to handle and respond to incoming Flow Data Exchange requests.
+
+        Example:
+
+            >>> from pywa import WhatsApp
+            >>> wa = WhatsApp(..., business_private_key='...')
+            >>> @wa.on_flow_request('/feedback_flow')
+            ... def feedback_flow_handler(_: WhatsApp, flow: FlowRequest) -> FlowResponse:
+            ...     return FlowResponse(
+            ...         version=flow.version,
+            ...         screen="SURVEY",
+            ...         data={
+            ...             "default_text": "Please rate your experience with our service",
+            ...             "text_required": True
+            ...         }
+            ...     )
+
+        Args:
+            endpoint: The endpoint to listen to (The data_channel_uri provided when creating the flow).
+            acknowledge_errors: Whether to acknowledge errors (It will be ignore from the callback return value and
+             the pywa will acknowledge the error automatically).
+            handle_health_check: Whether to handle health checks (The callback will not be called for health checks).
+            private_key: The private key to use to decrypt the requests (Override the global ``business_private_key``).
+            private_key_password: The password to use to decrypt the private key (Override the global ``business_private_key_password``).
+            request_decryptor: The function to use to decrypt the requests (Override the global ``flows_request_decryptor``)
+            response_encryptor: The function to use to encrypt the responses (Override the global ``flows_response_encryptor``)
+        """
+
+        @functools.wraps(self.on_flow_request)
+        def decorator(
+            callback: Callable[[WhatsApp, FlowRequest], FlowResponse | dict],
+        ) -> Callable[[WhatsApp, FlowRequest], FlowResponse | dict]:
+            self._register_flow_endpoint_callback(
+                endpoint=endpoint,
+                callback=callback,
+                acknowledge_errors=acknowledge_errors,
+                handle_health_check=handle_health_check,
+                private_key=private_key,
+                private_key_password=private_key_password,
+                request_decryptor=request_decryptor,
+                response_encryptor=response_encryptor,
+            )
             return callback
 
         return decorator

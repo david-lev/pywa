@@ -8,3 +8,7 @@ Others
 .. autoclass:: CommerceSettings()
 
 .. autoclass:: Industry()
+
+.. autoclass:: WhatsAppBusinessAccount()
+
+.. autoclass:: FacebookApplication()

@@ -68,6 +68,12 @@ TYPES: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
     "template_status": {
         "approved": [lambda s: s.event == TemplateStatus.TemplateEvent.APPROVED],
     },
+    "flow_completion": {
+        "completion": [
+            lambda f: f.token is not None,
+            lambda f: "flow_token" in f.response,
+        ],
+    },
 }
 
 

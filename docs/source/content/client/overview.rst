@@ -43,9 +43,20 @@ The available methods are:
      - :meth:`~WhatsApp.upload_media`,
        :meth:`~WhatsApp.download_media`,
        :meth:`~WhatsApp.get_media_url`
+   * - Templates
+     - :meth:`~WhatsApp.create_template`
+   * - Flows
+     - :meth:`~WhatsApp.create_flow`,
+       :meth:`~WhatsApp.update_flow_metadata`,
+       :meth:`~WhatsApp.update_flow_json`,
+       :meth:`~WhatsApp.publish_flow`,
+       :meth:`~WhatsApp.delete_flow`,
+       :meth:`~WhatsApp.deprecate_flow`,
+       :meth:`~WhatsApp.get_flow`,
+       :meth:`~WhatsApp.get_flows`,
+       :meth:`~WhatsApp.get_flow_assets`
    * - Business profile
-     - :meth:`~WhatsApp.create_template`,
-       :meth:`~WhatsApp.get_business_profile`,
+     - :meth:`~WhatsApp.get_business_profile`,
        :meth:`~WhatsApp.update_business_profile`
    * - Commerce
      - :meth:`~WhatsApp.get_commerce_settings`,

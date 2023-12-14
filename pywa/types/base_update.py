@@ -18,7 +18,7 @@ from .others import Contact, Metadata, ProductsSection, User
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
 
-    from .callback import Button, ButtonUrl, SectionList
+    from .callback import Button, ButtonUrl, SectionList, FlowButton
     from .template import Template
 
 
@@ -133,7 +133,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         text: str,
         header: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | SectionList | None = None,
+        buttons: Iterable[Button] | ButtonUrl | FlowButton | SectionList | None = None,
         quote: bool = False,
         preview_url: bool = False,
         keyboard: None = None,
@@ -236,7 +236,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         caption: str | None = None,
         body: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | None = None,
+        buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         quote: bool = False,
         mime_type: str | None = None,
     ) -> str:
@@ -285,7 +285,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         caption: str | None = None,
         body: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | None = None,
+        buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         quote: bool = False,
         mime_type: str | None = None,
     ) -> str:
@@ -336,7 +336,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         caption: str | None = None,
         body: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | None = None,
+        buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         quote: bool = False,
         mime_type: str | None = None,
     ) -> str:

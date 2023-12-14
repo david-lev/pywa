@@ -4,15 +4,18 @@ from __future__ import annotations
 
 __all__ = ["WhatsApp"]
 
+import collections
 import hashlib
+import json
 import mimetypes
 import os
 import pathlib
 import warnings
-from typing import BinaryIO, Iterable, Literal
+from typing import BinaryIO, Iterable, Literal, Callable, Any
 
 import requests
 
+from pywa import utils
 from pywa.api import WhatsAppCloudApi
 from pywa.handlers import Handler, HandlerDecorators  # noqa
 from pywa.types import (
@@ -29,6 +32,15 @@ from pywa.types import (
     SectionList,
     Template,
     TemplateResponse,
+    FlowButton,
+)
+from pywa.types.base_update import BaseUpdate
+from pywa.types.flows import (
+    FlowCategory,
+    FlowJSON,
+    FlowDetails,
+    FlowValidationError,
+    FlowAsset,
 )
 from pywa.utils import FastAPI, Flask
 from pywa.webhook import Webhook
@@ -54,6 +66,10 @@ class WhatsApp(Webhook, HandlerDecorators):
         app_id: int | None = None,
         app_secret: str | None = None,
         verify_timeout: int | None = None,
+        business_private_key: str | None = None,
+        business_private_key_password: str | None = None,
+        flows_request_decryptor: utils.FlowRequestDecryptor = utils.default_flow_request_decryptor,
+        flows_response_encryptor: utils.FlowResponseEncryptor = utils.default_flow_response_encryptor,
     ) -> None:
         """
         The WhatsApp client.
@@ -111,7 +127,7 @@ class WhatsApp(Webhook, HandlerDecorators):
              or for multiple WhatsApp clients, you can change this to avoid conflicts).
             filter_updates: Whether to filter out user updates that are not sent to this phone_id (default: ``True``, does
              not apply to raw updates or updates that are not user-related).
-            business_account_id: The business account ID that owns the app (optional, required for some API
+            business_account_id: The WhatsApp business account ID that owns the phone ID (optional, required for some API
              methods).
         """
         if not phone_id or not token:
@@ -129,7 +145,12 @@ class WhatsApp(Webhook, HandlerDecorators):
             base_url=base_url,
             api_version=float(api_version),
         )
-        self._handlers = None
+
+        self._handlers: dict[
+            type[Handler] | None,
+            list[Callable[[WhatsApp, BaseUpdate | dict], Any]],
+        ] = collections.defaultdict(list)
+
         super().__init__(
             server=server,
             webhook_endpoint=webhook_endpoint,
@@ -139,6 +160,10 @@ class WhatsApp(Webhook, HandlerDecorators):
             app_secret=app_secret,
             verify_token=verify_token,
             verify_timeout=verify_timeout,
+            business_private_key=business_private_key,
+            business_private_key_password=business_private_key_password,
+            flows_request_decryptor=flows_request_decryptor,
+            flows_response_encryptor=flows_response_encryptor,
         )
 
     def __str__(self) -> str:
@@ -173,7 +198,7 @@ class WhatsApp(Webhook, HandlerDecorators):
             ...     CallbackButtonHandler(print_message),
             ... )
         """
-        if self._handlers is None:
+        if self._server is None:
             raise ValueError(
                 "You must initialize the WhatsApp client with an web server"
                 " (Flask or FastAPI) in order to handle incoming updates."
@@ -187,7 +212,7 @@ class WhatsApp(Webhook, HandlerDecorators):
         text: str,
         header: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | SectionList | None = None,
+        buttons: Iterable[Button] | ButtonUrl | SectionList | FlowButton | None = None,
         preview_url: bool = False,
         reply_to_message_id: str | None = None,
         keyboard: None = None,
@@ -210,7 +235,6 @@ class WhatsApp(Webhook, HandlerDecorators):
             >>> wa = WhatsApp(...)
             >>> wa.send_message(
             ...     to="1234567890",
-            ...     header="Hello from PyWa!",
             ...     text="What can I help you with?",
             ...     footer="Powered by PyWa",
             ...     buttons=[
@@ -219,12 +243,26 @@ class WhatsApp(Webhook, HandlerDecorators):
             ...     ],
             ... )
 
+        Example with a button url:
+
+            >>> from pywa.types import ButtonUrl
+            >>> wa = WhatsApp(...)
+            >>> wa.send_message(
+            ...     to="1234567890",
+            ...     text="Hello from PyWa!",
+            ...     footer="Powered by PyWa",
+            ...     buttons=ButtonUrl(
+            ...         title="PyWa GitHub",
+            ...         url="https://github.com/david-lev/pywa",
+            ...     )
+            ... )
+
         Example with a section list:
+
             >>> from pywa.types import SectionList, Section, SectionRow
             >>> wa = WhatsApp(...)
             >>> wa.send_message(
             ...     to="1234567890",
-            ...     header="Hello from PyWa!",
             ...     text="What can I help you with?",
             ...     footer="Powered by PyWa",
             ...     buttons=SectionList(
@@ -256,6 +294,24 @@ class WhatsApp(Webhook, HandlerDecorators):
             ...                 ],
             ...             ),
             ...         ],
+            ...     ),
+            ... )
+
+        Example with a flow button:
+
+            >>> from pywa.types import FlowButton, FlowActionType
+            >>> wa = WhatsApp(...)
+            >>> wa.send_message(
+            ...     to="1234567890",
+            ...     text="We love to get feedback!",
+            ...     footer="Powered by PyWa",
+            ...     buttons=FlowButton(
+            ...         title="Feedback",
+            ...         flow_id="1234567890",
+            ...         flow_token="AQAAAAACS5FpgQ_cAAAAAD0QI3s.",
+            ...         flow_message_version="3",
+            ...         flow_action_type=FlowActionType.NAVIGATE,
+            ...         flow_action_screen="RECOMMENDED"
             ...     ),
             ... )
 
@@ -316,7 +372,7 @@ class WhatsApp(Webhook, HandlerDecorators):
         caption: str | None = None,
         body: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | None = None,
+        buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
     ) -> str:
@@ -393,7 +449,7 @@ class WhatsApp(Webhook, HandlerDecorators):
         caption: str | None = None,
         body: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | None = None,
+        buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
     ) -> str:
@@ -472,7 +528,7 @@ class WhatsApp(Webhook, HandlerDecorators):
         caption: str | None = None,
         body: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | None = None,
+        buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
     ) -> str:
@@ -1227,8 +1283,8 @@ class WhatsApp(Webhook, HandlerDecorators):
         """Internal method to validate that the business account ID was provided."""
         if self.business_account_id is None:
             raise ValueError(
-                "You must provide the business account ID when using this method. "
-                "You can provide it when initializing the client or by setting the business_account_id attribute."
+                "You must provide the WhatsApp business account ID when using this method. "
+                "You can provide it when initializing the client or by setting the `business_account_id` attribute."
             )
 
     def create_template(
@@ -1403,9 +1459,294 @@ class WhatsApp(Webhook, HandlerDecorators):
             reply_to_message_id=reply_to_message_id,
         )["messages"][0]["id"]
 
+    def create_flow(
+        self,
+        name: str,
+        categories: Iterable[FlowCategory | str],
+        clone_flow_id: str | None = None,
+    ) -> str:
+        """
+        Create a flow.
+
+        - New Flows are created in DRAFT status.
+        - To update the flow json, use :py:func:`~pywa.client.WhatsApp.update_flow`.
+        - To send a flow, use :py:func:`~pywa.client.WhatsApp.send_flow`.
+
+        Args:
+            name: The name of the flow.
+            categories: The categories of the flow.
+            clone_flow_id: The flow ID to clone (optional).
+
+        Example:
+
+            >>> from pywa.types.flows import FlowCategory
+            >>> wa = WhatsApp(...)
+            >>> wa.create_flow(
+            ...     name='Feedback',
+            ...     categories=[FlowCategory.SURVEY, FlowCategory.OTHER]
+            ... )
+
+        Returns:
+            The flow ID.
+        """
+        self._validate_business_account_id_provided()
+        return self.api.create_flow(
+            name=name,
+            categories=tuple(map(str, categories)),
+            clone_flow_id=clone_flow_id,
+            business_account_id=self.business_account_id,
+        )["id"]
+
+    def update_flow_metadata(
+        self,
+        flow_id: str | int,
+        *,
+        name: str | None = None,
+        categories: Iterable[FlowCategory | str] | None = None,
+        endpoint_uri: str | None = None,
+    ) -> bool:
+        """
+        Update the metadata of a flow.
+
+        Args:
+            flow_id: The flow ID.
+            name: The name of the flow (optional).
+            categories: The new categories of the flow (optional).
+            endpoint_uri: The URL of the WA FlowJSON Endpoint. Starting from FlowJSON JSON version 3.0 this property should be
+             specified only via API. Do not provide this field if you are cloning a FlowJSON with FlowJSON JSON version below 3.0.
+
+        Example:
+
+            >>> from pywa.types.flows import FlowCategory
+            >>> wa = WhatsApp(...)
+            >>> wa.update_flow_metadata(
+            ...     flow_id='1234567890',
+            ...     name='Feedback',
+            ...     categories=[FlowCategory.SURVEY, FlowCategory.OTHER]
+            ... )
+
+        Returns:
+            Whether the flow was updated.
+
+        Raises:
+            ValueError: If neither ``name`` nor ``categories`` are provided.
+        """
+        if name is None and categories is None and endpoint_uri is None:
+            raise ValueError("At least one argument must be provided")
+        return self.api.update_flow_metadata(
+            flow_id=str(flow_id),
+            name=name,
+            categories=tuple(map(str, categories)) if categories else None,
+            endpoint_uri=endpoint_uri,
+        )["success"]
+
+    def update_flow_json(
+        self,
+        flow_id: str | int,
+        flow_json: FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO,
+    ) -> tuple[bool, tuple[FlowValidationError, ...]]:
+        """
+        Update the json of a flow.
+
+        Args:
+            flow_id: The flow ID.
+            flow_json: The new json of the flow. Can be a FlowJSON object, dict, json string, json file path or json bytes.
+
+        Examples:
+
+            >>> wa = WhatsApp(...)
+
+            - Using a Flow object:
+
+            >>> from pywa.types.flows import *
+            >>> wa.update_flow_json(
+            ...     flow_id='1234567890',
+            ...     flow_json=FlowJSON(version='2.1', screens=[Screen(...)])
+            ... )
+
+            - From a json file path:
+
+            >>> wa.update_flow_json(
+            ...     flow_id='1234567890',
+            ...     flow_json="/home/david/feedback_flow.json"
+            ... )
+
+            - From a json string:
+
+            >>> wa.update_flow_json(
+            ...     flow_id='1234567890',
+            ...     flow_json=\"\"\"{"version": "2.1", "screens": [...]}\"\"\"
+            ... )
+
+
+        Returns:
+            A tuple of (success, validation_errors).
+        """
+        json_str = None
+        to_dump = None
+        if isinstance(flow_json, (str, pathlib.Path)):
+            as_path = pathlib.Path(flow_json)
+            try:
+                if as_path.is_file():
+                    with open(as_path, "r") as f:
+                        json_str = f.read()
+            except OSError:  # file name too long or other OS error
+                pass
+        elif isinstance(flow_json, FlowJSON):
+            to_dump = flow_json.to_dict()
+        elif isinstance(flow_json, dict):
+            to_dump = flow_json
+        elif isinstance(flow_json, bytes):
+            json_str = flow_json.decode()
+
+        if to_dump is not None:
+            json_str = json.dumps(to_dump)
+        res = self.api.update_flow_json(
+            flow_id=str(flow_id), flow_json=json_str or flow_json
+        )
+        return res["success"], tuple(
+            FlowValidationError.from_dict(data) for data in res["validation_errors"]
+        )
+
+    def publish_flow(
+        self,
+        flow_id: str | int,
+    ) -> bool:
+        """
+        This request updates the status of the Flow to "PUBLISHED".
+
+        - This action is not reversible.
+        - The Flow and its assets become immutable once published.
+        - To update the Flow after that, you must create a new Flow. You specify the existing Flow ID as the clone_flow_id parameter while creating to copy the existing flow.
+
+            You can publish your Flow once you have ensured that:
+
+            - All validation errors and publishing checks have been resolved.
+            - The Flow meets the design principles of WhatsApp Flows
+            - The Flow complies with WhatsApp Terms of Service, the WhatsApp Business Messaging Policy and, if applicable, the WhatsApp Commerce Policy
+
+        Args:
+            flow_id: The flow ID.
+
+        Returns:
+            Whether the flow was published.
+        """
+        return self.api.publish_flow(flow_id=str(flow_id))["success"]
+
+    def delete_flow(
+        self,
+        flow_id: str | int,
+    ) -> bool:
+        """
+        While a Flow is in DRAFT status, it can be deleted.
+
+        Args:
+            flow_id: The flow ID.
+
+        Returns:
+            Whether the flow was deleted.
+        """
+        return self.api.delete_flow(flow_id=str(flow_id))["success"]
+
+    def deprecate_flow(
+        self,
+        flow_id: str | int,
+    ) -> bool:
+        """
+        Once a Flow is published, it cannot be modified or deleted, but can be marked as deprecated.
+
+        Args:
+            flow_id: The flow ID.
+
+        Returns:
+            Whether the flow was deprecated.
+        """
+        return self.api.deprecate_flow(flow_id=str(flow_id))["success"]
+
+    @staticmethod
+    def _get_flow_fields(invalidate_preview: bool) -> tuple[str, ...]:
+        """Internal method to get the fields of a flow."""
+        return (
+            "id",
+            "name",
+            "status",
+            "categories",
+            "validation_errors",
+            "json_version",
+            "data_api_version",
+            "data_channel_uri",
+            "preview" if invalidate_preview else "preview.invalidate(false)",
+            "whatsapp_business_account",
+            "application",
+        )
+
+    def get_flow(
+        self,
+        flow_id: str | int,
+        invalidate_preview: bool = True,
+    ) -> FlowDetails:
+        """
+        Get the details of a flow.
+
+        Args:
+            flow_id: The flow ID.
+            invalidate_preview: Whether to invalidate the preview (optional, default: True).
+
+        Returns:
+            The details of the flow.
+        """
+        return FlowDetails.from_dict(
+            data=self.api.get_flow(
+                flow_id=str(flow_id),
+                fields=self._get_flow_fields(invalidate_preview=invalidate_preview),
+            ),
+            client=self,
+        )
+
+    def get_flows(
+        self,
+        invalidate_preview: bool = True,
+    ) -> tuple[FlowDetails, ...]:
+        """
+        Get the details of all flows belonging to the WhatsApp Business account.
+
+        Args:
+            invalidate_preview: Whether to invalidate the preview (optional, default: True).
+
+        Returns:
+            The details of all flows.
+        """
+        return tuple(
+            FlowDetails.from_dict(data=data, client=self)
+            for data in self.api.get_flows(
+                business_account_id=self.business_account_id,
+                fields=self._get_flow_fields(invalidate_preview=invalidate_preview),
+            )["data"]
+        )
+
+    def get_flow_assets(
+        self,
+        flow_id: str | int,
+    ) -> tuple[FlowAsset, ...]:
+        """
+        Get all assets attached to a specified Flow.
+
+        Args:
+            flow_id: The flow ID.
+
+        Returns:
+            The assets of the flow.
+        """
+        return tuple(
+            FlowAsset.from_dict(data)
+            for data in self.api.get_flow_assets(
+                flow_id=str(flow_id),
+            )["data"]
+        )
+
 
 def _resolve_buttons_param(
-    buttons: Iterable[Button] | ButtonUrl | SectionList,
+    buttons: Iterable[Button] | ButtonUrl | FlowButton | SectionList,
 ) -> tuple[str, dict]:
     """
     Internal method to resolve `buttons` parameter. Returns a tuple of (type, buttons).
@@ -1414,7 +1755,9 @@ def _resolve_buttons_param(
         return "list", buttons.to_dict()
     elif isinstance(buttons, ButtonUrl):
         return "cta_url", buttons.to_dict()
-    else:
+    elif isinstance(buttons, FlowButton):
+        return "flow", buttons.to_dict()
+    else:  # assume its a list of buttons
         return "button", {"buttons": tuple(b.to_dict() for b in buttons)}
 
 
