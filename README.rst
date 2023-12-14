@@ -148,8 +148,14 @@ ________________________
 
 .. code-block:: bash
 
-    pip3 install -U pywa[flask]
-    pip3 install -U pywa[fastapi]
+    pip3 install -U "pywa[flask]"
+    pip3 install -U "pywa[fastapi]"
+
+- **If you going to use the Flow features and want to use the default FlowRequestDecryptor and the default FlowResponseEncryptor, here is shortcut to install the required dependencies:**
+
+.. code-block:: bash
+
+    pip3 install -U "pywa[cryptography]"
 
 .. end-installation
 
@@ -167,7 +173,6 @@ See the `Documentation <https://pywa.readthedocs.io/>`_ for detailed instruction
 ☑️ **TODO**
 ------------
 
-- Add support for Flows
 - Add support for async
 - Add support for more web frameworks (``Django``, ``Starlette``, etc.)
 - Add support for more types of updates (``account_alerts``, ``phone_number_quality_updates``, ``template_category_updates``, etc.)
