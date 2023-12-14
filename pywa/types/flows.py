@@ -1,3 +1,5 @@
+"""This module contains the types related to WhatsApp Flows."""
+
 from __future__ import annotations
 
 import abc

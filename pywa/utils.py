@@ -7,10 +7,6 @@ import enum
 import importlib
 from typing import Any, Callable, Protocol, TypeVar
 
-from cryptography.hazmat.primitives.asymmetric.padding import OAEP, MGF1, hashes
-from cryptography.hazmat.primitives.ciphers import algorithms, Cipher, modes
-from cryptography.hazmat.primitives.serialization import load_pem_private_key
-
 
 def is_fastapi_app(app):
     """Check if the app is a FastAPI app."""
@@ -98,6 +94,8 @@ def default_flow_request_decryptor(
     """
     The default decryption function for WhatsApp Flow.
 
+    - This implementation requires ``cryptography`` to be installed.
+    - To install it, run ``pip3 install 'pywa[cryptography]'`` or ``pip3 install cryptography``.
     - This implementation was taken from the official documentation at
       `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/guides/implementingyourflowendpoint#python-django-example>`_.
 
@@ -107,6 +105,16 @@ def default_flow_request_decryptor(
         aes_key: AES key you should use to encrypt the response
         iv: initial vector you should use to encrypt the response
     """
+    try:
+        from cryptography.hazmat.primitives.asymmetric.padding import OAEP, MGF1, hashes
+        from cryptography.hazmat.primitives.ciphers import algorithms, Cipher, modes
+        from cryptography.hazmat.primitives.serialization import load_pem_private_key
+    except ImportError as e:
+        raise ImportError(
+            "You need to install `cryptography` to use the default FlowRequestDecryptor.\n"
+            "- To install it, run `pip3 install 'pywa[cryptography]'` or `pip3 install cryptography`."
+        ) from e
+
     flow_data = base64.b64decode(encrypted_flow_data_b64)
     iv = base64.b64decode(initial_vector_b64)
     encrypted_aes_key = base64.b64decode(encrypted_aes_key_b64)
@@ -154,12 +162,22 @@ def default_flow_response_encryptor(response: dict, aes_key: bytes, iv: bytes) -
     """
     The default encryption function for WhatsApp Flow.
 
+    - This implementation requires ``cryptography`` to be installed.
+    - To install it, run ``pip3 install 'pywa[cryptography]'`` or ``pip3 install cryptography``.
     - This implementation was taken from the official documentation at
       `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/guides/implementingyourflowendpoint#python-django-example>`_.
 
     Returns:
         encrypted_response: encrypted response to send back to WhatsApp Flow
     """
+    try:
+        from cryptography.hazmat.primitives.ciphers import algorithms, Cipher, modes
+    except ImportError as e:
+        raise ImportError(
+            "You need to install `cryptography` to use the default FlowResponseEncryptor.\n"
+            "- To install it, run `pip3 install 'pywa[cryptography]'` or `pip3 install cryptography`."
+        ) from e
+
     flipped_iv = bytearray()
     for byte in iv:
         flipped_iv.append(byte ^ 0xFF)
