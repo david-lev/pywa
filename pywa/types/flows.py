@@ -514,6 +514,7 @@ class Screen:
     """
     Represents a screen (page) in a WhatsApp flow.
 
+    - The maximum number of components (children) per screen is 50.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#screens>`_.
 
     Attributes:
@@ -594,7 +595,9 @@ class Form(Component):
     """
     To get and submit the data entered from users, Flow JSON uses a straightforward concept from HTML - Forms.
 
-    Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#forms-and-form-properties>`_.
+    - The following components must be inside Form: :class:`TextInput`, :class:`TextArea`, :class:`CheckboxGroup`,
+      :class:`RadioButtonsGroup`, :class:`OptIn`, :class:`Dropdown` and :class:`DatePicker`.
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#forms-and-form-properties>`_.
 
     Attributes:
         name: The name of the form.
@@ -783,6 +786,7 @@ class TextInput(TextEntryComponent):
     """
     Represents a text entry component that allows for a single line of text.
 
+    - This component must be inside a :class:`Form`.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#textinput>`_.
 
     Attributes:
@@ -816,6 +820,7 @@ class TextArea(TextEntryComponent):
     """
     Represents a text entry component that allows for multiple lines of text.
 
+    - This component must be inside a :class:`Form`.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#textarea>`_.
 
     Attributes:
@@ -865,6 +870,7 @@ class CheckboxGroup(Component):
     """
     CheckboxGroup component allows users to pick multiple selections from a list of options.
 
+    - This component must be inside a :class:`Form`.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#checkbox>`_.
 
     Attributes:
@@ -898,6 +904,7 @@ class RadioButtonsGroup(Component):
     """
     RadioButtonsGroup component allows users to pick a single selection from a list of options.
 
+    - This component must be inside a :class:`Form`.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#radio>`_.
 
     Attributes:
@@ -955,8 +962,9 @@ class OptIn(Component):
     """
     OptIn component allows users to check a box to opt in for a specific purpose.
 
-    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#opt>`_.
+    - This component must be inside a :class:`Form`.
     - Max number of Opt-Ins Per Screen is 5.
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#opt>`_.
 
     Attributes:
         name: The name of this component (to be used dynamically or in action payloads).
@@ -981,6 +989,7 @@ class Dropdown(Component):
     """
     Dropdown component allows users to pick a single selection from a list of options.
 
+    - This component must be inside a :class:`Form`.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#drop>`_.
 
     Attributes:
@@ -1010,9 +1019,10 @@ class EmbeddedLink(Component):
     """
     EmbeddedLink component allows users to click on a link that opens a web page.
 
-    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#embed>`_.
+    - This component must be inside a :class:`Form`.
     - Max Number of Embedded Links Per Screen is 2.
     - Empty or Blank value is not accepted for the text field.
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#embed>`_.
 
     Attributes:
         text: The text of the embedded link. Limited to 35 characters. Can be dynamic (e.g ``${data.text}``).
@@ -1033,6 +1043,7 @@ class DatePicker(Component):
     """
     DatePicker component allows users to select a date
 
+    - This component must be inside a :class:`Form`.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#dp>`_.
 
     Attributes:
