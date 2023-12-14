@@ -1,29 +1,9 @@
-Flows
-=====
+Flow JSON
+=========
 
-.. note::
-
-    WORK IN PROGRESS - A full guide to the Flows will be available soon.
+Here you will find all the components that make up a Flow JSON object.
 
 .. currentmodule:: pywa.types.flows
-
-.. autoclass:: FlowRequest()
-    :members: has_error, is_health_check
-
-.. autoclass:: FlowResponse()
-
-.. autoclass:: FlowCategory()
-
-.. autoclass:: FlowDetails()
-    :members: publish, delete, deprecate, get_assets, update_metadata, update_json
-
-.. autoclass:: FlowStatus()
-
-.. autoclass:: FlowPreview()
-
-.. autoclass:: FlowValidationError()
-
-.. autoclass:: FlowAsset()
 
 .. autoclass:: FlowJSON()
 
@@ -78,9 +58,3 @@ Flows
 .. autoclass:: ActionNext()
 
 .. autoclass:: ActionNextType()
-
-.. currentmodule:: pywa.utils
-
-.. autoclass:: FlowRequestDecryptor()
-
-.. autoclass:: FlowResponseEncryptor()
