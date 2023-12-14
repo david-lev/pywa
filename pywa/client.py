@@ -1586,9 +1586,12 @@ class WhatsApp(Webhook, HandlerDecorators):
         to_dump = None
         if isinstance(flow_json, (str, pathlib.Path)):
             as_path = pathlib.Path(flow_json)
-            if as_path.is_file():
-                with open(as_path, "r") as f:
-                    json_str = f.read()
+            try:
+                if as_path.is_file():
+                    with open(as_path, "r") as f:
+                        json_str = f.read()
+            except OSError:  # file name too long or other OS error
+                pass
         elif isinstance(flow_json, FlowJSON):
             to_dump = flow_json.to_dict()
         elif isinstance(flow_json, dict):
