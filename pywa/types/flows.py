@@ -153,8 +153,10 @@ class FlowRequest:
     flow_token: str | None = None
     screen: str | None = None
     data: dict[str, Any] | None = None
-    raw: dict[str, Any]
-    raw_encrypted: dict[str, str]
+    raw: dict[str, Any] = dataclasses.field(repr=False, hash=False, compare=False)
+    raw_encrypted: dict[str, str] = dataclasses.field(
+        repr=False, hash=False, compare=False
+    )
 
     @classmethod
     def from_dict(cls, data: dict, raw_encrypted: dict):
@@ -553,7 +555,7 @@ class FlowJSON:
     screens: list[Screen] | tuple[Screen]
     data_api_version: str | None = None
     data_channel_uri: str | None = None
-    routing_model: dict[str, Iterable[str]] | None = None
+    routing_model: dict[str, Iterable[str]] = dataclasses.field(default_factory=dict)
 
     def to_dict(self):
         return dataclasses.asdict(
