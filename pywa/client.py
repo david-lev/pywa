@@ -1492,6 +1492,10 @@ class WhatsApp(Webhook, HandlerDecorators):
 
         Returns:
             The flow ID.
+
+        Raises:
+            FlowBlockedByIntegrity: If you can't create a flow because of integrity issues.
+            FlowInvalidError: If the flow name is already taken.
         """
         self._validate_business_account_id_provided()
         return self.api.create_flow(
@@ -1534,6 +1538,7 @@ class WhatsApp(Webhook, HandlerDecorators):
 
         Raises:
             ValueError: If neither ``name`` nor ``categories`` are provided.
+            FlowInvalidError: If the flow name is already taken.
         """
         if name is None and categories is None and endpoint_uri is None:
             raise ValueError("At least one argument must be provided")
@@ -1585,6 +1590,9 @@ class WhatsApp(Webhook, HandlerDecorators):
 
         Returns:
             A tuple of (success, validation_errors).
+
+        Raises:
+            FlowUpdatingError: If the flow json is invalid or the flow is already published.
         """
         json_str = None
         to_dump = None
@@ -1634,6 +1642,9 @@ class WhatsApp(Webhook, HandlerDecorators):
 
         Returns:
             Whether the flow was published.
+
+        Raises:
+            FlowPublishingError: If the flow has validation errors or not all publishing checks have been resolved.
         """
         return self.api.publish_flow(flow_id=str(flow_id))["success"]
 
@@ -1649,6 +1660,9 @@ class WhatsApp(Webhook, HandlerDecorators):
 
         Returns:
             Whether the flow was deleted.
+
+        Raises:
+            FlowDeletingError: If the flow is already published.
         """
         return self.api.delete_flow(flow_id=str(flow_id))["success"]
 
@@ -1664,6 +1678,9 @@ class WhatsApp(Webhook, HandlerDecorators):
 
         Returns:
             Whether the flow was deprecated.
+
+        Raises:
+            FlowDeprecatingError: If the flow is not published or already deprecated.
         """
         return self.api.deprecate_flow(flow_id=str(flow_id))["success"]
 
