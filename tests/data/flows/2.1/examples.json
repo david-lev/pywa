@@ -1,6 +1,7 @@
 {
   "customer_satisfaction_survey": {
     "version": "2.1",
+    "routing_model": {},
     "screens": [
       {
         "id": "RECOMMEND",
@@ -195,6 +196,7 @@
   },
   "load_re_engagement": {
     "version": "2.1",
+    "routing_model": {},
     "screens": [
       {
         "id": "SIGN_UP",
@@ -254,6 +256,7 @@
   },
   "costumer_engagement": {
     "version": "2.1",
+    "routing_model": {},
     "screens": [
       {
         "id": "QUESTION_ONE",
@@ -453,6 +456,7 @@
   },
   "support_request": {
     "version": "2.1",
+    "routing_model": {},
     "screens": [
       {
         "id": "DETAILS",
@@ -537,6 +541,7 @@
   },
   "communication_preferences": {
     "version": "2.1",
+    "routing_model": {},
     "screens": [
       {
         "id": "PREFERENCES",
@@ -614,6 +619,7 @@
   },
   "register_for_an_event": {
     "version": "2.1",
+    "routing_model": {},
     "screens": [
       {
         "id": "SIGN_UP",
