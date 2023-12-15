@@ -642,7 +642,7 @@ After you have the flow json, you can update the flow:
 
 The ``flow_json`` argument can be :class:`FlowJSON`, a dict, json string, json file path or open(json_file) obj.
 
-You can get the details of the flow to see if there is validation errors needed to be fixed:
+You can get the :class:`FlowDetails` of the flow with :meth:`pywa.client.WhatsApp.get_flow` to see if there is validation errors needed to be fixed:
 
 .. code-block:: python
     :linenos:
@@ -654,6 +654,30 @@ You can get the details of the flow to see if there is validation errors needed 
     print(wa.get_flow(flow_id))
 
     # FlowDetails(id='1234567890123456', name='My New Flow', validation_errors=(...))
+
+If you are working back and forth on the FlowJSON, you can do something like this:
+
+.. code-block:: python
+    :linenos:
+    :emphasize-lines: 7, 9, 11, 12, 13, 14, 15
+
+    from pywa import WhatsApp
+    from pywa.errors import FlowUpdatingError
+    from pywa.types.flows import *
+
+    wa = WhatsApp(..., business_account_id="1234567890123456")
+
+    flow_id = "123456789" # wa.create_flow(name="My New Flow") # run this only once
+
+    your_flow_json = FlowJSON(...)  # keep edit your flow
+
+    try:
+        wa.update_flow(flow_id, flow_json=your_flow_json)
+    except FlowUpdatingError:
+        print("Error updating flow")
+        print(wa.get_flow(flow_id).validation_errors)
+
+This way you always know if there is validation errors that needed to be fixed.
 
 To test your flow you need to sent it:
 
@@ -670,6 +694,7 @@ Let's see how to send text message with flow:
 
 .. code-block:: python
     :linenos:
+    :emphasize-lines: 9, 10, 11, 12, 13, 14, 15, 16, 17
 
     from pywa import WhatsApp
     from pywa.types import FlowButton
@@ -758,6 +783,7 @@ We first sending this flow. this time with an image:
 
 .. code-block:: python
     :linenos:
+    :emphasize-lines: 16
 
     from pywa import WhatsApp
     from pywa.types import FlowButton, FlowActionType, FlowStatus
@@ -784,6 +810,7 @@ Let's register a callback function to handle this request:
 
 .. code-block:: python
     :linenos:
+    :emphasize-lines: 6, 9, 10, 14, 15, 16, 17, 18, 19
 
     from pywa import WhatsApp
     from pywa.types import FlowRequest, FlowResponse
