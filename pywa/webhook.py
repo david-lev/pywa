@@ -174,7 +174,7 @@ class Webhook:
         try:
             field = update["entry"][0]["changes"][0]["field"]
             value = update["entry"][0]["changes"][0]["value"]
-        except (KeyError, IndexError):  # this endpoint got non-expected data
+        except (KeyError, IndexError, TypeError):  # this endpoint got non-expected data
             raise ValueError(f"Invalid update: {update}")
 
         # The `messages` field needs to be handled differently because it can be a message, button, selection, or status
@@ -259,18 +259,18 @@ class Webhook:
                     private_key or self._private_key,
                     private_key_password or self._private_key_password,
                 )
-                if handle_health_check and decrypted_request["action"] == "ping":
-                    return (response_encryptor or self._flows_response_encryptor)(
-                        {
-                            "version": decrypted_request["version"],
-                            "data": {"status": "active"},
-                        },
-                        aes_key,
-                        iv,
-                    ), 200
             except Exception as e:
                 _logger.exception(e)
                 return "Decryption failed", FlowRequestCannotBeDecrypted.status_code
+            if handle_health_check and decrypted_request["action"] == "ping":
+                return (response_encryptor or self._flows_response_encryptor)(
+                    {
+                        "version": decrypted_request["version"],
+                        "data": {"status": "active"},
+                    },
+                    aes_key,
+                    iv,
+                ), 200
             request = FlowRequest.from_dict(
                 data=decrypted_request, raw_encrypted=payload
             )
@@ -280,7 +280,11 @@ class Webhook:
                     raise response
             except FlowTokenNoLongerValid as e:
                 return (
-                    """{"error_msg": %s}""" % e.error_message,
+                    (response_encryptor or self._flows_response_encryptor)(
+                        """{"error_msg": %s}""" % e.error_message,
+                        aes_key,
+                        iv,
+                    ),
                     FlowTokenNoLongerValid.status_code,
                 )
             except FlowResponseError as e:
@@ -298,8 +302,8 @@ class Webhook:
                     iv,
                 ), 200
             if not isinstance(response, (FlowResponse | dict)):
-                raise ValueError(
-                    f"Flow endpoint callback must return a FlowResponse or dict, not {type(response)}"
+                raise TypeError(
+                    f"Flow endpoint callback must return a `FlowResponse` or `dict`, not {type(response)}"
                 )
             return (response_encryptor or self._flows_response_encryptor)(
                 response.to_dict() if isinstance(response, FlowResponse) else response,
