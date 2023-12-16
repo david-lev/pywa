@@ -281,11 +281,11 @@ class Webhook:
             except FlowTokenNoLongerValid as e:
                 return (
                     (response_encryptor or self._flows_response_encryptor)(
-                        """{"error_msg": %s}""" % e.error_message,
+                        {"error_msg": e.error_message},
                         aes_key,
                         iv,
                     ),
-                    FlowTokenNoLongerValid.status_code,
+                    e.status_code,
                 )
             except FlowResponseError as e:
                 return e.__class__.__name__, e.status_code
