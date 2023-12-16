@@ -3,6 +3,13 @@ Changelog
 
 NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 1.13.0-rc.4 (2023-12-16)
+
+- [client] expose `set_business_public_key`
+- [flows] adding `DataKey` and `FormRef` to use when building a `FlowJSON`
+- [template] adding support to create and send template with `FlowButton`
+- [errors] remove `FlowInvalidError` (Too broad error code)
+
 ### 1.13.0-rc.3 (2023-12-15)
 
 - [errors] adding flows specific errors
