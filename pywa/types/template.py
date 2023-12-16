@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .flows import FlowActionType
 
 """This module contains the types related to templates."""
 
@@ -15,7 +16,7 @@ import dataclasses
 import re
 import pathlib
 import datetime as dt
-from typing import TYPE_CHECKING, Any, BinaryIO, Iterable
+from typing import TYPE_CHECKING, Any, BinaryIO, Iterable, Literal
 
 from pywa import utils
 
@@ -95,6 +96,7 @@ class ButtonType(utils.StrEnum):
     MPM = "MPM"
     CATALOG = "CATALOG"
     COPY_CODE = "COPY_CODE"
+    FLOW = "FLOW"
 
 
 class Language(utils.StrEnum):
@@ -285,6 +287,7 @@ class NewTemplate:
         | MPMButton
         | CatalogButton
         | OTPButton
+        | FlowButton
         | None
     ) = None
 
@@ -854,6 +857,54 @@ class NewTemplate:
         def to_dict(self, placeholder: tuple[str, str] = None) -> dict[str, str | None]:
             return dict(type=self.type.value, example=self.example)
 
+    @dataclasses.dataclass(slots=True)
+    class FlowButton(NewButtonABC):
+        """
+        Represents a button that can be used to send a message with a flow.
+
+        Example:
+            >>> from pywa.types import NewTemplate, FlowActionType
+            >>> NewTemplate.FlowButton(
+            ...     flow_id='123456789',
+            ...     title='Feedback',
+            ...     flow_action=FlowActionType.NAVIGATE,
+            ...     navigate_screen='SURVEY_SCREEN'
+            ... )
+
+        Attributes:
+            flow_id: The flow ID to send.
+            title: The button title.
+            flow_action: The flow action (``NAVIGATE`` or ``DATA_EXCHANGE``).
+            navigate_screen: The screen to navigate to (required if ``flow_action`` is ``NAVIGATE``).
+        """
+
+        type: ButtonType = dataclasses.field(
+            default=ButtonType.QUICK_REPLY, init=False, repr=False
+        )
+        title: str
+        flow_id: str | int
+        flow_action: Literal[
+            FlowActionType.NAVIGATE, FlowActionType.DATA_EXCHANGE
+        ] | str
+        navigate_screen: str | None = None
+
+        def __post_init__(self):
+            if self.flow_action == FlowActionType.NAVIGATE and not self.navigate_screen:
+                raise ValueError("`navigate_screen` is required for FLOW with NAVIGATE")
+
+        def to_dict(self, placeholder: None = None) -> dict[str, str]:
+            return dict(
+                type=self.type.value,
+                text=self.title,
+                flow_id=str(self.flow_id),
+                flow_action=self.flow_action,
+                **(
+                    {"navigate_screen": self.navigate_screen}
+                    if self.navigate_screen
+                    else {}
+                ),
+            )
+
 
 class ParamType(utils.StrEnum):
     TEXT = "text"
@@ -929,6 +980,7 @@ class Template:
         | MPMButton
         | CatalogButton
         | CopyCodeButton
+        | FlowButton
         | None
     ) = None
 
@@ -1332,6 +1384,45 @@ class Template:
 
         def to_dict(self) -> dict[str, str]:
             return dict(type="coupon_code", coupon_code=self.code)
+
+    @dataclasses.dataclass(slots=True)
+    class FlowButton(ComponentABC):
+        """
+        Represents a flow button.
+
+        Example:
+            >>> from pywa.types import Template, FlowActionType
+            >>> Template.FlowButton(
+            ...     flow_token="AAAAAAAAAA",
+            ...     flow_action_data={"is_name_required": True}
+            ... )
+
+        Attributes:
+            flow_token: The flow token to send to identify the flow when exchanging data. Optional, default is "unused"
+            flow_action_data: The data to pass to the screen that specifies when creating the template.
+        """
+
+        type: ParamType = dataclasses.field(
+            default=ParamType.BUTTON, init=False, repr=False
+        )
+        sub_type: ButtonType = dataclasses.field(
+            default=ButtonType.FLOW, init=False, repr=False
+        )
+        flow_token: str | None = None
+        flow_action_data: dict[str, Any] | None = None
+
+        def to_dict(self) -> dict[str, str]:
+            return dict(
+                type="action",
+                action=dict(
+                    **({"flow_token": self.flow_token} if self.flow_token else {}),
+                    **(
+                        {"flow_action_data": self.flow_action_data}
+                        if self.flow_action_data
+                        else {}
+                    ),
+                ),
+            )
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
