@@ -374,22 +374,6 @@ class FlowError(WhatsAppError):
     __error_codes__ = None
 
 
-class FlowInvalidError(FlowError):
-    """
-    Flow is invalid.
-
-    - Flow name is not unique
-    - Invalid Flow JSON version
-    - Invalid Flow JSON data_api_version
-    - Flow with specified ID does not exist
-    - Only one clone source can be set
-    - Specify Endpoint Uri in Flow JSON
-    - Invalid Endpoint URI
-    """
-
-    __error_codes__ = (100,)
-
-
 class FlowBlockedByIntegrity(FlowError):
     """Unfortunately, we've identified an issue with integrity in your account and have prevented you from creating
     or publishing your Flow."""

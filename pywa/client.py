@@ -1518,7 +1518,6 @@ class WhatsApp(Webhook, HandlerDecorators):
 
         Raises:
             FlowBlockedByIntegrity: If you can't create a flow because of integrity issues.
-            FlowInvalidError: If the flow name is already taken.
         """
         self._validate_business_account_id_provided()
         return self.api.create_flow(
@@ -1561,7 +1560,6 @@ class WhatsApp(Webhook, HandlerDecorators):
 
         Raises:
             ValueError: If neither ``name`` nor ``categories`` are provided.
-            FlowInvalidError: If the flow name is already taken.
         """
         if name is None and categories is None and endpoint_uri is None:
             raise ValueError("At least one argument must be provided")
