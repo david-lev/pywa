@@ -58,6 +58,7 @@ The available methods are:
    * - Business profile
      - :meth:`~WhatsApp.get_business_profile`,
        :meth:`~WhatsApp.update_business_profile`
+       :meth:`~WhatsApp.set_business_public_key`
    * - Commerce
      - :meth:`~WhatsApp.get_commerce_settings`,
        :meth:`~WhatsApp.update_commerce_settings`

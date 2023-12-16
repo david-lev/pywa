@@ -1168,6 +1168,29 @@ class WhatsApp(Webhook, HandlerDecorators):
             data=self.api.get_business_profile()["data"][0]
         )
 
+    def set_business_public_key(
+        self,
+        public_key: str,
+    ) -> bool:
+        """
+        Set the business public key of the WhatsApp Business account (required for end-to-end encryption in flows)
+
+        Args:
+            public_key: An public 2048-bit RSA Key in PEM format.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.set_business_public_key(
+            ...     public_key=\"\"\"-----BEGIN PUBLIC KEY-----...\"\"\"
+            ... )
+
+
+        Returns:
+            Whether the business public key was set.
+        """
+        return self.api.set_business_public_key(public_key=public_key)["success"]
+
     def update_business_profile(
         self,
         about: str | None = _MISSING,

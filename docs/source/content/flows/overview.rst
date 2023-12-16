@@ -29,7 +29,7 @@ From `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flo
     You can use Flows to book appointments, browse products, collect customer feedback, get new sales leads, or anything else where structured communication is more natural or comfortable for your customers.
 
 
-When you reading the official docs it's looks very intimidating, but in fact it's quite simple (by PyWa ;) ).
+When you reading the official docs it's looks very intimidating, but in fact it's quite simple (by PyWa 😉).
 
 The Flows are seperated to 4 parts:
 
@@ -688,9 +688,12 @@ Sending Flow
 
     WORK IN PROGRESS
 
+.. currentmodule:: pywa.types.callback
 
-Flow is just a button attached to a message.
+Flow is just a :class:`FlowButton` attached to a message.
 Let's see how to send text message with flow:
+
+.. currentmodule:: pywa.types.flows
 
 .. code-block:: python
     :linenos:
@@ -837,7 +840,7 @@ We need to provide our business private key to decrypt the request and encrypt t
 
         We need to setup WhatsApp Business Encryption in order to decrypt the request and encrypt the response.
         You can read more about it in `WhatsApp Business Encryption <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/whatsapp-business-encryption>`_.
-        The public key can be uploaded using the :meth:`pywa.api.WhatsAppCloudApi.set_business_public_key` method.
+        The public key can be uploaded using the :meth:`pywa.api.client.set_business_public_key.set_business_public_key` method.
 
 After that. we are registering a callback function to handle the request.
 The callback function will receive the :class:`FlowRequest` object and should return :class:`FlowResponse` object.

@@ -13,6 +13,8 @@ Keyboard
 
 .. autoclass:: SectionRow()
 
+.. autoclass:: FlowButton()
+
 .. autoclass:: CallbackData()
 
 .. autoclass:: CallbackDataT()
