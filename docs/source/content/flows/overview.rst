@@ -79,7 +79,30 @@ Or it can be dynamic; your server can respond to screen actions and determine th
     I really recommend you to read the `Flow JSON Docs <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson>`_ before you continue.
     A full guide will be added soon.
 
-Every component on the flowJSON has a corresponding class in :mod:`pywa.types.flows`.
+Every component on the FlowJSON, has a corresponding class in :mod:`pywa.types.flows`:
+
+.. list-table::
+   :widths: 10 60
+   :header-rows: 1
+
+   * - Category
+     - Types
+   * - Components
+     - :class:`Form`,
+       :class:`TextHeading`,
+       :class:`TextSubheading`,
+       :class:`TextBody`,
+       :class:`TextCaption`,
+       :class:`TextInput`,
+       :class:`TextArea`,
+       :class:`RadioButtonsGroup`,
+       :class:`CheckboxGroup`,
+       :class:`Dropdown`,
+       :class:`Image`,
+       :class:`OptIn`,
+       :class:`EmbeddedLink`,
+       :class:`Footer`
+
 
 here is an example of static flow:
 
@@ -112,7 +135,6 @@ here is an example of static flow:
                 Screen(
                     id="RECOMMEND",
                     title="Feedback 1 of 2",
-                    data={},
                     layout=Layout(
                         type=LayoutType.SINGLE_COLUMN,
                         children=[
@@ -140,11 +162,12 @@ here is an example of static flow:
                                         on_click_action=Action(
                                             name=FlowActionType.NAVIGATE,
                                             next=ActionNext(
-                                                type=ActionNextType.SCREEN, name="RATE"
+                                                name="RATE",
+                                                type=ActionNextType.SCREEN
                                             ),
                                             payload={
-                                                "recommend_radio": "${form.recommend_radio}",
-                                                "comment_text": "${form.comment_text}",
+                                                "recommend_radio": FormRef("recommend_radio"),
+                                                "comment_text": FormRef("comment_text"),
                                             },
                                         ),
                                     ),
@@ -157,8 +180,8 @@ here is an example of static flow:
                     id="RATE",
                     title="Feedback 2 of 2",
                     data={
-                        "recommend_radio": {"type": "string", "__example__": "Example"},
-                        "comment_text": {"type": "string", "__example__": "Example"},
+                        "recommend_radio": {"type": "string", "__example__": "0"},
+                        "comment_text": {"type": "string", "__example__": "Test comment"},
                     },
                     terminal=True,
                     layout=Layout(
@@ -209,11 +232,11 @@ here is an example of static flow:
                                         on_click_action=Action(
                                             name=FlowActionType.COMPLETE,
                                             payload={
-                                                "purchase_rating": "${form.purchase_rating}",
-                                                "delivery_rating": "${form.delivery_rating}",
-                                                "cs_rating": "${form.cs_rating}",
-                                                "recommend_radio": "${data.recommend_radio}",
-                                                "comment_text": "${data.comment_text}",
+                                                "purchase_rating": FormRef("purchase_rating"),
+                                                "delivery_rating": FormRef("delivery_rating"),
+                                                "cs_rating": FormRef("cs_rating"),
+                                                "recommend_radio": DataKey("form", "recommend_radio"),
+                                                "comment_text": DataKey("form", "comment_text"),
                                             },
                                         ),
                                     ),
@@ -471,13 +494,13 @@ Here is example of dynamic flow:
                                         label="Name",
                                         input_type=InputType.TEXT,
                                         required=True,
-                                        helper_text="${data.name_help}",
+                                        helper_text=DataKey("name_help"),
                                     ),
                                     TextInput(
                                         name="order_number",
                                         label="Order number",
                                         input_type=InputType.NUMBER,
-                                        required="${data.is_order_num_required}",
+                                        required=DataKey("is_order_num_required"),
                                         helper_text="",
                                     ),
                                     RadioButtonsGroup(
@@ -496,17 +519,17 @@ Here is example of dynamic flow:
                                         name="description",
                                         label="Description of issue",
                                         required=False,
-                                        enabled="${data.is_desc_enabled}",
+                                        enabled=DataKey("is_desc_enabled"),
                                     ),
                                     Footer(
                                         label="Done",
                                         on_click_action=Action(
                                             name=FlowActionType.COMPLETE,
                                             payload={
-                                                "name": "${form.name}",
-                                                "order_number": "${form.order_number}",
-                                                "topic": "${form.topic_radio}",
-                                                "description": "${form.description}",
+                                                "name": FormRef("name"),
+                                                "order_number": FormRef("order_number"),
+                                                "topic": FormRef("topic_radio"),
+                                                "description": FormRef("description"),
                                             },
                                         ),
                                     ),
@@ -629,7 +652,7 @@ Which is the equivalent of the following flow json:
           ]
         }
 
-After you have the flow json, you can update the flow:
+After you have the flow json, you can update the flow with :meth:`pywa.client.WhatsApp.update_flow_json`:
 
 .. code-block:: python
     :linenos:
@@ -638,9 +661,9 @@ After you have the flow json, you can update the flow:
 
     wa = WhatsApp(...)
 
-    wa.update_flow(flow_id, flow_json=customer_satisfaction_survey)
+    wa.update_flow_json(flow_id, flow_json=customer_satisfaction_survey)
 
-The ``flow_json`` argument can be :class:`FlowJSON`, a dict, json string, json file path or open(json_file) obj.
+The ``flow_json`` argument can be :class:`FlowJSON`, a :class:`dict`, json :class:`str`, json file path or open(json_file) obj.
 
 You can get the :class:`FlowDetails` of the flow with :meth:`pywa.client.WhatsApp.get_flow` to see if there is validation errors needed to be fixed:
 
@@ -672,7 +695,7 @@ If you are working back and forth on the FlowJSON, you can do something like thi
     your_flow_json = FlowJSON(...)  # keep edit your flow
 
     try:
-        wa.update_flow(flow_id, flow_json=your_flow_json)
+        wa.update_flow_json(flow_id, flow_json=your_flow_json)
     except FlowUpdatingError:
         print("Error updating flow")
         print(wa.get_flow(flow_id).validation_errors)
@@ -778,7 +801,7 @@ As you can see, this screen gets data that help it to be dynamic.
 
 For example, we have :class:`TextInput` that gets the user's name. We want to be dynamic about what we want the user
 typing in. So we don't hard-code the ``helper_text`` with value like "Enter you first and last name:", instead, we use
-the ``"${data.name_help}"`` which is a reference to the ``name_help`` key in the ``data`` dict we are going to provide dynamically.
+the ``DataKey("name_help")`` which is a reference to the ``name_help`` key in the ``data`` dict we are going to provide dynamically.
 
 So when the user clicks the button, we will receive a request to our server with the ation, flow_token and the screen which requested the data.
 

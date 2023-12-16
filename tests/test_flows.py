@@ -23,6 +23,8 @@ from pywa.types.flows import (
     TextBody,
     OptIn,
     EmbeddedLink,
+    DataKey,
+    FormRef,
 )
 
 FLOWS_VERSION = "2.1"
@@ -64,8 +66,8 @@ customer_satisfaction_survey = FlowJSON(
                                         type=ActionNextType.SCREEN, name="RATE"
                                     ),
                                     payload={
-                                        "recommend_radio": "${form.recommend_radio}",
-                                        "comment_text": "${form.comment_text}",
+                                        "recommend_radio": FormRef("recommend_radio"),
+                                        "comment_text": FormRef("comment_text"),
                                     },
                                 ),
                             ),
@@ -130,11 +132,11 @@ customer_satisfaction_survey = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.COMPLETE,
                                     payload={
-                                        "purchase_rating": "${form.purchase_rating}",
-                                        "delivery_rating": "${form.delivery_rating}",
-                                        "cs_rating": "${form.cs_rating}",
-                                        "recommend_radio": "${data.recommend_radio}",
-                                        "comment_text": "${data.comment_text}",
+                                        "purchase_rating": FormRef("purchase_rating"),
+                                        "delivery_rating": FormRef("delivery_rating"),
+                                        "cs_rating": FormRef("cs_rating"),
+                                        "recommend_radio": DataKey("recommend_radio"),
+                                        "comment_text": DataKey("comment_text"),
                                     },
                                 ),
                             ),
@@ -187,9 +189,9 @@ load_re_engagement = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.COMPLETE,
                                     payload={
-                                        "firstName": "${form.firstName}",
-                                        "lastName": "${form.lastName}",
-                                        "email": "${form.email}",
+                                        "firstName": FormRef("firstName"),
+                                        "lastName": FormRef("lastName"),
+                                        "email": FormRef("email"),
                                     },
                                 ),
                             ),
@@ -398,10 +400,10 @@ support_request = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.COMPLETE,
                                     payload={
-                                        "name": "${form.name}",
-                                        "orderNumber": "${form.orderNumber}",
-                                        "topicRadio": "${form.topicRadio}",
-                                        "description": "${form.description}",
+                                        "name": FormRef("name"),
+                                        "orderNumber": FormRef("orderNumber"),
+                                        "topicRadio": FormRef("topicRadio"),
+                                        "description": FormRef("description"),
                                     },
                                 ),
                             ),
@@ -457,8 +459,10 @@ communication_preferences = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.COMPLETE,
                                     payload={
-                                        "communicationTypes": "${form.communicationTypes}",
-                                        "contactPrefs": "${form.contactPrefs}",
+                                        "communicationTypes": FormRef(
+                                            "communicationTypes"
+                                        ),
+                                        "contactPrefs": FormRef("contactPrefs"),
                                     },
                                 ),
                             ),
@@ -511,9 +515,9 @@ register_for_an_event = FlowJSON(
                                         type=ActionNextType.SCREEN, name="SURVEY"
                                     ),
                                     payload={
-                                        "firstName": "${form.firstName}",
-                                        "lastName": "${form.lastName}",
-                                        "email": "${form.email}",
+                                        "firstName": FormRef("firstName"),
+                                        "lastName": FormRef("lastName"),
+                                        "email": FormRef("email"),
                                     },
                                 ),
                             ),
@@ -555,10 +559,10 @@ register_for_an_event = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.COMPLETE,
                                     payload={
-                                        "source": "${form.source}",
-                                        "firstName": "${data.firstName}",
-                                        "lastName": "${data.lastName}",
-                                        "email": "${data.email}",
+                                        "source": FormRef("source"),
+                                        "firstName": DataKey("firstName"),
+                                        "lastName": DataKey("lastName"),
+                                        "email": DataKey("email"),
                                     },
                                 ),
                             ),
@@ -630,8 +634,8 @@ sign_in = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
                                     payload={
-                                        "email": "${form.email}",
-                                        "password": "${form.password}",
+                                        "email": FormRef("email"),
+                                        "password": FormRef("password"),
                                     },
                                 ),
                             ),
@@ -702,13 +706,15 @@ sign_in = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
                                     payload={
-                                        "first_name": "${form.first_name}",
-                                        "last_name": "${form.last_name}",
-                                        "email": "${form.email}",
-                                        "password": "${form.password}",
-                                        "confirm_password": "${form.confirm_password}",
-                                        "terms_agreement": "${form.terms_agreement}",
-                                        "offers_acceptance": "${form.offers_acceptance}",
+                                        "first_name": FormRef("first_name"),
+                                        "last_name": FormRef("last_name"),
+                                        "email": FormRef("email"),
+                                        "password": FormRef("password"),
+                                        "confirm_password": FormRef("confirm_password"),
+                                        "terms_agreement": FormRef("terms_agreement"),
+                                        "offers_acceptance": FormRef(
+                                            "offers_acceptance"
+                                        ),
                                     },
                                 ),
                             ),
@@ -733,7 +739,7 @@ sign_in = FlowJSON(
                     Form(
                         name="forgot_password_form",
                         children=[
-                            TextBody(text="${data.body}"),
+                            TextBody(text=DataKey("body")),
                             TextInput(
                                 name="email",
                                 label="Email address",
@@ -744,7 +750,7 @@ sign_in = FlowJSON(
                                 label="Sign in",
                                 on_click_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
-                                    payload={"email": "${form.email}"},
+                                    payload={"email": FormRef("email")},
                                 ),
                             ),
                         ],
@@ -795,7 +801,7 @@ register = FlowJSON(
                 children=[
                     Form(
                         name="register_form",
-                        error_messages="${data.error_messages}",
+                        error_messages=DataKey("error_messages"),
                         children=[
                             TextInput(
                                 name="first_name",
@@ -849,13 +855,15 @@ register = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
                                     payload={
-                                        "first_name": "${form.first_name}",
-                                        "last_name": "${form.last_name}",
-                                        "email": "${form.email}",
-                                        "password": "${form.password}",
-                                        "confirm_password": "${form.confirm_password}",
-                                        "terms_agreement": "${form.terms_agreement}",
-                                        "offers_acceptance": "${form.offers_acceptance}",
+                                        "first_name": FormRef("first_name"),
+                                        "last_name": FormRef("last_name"),
+                                        "email": FormRef("email"),
+                                        "password": FormRef("password"),
+                                        "confirm_password": FormRef("confirm_password"),
+                                        "terms_agreement": FormRef("terms_agreement"),
+                                        "offers_acceptance": FormRef(
+                                            "offers_acceptance"
+                                        ),
                                     },
                                 ),
                             ),
@@ -935,7 +943,7 @@ get_a_quote = FlowJSON(
                             Dropdown(
                                 label="City, State",
                                 name="city",
-                                data_source="${data.city}",
+                                data_source=DataKey("city"),
                                 required=True,
                             ),
                             TextInput(
@@ -955,11 +963,11 @@ get_a_quote = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
                                     payload={
-                                        "name": "${form.name}",
-                                        "address": "${form.address}",
-                                        "city": "${form.city}",
-                                        "zip_code": "${form.zip_code}",
-                                        "country_region": "${form.country_region}",
+                                        "name": FormRef("name"),
+                                        "address": FormRef("address"),
+                                        "city": FormRef("city"),
+                                        "zip_code": FormRef("zip_code"),
+                                        "country_region": FormRef("country_region"),
                                     },
                                 ),
                             ),
@@ -1009,7 +1017,7 @@ get_a_quote = FlowJSON(
                         children=[
                             CheckboxGroup(
                                 name="options",
-                                data_source="${data.options}",
+                                data_source=DataKey("options"),
                                 label="Options",
                                 required=True,
                             ),
@@ -1017,7 +1025,7 @@ get_a_quote = FlowJSON(
                                 label="Continue",
                                 on_click_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
-                                    payload={"options": "${form.options}"},
+                                    payload={"options": FormRef("options")},
                                 ),
                             ),
                         ],
@@ -1053,10 +1061,10 @@ get_a_quote = FlowJSON(
                             Dropdown(
                                 label="Excess",
                                 name="excess",
-                                data_source="${data.excess}",
+                                data_source=DataKey("excess"),
                                 on_select_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
-                                    payload={"excess": "${form.excess}"},
+                                    payload={"excess": FormRef("excess")},
                                 ),
                                 required=True,
                             ),
@@ -1070,12 +1078,12 @@ get_a_quote = FlowJSON(
                                 on_select_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
                                     payload={
-                                        "payment_options": "${form.payment_options}"
+                                        "payment_options": FormRef("payment_options")
                                     },
                                 ),
                                 required=True,
                             ),
-                            TextHeading(text="${data.total}"),
+                            TextHeading(text=DataKey("total")),
                             OptIn(
                                 name="privacy_policy",
                                 label="Accept our Privacy Policy",
@@ -1094,7 +1102,7 @@ get_a_quote = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
                                     payload={
-                                        "privacy_policy": "${form.privacy_policy}"
+                                        "privacy_policy": FormRef("privacy_policy")
                                     },
                                 ),
                             ),

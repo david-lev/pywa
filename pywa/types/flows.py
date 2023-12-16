@@ -41,6 +41,8 @@ __all__ = [
     "Layout",
     "LayoutType",
     "Form",
+    "DataKey",
+    "FormRef",
     "TextHeading",
     "TextSubheading",
     "TextBody",
@@ -552,7 +554,7 @@ class FlowJSON:
     """
 
     version: str
-    screens: list[Screen] | tuple[Screen]
+    screens: Iterable[Screen]
     data_api_version: str | None = None
     data_channel_uri: str | None = None
     routing_model: dict[str, Iterable[str]] = dataclasses.field(default_factory=dict)
@@ -658,6 +660,43 @@ class ComponentType(utils.StrEnum):
     IMAGE = "Image"
 
 
+class _Ref:
+    """Base class for all variables"""
+
+    def __new__(cls, prefix: str, field: str) -> str:
+        return "${%s.%s}" % (prefix, field)
+
+
+class DataKey(_Ref):
+    """
+    Represents a data reference variable (converts to ``${data.<field>}``).
+
+    Attributes:
+
+    """
+
+    def __new__(cls, key: str):
+        """
+        Represents a data key (converts to ``${data.<key>}``).
+
+        Args:
+            key: The key to get from the :class:`Screen` .data attribute.
+        """
+        return super().__new__(cls, "data", key)
+
+
+class FormRef(_Ref):
+    def __new__(cls, child_name: str, form_name: str = "form"):
+        """
+        Represents a form reference variable (converts to ``${form.<child>}``).
+
+        Args:
+            child_name: The name of the :class:`Form` child to get the value from.
+            form_name: The name of the :class:`Form` to get the child from. Default to ``"form"``.
+        """
+        return super().__new__(cls, form_name, child_name)
+
+
 @dataclasses.dataclass(slots=True, kw_only=True)
 class Form(Component):
     """
@@ -689,8 +728,8 @@ class Form(Component):
         | DatePicker
         | dict[str, Any]
     ]
-    init_values: dict[str, str | list[str, ...] | tuple[str, ...]] | str | None = None
-    error_messages: dict[str, str] | str | None = None
+    init_values: dict[str, Any] | str | DataKey | None = None
+    error_messages: dict[str, str] | str | DataKey | None = None
 
 
 class TextComponent(Component, abc.ABC):
@@ -702,7 +741,7 @@ class TextComponent(Component, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def text(self) -> str:
+    def text(self) -> str | DataKey:
         ...
 
 
@@ -731,15 +770,15 @@ class TextHeading(TextComponent):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#heading>`_.
 
     Attributes:
-        text: The text of the heading. Limited to 4096 characters. Can be dynamic (e.g ``${data.text}``).
-        visible: Whether the heading is visible or not. Default to ``True``, Can be dynamic (e.g ``${data.is_visible}``).
+        text: The text of the heading. Limited to 4096 characters. Can be dynamic (e.g ``DataKey("text")``).
+        visible: Whether the heading is visible or not. Default to ``True``, Can be dynamic (e.g ``DataKey("is_visible")``).
     """
 
     type: ComponentType = dataclasses.field(
         default=ComponentType.TEXT_HEADING, init=False, repr=False
     )
-    text: str
-    visible: bool | str | None = None
+    text: str | DataKey
+    visible: bool | str | DataKey | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -750,15 +789,15 @@ class TextSubheading(TextComponent):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#subheading>`_.
 
     Attributes:
-        text: The text of the subheading. Limited to 60 characters. Can be dynamic (e.g ``${data.text}``).
-        visible: Whether the subheading is visible or not. Default to ``True``, Can be dynamic (e.g ``${data.is_visible}``).
+        text: The text of the subheading. Limited to 60 characters. Can be dynamic (e.g ``DataKey("text")``).
+        visible: Whether the subheading is visible or not. Default to ``True``, Can be dynamic (e.g ``DataKey("is_visible")``).
     """
 
     type: ComponentType = dataclasses.field(
         default=ComponentType.TEXT_SUBHEADING, init=False, repr=False
     )
-    text: str
-    visible: bool | str | None = None
+    text: str | DataKey
+    visible: bool | str | DataKey | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -769,19 +808,19 @@ class TextBody(TextComponent):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#body>`_.
 
     Attributes:
-        text: The text of the body. Limited to 80 characters. Can be dynamic (e.g ``${data.text}``).
-        font_weight: The weight of the text. Can be dynamic (e.g ``${data.font_weight}``).
-        strikethrough: Whether the text is strikethrough or not. Can be dynamic (e.g ``${data.strikethrough}``).
-        visible: Whether the body is visible or not. Default to ``True``, Can be dynamic (e.g ``${data.is_visible}``).
+        text: The text of the body. Limited to 80 characters. Can be dynamic (e.g ``DataKey("text")``).
+        font_weight: The weight of the text. Can be dynamic (e.g ``DataKey("font_weight")``).
+        strikethrough: Whether the text is strikethrough or not. Can be dynamic (e.g ``DataKey("strikethrough")``).
+        visible: Whether the body is visible or not. Default to ``True``, Can be dynamic (e.g ``DataKey("is_visible")``).
     """
 
     type: ComponentType = dataclasses.field(
         default=ComponentType.TEXT_BODY, init=False, repr=False
     )
-    text: str
-    font_weight: FontWeight | str | None = None
-    strikethrough: bool | str | None = None
-    visible: bool | str | None = None
+    text: str | DataKey
+    font_weight: FontWeight | str | DataKey | None = None
+    strikethrough: bool | str | DataKey | None = None
+    visible: bool | str | DataKey | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -792,19 +831,19 @@ class TextCaption(TextComponent):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#caption>`_.
 
     Attributes:
-        text: The text of the caption. Limited to 4096 characters. Can be dynamic (e.g ``${data.text}``).
-        font_weight: The weight of the text. Can be dynamic (e.g ``${data.font_weight}``).
-        strikethrough: Whether the text is strikethrough or not. Can be dynamic (e.g ``${data.strikethrough}``).
-        visible: Whether the caption is visible or not. Default to ``True``, Can be dynamic (e.g ``${data.is_visible}``).
+        text: The text of the caption. Limited to 4096 characters. Can be dynamic (e.g ``DataKey("text")``).
+        font_weight: The weight of the text. Can be dynamic (e.g ``DataKey("font_weight")``).
+        strikethrough: Whether the text is strikethrough or not. Can be dynamic (e.g ``DataKey("strikethrough")``).
+        visible: Whether the caption is visible or not. Default to ``True``, Can be dynamic (e.g ``DataKey("is_visible")``).
     """
 
     type: ComponentType = dataclasses.field(
         default=ComponentType.TEXT_CAPTION, init=False, repr=False
     )
-    text: str
-    font_weight: FontWeight | str | None = None
-    strikethrough: bool | str | None = None
-    visible: bool | str | None = None
+    text: str | DataKey
+    font_weight: FontWeight | str | DataKey | None = None
+    strikethrough: bool | str | DataKey | None = None
+    visible: bool | str | DataKey | None = None
 
 
 class TextEntryComponent(Component, abc.ABC):
@@ -821,17 +860,17 @@ class TextEntryComponent(Component, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def label(self) -> str:
+    def label(self) -> str | DataKey:
         ...
 
     @property
     @abc.abstractmethod
-    def required(self) -> bool | str | None:
+    def required(self) -> bool | str | DataKey | None:
         ...
 
     @property
     @abc.abstractmethod
-    def helper_text(self) -> str | None:
+    def helper_text(self) -> str | DataKey | None:
         ...
 
 
@@ -868,28 +907,28 @@ class TextInput(TextEntryComponent):
 
     Attributes:
         name: The unique name (id) for this component (to be used dynamically or in action payloads).
-        label: The label of the text input. Limited to 20 characters. Can be dynamic (e.g ``${data.label}``).
-        input_type: The input type of the text input (for keyboard layout and validation rules). Can be dynamic (e.g ``${data.input_type}``).
-        required: Whether the text input is required or not. Can be dynamic (e.g ``${data.required}``).
-        min_chars: The minimum number of characters allowed in the text input. Can be dynamic (e.g ``${data.min_chars}``).
-        max_chars: The maximum number of characters allowed in the text input. Can be dynamic (e.g ``${data.max_chars}``).
-        helper_text: The helper text of the text input. Limited to 80 characters. Can be dynamic (e.g ``${data.helper_text}``).
-        enabled: Whether the text input is enabled or not. Default to ``True``. Can be dynamic (e.g ``${data.enabled}``).
-        visible: Whether the text input is visible or not. Default to ``True``. Can be dynamic (e.g ``${data.is_visible}``).
+        label: The label of the text input. Limited to 20 characters. Can be dynamic (e.g ``DataKey("label")``).
+        input_type: The input type of the text input (for keyboard layout and validation rules). Can be dynamic (e.g ``DataKey("input_type")``).
+        required: Whether the text input is required or not. Can be dynamic (e.g ``DataKey("required")``).
+        min_chars: The minimum number of characters allowed in the text input. Can be dynamic (e.g ``DataKey("min_chars")``).
+        max_chars: The maximum number of characters allowed in the text input. Can be dynamic (e.g ``DataKey("max_chars")``).
+        helper_text: The helper text of the text input. Limited to 80 characters. Can be dynamic (e.g ``DataKey("helper_text")``).
+        enabled: Whether the text input is enabled or not. Default to ``True``. Can be dynamic (e.g ``DataKey("enabled")``).
+        visible: Whether the text input is visible or not. Default to ``True``. Can be dynamic (e.g ``DataKey("is_visible")``).
     """
 
     type: ComponentType = dataclasses.field(
         default=ComponentType.TEXT_INPUT, init=False, repr=False
     )
     name: str
-    label: str
-    input_type: InputType | str | None = None
-    required: bool | str | None = None
-    min_chars: int | str | None = None
-    max_chars: int | str | None = None
-    helper_text: str | None = None
-    enabled: bool | str | None = None
-    visible: bool | str | None = None
+    label: str | DataKey
+    input_type: InputType | str | DataKey | None = None
+    required: bool | str | DataKey | None = None
+    min_chars: int | str | DataKey | None = None
+    max_chars: int | str | DataKey | None = None
+    helper_text: str | DataKey | None = None
+    enabled: bool | str | DataKey | None = None
+    visible: bool | str | DataKey | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -902,24 +941,24 @@ class TextArea(TextEntryComponent):
 
     Attributes:
         name: The unique name (id) for this component (to be used dynamically or in action payloads).
-        label: The label of the text area. Limited to 20 characters. Can be dynamic (e.g ``${data.label}``).
-        required: Whether the text area is required or not. Can be dynamic (e.g ``${data.required}``).
-        max_length: The maximum number of characters allowed in the text area. Can be dynamic (e.g ``${data.max_length}``).
-        helper_text: The helper text of the text area. Limited to 80 characters. Can be dynamic (e.g ``${data.helper_text}``).
-        enabled: Whether the text area is enabled or not. Default to ``True``. Can be dynamic (e.g ``${data.enabled}``).
-        visible: Whether the text area is visible or not. Default to ``True``. Can be dynamic (e.g ``${data.is_visible}``).
+        label: The label of the text area. Limited to 20 characters. Can be dynamic (e.g ``DataKey("label")``).
+        required: Whether the text area is required or not. Can be dynamic (e.g ``DataKey("required")``).
+        max_length: The maximum number of characters allowed in the text area. Can be dynamic (e.g ``DataKey("max_length")``).
+        helper_text: The helper text of the text area. Limited to 80 characters. Can be dynamic (e.g ``DataKey("helper_text")``).
+        enabled: Whether the text area is enabled or not. Default to ``True``. Can be dynamic (e.g ``DataKey("enabled")``).
+        visible: Whether the text area is visible or not. Default to ``True``. Can be dynamic (e.g ``DataKey("is_visible")``).
     """
 
     type: ComponentType = dataclasses.field(
         default=ComponentType.TEXT_AREA, init=False, repr=False
     )
     name: str
-    label: str
-    required: bool | str | None = None
-    max_length: int | str | None = None
-    helper_text: str | None = None
-    enabled: bool | str | None = None
-    visible: bool | str | None = None
+    label: str | DataKey
+    required: bool | str | DataKey | None = None
+    max_length: int | str | DataKey | None = None
+    helper_text: str | DataKey | None = None
+    enabled: bool | str | DataKey | None = None
+    visible: bool | str | DataKey | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -952,13 +991,13 @@ class CheckboxGroup(Component):
 
     Attributes:
         name: The unique name (id) for this component (to be used dynamically or in action payloads).
-        data_source: The data source of the checkbox group. Can be dynamic (e.g ``${data.data_source}``).
-        label: The label of the checkbox group. Limited to 30 characters. Can be dynamic (e.g ``${data.label}``).
-        min_selected_items: The minimum number of items that can be selected. Minimum value is 1. Can be dynamic (e.g ``${data.min_selected_items}``).
-        max_selected_items: The maximum number of items that can be selected. Maximum value is 20. Can be dynamic (e.g ``${data.max_selected_items}``).
-        required: Whether the checkbox group is required or not. Can be dynamic (e.g ``${data.required}``).
-        visible: Whether the checkbox group is visible or not. Default to ``True``. Can be dynamic (e.g ``${data.is_visible}``).
-        enabled: Whether the checkbox group is enabled or not. Default to ``True``. Can be dynamic (e.g ``${data.enabled}``).
+        data_source: The data source of the checkbox group. Can be dynamic (e.g ``DataKey("data_source")``).
+        label: The label of the checkbox group. Limited to 30 characters. Can be dynamic (e.g ``DataKey("label")``).
+        min_selected_items: The minimum number of items that can be selected. Minimum value is 1. Can be dynamic (e.g ``DataKey("min_selected_items")``).
+        max_selected_items: The maximum number of items that can be selected. Maximum value is 20. Can be dynamic (e.g ``DataKey("max_selected_items")``).
+        required: Whether the checkbox group is required or not. Can be dynamic (e.g ``DataKey("required")``).
+        visible: Whether the checkbox group is visible or not. Default to ``True``. Can be dynamic (e.g ``DataKey("is_visible")``).
+        enabled: Whether the checkbox group is enabled or not. Default to ``True``. Can be dynamic (e.g ``DataKey("enabled")``).
         on_select_action: The action to perform when an item is selected.
     """
 
@@ -966,13 +1005,13 @@ class CheckboxGroup(Component):
         default=ComponentType.CHECKBOX_GROUP, init=False, repr=False
     )
     name: str
-    data_source: list[DataSource] | tuple[DataSource] | str
-    label: str | None = None
-    min_selected_items: int | str | None = None
-    max_selected_items: int | str | None = None
-    required: bool | str | None = None
-    visible: bool | str | None = None
-    enabled: bool | str | None = None
+    data_source: Iterable[DataSource] | str | DataKey
+    label: str | DataKey | None = None
+    min_selected_items: int | str | DataKey | None = None
+    max_selected_items: int | str | DataKey | None = None
+    required: bool | str | DataKey | None = None
+    visible: bool | str | DataKey | None = None
+    enabled: bool | str | DataKey | None = None
     on_select_action: Action | None = None
 
 
@@ -986,11 +1025,11 @@ class RadioButtonsGroup(Component):
 
     Attributes:
         name: The unique name (id) for this component (to be used dynamically or in action payloads).
-        data_source: The data source of the radio buttons group. Can be dynamic (e.g ``${data.data_source}``).
-        label: The label of the radio buttons group. Limited to 30 characters. Can be dynamic (e.g ``${data.label}``).
-        required: Whether the radio buttons group is required or not. Can be dynamic (e.g ``${data.required}``).
-        visible: Whether the radio buttons group is visible or not. Default to ``True``. Can be dynamic (e.g ``${data.is_visible}``).
-        enabled: Whether the radio buttons group is enabled or not. Default to ``True``. Can be dynamic (e.g ``${data.enabled}``).
+        data_source: The data source of the radio buttons group. Can be dynamic (e.g ``DataKey("data_source")``).
+        label: The label of the radio buttons group. Limited to 30 characters. Can be dynamic (e.g ``DataKey("label")``).
+        required: Whether the radio buttons group is required or not. Can be dynamic (e.g ``DataKey("required")``).
+        visible: Whether the radio buttons group is visible or not. Default to ``True``. Can be dynamic (e.g ``DataKey("is_visible")``).
+        enabled: Whether the radio buttons group is enabled or not. Default to ``True``. Can be dynamic (e.g ``DataKey("enabled")``).
         on_select_action: The action to perform when an item is selected.
     """
 
@@ -998,11 +1037,11 @@ class RadioButtonsGroup(Component):
         default=ComponentType.RADIO_BUTTONS_GROUP, init=False, repr=False
     )
     name: str
-    data_source: list[DataSource] | tuple[DataSource] | str
-    label: str | None = None
-    required: bool | str | None = None
-    visible: bool | str | None = None
-    enabled: bool | str | None = None
+    data_source: Iterable[DataSource] | str | DataKey
+    label: str | DataKey | None = None
+    required: bool | str | DataKey | None = None
+    visible: bool | str | DataKey | None = None
+    enabled: bool | str | DataKey | None = None
     on_select_action: Action | None = None
 
 
@@ -1014,24 +1053,24 @@ class Footer(Component):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#foot>`_.
 
     Attributes:
-        label: The label of the footer. Limited to 35 characters. Can be dynamic (e.g ``${data.label}``).
+        label: The label of the footer. Limited to 35 characters. Can be dynamic (e.g ``DataKey("label")``).
         on_click_action: The action to perform when the footer is clicked. Required.
-        left_caption: Can set left_caption and right_caption or only center_caption, but not all 3 at once. Limited to 15 characters. Can be dynamic (e.g ``${data.left_caption}``).
-        center_caption: Can set center-caption or left-caption and right-caption, but not all 3 at once. Limited to 15 characters. Can be dynamic (e.g ``${data.center_caption}``).
-        right_caption: Can set right-caption and left-caption or only center-caption, but not all 3 at once. Limited to 15 characters. Can be dynamic (e.g ``${data.right_caption}``).
-        enabled: Whether the footer is enabled or not. Default to ``True``. Can be dynamic (e.g ``${data.enabled}``).
+        left_caption: Can set left_caption and right_caption or only center_caption, but not all 3 at once. Limited to 15 characters. Can be dynamic (e.g ``DataKey("left_caption")``).
+        center_caption: Can set center-caption or left-caption and right-caption, but not all 3 at once. Limited to 15 characters. Can be dynamic (e.g ``DataKey("center_caption")``).
+        right_caption: Can set right-caption and left-caption or only center-caption, but not all 3 at once. Limited to 15 characters. Can be dynamic (e.g ``DataKey("right_caption")``).
+        enabled: Whether the footer is enabled or not. Default to ``True``. Can be dynamic (e.g ``DataKey("enabled")``).
     """
 
     type: ComponentType = dataclasses.field(
         default=ComponentType.FOOTER, init=False, repr=False
     )
     visible: None = dataclasses.field(default=None, init=False, repr=False)
-    label: str
+    label: str | DataKey
     on_click_action: Action
-    left_caption: str | None = None
-    center_caption: str | None = None
-    right_caption: str | None = None
-    enabled: bool | None = None
+    left_caption: str | DataKey | None = None
+    center_caption: str | DataKey | None = None
+    right_caption: str | DataKey | None = None
+    enabled: bool | str | DataKey | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1045,9 +1084,9 @@ class OptIn(Component):
 
     Attributes:
         name: The unique name (id) for this component (to be used dynamically or in action payloads).
-        label: The label of the opt in. Limited to 30 characters. Can be dynamic (e.g ``${data.label}``).
-        required: Whether the opt in is required or not. Can be dynamic (e.g ``${data.required}``).
-        visible: Whether the opt in is visible or not. Default to ``True``. Can be dynamic (e.g ``${data.is_visible}``).
+        label: The label of the opt in. Limited to 30 characters. Can be dynamic (e.g ``DataKey("label")``).
+        required: Whether the opt in is required or not. Can be dynamic (e.g ``DataKey("required")``).
+        visible: Whether the opt in is visible or not. Default to ``True``. Can be dynamic (e.g ``DataKey("is_visible")``).
         on_click_action: The action to perform when the opt in is clicked.
     """
 
@@ -1055,9 +1094,9 @@ class OptIn(Component):
         default=ComponentType.OPT_IN, init=False, repr=False
     )
     name: str
-    label: str
-    required: bool | str | None = None
-    visible: bool | str | None = None
+    label: str | DataKey
+    required: bool | str | DataKey | None = None
+    visible: bool | str | DataKey | None = None
     on_click_action: Action | None = None
 
 
@@ -1071,11 +1110,11 @@ class Dropdown(Component):
 
     Attributes:
         name: The unique name (id) for this component (to be used dynamically or in action payloads).
-        label: The label of the dropdown. Limited to 30 characters. Can be dynamic (e.g ``${data.label}``).
-        data_source: The data source of the dropdown. minimum 1 and maximum 200 items. Can be dynamic (e.g ``${data.data_source}``).
-        enabled: Whether the dropdown is enabled or not. Default to ``True``. Can be dynamic (e.g ``${data.enabled}``).
-        required: Whether the dropdown is required or not. Can be dynamic (e.g ``${data.required}``).
-        visible: Whether the dropdown is visible or not. Default to ``True``. Can be dynamic (e.g ``${data.is_visible}``).
+        label: The label of the dropdown. Limited to 30 characters. Can be dynamic (e.g ``DataKey("label")``).
+        data_source: The data source of the dropdown. minimum 1 and maximum 200 items. Can be dynamic (e.g ``DataKey("data_source")``).
+        enabled: Whether the dropdown is enabled or not. Default to ``True``. Can be dynamic (e.g ``DataKey("enabled")``).
+        required: Whether the dropdown is required or not. Can be dynamic (e.g ``DataKey("required")``).
+        visible: Whether the dropdown is visible or not. Default to ``True``. Can be dynamic (e.g ``DataKey("is_visible")``).
         on_select_action: The action to perform when an item is selected.
     """
 
@@ -1083,11 +1122,11 @@ class Dropdown(Component):
         default=ComponentType.DROPDOWN, init=False, repr=False
     )
     name: str
-    label: str
-    data_source: list[DataSource] | tuple[DataSource] | str
-    enabled: bool | str | None = None
-    required: bool | str | None = None
-    visible: bool | str | None = None
+    label: str | DataKey
+    data_source: Iterable[DataSource] | str | DataKey
+    enabled: bool | str | DataKey | None = None
+    required: bool | str | DataKey | None = None
+    visible: bool | str | DataKey | None = None
     on_select_action: Action | None = None
 
 
@@ -1102,17 +1141,17 @@ class EmbeddedLink(Component):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#embed>`_.
 
     Attributes:
-        text: The text of the embedded link. Limited to 35 characters. Can be dynamic (e.g ``${data.text}``).
+        text: The text of the embedded link. Limited to 35 characters. Can be dynamic (e.g ``DataKey("text")``).
         on_click_action: The action to perform when the embedded link is clicked.
-        visible: Whether the embedded link is visible or not. Default to ``True``. Can be dynamic (e.g ``${data.is_visible}``).
+        visible: Whether the embedded link is visible or not. Default to ``True``. Can be dynamic (e.g ``DataKey("is_visible")``).
     """
 
     type: ComponentType = dataclasses.field(
         default=ComponentType.EMBEDDED_LINK, init=False, repr=False
     )
-    text: str
+    text: str | DataKey
     on_click_action: Action
-    visible: bool | str | None = None
+    visible: bool | str | DataKey | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1125,14 +1164,14 @@ class DatePicker(Component):
 
     Attributes:
         name: The unique name (id) for this component (to be used dynamically or in action payloads).
-        label: The label of the date picker. Limited to 40 characters. Can be dynamic (e.g ``${data.label}``).
-        min_date: The minimum date (timestamp in ms) that can be selected. Can be dynamic (e.g ``${data.min_date}``).
-        max_date: The maximum date (timestamp in ms) that can be selected. Can be dynamic (e.g ``${data.max_date}``).
-        unavailable_dates: The dates (timestamp in ms) that cannot be selected. Can be dynamic (e.g ``${data.unavailable_dates}``).
-        helper_text: The helper text of the date picker. Limited to 80 characters. Can be dynamic (e.g ``${data.helper_text}``).
-        enabled: Whether the date picker is enabled or not. Default to ``True``. Can be dynamic (e.g ``${data.enabled}``).
-        required: Whether the date picker is required or not. Can be dynamic (e.g ``${data.required}``).
-        visible: Whether the date picker is visible or not. Default to ``True``. Can be dynamic (e.g ``${data.is_visible}``).
+        label: The label of the date picker. Limited to 40 characters. Can be dynamic (e.g ``DataKey("label")``).
+        min_date: The minimum date (timestamp in ms) that can be selected. Can be dynamic (e.g ``DataKey("min_date")``).
+        max_date: The maximum date (timestamp in ms) that can be selected. Can be dynamic (e.g ``DataKey("max_date")``).
+        unavailable_dates: The dates (timestamp in ms) that cannot be selected. Can be dynamic (e.g ``DataKey("unavailable_dates")``).
+        helper_text: The helper text of the date picker. Limited to 80 characters. Can be dynamic (e.g ``DataKey("helper_text")``).
+        enabled: Whether the date picker is enabled or not. Default to ``True``. Can be dynamic (e.g ``DataKey("enabled")``).
+        required: Whether the date picker is required or not. Can be dynamic (e.g ``DataKey("required")``).
+        visible: Whether the date picker is visible or not. Default to ``True``. Can be dynamic (e.g ``DataKey("is_visible")``).
         on_select_action: The action to perform when a date is selected.
     """
 
@@ -1140,14 +1179,14 @@ class DatePicker(Component):
         default=ComponentType.DATE_PICKER, init=False, repr=False
     )
     name: str
-    label: str
-    min_date: str | str | None = None
-    max_date: str | str | None = None
-    unavailable_dates: Iterable[str] | str | None = None
-    helper_text: str | None = None
-    enabled: bool | str | None = None
-    required: bool | str | None = None
-    visible: bool | str | None = None
+    label: str | DataKey
+    min_date: str | str | DataKey | None = None
+    max_date: str | str | DataKey | None = None
+    unavailable_dates: Iterable[str] | str | DataKey | None = None
+    helper_text: str | DataKey | None = None
+    enabled: bool | str | DataKey | None = None
+    required: bool | str | DataKey | None = None
+    visible: bool | str | DataKey | None = None
     on_select_action: Action | None = None
 
 
@@ -1178,23 +1217,23 @@ class Image(Component):
 
     Attributes:
         src: Base64 of an image.
-        width: The width of the image. Can be dynamic (e.g ``${data.width}``).
-        height: The height of the image. Can be dynamic (e.g ``${data.height}``).
-        scale_type: The scale type of the image. Defaule to ``ScaleType.CONTAIN`` Can be dynamic (e.g ``${data.scale_type}``). Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#image-scale-types>`_.
-        aspect_ratio: The aspect ratio of the image. Default to ``1``. Can be dynamic (e.g ``${data.aspect_ratio}``).
-        alt_text: Alternative Text is for the accessibility feature, eg. Talkback and Voice over. Can be dynamic (e.g ``${data.alt_text}``).
+        width: The width of the image. Can be dynamic (e.g ``DataKey("width")``).
+        height: The height of the image. Can be dynamic (e.g ``DataKey("height")``).
+        scale_type: The scale type of the image. Defaule to ``ScaleType.CONTAIN`` Can be dynamic (e.g ``DataKey("scale_type")``). Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#image-scale-types>`_.
+        aspect_ratio: The aspect ratio of the image. Default to ``1``. Can be dynamic (e.g ``DataKey("aspect_ratio")``).
+        alt_text: Alternative Text is for the accessibility feature, eg. Talkback and Voice over. Can be dynamic (e.g ``DataKey("alt_text")``).
     """
 
     type: ComponentType = dataclasses.field(
         default=ComponentType.IMAGE, init=False, repr=False
     )
     src: str
-    width: int | str | None = None
-    height: int | str | None = None
-    scale_type: ScaleType | str | None = None
-    aspect_ratio: int | str
-    alt_text: str | None = None
-    visible: bool | str | None = None
+    width: int | str | DataKey | None = None
+    height: int | str | DataKey | None = None
+    scale_type: ScaleType | str | DataKey | None = None
+    aspect_ratio: int | str | DataKey
+    alt_text: str | DataKey | None = None
+    visible: bool | str | DataKey | None = None
 
 
 class FlowActionType(utils.StrEnum):
@@ -1255,9 +1294,10 @@ class Action:
     Attributes:
         name: The type of the action
         next: The next action (only for ``FlowActionType.NAVIGATE``)
-        payload: The payload of the action
+        payload: The payload of the action (Pass data to the next screen or to the WhatsApp Flows Data Endpoint).
+         This payload can take data from form components or from the data of the screen.
     """
 
     name: FlowActionType | str
     next: ActionNext | None = None
-    payload: dict[str, str] | None = None
+    payload: dict[str, str | DataKey | FormRef] | None = None

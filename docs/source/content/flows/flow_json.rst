@@ -58,3 +58,7 @@ Here you will find all the components that make up a Flow JSON object.
 .. autoclass:: ActionNext()
 
 .. autoclass:: ActionNextType()
+
+.. autoclass:: DataKey()
+
+.. autoclass:: FormRef()
