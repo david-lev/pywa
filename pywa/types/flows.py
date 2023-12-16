@@ -612,7 +612,16 @@ class Layout:
     """
 
     type: LayoutType = LayoutType.SINGLE_COLUMN
-    children: list[Component] | tuple[Component]
+    children: Iterable[
+        Form
+        | TextHeading
+        | TextSubheading
+        | TextBody
+        | TextCaption
+        | Image
+        | Footer
+        | dict[str, Any]
+    ]
 
 
 class Component(abc.ABC):
@@ -670,7 +679,16 @@ class Form(Component):
     )
     visible: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
-    children: Iterable[Component]
+    children: Iterable[
+        TextInput
+        | TextArea
+        | CheckboxGroup
+        | RadioButtonsGroup
+        | OptIn
+        | Dropdown
+        | DatePicker
+        | dict[str, Any]
+    ]
     init_values: dict[str, str | list[str, ...] | tuple[str, ...]] | str | None = None
     error_messages: dict[str, str] | str | None = None
 
@@ -849,7 +867,7 @@ class TextInput(TextEntryComponent):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#textinput>`_.
 
     Attributes:
-        name: The name of this component (to be used dynamically or in action payloads).
+        name: The unique name (id) for this component (to be used dynamically or in action payloads).
         label: The label of the text input. Limited to 20 characters. Can be dynamic (e.g ``${data.label}``).
         input_type: The input type of the text input (for keyboard layout and validation rules). Can be dynamic (e.g ``${data.input_type}``).
         required: Whether the text input is required or not. Can be dynamic (e.g ``${data.required}``).
@@ -883,7 +901,7 @@ class TextArea(TextEntryComponent):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#textarea>`_.
 
     Attributes:
-        name: The name of this component (to be used dynamically or in action payloads).
+        name: The unique name (id) for this component (to be used dynamically or in action payloads).
         label: The label of the text area. Limited to 20 characters. Can be dynamic (e.g ``${data.label}``).
         required: Whether the text area is required or not. Can be dynamic (e.g ``${data.required}``).
         max_length: The maximum number of characters allowed in the text area. Can be dynamic (e.g ``${data.max_length}``).
@@ -933,7 +951,7 @@ class CheckboxGroup(Component):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#checkbox>`_.
 
     Attributes:
-        name: The name of this component (to be used dynamically or in action payloads).
+        name: The unique name (id) for this component (to be used dynamically or in action payloads).
         data_source: The data source of the checkbox group. Can be dynamic (e.g ``${data.data_source}``).
         label: The label of the checkbox group. Limited to 30 characters. Can be dynamic (e.g ``${data.label}``).
         min_selected_items: The minimum number of items that can be selected. Minimum value is 1. Can be dynamic (e.g ``${data.min_selected_items}``).
@@ -967,7 +985,7 @@ class RadioButtonsGroup(Component):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#radio>`_.
 
     Attributes:
-        name: The name of this component (to be used dynamically or in action payloads).
+        name: The unique name (id) for this component (to be used dynamically or in action payloads).
         data_source: The data source of the radio buttons group. Can be dynamic (e.g ``${data.data_source}``).
         label: The label of the radio buttons group. Limited to 30 characters. Can be dynamic (e.g ``${data.label}``).
         required: Whether the radio buttons group is required or not. Can be dynamic (e.g ``${data.required}``).
@@ -1026,7 +1044,7 @@ class OptIn(Component):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#opt>`_.
 
     Attributes:
-        name: The name of this component (to be used dynamically or in action payloads).
+        name: The unique name (id) for this component (to be used dynamically or in action payloads).
         label: The label of the opt in. Limited to 30 characters. Can be dynamic (e.g ``${data.label}``).
         required: Whether the opt in is required or not. Can be dynamic (e.g ``${data.required}``).
         visible: Whether the opt in is visible or not. Default to ``True``. Can be dynamic (e.g ``${data.is_visible}``).
@@ -1052,7 +1070,7 @@ class Dropdown(Component):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#drop>`_.
 
     Attributes:
-        name: The name of this component (to be used dynamically or in action payloads).
+        name: The unique name (id) for this component (to be used dynamically or in action payloads).
         label: The label of the dropdown. Limited to 30 characters. Can be dynamic (e.g ``${data.label}``).
         data_source: The data source of the dropdown. minimum 1 and maximum 200 items. Can be dynamic (e.g ``${data.data_source}``).
         enabled: Whether the dropdown is enabled or not. Default to ``True``. Can be dynamic (e.g ``${data.enabled}``).
@@ -1106,7 +1124,7 @@ class DatePicker(Component):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#dp>`_.
 
     Attributes:
-        name: The name of this component (to be used dynamically or in action payloads).
+        name: The unique name (id) for this component (to be used dynamically or in action payloads).
         label: The label of the date picker. Limited to 40 characters. Can be dynamic (e.g ``${data.label}``).
         min_date: The minimum date (timestamp in ms) that can be selected. Can be dynamic (e.g ``${data.min_date}``).
         max_date: The maximum date (timestamp in ms) that can be selected. Can be dynamic (e.g ``${data.max_date}``).
