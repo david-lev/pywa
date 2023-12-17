@@ -863,7 +863,7 @@ We need to provide our business private key to decrypt the request and encrypt t
 
         We need to setup WhatsApp Business Encryption in order to decrypt the request and encrypt the response.
         You can read more about it in `WhatsApp Business Encryption <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/whatsapp-business-encryption>`_.
-        The public key can be uploaded using the :meth:`pywa.api.client.set_business_public_key.set_business_public_key` method.
+        The public key can be uploaded using the :meth:`pywa.client.WhatsApp.set_business_public_key` method.
 
 After that. we are registering a callback function to handle the request.
 The callback function will receive the :class:`FlowRequest` object and should return :class:`FlowResponse` object.

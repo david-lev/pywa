@@ -432,7 +432,7 @@ class FlowCompletionHandler(Handler):
 
     Args:
         callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a
-            :class:`pywa.types.Flow` as arguments)
+            :class:`pywa.types.FlowCompletion` as arguments)
 
     """
 
