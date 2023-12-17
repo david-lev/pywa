@@ -620,6 +620,7 @@ class Layout:
         | TextSubheading
         | TextBody
         | TextCaption
+        | EmbeddedLink
         | Image
         | Footer
         | dict[str, Any]
@@ -668,13 +669,6 @@ class _Ref:
 
 
 class DataKey(_Ref):
-    """
-    Represents a data reference variable (converts to ``${data.<field>}``).
-
-    Attributes:
-
-    """
-
     def __new__(cls, key: str):
         """
         Represents a data key (converts to ``${data.<key>}``).
@@ -719,13 +713,20 @@ class Form(Component):
     visible: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
     children: Iterable[
-        TextInput
+        TextHeading
+        | TextSubheading
+        | TextBody
+        | TextCaption
+        | TextInput
         | TextArea
         | CheckboxGroup
         | RadioButtonsGroup
         | OptIn
         | Dropdown
         | DatePicker
+        | EmbeddedLink
+        | Image
+        | Footer
         | dict[str, Any]
     ]
     init_values: dict[str, Any] | str | DataKey | None = None
