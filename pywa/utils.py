@@ -5,7 +5,7 @@ import json
 import dataclasses
 import enum
 import importlib
-from typing import Any, Callable, Protocol, TypeVar
+from typing import Any, Callable, Protocol, TypeAlias
 
 
 def is_fastapi_app(app):
@@ -24,7 +24,18 @@ def is_flask_app(app):
         return False
 
 
+def is_cryptography_installed():
+    """Check if the cryptography library is installed."""
+    try:
+        importlib.import_module("cryptography")
+        return True
+    except ImportError:
+        return False
+
+
 class StrEnum(str, enum.Enum):
+    """Enum where the values are also (and must be) strings."""
+
     def __str__(self):
         return self.value
 
@@ -61,26 +72,26 @@ class Flask(Protocol):
         ...
 
 
-FlowRequestDecryptor = TypeVar(
-    "FlowRequestDecryptor",
-    bound=Callable[[str, str, str, str, str | None], tuple[dict, bytes, bytes]],
+FlowRequestDecryptor: TypeAlias = (
+    Callable[[str, str, str, str, str | None], tuple[dict, bytes, bytes]],
 )
 """
 Type hint for the function that decrypts the request from WhatsApp Flow.
 
 - All parameters need to be positional.
 
-    Args:
-        encrypted_flow_data_b64 (str): encrypted flow data
-        encrypted_aes_key_b64 (str): encrypted AES key
-        initial_vector_b64 (str): initial vector
-        private_key (str): private key
-        password (str, optional): password for the private key. Optional.
+Args:
+    encrypted_flow_data_b64 (str): encrypted flow data
+    encrypted_aes_key_b64 (str): encrypted AES key
+    initial_vector_b64 (str): initial vector
+    private_key (str): private key
+    password (str): password for the private key. Optional.
 
-    Returns:
-        decrypted_data (dict): decrypted data from the request
-        aes_key (bytes): AES key you should use to encrypt the response
-        iv (bytes): initial vector you should use to encrypt the response
+Returns:
+    tuple[dict, bytes, bytes]
+    - decrypted_data (dict): decrypted data from the request
+    - aes_key (bytes): AES key you should use to encrypt the response
+    - iv (bytes): initial vector you should use to encrypt the response
 """
 
 
@@ -105,15 +116,9 @@ def default_flow_request_decryptor(
         aes_key: AES key you should use to encrypt the response
         iv: initial vector you should use to encrypt the response
     """
-    try:
-        from cryptography.hazmat.primitives.asymmetric.padding import OAEP, MGF1, hashes
-        from cryptography.hazmat.primitives.ciphers import algorithms, Cipher, modes
-        from cryptography.hazmat.primitives.serialization import load_pem_private_key
-    except ImportError as e:
-        raise ImportError(
-            "You need to install `cryptography` to use the default FlowRequestDecryptor.\n"
-            "- To install it, run `pip3 install 'pywa[cryptography]'` or `pip3 install cryptography`."
-        ) from e
+    from cryptography.hazmat.primitives.asymmetric.padding import OAEP, MGF1, hashes
+    from cryptography.hazmat.primitives.ciphers import algorithms, Cipher, modes
+    from cryptography.hazmat.primitives.serialization import load_pem_private_key
 
     flow_data = base64.b64decode(encrypted_flow_data_b64)
     iv = base64.b64decode(initial_vector_b64)
@@ -140,21 +145,19 @@ def default_flow_request_decryptor(
     return decrypted_data, aes_key, iv
 
 
-FlowResponseEncryptor = TypeVar(
-    "FlowResponseEncryptor", bound=Callable[[dict, bytes, bytes], str]
-)
+FlowResponseEncryptor: TypeAlias = Callable[[dict, bytes, bytes], str]
 """
 Type hint for the function that encrypts the response to WhatsApp Flow.
 
 - All parameters need to be positional.
 
-    Args:
-        response (dict): response to encrypt
-        aes_key (bytes): AES key
-        iv (bytes): initial vector
+Args:
+    response (dict): response to encrypt
+    aes_key (bytes): AES key
+    iv (bytes): initial vector
 
-    Returns:
-        encrypted_response (str): encrypted response to send back to WhatsApp Flow
+Returns:
+    encrypted_response (str): encrypted response to send back to WhatsApp Flow
 """
 
 
@@ -170,13 +173,7 @@ def default_flow_response_encryptor(response: dict, aes_key: bytes, iv: bytes) -
     Returns:
         encrypted_response: encrypted response to send back to WhatsApp Flow
     """
-    try:
-        from cryptography.hazmat.primitives.ciphers import algorithms, Cipher, modes
-    except ImportError as e:
-        raise ImportError(
-            "You need to install `cryptography` to use the default FlowResponseEncryptor.\n"
-            "- To install it, run `pip3 install 'pywa[cryptography]'` or `pip3 install cryptography`."
-        ) from e
+    from cryptography.hazmat.primitives.ciphers import algorithms, Cipher, modes
 
     flipped_iv = bytearray()
     for byte in iv:

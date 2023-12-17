@@ -68,8 +68,10 @@ class WhatsApp(Webhook, HandlerDecorators):
         verify_timeout: int | None = None,
         business_private_key: str | None = None,
         business_private_key_password: str | None = None,
-        flows_request_decryptor: utils.FlowRequestDecryptor = utils.default_flow_request_decryptor,
-        flows_response_encryptor: utils.FlowResponseEncryptor = utils.default_flow_response_encryptor,
+        flows_request_decryptor: utils.FlowRequestDecryptor
+        | None = utils.default_flow_request_decryptor,
+        flows_response_encryptor: utils.FlowResponseEncryptor
+        | None = utils.default_flow_response_encryptor,
     ) -> None:
         """
         The WhatsApp client.
@@ -159,7 +161,7 @@ class WhatsApp(Webhook, HandlerDecorators):
             server=server,
             webhook_endpoint=webhook_endpoint,
             callback_url=callback_url,
-            fields=fields,
+            fields=tuple(fields) if fields else None,
             app_id=app_id,
             app_secret=app_secret,
             verify_token=verify_token,
@@ -1323,6 +1325,7 @@ class WhatsApp(Webhook, HandlerDecorators):
         `'Create Templates' on developers.facebook.com
         <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates>`_.
 
+        - This method requires the WhatsApp Business account ID to be provided when initializing the client.
         - To send a template, use :py:func:`~pywa.client.WhatsApp.send_template`.
 
         ATTENTION: In case of an errors, WhatsApp does not return a proper error message, instead, it returns a message
@@ -1495,6 +1498,7 @@ class WhatsApp(Webhook, HandlerDecorators):
         """
         Create a flow.
 
+        - This method requires the WhatsApp Business account ID to be provided when initializing the client.
         - New Flows are created in DRAFT status.
         - To update the flow json, use :py:func:`~pywa.client.WhatsApp.update_flow`.
         - To send a flow, use :py:func:`~pywa.client.WhatsApp.send_flow`.
@@ -1752,12 +1756,15 @@ class WhatsApp(Webhook, HandlerDecorators):
         """
         Get the details of all flows belonging to the WhatsApp Business account.
 
+        - This method requires the WhatsApp Business account ID to be provided when initializing the client.
+
         Args:
             invalidate_preview: Whether to invalidate the preview (optional, default: True).
 
         Returns:
             The details of all flows.
         """
+        self._validate_business_account_id_provided()
         return tuple(
             FlowDetails.from_dict(data=data, client=self)
             for data in self.api.get_flows(

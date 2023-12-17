@@ -17,8 +17,9 @@ __all__ = [
 import abc
 import dataclasses
 import functools
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, cast, TypeAlias
 
+from pywa import utils
 from pywa.types import (
     CallbackButton,
     CallbackSelection,
@@ -29,22 +30,19 @@ from pywa.types import (
     FlowResponse,
 )
 from pywa.types.callback import CallbackData
-from pywa.types.flows import FlowCompletion
+from pywa.types.flows import FlowCompletion, FlowResponseError  # noqa
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
     from pywa.types.base_update import BaseUpdate  # noqa
 
 
-CallbackDataFactoryT = TypeVar(
-    "CallbackDataFactoryT",
-    bound=(
-        type[str]
-        | type[CallbackData]
-        | tuple[type[CallbackData | Any], ...]
-        | list[type[CallbackData | Any], ...]
-        | Callable[[str], Any]
-    ),
+CallbackDataFactoryT: TypeAlias = (
+    type[str]
+    | type[CallbackData]
+    | tuple[type[CallbackData | Any], ...]
+    | list[type[CallbackData | Any], ...]
+    | Callable[[str], Any]
 )
 """Type hint for the callback data factory."""
 
@@ -768,14 +766,17 @@ class HandlerDecorators:
         handle_health_check: bool = True,
         private_key: str | None = None,
         private_key_password: str | None = None,
-        request_decryptor: Callable[
-            [str, str, str, str, str | None], tuple[dict, bytes, bytes]
-        ]
-        | None = None,
+        request_decryptor: utils.FlowRequestDecryptor | None = None,
         response_encryptor: Callable[[dict, bytes, bytes], str] | None = None,
     ) -> Callable[
-        [Callable[[WhatsApp, FlowRequest], FlowResponse | dict]],
-        Callable[[WhatsApp, FlowRequest], FlowResponse | dict],
+        [
+            Callable[
+                [WhatsApp, FlowRequest], FlowResponse | FlowResponseError | dict | None
+            ]
+        ],
+        Callable[
+            [WhatsApp, FlowRequest], FlowResponse | FlowResponseError | dict | None
+        ],
     ]:
         """
         Decorator to register a function to handle and respond to incoming Flow Data Exchange requests.
@@ -808,8 +809,12 @@ class HandlerDecorators:
 
         @functools.wraps(self.on_flow_request)
         def decorator(
-            callback: Callable[[WhatsApp, FlowRequest], FlowResponse | dict],
-        ) -> Callable[[WhatsApp, FlowRequest], FlowResponse | dict]:
+            callback: Callable[
+                [WhatsApp, FlowRequest], FlowResponse | FlowResponseError | dict | None
+            ],
+        ) -> Callable[
+            [WhatsApp, FlowRequest], FlowResponse | FlowResponseError | dict | None
+        ]:
             self._register_flow_endpoint_callback(
                 endpoint=endpoint,
                 callback=callback,
