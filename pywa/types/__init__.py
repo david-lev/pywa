@@ -53,4 +53,5 @@ from .flows import (
     FlowJSON,
     FlowActionType,
     FlowStatus,
+    FlowCategory,
 )

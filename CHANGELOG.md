@@ -3,6 +3,11 @@ Changelog
 
 NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 1.13.0-rc.5 (2023-12-18)
+
+- [flows] add supported types for Layout and Form `.children` and fix FlowPreview.expires_at
+- [webhook] validate `cryptography` is installed when using the default flows decryptor/encryptor
+
 ### 1.13.0-rc.4 (2023-12-16)
 
 - [client] expose `set_business_public_key`
