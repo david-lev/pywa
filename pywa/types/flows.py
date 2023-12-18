@@ -393,7 +393,9 @@ class FlowPreview:
     def from_dict(cls, data: dict):
         return cls(
             url=data["preview_url"],
-            expires_at=datetime.datetime.fromisoformat(data["expires_at"]),
+            expires_at=datetime.datetime.strptime(
+                data["expires_at"], "%Y-%m-%dT%H:%M:%S%z"
+            ),
         )
 
 
