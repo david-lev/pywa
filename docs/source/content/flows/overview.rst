@@ -112,77 +112,11 @@ here is an example of static flow:
         :caption: customer_satisfaction_survey_flow.py
         :linenos:
 
-        from pywa.types.flows import (
-            FlowJSON,
-            Screen,
-            Layout,
-            LayoutType,
-            Form,
-            TextSubheading,
-            RadioButtonsGroup,
-            DataSource,
-            TextArea,
-            Footer,
-            Action,
-            FlowActionType,
-            ActionNext,
-            ActionNextType,
-            Dropdown,
-        )
-        customer_satisfaction_survey = FlowJSON(
-            version="2.1",
+        static_flow = FlowJSON(
             screens=[
                 Screen(
-                    id="RECOMMEND",
-                    title="Feedback 1 of 2",
-                    layout=Layout(
-                        type=LayoutType.SINGLE_COLUMN,
-                        children=[
-                            Form(
-                                name="form",
-                                children=[
-                                    TextSubheading(text="Would you recommend us to a friend?"),
-                                    RadioButtonsGroup(
-                                        name="recommend_radio",
-                                        label="Choose one",
-                                        data_source=[
-                                            DataSource(id="0", title="Yes"),
-                                            DataSource(id="1", title="No"),
-                                        ],
-                                        required=True,
-                                    ),
-                                    TextSubheading(text="How could we do better?"),
-                                    TextArea(
-                                        name="comment_text",
-                                        label="Leave a comment",
-                                        required=False,
-                                    ),
-                                    Footer(
-                                        label="Continue",
-                                        on_click_action=Action(
-                                            name=FlowActionType.NAVIGATE,
-                                            next=ActionNext(
-                                                name="RATE",
-                                                type=ActionNextType.SCREEN
-                                            ),
-                                            payload={
-                                                "recommend_radio": FormRef("recommend_radio"),
-                                                "comment_text": FormRef("comment_text"),
-                                            },
-                                        ),
-                                    ),
-                                ],
-                            )
-                        ],
-                    ),
-                ),
-                Screen(
-                    id="RATE",
-                    title="Feedback 2 of 2",
-                    data={
-                        "recommend_radio": {"type": "string", "__example__": "0"},
-                        "comment_text": {"type": "string", "__example__": "Test comment"},
-                    },
+                    id="SIGN_UP",
+                    title="Finish Sign Up",
                     terminal=True,
                     layout=Layout(
                         type=LayoutType.SINGLE_COLUMN,
@@ -190,53 +124,33 @@ here is an example of static flow:
                             Form(
                                 name="form",
                                 children=[
-                                    TextSubheading(text="Rate the following: "),
-                                    Dropdown(
-                                        name="purchase_rating",
-                                        label="Purchase experience",
+                                    TextInput(
+                                        name="first_name",
+                                        label="First Name",
+                                        input_type=InputType.TEXT,
                                         required=True,
-                                        data_source=[
-                                            DataSource(id="0", title="★★★★★ • Excellent (5/5)"),
-                                            DataSource(id="1", title="★★★★☆ • Good (4/5)"),
-                                            DataSource(id="2", title="★★★☆☆ • Average (3/5)"),
-                                            DataSource(id="3", title="★★☆☆☆ • Poor (2/5)"),
-                                            DataSource(id="4", title="★☆☆☆☆ • Very Poor (1/5)"),
-                                        ],
                                     ),
-                                    Dropdown(
-                                        name="delivery_rating",
-                                        label="Delivery and setup",
+                                    TextInput(
+                                        name="last_name",
+                                        label="Last Name",
+                                        input_type=InputType.TEXT,
                                         required=True,
-                                        data_source=[
-                                            DataSource(id="0", title="★★★★★ • Excellent (5/5)"),
-                                            DataSource(id="1", title="★★★★☆ • Good (4/5)"),
-                                            DataSource(id="2", title="★★★☆☆ • Average (3/5)"),
-                                            DataSource(id="3", title="★★☆☆☆ • Poor (2/5)"),
-                                            DataSource(id="4", title="★☆☆☆☆ • Very Poor (1/5)"),
-                                        ],
                                     ),
-                                    Dropdown(
-                                        name="cs_rating",
-                                        label="Customer service",
+                                    TextInput(
+                                        name="email",
+                                        label="Email Address",
+                                        input_type=InputType.EMAIL,
                                         required=True,
-                                        data_source=[
-                                            DataSource(id="0", title="★★★★★ • Excellent (5/5)"),
-                                            DataSource(id="1", title="★★★★☆ • Good (4/5)"),
-                                            DataSource(id="2", title="★★★☆☆ • Average (3/5)"),
-                                            DataSource(id="3", title="★★☆☆☆ • Poor (2/5)"),
-                                            DataSource(id="4", title="★☆☆☆☆ • Very Poor (1/5)"),
-                                        ],
                                     ),
                                     Footer(
                                         label="Done",
+                                        enabled=True,
                                         on_click_action=Action(
                                             name=FlowActionType.COMPLETE,
                                             payload={
-                                                "purchase_rating": FormRef("purchase_rating"),
-                                                "delivery_rating": FormRef("delivery_rating"),
-                                                "cs_rating": FormRef("cs_rating"),
-                                                "recommend_radio": DataKey("recommend_radio"),
-                                                "comment_text": DataKey("comment_text"),
+                                                "first_name": FormRef("first_name"),
+                                                "last_name": FormRef("last_name"),
+                                                "email": FormRef("email"),
                                             },
                                         ),
                                     ),
@@ -244,7 +158,7 @@ here is an example of static flow:
                             )
                         ],
                     ),
-                ),
+                )
             ],
         )
 
@@ -257,199 +171,60 @@ Which is the equivalent of the following flow json:
         :linenos:
 
         {
-            "version": "2.1",
-            "screens": [
-              {
-                "id": "RECOMMEND",
-                "title": "Feedback 1 of 2",
-                "data": {},
-                "layout": {
-                  "type": "SingleColumnLayout",
-                  "children": [
-                    {
-                      "type": "Form",
-                      "name": "form",
-                      "children": [
-                        {
-                          "type": "TextSubheading",
-                          "text": "Would you recommend us to a friend?"
-                        },
-                        {
-                          "type": "RadioButtonsGroup",
-                          "label": "Choose one",
-                          "name": "recommend_radio",
-                          "data-source": [
-                            {
-                              "id": "0",
-                              "title": "Yes"
-                            },
-                            {
-                              "id": "1",
-                              "title": "No"
-                            }
-                          ],
-                          "required": true
-                        },
-                        {
-                          "type": "TextSubheading",
-                          "text": "How could we do better?"
-                        },
-                        {
-                          "type": "TextArea",
-                          "label": "Leave a comment",
-                          "required": false,
-                          "name": "comment_text"
-                        },
-                        {
-                          "type": "Footer",
-                          "label": "Continue",
-                          "on-click-action": {
-                            "name": "navigate",
-                            "next": {
-                              "type": "screen",
-                              "name": "RATE"
-                            },
-                            "payload": {
-                              "recommend_radio": "${form.recommend_radio}",
-                              "comment_text": "${form.comment_text}"
-                            }
+          "version": "3.0",
+          "screens": [
+            {
+              "id": "SIGN_UP",
+              "title": "Finish Sign Up",
+              "terminal": true,
+              "layout": {
+                "type": "SingleColumnLayout",
+                "children": [
+                  {
+                    "type": "Form",
+                    "name": "form",
+                    "children": [
+                      {
+                        "type": "TextInput",
+                        "name": "first_name",
+                        "label": "First Name",
+                        "input-type": "text",
+                        "required": true
+                      },
+                      {
+                        "type": "TextInput",
+                        "name": "last_name",
+                        "label": "Last Name",
+                        "input-type": "text",
+                        "required": true
+                      },
+                      {
+                        "type": "TextInput",
+                        "name": "email",
+                        "label": "Email Address",
+                        "input-type": "email",
+                        "required": true
+                      },
+                      {
+                        "type": "Footer",
+                        "label": "Done",
+                        "on-click-action": {
+                          "name": "complete",
+                          "payload": {
+                            "first_name": "${form.first_name}",
+                            "last_name": "${form.last_name}",
+                            "email": "${form.email}"
                           }
-                        }
-                      ]
-                    }
-                  ]
-                }
-              },
-              {
-                "id": "RATE",
-                "title": "Feedback 2 of 2",
-                "data": {
-                  "recommend_radio": {
-                    "type": "string",
-                    "__example__": "Example"
-                  },
-                  "comment_text": {
-                    "type": "string",
-                    "__example__": "Example"
+                        },
+                        "enabled": true
+                      }
+                    ]
                   }
-                },
-                "terminal": true,
-                "layout": {
-                  "type": "SingleColumnLayout",
-                  "children": [
-                    {
-                      "type": "Form",
-                      "name": "form",
-                      "children": [
-                        {
-                          "type": "TextSubheading",
-                          "text": "Rate the following: "
-                        },
-                        {
-                          "type": "Dropdown",
-                          "label": "Purchase experience",
-                          "required": true,
-                          "name": "purchase_rating",
-                          "data-source": [
-                            {
-                              "id": "0",
-                              "title": "★★★★★ • Excellent (5/5)"
-                            },
-                            {
-                              "id": "1",
-                              "title": "★★★★☆ • Good (4/5)"
-                            },
-                            {
-                              "id": "2",
-                              "title": "★★★☆☆ • Average (3/5)"
-                            },
-                            {
-                              "id": "3",
-                              "title": "★★☆☆☆ • Poor (2/5)"
-                            },
-                            {
-                              "id": "4",
-                              "title": "★☆☆☆☆ • Very Poor (1/5)"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "Dropdown",
-                          "label": "Delivery and setup",
-                          "required": true,
-                          "name": "delivery_rating",
-                          "data-source": [
-                            {
-                              "id": "0",
-                              "title": "★★★★★ • Excellent (5/5)"
-                            },
-                            {
-                              "id": "1",
-                              "title": "★★★★☆ • Good (4/5)"
-                            },
-                            {
-                              "id": "2",
-                              "title": "★★★☆☆ • Average (3/5)"
-                            },
-                            {
-                              "id": "3",
-                              "title": "★★☆☆☆ • Poor (2/5)"
-                            },
-                            {
-                              "id": "4",
-                              "title": "★☆☆☆☆ • Very Poor (1/5)"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "Dropdown",
-                          "label": "Customer service",
-                          "required": true,
-                          "name": "cs_rating",
-                          "data-source": [
-                            {
-                              "id": "0",
-                              "title": "★★★★★ • Excellent (5/5)"
-                            },
-                            {
-                              "id": "1",
-                              "title": "★★★★☆ • Good (4/5)"
-                            },
-                            {
-                              "id": "2",
-                              "title": "★★★☆☆ • Average (3/5)"
-                            },
-                            {
-                              "id": "3",
-                              "title": "★★☆☆☆ • Poor (2/5)"
-                            },
-                            {
-                              "id": "4",
-                              "title": "★☆☆☆☆ • Very Poor (1/5)"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "Footer",
-                          "label": "Done",
-                          "on-click-action": {
-                            "name": "complete",
-                            "payload": {
-                              "purchase_rating": "${form.purchase_rating}",
-                              "delivery_rating": "${form.delivery_rating}",
-                              "cs_rating": "${form.cs_rating}",
-                              "recommend_radio": "${data.recommend_radio}",
-                              "comment_text": "${data.comment_text}"
-                            }
-                          }
-                        }
-                      ]
-                    }
-                  ]
-                }
+                ]
               }
-            ]
-          }
+            }
+          ]
+        }
 
 Here is example of dynamic flow:
 
@@ -459,26 +234,24 @@ Here is example of dynamic flow:
         :caption: support_request.json
         :linenos:
 
-        support_request = FlowJSON(
-            version="2.1",
-            data_api_version="3.0",
-            data_channel_uri="https://your-server-api.com/support_request_flow",
+        dynamic_flow = FlowJSON(
+            data_api_version=utils.Version.FLOW_DATA_API,
             routing_model={},
             screens=[
                 Screen(
-                    id="DETAILS",
+                    id="SIGN_UP",
+                    title="Finish Sign Up",
                     terminal=True,
-                    title="Get help",
                     data={
-                        "name_help": {
+                        "first_name_helper_text": {
                             "type": "string",
-                            "__example__": "request for full name",
+                            "__example__": "Enter your first name",
                         },
-                        "is_order_num_required": {
+                        "is_last_name_required": {
                             "type": "boolean",
                             "__example__": True,
                         },
-                        "is_desc_enabled": {
+                        "is_email_enabled": {
                             "type": "boolean",
                             "__example__": False,
                         },
@@ -490,46 +263,32 @@ Here is example of dynamic flow:
                                 name="form",
                                 children=[
                                     TextInput(
-                                        name="name",
-                                        label="Name",
+                                        name="first_name",
+                                        label="First Name",
                                         input_type=InputType.TEXT,
                                         required=True,
-                                        helper_text=DataKey("name_help"),
+                                        helper_text=DataKey("first_name_helper_text"),
                                     ),
                                     TextInput(
-                                        name="order_number",
-                                        label="Order number",
-                                        input_type=InputType.NUMBER,
-                                        required=DataKey("is_order_num_required"),
-                                        helper_text="",
+                                        name="last_name",
+                                        label="Last Name",
+                                        input_type=InputType.TEXT,
+                                        required=DataKey("is_last_name_required"),
                                     ),
-                                    RadioButtonsGroup(
-                                        name="topic_radio",
-                                        label="Choose a topic",
-                                        data_source=[
-                                            DataSource(id="0", title="Orders and payments"),
-                                            DataSource(id="1", title="Maintenance"),
-                                            DataSource(id="2", title="Delivery"),
-                                            DataSource(id="3", title="Returns"),
-                                            DataSource(id="4", title="Other"),
-                                        ],
-                                        required=True,
-                                    ),
-                                    TextArea(
-                                        name="description",
-                                        label="Description of issue",
-                                        required=False,
-                                        enabled=DataKey("is_desc_enabled"),
+                                    TextInput(
+                                        name="email",
+                                        label="Email Address",
+                                        input_type=InputType.EMAIL,
+                                        enabled=DataKey("is_email_enabled"),
                                     ),
                                     Footer(
                                         label="Done",
                                         on_click_action=Action(
                                             name=FlowActionType.COMPLETE,
                                             payload={
-                                                "name": FormRef("name"),
-                                                "order_number": FormRef("order_number"),
-                                                "topic": FormRef("topic_radio"),
-                                                "description": FormRef("description"),
+                                                "first_name": FormRef("first_name"),
+                                                "last_name": FormRef("last_name"),
+                                                "email": FormRef("email"),
                                             },
                                         ),
                                     ),
@@ -550,106 +309,75 @@ Which is the equivalent of the following flow json:
         :linenos:
 
         {
-          "version": "2.1",
-          "data_api_version": "3.0",
-          "data_channel_uri": "https://example.com/support_request_flow",
-          "routing_model": {},
-          "screens": [
-            {
-              "id": "DETAILS",
-              "title": "Get help",
-              "data": {
-                "name_help": {
-                  "type": "string",
-                  "__example__": "request for full name"
-                },
-                "is_order_num_required": {
-                  "type": "boolean",
-                  "__example__": true
-                },
-                "is_desc_enabled": {
-                  "type": "boolean",
-                  "__example__": false
-                }
-              },
-              "terminal": true,
-              "layout": {
-                "type": "SingleColumnLayout",
-                "children": [
-                  {
-                    "type": "Form",
-                    "name": "form",
-                    "children": [
-                      {
-                        "type": "TextInput",
-                        "name": "name",
-                        "label": "Name",
-                        "input-type": "text",
-                        "required": true,
-                        "helper-text": "${data.name_help}"
-                      },
-                      {
-                        "type": "TextInput",
-                        "name": "order_number",
-                        "label": "Order number",
-                        "input-type": "number",
-                        "required": "${data.is_order_num_required}",
-                        "helper-text": ""
-                      },
-                      {
-                        "type": "RadioButtonsGroup",
-                        "name": "topic_radio",
-                        "data-source": [
-                          {
-                            "id": "0",
-                            "title": "Orders and payments"
-                          },
-                          {
-                            "id": "1",
-                            "title": "Maintenance"
-                          },
-                          {
-                            "id": "2",
-                            "title": "Delivery"
-                          },
-                          {
-                            "id": "3",
-                            "title": "Returns"
-                          },
-                          {
-                            "id": "4",
-                            "title": "Other"
-                          }
-                        ],
-                        "label": "Choose a topic",
-                        "required": true
-                      },
-                      {
-                        "type": "TextArea",
-                        "name": "description",
-                        "label": "Description of issue",
-                        "required": false,
-                        "enabled": "${data.is_desc_enabled}"
-                      },
-                      {
-                        "type": "Footer",
-                        "label": "Done",
-                        "on-click-action": {
-                          "name": "complete",
-                          "payload": {
-                            "name": "${form.name}",
-                            "order_number": "${form.order_number}",
-                            "topic": "${form.topic_radio}",
-                            "description": "${form.description}"
-                          }
+            "version": "3.0",
+            "data_api_version": "3.0",
+            "routing_model": {},
+            "screens": [
+                {
+                    "id": "SIGN_UP",
+                    "title": "Finish Sign Up",
+                    "data": {
+                        "first_name_helper_text": {
+                            "type": "string",
+                            "__example__": "Enter your first name"
+                        },
+                        "is_last_name_required": {
+                            "type": "boolean",
+                            "__example__": true
+                        },
+                        "is_email_enabled": {
+                            "type": "boolean",
+                            "__example__": false
                         }
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          ]
+                    },
+                    "terminal": true,
+                    "layout": {
+                        "type": "SingleColumnLayout",
+                        "children": [
+                            {
+                                "type": "Form",
+                                "name": "form",
+                                "children": [
+                                    {
+                                        "type": "TextInput",
+                                        "name": "first_name",
+                                        "label": "First Name",
+                                        "input-type": "text",
+                                        "required": true,
+                                        "helper-text": "${data.first_name_helper_text}"
+                                    },
+                                    {
+                                        "type": "TextInput",
+                                        "name": "last_name",
+                                        "label": "Last Name",
+                                        "input-type": "text",
+                                        "required": "${data.is_last_name_required}"
+                                    },
+                                    {
+                                        "type": "TextInput",
+                                        "name": "email",
+                                        "label": "Email Address",
+                                        "input-type": "email",
+                                        "enabled": "${data.is_email_enabled}"
+                                    },
+                                    {
+                                        "type": "Footer",
+                                        "label": "Done",
+                                        "on-click-action": {
+                                            "name": "complete",
+                                            "payload": {
+                                                "first_name": "${form.first_name}",
+                                                "last_name": "${form.last_name}",
+                                                "email": "${form.email}"
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            ]
         }
 
 After you have the flow json, you can update the flow with :meth:`pywa.client.WhatsApp.update_flow_json`:
@@ -720,7 +448,7 @@ Let's see how to send text message with flow:
 
 .. code-block:: python
     :linenos:
-    :emphasize-lines: 9, 10, 11, 12, 13, 14, 15, 16, 17
+    :emphasize-lines: 9, 10, 11, 12, 13, 14, 15, 16
 
     from pywa import WhatsApp
     from pywa.types import FlowButton
@@ -731,13 +459,12 @@ Let's see how to send text message with flow:
         phone_number="1234567890",
         text="Hi, We love to get your feedback on our service!",
         buttons=FlowButton(
-            title="Leave Feedback",
-            flow_id="1234567890123456",  # The `customer_satisfaction_survey_flow` id from above
+            title="Finish Sign Up",
+            flow_id="1234567890123456",  # The `static_flow` flow id from above
             flow_token="AQAAAAACS5FpgQ_cAAAAAD0QI3s.",
-            flow_message_version="3",
             mode=FlowStatus.DRAFT,
             flow_action_type=FlowActionType.NAVIGATE,
-            flow_action_screen="RECOMMEND", # The first screen id
+            flow_action_screen="SIGN_UP", # The screen id to open when the user clicks the button
         )
     )
 
@@ -748,8 +475,6 @@ Let's walk through the arguments:
 - ``flow_id`` - The flow id that you want to send.
 
 - ``flow_token`` - A unique token you generate for each flow message. The token is used to identify the flow message when you receive a response from the user.
-
-- ``flow_message_version`` - The version of the flow message. The version is used to identify the flow message when you receive a response from the user.
 
 - ``mode`` - If the flow is in draft mode, you must specify the mode as ``FlowStatus.DRAFT``.
 
@@ -768,26 +493,26 @@ Handling Flow requests and responding to them
 In dynamic flow, when the user perform an action with type of ``FlowActionType.DATA_EXCHANGE`` you will receive a request to your server with the payload
 and you need to determine if you want to continue to the next screen or complete the flow.
 
-So in our dynamic example (``support_request``) we have just one screen: ``DETAILS``
+So in our dynamic example (``dynamic_flow``) we have just one screen: ``SIGN_UP``.
 
 .. code-block:: python
         :linenos:
         :emphasize-lines: 3, 6, 10, 14
 
         Screen(
-            id="DETAILS",
+            id="SIGN_UP",
+            title="Finish Sign Up",
             terminal=True,
-            title="Get help",
             data={
-                "name_help": {
+                "first_name_helper_text": {
                     "type": "string",
-                    "__example__": "request for full name",
+                    "__example__": "Enter your first name",
                 },
-                "is_order_num_required": {
+                "is_last_name_required": {
                     "type": "boolean",
                     "__example__": True,
                 },
-                "is_desc_enabled": {
+                "is_email_enabled": {
                     "type": "boolean",
                     "__example__": False,
                 },
@@ -795,21 +520,38 @@ So in our dynamic example (``support_request``) we have just one screen: ``DETAI
             ...
         )
 
-The ``terminal`` argument is set to ``True`` which means that this screen can ends the flow.
+
+The ``terminal`` argument is set to ``True`` which means that this screen can end the flow.
 
 As you can see, this screen gets data that help it to be dynamic.
 
-For example, we have :class:`TextInput` that gets the user's name. We want to be dynamic about what we want the user
-typing in. So we don't hard-code the ``helper_text`` with value like "Enter you first and last name:", instead, we use
-the ``DataKey("name_help")`` which is a reference to the ``name_help`` key in the ``data`` dict we are going to provide dynamically.
+For example, we have :class:`TextInput` that gets the user's last name. We want to be able to decide if it's required or not,
+so if we already have the user's last name in our database, we don't require it.
+This can be done by setting the ``required`` argument to a dynamic value taken from the ``data`` map. this data can be provided by the previous screen, by our server or when sending the flow.
 
+We want to demonstrate how to handle dynamic flow with our server, so we will send the flow with action type of ``FlowActionType.DATA_EXCHANGE``,
 So when the user clicks the button, we will receive a request to our server with the ation, flow_token and the screen which requested the data.
 
-We first sending this flow. this time with an image:
+We need to tell WhatsApp to send the requests to our serve. :meth:`pywa.client.WhatsApp.update_flow_metadata`:
 
 .. code-block:: python
     :linenos:
-    :emphasize-lines: 16
+    :emphasize-lines: 7
+
+    from pywa import WhatsApp
+
+    wa = WhatsApp(...)
+
+    wa.update_flow_metadata(
+        flow_id="1234567890123456",  # The `dynamic_flow` flow id from above
+        endpoint_uri="https://our-server.com/flow"
+    )
+
+Let's send the flow. this time with an image:
+
+.. code-block:: python
+    :linenos:
+    :emphasize-lines: 15
 
     from pywa import WhatsApp
     from pywa.types import FlowButton, FlowActionType, FlowStatus
@@ -818,13 +560,12 @@ We first sending this flow. this time with an image:
 
     wa.send_image(
         to="1234567890",
-        image="https://wpforms.com/wp-content/uploads/2017/11/designing-support-ticket-request-form-best-practices.jpg",
-        caption="Hi, Please fill the form below to get support.",
+        image="https://t3.ftcdn.net/jpg/03/82/73/76/360_F_382737626_Th2TUrj9PbvWZKcN9Kdjxu2yN35rA9nU.jpg",
+        caption="Hi, You need to finish your sign up!",
         buttons=FlowButton(
-            title="Get Support",
-            flow_id="1234567890123456",  # The `support_request` flow id from above
+            title="Finish Sign Up",
+            flow_id="1234567890123456",  # The `dynamic_flow` flow id from above
             flow_token="AQAAAAACS5FpgQ_cAAAAAD0QI3s.",
-            flow_message_version="3",
             mode=FlowStatus.DRAFT,
             flow_action_type=FlowActionType.DATA_EXCHANGE,  # This time we want to exchange data
         )
@@ -832,6 +573,7 @@ We first sending this flow. this time with an image:
 
 Here we set the ``flow_action_type`` to ``FlowActionType.DATA_EXCHANGE`` since we want to exchange data with the server.
 So, when the user opens the flow, we will receive a request to our server to provide the screen to open and the data to provide to it.
+
 Let's register a callback function to handle this request:
 
 .. code-block:: python
@@ -846,17 +588,17 @@ Let's register a callback function to handle this request:
         business_private_key="PRIVATE_KEY",
     )
 
-    @wa.on_flow_request(endpoint="/support_request_flow")
+    @wa.on_flow_request(endpoint="/flow")  # The endpoint we set above
     def on_support_request(_: WhatsApp, req: FlowRequest) -> FlowResponse:
         print(req.flow_token)  # use this to indentify the user who you sent the flow to
         return FlowResponse(
             version=req.version,
-            screen="DETAILS",
+            screen="SIGN_UP",  # The screen id to open
             data={
-                 "name_help": "Just your first name",
-                 "is_order_num_required": True,
-                 "is_desc_enabled": False,
-             },
+                "first_name_helper_text": "Please enter your first name",
+                "is_last_name_required": True,
+                "is_email_enabled": False,
+            },
         )
 
 We need to provide our business private key to decrypt the request and encrypt the response.
@@ -871,7 +613,7 @@ The callback function will receive the :class:`FlowRequest` object and should re
         A callback function can be return or raise :class:`FlowTokenNoLongerValid` or :class:`FlowRequestSignatureAuthenticationFailed`
         to indicate that the flow token is no longer valid or the request signature authentication failed.
 
-In our example, we returning our dynamic data to the ``DETAILS`` screen.
+In our example, we returning our dynamic data to the ``SIGN_UP`` screen.
 
 Of course, it can be more complex, if you have multiple screens, you can return data from them and then decide
 what screen to open next or complete the flow.
