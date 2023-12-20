@@ -3,6 +3,10 @@ Changelog
 
 NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 1.13.0-rc.6 (2023-12-20)
+
+- [utils] adding `Version` to provide the latest versions to the api & flows, and to perform min checks
+
 ### 1.13.0-rc.5 (2023-12-18)
 
 - [flows] add supported types for Layout and Form `.children` and fix FlowPreview.expires_at

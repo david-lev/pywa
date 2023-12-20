@@ -10,7 +10,7 @@
     The ``Flows`` in pywa are still in beta and not fully tested.
     Install the RC version of pywa to use it:
 
-    >>> pip3 install "pywa[cryptography]==1.13.0rc5"
+    >>> pip3 install "pywa[cryptography]==1.13.0rc6"
 
     The ``cryptography`` extra is required for the default implementation of the decryption and encryption of the flow requests and responses.
 
