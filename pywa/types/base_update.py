@@ -485,6 +485,9 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             address=address,
         )
 
+    def reply_request_location(self, text: str) -> dict[str, dict | list]:
+        return self._client.request_location(to=self.sender, text=text)
+
     def reply_contact(
         self,
         contact: Contact | Iterable[Contact],
