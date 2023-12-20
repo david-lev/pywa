@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from pywa.types.flows import (
     FlowJSON,
     Screen,
@@ -1150,4 +1152,27 @@ def test_flows_to_json():
     with open(f"tests/data/flows/{FLOWS_VERSION}/examples.json", "r") as f:
         examples = json.load(f)
     for flow_name, flow in FLOWS.items():
-        assert flow.to_dict() == examples[flow_name]
+        try:
+            assert flow.to_dict() == examples[flow_name]
+        except AssertionError:
+            raise AssertionError(
+                f"Flow {flow_name} does not match example\nFlow: {flow}\nJSON: {examples[flow_name]}"
+            )
+
+
+def test_min_version():
+    with pytest.raises(ValueError):
+        FlowJSON(version="1.0", screens=[])
+
+
+def test_data_channel_uri():
+    with pytest.raises(ValueError):
+        FlowJSON(version="3.0", data_channel_uri="https://example.com", screens=[])
+
+
+def test_action():
+    with pytest.raises(ValueError):
+        Action(name=FlowActionType.NAVIGATE)
+
+    with pytest.raises(ValueError):
+        Action(name=FlowActionType.COMPLETE)

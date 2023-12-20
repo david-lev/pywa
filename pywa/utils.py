@@ -33,6 +33,44 @@ def is_cryptography_installed():
         return False
 
 
+class Version(enum.Enum):
+    """
+    Enum for the latest and minimum versions of the WhatsApp API.
+
+    - Use the constant to get the latest version. Example: ``WhatsApp(..., api_version=Version.GRAPH_API)``
+    - Use the ``min`` attribute to get the minimum version. Example: Version.GRAPH_API.min
+
+    Attributes:
+        GRAPH_API: (MIN_VERSION: str, LATEST_VERSION: str)
+        FLOW_JSON: (MIN_VERSION: str, LATEST_VERSION: str)
+        FLOW_DATA_API: (MIN_VERSION: str, LATEST_VERSION: str)
+        FLOW_MSG: (MIN_VERSION: str, LATEST_VERSION: str)
+    """
+
+    # KEY = (MIN_VERSION: str, LATEST_VERSION: str)
+    GRAPH_API = ("17.0", "18.0")
+    FLOW_JSON = ("2.1", "3.0")
+    FLOW_DATA_API = ("3.0", "3.0")
+    FLOW_MSG = ("3", "3")
+
+    def __new__(cls, min_version: str, latest_version: str):
+        obj = object.__new__(cls)
+        obj._value_ = latest_version
+        obj.min = min_version
+        return obj
+
+    def __str__(self):
+        """Required for the ``Version`` enum to be used as a string."""
+        return self.value
+
+    def validate_min_version(self, version: str):
+        """Check if the given version is supported."""
+        if float(version) < float(self.min):
+            raise ValueError(
+                f"{self.name}: version {version} is not supported. Minimum version is {self.min}."
+            )
+
+
 class StrEnum(str, enum.Enum):
     """Enum where the values are also (and must be) strings."""
 

@@ -54,7 +54,10 @@ class WhatsApp(Webhook, HandlerDecorators):
         phone_id: str | int,
         token: str,
         base_url: str = "https://graph.facebook.com",
-        api_version: float | int = 18.0,
+        api_version: str
+        | int
+        | float
+        | Literal[utils.Version.GRAPH_API] = utils.Version.GRAPH_API,
         session: requests.Session | None = None,
         server: Flask | FastAPI | None = None,
         webhook_endpoint: str = "/",
@@ -105,7 +108,7 @@ class WhatsApp(Webhook, HandlerDecorators):
             token: The token of the WhatsApp business account (In production, you should
              `use permanent token <https://developers.facebook.com/docs/whatsapp/business-management-api/get-started>`_).
             base_url: The base URL of the WhatsApp API (Do not change unless you know what you're doing).
-            api_version: The API version of the WhatsApp API (default: ``18.0``).
+            api_version: The API version of the WhatsApp Cloud API (default to the latest version).
             session: The session to use for requests (default: new ``requests.Session()``, For cases where you want to
              use a custom session, e.g. for proxy support. Do not use the same session across multiple WhatsApp clients!).
             server: The Flask or FastAPI app instance to use for the webhook. required when you want to handle incoming
@@ -139,6 +142,16 @@ class WhatsApp(Webhook, HandlerDecorators):
         if not phone_id or not token:
             raise ValueError("phone_id and token must be provided.")
 
+        try:
+            utils.Version.GRAPH_API.validate_min_version(str(api_version))
+        except ValueError:
+            warnings.warn(
+                message=f"PyWa officially supports WhatsApp Cloud API version {utils.Version.GRAPH_API.min} and up. "
+                f"Using version {api_version} is not officially supported and may cause unexpected behavior.",
+                category=RuntimeWarning,
+                stacklevel=2,
+            )
+
         self._phone_id = str(phone_id)
         self.filter_updates = filter_updates
         self.business_account_id = (
@@ -149,7 +162,7 @@ class WhatsApp(Webhook, HandlerDecorators):
             token=token,
             session=session or requests.Session(),
             base_url=base_url,
-            api_version=float(api_version),
+            api_version=float(str(api_version)),
         )
 
         self._handlers: dict[
@@ -315,7 +328,6 @@ class WhatsApp(Webhook, HandlerDecorators):
             ...         title="Feedback",
             ...         flow_id="1234567890",
             ...         flow_token="AQAAAAACS5FpgQ_cAAAAAD0QI3s.",
-            ...         flow_message_version="3",
             ...         flow_action_type=FlowActionType.NAVIGATE,
             ...         flow_action_screen="RECOMMENDED"
             ...     ),
@@ -1546,8 +1558,8 @@ class WhatsApp(Webhook, HandlerDecorators):
             flow_id: The flow ID.
             name: The name of the flow (optional).
             categories: The new categories of the flow (optional).
-            endpoint_uri: The URL of the WA FlowJSON Endpoint. Starting from FlowJSON JSON version 3.0 this property should be
-             specified only via API. Do not provide this field if you are cloning a FlowJSON with FlowJSON JSON version below 3.0.
+            endpoint_uri: The URL of the FlowJSON Endpoint. Starting from FlowJSON 3.0 this property should be
+             specified only gere. Do not provide this field if you are cloning a FlowJSON with version below 3.0.
 
         Example:
 
@@ -1556,7 +1568,8 @@ class WhatsApp(Webhook, HandlerDecorators):
             >>> wa.update_flow_metadata(
             ...     flow_id='1234567890',
             ...     name='Feedback',
-            ...     categories=[FlowCategory.SURVEY, FlowCategory.OTHER]
+            ...     categories=[FlowCategory.SURVEY, FlowCategory.OTHER],
+            ...     endpoint_uri='https://my-api-server/feedback_flow'
             ... )
 
         Returns:

@@ -883,9 +883,7 @@ class NewTemplate:
         )
         title: str
         flow_id: str | int
-        flow_action: Literal[
-            FlowActionType.NAVIGATE, FlowActionType.DATA_EXCHANGE
-        ] | str
+        flow_action: Literal[FlowActionType.NAVIGATE, FlowActionType.DATA_EXCHANGE]
         navigate_screen: str | None = None
 
         def __post_init__(self):

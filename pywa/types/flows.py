@@ -7,7 +7,7 @@ import dataclasses
 import datetime
 import json
 import pathlib
-from typing import Iterable, TYPE_CHECKING, Any, BinaryIO
+from typing import Iterable, TYPE_CHECKING, Any, BinaryIO, Literal
 
 from pywa import utils
 from pywa.types.base_update import BaseUserUpdate  # noqa
@@ -548,18 +548,31 @@ class FlowJSON:
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson>`_.
 
     Attributes:
-        version: The Flow JSON version (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/versioning>`_).
         screens: The screens that are part of the flow (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#screens>`_).
-        data_api_version: The version to use during communication with the WhatsApp Flows Data Endpoint. Required if the data channel is set.
-        data_channel_uri: The endpoint to use to communicate with your server (If you using the WhatsApp Flows Data Endpoint).
+        version: The Flow JSON version. Default to latest (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/versioning>`_).
+        data_api_version: The version to use during communication with the WhatsApp Flows Data Endpoint. Default to latest. Required if the data channel is set.
         routing_model: Defines the rules for the screen by limiting the possible state transition. (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#routing-model>`_).
+        data_channel_uri: The endpoint to use to communicate with your server (When using v3.0 or higher, this field need to be set via :meth:`WhatsApp.update_flow_metadata`).
     """
 
-    version: str
     screens: Iterable[Screen]
-    data_api_version: str | None = None
+    version: str | float | Literal[utils.Version.FLOW_JSON] = utils.Version.FLOW_JSON
+    data_api_version: str | float | Literal[utils.Version.FLOW_DATA_API] | None = None
+    routing_model: dict[str, Iterable[str]] | None = None
     data_channel_uri: str | None = None
-    routing_model: dict[str, Iterable[str]] = dataclasses.field(default_factory=dict)
+
+    def __post_init__(self):
+        self.version = str(self.version)
+        utils.Version.FLOW_JSON.validate_min_version(self.version)
+        if self.data_channel_uri and float(self.version) >= 3.0:
+            raise ValueError(
+                "When using v3.0 or higher, `data_channel_uri` need to be set via WhatsApp.update_flow_metadata.\n"
+                ">>> wa = WhatsApp(...)\n"
+                f">>> wa.update_flow_metadata(flow_id, endpoint_uri={self.data_channel_uri!r})\n"
+            )
+        if self.data_api_version:
+            self.data_api_version = str(self.data_api_version)
+            utils.Version.FLOW_DATA_API.validate_min_version(self.data_api_version)
 
     def to_dict(self):
         return dataclasses.asdict(
@@ -598,7 +611,12 @@ class Screen:
 
 
 class LayoutType(utils.StrEnum):
-    """LayoutType is the type of layout that is used to display the components."""
+    """
+    The type of layout that is used to display the components.
+
+    Attributes:
+        SINGLE_COLUMN: A single column layout.
+    """
 
     SINGLE_COLUMN = "SingleColumnLayout"
 
@@ -1248,7 +1266,7 @@ class FlowActionType(utils.StrEnum):
     Attributes:
         COMPLETE: Triggers the termination of the Flow with the provided payload
          (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#complete-action>`_).
-        DATA_EXCHANGE: TSending Data to WhatsApp Flows Data Endpoint
+        DATA_EXCHANGE: Sending Data to WhatsApp Flows Data Endpoint
          (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#data-exchange-action>`_).
         NAVIGATE: Triggers the next screen with the payload as its input. The CTA button will be disabled until the
          payload with data required for the next screen is supplied.
@@ -1304,3 +1322,13 @@ class Action:
     name: FlowActionType | str
     next: ActionNext | None = None
     payload: dict[str, str | DataKey | FormRef] | None = None
+
+    def __post_init__(self):
+        if self.name == FlowActionType.NAVIGATE.value:
+            if self.next is None:
+                raise ValueError("next is required for FlowActionType.NAVIGATE")
+        if self.name == FlowActionType.COMPLETE.value:
+            if self.payload is None:
+                raise ValueError(
+                    "payload is required for FlowActionType.COMPLETE (use {} for empty payload)"
+                )
