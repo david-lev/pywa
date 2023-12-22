@@ -247,7 +247,7 @@ class Webhook:
                 "initializing the WhatsApp client or when registering the flow request callback."
             )
         response_encryptor = response_encryptor or self._flows_response_encryptor
-        if not response_encryptor and not self._flows_response_encryptor:
+        if not response_encryptor:
             raise ValueError(
                 "A `response_encryptor` must be provided in order to encrypt outgoing responses. You can provide it "
                 "when initializing the WhatsApp client or when registering the flow request callback."
