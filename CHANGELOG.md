@@ -3,6 +3,13 @@ Changelog
 
 NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 1.13.0 (2023-12-22)
+
+- [flows] adding full support for [WhatsApp Flows](https://business.whatsapp.com/products/whatsapp-flows)!
+- [client] adding `request_location` method to `WhatsApp` client
+- [base_update] adding `.raw` attr to hold the original update
+- [utils] adding `Version` to provide the latest versions to the api & flows, and to perform min checks
+
 ### 1.13.0-rc.6 (2023-12-20)
 
 - [utils] adding `Version` to provide the latest versions to the api & flows, and to perform min checks
