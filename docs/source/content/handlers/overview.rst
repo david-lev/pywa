@@ -344,7 +344,7 @@ Available handlers
      - :class:`FlowCompletionHandler`
      - :class:`~pywa.types.flows.FlowCompletion`
    * - :meth:`~pywa.client.WhatsApp.on_flow_request`
-     - ---
+     - :class:`FlowRequestHandler`
      - :class:`~pywa.types.flows.FlowRequest`
    * - :meth:`~pywa.client.WhatsApp.on_message_status`
      - :class:`MessageStatusHandler`

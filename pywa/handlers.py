@@ -12,6 +12,7 @@ __all__ = [
     "MessageStatusHandler",
     "TemplateStatusHandler",
     "FlowCompletionHandler",
+    "FlowRequestHandler",
 ]
 
 import abc
@@ -478,6 +479,47 @@ class RawUpdateHandler(Handler):
         super().__init__(callback, *filters)
 
 
+class FlowRequestHandler:
+    """
+    A handler for Flow Data Exchange requests.
+
+    Args:
+        callback: The function to call when a request is received (Takes a :class:`pywa.WhatsApp` instance and a
+         :class:`pywa.types.FlowRequest` as arguments and returns a :class:`pywa.types.FlowResponse`.
+        endpoint: The endpoint to listen to (The endpoint uri you set to the flow. e.g ``/feedback_flow``).
+        acknowledge_errors: Whether to acknowledge errors (The return value of the callback will be ignored, and
+         pywa will acknowledge the error automatically).
+        handle_health_check: Whether to handle health checks (The callback will not be called for health checks).
+        private_key: The private key to use to decrypt the requests (Override the global ``business_private_key``).
+        private_key_password: The password to use to decrypt the private key (Override the global ``business_private_key_password``).
+        request_decryptor: The function to use to decrypt the requests (Override the global ``flows_request_decryptor``)
+        response_encryptor: The function to use to encrypt the responses (Override the global ``flows_response_encryptor``)
+    """
+
+    def __init__(
+        self,
+        callback: Callable[
+            [WhatsApp, FlowRequest], FlowResponse | FlowResponseError | dict | None
+        ],
+        *,
+        endpoint: str,
+        acknowledge_errors: bool = True,
+        handle_health_check: bool = True,
+        private_key: str | None = None,
+        private_key_password: str | None = None,
+        request_decryptor: utils.FlowRequestDecryptor | None = None,
+        response_encryptor: utils.FlowResponseEncryptor | None = None,
+    ):
+        self.callback = callback
+        self.endpoint = endpoint
+        self.acknowledge_errors = acknowledge_errors
+        self.handle_health_check = handle_health_check
+        self.private_key = private_key
+        self.private_key_password = private_key_password
+        self.request_decryptor = request_decryptor
+        self.response_encryptor = response_encryptor
+
+
 class HandlerDecorators:
     """This class is used by the :class:`WhatsApp` client to register handlers using decorators."""
 
@@ -767,7 +809,7 @@ class HandlerDecorators:
         private_key: str | None = None,
         private_key_password: str | None = None,
         request_decryptor: utils.FlowRequestDecryptor | None = None,
-        response_encryptor: Callable[[dict, bytes, bytes], str] | None = None,
+        response_encryptor: utils.FlowResponseEncryptor | None = None,
     ) -> Callable[
         [
             Callable[
@@ -784,7 +826,7 @@ class HandlerDecorators:
         Example:
 
             >>> from pywa import WhatsApp
-            >>> wa = WhatsApp(..., business_private_key='...')
+            >>> wa = WhatsApp(business_private_key='...', ...)
             >>> @wa.on_flow_request('/feedback_flow')
             ... def feedback_flow_handler(_: WhatsApp, flow: FlowRequest) -> FlowResponse:
             ...     return FlowResponse(
@@ -797,9 +839,9 @@ class HandlerDecorators:
             ...     )
 
         Args:
-            endpoint: The endpoint to listen to (The data_channel_uri provided when creating the flow).
-            acknowledge_errors: Whether to acknowledge errors (It will be ignore from the callback return value and
-             the pywa will acknowledge the error automatically).
+            endpoint: The endpoint to listen to (The endpoint uri you set to the flow. e.g ``/feedback_flow``).
+            acknowledge_errors: Whether to acknowledge errors (The return value of the callback will be ignored, and
+             pywa will acknowledge the error automatically).
             handle_health_check: Whether to handle health checks (The callback will not be called for health checks).
             private_key: The private key to use to decrypt the requests (Override the global ``business_private_key``).
             private_key_password: The password to use to decrypt the private key (Override the global ``business_private_key_password``).

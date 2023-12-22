@@ -243,7 +243,13 @@ class FlowResponse:
 
 
 class FlowResponseError(Exception):
-    """Base class for all flow response errors"""
+    """
+    Base class for all flow response errors
+
+
+    - Subclass this exception to return or raise from the flow endpoint callback (@wa.on_flow_request).
+    - Override the ``status_code`` attribute to set the status code of the response.
+    """
 
     status_code: int
 

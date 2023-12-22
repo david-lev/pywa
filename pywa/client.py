@@ -17,7 +17,7 @@ import requests
 
 from pywa import utils
 from pywa.api import WhatsAppCloudApi
-from pywa.handlers import Handler, HandlerDecorators  # noqa
+from pywa.handlers import Handler, HandlerDecorators, FlowRequestHandler  # noqa
 from pywa.types import (
     BusinessProfile,
     Button,
@@ -202,7 +202,7 @@ class WhatsApp(Webhook, HandlerDecorators):
         self._phone_id = str(value)
         self.api.phone_id = self._phone_id
 
-    def add_handlers(self, *handlers: Handler):
+    def add_handlers(self, *handlers: Handler | FlowRequestHandler):
         """
         Add handlers programmatically instead of using decorators.
 
@@ -223,6 +223,18 @@ class WhatsApp(Webhook, HandlerDecorators):
                 " (Flask or FastAPI) in order to handle incoming updates."
             )
         for handler in handlers:
+            if isinstance(handler, FlowRequestHandler):
+                self._register_flow_endpoint_callback(
+                    endpoint=handler.endpoint,
+                    callback=handler.callback,
+                    acknowledge_errors=handler.acknowledge_errors,
+                    handle_health_check=handler.handle_health_check,
+                    private_key=handler.private_key,
+                    private_key_password=handler.private_key_password,
+                    request_decryptor=handler.request_decryptor,
+                    response_encryptor=handler.response_encryptor,
+                )
+                continue
             self._handlers[handler.__class__].append(handler)
 
     def send_message(
@@ -1733,8 +1745,8 @@ class WhatsApp(Webhook, HandlerDecorators):
             "validation_errors",
             "json_version",
             "data_api_version",
-            "data_channel_uri",
-            "preview" if invalidate_preview else "preview.invalidate(false)",
+            "endpoint_uri",
+            f"preview.invalidate({'true' if invalidate_preview else 'false'})",
             "whatsapp_business_account",
             "application",
         )
