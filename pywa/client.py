@@ -802,13 +802,23 @@ class WhatsApp(Webhook, HandlerDecorators):
             address=address,
         )["messages"][0]["id"]
 
-    def request_location(self, to: str | int, text: str) -> dict[str, dict | list]:
+    def request_location(self, to: str | int, text: str) -> str:
+        """
+        Send a text message with button to request the user's location.
+
+        Args:
+            to: The phone ID of the WhatsApp user.
+            text: The text to send with the button.
+
+        Returns:
+            The message ID of the sent message.
+        """
         return self.api.send_interactive_message(
             to=str(to),
             type_="location_request_message",
             action={"name": "send_location"},
             body=text,
-        )
+        )["messages"][0]["id"]
 
     def send_contact(
         self,
