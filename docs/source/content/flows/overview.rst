@@ -3,19 +3,6 @@
 
 .. currentmodule:: pywa.types.flows
 
-.. note::
-
-    WORK IN PROGRESS
-
-    The ``Flows`` in pywa are still in beta and not fully tested.
-    Install the RC version of pywa to use it:
-
-    >>> pip3 install "pywa[cryptography]==1.13.0rc6"
-
-    The ``cryptography`` extra is required for the default implementation of the decryption and encryption of the flow requests and responses.
-
-    If you find any bugs or have any suggestions, please open an issue on `GitHub <https://github.com/david-lev/pywa/issues>`_.
-
 The WhatsApp Flows are now the most exciting part of the WhatsApp Cloud API.
 
 From `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows>`_:
@@ -62,10 +49,6 @@ You can create the flows using the `WhatsApp Flow Builder <https://business.face
     # FlowDetails(id='1234567890123456', name='My New Flow', status=FlowStatus.DRAFT, ...)
 
 Now you can start building the flow structure.
-
-.. note::
-
-    WORK IN PROGRESS
 
 A flow is collection of screens containing components. screens can exchange data with each other and with your server.
 
@@ -233,6 +216,7 @@ Here is example of dynamic flow:
     .. code-block:: python
         :caption: support_request.json
         :linenos:
+        :emphasize-lines: 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 34, 40, 46
 
         dynamic_flow = FlowJSON(
             data_api_version=utils.Version.FLOW_DATA_API,
@@ -389,7 +373,7 @@ After you have the flow json, you can update the flow with :meth:`pywa.client.Wh
 
     wa = WhatsApp(...)
 
-    wa.update_flow_json(flow_id, flow_json=customer_satisfaction_survey)
+    wa.update_flow_json(flow_id, flow_json=flow_json)
 
 The ``flow_json`` argument can be :class:`FlowJSON`, a :class:`dict`, json :class:`str`, json file path or open(json_file) obj.
 
@@ -488,7 +472,57 @@ Handling Flow requests and responding to them
 
 .. note::
 
-    WORK IN PROGRESS
+    Since the requests and responses can contain sensitive data, such as passwords and other personal information,
+    all the requests and responses are encrypted using the `WhatsApp Business Encryption <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/whatsapp-business-encryption>`_.
+
+    Before you continue, you need to sign and upload the business public key.
+    First you need to generate a private key and a public key:
+
+    Generate a public and private RSA key pair by typing in the following command:
+
+    >>> openssl genrsa -des3 -out private.pem 2048
+
+
+    This generates 2048-bit RSA key pair encrypted with a password you provided and is written to a file.
+
+    Next, you need to export the RSA Public Key to a file.
+
+    >>> openssl rsa -in private.pem -outform PEM -pubout -out public.pem
+
+
+    This exports the RSA Public Key to a file.
+
+    Once you have the public key, you can upload it using the :meth:`pywa.client.WhatsApp.set_business_public_key` method.
+
+    .. code-block:: python
+        :linenos:
+
+        from pywa import WhatsApp
+
+        wa = WhatsApp(...)
+
+        wa.set_business_public_key(open("public.pem").read())
+
+    Every request need to be decrypted using the private key. so you need to provide it when you create the :class:`WhatsApp` object:
+
+    .. code-block:: python
+        :linenos:
+
+        from pywa import WhatsApp
+
+        wa = WhatsApp(..., business_private_key=open("private.pem").read())
+
+    Now you are ready to handle the requests.
+
+    Just one more thing, the default decryption & encryption implementation is using the `cryptography <https://cryptography.io/en/latest/>`_ library,
+    So you need to install it:
+
+    >>> pip3 install cryptography
+
+    Or when installing PyWa:
+
+    >>> pip3 install "pywa[cryptography]"
+
 
 In dynamic flow, when the user perform an action with type of ``FlowActionType.DATA_EXCHANGE`` you will receive a request to your server with the payload
 and you need to determine if you want to continue to the next screen or complete the flow.
@@ -497,7 +531,7 @@ So in our dynamic example (``dynamic_flow``) we have just one screen: ``SIGN_UP`
 
 .. code-block:: python
         :linenos:
-        :emphasize-lines: 3, 6, 10, 14
+        :emphasize-lines: 4, 6, 10, 14
 
         Screen(
             id="SIGN_UP",
@@ -585,7 +619,7 @@ Let's register a callback function to handle this request:
 
     wa = WhatsApp(
         ...,
-        business_private_key="PRIVATE_KEY",
+        business_private_key=open("private.pem").read(),  # provide your business private key
     )
 
     @wa.on_flow_request(endpoint="/flow")  # The endpoint we set above
@@ -602,10 +636,6 @@ Let's register a callback function to handle this request:
         )
 
 We need to provide our business private key to decrypt the request and encrypt the response.
-
-        We need to setup WhatsApp Business Encryption in order to decrypt the request and encrypt the response.
-        You can read more about it in `WhatsApp Business Encryption <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/whatsapp-business-encryption>`_.
-        The public key can be uploaded using the :meth:`pywa.client.WhatsApp.set_business_public_key` method.
 
 After that. we are registering a callback function to handle the request.
 The callback function will receive the :class:`FlowRequest` object and should return :class:`FlowResponse` object.

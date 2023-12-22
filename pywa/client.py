@@ -1606,7 +1606,7 @@ class WhatsApp(Webhook, HandlerDecorators):
             Whether the flow was updated.
 
         Raises:
-            ValueError: If neither ``name`` nor ``categories`` are provided.
+            ValueError: If neither ``name``, ``categories`` or ``endpoint_uri`` are provided.
         """
         if name is None and categories is None and endpoint_uri is None:
             raise ValueError("At least one argument must be provided")

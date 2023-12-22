@@ -469,24 +469,69 @@ class FlowDetails:
         )
 
     def publish(self) -> bool:
+        """
+        Update the status of this flow to ``FlowStatus.PUBLISHED``.
+            - A shortcut for :meth:`pywa.client.WhatsApp.publish_flow`.
+
+        - This action is not reversible.
+        - The Flow and its assets become immutable once published.
+        - To update the Flow after that, you must create a new Flow. You specify the existing Flow ID as the clone_flow_id parameter while creating to copy the existing flow.
+
+            You can publish your Flow once you have ensured that:
+
+            - All validation errors and publishing checks have been resolved.
+            - The Flow meets the design principles of WhatsApp Flows
+            - The Flow complies with WhatsApp Terms of Service, the WhatsApp Business Messaging Policy and, if applicable, the WhatsApp Commerce Policy
+
+        Returns:
+            Whether the flow was published.
+
+        Raises:
+            FlowPublishingError: If this flow has validation errors or not all publishing checks have been resolved.
+        """
         if self._client.publish_flow(self.id):
             self.status = FlowStatus.PUBLISHED
             return True
         return False
 
     def delete(self) -> bool:
+        """
+        When the flow is in ``FlowStatus.DRAFT`` status, you can delete it.
+            - A shortcut for :meth:`pywa.client.WhatsApp.delete_flow`.
+
+        Returns:
+            Whether the flow was deleted.
+
+        Raises:
+            FlowDeletingError: If this flow is already published.
+        """
         if self._client.delete_flow(self.id):
-            self.status = FlowStatus.DEPRECATED
+            self.status = FlowStatus.DEPRECATED  # there is no `DELETED` status
             return True
         return False
 
     def deprecate(self) -> bool:
+        """
+        When the flow is in ``FlowStatus.PUBLISHED`` status, you can only deprecate it.
+
+        Returns:
+            Whether the flow was deprecated.
+
+        Raises:
+            FlowDeprecatingError: If this flow is not published or already deprecated.
+        """
         if self._client.deprecate_flow(self.id):
             self.status = FlowStatus.DEPRECATED
             return True
         return False
 
     def get_assets(self) -> tuple[FlowAsset, ...]:
+        """
+        Get all assets attached to this flow.
+
+        Returns:
+            The assets of the flow.
+        """
         return self._client.get_flow_assets(self.id)
 
     def update_metadata(
@@ -495,6 +540,31 @@ class FlowDetails:
         categories: Iterable[FlowCategory | str] | None = None,
         endpoint_uri: str | None = None,
     ) -> bool:
+        """
+        Args:
+            flow_id: The flow ID.
+            name: The name of the flow (optional).
+            categories: The new categories of the flow (optional).
+            endpoint_uri: The URL of the FlowJSON Endpoint. Starting from FlowJSON 3.0 this property should be
+             specified only gere. Do not provide this field if you are cloning a FlowJSON with version below 3.0.
+
+        Example:
+
+            >>> from pywa.types.flows import FlowCategory
+            >>> wa = WhatsApp(business_account_id='1234567890', ...)
+            >>> my_flows = wa.get_flows()
+            >>> my_flows[0].update_metadata(
+            ...     name='Feedback',
+            ...     categories=[FlowCategory.SURVEY, FlowCategory.OTHER],
+            ...     endpoint_uri='https://my-api-server/feedback_flow'
+            ... )
+
+        Returns:
+            Whether the flow was updated.
+
+        Raises:
+            ValueError: If neither ``name``, ``categories`` or ``endpoint_uri`` is provided.
+        """
         success = self._client.update_flow_metadata(
             flow_id=self.id,
             name=name,
@@ -513,17 +583,39 @@ class FlowDetails:
     def update_json(
         self, flow_json: FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO
     ) -> bool:
+        """
+        Update the json of this flow.
+
+        Args:
+            flow_json: The new json of the flow. Can be a :class:`FlowJSON` object, :class:`dict`, json :class:`str`,
+             json file path or json bytes.
+
+        Returns:
+            Whether the flow was updated.
+
+        Raises:
+            FlowUpdatingError: If the flow json is invalid or this flow is already published.
+        """
         is_success, errors = self._client.update_flow_json(
             flow_id=self.id,
             flow_json=flow_json,
         )
-        self.validation_errors = errors
+        self.validation_errors = errors or None
         return is_success
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
 class FlowAsset:
-    """Represents an asset in a flow."""
+    """
+    Represents an asset in a flow.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowsapi#asset-list>`_.
+
+    Attributes:
+        name: The name of the asset (e.g. ``"flow.json"``).
+        type: The type of the asset (e.g. ``"FLOW_JSON"``).
+        url: The URL to the asset.
+    """
 
     name: str
     type: str

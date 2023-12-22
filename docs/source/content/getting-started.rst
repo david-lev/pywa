@@ -172,6 +172,8 @@ Now you can continue to the next section and learn how to use the ``pywa`` packa
 
 - The `Updates <updates/overview.html>`_: Learn about the different types of updates that the client can receive, their attributes and properties and how to use them.
 
+- The `Flows <flows/overview.html>`_: Learn how to create, update and send flows.
+
 - The `errors <errors/overview.html>`_: Learn about the different types of errors in the package and how to handle them.
 
 - The `Examples <examples/overview.html>`_: See some examples of how to use the package.
