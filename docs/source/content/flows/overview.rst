@@ -648,6 +648,395 @@ In our example, we returning our dynamic data to the ``SIGN_UP`` screen.
 Of course, it can be more complex, if you have multiple screens, you can return data from them and then decide
 what screen to open next or complete the flow.
 
+Here is an example of a more complex flow and how to handle it (Do not use this code, it's just for demonstration):
+
+.. toggle::
+
+    .. code-block:: python
+        :linenos:
+
+        import logging
+        import typing
+        import flask
+        from pywa import WhatsApp, utils
+        from pywa.types import FlowRequest, FlowResponse, FlowJSON
+        from pywa.types.flows import Screen, TextHeading, Layout, EmbeddedLink, Action, FlowActionType, ActionNext, \
+            ActionNextType, Form, DataKey, FormRef, TextInput, InputType, TextSubheading, OptIn, Footer, FlowCategory
+
+
+        SIGN_UP_FLOW_JSON = FlowJSON(
+            data_api_version=utils.Version.FLOW_DATA_API,
+            routing_model={
+                "START": ["SIGN_UP", "LOGIN"],
+                "SIGN_UP": ["LOGIN"],
+                "LOGIN": ["LOGIN_SUCCESS"],
+                "LOGIN_SUCCESS": [],
+            },
+            screens=[
+                Screen(
+                    id="START",
+                    title="Home",
+                    layout=Layout(
+                        children=[
+                            TextHeading(
+                                text="Welcome to our app",
+                            ),
+                            EmbeddedLink(
+                                text="Click here to sign up",
+                                on_click_action=Action(
+                                    name=FlowActionType.NAVIGATE,
+                                    next=ActionNext(
+                                        type=ActionNextType.SCREEN,
+                                        name="SIGN_UP",
+                                    ),
+                                    payload={
+                                        "first_name_initial_value": "",
+                                        "last_name_initial_value": "",
+                                        "email_initial_value": "",
+                                        "password_initial_value": "",
+                                        "confirm_password_initial_value": "",
+                                    },
+                                ),
+                            ),
+                            EmbeddedLink(
+                                text="Click here to login",
+                                on_click_action=Action(
+                                    name=FlowActionType.NAVIGATE,
+                                    next=ActionNext(
+                                        type=ActionNextType.SCREEN,
+                                        name="LOGIN",
+                                    ),
+                                    payload={
+                                        "email_initial_value": "",
+                                        "password_initial_value": "",
+                                    },
+                                ),
+                            ),
+                        ]
+                    ),
+                ),
+                Screen(
+                    id="SIGN_UP",
+                    title="Sign Up",
+                    data={
+                        "first_name_initial_value": {
+                            "type": "string",
+                            "__example__": "John",
+                        },
+                        "last_name_initial_value": {
+                            "type": "string",
+                            "__example__": "Doe",
+                        },
+                        "email_initial_value": {
+                            "type": "string",
+                            "__example__": "john@gmail.com"
+                        },
+                        "password_initial_value": {
+                            "type": "string",
+                            "__example__": "abc123"
+                        },
+                        "confirm_password_initial_value": {
+                            "type": "string",
+                            "__example__": "abc123"
+                        },
+                    },
+                    layout=Layout(
+                        children=[
+                            TextHeading(
+                                text="Please enter your details",
+                            ),
+                            Form(
+                                name="form",
+                                init_values={
+                                    "first_name": DataKey("first_name_initial_value"),
+                                    "last_name": DataKey("last_name_initial_value"),
+                                    "email": DataKey("email_initial_value"),
+                                    "password": DataKey("password_initial_value"),
+                                    "confirm_password": DataKey("confirm_password_initial_value"),
+                                },
+                                children=[
+                                    EmbeddedLink(
+                                        text="Already have an account?",
+                                        on_click_action=Action(
+                                            name=FlowActionType.NAVIGATE,
+                                            next=ActionNext(
+                                                type=ActionNextType.SCREEN,
+                                                name="LOGIN",
+                                            ),
+                                            payload={
+                                                "email_initial_value": FormRef("email"),
+                                                "password_initial_value": FormRef("password"),
+                                            },
+                                        ),
+                                    ),
+                                    TextInput(
+                                        name="first_name",
+                                        label="First Name",
+                                        input_type=InputType.TEXT,
+                                        required=True,
+                                    ),
+                                    TextInput(
+                                        name="last_name",
+                                        label="Last Name",
+                                        input_type=InputType.TEXT,
+                                        required=True,
+                                    ),
+                                    TextInput(
+                                        name="email",
+                                        label="Email Address",
+                                        input_type=InputType.EMAIL,
+                                        required=True,
+                                    ),
+                                    TextInput(
+                                        name="password",
+                                        label="Password",
+                                        input_type=InputType.PASSWORD,
+                                        min_chars=8,
+                                        max_chars=16,
+                                        helper_text="Password must contain at least one number",
+                                        required=True,
+                                    ),
+                                    TextInput(
+                                        name="confirm_password",
+                                        label="Confirm Password",
+                                        input_type=InputType.PASSWORD,
+                                        min_chars=8,
+                                        max_chars=16,
+                                        required=True,
+                                    ),
+                                    Footer(
+                                        label="Done",
+                                        on_click_action=Action(
+                                            name=FlowActionType.DATA_EXCHANGE,
+                                            payload={
+                                                "first_name": FormRef("first_name"),
+                                                "last_name": FormRef("last_name"),
+                                                "email": FormRef("email"),
+                                                "password": FormRef("password"),
+                                                "confirm_password": FormRef("confirm_password"),
+                                            },
+                                        ),
+                                    ),
+                                ]
+                            )
+                        ]
+                    )
+                ),
+                Screen(
+                    id="LOGIN",
+                    title="Login",
+                    terminal=True,
+                    data={
+                        "email_initial_value": {
+                            "type": "string",
+                            "__example__": "john@gmail.com"
+                        },
+                        "password_initial_value": {
+                            "type": "string",
+                            "__example__": "abc123"
+                        },
+                    },
+                    layout=Layout(
+                        children=[
+                            TextHeading(
+                                text="Please enter your details"
+                            ),
+                            Form(
+                                name="form",
+                                init_values={
+                                    "email": DataKey("email_initial_value"),
+                                    "password": DataKey("password_initial_value"),
+                                },
+                                children=[
+                                    EmbeddedLink(
+                                        text="Don't have an account?",
+                                        on_click_action=Action(
+                                            name=FlowActionType.NAVIGATE,
+                                            next=ActionNext(
+                                                type=ActionNextType.SCREEN,
+                                                name="SIGN_UP",
+                                            ),
+                                            payload={
+                                                "email_initial_value": FormRef("email"),
+                                                "password_initial_value": FormRef("password"),
+                                                "confirm_password_initial_value": "",
+                                                "first_name_initial_value": "",
+                                                "last_name_initial_value": "",
+                                            },
+                                        ),
+                                    ),
+                                    TextInput(
+                                        name="email",
+                                        label="Email Address",
+                                        input_type=InputType.EMAIL,
+                                        required=True,
+                                    ),
+                                    TextInput(
+                                        name="password",
+                                        label="Password",
+                                        input_type=InputType.PASSWORD,
+                                        required=True,
+                                    ),
+                                    Footer(
+                                        label="Done",
+                                        on_click_action=Action(
+                                            name=FlowActionType.DATA_EXCHANGE,
+                                            payload={
+                                                "email": FormRef("email"),
+                                                "password": FormRef("password"),
+                                            },
+                                        ),
+                                    ),
+                                ]
+                            )
+                        ]
+                    ),
+                ),
+                Screen(
+                    id="LOGIN_SUCCESS",
+                    title="Success",
+                    terminal=True,
+                    layout=Layout(
+                        children=[
+                            TextHeading(
+                                text="Welcome to our app",
+                            ),
+                            TextSubheading(
+                                text="You are now logged in",
+                            ),
+                            Form(
+                                name="form",
+                                children=[
+                                    OptIn(
+                                        name="stay_logged_in",
+                                        label="Stay logged in",
+                                    ),
+                                    Footer(
+                                        label="Done",
+                                        on_click_action=Action(
+                                            name=FlowActionType.COMPLETE,
+                                            payload={
+                                                "stay_logged_in": FormRef("stay_logged_in"),
+                                            },
+                                        ),
+                                    ),
+                                ]
+                            )
+                        ]
+                    ),
+                ),
+            ]
+        )
+
+
+        class UserRepository:
+            def __init__(self):
+                self._users = {}
+
+            def create(self, user_id: str, details: dict[str, typing.Any]):
+                self._users[user_id] = details
+
+            def get(self, user_id: str) -> dict[str, typing.Any] | None:
+                return self._users.get(user_id)
+
+            def update(self, user_id: str, details: dict[str, typing.Any]):
+                self._users[user_id] = details
+
+            def delete(self, user_id: str):
+                del self._users[user_id]
+
+            def exists(self, user_id: str) -> bool:
+                return user_id in self._users
+
+            def is_password_valid(self, user_id: str, password: str) -> bool:
+                return self._users[user_id]["password"] == password
+
+
+        flask_app = flask.Flask(__name__)
+        user_repository = UserRepository()
+
+        wa = WhatsApp(
+            phone_id="1234567890",
+            token="abcdefg",
+            server=flask_app,
+            callback_url="https://my-server.com",
+            webhook_endpoint="/webhook",
+            verify_token="xyz123",
+            app_id=123,
+            app_secret="zzz",
+            business_private_key=open("private.pem").read(),
+            business_private_key_password="abc123",
+        )
+
+        # RUN THIS ONLY ONCE TO CREATE AND UPDATE THE FLOW
+        flow_id = wa.create_flow( name="Sign Up Flow", categories=[FlowCategory.SIGN_IN, FlowCategory.SIGN_UP])
+        wa.update_flow_json(flow_id, SIGN_UP_FLOW_JSON)
+        wa.update_flow_metadata(flow_id, endpoint_uri="https://my-server.com/flow")
+
+
+        @wa.on_flow_request("/flow")
+        def handle_sign_up_request(_: WhatsApp, flow: FlowRequest) -> FlowResponse | None:
+            if flow.has_error:
+                logging.error(flow.data)
+                return
+
+            match flow.screen:
+                case "SIGN_UP":
+                    if flow.data["password"] != flow.data["confirm_password"]:
+                        return FlowResponse(
+                            version=flow.version,
+                            screen=flow.screen,
+                            error_message="Passwords do not match",
+                            data={
+                                "first_name_initial_value": flow.data["first_name"],
+                                "last_name_initial_value": flow.data["last_name"],
+                                "email_initial_value": flow.data["email"],
+                                "password_initial_value": "",
+                                "confirm_password_initial_value": "",
+                            },
+                        )
+                    else:
+                        user_repository.create(flow.flow_token, flow.data)
+                        return FlowResponse(
+                            version=flow.version,
+                            screen="LOGIN",
+                            data={
+                                "email_initial_value": flow.data["email"],
+                                "password_initial_value": "",
+                            },
+                        )
+                case "LOGIN":
+                    if not user_repository.exists(flow.flow_token):
+                        return FlowResponse(
+                            version=flow.version,
+                            screen="SIGN_UP",
+                            error_message="You are not registered. Please sign up",
+                            data={
+                                "first_name_initial_value": "",
+                                "last_name_initial_value": "",
+                                "email_initial_value": flow.data["email"],
+                                "password_initial_value": "",
+                                "confirm_password_initial_value": "",
+                            },
+                        )
+                    elif not user_repository.is_password_valid(flow.flow_token, flow.data["password"]):
+                        return FlowResponse(
+                            version=flow.version,
+                            screen=flow.screen,
+                            error_message="Incorrect password",
+                            data={
+                                "email_initial_value": flow.data["email"],
+                                "password_initial_value": "",
+                            },
+                        )
+                    else:
+                        return FlowResponse(
+                            version=flow.version,
+                            screen="LOGIN_SUCCESS",
+                            data={},
+                        )
+
+
 Getting Flow Completion message
 -------------------------------
 
