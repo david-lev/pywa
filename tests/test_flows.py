@@ -1058,7 +1058,6 @@ get_a_quote = FlowJSON(
                 children=[
                     Form(
                         name="quote_form",
-                        init_values={"payment_options": "1"},
                         children=[
                             Dropdown(
                                 label="Excess",
@@ -1084,6 +1083,7 @@ get_a_quote = FlowJSON(
                                     },
                                 ),
                                 required=True,
+                                init_value="1",
                             ),
                             TextHeading(text=DataKey("total")),
                             OptIn(

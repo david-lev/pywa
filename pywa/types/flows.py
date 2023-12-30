@@ -637,6 +637,11 @@ _UNDERSCORE_FIELDS = {
     "refresh_on_back",
 }
 
+_SKIP_KEYS = {
+    "init_value",  # Default value copied to Form.init_values
+    "error_message",  # Error message copied to Form.error_messages
+}
+
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class FlowJSON:
@@ -678,7 +683,7 @@ class FlowJSON:
             dict_factory=lambda d: {
                 k.replace("_", "-") if k not in _UNDERSCORE_FIELDS else k: v
                 for (k, v) in d
-                if v is not None
+                if k not in _SKIP_KEYS and v is not None
             },
         )
 
@@ -850,6 +855,38 @@ class Form(Component):
     init_values: dict[str, Any] | str | DataKey | None = None
     error_messages: dict[str, str] | str | DataKey | None = None
 
+    def __post_init__(self):
+        if not self.children:
+            raise ValueError("At least one child is required")
+
+        init_values = self.init_values or {}
+        for child in self.children:
+            if getattr(child, "init_value", None) is not None:
+                if child.name in init_values:
+                    raise ValueError(
+                        f"Duplicate init value for {child.name!r} in form {self.name!r}"
+                    )
+                if isinstance(self.init_values, str):
+                    raise ValueError(
+                        f"No need to set init value for {child.name!r} if form init values is a dynamic DataKey"
+                    )
+                init_values[child.name] = child.init_value
+        self.init_values = init_values or None
+
+        error_messages = self.error_messages or {}
+        for child in self.children:
+            if getattr(child, "error_message", None) is not None:
+                if child.name in error_messages:
+                    raise ValueError(
+                        f"Duplicate error message for {child.name!r} in form {self.name!r}"
+                    )
+                if isinstance(self.error_messages, str):
+                    raise ValueError(
+                        f"No need to set error message for {child.name!r} if form error messages is a dynamic DataKey"
+                    )
+                error_messages[child.name] = child.error_message
+        self.error_messages = error_messages or None
+
 
 class TextComponent(Component, abc.ABC):
     """
@@ -992,6 +1029,16 @@ class TextEntryComponent(Component, abc.ABC):
     def helper_text(self) -> str | DataKey | None:
         ...
 
+    @property
+    @abc.abstractmethod
+    def init_value(self) -> str | DataKey | None:
+        ...
+
+    @property
+    @abc.abstractmethod
+    def error_message(self) -> str | DataKey | None:
+        ...
+
 
 class InputType(utils.StrEnum):
     """
@@ -1034,6 +1081,8 @@ class TextInput(TextEntryComponent):
         helper_text: The helper text of the text input. Limited to 80 characters. Can be dynamic (e.g ``DataKey("helper_text")``).
         enabled: Whether the text input is enabled or not. Default to ``True``. Can be dynamic (e.g ``DataKey("enabled")``).
         visible: Whether the text input is visible or not. Default to ``True``. Can be dynamic (e.g ``DataKey("is_visible")``).
+        init_value: The default value of the text input. Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic (e.g ``DataKey("default_text_input")``).
+        error_message: The error message of the text input. Shortcuts for ``error_messages`` of the parent :class:`Form`. Can be dynamic (e.g ``DataKey("error_message")``).
     """
 
     type: ComponentType = dataclasses.field(
@@ -1048,6 +1097,8 @@ class TextInput(TextEntryComponent):
     helper_text: str | DataKey | None = None
     enabled: bool | str | DataKey | None = None
     visible: bool | str | DataKey | None = None
+    init_value: str | DataKey | None = None
+    error_message: str | DataKey | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1066,6 +1117,8 @@ class TextArea(TextEntryComponent):
         helper_text: The helper text of the text area. Limited to 80 characters. Can be dynamic (e.g ``DataKey("helper_text")``).
         enabled: Whether the text area is enabled or not. Default to ``True``. Can be dynamic (e.g ``DataKey("enabled")``).
         visible: Whether the text area is visible or not. Default to ``True``. Can be dynamic (e.g ``DataKey("is_visible")``).
+        init_value: The default value of the text area. Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic (e.g ``DataKey("default_text_area")``).
+        error_message: The error message of the text area. Shortcuts for ``error_messages`` of the parent :class:`Form`. Can be dynamic (e.g ``DataKey("error_message")``).
     """
 
     type: ComponentType = dataclasses.field(
@@ -1078,6 +1131,8 @@ class TextArea(TextEntryComponent):
     helper_text: str | DataKey | None = None
     enabled: bool | str | DataKey | None = None
     visible: bool | str | DataKey | None = None
+    init_value: str | DataKey | None = None
+    error_message: str | DataKey | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1117,6 +1172,7 @@ class CheckboxGroup(Component):
         required: Whether the checkbox group is required or not. Can be dynamic (e.g ``DataKey("required")``).
         visible: Whether the checkbox group is visible or not. Default to ``True``. Can be dynamic (e.g ``DataKey("is_visible")``).
         enabled: Whether the checkbox group is enabled or not. Default to ``True``. Can be dynamic (e.g ``DataKey("enabled")``).
+        init_value: The default values (IDs of the data sources). Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic (e.g ``DataKey("default_checked")``).
         on_select_action: The action to perform when an item is selected.
     """
 
@@ -1131,6 +1187,7 @@ class CheckboxGroup(Component):
     required: bool | str | DataKey | None = None
     visible: bool | str | DataKey | None = None
     enabled: bool | str | DataKey | None = None
+    init_value: list[str] | str | DataKey | None = None
     on_select_action: Action | None = None
 
 
@@ -1149,6 +1206,7 @@ class RadioButtonsGroup(Component):
         required: Whether the radio buttons group is required or not. Can be dynamic (e.g ``DataKey("required")``).
         visible: Whether the radio buttons group is visible or not. Default to ``True``. Can be dynamic (e.g ``DataKey("is_visible")``).
         enabled: Whether the radio buttons group is enabled or not. Default to ``True``. Can be dynamic (e.g ``DataKey("enabled")``).
+        init_value: The default value (ID of the data source). Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic (e.g ``DataKey("default_radio")``).
         on_select_action: The action to perform when an item is selected.
     """
 
@@ -1161,6 +1219,7 @@ class RadioButtonsGroup(Component):
     required: bool | str | DataKey | None = None
     visible: bool | str | DataKey | None = None
     enabled: bool | str | DataKey | None = None
+    init_value: str | DataKey | None = None
     on_select_action: Action | None = None
 
 
@@ -1206,6 +1265,7 @@ class OptIn(Component):
         label: The label of the opt in. Limited to 30 characters. Can be dynamic (e.g ``DataKey("label")``).
         required: Whether the opt in is required or not. Can be dynamic (e.g ``DataKey("required")``).
         visible: Whether the opt in is visible or not. Default to ``True``. Can be dynamic (e.g ``DataKey("is_visible")``).
+        init_value: The default value of the opt in. Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic (e.g ``DataKey("default_opt_in")``).
         on_click_action: The action to perform when the opt in is clicked.
     """
 
@@ -1216,6 +1276,7 @@ class OptIn(Component):
     label: str | DataKey
     required: bool | str | DataKey | None = None
     visible: bool | str | DataKey | None = None
+    init_value: bool | str | DataKey | None = None
     on_click_action: Action | None = None
 
 
@@ -1234,6 +1295,7 @@ class Dropdown(Component):
         enabled: Whether the dropdown is enabled or not. Default to ``True``. Can be dynamic (e.g ``DataKey("enabled")``).
         required: Whether the dropdown is required or not. Can be dynamic (e.g ``DataKey("required")``).
         visible: Whether the dropdown is visible or not. Default to ``True``. Can be dynamic (e.g ``DataKey("is_visible")``).
+        init_value: The default value (ID of the data source). Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic (e.g ``DataKey("default_dropdown")``).
         on_select_action: The action to perform when an item is selected.
     """
 
@@ -1246,6 +1308,7 @@ class Dropdown(Component):
     enabled: bool | str | DataKey | None = None
     required: bool | str | DataKey | None = None
     visible: bool | str | DataKey | None = None
+    init_value: str | DataKey | None = None
     on_select_action: Action | None = None
 
 
@@ -1291,6 +1354,8 @@ class DatePicker(Component):
         enabled: Whether the date picker is enabled or not. Default to ``True``. Can be dynamic (e.g ``DataKey("enabled")``).
         required: Whether the date picker is required or not. Can be dynamic (e.g ``DataKey("required")``).
         visible: Whether the date picker is visible or not. Default to ``True``. Can be dynamic (e.g ``DataKey("is_visible")``).
+        init_value: The default value. Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic (e.g ``DataKey("default_date")``).
+        error_message: The error message of the date picker. Shortcuts for ``error_messages`` of the parent :class:`Form`. Can be dynamic (e.g ``DataKey("error_message")``).
         on_select_action: The action to perform when a date is selected.
     """
 
@@ -1306,6 +1371,8 @@ class DatePicker(Component):
     enabled: bool | str | DataKey | None = None
     required: bool | str | DataKey | None = None
     visible: bool | str | DataKey | None = None
+    init_value: str | DataKey | None = None
+    error_message: str | DataKey | None = None
     on_select_action: Action | None = None
 
 
