@@ -1065,6 +1065,8 @@ class Form(Component):
 
 
 class FormComponent(Component, abc.ABC):
+    """Base class for all components that must be inside a form"""
+
     @property
     @abc.abstractmethod
     def name(self) -> str:
@@ -1082,11 +1084,6 @@ class FormComponent(Component, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def visible(self) -> bool | str | DataKey | None:
-        ...
-
-    @property
-    @abc.abstractmethod
     def enabled(self) -> bool | str | DataKey | None:
         ...
 
@@ -1100,6 +1097,7 @@ class FormComponent(Component, abc.ABC):
         """
         The form reference variable for this component.
             - A shortcut for :class:`FormRef` with this component name.
+            - Use this when form name is ``"form"``, otherwise use ``.form_ref_of`` method.
 
         Example:
 
@@ -1108,6 +1106,19 @@ class FormComponent(Component, abc.ABC):
             >>> text_input.form_ref
         """
         return FormRef(self.name)
+
+    def form_ref_of(self, form_name: str) -> str:
+        """
+        The form reference variable for this component with the given form name.
+            - A shortcut for :class:`FormRef` with the given form name.
+
+        Example:
+
+            >>> from pywa.types.flows import Form, TextInput
+            >>> form = Form(name='my_form', children=[text_input := TextInput(name='email', ...)])
+            >>> text_input.form_ref_of('my_form')
+        """
+        return FormRef(child_name=self.name, form_name=form_name)
 
 
 class TextComponent(Component, abc.ABC):

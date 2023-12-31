@@ -1142,6 +1142,11 @@ def test_data_channel_uri():
         FlowJSON(version="3.0", data_channel_uri="https://example.com", screens=[])
 
 
+def test_empty_form():
+    with pytest.raises(ValueError):
+        Form(name="form", children=[])
+
+
 def test_action():
     with pytest.raises(ValueError):
         Action(name=FlowActionType.NAVIGATE)
@@ -1154,6 +1159,10 @@ def test_form_ref():
     assert FormRef("test") == "${form.test}"
     assert FormRef("test", "custom") == "${custom.test}"
     assert TextInput(name="test", label="Test").form_ref == "${form.test}"
+    assert (
+        TextInput(name="test", label="Test").form_ref_of("custom_form")
+        == "${custom_form.test}"
+    )
 
 
 def test_data_key():
