@@ -27,6 +27,7 @@ from pywa.types.flows import (
     EmbeddedLink,
     DataKey,
     FormRef,
+    ScreenData,
 )
 
 FLOWS_VERSION = "2.1"
@@ -45,7 +46,7 @@ customer_satisfaction_survey = FlowJSON(
                         name="form",
                         children=[
                             TextSubheading(text="Would you recommend us to a friend?"),
-                            RadioButtonsGroup(
+                            recommend_radio := RadioButtonsGroup(
                                 name="recommend_radio",
                                 label="Choose one",
                                 data_source=[
@@ -55,7 +56,7 @@ customer_satisfaction_survey = FlowJSON(
                                 required=True,
                             ),
                             TextSubheading(text="How could we do better?"),
-                            TextArea(
+                            comment_text := TextArea(
                                 name="comment_text",
                                 label="Leave a comment",
                                 required=False,
@@ -68,8 +69,8 @@ customer_satisfaction_survey = FlowJSON(
                                         type=ActionNextType.SCREEN, name="RATE"
                                     ),
                                     payload={
-                                        "recommend_radio": FormRef("recommend_radio"),
-                                        "comment_text": FormRef("comment_text"),
+                                        "recommend_radio": recommend_radio.form_ref,
+                                        "comment_text": comment_text.form_ref,
                                     },
                                 ),
                             ),
@@ -81,10 +82,10 @@ customer_satisfaction_survey = FlowJSON(
         Screen(
             id="RATE",
             title="Feedback 2 of 2",
-            data={
-                "recommend_radio": {"type": "string", "__example__": "Example"},
-                "comment_text": {"type": "string", "__example__": "Example"},
-            },
+            data=[
+                recommend_radio := ScreenData(key="recommend_radio", example="Example"),
+                comment_text := ScreenData(key="comment_text", example="Example"),
+            ],
             terminal=True,
             layout=Layout(
                 type=LayoutType.SINGLE_COLUMN,
@@ -93,7 +94,7 @@ customer_satisfaction_survey = FlowJSON(
                         name="form",
                         children=[
                             TextSubheading(text="Rate the following: "),
-                            Dropdown(
+                            purchase_rating := Dropdown(
                                 name="purchase_rating",
                                 label="Purchase experience",
                                 required=True,
@@ -105,7 +106,7 @@ customer_satisfaction_survey = FlowJSON(
                                     DataSource(id="4", title="★☆☆☆☆ • Very Poor (1/5)"),
                                 ],
                             ),
-                            Dropdown(
+                            delivery_rating := Dropdown(
                                 name="delivery_rating",
                                 label="Delivery and setup",
                                 required=True,
@@ -117,7 +118,7 @@ customer_satisfaction_survey = FlowJSON(
                                     DataSource(id="4", title="★☆☆☆☆ • Very Poor (1/5)"),
                                 ],
                             ),
-                            Dropdown(
+                            cs_rating := Dropdown(
                                 name="cs_rating",
                                 label="Customer service",
                                 required=True,
@@ -134,11 +135,11 @@ customer_satisfaction_survey = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.COMPLETE,
                                     payload={
-                                        "purchase_rating": FormRef("purchase_rating"),
-                                        "delivery_rating": FormRef("delivery_rating"),
-                                        "cs_rating": FormRef("cs_rating"),
-                                        "recommend_radio": DataKey("recommend_radio"),
-                                        "comment_text": DataKey("comment_text"),
+                                        "purchase_rating": purchase_rating.form_ref,
+                                        "delivery_rating": delivery_rating.form_ref,
+                                        "cs_rating": cs_rating.form_ref,
+                                        "recommend_radio": recommend_radio.data_key,
+                                        "comment_text": comment_text.data_key,
                                     },
                                 ),
                             ),
@@ -164,21 +165,21 @@ load_re_engagement = FlowJSON(
                     Form(
                         name="form",
                         children=[
-                            TextInput(
+                            first_name := TextInput(
                                 name="firstName",
                                 label="First Name",
                                 input_type=InputType.TEXT,
                                 required=True,
                                 visible=True,
                             ),
-                            TextInput(
+                            last_name := TextInput(
                                 name="lastName",
                                 label="Last Name",
                                 input_type=InputType.TEXT,
                                 required=True,
                                 visible=True,
                             ),
-                            TextInput(
+                            email := TextInput(
                                 name="email",
                                 label="Email Address",
                                 input_type=InputType.EMAIL,
@@ -191,9 +192,9 @@ load_re_engagement = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.COMPLETE,
                                     payload={
-                                        "firstName": FormRef("firstName"),
-                                        "lastName": FormRef("lastName"),
-                                        "email": FormRef("email"),
+                                        "firstName": first_name.form_ref,
+                                        "lastName": last_name.form_ref,
+                                        "email": email.form_ref,
                                     },
                                 ),
                             ),
@@ -221,7 +222,7 @@ costumer_engagement = FlowJSON(
                             TextHeading(
                                 text="You've found the perfect deal, what do you do next?"
                             ),
-                            CheckboxGroup(
+                            question1_checkbox := CheckboxGroup(
                                 name="question1Checkbox",
                                 label="Choose all that apply:",
                                 required=True,
@@ -247,7 +248,7 @@ costumer_engagement = FlowJSON(
                                         type=ActionNextType.SCREEN, name="QUESTION_TWO"
                                     ),
                                     payload={
-                                        "question1Checkbox": "${form.question1Checkbox}"
+                                        "question1Checkbox": question1_checkbox.form_ref
                                     },
                                 ),
                             ),
@@ -259,13 +260,11 @@ costumer_engagement = FlowJSON(
         Screen(
             id="QUESTION_TWO",
             title="Question 2 of 3",
-            data={
-                "question1Checkbox": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "__example__": [],
-                }
-            },
+            data=[
+                question1_checkbox := ScreenData(
+                    key="question1Checkbox", example=["Example", "Example2"]
+                ),
+            ],
             layout=Layout(
                 type=LayoutType.SINGLE_COLUMN,
                 children=[
@@ -275,7 +274,7 @@ costumer_engagement = FlowJSON(
                             TextHeading(
                                 text="Its your birthday in two weeks, how might you prepare?"
                             ),
-                            RadioButtonsGroup(
+                            question2_radio_buttons := RadioButtonsGroup(
                                 name="question2RadioButtons",
                                 label="Choose all that apply:",
                                 required=True,
@@ -294,8 +293,8 @@ costumer_engagement = FlowJSON(
                                         name="QUESTION_THREE",
                                     ),
                                     payload={
-                                        "question2RadioButtons": "${form.question2RadioButtons}",
-                                        "question1Checkbox": "${data.question1Checkbox}",
+                                        "question2RadioButtons": question2_radio_buttons.form_ref,
+                                        "question1Checkbox": question1_checkbox.data_key,
                                     },
                                 ),
                             ),
@@ -307,14 +306,14 @@ costumer_engagement = FlowJSON(
         Screen(
             id="QUESTION_THREE",
             title="Question 3 of 3",
-            data={
-                "question2RadioButtons": {"type": "string", "__example__": "Example"},
-                "question1Checkbox": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "__example__": [],
-                },
-            },
+            data=[
+                question2_radio_buttons := ScreenData(
+                    key="question2RadioButtons", example="Example"
+                ),
+                question1_checkbox := ScreenData(
+                    key="question1Checkbox", example=["Example", "Example2"]
+                ),
+            ],
             terminal=True,
             layout=Layout(
                 type=LayoutType.SINGLE_COLUMN,
@@ -323,7 +322,7 @@ costumer_engagement = FlowJSON(
                         name="form",
                         children=[
                             TextHeading(text="What's the best gift for a friend?"),
-                            CheckboxGroup(
+                            question3_checkbox := CheckboxGroup(
                                 name="question3Checkbox",
                                 label="Choose all that apply:",
                                 required=True,
@@ -339,9 +338,9 @@ costumer_engagement = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.COMPLETE,
                                     payload={
-                                        "question1Checkbox": "${data.question1Checkbox}",
-                                        "question2RadioButtons": "${data.question2RadioButtons}",
-                                        "question3Checkbox": "${form.question3Checkbox}",
+                                        "question1Checkbox": question1_checkbox.data_key,
+                                        "question2RadioButtons": question2_radio_buttons.data_key,
+                                        "question3Checkbox": question3_checkbox.form_ref,
                                     },
                                 ),
                             ),
@@ -367,20 +366,20 @@ support_request = FlowJSON(
                     Form(
                         name="form",
                         children=[
-                            TextInput(
+                            name := TextInput(
                                 name="name",
                                 label="Name",
                                 input_type=InputType.TEXT,
                                 required=True,
                             ),
-                            TextInput(
+                            order_number := TextInput(
                                 label="Order number",
                                 name="orderNumber",
                                 input_type=InputType.NUMBER,
                                 required=True,
                                 helper_text="",
                             ),
-                            RadioButtonsGroup(
+                            topic_radio := RadioButtonsGroup(
                                 label="Choose a topic",
                                 name="topicRadio",
                                 data_source=[
@@ -392,7 +391,7 @@ support_request = FlowJSON(
                                 ],
                                 required=True,
                             ),
-                            TextArea(
+                            desc := TextArea(
                                 label="Description of issue",
                                 required=False,
                                 name="description",
@@ -402,10 +401,10 @@ support_request = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.COMPLETE,
                                     payload={
-                                        "name": FormRef("name"),
-                                        "orderNumber": FormRef("orderNumber"),
-                                        "topicRadio": FormRef("topicRadio"),
-                                        "description": FormRef("description"),
+                                        "name": name.form_ref,
+                                        "orderNumber": order_number.form_ref,
+                                        "topicRadio": topic_radio.form_ref,
+                                        "description": desc.form_ref,
                                     },
                                 ),
                             ),
@@ -431,7 +430,7 @@ communication_preferences = FlowJSON(
                     Form(
                         name="form",
                         children=[
-                            CheckboxGroup(
+                            communication_types := CheckboxGroup(
                                 label="Communication types",
                                 required=True,
                                 name="communicationTypes",
@@ -446,7 +445,7 @@ communication_preferences = FlowJSON(
                                     DataSource(id="3", title="New products"),
                                 ],
                             ),
-                            CheckboxGroup(
+                            contact_prefs := CheckboxGroup(
                                 label="Contact Preferences",
                                 required=False,
                                 name="contactPrefs",
@@ -461,10 +460,8 @@ communication_preferences = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.COMPLETE,
                                     payload={
-                                        "communicationTypes": FormRef(
-                                            "communicationTypes"
-                                        ),
-                                        "contactPrefs": FormRef("contactPrefs"),
+                                        "communicationTypes": communication_types.form_ref,
+                                        "contactPrefs": contact_prefs.form_ref,
                                     },
                                 ),
                             ),
@@ -491,19 +488,19 @@ register_for_an_event = FlowJSON(
                         children=[
                             TextHeading(text="Join our next webinar!"),
                             TextBody(text="First, we'll need a few details from you."),
-                            TextInput(
+                            first_name := TextInput(
                                 name="firstName",
                                 label="First Name",
                                 input_type=InputType.TEXT,
                                 required=True,
                             ),
-                            TextInput(
+                            last_name := TextInput(
                                 label="Last Name",
                                 name="lastName",
                                 input_type=InputType.TEXT,
                                 required=True,
                             ),
-                            TextInput(
+                            email := TextInput(
                                 label="Email Address",
                                 name="email",
                                 input_type=InputType.EMAIL,
@@ -517,9 +514,9 @@ register_for_an_event = FlowJSON(
                                         type=ActionNextType.SCREEN, name="SURVEY"
                                     ),
                                     payload={
-                                        "firstName": FormRef("firstName"),
-                                        "lastName": FormRef("lastName"),
-                                        "email": FormRef("email"),
+                                        "firstName": first_name.form_ref,
+                                        "lastName": last_name.form_ref,
+                                        "email": email.form_ref,
                                     },
                                 ),
                             ),
@@ -531,11 +528,11 @@ register_for_an_event = FlowJSON(
         Screen(
             id="SURVEY",
             title="Thank you",
-            data={
-                "firstName": {"type": "string", "__example__": "Example"},
-                "lastName": {"type": "string", "__example__": "Example"},
-                "email": {"type": "string", "__example__": "Example"},
-            },
+            data=[
+                first_name := ScreenData(key="firstName", example="Example"),
+                last_name := ScreenData(key="lastName", example="Example"),
+                email := ScreenData(key="email", example="Example"),
+            ],
             terminal=True,
             layout=Layout(
                 type=LayoutType.SINGLE_COLUMN,
@@ -545,7 +542,7 @@ register_for_an_event = FlowJSON(
                         children=[
                             TextHeading(text="Before you go"),
                             TextBody(text="How did you hear about us?"),
-                            RadioButtonsGroup(
+                            source := RadioButtonsGroup(
                                 name="source",
                                 label="Choose one",
                                 required=False,
@@ -561,10 +558,10 @@ register_for_an_event = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.COMPLETE,
                                     payload={
-                                        "source": FormRef("source"),
-                                        "firstName": DataKey("firstName"),
-                                        "lastName": DataKey("lastName"),
-                                        "email": DataKey("email"),
+                                        "source": source.form_ref,
+                                        "firstName": first_name.data_key,
+                                        "lastName": last_name.data_key,
+                                        "email": email.data_key,
                                     },
                                 ),
                             ),
@@ -598,13 +595,13 @@ sign_in = FlowJSON(
                     Form(
                         name="sign_in_form",
                         children=[
-                            TextInput(
+                            email := TextInput(
                                 name="email",
                                 label="Email address",
                                 input_type=InputType.EMAIL,
                                 required=True,
                             ),
-                            TextInput(
+                            password := TextInput(
                                 name="password",
                                 label="Password",
                                 input_type=InputType.PASSWORD,
@@ -636,8 +633,8 @@ sign_in = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
                                     payload={
-                                        "email": FormRef("email"),
-                                        "password": FormRef("password"),
+                                        "email": email.form_ref,
+                                        "password": password.form_ref,
                                     },
                                 ),
                             ),
@@ -656,37 +653,37 @@ sign_in = FlowJSON(
                     Form(
                         name="sign_up_form",
                         children=[
-                            TextInput(
+                            first_name := TextInput(
                                 name="first_name",
                                 label="First Name",
                                 input_type=InputType.TEXT,
                                 required=True,
                             ),
-                            TextInput(
+                            last_name := TextInput(
                                 name="last_name",
                                 label="Last Name",
                                 input_type=InputType.TEXT,
                                 required=True,
                             ),
-                            TextInput(
+                            email := TextInput(
                                 name="email",
                                 label="Email address",
                                 input_type=InputType.EMAIL,
                                 required=True,
                             ),
-                            TextInput(
+                            password := TextInput(
                                 name="password",
                                 label="Set password",
                                 input_type=InputType.PASSWORD,
                                 required=True,
                             ),
-                            TextInput(
+                            confirm_password := TextInput(
                                 name="confirm_password",
                                 label="Confirm password",
                                 input_type=InputType.PASSWORD,
                                 required=True,
                             ),
-                            OptIn(
+                            terms_agreement := OptIn(
                                 name="terms_agreement",
                                 label="I agree with the terms.",
                                 required=True,
@@ -699,7 +696,7 @@ sign_in = FlowJSON(
                                     payload={},
                                 ),
                             ),
-                            OptIn(
+                            offers_acceptance := OptIn(
                                 name="offers_acceptance",
                                 label="I would like to receive news and offers.",
                             ),
@@ -708,15 +705,13 @@ sign_in = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
                                     payload={
-                                        "first_name": FormRef("first_name"),
-                                        "last_name": FormRef("last_name"),
-                                        "email": FormRef("email"),
-                                        "password": FormRef("password"),
-                                        "confirm_password": FormRef("confirm_password"),
-                                        "terms_agreement": FormRef("terms_agreement"),
-                                        "offers_acceptance": FormRef(
-                                            "offers_acceptance"
-                                        ),
+                                        "first_name": first_name.form_ref,
+                                        "last_name": last_name.form_ref,
+                                        "email": email.form_ref,
+                                        "password": password.form_ref,
+                                        "confirm_password": confirm_password.form_ref,
+                                        "terms_agreement": terms_agreement.form_ref,
+                                        "offers_acceptance": offers_acceptance.form_ref,
                                     },
                                 ),
                             ),
@@ -729,20 +724,23 @@ sign_in = FlowJSON(
             id="FORGOT_PASSWORD",
             title="Forgot password",
             terminal=True,
-            data={
-                "body": {
-                    "type": "string",
-                    "__example__": "Enter your email address for your account and we'll send a reset link. The single-use link will expire after 24 hours.",
-                }
-            },
+            data=[
+                body := ScreenData(
+                    key="body",
+                    example=(
+                        "Enter your email address for your account and we'll send a reset link. "
+                        "The single-use link will expire after 24 hours."
+                    ),
+                ),
+            ],
             layout=Layout(
                 type=LayoutType.SINGLE_COLUMN,
                 children=[
                     Form(
                         name="forgot_password_form",
                         children=[
-                            TextBody(text=DataKey("body")),
-                            TextInput(
+                            TextBody(text=body.data_key),
+                            email := TextInput(
                                 name="email",
                                 label="Email address",
                                 input_type=InputType.EMAIL,
@@ -752,7 +750,7 @@ sign_in = FlowJSON(
                                 label="Sign in",
                                 on_click_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
-                                    payload={"email": FormRef("email")},
+                                    payload={"email": email.form_ref},
                                 ),
                             ),
                         ],
@@ -792,50 +790,50 @@ register = FlowJSON(
             id="REGISTER",
             title="Register for an account",
             terminal=True,
-            data={
-                "error_messages": {
-                    "type": "object",
-                    "__example__": {"confirm_password": "Passwords don't match."},
-                }
-            },
+            data=[
+                error_messages := ScreenData(
+                    key="error_messages",
+                    example={"confirm_password": "Passwords don't match."},
+                ),
+            ],
             layout=Layout(
                 type=LayoutType.SINGLE_COLUMN,
                 children=[
                     Form(
                         name="register_form",
-                        error_messages=DataKey("error_messages"),
+                        error_messages=error_messages.data_key,
                         children=[
-                            TextInput(
+                            first_name := TextInput(
                                 name="first_name",
                                 required=True,
                                 label="First name",
                                 input_type="text",
                             ),
-                            TextInput(
+                            last_name := TextInput(
                                 name="last_name",
                                 required=True,
                                 label="Last name",
                                 input_type="text",
                             ),
-                            TextInput(
+                            email := TextInput(
                                 name="email",
                                 required=True,
                                 label="Email address",
                                 input_type="email",
                             ),
-                            TextInput(
+                            password := TextInput(
                                 name="password",
                                 required=True,
                                 label="Set password",
                                 input_type="password",
                             ),
-                            TextInput(
+                            confirm_password := TextInput(
                                 name="confirm_password",
                                 required=True,
                                 label="Confirm password",
                                 input_type="password",
                             ),
-                            OptIn(
+                            terms_agreement := OptIn(
                                 name="terms_agreement",
                                 label="I agree with the terms.",
                                 required=True,
@@ -848,7 +846,7 @@ register = FlowJSON(
                                     payload={},
                                 ),
                             ),
-                            OptIn(
+                            offers_acceptance := OptIn(
                                 name="offers_acceptance",
                                 label="I would like to receive news and offers.",
                             ),
@@ -857,15 +855,13 @@ register = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
                                     payload={
-                                        "first_name": FormRef("first_name"),
-                                        "last_name": FormRef("last_name"),
-                                        "email": FormRef("email"),
-                                        "password": FormRef("password"),
-                                        "confirm_password": FormRef("confirm_password"),
-                                        "terms_agreement": FormRef("terms_agreement"),
-                                        "offers_acceptance": FormRef(
-                                            "offers_acceptance"
-                                        ),
+                                        "first_name": first_name.form_ref,
+                                        "last_name": last_name.form_ref,
+                                        "email": email.form_ref,
+                                        "password": password.form_ref,
+                                        "confirm_password": confirm_password.form_ref,
+                                        "terms_agreement": terms_agreement.form_ref,
+                                        "offers_acceptance": offers_acceptance.form_ref,
                                     },
                                 ),
                             ),
@@ -911,50 +907,42 @@ get_a_quote = FlowJSON(
         Screen(
             id="DETAILS",
             title="Your details",
-            data={
-                "city": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "id": {"type": "string"},
-                            "title": {"type": "string"},
-                        },
-                    },
-                    "__example__": [{"id": "1", "title": "Light City, SO"}],
-                }
-            },
+            data=[
+                city := ScreenData(
+                    key="city", example=[DataSource(id="1", title="Light City, SO")]
+                ),
+            ],
             layout=Layout(
                 type=LayoutType.SINGLE_COLUMN,
                 children=[
                     Form(
                         name="details_form",
                         children=[
-                            TextInput(
+                            name := TextInput(
                                 label="Your name",
                                 input_type=InputType.TEXT,
                                 name="name",
                                 required=True,
                             ),
-                            TextInput(
+                            address := TextInput(
                                 label="Street address",
                                 input_type=InputType.TEXT,
                                 name="address",
                                 required=True,
                             ),
-                            Dropdown(
+                            city := Dropdown(
                                 label="City, State",
                                 name="city",
-                                data_source=DataKey("city"),
+                                data_source=city.data_key,
                                 required=True,
                             ),
-                            TextInput(
+                            zip_code := TextInput(
                                 label="Zip code",
                                 input_type=InputType.TEXT,
                                 name="zip_code",
                                 required=True,
                             ),
-                            TextInput(
+                            country_region := TextInput(
                                 label="Country/Region",
                                 input_type=InputType.TEXT,
                                 name="country_region",
@@ -965,11 +953,11 @@ get_a_quote = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
                                     payload={
-                                        "name": FormRef("name"),
-                                        "address": FormRef("address"),
-                                        "city": FormRef("city"),
-                                        "zip_code": FormRef("zip_code"),
-                                        "country_region": FormRef("country_region"),
+                                        "name": name.form_ref,
+                                        "address": address.form_ref,
+                                        "city": city.form_ref,
+                                        "zip_code": zip_code.form_ref,
+                                        "country_region": country_region.form_ref,
                                     },
                                 ),
                             ),
@@ -981,45 +969,37 @@ get_a_quote = FlowJSON(
         Screen(
             id="COVER",
             title="Your cover",
-            data={
-                "options": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "id": {"type": "string"},
-                            "title": {"type": "string"},
-                            "description": {"type": "string"},
-                        },
-                    },
-                    "__example__": [
-                        {
-                            "id": "1",
-                            "title": "Fire and theft",
-                            "description": "Cover your home against incidents of theft or accidental fires",
-                        },
-                        {
-                            "id": "2",
-                            "title": "Natural disaster",
-                            "description": "Protect your home against disasters including earthquakes, floods and storms",
-                        },
-                        {
-                            "id": "3",
-                            "title": "Liability",
-                            "description": "Protect yourself from legal liabilities that occur from accidents on your property",
-                        },
+            data=[
+                options := ScreenData(
+                    key="options",
+                    example=[
+                        DataSource(
+                            id="1",
+                            title="Fire and theft",
+                            description="Cover your home against incidents of theft or accidental fires",
+                        ),
+                        DataSource(
+                            id="2",
+                            title="Natural disaster",
+                            description="Protect your home against disasters including earthquakes, floods and storms",
+                        ),
+                        DataSource(
+                            id="3",
+                            title="Liability",
+                            description="Protect yourself from legal liabilities that occur from accidents on your property",
+                        ),
                     ],
-                }
-            },
+                ),
+            ],
             layout=Layout(
                 type=LayoutType.SINGLE_COLUMN,
                 children=[
                     Form(
                         name="cover_form",
                         children=[
-                            CheckboxGroup(
+                            options_form := CheckboxGroup(
                                 name="options",
-                                data_source=DataKey("options"),
+                                data_source=options.data_key,
                                 label="Options",
                                 required=True,
                             ),
@@ -1027,7 +1007,7 @@ get_a_quote = FlowJSON(
                                 label="Continue",
                                 on_click_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
-                                    payload={"options": FormRef("options")},
+                                    payload={"options": options_form.form_ref},
                                 ),
                             ),
                         ],
@@ -1039,20 +1019,12 @@ get_a_quote = FlowJSON(
             id="QUOTE",
             title="Your quote",
             terminal=True,
-            data={
-                "excess": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "id": {"type": "string"},
-                            "title": {"type": "string"},
-                        },
-                    },
-                    "__example__": [{"id": "1", "title": "$250"}],
-                },
-                "total": {"type": "string", "__example__": "$47.98 per month"},
-            },
+            data=[
+                excess := ScreenData(
+                    key="excess", example=[DataSource(id="1", title="$250")]
+                ),
+                total := ScreenData(key="total", example="$47.98 per month"),
+            ],
             layout=Layout(
                 type=LayoutType.SINGLE_COLUMN,
                 children=[
@@ -1062,7 +1034,7 @@ get_a_quote = FlowJSON(
                             Dropdown(
                                 label="Excess",
                                 name="excess",
-                                data_source=DataKey("excess"),
+                                data_source=excess.data_key,
                                 on_select_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
                                     payload={"excess": FormRef("excess")},
@@ -1085,8 +1057,8 @@ get_a_quote = FlowJSON(
                                 required=True,
                                 init_value="1",
                             ),
-                            TextHeading(text=DataKey("total")),
-                            OptIn(
+                            TextHeading(text=total.data_key),
+                            privacy_policy := OptIn(
                                 name="privacy_policy",
                                 label="Accept our Privacy Policy",
                                 required=True,
@@ -1104,7 +1076,7 @@ get_a_quote = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
                                     payload={
-                                        "privacy_policy": FormRef("privacy_policy")
+                                        "privacy_policy": privacy_policy.form_ref,
                                     },
                                 ),
                             ),
@@ -1176,3 +1148,160 @@ def test_action():
 
     with pytest.raises(ValueError):
         Action(name=FlowActionType.COMPLETE)
+
+
+def test_form_ref():
+    assert FormRef("test") == "${form.test}"
+    assert FormRef("test", "custom") == "${custom.test}"
+    assert TextInput(name="test", label="Test").form_ref == "${form.test}"
+
+
+def test_data_key():
+    assert DataKey("test") == "${data.test}"
+    assert ScreenData(key="test", example="Example").data_key == "${data.test}"
+
+
+def test_init_values():
+    text_entry = TextInput(name="test", label="Test", init_value="Example")
+    form = Form(name="form", children=[text_entry])
+    assert form.init_values == {"test": "Example"}
+
+    with pytest.raises(ValueError):
+        TextInput(
+            name="test", label="Test", init_value="Example", input_type=InputType.NUMBER
+        )
+        Form(name="form", init_values={"test": "Example"}, children=[text_entry])
+
+
+def test_error_messages():
+    text_entry = TextInput(name="test", label="Test", error_message="Example")
+    form = Form(name="form", children=[text_entry])
+    assert form.error_messages == {"test": "Example"}
+
+    with pytest.raises(ValueError):
+        TextInput(name="test", label="Test", error_message="Example")
+        Form(name="form", error_messages={"test": "Example"}, children=[text_entry])
+
+
+def test_screen_data():
+    assert Screen(
+        id="test",
+        title="Test",
+        data=[
+            ScreenData(key="str", example="Example"),
+            ScreenData(key="int", example=1),
+            ScreenData(key="float", example=1.0),
+            ScreenData(key="bool", example=True),
+        ],
+        layout=Layout(type=LayoutType.SINGLE_COLUMN, children=[]),
+    ) == Screen(
+        id="test",
+        title="Test",
+        data={
+            "str": {"type": "string", "__example__": "Example"},
+            "int": {"type": "number", "__example__": 1},
+            "float": {"type": "number", "__example__": 1.0},
+            "bool": {"type": "boolean", "__example__": True},
+        },
+        layout=Layout(type=LayoutType.SINGLE_COLUMN, children=[]),
+    )
+
+    # ---
+
+    screen_1 = Screen(
+        id="test",
+        title="Test",
+        data=[
+            ScreenData(
+                key="obj",
+                example=DataSource(id="1", title="Example"),
+            )
+        ],
+        layout=Layout(type=LayoutType.SINGLE_COLUMN, children=[]),
+    )
+    screen_2 = Screen(
+        id="test",
+        title="Test",
+        data={
+            "obj": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string"},
+                    "title": {"type": "string"},
+                },
+                "__example__": {"id": "1", "title": "Example"},
+            }
+        },
+        layout=Layout(type=LayoutType.SINGLE_COLUMN, children=[]),
+    )
+
+    flow_json = FlowJSON(screens=[screen_1, screen_2]).to_dict()
+    assert flow_json["screens"][0] == flow_json["screens"][1]
+
+    # ---
+
+    screen_1 = Screen(
+        id="test",
+        title="Test",
+        data=[
+            ScreenData(
+                key="obj_array",
+                example=[
+                    DataSource(id="1", title="Example"),
+                    DataSource(id="2", title="Example2"),
+                ],
+            ),
+            ScreenData(
+                key="str_array",
+                example=["Example", "Example2"],
+            ),
+        ],
+        layout=Layout(type=LayoutType.SINGLE_COLUMN, children=[]),
+    )
+    screen_2 = Screen(
+        id="test",
+        title="Test",
+        data={
+            "obj_array": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "string"},
+                        "title": {"type": "string"},
+                    },
+                },
+                "__example__": [
+                    {"id": "1", "title": "Example"},
+                    {"id": "2", "title": "Example2"},
+                ],
+            },
+            "str_array": {
+                "type": "array",
+                "items": {"type": "string"},
+                "__example__": ["Example", "Example2"],
+            },
+        },
+        layout=Layout(type=LayoutType.SINGLE_COLUMN, children=[]),
+    )
+
+    flow_json = FlowJSON(screens=[screen_1, screen_2]).to_dict()
+    assert flow_json["screens"][0] == flow_json["screens"][1]
+
+    # ---
+
+    with pytest.raises(ValueError):
+        Screen(
+            id="test",
+            title="Test",
+            data=[ScreenData(key="test", example=[])],
+            layout=Layout(type=LayoutType.SINGLE_COLUMN, children=[]),
+        )
+
+    with pytest.raises(ValueError):
+        Screen(
+            id="test",
+            title="Test",
+            data=[ScreenData(key="test", example=ValueError)],
+            layout=Layout(type=LayoutType.SINGLE_COLUMN, children=[]),
+        )

@@ -326,7 +326,7 @@
             "items": {
               "type": "string"
             },
-            "__example__": []
+            "__example__": ["Example", "Example2"]
           }
         },
         "layout": {
@@ -393,7 +393,7 @@
             "items": {
               "type": "string"
             },
-            "__example__": []
+            "__example__": ["Example", "Example2"]
           }
         },
         "terminal": true,
@@ -1016,6 +1016,11 @@
         "data": {
           "error_messages": {
             "type": "object",
+            "properties": {
+              "confirm_password": {
+                "type": "string"
+              }
+            },
             "__example__": {
               "confirm_password": "Passwords don't match."
             }
