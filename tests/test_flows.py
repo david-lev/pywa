@@ -1175,11 +1175,30 @@ def test_init_values():
     form = Form(name="form", children=[text_entry])
     assert form.init_values == {"test": "Example"}
 
+    # check for duplicate init_values (in the form level and in the children level)
     with pytest.raises(ValueError):
         TextInput(
             name="test", label="Test", init_value="Example", input_type=InputType.NUMBER
         )
         Form(name="form", init_values={"test": "Example"}, children=[text_entry])
+
+    # test that if form has init_values referred to a data_key,
+    # the init_values does not fill up from the .children init_value's
+    form_with_init_values_as_data_key = Screen(
+        id="test",
+        title="Test",
+        data=[
+            init_vals := ScreenData(key="init_vals", example={"test": "Example"}),
+        ],
+        layout=Layout(
+            children=[
+                Form(name="form", init_values=init_vals.data_key, children=[text_entry])
+            ]
+        ),
+    )
+    assert isinstance(
+        form_with_init_values_as_data_key.layout.children[0].init_values, str
+    )
 
 
 def test_error_messages():
@@ -1187,9 +1206,32 @@ def test_error_messages():
     form = Form(name="form", children=[text_entry])
     assert form.error_messages == {"test": "Example"}
 
+    # check for duplicate error_messages (in the form level and in the children level)
     with pytest.raises(ValueError):
         TextInput(name="test", label="Test", error_message="Example")
         Form(name="form", error_messages={"test": "Example"}, children=[text_entry])
+
+    # test that if form has error_messages referred to a data_key,
+    # the error_messages does not fill up from the .children error_message's
+    form_with_error_messages_as_data_key = Screen(
+        id="test",
+        title="Test",
+        data=[
+            error_msgs := ScreenData(key="error_msgs", example={"test": "Example"}),
+        ],
+        layout=Layout(
+            children=[
+                Form(
+                    name="form",
+                    error_messages=error_msgs.data_key,
+                    children=[text_entry],
+                )
+            ]
+        ),
+    )
+    assert isinstance(
+        form_with_error_messages_as_data_key.layout.children[0].error_messages, str
+    )
 
 
 def test_screen_data():
@@ -1202,7 +1244,7 @@ def test_screen_data():
             ScreenData(key="float", example=1.0),
             ScreenData(key="bool", example=True),
         ],
-        layout=Layout(type=LayoutType.SINGLE_COLUMN, children=[]),
+        layout=Layout(children=[]),
     ) == Screen(
         id="test",
         title="Test",
@@ -1212,7 +1254,7 @@ def test_screen_data():
             "float": {"type": "number", "__example__": 1.0},
             "bool": {"type": "boolean", "__example__": True},
         },
-        layout=Layout(type=LayoutType.SINGLE_COLUMN, children=[]),
+        layout=Layout(children=[]),
     )
 
     # ---
@@ -1226,7 +1268,7 @@ def test_screen_data():
                 example=DataSource(id="1", title="Example"),
             )
         ],
-        layout=Layout(type=LayoutType.SINGLE_COLUMN, children=[]),
+        layout=Layout(children=[]),
     )
     screen_2 = Screen(
         id="test",
@@ -1241,7 +1283,7 @@ def test_screen_data():
                 "__example__": {"id": "1", "title": "Example"},
             }
         },
-        layout=Layout(type=LayoutType.SINGLE_COLUMN, children=[]),
+        layout=Layout(children=[]),
     )
 
     flow_json = FlowJSON(screens=[screen_1, screen_2]).to_dict()
@@ -1265,7 +1307,7 @@ def test_screen_data():
                 example=["Example", "Example2"],
             ),
         ],
-        layout=Layout(type=LayoutType.SINGLE_COLUMN, children=[]),
+        layout=Layout(children=[]),
     )
     screen_2 = Screen(
         id="test",
@@ -1291,7 +1333,7 @@ def test_screen_data():
                 "__example__": ["Example", "Example2"],
             },
         },
-        layout=Layout(type=LayoutType.SINGLE_COLUMN, children=[]),
+        layout=Layout(children=[]),
     )
 
     flow_json = FlowJSON(screens=[screen_1, screen_2]).to_dict()
@@ -1304,7 +1346,7 @@ def test_screen_data():
             id="test",
             title="Test",
             data=[ScreenData(key="test", example=[])],
-            layout=Layout(type=LayoutType.SINGLE_COLUMN, children=[]),
+            layout=Layout(children=[]),
         )
 
     with pytest.raises(ValueError):
@@ -1312,5 +1354,5 @@ def test_screen_data():
             id="test",
             title="Test",
             data=[ScreenData(key="test", example=ValueError)],
-            layout=Layout(type=LayoutType.SINGLE_COLUMN, children=[]),
+            layout=Layout(children=[]),
         )

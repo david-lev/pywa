@@ -1034,34 +1034,35 @@ class Form(Component):
     def __post_init__(self):
         if not self.children:
             raise ValueError("At least one child is required")
+        if not isinstance(self.init_values, str):
+            init_values = self.init_values or {}
+            for child in self.children:
+                if getattr(child, "init_value", None) is not None:
+                    if child.name in init_values:
+                        raise ValueError(
+                            f"Duplicate init value for {child.name!r} in form {self.name!r}"
+                        )
+                    if isinstance(self.init_values, str):
+                        raise ValueError(
+                            f"No need to set init value for {child.name!r} if form init values is a dynamic DataKey"
+                        )
+                    init_values[child.name] = child.init_value
+            self.init_values = init_values or None
 
-        init_values = self.init_values or {}
-        for child in self.children:
-            if getattr(child, "init_value", None) is not None:
-                if child.name in init_values:
-                    raise ValueError(
-                        f"Duplicate init value for {child.name!r} in form {self.name!r}"
-                    )
-                if isinstance(self.init_values, str):
-                    raise ValueError(
-                        f"No need to set init value for {child.name!r} if form init values is a dynamic DataKey"
-                    )
-                init_values[child.name] = child.init_value
-        self.init_values = init_values or None
-
-        error_messages = self.error_messages or {}
-        for child in self.children:
-            if getattr(child, "error_message", None) is not None:
-                if child.name in error_messages:
-                    raise ValueError(
-                        f"Duplicate error message for {child.name!r} in form {self.name!r}"
-                    )
-                if isinstance(self.error_messages, str):
-                    raise ValueError(
-                        f"No need to set error message for {child.name!r} if form error messages is a dynamic DataKey"
-                    )
-                error_messages[child.name] = child.error_message
-        self.error_messages = error_messages or None
+        if not isinstance(self.error_messages, str):
+            error_messages = self.error_messages or {}
+            for child in self.children:
+                if getattr(child, "error_message", None) is not None:
+                    if child.name in error_messages:
+                        raise ValueError(
+                            f"Duplicate error msg for {child.name!r} in form {self.name!r}"
+                        )
+                    if isinstance(self.error_messages, str):
+                        raise ValueError(
+                            f"No need to set error msg for {child.name!r} if form error messages is a dynamic DataKey"
+                        )
+                    error_messages[child.name] = child.error_message
+            self.error_messages = error_messages or None
 
 
 class FormComponent(Component, abc.ABC):
