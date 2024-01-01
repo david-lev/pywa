@@ -3,6 +3,13 @@ Changelog
 
 NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 1.14.0 (2024-01-01)
+
+- [flows] define `Form` `init_values` from children `init_value`
+- [flows] adding a new `ScreenData` type to be used in screen `.data`
+- [flows] adding `.form_ref` and `.form_ref_of(form_name)` to form components
+- [docs] adding s real-world example for a complex flow
+
 ### 1.13.0 (2023-12-22)
 
 - [flows] adding full support for [WhatsApp Flows](https://business.whatsapp.com/products/whatsapp-flows)!
