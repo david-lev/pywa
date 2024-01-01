@@ -10,4 +10,5 @@
     message
     interactive
     media
+    sign_up_flow
     template

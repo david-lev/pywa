@@ -38,6 +38,7 @@ __all__ = [
     "FlowAsset",
     "FlowJSON",
     "Screen",
+    "ScreenData",
     "Layout",
     "LayoutType",
     "Form",
@@ -283,6 +284,11 @@ class FlowTokenNoLongerValid(FlowResponseError):
     """
     This exception need to be returned or raised from the flow endpoint callback when the Flow token is no longer valid.
 
+    Example:
+
+        >>> from pywa.types.flows import FlowTokenNoLongerValid
+        >>> raise FlowTokenNoLongerValid(error_message='The order has already been placed')
+
     - The layout will be closed and the ``FlowButton`` will be disabled for the user.
       You can send a new message to the user generating a new Flow token.
       This action may be used to prevent users from initiating the same Flow again.
@@ -513,6 +519,7 @@ class FlowDetails:
     def deprecate(self) -> bool:
         """
         When the flow is in ``FlowStatus.PUBLISHED`` status, you can only deprecate it.
+            - A shortcut for :meth:`pywa.client.WhatsApp.deprecate_flow`.
 
         Returns:
             Whether the flow was deprecated.
@@ -528,6 +535,7 @@ class FlowDetails:
     def get_assets(self) -> tuple[FlowAsset, ...]:
         """
         Get all assets attached to this flow.
+            - A shortcut for :meth:`pywa.client.WhatsApp.get_flow_assets`.
 
         Returns:
             The assets of the flow.
@@ -541,8 +549,10 @@ class FlowDetails:
         endpoint_uri: str | None = None,
     ) -> bool:
         """
+        Update the metadata of this flow.
+            - A shortcut for :meth:`pywa.client.WhatsApp.update_flow_metadata`.
+
         Args:
-            flow_id: The flow ID.
             name: The name of the flow (optional).
             categories: The new categories of the flow (optional).
             endpoint_uri: The URL of the FlowJSON Endpoint. Starting from FlowJSON 3.0 this property should be
@@ -585,6 +595,7 @@ class FlowDetails:
     ) -> bool:
         """
         Update the json of this flow.
+            - A shortcut for :meth:`pywa.client.WhatsApp.update_flow_json`.
 
         Args:
             flow_json: The new json of the flow. Can be a :class:`FlowJSON` object, :class:`dict`, json :class:`str`,
@@ -637,6 +648,11 @@ _UNDERSCORE_FIELDS = {
     "refresh_on_back",
 }
 
+_SKIP_KEYS = {
+    "init_value",  # Default value copied to Form.init_values
+    "error_message",  # Error message copied to Form.error_messages
+}
+
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class FlowJSON:
@@ -678,9 +694,99 @@ class FlowJSON:
             dict_factory=lambda d: {
                 k.replace("_", "-") if k not in _UNDERSCORE_FIELDS else k: v
                 for (k, v) in d
-                if v is not None
+                if k not in _SKIP_KEYS and v is not None
             },
         )
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class DataSource:
+    """
+    The data source of a component.
+
+    Example:
+
+        >>> from pywa.types.flows import DataSource
+        >>> option_1 = DataSource(id='1', title='Option 1')
+        >>> option_2 = DataSource(id='2', title='Option 2')
+        >>> checkbox_group = CheckboxGroup(data_source=[option_1, option_2], ...)
+
+    Attributes:
+        id: The ID of the data source.
+        title: The title of the data source. Limited to 30 characters.
+        description: The description of the data source. Limited to 300 characters.
+        metadata: The metadata of the data source. Limited to 20 characters.
+        enabled: Whether the data source is enabled or not. Default to ``True``.
+    """
+
+    id: str
+    title: str
+    description: str | None = None
+    metadata: str | None = None
+    enabled: bool | None = None
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class ScreenData:
+    """
+    Represents a screen data that a screen should get from the previous screen or from the data endpoint.
+
+    - You can use the :class:`DataKey` or the ``.data_key`` property to reference this data in the screen children.
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#dynamic-properties>`_.
+
+    Example:
+
+        >>> from pywa.types.flows import ScreenData
+        >>> dynamic_welcome = ScreenData(key='welcome', example='Welcome to my store!')
+        >>> is_email_required = ScreenData(key='is_email_required', example=False)
+        >>> screen = Screen(
+        ...     id='START',
+        ...     data=[dynamic_welcome, is_email_required],
+        ...     layout=Layout(children=[Form(children=[
+        ...         TextHeading(text=dynamic_welcome.data_key, ...),
+        ...         TextInput(required=is_email_required.data_key, input_type=InputType.EMAIL, ...)
+        ...     ])])
+        ... )
+
+    Attributes:
+        key: The key of the data (To use later in the screen children with :class:`DataKey`).
+        example: The example of the data that the screen should get from the previous screen or from the data endpoint.
+    """
+
+    key: str
+    example: str | int | float | bool | dict | DataSource | Iterable[
+        str | int | float | bool | dict | DataSource
+    ]
+
+    @property
+    def data_key(self) -> str:
+        """
+        The key for this data to use in the screen children.
+            - A shortcut for :class:`DataKey` with this key.
+
+        Example:
+
+            >>> from pywa.types.flows import Screen, ScreenData, TextHeading, DataKey
+            >>> dynamic_welcome = ScreenData(key='welcome', example='Welcome to my store!')
+
+            >>> screen = Screen(
+            ...     id='START',
+            ...     data=[dynamic_welcome],
+            ...     layout=Layout(children=[
+            ...         TextHeading(text=dynamic_welcome.data_key, ...)
+            ...     ])
+            ... )
+
+        """
+        return DataKey(self.key)
+
+
+_PY_TO_JSON_TYPES = {
+    str: "string",
+    int: "number",
+    float: "number",
+    bool: "boolean",
+}
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -691,26 +797,97 @@ class Screen:
     - The maximum number of components (children) per screen is 50.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#screens>`_.
 
+    Example:
+
+        >>> from pywa.types.flows import Screen
+        >>> screen = Screen(
+        ...     id='START',
+        ...     title='Welcome',
+        ...     data=[ScreenData(key='welcome', example='Welcome to my store!')],
+        ...     terminal=True,
+        ...     layout=Layout(children=[Form(children=[...])]),
+        ...     refresh_on_back=True
+        ... )
+
     Attributes:
-        id: Unique identifier of the screen which works as a page url. ``SUCCESS`` is a reserved keyword and should not be used as a screen id.
-        layout: Associated screen UI Layout that is shown to the user (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#layout>`_).
+        id: Unique identifier of the screen for navigation purposes. ``SUCCESS`` is a reserved keyword and should not be used as a screen id.
         title: Screen level attribute that is rendered in the top navigation bar.
-        data: Declaration of dynamic data that fills the components field in the Flow JSON. It uses JSON Schema to define the structure and type of the properties.
-        terminal: Each Flow should have a terminal state where we terminate the experience and have the Flow completed. Multiple screens can be marked as terminal. It's mandatory to have a Footer component on the terminal screen.
+        data: Declaration of dynamic data that this screen should get from the previous screen or from the data endpoint. In the screen children, you can use the :class:`DataKey` to get the data from this attribute.
+        terminal: Each Flow should have a terminal state where we terminate the experience and have the Flow completed. Multiple screens can be marked as terminal. It's mandatory to have a :class:`Footer` on the terminal screen.
         refresh_on_back: Whether to trigger a data exchange request with the WhatsApp Flows Data Endpoint when using the back button while on this screen (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#additional-information-on-refresh-on-back>`_).
+        layout: Associated screen UI Layout that is shown to the user (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#layout>`_).
     """
 
     id: str
-    layout: Layout
     title: str | None = None
-    data: dict[str, dict] | None = None
+    data: Iterable[ScreenData] | dict[str, dict] | None = None
     terminal: bool | None = None
     refresh_on_back: bool | None = None
+    layout: Layout
+
+    def __post_init__(self):
+        if not self.data or isinstance(self.data, dict):
+            return
+
+        data = {}
+        for item in self.data:
+            try:
+                data[item.key] = dict(
+                    **_get_json_type(item.example), __example__=item.example
+                )
+            except KeyError as e:
+                raise ValueError(
+                    f"Invalid example type {type(item.example)!r} for {item.key!r}. "
+                    f"{e}"
+                )
+
+        self.data = data or None
+
+
+def _get_json_type(
+    example: str
+    | int
+    | float
+    | bool
+    | DataSource
+    | Iterable[str | int | float | bool | DataSource],
+) -> dict[str, str | dict[str, str]]:
+    if isinstance(example, (str, int, float, bool)):
+        return {"type": _PY_TO_JSON_TYPES[type(example)]}
+    elif isinstance(example, (dict, DataSource)):
+        return {"type": "object", "properties": _get_obj_props(example)}
+    elif isinstance(example, Iterable):
+        try:
+            first = next(iter(example))
+        except StopIteration:
+            raise ValueError("At least one example is required when using Iterable")
+        if isinstance(first, (str, int, float, bool)):
+            return {"type": "array", "items": {"type": _PY_TO_JSON_TYPES[type(first)]}}
+        elif isinstance(first, (dict, DataSource)):
+            return {
+                "type": "array",
+                "items": {"type": "object", "properties": _get_obj_props(first)},
+            }
+    else:
+        raise KeyError("Invalid example type")
+
+
+def _get_obj_props(item: dict | DataSource):
+    return {
+        k: dict(type=_PY_TO_JSON_TYPES[type(v)])
+        for k, v in (
+            dataclasses.asdict(item).items()
+            if isinstance(item, DataSource)
+            else item.items()
+        )
+        if v is not None
+    }
 
 
 class LayoutType(utils.StrEnum):
     """
     The type of layout that is used to display the components.
+        - Currently, only ``LayoutType.SINGLE_COLUMN`` is supported.
 
     Attributes:
         SINGLE_COLUMN: A single column layout.
@@ -791,6 +968,8 @@ class DataKey(_Ref):
         """
         Represents a data key (converts to ``${data.<key>}``).
 
+        - Hint: use the ``.data_key`` property of :class:`ScreenData` to get the data key of a screen data.
+
         Args:
             key: The key to get from the :class:`Screen` .data attribute.
         """
@@ -801,6 +980,8 @@ class FormRef(_Ref):
     def __new__(cls, child_name: str, form_name: str = "form"):
         """
         Represents a form reference variable (converts to ``${form.<child>}``).
+
+        - Hint: use the ``.form_ref`` property of each component to get the form reference variable of that component.
 
         Args:
             child_name: The name of the :class:`Form` child to get the value from.
@@ -850,6 +1031,96 @@ class Form(Component):
     init_values: dict[str, Any] | str | DataKey | None = None
     error_messages: dict[str, str] | str | DataKey | None = None
 
+    def __post_init__(self):
+        if not self.children:
+            raise ValueError("At least one child is required")
+        if not isinstance(self.init_values, str):
+            init_values = self.init_values or {}
+            for child in self.children:
+                if getattr(child, "init_value", None) is not None:
+                    if child.name in init_values:
+                        raise ValueError(
+                            f"Duplicate init value for {child.name!r} in form {self.name!r}"
+                        )
+                    if isinstance(self.init_values, str):
+                        raise ValueError(
+                            f"No need to set init value for {child.name!r} if form init values is a dynamic DataKey"
+                        )
+                    init_values[child.name] = child.init_value
+            self.init_values = init_values or None
+
+        if not isinstance(self.error_messages, str):
+            error_messages = self.error_messages or {}
+            for child in self.children:
+                if getattr(child, "error_message", None) is not None:
+                    if child.name in error_messages:
+                        raise ValueError(
+                            f"Duplicate error msg for {child.name!r} in form {self.name!r}"
+                        )
+                    if isinstance(self.error_messages, str):
+                        raise ValueError(
+                            f"No need to set error msg for {child.name!r} if form error messages is a dynamic DataKey"
+                        )
+                    error_messages[child.name] = child.error_message
+            self.error_messages = error_messages or None
+
+
+class FormComponent(Component, abc.ABC):
+    """Base class for all components that must be inside a form"""
+
+    @property
+    @abc.abstractmethod
+    def name(self) -> str:
+        ...
+
+    @property
+    @abc.abstractmethod
+    def label(self) -> str | DataKey:
+        ...
+
+    @property
+    @abc.abstractmethod
+    def required(self) -> bool | str | DataKey | None:
+        ...
+
+    @property
+    @abc.abstractmethod
+    def enabled(self) -> bool | str | DataKey | None:
+        ...
+
+    @property
+    @abc.abstractmethod
+    def init_value(self) -> bool | str | DataKey | None:
+        ...
+
+    @property
+    def form_ref(self) -> str:
+        """
+        The form reference variable for this component.
+            - A shortcut for :class:`FormRef` with this component name.
+            - Use this when form name is ``"form"``, otherwise use ``.form_ref_of`` method.
+
+        Example:
+
+            >>> from pywa.types.flows import Form, TextInput
+            >>> form = Form(children=[text_input := TextInput(name='email', ...)])
+            >>> text_input.form_ref
+        """
+        return FormRef(self.name)
+
+    def form_ref_of(self, form_name: str) -> str:
+        """
+        The form reference variable for this component with the given form name.
+            - A shortcut for :class:`FormRef` with the given form name.
+
+        Example:
+
+            >>> from pywa.types.flows import Form, TextInput
+            >>> form = Form(name='my_form', children=[text_input := TextInput(name='email', ...)])
+            >>> text_input.form_ref_of('my_form')
+        """
+        return FormRef(child_name=self.name, form_name=form_name)
+
 
 class TextComponent(Component, abc.ABC):
     """
@@ -889,8 +1160,8 @@ class TextHeading(TextComponent):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#heading>`_.
 
     Attributes:
-        text: The text of the heading. Limited to 4096 characters. Can be dynamic (e.g ``DataKey("text")``).
-        visible: Whether the heading is visible or not. Default to ``True``, Can be dynamic (e.g ``DataKey("is_visible")``).
+        text: The text of the heading. Limited to 4096 characters. Can be dynamic.
+        visible: Whether the heading is visible or not. Default to ``True``, Can be dynamic.
     """
 
     type: ComponentType = dataclasses.field(
@@ -908,8 +1179,8 @@ class TextSubheading(TextComponent):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#subheading>`_.
 
     Attributes:
-        text: The text of the subheading. Limited to 60 characters. Can be dynamic (e.g ``DataKey("text")``).
-        visible: Whether the subheading is visible or not. Default to ``True``, Can be dynamic (e.g ``DataKey("is_visible")``).
+        text: The text of the subheading. Limited to 60 characters. Can be dynamic.
+        visible: Whether the subheading is visible or not. Default to ``True``, Can be dynamic.
     """
 
     type: ComponentType = dataclasses.field(
@@ -927,10 +1198,10 @@ class TextBody(TextComponent):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#body>`_.
 
     Attributes:
-        text: The text of the body. Limited to 80 characters. Can be dynamic (e.g ``DataKey("text")``).
-        font_weight: The weight of the text. Can be dynamic (e.g ``DataKey("font_weight")``).
-        strikethrough: Whether the text is strikethrough or not. Can be dynamic (e.g ``DataKey("strikethrough")``).
-        visible: Whether the body is visible or not. Default to ``True``, Can be dynamic (e.g ``DataKey("is_visible")``).
+        text: The text of the body. Limited to 80 characters. Can be dynamic.
+        font_weight: The weight of the text. Can be dynamic.
+        strikethrough: Whether the text is strikethrough or not. Can be dynamic.
+        visible: Whether the body is visible or not. Default to ``True``, Can be dynamic.
     """
 
     type: ComponentType = dataclasses.field(
@@ -950,10 +1221,10 @@ class TextCaption(TextComponent):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#caption>`_.
 
     Attributes:
-        text: The text of the caption. Limited to 4096 characters. Can be dynamic (e.g ``DataKey("text")``).
-        font_weight: The weight of the text. Can be dynamic (e.g ``DataKey("font_weight")``).
-        strikethrough: Whether the text is strikethrough or not. Can be dynamic (e.g ``DataKey("strikethrough")``).
-        visible: Whether the caption is visible or not. Default to ``True``, Can be dynamic (e.g ``DataKey("is_visible")``).
+        text: The text of the caption. Limited to 4096 characters. Can be dynamic.
+        font_weight: The weight of the text. Can be dynamic.
+        strikethrough: Whether the text is strikethrough or not. Can be dynamic.
+        visible: Whether the caption is visible or not. Default to ``True``, Can be dynamic.
     """
 
     type: ComponentType = dataclasses.field(
@@ -965,7 +1236,7 @@ class TextCaption(TextComponent):
     visible: bool | str | DataKey | None = None
 
 
-class TextEntryComponent(Component, abc.ABC):
+class TextEntryComponent(FormComponent, abc.ABC):
     """
     Base class for all text entry components
 
@@ -974,22 +1245,12 @@ class TextEntryComponent(Component, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def name(self) -> str:
-        ...
-
-    @property
-    @abc.abstractmethod
-    def label(self) -> str | DataKey:
-        ...
-
-    @property
-    @abc.abstractmethod
-    def required(self) -> bool | str | DataKey | None:
-        ...
-
-    @property
-    @abc.abstractmethod
     def helper_text(self) -> str | DataKey | None:
+        ...
+
+    @property
+    @abc.abstractmethod
+    def error_message(self) -> str | DataKey | None:
         ...
 
 
@@ -1026,14 +1287,16 @@ class TextInput(TextEntryComponent):
 
     Attributes:
         name: The unique name (id) for this component (to be used dynamically or in action payloads).
-        label: The label of the text input. Limited to 20 characters. Can be dynamic (e.g ``DataKey("label")``).
-        input_type: The input type of the text input (for keyboard layout and validation rules). Can be dynamic (e.g ``DataKey("input_type")``).
-        required: Whether the text input is required or not. Can be dynamic (e.g ``DataKey("required")``).
-        min_chars: The minimum number of characters allowed in the text input. Can be dynamic (e.g ``DataKey("min_chars")``).
-        max_chars: The maximum number of characters allowed in the text input. Can be dynamic (e.g ``DataKey("max_chars")``).
-        helper_text: The helper text of the text input. Limited to 80 characters. Can be dynamic (e.g ``DataKey("helper_text")``).
-        enabled: Whether the text input is enabled or not. Default to ``True``. Can be dynamic (e.g ``DataKey("enabled")``).
-        visible: Whether the text input is visible or not. Default to ``True``. Can be dynamic (e.g ``DataKey("is_visible")``).
+        label: The label of the text input. Limited to 20 characters. Can be dynamic.
+        input_type: The input type of the text input (for keyboard layout and validation rules). Can be dynamic.
+        required: Whether the text input is required or not. Can be dynamic.
+        min_chars: The minimum number of characters allowed in the text input. Can be dynamic.
+        max_chars: The maximum number of characters allowed in the text input. Can be dynamic.
+        helper_text: The helper text of the text input. Limited to 80 characters. Can be dynamic.
+        enabled: Whether the text input is enabled or not. Default to ``True``. Can be dynamic.
+        visible: Whether the text input is visible or not. Default to ``True``. Can be dynamic.
+        init_value: The default value of the text input. Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic.
+        error_message: The error message of the text input. Shortcuts for ``error_messages`` of the parent :class:`Form`. Can be dynamic.
     """
 
     type: ComponentType = dataclasses.field(
@@ -1048,6 +1311,8 @@ class TextInput(TextEntryComponent):
     helper_text: str | DataKey | None = None
     enabled: bool | str | DataKey | None = None
     visible: bool | str | DataKey | None = None
+    init_value: str | DataKey | None = None
+    error_message: str | DataKey | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1060,12 +1325,14 @@ class TextArea(TextEntryComponent):
 
     Attributes:
         name: The unique name (id) for this component (to be used dynamically or in action payloads).
-        label: The label of the text area. Limited to 20 characters. Can be dynamic (e.g ``DataKey("label")``).
-        required: Whether the text area is required or not. Can be dynamic (e.g ``DataKey("required")``).
-        max_length: The maximum number of characters allowed in the text area. Can be dynamic (e.g ``DataKey("max_length")``).
-        helper_text: The helper text of the text area. Limited to 80 characters. Can be dynamic (e.g ``DataKey("helper_text")``).
-        enabled: Whether the text area is enabled or not. Default to ``True``. Can be dynamic (e.g ``DataKey("enabled")``).
-        visible: Whether the text area is visible or not. Default to ``True``. Can be dynamic (e.g ``DataKey("is_visible")``).
+        label: The label of the text area. Limited to 20 characters. Can be dynamic.
+        required: Whether the text area is required or not. Can be dynamic.
+        max_length: The maximum number of characters allowed in the text area. Can be dynamic.
+        helper_text: The helper text of the text area. Limited to 80 characters. Can be dynamic.
+        enabled: Whether the text area is enabled or not. Default to ``True``. Can be dynamic.
+        visible: Whether the text area is visible or not. Default to ``True``. Can be dynamic.
+        init_value: The default value of the text area. Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic.
+        error_message: The error message of the text area. Shortcuts for ``error_messages`` of the parent :class:`Form`. Can be dynamic.
     """
 
     type: ComponentType = dataclasses.field(
@@ -1078,30 +1345,12 @@ class TextArea(TextEntryComponent):
     helper_text: str | DataKey | None = None
     enabled: bool | str | DataKey | None = None
     visible: bool | str | DataKey | None = None
+    init_value: str | DataKey | None = None
+    error_message: str | DataKey | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
-class DataSource:
-    """
-    The data source of a component.
-
-    Attributes:
-        id: The ID of the data source.
-        title: The title of the data source. Limited to 30 characters.
-        description: The description of the data source. Limited to 300 characters.
-        metadata: The metadata of the data source. Limited to 20 characters.
-        enabled: Whether the data source is enabled or not. Default to ``True``.
-    """
-
-    id: str
-    title: str
-    description: str | None = None
-    metadata: str | None = None
-    enabled: bool | None = None
-
-
-@dataclasses.dataclass(slots=True, kw_only=True)
-class CheckboxGroup(Component):
+class CheckboxGroup(FormComponent):
     """
     CheckboxGroup component allows users to pick multiple selections from a list of options.
 
@@ -1110,13 +1359,14 @@ class CheckboxGroup(Component):
 
     Attributes:
         name: The unique name (id) for this component (to be used dynamically or in action payloads).
-        data_source: The data source of the checkbox group. Can be dynamic (e.g ``DataKey("data_source")``).
-        label: The label of the checkbox group. Limited to 30 characters. Can be dynamic (e.g ``DataKey("label")``).
-        min_selected_items: The minimum number of items that can be selected. Minimum value is 1. Can be dynamic (e.g ``DataKey("min_selected_items")``).
-        max_selected_items: The maximum number of items that can be selected. Maximum value is 20. Can be dynamic (e.g ``DataKey("max_selected_items")``).
-        required: Whether the checkbox group is required or not. Can be dynamic (e.g ``DataKey("required")``).
-        visible: Whether the checkbox group is visible or not. Default to ``True``. Can be dynamic (e.g ``DataKey("is_visible")``).
-        enabled: Whether the checkbox group is enabled or not. Default to ``True``. Can be dynamic (e.g ``DataKey("enabled")``).
+        data_source: The data source of the checkbox group. Can be dynamic.
+        label: The label of the checkbox group. Limited to 30 characters. Can be dynamic.
+        min_selected_items: The minimum number of items that can be selected. Minimum value is 1. Can be dynamic.
+        max_selected_items: The maximum number of items that can be selected. Maximum value is 20. Can be dynamic.
+        required: Whether the checkbox group is required or not. Can be dynamic.
+        visible: Whether the checkbox group is visible or not. Default to ``True``. Can be dynamic.
+        enabled: Whether the checkbox group is enabled or not. Default to ``True``. Can be dynamic.
+        init_value: The default values (IDs of the data sources). Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic.
         on_select_action: The action to perform when an item is selected.
     """
 
@@ -1131,11 +1381,12 @@ class CheckboxGroup(Component):
     required: bool | str | DataKey | None = None
     visible: bool | str | DataKey | None = None
     enabled: bool | str | DataKey | None = None
+    init_value: list[str] | str | DataKey | None = None
     on_select_action: Action | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
-class RadioButtonsGroup(Component):
+class RadioButtonsGroup(FormComponent):
     """
     RadioButtonsGroup component allows users to pick a single selection from a list of options.
 
@@ -1144,11 +1395,12 @@ class RadioButtonsGroup(Component):
 
     Attributes:
         name: The unique name (id) for this component (to be used dynamically or in action payloads).
-        data_source: The data source of the radio buttons group. Can be dynamic (e.g ``DataKey("data_source")``).
-        label: The label of the radio buttons group. Limited to 30 characters. Can be dynamic (e.g ``DataKey("label")``).
-        required: Whether the radio buttons group is required or not. Can be dynamic (e.g ``DataKey("required")``).
-        visible: Whether the radio buttons group is visible or not. Default to ``True``. Can be dynamic (e.g ``DataKey("is_visible")``).
-        enabled: Whether the radio buttons group is enabled or not. Default to ``True``. Can be dynamic (e.g ``DataKey("enabled")``).
+        data_source: The data source of the radio buttons group. Can be dynamic.
+        label: The label of the radio buttons group. Limited to 30 characters. Can be dynamic.
+        required: Whether the radio buttons group is required or not. Can be dynamic.
+        visible: Whether the radio buttons group is visible or not. Default to ``True``. Can be dynamic.
+        enabled: Whether the radio buttons group is enabled or not. Default to ``True``. Can be dynamic.
+        init_value: The default value (ID of the data source). Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic.
         on_select_action: The action to perform when an item is selected.
     """
 
@@ -1161,6 +1413,7 @@ class RadioButtonsGroup(Component):
     required: bool | str | DataKey | None = None
     visible: bool | str | DataKey | None = None
     enabled: bool | str | DataKey | None = None
+    init_value: str | DataKey | None = None
     on_select_action: Action | None = None
 
 
@@ -1172,12 +1425,12 @@ class Footer(Component):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#foot>`_.
 
     Attributes:
-        label: The label of the footer. Limited to 35 characters. Can be dynamic (e.g ``DataKey("label")``).
+        label: The label of the footer. Limited to 35 characters. Can be dynamic.
         on_click_action: The action to perform when the footer is clicked. Required.
-        left_caption: Can set left_caption and right_caption or only center_caption, but not all 3 at once. Limited to 15 characters. Can be dynamic (e.g ``DataKey("left_caption")``).
-        center_caption: Can set center-caption or left-caption and right-caption, but not all 3 at once. Limited to 15 characters. Can be dynamic (e.g ``DataKey("center_caption")``).
-        right_caption: Can set right-caption and left-caption or only center-caption, but not all 3 at once. Limited to 15 characters. Can be dynamic (e.g ``DataKey("right_caption")``).
-        enabled: Whether the footer is enabled or not. Default to ``True``. Can be dynamic (e.g ``DataKey("enabled")``).
+        left_caption: Can set left_caption and right_caption or only center_caption, but not all 3 at once. Limited to 15 characters. Can be dynamic.
+        center_caption: Can set center-caption or left-caption and right-caption, but not all 3 at once. Limited to 15 characters. Can be dynamic.
+        right_caption: Can set right-caption and left-caption or only center-caption, but not all 3 at once. Limited to 15 characters. Can be dynamic.
+        enabled: Whether the footer is enabled or not. Default to ``True``. Can be dynamic.
     """
 
     type: ComponentType = dataclasses.field(
@@ -1193,7 +1446,7 @@ class Footer(Component):
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
-class OptIn(Component):
+class OptIn(FormComponent):
     """
     OptIn component allows users to check a box to opt in for a specific purpose.
 
@@ -1203,24 +1456,27 @@ class OptIn(Component):
 
     Attributes:
         name: The unique name (id) for this component (to be used dynamically or in action payloads).
-        label: The label of the opt in. Limited to 30 characters. Can be dynamic (e.g ``DataKey("label")``).
-        required: Whether the opt in is required or not. Can be dynamic (e.g ``DataKey("required")``).
-        visible: Whether the opt in is visible or not. Default to ``True``. Can be dynamic (e.g ``DataKey("is_visible")``).
+        label: The label of the opt in. Limited to 30 characters. Can be dynamic.
+        required: Whether the opt in is required or not. Can be dynamic.
+        visible: Whether the opt in is visible or not. Default to ``True``. Can be dynamic.
+        init_value: The default value of the opt in. Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic.
         on_click_action: The action to perform when the opt in is clicked.
     """
 
     type: ComponentType = dataclasses.field(
         default=ComponentType.OPT_IN, init=False, repr=False
     )
+    enabled: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
     label: str | DataKey
     required: bool | str | DataKey | None = None
     visible: bool | str | DataKey | None = None
+    init_value: bool | str | DataKey | None = None
     on_click_action: Action | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
-class Dropdown(Component):
+class Dropdown(FormComponent):
     """
     Dropdown component allows users to pick a single selection from a list of options.
 
@@ -1229,11 +1485,12 @@ class Dropdown(Component):
 
     Attributes:
         name: The unique name (id) for this component (to be used dynamically or in action payloads).
-        label: The label of the dropdown. Limited to 30 characters. Can be dynamic (e.g ``DataKey("label")``).
-        data_source: The data source of the dropdown. minimum 1 and maximum 200 items. Can be dynamic (e.g ``DataKey("data_source")``).
-        enabled: Whether the dropdown is enabled or not. Default to ``True``. Can be dynamic (e.g ``DataKey("enabled")``).
-        required: Whether the dropdown is required or not. Can be dynamic (e.g ``DataKey("required")``).
-        visible: Whether the dropdown is visible or not. Default to ``True``. Can be dynamic (e.g ``DataKey("is_visible")``).
+        label: The label of the dropdown. Limited to 30 characters. Can be dynamic.
+        data_source: The data source of the dropdown. minimum 1 and maximum 200 items. Can be dynamic.
+        enabled: Whether the dropdown is enabled or not. Default to ``True``. Can be dynamic.
+        required: Whether the dropdown is required or not. Can be dynamic.
+        visible: Whether the dropdown is visible or not. Default to ``True``. Can be dynamic.
+        init_value: The default value (ID of the data source). Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic.
         on_select_action: The action to perform when an item is selected.
     """
 
@@ -1246,6 +1503,7 @@ class Dropdown(Component):
     enabled: bool | str | DataKey | None = None
     required: bool | str | DataKey | None = None
     visible: bool | str | DataKey | None = None
+    init_value: str | DataKey | None = None
     on_select_action: Action | None = None
 
 
@@ -1260,9 +1518,9 @@ class EmbeddedLink(Component):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#embed>`_.
 
     Attributes:
-        text: The text of the embedded link. Limited to 35 characters. Can be dynamic (e.g ``DataKey("text")``).
+        text: The text of the embedded link. Limited to 35 characters. Can be dynamic.
         on_click_action: The action to perform when the embedded link is clicked.
-        visible: Whether the embedded link is visible or not. Default to ``True``. Can be dynamic (e.g ``DataKey("is_visible")``).
+        visible: Whether the embedded link is visible or not. Default to ``True``. Can be dynamic.
     """
 
     type: ComponentType = dataclasses.field(
@@ -1274,7 +1532,7 @@ class EmbeddedLink(Component):
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
-class DatePicker(Component):
+class DatePicker(FormComponent):
     """
     DatePicker component allows users to select a date
 
@@ -1283,14 +1541,16 @@ class DatePicker(Component):
 
     Attributes:
         name: The unique name (id) for this component (to be used dynamically or in action payloads).
-        label: The label of the date picker. Limited to 40 characters. Can be dynamic (e.g ``DataKey("label")``).
-        min_date: The minimum date (timestamp in ms) that can be selected. Can be dynamic (e.g ``DataKey("min_date")``).
-        max_date: The maximum date (timestamp in ms) that can be selected. Can be dynamic (e.g ``DataKey("max_date")``).
-        unavailable_dates: The dates (timestamp in ms) that cannot be selected. Can be dynamic (e.g ``DataKey("unavailable_dates")``).
-        helper_text: The helper text of the date picker. Limited to 80 characters. Can be dynamic (e.g ``DataKey("helper_text")``).
-        enabled: Whether the date picker is enabled or not. Default to ``True``. Can be dynamic (e.g ``DataKey("enabled")``).
-        required: Whether the date picker is required or not. Can be dynamic (e.g ``DataKey("required")``).
-        visible: Whether the date picker is visible or not. Default to ``True``. Can be dynamic (e.g ``DataKey("is_visible")``).
+        label: The label of the date picker. Limited to 40 characters. Can be dynamic.
+        min_date: The minimum date (timestamp in ms) that can be selected. Can be dynamic.
+        max_date: The maximum date (timestamp in ms) that can be selected. Can be dynamic.
+        unavailable_dates: The dates (timestamp in ms) that cannot be selected. Can be dynamic.
+        helper_text: The helper text of the date picker. Limited to 80 characters. Can be dynamic.
+        enabled: Whether the date picker is enabled or not. Default to ``True``. Can be dynamic.
+        required: Whether the date picker is required or not. Can be dynamic.
+        visible: Whether the date picker is visible or not. Default to ``True``. Can be dynamic.
+        init_value: The default value. Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic.
+        error_message: The error message of the date picker. Shortcuts for ``error_messages`` of the parent :class:`Form`. Can be dynamic.
         on_select_action: The action to perform when a date is selected.
     """
 
@@ -1306,6 +1566,8 @@ class DatePicker(Component):
     enabled: bool | str | DataKey | None = None
     required: bool | str | DataKey | None = None
     visible: bool | str | DataKey | None = None
+    init_value: str | DataKey | None = None
+    error_message: str | DataKey | None = None
     on_select_action: Action | None = None
 
 
@@ -1336,11 +1598,11 @@ class Image(Component):
 
     Attributes:
         src: Base64 of an image.
-        width: The width of the image. Can be dynamic (e.g ``DataKey("width")``).
-        height: The height of the image. Can be dynamic (e.g ``DataKey("height")``).
-        scale_type: The scale type of the image. Defaule to ``ScaleType.CONTAIN`` Can be dynamic (e.g ``DataKey("scale_type")``). Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#image-scale-types>`_.
-        aspect_ratio: The aspect ratio of the image. Default to ``1``. Can be dynamic (e.g ``DataKey("aspect_ratio")``).
-        alt_text: Alternative Text is for the accessibility feature, eg. Talkback and Voice over. Can be dynamic (e.g ``DataKey("alt_text")``).
+        width: The width of the image. Can be dynamic.
+        height: The height of the image. Can be dynamic.
+        scale_type: The scale type of the image. Defaule to ``ScaleType.CONTAIN`` Can be dynamic. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#image-scale-types>`_.
+        aspect_ratio: The aspect ratio of the image. Default to ``1``. Can be dynamic.
+        alt_text: Alternative Text is for the accessibility feature, eg. Talkback and Voice over. Can be dynamic.
     """
 
     type: ComponentType = dataclasses.field(
