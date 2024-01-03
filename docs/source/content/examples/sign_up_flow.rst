@@ -5,22 +5,34 @@ Sign Up Flow
 
 **In this example, we will create a sign up flow that allows users to sign up and login to their account.**
 
-The screens are the most important part of a flow. They are the building blocks of a flow.
+Think of a Flow as a collection of related screens. The screens can exchange data with each other and with your server.
+
+A screen can be static: it can display static content that configured when the flow is created. For example, a screen can
+display a generic welcome message without any dynamic content, or it can display a message that will be different for each user
+by providing the message text when the flow is sent to the user or when it requested from the server.
+
+Almost every aspect of a screen component can be dynamic. For example, let's take the :class:`TextInput` component which is used to
+collect user input (e.g name, email, password, etc.). The label, the input type, the helper text, the minimum and maximum number of characters,
+and whether the input is required or not, if the field is pre-filled with a value, and if the field is disabled or not, can all be dynamic.
 
 Each :class:`Screen` has
 
-- A ``id``: The unique ID of the screen, which is used to navigate to the screen
-- A ``title``: The title of the screen, which is displayed at the top of the screen
+- A ``id``: The unique ID of the screen, which is used for navigation
+- A ``title``: The title of the screen, which is rendered at the top of the screen
 - A ``layout``: The layout of the screen, which contains the elements that are displayed on the screen.
-  If we want to collect data from the user, we can use a form.
-- A ``data``: The data that the screen expects to receive. This data is used to insert content and configure the screen.
+- A ``data``: The data that the screen expects to receive. This data is used to insert content and configure the screen
+  in order to make it dynamic.
 
+Important thing to understand is that it doesn't matter in which order the screens are defined, every screen is independent
+and has its own data.
 
+I think it's easier to understand this with an examples, so let's get started.
 
 Start Screen
 --------------
 
-Let's start from the ``START`` screen. This screen welcomes the user and allows them to sign up or login.
+Let's start from the ``START`` screen. This screen welcomes the user and allows them to choose if they want to sign up
+(create an account) or login to their existing account.
 
 .. code-block:: python
     :linenos:
@@ -70,22 +82,25 @@ Let's start from the ``START`` screen. This screen welcomes the user and allows 
         ),
     )
 
-The ``START`` screen has three elements:
+This is an example of static screen. The screen doesn't expect to receive any data and all its components are pre-configured.
 
-- A heading, which welcomes the user
-- A link to the ``SIGN_UP`` screen, which allows the user to sign up
-- A link to the ``LOGIN`` screen, which allows the user to login
+The ``START`` screen has three components:
+
+- A :class:`TextHeading`, which welcomes the user
+- A :class:`EmbeddedLink` with an :class:`Action` that navigates to the ``SIGN_UP`` screen
+- A :class:`EmbeddedLink` with an :class:`Action` that navigates to the ``LOGIN`` screen
 
 Each EmbeddedLink has an ``.on_click_action`` with Action value, so when the user clicks on the link, the action is triggered. In this case,
-the action is to NAVIGATE to another screen. The payload contains the data that will be passed to the next screen. In
-this case, we are passing empty strings as the initial values for the form fields on the SIGN_UP and LOGIN screens.
+the action is to :class:`FlowActionType.NAVIGATE` to another screen. The payload contains the data that will be passed to the navigated screen, in
+this case, we are passing the expected data of the ``SIGN_UP`` and ``LOGIN`` screens.
+
 We will see how this works later on.
 
 
 Sign Up Screen
 --------------
 
-The ``SIGN_UP`` screen allows the user to sign up. Let's take a look at the layout:
+The ``SIGN_UP`` screen allows the user to sign up (create an account). Let's take a look at the layout:
 
 
 .. code-block:: python
@@ -189,21 +204,23 @@ Ok, that's a lot of code. Let's break it down.
     In this examples we are using the walrus operator (:=) to assign values to variables. This allows us to use the
     variables later on in the code without having to declare them outside of the layout and then assign them values later
 
-The ``SIGN_UP`` screen expects to receive some data. This data is used to populate the form fields with initial values.
+The ``SIGN_UP`` screen expects to receive some data. In this case, we are expecting to receive some values to pre-fill the form fields.
+
+The data of the screen is represented by the ``.data`` property. The data is a list of :class:`ScreenData` objects.
 
 Every :class:`ScreenData` need to have a unique ``key`` and an ``example`` value. The example value is used to generate the appropriate
 JSON schema for the data. Also, we are assigning every :class:`ScreenData` to a variable (inlined with the walrus operator) so
-that we can use them later on in the code to reference the data (e.g. ``first_name_initial_value.data_key``).
+that we can use them later on in the code to reference the data and "use" it in the screen (e.g. ``first_name_initial_value.data_key``).
 
 The layout of the ``SIGN_UP`` screen contains the following elements:
 
-- A :class:`TextHeading`, which tells the user to enter their details
+- A :class:`TextHeading`, which asks the user to enter their details
 - A :class:`EmbeddedLink` to the ``LOGIN`` screen, which allows the user to login if they already have an account (the user just remembered
   that they already have an account)
 - A :class:`Form`, which contains the form fields that the user needs to fill in to sign up
 - A :class:`Footer`, which contains a button that the user can click to submit the form
 
-The form fields are:
+The :class:`Form` fields are:
 
 - A :class:`TextInput` field for the first name, which is required
 - A :class:`TextInput` field for the last name, which is required
@@ -214,26 +231,31 @@ The form fields are:
 - A :class:`TextInput` field for the confirm password (the input type is set to :class:`InputType.PASSWORD`, so that the user's password is hidden when they re-type it)
 
 Now, every form child get assigned to a variable (inlined with the walrus operator) so that we can use them later on in
-the code to reference the form fields (e.g. ``first_name.form_ref``).
+the code to reference the form fields and send their "values" to the server or to another screen (e.g. ``first_name.form_ref``).
 
 The :class:`Footer` contains a button that the user can click to submit the form. When the user clicks on the button, the :class:`Action`
-``DATA_EXCHANGE`` is triggered. This action allows us to send data to the server and then decide what to do next (for example,
+:class:`FlowActionType.DATA_EXCHANGE` is triggered. This action type allows us to send data to the server and then decide what to do next (for example,
 if the user is already registered, we can navigate to the ``LOGIN`` screen, or if the password and confirm password do not match,
 we can show an error message and ask the user to try again).
 
-The payload of the ``DATA_EXCHANGE`` action contains the data that we want to send to the server. In this case, we are sending
-the values of the form fields. The values can be either a :class:`DataKey` or a :class:`Formref`. A `:class:`DataKey` is used to reference
-a screen's ``.data``. and a :class:`FormRef`` is used to reference :class:`Form`'s ``.children``.
+The payload of the :class:`Action` of the :class:`Footer` contains the data that we want to send to the server. In this case, we are sending
+the values of the form fields. The values can be either a :class:`DataKey` or a :class:`FormRef`. A `:class:`DataKey` is used to reference
+a screen's ``.data`` items and a :class:`FormRef`` is used to reference :class:`Form` children.
 Because we are using the walrus operator to assign the form fields to variables, we can use the variables to reference the form fields
-by using the the ``.form_ref`` property of the form field.
+by using the the ``.form_ref`` property of the form field (which is more type-safe than using the :class:`FormRef` with the form field's name).
+
+
+The ``.form_ref`` and ``.data_key`` properties are equivalent to the :class:`FormRef` with the form field's name and the :class:`DataKey` with the
+screen's data key, respectively. Infact, the ``.form_ref`` and ``.data_key`` properties are just shortcuts for the :class:`FormRef` and :class:`DataKey` classes.
 
     We are not using the ``.form_ref`` property to reference the ``email`` and ``password`` fields in the :class:`EmbeddedLink` because
     the ``.form_ref`` property is only available after the :class:`Form` has been added to the layout. So, we are using the :class:`FormRef` class
 
+
 Sign In Screen
 --------------
 
-Ok, now to the ``LOGIN`` screen. This screen allows the user to login to their existing account. Let's take a look at the layout:
+Ok, now to the ``LOGIN`` screen. This screen allows the user to login to their existing account.
 
 
 .. code-block:: python
@@ -304,14 +326,14 @@ Ok, now to the ``LOGIN`` screen. This screen allows the user to login to their e
     )
 
 
-This screen is very straightforward. It has two form fields:
+This screen is very straightforward. It has two elements:
 
 - A :class:`TextInput` field for the email address (the input type is set to :class:`InputType.EMAIL`, so that the keyboard on the user's phone
-  will show the @ symbol and validate the email address)
+  will show the ``@`` symbol and validate the email address)
 - A :class:`TextInput` field for the password (the input type is set to :class:`InputType.PASSWORD`, so that the user's password is hidden when they type it)
 
 The :class:`Footer` contains a button that the user can click to submit the form. When the user clicks on the button, We are using the
-``DATA_EXCHANGE`` action to send the email and password that the user entered, to the server and then decide what to do next (for example,
+:class:`FlowActionType.DATA_EXCHANGE` action type to send the email and password that the user entered, to the server and then decide what to do next (for example,
 if the user is not registered, we can navigate to the ``SIGN_UP`` screen, or if the password is incorrect, we can show an error message and ask
 the user to try again).
 
@@ -361,12 +383,14 @@ Now, to the last screen, the ``LOGIN_SUCCESS`` screen. This screen is displayed 
 This screen has two elements:
 
 - A :class:`TextHeading`, which welcomes the user to the store
-- A :class:`TextSubHeading`, which tells the user that they are now logged in
+- A :class:`TextSubheading`, which tells the user that they are now logged in
 - A :class:`Form`, which contains an :class:`OptIn` field that asks the user if they want to stay logged in
 
 The :class:`Footer` contains a button that the user can click to submit the form. The ``COMPLETE`` action is used to complete the flow.
-When the user clicks on the button, we are using the ``COMPLETE`` action to send the value of the :class:`OptIn` field to the server and
+When the user clicks on the button, we are using the :class:`FlowActionType.COMPLETE` action to send the value of the :class:`OptIn` field to the server and
 then complete the flow.
+
+This screen is the only scrren that can complete the flow, that's why we are setting the ``terminal`` property to ``True``.
 
 
 Creating the Flow
@@ -1116,7 +1140,8 @@ First let's send the flow!
     from pywa.types.flows import FlowStatus, FlowActionType
 
     wa.send_message(
-        phone_number="1234567890",
+        to="1234567890",
+        text="Welcome to our app! Click the button below to login or sign up",
         buttons=[
             FlowButton(
                 title="Sign Up",
@@ -1175,17 +1200,16 @@ After we create the WhatsApp instance and we send the flow, we can start listeni
         ...
 
 
-The ``on_flow_request`` decorator takes the endpoint URI as a parameter. This is the endpoint that we provided when we updated the flow's metadata.
+The :meth:`pywa.client.WhatsApp.on_flow_request` decorator takes the endpoint URI as a parameter. This is the endpoint that we provided when we updated the flow's metadata.
 So if the endpoint URI is ``https://my-server.com/sign-up-flow``, then the endpoint URI that we are listening to is ``/sign-up-flow``.
 
     Yes, you can point multiple flows to the same endpoint URI. But then you need to find a way to identify the flow by the flow token.
     I recommend creating a unique endpoint URI for each flow.
 
 
-
 The ``on_sign_up_request`` function takes two parameters:
 
-- ``wa``: The WhatsApp instance
+- ``wa``: The :class:`pywa.client.WhatsApp` class instance
 - ``flow``: A :class:`FlowRequest` object, which contains the flow request data
 
 The flow request contains the following properties:
@@ -1262,7 +1286,7 @@ Now, let's handle the flow request. we can handle all the screens in one code bl
 So, what's going on here?
 
 This function handles the ``SIGN_UP`` screen.
-We need to do three things:
+We need to check a few things:
 
 - Check if the user is already registered. If they are, we need to navigate to the ``LOGIN`` screen and show an error message
 - Check if the password and confirm password match. If they don't, we navigate again to ``SIGN_UP`` screen and show an error message
@@ -1295,7 +1319,7 @@ Now, let's handle the ``LOGIN`` screen:
                     "confirm_password_initial_value": "",
                 },
             )
-        elif not user_repository.is_password_valid(request.flow_token, request.data["password"]):
+        elif not user_repository.is_password_valid(request.data["email"], request.data["password"]):
             return FlowResponse(
                 version=request.version,
                 screen=request.screen,
@@ -1312,7 +1336,7 @@ Now, let's handle the ``LOGIN`` screen:
                 data={},
             )
 
-The ``LOGIN`` screen is very similar to the ``SIGN_UP`` screen. We need to do two things:
+The ``LOGIN`` screen is very similar to the ``SIGN_UP`` screen. We need to check a few things:
 
 - Check if the user is registered. If they are not, we need to navigate to the ``SIGN_UP`` screen and show an error message
 - Check if the password is correct. If it's not, we need to navigate again to ``LOGIN`` screen and show an error message
@@ -1321,7 +1345,7 @@ The ``LOGIN`` screen is very similar to the ``SIGN_UP`` screen. We need to do tw
 Handling the Flow Requests
 --------------------------
 
-Let's call the functions that we created earlier:
+Let's modify the ``on_sign_up_request`` function to handle the ``SIGN_UP`` and ``LOGIN`` screens:
 
 .. code-block:: python
     :linenos:
