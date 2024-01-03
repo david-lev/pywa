@@ -12,3 +12,7 @@ Others
 .. autoclass:: WhatsAppBusinessAccount()
 
 .. autoclass:: FacebookApplication()
+
+.. currentmodule:: pywa.utils
+
+.. autoclass:: Version()

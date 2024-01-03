@@ -239,8 +239,8 @@ if the user is already registered, we can navigate to the ``LOGIN`` screen, or i
 we can show an error message and ask the user to try again).
 
 The payload of the :class:`Action` of the :class:`Footer` contains the data that we want to send to the server. In this case, we are sending
-the values of the form fields. The values can be either a :class:`DataKey` or a :class:`FormRef`. A `:class:`DataKey` is used to reference
-a screen's ``.data`` items and a :class:`FormRef`` is used to reference :class:`Form` children.
+the values of the form fields. The values can be either a :class:`DataKey` or a :class:`FormRef`. A :class:`DataKey` is used to reference
+a screen's ``.data`` items and a :class:`FormRef` is used to reference :class:`Form` children.
 Because we are using the walrus operator to assign the form fields to variables, we can use the variables to reference the form fields
 by using the the ``.form_ref`` property of the form field (which is more type-safe than using the :class:`FormRef` with the form field's name).
 
@@ -1005,7 +1005,7 @@ And if you want to go to the `WhatsApp Flows Playground <https://business.facebo
 
 
 
-Creating the flow is very simple:
+Creating the flow is very simple using the :meth:`~pywa.client.WhatsApp.create_flow` method:
 
 .. code-block:: python
     :linenos:
@@ -1016,7 +1016,7 @@ Creating the flow is very simple:
     wa = WhatsApp(
         phone_id="1234567890",
         token="abcdefg",
-        business_account_id="1234567890",
+        business_account_id="1234567890",  # the ID of the WhatsApp Business Account
     )
 
     flow_id = wa.create_flow(
@@ -1025,7 +1025,7 @@ Creating the flow is very simple:
     )
 
 Because we are going to exchange data with our server, we need to provide endpoint URI for the flow. This is the URI that
-WhatsApp will use to send data to our server. We can do this by updating the flow's metadata:
+WhatsApp will use to send data to our server. We can do this by using the :meth:`~pywa.client.WhatsApp.update_flow_metadata` method:
 
 .. code-block:: python
     :linenos:
@@ -1037,7 +1037,7 @@ WhatsApp will use to send data to our server. We can do this by updating the flo
 
 This endpoint must, of course, be pointing to our server. We can use ngrok or a similar tool to expose our server to the internet.
 
-Finally, let's update the flow's JSON:
+Finally, let's update the flow's JSON with :meth:`~pywa.client.WhatsApp.update_flow_json`:
 
 .. code-block:: python
     :linenos:
@@ -1090,10 +1090,10 @@ After the flow updates successfully, we can start with our server logic. First w
 
 Of course, in a real application, we would use a real database to store the users (and we never store the passwords in plain text...).
 
-Send the Flow
--------------
+Sending the Flow
+----------------
 
-Now, let's create a Flask app and a WhatsApp instance:
+To send the flow we need to initialize the :class:`~pywa.client.WhatsApp` client with some specific parameters:
 
 .. code-block:: python
     :linenos:
@@ -1117,7 +1117,7 @@ Now, let's create a Flask app and a WhatsApp instance:
     )
 
 
-The ``WhatsApp`` class takes a few parameters:
+The :class:`~pywa.client.WhatsApp` class takes a few parameters:
 
 - ``phone_id``: The phone ID of the WhatsApp account that we are using to send and receive messages
 - ``token``: The token of the WhatsApp account that we are using to send and receive messages
@@ -1127,7 +1127,7 @@ The ``WhatsApp`` class takes a few parameters:
 - ``verify_token``: Used by WhatsApp to challenge the server when we register the webhook
 - ``app_id``: The ID of the WhatsApp App, needed to register the callback URL
 - ``app_secret``: The secret of the WhatsApp App, needed to register the callback URL
-- ``business_private_key``: The private key of the WhatsApp Business Account, needed to decrypt the flow requests
+- ``business_private_key``: The private key of the WhatsApp Business Account, needed to decrypt the flow requests (see `here <../flows/overview.html#handling-flow-requests-and-responding-to-them>`_ for more info)
 - ``business_private_key_password``: The passphrase of the private_key, if it has one
 
 
@@ -1156,7 +1156,7 @@ First let's send the flow!
 
 Ok, let's break this down:
 
-Sending a flow is very simple. We sending text (or image, video etc.) message with a FlowButton. The FlowButton contains the following properties:
+Sending a flow is very simple. We sending text (or image, video etc.) message with a :class:`~pywa.types.callback.FlowButton`. The FlowButton contains the following properties:
 
 - ``title``: The title of the button (the text that the user will see on the button)
 - ``flow_id``: The ID of the flow that we want to send
@@ -1174,7 +1174,7 @@ And when requests are coming, you can use the flow token to identify the user an
     The flow token can be also used to invalidate the flow, by raising FlowTokenNoLongerValid exception with appropriate error_message.
 
 A good practice is to generate a unique token for each flow request. This way, we can be sure that the token is unique and that we can identify the user and the flow.
-You can use the ``uuid`` module to generate a unique token:
+You can use the :mod:`uuid` module to generate a unique token:
 
 .. code-block:: python
     :linenos:
@@ -1200,21 +1200,21 @@ After we create the WhatsApp instance and we send the flow, we can start listeni
         ...
 
 
-The :meth:`pywa.client.WhatsApp.on_flow_request` decorator takes the endpoint URI as a parameter. This is the endpoint that we provided when we updated the flow's metadata.
+The :meth:`~pywa.client.WhatsApp.on_flow_request` decorator takes the endpoint URI as a parameter. This is the endpoint that we provided when we updated the flow's metadata.
 So if the endpoint URI is ``https://my-server.com/sign-up-flow``, then the endpoint URI that we are listening to is ``/sign-up-flow``.
 
     Yes, you can point multiple flows to the same endpoint URI. But then you need to find a way to identify the flow by the flow token.
     I recommend creating a unique endpoint URI for each flow.
 
 
-The ``on_sign_up_request`` function takes two parameters:
+Our ``on_sign_up_request`` calback function takes two parameters:
 
-- ``wa``: The :class:`pywa.client.WhatsApp` class instance
+- ``wa``: The :class:`~pywa.client.WhatsApp` class instance
 - ``flow``: A :class:`FlowRequest` object, which contains the flow request data
 
 The flow request contains the following properties:
 
-- ``version``: The version of the flow data API that the flow request is using.
+- ``version``: The version of the flow data API that the flow request is using (you should use thisn version in the response)
 - ``flow_token``: The token of the flow (the same token that we provided when we sent the flow)
 - ``action``: The action type that was triggered the request. ``FlowActionType.DATA_EXCHANGE`` in our case.
 - ``screen``: The name of the screen that the user is currently on (We have two screens with data exchange actions, so we need to know which screen the user is currently on)
@@ -1345,7 +1345,7 @@ The ``LOGIN`` screen is very similar to the ``SIGN_UP`` screen. We need to check
 Handling the Flow Requests
 --------------------------
 
-Let's modify the ``on_sign_up_request`` function to handle the ``SIGN_UP`` and ``LOGIN`` screens:
+Let's modify out ``on_sign_up_request`` callback function to handle the ``SIGN_UP`` and ``LOGIN`` screens:
 
 .. code-block:: python
     :linenos:

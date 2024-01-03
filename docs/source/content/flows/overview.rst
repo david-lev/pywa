@@ -360,7 +360,7 @@ Which is the equivalent of the following flow json:
             ]
         }
 
-After you have the flow json, you can update the flow with :meth:`pywa.client.WhatsApp.update_flow_json`:
+After you have the flow json, you can update the flow with :meth:`~pywa.client.WhatsApp.update_flow_json`:
 
 .. code-block:: python
     :linenos:
@@ -373,7 +373,7 @@ After you have the flow json, you can update the flow with :meth:`pywa.client.Wh
 
 The ``flow_json`` argument can be :class:`FlowJSON`, a :class:`dict`, json :class:`str`, json file path or open(json_file) obj.
 
-You can get the :class:`FlowDetails` of the flow with :meth:`pywa.client.WhatsApp.get_flow` to see if there is validation errors needed to be fixed:
+You can get the :class:`FlowDetails` of the flow with :meth:`~pywa.client.WhatsApp.get_flow` to see if there is validation errors needed to be fixed:
 
 .. code-block:: python
     :linenos:
@@ -436,7 +436,7 @@ Let's see how to send text message with flow:
     wa = WhatsApp(...)
 
     wa.send_message(
-        phone_number="1234567890",
+        to="1234567890",
         text="Hi, We love to get your feedback on our service!",
         buttons=FlowButton(
             title="Finish Sign Up",
@@ -488,7 +488,7 @@ Handling Flow requests and responding to them
 
     This exports the RSA Public Key to a file.
 
-    Once you have the public key, you can upload it using the :meth:`pywa.client.WhatsApp.set_business_public_key` method.
+    Once you have the public key, you can upload it using the :meth:`~pywa.client.WhatsApp.set_business_public_key` method.
 
     .. code-block:: python
         :linenos:
@@ -553,7 +553,7 @@ This can be done by setting the ``required`` argument to a dynamic value taken f
 We want to demonstrate how to handle dynamic flow with our server, so we will send the flow with action type of ``FlowActionType.DATA_EXCHANGE``,
 So when the user clicks the button, we will receive a request to our server with the ation, flow_token and the screen which requested the data.
 
-We need to tell WhatsApp to send the requests to our serve. :meth:`pywa.client.WhatsApp.update_flow_metadata`:
+We need to tell WhatsApp to send the requests to our serve. :meth:`~pywa.client.WhatsApp.update_flow_metadata`:
 
 .. code-block:: python
     :linenos:
