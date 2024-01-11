@@ -1691,12 +1691,12 @@ class ActionNext:
     The next action
 
     Attributes:
-        type: The type of the next action
         name: The name of the next screen or plugin
+        type: The type of the next action (Default: ``ActionNextType.SCREEN``)
     """
 
-    type: ActionNextType | str
     name: str
+    type: ActionNextType | str = ActionNextType.SCREEN
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
