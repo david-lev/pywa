@@ -35,6 +35,7 @@ Let's start from the ``START`` screen. This screen welcomes the user and allows 
 (create an account) or login to their existing account.
 
 .. code-block:: python
+    :caption: start_screen.py
     :linenos:
     :emphasize-lines: 6, 9, 26
 
@@ -104,6 +105,7 @@ The ``SIGN_UP`` screen allows the user to sign up (create an account). Let's tak
 
 
 .. code-block:: python
+    :caption: sign_up_screen.py
     :linenos:
     :emphasize-lines: 4, 5, 6, 7, 8, 9, 10, 25, 26, 33, 38, 40, 45, 47, 52, 54, 62, 64, 71, 77, 78, 79, 80, 81, 82, 83
 
@@ -259,6 +261,7 @@ Ok, now to the ``LOGIN`` screen. This screen allows the user to login to their e
 
 
 .. code-block:: python
+    :caption: login_screen.py
     :linenos:
     :emphasize-lines: 5, 6, 7, 8, 22, 23, 24, 25, 26, 27, 28, 34, 39, 41, 46, 52, 53, 54, 55
 
@@ -343,6 +346,7 @@ Login Success Screen
 Now, to the last screen, the ``LOGIN_SUCCESS`` screen. This screen is displayed when the user successfully logs in:
 
 .. code-block:: python
+    :caption: login_success_screen.py
     :linenos:
     :emphasize-lines: 16, 24, 25, 26
 
@@ -390,7 +394,7 @@ The :class:`Footer` contains a button that the user can click to submit the form
 When the user clicks on the button, we are using the :class:`FlowActionType.COMPLETE` action to send the value of the :class:`OptIn` field to the server and
 then complete the flow.
 
-This screen is the only scrren that can complete the flow, that's why we are setting the ``terminal`` property to ``True``.
+This screen is the only screen that can complete the flow, that's why we are setting the ``terminal`` property to ``True``.
 
 
 Creating the Flow
@@ -1306,7 +1310,7 @@ Now, let's handle the ``LOGIN`` screen:
 
     def handle_login_screen(request: FlowRequest) -> FlowResponse:
 
-        if not user_repository.exists(request.flow_token):
+        if not user_repository.exists(request.data["email"]):
             return FlowResponse(
                 version=request.version,
                 screen="SIGN_UP",
