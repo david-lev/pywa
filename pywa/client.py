@@ -1035,6 +1035,33 @@ class WhatsApp(Webhook, HandlerDecorators):
             reply_to_message_id=reply_to_message_id,
         )["messages"][0]["id"]
 
+    def register_phone_number(
+        self, password: str | int, data_localization_region: str = None
+    ) -> bool:
+        """
+        Register a phone number with WhatsApp.
+
+        read more in fecebook develeopers https://developers.facebook.com/docs/whatsapp/cloud-api/reference/registration
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.register_phone_number(password='111111', data_localization_region='US')
+
+        Args:
+            password: The 2fa of the phone number (if 2fa is enabled set password to 111111).
+                if you don't remember the password read the docs in facebook: https://developers.facebook.com/docs/whatsapp/cloud-api/reference/two-step-verification#updating-verification-code
+
+            data_localization_region: the data localization region of the phone number.
+
+        Returns:
+            The success of the operation.
+        """
+
+        return self.api.register_phone_number(
+            password=password, data_localization_region=data_localization_region
+        )["success"]
+
     def mark_message_as_read(
         self,
         message_id: str,
