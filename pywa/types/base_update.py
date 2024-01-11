@@ -238,7 +238,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         self,
         image: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
-        body: str | None = None,
+        body: None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         quote: bool = False,
@@ -258,16 +258,17 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             ... )
 
         Args:
-            image: The image to reply with (either a media ID, URL, file path, bytes, or an open file object. When
-             buttons are provided, only URL is supported).
-            caption: The caption of the image (optional, markdown allowed).
-            body: The body of the reply (optional, up to 1024 characters, markdown allowed,
-             if buttons are provided and body is not provided, caption will be used as the body)
-            footer: The footer of the reply (if buttons are provided, optional, markdown has no effect).
+            image: The image to reply (either a media ID, URL, file path, bytes, or an open file object. When buttons are
+             provided, only URL is supported).
+            caption: The caption of the image (required when buttons are provided,
+             `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
+            footer: The footer of the message (if buttons are provided, optional,
+             `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the image (optional).
-            quote: Whether to quote the replied message (default: False).
-            mime_type: The mime type of the image (optional, required when sending a image as bytes or a file object,
+            mime_type: The mime type of the image (optional, required when sending an image as bytes or a file object,
              or file path that does not have an extension).
+            quote: Whether to quote the replied message (default: False).
+            body: Deprecated and will be removed in a future version, use ``caption`` instead.
 
         Returns:
             The ID of the sent reply.
@@ -287,7 +288,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         self,
         video: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
-        body: str | None = None,
+        body: None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         quote: bool = False,
@@ -308,16 +309,17 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             ... )
 
         Args:
-            video: The video to reply with (either a media ID, URL, file path, bytes, or an open file object. When
-             buttons are provided, only URL is supported).
-            caption: The caption of the video (optional, markdown allowed).
-            body: The body of the reply (optional, up to 1024 characters, markdown allowed,
-             if buttons are provided and body is not provided, caption will be used as the body)
-            footer: The footer of the reply (if buttons are provided, optional, markdown has no effect).
+            video: The video to reply (either a media ID, URL, file path, bytes, or an open file object. When buttons
+             are provided, only URL is supported).
+            caption: The caption of the video (required when sending a video with buttons,
+             `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
+            footer: The footer of the message (if ``buttons`` are provided, optional,
+             `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the video (optional).
-            quote: Whether to quote the replied message (default: False).
             mime_type: The mime type of the video (optional, required when sending a video as bytes or a file object,
              or file path that does not have an extension).
+            quote: Whether to quote the replied message (default: False).
+            body: Deprecated and will be removed in a future version, use ``caption`` instead.
 
         Returns:
             The ID of the sent reply.
@@ -338,7 +340,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         document: str | pathlib.Path | bytes | BinaryIO,
         filename: str | None = None,
         caption: str | None = None,
-        body: str | None = None,
+        body: None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         quote: bool = False,
@@ -359,18 +361,19 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
 
 
         Args:
-            document: The document to reply with (either a media ID, URL, file path, bytes, or an open file object. When
+            document: The document to reply (either a media ID, URL, file path, bytes, or an open file object. When
              buttons are provided, only URL is supported).
             filename: The filename of the document (optional, The extension of the filename will specify what format the
              document is displayed as in WhatsApp).
-            caption: The caption of the document (optional).
-            body: The body of the reply (optional, up to 1024 characters, markdown allowed,
-             if buttons are provided and body is not provided, caption will be used as the body)
-            footer: The footer of the reply (if buttons is provided, optional, markdown has no effect).
+            caption: The caption of the document (required when sending a document with buttons,
+             `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
+            footer: The footer of the message (if buttons are provided, optional,
+             `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the document (optional).
-            quote: Whether to quote the replied message (default: False).
             mime_type: The mime type of the document (optional, required when sending a document as bytes or a file
              object, or file path that does not have an extension).
+            body: Deprecated and will be removed in a future version, use ``caption`` instead.
+            quote: Whether to quote the replied message (default: False).
 
         Returns:
             The ID of the sent reply.

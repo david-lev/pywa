@@ -400,7 +400,7 @@ class WhatsApp(Webhook, HandlerDecorators):
         to: str | int,
         image: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
-        body: str | None = None,
+        body: None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         reply_to_message_id: str | None = None,
@@ -423,20 +423,29 @@ class WhatsApp(Webhook, HandlerDecorators):
             to: The phone ID of the WhatsApp user.
             image: The image to send (either a media ID, URL, file path, bytes, or an open file object. When buttons are
              provided, only URL is supported).
-            caption: The caption of the image (optional, `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
-            body: The body of the message (optional, up to 1024 characters,
-             `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed, if buttons are provided and body is not
-             provided, caption will be used as the body)
-            footer: The footer of the message (if buttons is provided, optional,
+            caption: The caption of the image (required when buttons are provided,
+             `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
+            footer: The footer of the message (if buttons are provided, optional,
              `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the image (optional).
             reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
             mime_type: The mime type of the image (optional, required when sending an image as bytes or a file object,
              or file path that does not have an extension).
+            body: Deprecated and will be removed in a future version, use ``caption`` instead.
 
         Returns:
             The message ID of the sent image message.
         """
+        if body is not None:
+            warnings.simplefilter("always", DeprecationWarning)
+            warnings.warn(
+                message="send_image | reply_image: "
+                "`body` is deprecated and will be removed in a future version, use `caption` instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            caption = body
+
         is_url, image = _resolve_media_param(
             wa=self,
             media=image,
@@ -452,9 +461,9 @@ class WhatsApp(Webhook, HandlerDecorators):
                 media_type="image",
                 caption=caption,
             )["messages"][0]["id"]
-        if not body and not caption:
+        if not caption:
             raise ValueError(
-                "Either body or caption must be provided when sending an image with buttons."
+                "A caption must be provided when sending an image with buttons."
             )
         type_, kb = _resolve_buttons_param(buttons)
         return self.api.send_interactive_message(
@@ -467,7 +476,7 @@ class WhatsApp(Webhook, HandlerDecorators):
                     "link" if is_url else "id": image,
                 },
             },
-            body=body or caption,
+            body=caption,
             footer=footer,
             reply_to_message_id=reply_to_message_id,
         )["messages"][0]["id"]
@@ -477,7 +486,7 @@ class WhatsApp(Webhook, HandlerDecorators):
         to: str | int,
         video: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
-        body: str | None = None,
+        body: None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         reply_to_message_id: str | None = None,
@@ -501,20 +510,29 @@ class WhatsApp(Webhook, HandlerDecorators):
             to: The phone ID of the WhatsApp user.
             video: The video to send (either a media ID, URL, file path, bytes, or an open file object. When buttons are
              provided, only URL is supported).
-            caption: The caption of the video (optional, `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
-            body: The body of the message (optional, up to 1024 characters,
-             `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed, if buttons are provided and body is not
-             provided, caption will be used as the body)
-            footer: The footer of the message (if buttons is provided, optional,
+            caption: The caption of the video (required when sending a video with buttons,
+             `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
+            footer: The footer of the message (if buttons are provided, optional,
              `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the video (optional).
             reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
             mime_type: The mime type of the video (optional, required when sending a video as bytes or a file object,
              or file path that does not have an extension).
+            body: Deprecated and will be removed in a future version, use ``caption`` instead.
 
         Returns:
             The message ID of the sent video.
         """
+        if body is not None:
+            warnings.simplefilter("always", DeprecationWarning)
+            warnings.warn(
+                message="send_video | reply_video: "
+                "`body` is deprecated and will be removed in a future version, use `caption` instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            caption = body
+
         is_url, video = _resolve_media_param(
             wa=self,
             media=video,
@@ -530,9 +548,9 @@ class WhatsApp(Webhook, HandlerDecorators):
                 media_type="video",
                 caption=caption,
             )["messages"][0]["id"]
-        if not body and not caption:
+        if not caption:
             raise ValueError(
-                "Either body or caption must be provided when sending a video with buttons."
+                "A caption must be provided when sending a video with buttons."
             )
         type_, kb = _resolve_buttons_param(buttons)
         return self.api.send_interactive_message(
@@ -545,7 +563,7 @@ class WhatsApp(Webhook, HandlerDecorators):
                     "link" if is_url else "id": video,
                 },
             },
-            body=body or caption,
+            body=caption,
             footer=footer,
             reply_to_message_id=reply_to_message_id,
         )["messages"][0]["id"]
@@ -556,7 +574,7 @@ class WhatsApp(Webhook, HandlerDecorators):
         document: str | pathlib.Path | bytes | BinaryIO,
         filename: str | None = None,
         caption: str | None = None,
-        body: str | None = None,
+        body: None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         reply_to_message_id: str | None = None,
@@ -582,20 +600,29 @@ class WhatsApp(Webhook, HandlerDecorators):
              buttons are provided, only URL is supported).
             filename: The filename of the document (optional, The extension of the filename will specify what format the
              document is displayed as in WhatsApp).
-            caption: The caption of the document (optional).
-            body: The body of the message (optional, up to 1024 characters,
-             `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed, if buttons are provided and body is not
-             provided, caption will be used as the body)
-            footer: The footer of the message (if buttons is provided, optional,
+            caption: The caption of the document (required when sending a document with buttons,
+             `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
+            footer: The footer of the message (if buttons are provided, optional,
              `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the document (optional).
             reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
             mime_type: The mime type of the document (optional, required when sending a document as bytes or a file
              object, or file path that does not have an extension).
+            body: Deprecated and will be removed in a future version, use ``caption`` instead.
 
         Returns:
             The message ID of the sent document.
         """
+        if body is not None:
+            warnings.simplefilter("always", DeprecationWarning)
+            warnings.warn(
+                message="send_document | reply_document: "
+                "`body` is deprecated and will be removed in a future version, use `caption` instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            caption = body
+
         is_url, document = _resolve_media_param(
             wa=self,
             media=document,
@@ -612,9 +639,9 @@ class WhatsApp(Webhook, HandlerDecorators):
                 caption=caption,
                 filename=filename,
             )["messages"][0]["id"]
-        if not body and not caption:
+        if not caption:
             raise ValueError(
-                "Either body or caption must be provided when sending a document with buttons."
+                "A caption must be provided when sending a document with buttons."
             )
         type_, kb = _resolve_buttons_param(buttons)
         return self.api.send_interactive_message(
@@ -628,7 +655,7 @@ class WhatsApp(Webhook, HandlerDecorators):
                     "filename": filename,
                 },
             },
-            body=body or caption,
+            body=caption,
             footer=footer,
             reply_to_message_id=reply_to_message_id,
         )["messages"][0]["id"]
