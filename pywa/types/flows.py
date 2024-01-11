@@ -1631,7 +1631,7 @@ class Image(Component):
     - Max number of images per screen is 3
 
     Attributes:
-        src: Base64 of an image.
+        src: Base64 of an image. Can be dynamic.
         width: The width of the image. Can be dynamic.
         height: The height of the image. Can be dynamic.
         scale_type: The scale type of the image. Defaule to ``ScaleType.CONTAIN`` Can be dynamic. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#image-scale-types>`_.
@@ -1642,7 +1642,7 @@ class Image(Component):
     type: ComponentType = dataclasses.field(
         default=ComponentType.IMAGE, init=False, repr=False
     )
-    src: str
+    src: str | DataKey
     width: int | str | DataKey | None = None
     height: int | str | DataKey | None = None
     scale_type: ScaleType | str | DataKey | None = None
