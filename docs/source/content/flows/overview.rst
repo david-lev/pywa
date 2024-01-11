@@ -18,20 +18,20 @@ From `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flo
 
 When you reading the official docs it's looks very intimidating, but in fact it's quite simple (by PyWa 😉).
 
-    For a real world example, you can check out the `Sign up Flow Exmaple <../examples/sign_up_flow.html>`_.
+    For a real world example, you can check out the `Sign up Flow Example <../examples/sign_up_flow.html>`_.
 
 The Flows are seperated to 4 parts:
 
 - Creating Flow
 - Sending Flow
-- Handling Flow requests and responding to them
+- Handling Flow requests and responding to them (Only for dynamic flow)
 - Getting Flow Completion message
 
 Creating Flow
 -------------
 
-First you need to create the flow, name it and assign categories to it.
-You can create the flows using the `WhatsApp Flow Builder <https://business.facebook.com/wa/manage/flows/>`_ or by PyWa:
+First you need to create the flow, give it a name and set the categories by calling :meth:`~pywa.client.WhatsApp.create_flow`:
+    You can also create the flows using the `WhatsApp Flow Builder <https://business.facebook.com/wa/manage/flows/>`_.
 
 .. code-block:: python
     :linenos:
@@ -72,30 +72,32 @@ Every component on the FlowJSON, has a corresponding class in :mod:`pywa.types.f
 
    * - Category
      - Types
-   * - Components
-     - :class:`Form`,
-       :class:`TextHeading`,
+   * - Static elements
+     - :class:`TextHeading`,
        :class:`TextSubheading`,
        :class:`TextBody`,
        :class:`TextCaption`,
+       :class:`Image`
+   * - Collect data
+     - :class:`Form`,
        :class:`TextInput`,
        :class:`TextArea`,
        :class:`RadioButtonsGroup`,
        :class:`CheckboxGroup`,
        :class:`Dropdown`,
-       :class:`Image`,
-       :class:`OptIn`,
-       :class:`EmbeddedLink`,
+       :class:`OptIn`
+   * - Navigation
+     - :class:`EmbeddedLink`,
        :class:`Footer`
-
 
 here is an example of static flow:
 
 .. toggle::
 
     .. code-block:: python
-        :caption: customer_satisfaction_survey_flow.py
+        :caption: simple_sign_up_flow.py
         :linenos:
+        :emphasize-lines: 6, 13, 19, 25, 31, 36, 37, 38, 39, 40
 
         static_flow = FlowJSON(
             screens=[
@@ -153,7 +155,7 @@ Which is the equivalent of the following flow json:
 .. toggle::
 
     .. code-block:: json
-        :caption: customer_satisfaction_survey_flow.json
+        :caption: simple_sign_up_flow.json
         :linenos:
 
         {
@@ -217,9 +219,9 @@ Here is example of dynamic flow:
 .. toggle::
 
     .. code-block:: python
-        :caption: support_request.json
+        :caption: dynamic_sign_up_flow.py
         :linenos:
-        :emphasize-lines: 2, 3, 9, 10, 11, 12, 13, 25, 31, 37
+        :emphasize-lines: 2, 3, 9, 10, 11, 12, 13, 20, 25, 27, 31, 33, 37, 43, 44, 45, 46, 47
 
 
         dynamic_flow = FlowJSON(
@@ -285,7 +287,7 @@ Which is the equivalent of the following flow json:
 .. toggle::
 
     .. code-block:: json
-        :caption: support_request.json
+        :caption: dynamic_sign_up_flow.json
         :linenos:
 
         {
@@ -462,9 +464,12 @@ Let's walk through the arguments:
 
 - ``flow_action_screen`` - The first screen id to display when the user clicks the button.
 
+    If you don't care about the dynamic example, you can skip to `Getting Flow Completion message <#getting-flow-completion-message>`_.
 
 Handling Flow requests and responding to them
 ---------------------------------------------
+
+This part is only for dynamic flow. here we will demonstrate how to handle the DATA_EXCHANGE requests and respond to them.
 
 .. note::
 
@@ -523,7 +528,7 @@ Handling Flow requests and responding to them
 In dynamic flow, when the user perform an action with type of ``FlowActionType.DATA_EXCHANGE`` you will receive a request to your server with the payload
 and you need to determine if you want to continue to the next screen or complete the flow.
 
-So in our dynamic example (``dynamic_flow``) we have just one screen: ``SIGN_UP``.
+So in our dynamic example (``dynamic_sign_up_flow.py``), we have just one screen: ``SIGN_UP``.
 
 .. code-block:: python
         :linenos:
@@ -635,7 +640,7 @@ In our example, we returning our dynamic data to the ``SIGN_UP`` screen.
 Of course, it can be more complex, if you have multiple screens, you can return data from them and then decide
 what screen to open next or complete the flow.
 
-If you want example of more complex flow, you can check out the `Sign up Flow Exmaple <../examples/sign_up_flow.html>`_.
+    If you want example of more complex flow, you can check out the `Sign up Flow Example <../examples/sign_up_flow.html>`_.
 
 Getting Flow Completion message
 -------------------------------

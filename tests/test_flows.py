@@ -28,7 +28,9 @@ from pywa.types.flows import (
     DataKey,
     FormRef,
     ScreenData,
+    FlowResponse,
 )
+from pywa.utils import Version
 
 FLOWS_VERSION = "2.1"
 
@@ -1356,3 +1358,65 @@ def test_screen_data():
             data=[ScreenData(key="test", example=ValueError)],
             layout=Layout(children=[]),
         )
+
+
+def test_flow_response_with_error_msg():
+    assert (
+        "error_message"
+        in FlowResponse(
+            version=Version.FLOW_MSG.value,
+            data={"test": "test"},
+            screen="TEST",
+            error_message="Example",
+        ).to_dict()["data"]
+    )
+
+
+def test_flow_response_with_close_flow():
+    assert (
+        FlowResponse(  # closing flow make screen `SUCCESS`
+            version=Version.FLOW_MSG.value,
+            data={"test": "test"},
+            close_flow=True,
+            flow_token="test",
+        ).to_dict()["screen"]
+        == "SUCCESS"
+    )
+
+    with pytest.raises(ValueError):  # not closing flow without screen
+        FlowResponse(
+            version=Version.FLOW_MSG.value,
+            data={"test": "test"},
+            flow_token="test",
+            close_flow=False,
+        )
+
+    with pytest.raises(ValueError):  # closing flow without flow_token
+        FlowResponse(
+            version=Version.FLOW_MSG.value,
+            data={"test": "test"},
+            close_flow=True,
+        )
+
+    with pytest.raises(ValueError):  # closing flow with error_message
+        FlowResponse(
+            version=Version.FLOW_MSG.value,
+            data={"test": "test"},
+            close_flow=True,
+            flow_token="fdf",
+            error_message="Example",
+        )
+
+
+def test_flow_response_with_data_sources():
+    assert FlowResponse(
+        version=Version.FLOW_MSG.value,
+        data={"data_source": DataSource(id="1", title="Example")},
+        screen="TEST",
+    ).to_dict()["data"]["data_source"] == {"id": "1", "title": "Example"}
+
+    assert FlowResponse(
+        version=Version.FLOW_MSG.value,
+        data={"data_source": [DataSource(id="1", title="Example")]},
+        screen="TEST",
+    ).to_dict()["data"]["data_source"] == [{"id": "1", "title": "Example"}]
