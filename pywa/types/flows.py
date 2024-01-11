@@ -205,31 +205,58 @@ class FlowResponse:
     Attributes:
         version: The version of the data exchange.
         screen: The screen to display (if the flow is not closed).
-        data: The data to send to the screen or to add to flow completion message (received to the webhook).
+        data: The data to send to the screen or to add to flow completion message (default to empty dict).
         error_message: This will redirect the user to ``screen`` and will trigger a snackbar error with the error_message present (if the flow is not closed).
         flow_token: The flow token to close the flow (if the flow is closed).
         close_flow: Whether to close the flow or just navigate to the screen.
     """
 
     version: str
-    data: dict[str, Any]
+    data: dict[
+        str,
+        str
+        | int
+        | float
+        | bool
+        | dict
+        | DataSource
+        | Iterable[str | int | float | bool | dict | DataSource],
+    ] = dataclasses.field(default_factory=dict)
     screen: str | None = None
     error_message: str | None = None
     flow_token: str | None = None
     close_flow: bool = False
 
-    def to_dict(self) -> dict[str, str | dict]:
+    def __post_init__(self):
         if not self.close_flow and not self.screen:
             raise ValueError(
                 "When the response not close the flow, the screen must be provided."
             )
-        if self.close_flow and not self.flow_token:
-            raise ValueError(
-                "When the response close the flow, the flow token must be provided."
-            )
+        if self.close_flow:
+            if not self.flow_token:
+                raise ValueError(
+                    "When the response close the flow, the flow token must be provided."
+                )
+            if self.screen:
+                raise ValueError(
+                    "When the response close the flow, no need to provide the screen."
+                )
+            if self.error_message:
+                raise ValueError(
+                    "When the response close the flow, message error is not supported."
+                )
+
+    def to_dict(self) -> dict[str, str | dict]:
         data = self.data.copy()
         if not self.close_flow and self.error_message:
             data["error_message"] = self.error_message
+        for key, val in data.items():
+            if isinstance(val, DataSource):
+                data[key] = val.to_dict()
+            elif isinstance(val, Iterable) and not isinstance(val, (str, bytes)):
+                data[key] = [
+                    v.to_dict() if isinstance(v, DataSource) else v for v in val
+                ]
         return {
             "version": self.version,
             "screen": self.screen if not self.close_flow else "SUCCESS",
@@ -724,6 +751,13 @@ class DataSource:
     description: str | None = None
     metadata: str | None = None
     enabled: bool | None = None
+
+    def to_dict(self):
+        """Called when used in :class:`FlowResponse`."""
+        return dataclasses.asdict(
+            obj=self,
+            dict_factory=lambda d: {k: v for (k, v) in d if v is not None},
+        )
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
