@@ -1062,33 +1062,6 @@ class WhatsApp(Webhook, HandlerDecorators):
             reply_to_message_id=reply_to_message_id,
         )["messages"][0]["id"]
 
-    def register_phone_number(
-        self, password: str | int, data_localization_region: str = None
-    ) -> bool:
-        """
-        Register a phone number with WhatsApp.
-
-        read more in fecebook develeopers https://developers.facebook.com/docs/whatsapp/cloud-api/reference/registration
-
-        Example:
-
-            >>> wa = WhatsApp(...)
-            >>> wa.register_phone_number(password='111111', data_localization_region='US')
-
-        Args:
-            password: The 2fa of the phone number (if 2fa is enabled set password to 111111).
-                if you don't remember the password read the docs in facebook: https://developers.facebook.com/docs/whatsapp/cloud-api/reference/two-step-verification#updating-verification-code
-
-            data_localization_region: the data localization region of the phone number.
-
-        Returns:
-            The success of the operation.
-        """
-
-        return self.api.register_phone_number(
-            password=str(password), data_localization_region=data_localization_region
-        )["success"]
-
     def mark_message_as_read(
         self,
         message_id: str,
@@ -1889,6 +1862,38 @@ class WhatsApp(Webhook, HandlerDecorators):
                 flow_id=str(flow_id),
             )["data"]
         )
+
+    def register_phone_number(
+        self, pin: int | str, data_localization_region: str | None = None
+    ) -> bool:
+        """
+        Register a Business Phone Number
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/registration>`_
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.register_phone_number(password='111111', data_localization_region='US')
+
+        Args:
+            pin: If your verified business phone number already has two-step verification enabled,
+             set this value to your number's 6-digit two-step verification PIN.
+             If you cannot recall your PIN, you can
+             `uptdate <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/two-step-verification#updating-verification-code>`_ it.
+            data_localization_region: If included, enables
+             `local storage <https://developers.facebook.com/docs/whatsapp/cloud-api/overview/local-storage/>`_ on the
+             business phone number.
+             Value must be a 2-letter ISO 3166 country code (e.g. ``IN``) indicating the country where you
+             want data-at-rest to be stored.
+
+        Returns:
+            The success of the registration.
+        """
+
+        return self.api.register_phone_number(
+            pin=str(pin), data_localization_region=data_localization_region
+        )["success"]
 
 
 def _resolve_buttons_param(

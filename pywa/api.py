@@ -526,21 +526,13 @@ class WhatsAppCloudApi:
         )
 
     def register_phone_number(
-        self, password: str, data_localization_region: str = None
+        self, pin: str, data_localization_region: str = None
     ) -> dict[str, bool]:
         """
-        Register a phone number with WhatsApp.
-
         Return example:
             {
                 'success': True,
             }
-
-        Args:
-            password: The 2fa of the phone number (if 2fa is enabled set password to 111111).
-                if you don't remember the password read the docs in facebook: https://developers.facebook.com/docs/whatsapp/cloud-api/reference/two-step-verification#updating-verification-code
-
-            data_localization_region: the data localization region of the phone number.
 
         Returns:
             The success of the operation.
@@ -551,7 +543,7 @@ class WhatsAppCloudApi:
             endpoint=f"/{self.phone_id}/register",
             json={
                 **self._common_keys,
-                "pin": password,
+                "pin": pin,
                 **(
                     {"data_localization_region": data_localization_region}
                     if data_localization_region

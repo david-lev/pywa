@@ -36,3 +36,4 @@ Client Reference
 .. automethod:: WhatsApp.get_flow
 .. automethod:: WhatsApp.get_flows
 .. automethod:: WhatsApp.get_flow_assets
+.. automethod:: WhatsApp.register_phone_number
