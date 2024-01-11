@@ -1059,7 +1059,7 @@ class WhatsApp(Webhook, HandlerDecorators):
         """
 
         return self.api.register_phone_number(
-            password=password, data_localization_region=data_localization_region
+            password=str(password), data_localization_region=data_localization_region
         )["success"]
 
     def mark_message_as_read(

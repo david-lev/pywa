@@ -526,7 +526,7 @@ class WhatsAppCloudApi:
         )
 
     def register_phone_number(
-        self, password: str | int, data_localization_region: str = None
+        self, password: str, data_localization_region: str = None
     ) -> dict[str, bool]:
         """
         Register a phone number with WhatsApp.
@@ -551,7 +551,7 @@ class WhatsAppCloudApi:
             endpoint=f"/{self.phone_id}/register",
             json={
                 **self._common_keys,
-                "pin": str(password),
+                "pin": password,
                 **(
                     {"data_localization_region": data_localization_region}
                     if data_localization_region
