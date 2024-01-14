@@ -750,7 +750,10 @@ class WhatsApp(Webhook, HandlerDecorators):
     ) -> str:
         """
         React to a message with an emoji.
-            - You can react to incoming messages by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.react` method.
+            - You can react to incoming messages by using the
+              :py:func:`~pywa.types.base_update.BaseUserUpdate.react` method on every update.
+
+                >>> msg.react('👍')
 
         Example:
 
@@ -783,7 +786,10 @@ class WhatsApp(Webhook, HandlerDecorators):
     ) -> str:
         """
         Remove a reaction from a message.
-            - You can remove reactions from incoming messages by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.unreact` method.
+            - You can remove reactions from incoming messages by using the
+              :py:func:`~pywa.types.base_update.BaseUserUpdate.unreact` method on every update.
+
+              >>> msg.unreact()
 
         Example:
 
@@ -792,6 +798,10 @@ class WhatsApp(Webhook, HandlerDecorators):
             ...     to='1234567890',
             ...     message_id='wamid.XXX='
             ... )
+
+        Args:
+            to: The phone ID of the WhatsApp user.
+            message_id: The message ID to remove the reaction from.
 
         Returns:
             The message ID of the reaction (You can't use this message id to re-react or perform any other action on it.

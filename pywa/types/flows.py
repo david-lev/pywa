@@ -6,6 +6,7 @@ import abc
 import dataclasses
 import datetime
 import json
+import logging
 import pathlib
 from typing import Iterable, TYPE_CHECKING, Any, BinaryIO, Literal
 
@@ -22,6 +23,8 @@ from pywa.types.others import (
 
 if TYPE_CHECKING:
     from pywa import WhatsApp
+
+_logger = logging.getLogger(__name__)
 
 __all__ = [
     "FlowCompletion",
@@ -119,19 +122,25 @@ class FlowCompletion(BaseUserUpdate):
 
 class FlowRequestActionType(utils.StrEnum):
     """
-    The type the action that triggered the request.
+    The type the action that triggered the :class:`FlowRequest`.
 
     Attributes:
-        INIT: if the request is triggered when opening the Flow
-        BACK: if the request is triggered when pressing "back" (The screen has ``refresh_on_back`` set to ``True``)
-        DATA_EXCHANGE: if the request is triggered when submitting the screen
-        PING: if the request is triggered by a health check (ignore this requests by leaving ``handle_health_check`` to ``True``)
+        INIT: if the request is triggered when opening the flow (The :class:`FlowButton` was sent with flow_action_type set to ``FlowActionType.DATA_EXCHANGE``)
+        BACK: if the request is triggered when pressing back (The screen has ``refresh_on_back`` set to ``True``)
+        DATA_EXCHANGE: if the request is triggered when submitting the screen (And the :class:`Action` name is ``FlowActionType.DATA_EXCHANGE``)
+        PING: if the request is triggered by a health check (Ignore this requests by leaving ``handle_health_check`` to ``True``)
     """
 
     INIT = "INIT"
     BACK = "BACK"
     DATA_EXCHANGE = "data_exchange"
     PING = "ping"
+    UNKNOWN = "UNKNOWN"
+
+    @classmethod
+    def _missing_(cls, value):
+        _logger.warning("Unknown flow request action type: %s", value)
+        return cls.UNKNOWN
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
@@ -149,6 +158,8 @@ class FlowRequest:
         screen: The screen that triggered the request. ``None`` if action is ``FlowRequestActionType.PING``.
         data: The data sent from the screen. ``None`` if action is ``FlowRequestActionType.PING`` and optional if action is
          ``FlowRequestActionType.BACK`` or ``FlowRequestActionType.INIT``.
+        raw: The raw data of the request.
+        raw_encrypted: The raw-encrypted data of the request.
     """
 
     version: str
@@ -200,10 +211,24 @@ class FlowResponse:
     Represents a flow data exchange response. This response is sent to the flow endpoint to determine the next screen
     to display or to close the flow. You should return this response from your flow endpoint callback.
 
-    Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/guides/implementingyourflowendpoint#data_exchange_request>`_.
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/guides/implementingyourflowendpoint#data_exchange_request>`_.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> from pywa.types.flows import FlowResponse
+
+        >>> wa = WhatsApp(business_private_key="...", ...)
+        >>> @wa.on_flow_request("/my-flow-endpoint")
+        ... def my_flow_endpoint(flow_request: FlowRequest) -> FlowResponse:
+        ...     return FlowResponse(
+        ...         version=flow_request.version,
+        ...         screen="SCREEN_ID",
+        ...         data={"key": "value"},
+        ...     )
 
     Attributes:
-        version: The version of the data exchange.
+        version: The version of the data exchange (You can use the same version as the request (``request.version``)).
         screen: The screen to display (if the flow is not closed).
         data: The data to send to the screen or to add to flow completion message (default to empty dict).
         error_message: This will redirect the user to ``screen`` and will trigger a snackbar error with the error_message present (if the flow is not closed).
@@ -359,6 +384,7 @@ class FlowStatus(utils.StrEnum):
 
     @classmethod
     def _missing_(cls, value):
+        _logger.warning("Unknown flow status: %s", value)
         return cls.UNKNOWN
 
 
@@ -388,13 +414,14 @@ class FlowCategory(utils.StrEnum):
 
     @classmethod
     def _missing_(cls, value):
+        _logger.warning("Unknown flow category: %s", value)
         return cls.OTHER
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
 class FlowValidationError(Exception, utils.FromDict):
     """
-    Represents a validation error of a flow.
+    Represents a validation error of a :class:`FlowJSON`.
 
     Attributes:
         error: The error code.
@@ -689,9 +716,9 @@ class FlowJSON:
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson>`_.
 
     Attributes:
-        screens: The screens that are part of the flow (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#screens>`_).
+        screens: The screens of the flow (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#screens>`_).
         version: The Flow JSON version. Default to latest (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/versioning>`_).
-        data_api_version: The version to use during communication with the WhatsApp Flows Data Endpoint. Default to latest. Required if the data channel is set.
+        data_api_version: The version to use during communication with the WhatsApp Flows Data Endpoint. Use ``utils.Version.FLOW_DATA_API`` to get the latest version
         routing_model: Defines the rules for the screen by limiting the possible state transition. (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#routing-model>`_).
         data_channel_uri: The endpoint to use to communicate with your server (When using v3.0 or higher, this field need to be set via :meth:`WhatsApp.update_flow_metadata`).
     """
@@ -765,7 +792,7 @@ class ScreenData:
     """
     Represents a screen data that a screen should get from the previous screen or from the data endpoint.
 
-    - You can use the :class:`DataKey` or the ``.data_key`` property to reference this data in the screen children.
+    - You can use the ``.data_key`` property or the :class:`DataKey` to reference this data in the screen children or in the action payloads.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#dynamic-properties>`_.
 
     Example:
@@ -783,8 +810,8 @@ class ScreenData:
         ... )
 
     Attributes:
-        key: The key of the data (To use later in the screen children with :class:`DataKey`).
-        example: The example of the data that the screen should get from the previous screen or from the data endpoint.
+        key: The key of the data (To use later in the screen children with ``.data_key`` or with :class:`DataKey`).
+        example: The example of the data that the screen should get from the previous screen or from the data endpoint (or the previous screen).
     """
 
     key: str
@@ -801,11 +828,9 @@ class ScreenData:
         Example:
 
             >>> from pywa.types.flows import Screen, ScreenData, TextHeading, DataKey
-            >>> dynamic_welcome = ScreenData(key='welcome', example='Welcome to my store!')
-
             >>> screen = Screen(
             ...     id='START',
-            ...     data=[dynamic_welcome],
+            ...     data=[dynamic_welcome := ScreenData(key='welcome', example='Welcome to my store!')],
             ...     layout=Layout(children=[
             ...         TextHeading(text=dynamic_welcome.data_key, ...)
             ...     ])
@@ -844,18 +869,25 @@ class Screen:
         ... )
 
     Attributes:
-        id: Unique identifier of the screen for navigation purposes. ``SUCCESS`` is a reserved keyword and should not be used as a screen id.
+        id: Unique identifier of the screen for navigation purposes. ``SUCCESS`` is a reserved keyword and should not be
+         used as a screen id.
         title: Screen level attribute that is rendered in the top navigation bar.
-        data: Declaration of dynamic data that this screen should get from the previous screen or from the data endpoint. In the screen children, you can use the :class:`DataKey` to get the data from this attribute.
-        terminal: Each Flow should have a terminal state where we terminate the experience and have the Flow completed. Multiple screens can be marked as terminal. It's mandatory to have a :class:`Footer` on the terminal screen.
-        refresh_on_back: Whether to trigger a data exchange request with the WhatsApp Flows Data Endpoint when using the back button while on this screen (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#additional-information-on-refresh-on-back>`_).
+        data: Declaration of dynamic data that this screen should get from the previous screen or from the data endpoint.
+         In the screen children and in :class:`Action` ``.payload``, you can use the ``.data_key`` or :class:`DataKey`
+         to reference this data.
+        terminal: Each Flow should have a terminal state where we terminate the experience and have the Flow completed.
+         Multiple screens can be marked as terminal. It's mandatory to have a :class:`Footer` on the terminal screen.
+        refresh_on_back: Whether to trigger a data exchange request with the data endpoint when the user presses
+         the back button while on this screen (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#additional-information-on-refresh-on-back>`_).
         layout: Associated screen UI Layout that is shown to the user (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#layout>`_).
+        success: To indicate whether terminating on that screen results in a successful flow completion.
     """
 
     id: str
     title: str | None = None
     data: Iterable[ScreenData] | dict[str, dict] | None = None
     terminal: bool | None = None
+    success: bool | None = None
     refresh_on_back: bool | None = None
     layout: Layout
 
@@ -1027,17 +1059,19 @@ class FormRef(_Ref):
 @dataclasses.dataclass(slots=True, kw_only=True)
 class Form(Component):
     """
-    To get and submit the data entered from users, Flow JSON uses a straightforward concept from HTML - Forms.
+    The form component is a container for other components that collects user input.
 
     - The following components must be inside Form: :class:`TextInput`, :class:`TextArea`, :class:`CheckboxGroup`,
       :class:`RadioButtonsGroup`, :class:`OptIn`, :class:`Dropdown` and :class:`DatePicker`.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#forms-and-form-properties>`_.
 
     Attributes:
-        name: The name of the form.
+        name: The name of the form (the convention is to use ``"form"``).
         children: The components that are part of the form.
-        init_values: The initial values of the form (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#form-configuration>`_).
-        error_messages: The error messages of the form (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#form-configuration>`_).
+        init_values: The initial values of the form (you can use ``.init_value`` property of each component to set the
+         initial value instead of setting this attribute. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#form-configuration>`_).
+        error_messages: The error messages of the form (you can use ``.error_message`` property of each component to set
+         the error message instead of setting this attribute. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#form-configuration>`_).
     """
 
     type: ComponentType = dataclasses.field(
@@ -1174,8 +1208,8 @@ class FontWeight(utils.StrEnum):
     The text weight
 
     Attributes:
-        BOLD: Bold text
-        ITALIC: Italic text
+        BOLD: **Bold text**
+        ITALIC: `Italic text`
         BOLD_ITALIC: Bold and italic text
         NORMAL: Normal text
     """
@@ -1192,6 +1226,11 @@ class TextHeading(TextComponent):
     Represents text that is displayed as a heading.
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#heading>`_.
+
+    Example:
+
+        >>> from pywa.types.flows import TextHeading
+        >>> heading = TextHeading(text='Heading', visible=True)
 
     Attributes:
         text: The text of the heading. Limited to 4096 characters. Can be dynamic.
@@ -1212,6 +1251,11 @@ class TextSubheading(TextComponent):
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#subheading>`_.
 
+    Example:
+
+        >>> from pywa.types.flows import TextSubheading
+        >>> subheading = TextSubheading(text='Subheading', visible=True)
+
     Attributes:
         text: The text of the subheading. Limited to 60 characters. Can be dynamic.
         visible: Whether the subheading is visible or not. Default to ``True``, Can be dynamic.
@@ -1230,6 +1274,15 @@ class TextBody(TextComponent):
     Represents text that is displayed as a body.
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#body>`_.
+
+    Example:
+
+        >>> from pywa.types.flows import TextBody, FontWeight
+        >>> body = TextBody(
+        ...     text='Body',
+        ...     font_weight=FontWeight.BOLD,
+        ...     visible=True
+        ... )
 
     Attributes:
         text: The text of the body. Limited to 80 characters. Can be dynamic.
@@ -1254,10 +1307,20 @@ class TextCaption(TextComponent):
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#caption>`_.
 
+    Example:
+
+        >>> from pywa.types.flows import TextCaption, FontWeight
+        >>> caption = TextCaption(
+        ...     text='Caption',
+        ...     font_weight=FontWeight.ITALIC,
+        ...     strikethrough=True,
+        ... )
+
+
     Attributes:
         text: The text of the caption. Limited to 4096 characters. Can be dynamic.
         font_weight: The weight of the text. Can be dynamic.
-        strikethrough: Whether the text is strikethrough or not. Can be dynamic.
+        strikethrough: Whether to strike through the text or not. Can be dynamic.
         visible: Whether the caption is visible or not. Default to ``True``, Can be dynamic.
     """
 
@@ -1295,12 +1358,12 @@ class InputType(utils.StrEnum):
     - This is used by the WhatsApp client to determine the keyboard layout and validation rules.
 
     Attributes:
-        TEXT: A single line of text
-        NUMBER: A number
-        EMAIL: An email address
-        PASSWORD: A password
-        PASSCODE: A passcode
-        PHONE: A phone number
+        TEXT: A single line of text (for multi-line text use :class:`TextArea`).
+        NUMBER: A number (keyboard layout is numeric, with a decimal separator).
+        EMAIL: An email address (keyboard layout is alphanumeric, with a special character for the @ symbol).
+        PASSWORD: A password (the input is masked).
+        PASSCODE: A passcode (keyboard layout is numeric, the input is masked).
+        PHONE: A phone number (keyboard layout is numeric, with a special character for the + symbol).
     """
 
     TEXT = "text"
@@ -1318,6 +1381,19 @@ class TextInput(TextEntryComponent):
 
     - This component must be inside a :class:`Form`.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#textinput>`_.
+
+    Example:
+
+        >>> from pywa.types.flows import TextInput, InputType
+        >>> text_input = TextInput(
+        ...     name='email',
+        ...     label='Email',
+        ...     input_type=InputType.EMAIL,
+        ...     required=True,
+        ...     min_chars=5,
+        ...     max_chars=50,
+        ...     helper_text='Enter your email address',
+        ... )
 
     Attributes:
         name: The unique name (id) for this component (to be used dynamically or in action payloads).
@@ -1357,6 +1433,17 @@ class TextArea(TextEntryComponent):
     - This component must be inside a :class:`Form`.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#textarea>`_.
 
+    Example:
+
+        >>> from pywa.types.flows import TextArea
+        >>> text_area = TextArea(
+        ...     name='description',
+        ...     label='Description',
+        ...     required=True,
+        ...     max_length=100,
+        ...     helper_text='Enter your description',
+        ... )
+
     Attributes:
         name: The unique name (id) for this component (to be used dynamically or in action payloads).
         label: The label of the text area. Limited to 20 characters. Can be dynamic.
@@ -1390,6 +1477,23 @@ class CheckboxGroup(FormComponent):
 
     - This component must be inside a :class:`Form`.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#checkbox>`_.
+
+    Example:
+
+        >>> from pywa.types.flows import CheckboxGroup, DataSource
+        >>> checkbox_group = CheckboxGroup(
+        ...     name='options',
+        ...     data_source=[
+        ...         DataSource(id='1', title='Option 1'),
+        ...         DataSource(id='2', title='Option 2'),
+        ...         DataSource(id='3', title='Option 3'),
+        ...     ],
+        ...     label='Options',
+        ...     min_selected_items=1,
+        ...     max_selected_items=2,
+        ...     required=True,
+        ...     init_value=['1', '2']
+        ... )
 
     Attributes:
         name: The unique name (id) for this component (to be used dynamically or in action payloads).
@@ -1427,6 +1531,21 @@ class RadioButtonsGroup(FormComponent):
     - This component must be inside a :class:`Form`.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#radio>`_.
 
+    Example:
+
+        >>> from pywa.types.flows import RadioButtonsGroup, DataSource
+        >>> radio_buttons_group = RadioButtonsGroup(
+        ...     name='options',
+        ...     data_source=[
+        ...         DataSource(id='1', title='Option 1'),
+        ...         DataSource(id='2', title='Option 2'),
+        ...         DataSource(id='3', title='Option 3'),
+        ...     ],
+        ...     label='Options',
+        ...     required=True,
+        ...     init_value='1'
+        ... )
+
     Attributes:
         name: The unique name (id) for this component (to be used dynamically or in action payloads).
         data_source: The data source of the radio buttons group. Can be dynamic.
@@ -1458,6 +1577,25 @@ class Footer(Component):
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#foot>`_.
 
+    Example:
+
+        >>> from pywa.types.flows import Footer, Action, FlowActionType, ActionNext
+        >>> submit_footer = Footer(
+        ...     label='Submit',
+        ...     on_click_action=Action(
+        ...         name=FlowActionType.COMPLETE,
+        ...         payload={'data': 'value'}
+        ...     )
+        ... )
+
+        >>> navigation_footer = Footer(
+        ...     label='Next',
+        ...     on_click_action=Action(
+        ...         name=FlowActionType.NAVIGATE,
+        ...         next=ActionNext(name='NEXT_SCREEN'),
+        ...         payload={'data': 'value'}
+        ...     )
+
     Attributes:
         label: The label of the footer. Limited to 35 characters. Can be dynamic.
         on_click_action: The action to perform when the footer is clicked. Required.
@@ -1488,6 +1626,16 @@ class OptIn(FormComponent):
     - Max number of Opt-Ins Per Screen is 5.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#opt>`_.
 
+    Example:
+
+        >>> from pywa.types.flows import OptIn
+        >>> opt_in = OptIn(
+        ...     name='opt_in',
+        ...     label='I agree to the terms and conditions',
+        ...     required=True,
+        ...     init_value=True
+        ... )
+
     Attributes:
         name: The unique name (id) for this component (to be used dynamically or in action payloads).
         label: The label of the opt in. Limited to 30 characters. Can be dynamic.
@@ -1517,6 +1665,21 @@ class Dropdown(FormComponent):
     - This component must be inside a :class:`Form`.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#drop>`_.
 
+    Example:
+
+        >>> from pywa.types.flows import Dropdown, DataSource
+        >>> dropdown = Dropdown(
+        ...     name='options',
+        ...     data_source=[
+        ...         DataSource(id='1', title='Option 1'),
+        ...         DataSource(id='2', title='Option 2'),
+        ...         DataSource(id='3', title='Option 3'),
+        ...     ],
+        ...     label='Options',
+        ...     required=True,
+        ...     init_value='1'
+        ... )
+
     Attributes:
         name: The unique name (id) for this component (to be used dynamically or in action payloads).
         label: The label of the dropdown. Limited to 30 characters. Can be dynamic.
@@ -1544,12 +1707,24 @@ class Dropdown(FormComponent):
 @dataclasses.dataclass(slots=True, kw_only=True)
 class EmbeddedLink(Component):
     """
-    EmbeddedLink component allows users to click on a link that opens a web page.
+    EmbeddedLink component allows users to navigate to another screen.
 
     - This component must be inside a :class:`Form`.
     - Max Number of Embedded Links Per Screen is 2.
     - Empty or Blank value is not accepted for the text field.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#embed>`_.
+
+    Example:
+
+        >>> from pywa.types.flows import EmbeddedLink, Action, ActionNext
+        >>> embedded_link = EmbeddedLink(
+        ...     text='Sign up',
+        ...     on_click_action=Action(
+        ...         name=FlowActionType.NAVIGATE,
+        ...         next=ActionNext(name='SIGNUP_SCREEN'),
+        ...         payload={'data': 'value'}
+        ...     )
+        ... )
 
     Attributes:
         text: The text of the embedded link. Limited to 35 characters. Can be dynamic.
@@ -1572,6 +1747,23 @@ class DatePicker(FormComponent):
 
     - This component must be inside a :class:`Form`.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#dp>`_.
+
+    Example:
+
+        >>> from pywa.types.flows import DatePicker
+        >>> date_picker = DatePicker(
+        ...     name='date',
+        ...     label='Appointment Date',
+        ...     min_date='1577829600000',
+        ...     max_date='1704060000000',
+        ...     unavailable_dates=[
+        ...         '1609452000000',
+        ...         '1640988000000'
+        ...     ],
+        ...     helper_text='Select a date',
+        ...     required=True
+        ... )
+
 
     Attributes:
         name: The unique name (id) for this component (to be used dynamically or in action payloads).
@@ -1623,12 +1815,24 @@ class ScaleType(utils.StrEnum):
 @dataclasses.dataclass(slots=True, kw_only=True)
 class Image(Component):
     """
-    Image component allows users to pick multiple selections from a list of options.
+    Image component that displays an image.
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#img>`_.
     - Supported images formats are JPEG PNG
     - Recommended image size is up to 300kb
     - Max number of images per screen is 3
+
+    Example:
+
+        >>> from pywa.types.flows import Image, ScaleType
+        >>> image = Image(
+        ...     src='iVBORw0KGgoAAAANSUhEUgAAAlgAAAM...',
+        ...     width=100,
+        ...     height=100,
+        ...     scale_type=ScaleType.CONTAIN,
+        ...     aspect_ratio=1,
+        ...     alt_text='Image of a cat'
+        ... )
 
     Attributes:
         src: Base64 of an image. Can be dynamic.
@@ -1702,13 +1906,30 @@ class ActionNext:
 @dataclasses.dataclass(slots=True, kw_only=True)
 class Action:
     """
-    Action component allows users to trigger asynchronous actions handled by a client through interactive UI elements.
+    Action component allows users to trigger asynchronous actions that are handled by a client through interactive UI elements.
 
-    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#action>`_.
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#actions>`_.
+
+    Example:
+
+        >>> from pywa.types.flows import Action, FlowActionType, ActionNext
+        >>> complete_action = Action(
+        ...     name=FlowActionType.COMPLETE,
+        ...     payload={'data': 'value'}
+        ... )
+        >>> data_exchange_action = Action(
+        ...     name=FlowActionType.DATA_EXCHANGE,
+        ...     payload={'data': 'value'}
+        ... )
+        >>> navigate_action = Action(
+        ...     name=FlowActionType.NAVIGATE,
+        ...     next=ActionNext(name='NEXT_SCREEN'),
+        ...     payload={'data': 'value'}
+        ... )
 
     Attributes:
         name: The type of the action
-        next: The next action (only for ``FlowActionType.NAVIGATE``)
+        next: The next action to perform (only for ``FlowActionType.NAVIGATE``)
         payload: The payload of the action (Pass data to the next screen or to the WhatsApp Flows Data Endpoint).
          This payload can take data from form components or from the data of the screen.
     """
