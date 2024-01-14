@@ -3,6 +3,18 @@ Changelog
 
 NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 1.15.0 (2024-01-14)
+
+- [client] Added `register_phone_number` method
+- [client] mark the `body` arg in send image/video/doc as deprecated. use `caption` instead
+- [utils] bump `FLOW_JSON` version to 3.1
+- [flows] allow `DataSource` in `FlowResponse` data
+- [flows] `Image` .src can be dynamic
+- [flows] default `ActionNext` to SCREEN
+- [flows] adding `.success` for screen and adding in-docs examples
+
+
+
 ### 1.14.0 (2024-01-01)
 
 - [flows] define `Form` `init_values` from children `init_value`
