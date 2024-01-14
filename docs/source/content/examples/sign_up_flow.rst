@@ -5,6 +5,10 @@ Sign Up Flow
 
 **In this example, we will create a sign up flow that allows users to sign up and login to their account.**
 
+    .. image:: ../../../../_static/guides/sign-up-flow.webp
+        :alt: Sign Up Flow
+        :width: 100%
+
 Think of a Flow as a collection of related screens. The screens can exchange data with each other and with your server.
 
 A screen can be static: it can display static content that configured when the flow is created. For example, a screen can
@@ -133,8 +137,8 @@ The ``SIGN_UP`` screen allows the user to sign up (create an account). Let's tak
                             name="LOGIN",
                         ),
                         payload={
-                            "email_initial_value": FormRef("email"),
-                            "password_initial_value": FormRef("password"),
+                            "email_initial_value": "",
+                            "password_initial_value": "",
                         },
                     ),
                 ),
@@ -250,9 +254,6 @@ by using the the ``.form_ref`` property of the form field (which is more type-sa
 The ``.form_ref`` and ``.data_key`` properties are equivalent to the :class:`FormRef` with the form field's name and the :class:`DataKey` with the
 screen's data key, respectively. Infact, the ``.form_ref`` and ``.data_key`` properties are just shortcuts for the :class:`FormRef` and :class:`DataKey` classes.
 
-    We are not using the ``.form_ref`` property to reference the ``email`` and ``password`` fields in the :class:`EmbeddedLink` because
-    the ``.form_ref`` property is only available after the :class:`Form` has been added to the layout. So, we are using the :class:`FormRef` class
-
 
 Sign In Screen
 --------------
@@ -287,8 +288,8 @@ Ok, now to the ``LOGIN`` screen. This screen allows the user to login to their e
                             name="SIGN_UP",
                         ),
                         payload={
-                            "email_initial_value": FormRef("email"),
-                            "password_initial_value": FormRef("password"),
+                            "email_initial_value": "",
+                            "password_initial_value": "",
                             "confirm_password_initial_value": "",
                             "first_name_initial_value": "",
                             "last_name_initial_value": "",
@@ -536,8 +537,8 @@ Here is all the flow code in one place:
                                         name="LOGIN",
                                     ),
                                     payload={
-                                        "email_initial_value": FormRef("email"),
-                                        "password_initial_value": FormRef("password"),
+                                        "email_initial_value": "",
+                                        "password_initial_value": "",
                                     },
                                 ),
                             ),
@@ -624,8 +625,8 @@ Here is all the flow code in one place:
                                         name="SIGN_UP",
                                     ),
                                     payload={
-                                        "email_initial_value": FormRef("email"),
-                                        "password_initial_value": FormRef("password"),
+                                        "email_initial_value": "",
+                                        "password_initial_value": "",
                                         "confirm_password_initial_value": "",
                                         "first_name_initial_value": "",
                                         "last_name_initial_value": "",
@@ -812,8 +813,8 @@ And if you want to go to the `WhatsApp Flows Playground <https://business.facebo
                                         "name": "LOGIN"
                                     },
                                     "payload": {
-                                        "email_initial_value": "${form.email}",
-                                        "password_initial_value": "${form.password}"
+                                        "email_initial_value": "",
+                                        "password_initial_value": ""
                                     }
                                 }
                             },
@@ -918,8 +919,8 @@ And if you want to go to the `WhatsApp Flows Playground <https://business.facebo
                                         "name": "SIGN_UP"
                                     },
                                     "payload": {
-                                        "email_initial_value": "${form.email}",
-                                        "password_initial_value": "${form.password}",
+                                        "email_initial_value": "",
+                                        "password_initial_value": "",
                                         "confirm_password_initial_value": "",
                                         "first_name_initial_value": "",
                                         "last_name_initial_value": ""
@@ -1146,16 +1147,14 @@ First let's send the flow!
     wa.send_message(
         to="1234567890",
         text="Welcome to our app! Click the button below to login or sign up",
-        buttons=[
-            FlowButton(
-                title="Sign Up",
-                flow_id=flow_id,
-                flow_token="5749d4f8-4b74-464a-8405-c26b7770cc8c",
-                mode=FlowStatus.DRAFT,
-                flow_action_type=FlowActionType.NAVIGATE,
-                flow_action_screen="START",
-            ),
-        ],
+        buttons=FlowButton(
+            title="Sign Up",
+            flow_id=flow_id,
+            flow_token="5749d4f8-4b74-464a-8405-c26b7770cc8c",
+            mode=FlowStatus.DRAFT,
+            flow_action_type=FlowActionType.NAVIGATE,
+            flow_action_screen="START",
+        )
     )
 
 Ok, let's break this down:
@@ -1378,7 +1377,7 @@ The ``LOGIN_SUCCESS`` scrren completes the flow, so we don't need to do anything
     def handle_flow_completion(_: WhatsApp, flow: FlowCompletion):
         print("Flow completed successfully")
         print(flow.token)
-        print(flow.payload)
+        print(flow.response)
 
 Now, in a real application, this is the time to mark the user as logged in and allow them to perform actions in their account.
 You can also implement some kind of session management, so that the user will stay logged in for a certain amount of time and then require them to login again.

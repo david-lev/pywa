@@ -214,6 +214,17 @@ Which is the equivalent of the following flow json:
           ]
         }
 
+And this is how it looks like on WhatsApp:
+
+.. toggle::
+
+    .. image:: ../../../../_static/guides/static-sign-up-screen.webp
+        :alt: Static Sign Up Screen
+        :width: 50%
+
+==================
+
+
 Here is example of dynamic flow:
 
 .. toggle::
@@ -361,6 +372,14 @@ Which is the equivalent of the following flow json:
                 }
             ]
         }
+
+And this is how it looks like on WhatsApp:
+
+.. toggle::
+
+    .. image:: ../../../../_static/guides/dynamic-sign-up-screen.webp
+        :alt: Dynamic Sign Up Screen
+        :width: 50%
 
 After you have the flow json, you can update the flow with :meth:`~pywa.client.WhatsApp.update_flow_json`:
 
