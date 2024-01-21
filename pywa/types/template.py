@@ -32,7 +32,7 @@ DEFAULT = object()
 
 def _get_examples_from_placeholders(
     string: str, start: str = "{", end: str = "}"
-) -> tuple[str, tuple[str]]:
+) -> tuple[str, tuple[str, ...]]:
     """
     Extracts the examples from a string.
 

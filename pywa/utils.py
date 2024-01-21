@@ -117,6 +117,7 @@ FlowRequestDecryptor: TypeAlias = (
 Type hint for the function that decrypts the request from WhatsApp Flow.
 
 - All parameters need to be positional.
+- See :py:func:`default_flow_request_decryptor` source code for an example.
 
 Args:
     encrypted_flow_data_b64 (str): encrypted flow data
@@ -141,18 +142,29 @@ def default_flow_request_decryptor(
     password: str = None,
 ) -> tuple[dict, bytes, bytes]:
     """
-    The default decryption function for WhatsApp Flow.
+    The default global decryption function for decrypting data exchange requests from WhatsApp Flow.
 
-    - This implementation requires ``cryptography`` to be installed.
-    - To install it, run ``pip3 install 'pywa[cryptography]'`` or ``pip3 install cryptography``.
+    - This implementation follows the :class:`FlowRequestDecryptor` type hint.
+    - This implementation requires ``cryptography`` to be installed. To install it, run ``pip3 install 'pywa[cryptography]'`` or ``pip3 install cryptography``.
     - This implementation was taken from the official documentation at
       `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/guides/implementingyourflowendpoint#python-django-example>`_.
 
+    Example:
 
-    Returns:
-        decrypted_data: decrypted data from the request
-        aes_key: AES key you should use to encrypt the response
-        iv: initial vector you should use to encrypt the response
+        Set the default global decryptor (This is indeed the default):
+
+        >>> from pywa.utils import default_flow_request_decryptor
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(flows_request_decryptor=default_flow_request_decryptor, ...)
+
+        Set the decryptor for a specific flow:
+
+        >>> from pywa import WhatsApp
+        >>> from pywa.types.flows import FlowRequest, FlowResponse
+        >>> from pywa.utils import default_flow_request_decryptor
+        >>> wa = WhatsApp(...)
+        >>> @wa.on_flow_request("/sign-up-flow", request_decryptor=default_flow_request_decryptor)
+        ... def on_sign_up_request(_: WhatsApp, flow: FlowRequest) -> FlowResponse | None: ...
     """
     from cryptography.hazmat.primitives.asymmetric.padding import OAEP, MGF1, hashes
     from cryptography.hazmat.primitives.ciphers import algorithms, Cipher, modes
@@ -188,6 +200,7 @@ FlowResponseEncryptor: TypeAlias = Callable[[dict, bytes, bytes], str]
 Type hint for the function that encrypts the response to WhatsApp Flow.
 
 - All parameters need to be positional.
+- See :py:func:`default_flow_response_encryptor` source code for an example.
 
 Args:
     response (dict): response to encrypt
@@ -201,15 +214,29 @@ Returns:
 
 def default_flow_response_encryptor(response: dict, aes_key: bytes, iv: bytes) -> str:
     """
-    The default encryption function for WhatsApp Flow.
+    The default global encryption function for encrypting data exchange responses to WhatsApp Flow.
 
-    - This implementation requires ``cryptography`` to be installed.
-    - To install it, run ``pip3 install 'pywa[cryptography]'`` or ``pip3 install cryptography``.
+    - This implementation follows the :class:`FlowResponseEncryptor` type hint.
+    - This implementation requires ``cryptography`` to be installed. To install it, run ``pip3 install 'pywa[cryptography]'`` or ``pip3 install cryptography``.
     - This implementation was taken from the official documentation at
       `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/guides/implementingyourflowendpoint#python-django-example>`_.
 
-    Returns:
-        encrypted_response: encrypted response to send back to WhatsApp Flow
+    Example:
+
+        Set the default global encryptor (This is indeed the default):
+
+        >>> from pywa.utils import default_flow_response_encryptor
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(flows_response_encryptor=default_flow_response_encryptor, ...)
+
+        Set the encryptor for a specific flow:
+
+        >>> from pywa import WhatsApp
+        >>> from pywa.types.flows import FlowRequest, FlowResponse
+        >>> from pywa.utils import default_flow_response_encryptor
+        >>> wa = WhatsApp(...)
+        >>> @wa.on_flow_request("/sign-up-flow", response_encryptor=default_flow_response_encryptor)
+        ... def on_sign_up_request(_: WhatsApp, flow: FlowRequest) -> FlowResponse | None: ...
     """
     from cryptography.hazmat.primitives.ciphers import algorithms, Cipher, modes
 

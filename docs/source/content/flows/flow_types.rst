@@ -32,3 +32,7 @@ Flow Types
 .. autoclass:: FlowRequestDecryptor()
 
 .. autoclass:: FlowResponseEncryptor()
+
+.. autofunction:: default_flow_request_decryptor
+
+.. autofunction:: default_flow_response_encryptor

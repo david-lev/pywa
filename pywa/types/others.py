@@ -4,14 +4,18 @@ from __future__ import annotations
 
 import dataclasses
 import importlib
+import logging
 from typing import TYPE_CHECKING, Any, Iterable
 
 from pywa import utils
 
 if TYPE_CHECKING:
     from message_status import MessageStatus
-
+    from media import Image, Video, Document, Audio, Sticker
+    from callback import CallbackButton, CallbackSelection
     from pywa.client import WhatsApp
+
+_logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -49,21 +53,22 @@ class MessageType(utils.StrEnum):
     Message types.
 
     Attributes:
-        TEXT: A text message.
-        IMAGE: An image message.
-        VIDEO: A video message.
-        DOCUMENT: A document message.
-        AUDIO: An audio message.
-        STICKER: A sticker message.
-        REACTION: A reaction to a message.
-        LOCATION: A location message.
-        CONTACTS: A contacts message.
-        ORDER: An order message.
-        SYSTEM: A system message.
-        UNKNOWN: An unknown message.
-        UNSUPPORTED: An unsupported message.
-        INTERACTIVE: An interactive message (callback).
-        BUTTON: Quick reply button (in a template message).
+        TEXT: Message.text -> :class:`str`.
+        IMAGE: Message.image -> :class:`Image`.
+        VIDEO: Message.video -> :class:`Video`.
+        DOCUMENT: Message.document -> :class:`Document`.
+        AUDIO: Message.audio -> :class:`Audio`.
+        STICKER: Message.sticker -> :class:`Sticker`.
+        REACTION: Message.reaction -> :class:`Reaction`.
+        LOCATION: Message.location -> :class:`Location`.
+        CONTACTS: Message.contacts -> tuple[:class:`Contact`].
+        ORDER: Message.order -> :class:`Order`.
+        SYSTEM: Message.system -> :class:`System`.
+        UNKNOWN: An unknown message (Warning with the actual type will be logged).
+        UNSUPPORTED: An unsupported message (message type not supported by WhatsApp Cloud API).
+        INTERACTIVE: Only used in :class:`CallbackButton` and :class:`CallbackSelection`.
+        BUTTON: Only used in :class:`CallbackButton`.
+        REQUEST_WELCOME: Only used in :class:`ChatOpened`.
     """
 
     TEXT = "text"
@@ -82,9 +87,11 @@ class MessageType(utils.StrEnum):
 
     INTERACTIVE = "interactive"
     BUTTON = "button"
+    REQUEST_WELCOME = "request_welcome"
 
     @classmethod
     def _missing_(cls, value: str) -> MessageType:
+        _logger.warning(f"Unknown message type: {value}")
         return cls.UNKNOWN
 
 
@@ -474,7 +481,7 @@ class Order:
     """
 
     catalog_id: str
-    products: tuple[Product]
+    products: tuple[Product, ...]
     text: str | None
 
     @classmethod
@@ -614,7 +621,7 @@ class BusinessProfile:
     description: str | None
     email: str | None
     profile_picture_url: str | None
-    websites: tuple[str] | None
+    websites: tuple[str, ...] | None
 
     @classmethod
     def from_dict(cls, data: dict) -> BusinessProfile:

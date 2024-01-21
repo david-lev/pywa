@@ -97,7 +97,7 @@ class Message(BaseUserUpdate):
     caption: str | None = None
     reaction: Reaction | None = None
     location: Location | None = None
-    contacts: tuple[Contact] | None = None
+    contacts: tuple[Contact, ...] | None = None
     order: Order | None = None
     system: System | None = None
     error: WhatsAppError | None = None
