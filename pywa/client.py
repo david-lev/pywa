@@ -43,12 +43,12 @@ from pywa.types.flows import (
     FlowAsset,
 )
 from pywa.utils import FastAPI, Flask
-from pywa.webhook import Webhook
+from pywa.server import Server
 
 _MISSING = object()
 
 
-class WhatsApp(Webhook, HandlerDecorators):
+class WhatsApp(Server, HandlerDecorators):
     def __init__(
         self,
         phone_id: str | int,

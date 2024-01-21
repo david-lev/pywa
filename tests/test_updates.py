@@ -74,6 +74,9 @@ TYPES: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
             lambda f: "flow_token" in f.response,
         ],
     },
+    "chat_opened": {
+        "chat_opened": [lambda c: c.type == MessageType.REQUEST_WELCOME],
+    },
 }
 
 

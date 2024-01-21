@@ -13,6 +13,7 @@ __all__ = [
     "TemplateStatusHandler",
     "FlowCompletionHandler",
     "FlowRequestHandler",
+    "ChatOpenedHandler",
 ]
 
 import abc
@@ -29,6 +30,7 @@ from pywa.types import (
     TemplateStatus,
     FlowRequest,
     FlowResponse,
+    ChatOpened,
 )
 from pywa.types.callback import CallbackData
 from pywa.types.flows import FlowCompletion, FlowResponseError  # noqa
@@ -37,12 +39,11 @@ if TYPE_CHECKING:
     from pywa.client import WhatsApp
     from pywa.types.base_update import BaseUpdate  # noqa
 
-
 CallbackDataFactoryT: TypeAlias = (
     type[str]
     | type[CallbackData]
     | tuple[type[CallbackData | Any], ...]
-    | list[type[CallbackData | Any], ...]
+    | list[type[CallbackData | Any]]
     | Callable[[str], Any]
 )
 """Type hint for the callback data factory."""
@@ -379,6 +380,38 @@ class MessageStatusHandler(Handler):
         self,
         callback: Callable[[WhatsApp, MessageStatus], Any],
         *filters: Callable[[WhatsApp, MessageStatus], bool],
+    ):
+        super().__init__(callback, *filters)
+
+
+class ChatOpenedHandler(Handler):
+    """
+    Handler for :class:`pywa.types.ChatOpened`
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_chat_opened` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_chat_opened = lambda _, msg: print(msg)
+        >>> wa.add_handlers(ChatOpenedHandler(print_chat_opened))
+
+    Args:
+        callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a
+            :class:`pywa.types.ChatOpened` as arguments)
+        *filters: The filters to apply to the handler (Takes a :class:`pywa.WhatsApp` instance and a
+            :class:`pywa.types.ChatOpened` and returns a :class:`bool`)
+
+    """
+
+    __field_name__ = "messages"
+    __update_constructor__ = ChatOpened.from_update
+
+    def __init__(
+        self,
+        callback: Callable[[WhatsApp, ChatOpened], Any],
+        *filters: Callable[[WhatsApp, ChatOpened], bool],
     ):
         super().__init__(callback, *filters)
 
@@ -725,6 +758,41 @@ class HandlerDecorators:
             callback: Callable[[WhatsApp, MessageStatus], Any],
         ) -> Callable[[WhatsApp, MessageStatus], Any]:
             self.add_handlers(MessageStatusHandler(callback, *filters))
+            return callback
+
+        return decorator
+
+    def on_chat_opened(
+        self: WhatsApp,
+        *filters: Callable[[WhatsApp, ChatOpened], bool],
+    ) -> Callable[
+        [Callable[[WhatsApp, ChatOpened], Any]],
+        Callable[[WhatsApp, ChatOpened], Any],
+    ]:
+        """
+        Decorator to register a function as a callback for incoming chat opened (User opens a chat).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`ChatOpenedHandler`.
+
+        Example:
+
+            >>> from pywa.types import ChatOpened
+            >>> from pywa import filters as fil
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_chat_opened()
+            ... def chat_opened_handler(client: WhatsApp, chat_opened: ChatOpened):
+            ...     print(f"The user {chat_opened.from_user.wa_id} just opened a chat with us!")
+
+        Args:
+            *filters: Filters to apply to the incoming chat opened (filters are function that take a
+                :class:`pywa.WhatsApp` instance and the incoming :class:`pywa.types.ChatOpened` and return :class:`bool`).
+        """
+
+        @functools.wraps(self.on_chat_opened)
+        def decorator(
+            callback: Callable[[WhatsApp, ChatOpened], Any],
+        ) -> Callable[[WhatsApp, ChatOpened], Any]:
+            self.add_handlers(ChatOpenedHandler(callback, *filters))
             return callback
 
         return decorator

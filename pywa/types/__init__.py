@@ -55,3 +55,4 @@ from .flows import (
     FlowStatus,
     FlowCategory,
 )
+from .chat_opened import ChatOpened
