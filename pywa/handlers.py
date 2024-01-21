@@ -192,7 +192,7 @@ class Handler(abc.ABC):
         self.callback = callback
         self.filters = filters
 
-    def __call__(self, wa: WhatsApp, data: Any):
+    def handle(self, wa: WhatsApp, data: Any):
         if all((f(wa, data) for f in self.filters)):
             self.callback(wa, data)
 
@@ -296,7 +296,7 @@ class CallbackButtonHandler(Handler):
         self.factory_before_filters = factory_before_filters
         super().__init__(callback, *filters)
 
-    def __call__(self, wa: WhatsApp, clb: CallbackButton):
+    def handle(self, wa: WhatsApp, clb: CallbackButton):
         _call_callback_handler(self, wa, clb)
 
     def __str__(self) -> str:
@@ -344,7 +344,7 @@ class CallbackSelectionHandler(Handler):
         self.factory_before_filters = factory_before_filters
         super().__init__(callback, *filters)
 
-    def __call__(self, wa: WhatsApp, sel: CallbackSelection):
+    def handle(self, wa: WhatsApp, sel: CallbackSelection):
         _call_callback_handler(self, wa, sel)
 
     def __str__(self) -> str:

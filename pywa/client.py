@@ -11,7 +11,7 @@ import mimetypes
 import os
 import pathlib
 import warnings
-from typing import BinaryIO, Iterable, Literal, Callable, Any
+from typing import BinaryIO, Iterable, Literal
 
 import requests
 
@@ -167,7 +167,7 @@ class WhatsApp(Server, HandlerDecorators):
 
         self._handlers: dict[
             type[Handler] | None,
-            list[Callable[[WhatsApp, BaseUpdate | dict], Any]],
+            list[Handler],
         ] = collections.defaultdict(list)
 
         super().__init__(
