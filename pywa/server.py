@@ -1,9 +1,6 @@
-"""This module contains the Webhook class, which is used to set up a webhook for receiving incoming messages."""
+"""This module contains the Server class, which is used to set up a webhook for receiving incoming updates."""
 
 from __future__ import annotations
-
-
-__all__ = ["Webhook"]
 
 import logging
 import threading
@@ -12,7 +9,7 @@ from typing import TYPE_CHECKING, Callable
 
 from pywa import utils
 from pywa.errors import WhatsAppError
-from pywa.handlers import Handler  # noqa
+from pywa.handlers import Handler, ChatOpenedHandler  # noqa
 from pywa.handlers import (
     CallbackButtonHandler,
     CallbackSelectionHandler,
@@ -35,11 +32,23 @@ if TYPE_CHECKING:
 
 _VERIFY_TIMEOUT_SEC = 6
 
+
+_MESSAGE_TYPES: dict[MessageType, type[Handler]] = {
+    MessageType.BUTTON: CallbackButtonHandler,
+    MessageType.REQUEST_WELCOME: ChatOpenedHandler,
+}
+_INTERACTIVE_TYPES: dict[str, type[Handler]] = {
+    "button_reply": CallbackButtonHandler,
+    "list_reply": CallbackSelectionHandler,
+    "nfm_reply": FlowCompletionHandler,
+}
+
 _logger = logging.getLogger(__name__)
 
 
-class Webhook:
-    """This class is used by the :class:`WhatsApp` client to set up a webhook for receiving incoming messages."""
+class Server:
+    """This class is used internally by the :class:`WhatsApp` client to set up a webhook for receiving incoming
+    requests."""
 
     def __init__(
         self: WhatsApp,
@@ -136,39 +145,62 @@ class Webhook:
                     app_access_token = self.api.get_app_access_token(
                         app_id=app_id, app_secret=app_secret
                     )
+                    # noinspection PyProtectedMember
                     if not self.api.set_callback_url(
                         app_id=app_id,
                         app_access_token=app_access_token["access_token"],
                         callback_url=f"{callback_url}/{self._webhook_endpoint}",
                         verify_token=verify_token,
-                        fields=tuple(
-                            fields or Handler.__fields_to_subclasses__().keys()
-                        ),
+                        fields=tuple(fields or Handler._fields_to_subclasses().keys()),
                     )["success"]:
-                        raise ValueError("Failed to register callback URL.")
+                        raise RuntimeError("Failed to register callback URL.")
                 except WhatsAppError as e:
-                    raise ValueError(f"Failed to register callback URL. Error: {e}")
+                    raise RuntimeError("Failed to register callback URL.") from e
 
             threading.Thread(target=register_callback_url).start()
 
     def _call_handlers(self: WhatsApp, update: dict) -> None:
         """Call the handlers for the given update."""
-        handler = self._get_handler(update=update)
-        for callback in self._handlers[handler]:
+        try:
+            handler_type = self._get_handler(update=update)
+            if handler_type is None:
+                _logger.debug("No handler found for update: %s" % update)
+        except (
+            ValueError,
+            KeyError,
+            TypeError,
+            IndexError,
+        ):  # this endpoint got non-expected data
+            _logger.exception("Failed to get handler for update: %s" % update)
+            return
+
+        if handler_type is not None:
             try:
-                # noinspection PyCallingNonCallable
-                callback(self, handler.__update_constructor__(self, update))  # __call__
+                # noinspection PyCallingNonCallable, PyProtectedMember
+                constructed_update = handler_type._update_constructor(self, update)
+                for handler in self._handlers[handler_type]:
+                    try:
+                        handler.handle(self, constructed_update)
+                    except Exception as e:
+                        if isinstance(e, StopHandling):
+                            break
+                        _logger.exception(
+                            "An error occurred while %s was handling an update"
+                            % handler.callback.__name__,
+                        )
+            except Exception:
+                _logger.exception("Failed to construct update: %s" % update)
+
+        for raw_update_handler in self._handlers[RawUpdateHandler]:
+            try:
+                raw_update_handler.handle(self, update)
             except Exception as e:
                 if isinstance(e, StopHandling):
                     break
-                _logger.exception(e)
-        for raw_update_callback in self._handlers[RawUpdateHandler]:
-            try:
-                raw_update_callback(self, update)
-            except Exception as e:
-                if isinstance(e, StopHandling):
-                    break
-                _logger.exception(e)
+                _logger.exception(
+                    "An error occurred while %s was handling an raw update"
+                    % raw_update_handler.callback.__name__,
+                )
 
     def _get_handler(self: WhatsApp, update: dict) -> type[Handler] | None:
         """Get the handler for the given update."""
@@ -185,34 +217,31 @@ class Webhook:
                 value["metadata"]["phone_number_id"] == self.phone_id
             ):
                 if "messages" in value:
-                    match value["messages"][0]["type"]:
-                        case MessageType.INTERACTIVE:
-                            try:
-                                interactive_type = value["messages"][0]["interactive"][
-                                    "type"
-                                ]
-                            except KeyError:  # value with errors, when a user tries to send the interactive msg again
-                                return MessageHandler
-                            if interactive_type == "button_reply":  # button
-                                return CallbackButtonHandler
-                            elif interactive_type == "list_reply":  # selection
-                                return CallbackSelectionHandler
-                            elif interactive_type == "nfm_reply":  # flow
-                                return FlowCompletionHandler
-                            _logger.warning(
-                                "PyWa Webhook: Unknown interactive message type: %s"
-                                % interactive_type
-                            )
-                        case MessageType.BUTTON:  # button (quick reply from template)
-                            return CallbackButtonHandler
-                        case _:  # message
+                    msg_type = value["messages"][0]["type"]
+                    if msg_type == MessageType.INTERACTIVE:
+                        try:
+                            interactive_type = value["messages"][0]["interactive"][
+                                "type"
+                            ]
+                        except KeyError:  # value with errors, when a user tries to send the interactive msg again
                             return MessageHandler
+                        if (
+                            handler := _INTERACTIVE_TYPES.get(interactive_type)
+                        ) is not None:
+                            return handler
+                        _logger.warning(
+                            "PyWa Webhook: Unknown interactive message type: %s. Falling back to MessageHandler."
+                            % interactive_type
+                        )
+                    return _MESSAGE_TYPES.get(msg_type, MessageHandler)
+
                 elif "statuses" in value:  # status
                     return MessageStatusHandler
                 _logger.warning("PyWa Webhook: Unknown message type: %s" % value)
             return None
 
-        return Handler.__fields_to_subclasses__().get(field)
+        # noinspection PyProtectedMember
+        return Handler._fields_to_subclasses().get(field)
 
     def _register_flow_endpoint_callback(
         self: WhatsApp,
@@ -267,7 +296,7 @@ class Webhook:
             )
 
         def flow_endpoint(payload: dict) -> tuple[str, int]:
-            """The actual registered endpoint callback. returns response, status code"""
+            """Called by the server when a flow request is received. Returns response and status code."""
             try:
                 decrypted_request, aes_key, iv = request_decryptor(
                     payload["encrypted_flow_data"],
@@ -276,8 +305,11 @@ class Webhook:
                     private_key,
                     private_key_password,
                 )
-            except Exception as e:
-                _logger.exception(e)
+            except Exception:
+                _logger.exception(
+                    "Flow Endpoint (%s): Decryption failed for payload: %s"
+                    % (endpoint, payload)
+                )
                 return "Decryption failed", FlowRequestCannotBeDecrypted.status_code
             if handle_health_check and decrypted_request["action"] == "ping":
                 return response_encryptor(
@@ -288,9 +320,16 @@ class Webhook:
                     aes_key,
                     iv,
                 ), 200
-            request = FlowRequest.from_dict(
-                data=decrypted_request, raw_encrypted=payload
-            )
+            try:
+                request = FlowRequest.from_dict(
+                    data=decrypted_request, raw_encrypted=payload
+                )
+            except Exception:
+                _logger.exception(
+                    "Flow Endpoint (%s): Failed to construct FlowRequest from decrypted data: %s"
+                    % (endpoint, decrypted_request)
+                )
+                return "Failed to construct FlowRequest", 500
             try:
                 response = callback(self, request)
                 if isinstance(response, FlowResponseError):
@@ -306,6 +345,12 @@ class Webhook:
                 )
             except FlowResponseError as e:
                 return e.__class__.__name__, e.status_code
+            except Exception:
+                _logger.exception(
+                    "Flow Endpoint (%s): An error occurred while %s was handling a flow request"
+                    % (endpoint, callback.__name__)
+                )
+                return "An error occurred", 500
 
             if acknowledge_errors and request.has_error:
                 return response_encryptor(

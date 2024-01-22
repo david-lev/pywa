@@ -13,6 +13,7 @@ __all__ = [
     "TemplateStatusHandler",
     "FlowCompletionHandler",
     "FlowRequestHandler",
+    "ChatOpenedHandler",
 ]
 
 import abc
@@ -29,6 +30,7 @@ from pywa.types import (
     TemplateStatus,
     FlowRequest,
     FlowResponse,
+    ChatOpened,
 )
 from pywa.types.callback import CallbackData
 from pywa.types.flows import FlowCompletion, FlowResponseError  # noqa
@@ -37,12 +39,11 @@ if TYPE_CHECKING:
     from pywa.client import WhatsApp
     from pywa.types.base_update import BaseUpdate  # noqa
 
-
 CallbackDataFactoryT: TypeAlias = (
     type[str]
     | type[CallbackData]
     | tuple[type[CallbackData | Any], ...]
-    | list[type[CallbackData | Any], ...]
+    | list[type[CallbackData | Any]]
     | Callable[[str], Any]
 )
 """Type hint for the callback data factory."""
@@ -169,7 +170,7 @@ class Handler(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def __field_name__(self) -> str | None:
+    def _field_name(self) -> str | None:
         """
         The field name of the webhook update
         https://developers.facebook.com/docs/graph-api/webhooks/reference/whatsapp-business-account
@@ -177,7 +178,7 @@ class Handler(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def __update_constructor__(self) -> Callable[[WhatsApp, dict], BaseUpdate]:
+    def _update_constructor(self) -> Callable[[WhatsApp, dict], BaseUpdate]:
         """The constructor to use to construct the update object from the webhook update dict."""
 
     def __init__(
@@ -191,13 +192,13 @@ class Handler(abc.ABC):
         self.callback = callback
         self.filters = filters
 
-    def __call__(self, wa: WhatsApp, data: Any):
+    def handle(self, wa: WhatsApp, data: Any):
         if all((f(wa, data) for f in self.filters)):
             self.callback(wa, data)
 
     @staticmethod
     @functools.cache
-    def __fields_to_subclasses__() -> dict[str, Handler]:
+    def _fields_to_subclasses() -> dict[str, Handler]:
         """
         Return a dict of all the subclasses of `Handler` with their field name as the key.
         (e.g. ``{'messages': MessageHandler}``)
@@ -211,9 +212,9 @@ class Handler(abc.ABC):
         return cast(
             dict[str, Handler],
             {
-                h.__field_name__: h
+                h._field_name: h
                 for h in Handler.__subclasses__()
-                if h.__field_name__ is not None
+                if h._field_name is not None
             },
         )
 
@@ -244,8 +245,8 @@ class MessageHandler(Handler):
          :class:`pywa.types.Message` and returns a :class:`bool`)
     """
 
-    __field_name__ = "messages"
-    __update_constructor__ = Message.from_update
+    _field_name = "messages"
+    _update_constructor = Message.from_update
 
     def __init__(
         self,
@@ -278,8 +279,8 @@ class CallbackButtonHandler(Handler):
          filters will get the callback data after the factory is applied).
     """
 
-    __field_name__ = "messages"
-    __update_constructor__ = CallbackButton.from_update
+    _field_name = "messages"
+    _update_constructor = CallbackButton.from_update
 
     def __init__(
         self,
@@ -295,7 +296,7 @@ class CallbackButtonHandler(Handler):
         self.factory_before_filters = factory_before_filters
         super().__init__(callback, *filters)
 
-    def __call__(self, wa: WhatsApp, clb: CallbackButton):
+    def handle(self, wa: WhatsApp, clb: CallbackButton):
         _call_callback_handler(self, wa, clb)
 
     def __str__(self) -> str:
@@ -326,8 +327,8 @@ class CallbackSelectionHandler(Handler):
          filters will get the callback data after the factory is applied).
     """
 
-    __field_name__ = "messages"
-    __update_constructor__ = CallbackSelection.from_update
+    _field_name = "messages"
+    _update_constructor = CallbackSelection.from_update
 
     def __init__(
         self,
@@ -343,7 +344,7 @@ class CallbackSelectionHandler(Handler):
         self.factory_before_filters = factory_before_filters
         super().__init__(callback, *filters)
 
-    def __call__(self, wa: WhatsApp, sel: CallbackSelection):
+    def handle(self, wa: WhatsApp, sel: CallbackSelection):
         _call_callback_handler(self, wa, sel)
 
     def __str__(self) -> str:
@@ -372,13 +373,45 @@ class MessageStatusHandler(Handler):
             :class:`pywa.types.MessageStatus` and returns a :class:`bool`)
     """
 
-    __field_name__ = "messages"
-    __update_constructor__ = MessageStatus.from_update
+    _field_name = "messages"
+    _update_constructor = MessageStatus.from_update
 
     def __init__(
         self,
         callback: Callable[[WhatsApp, MessageStatus], Any],
         *filters: Callable[[WhatsApp, MessageStatus], bool],
+    ):
+        super().__init__(callback, *filters)
+
+
+class ChatOpenedHandler(Handler):
+    """
+    Handler for :class:`pywa.types.ChatOpened`
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_chat_opened` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_chat_opened = lambda _, msg: print(msg)
+        >>> wa.add_handlers(ChatOpenedHandler(print_chat_opened))
+
+    Args:
+        callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a
+            :class:`pywa.types.ChatOpened` as arguments)
+        *filters: The filters to apply to the handler (Takes a :class:`pywa.WhatsApp` instance and a
+            :class:`pywa.types.ChatOpened` and returns a :class:`bool`)
+
+    """
+
+    _field_name = "messages"
+    _update_constructor = ChatOpened.from_update
+
+    def __init__(
+        self,
+        callback: Callable[[WhatsApp, ChatOpened], Any],
+        *filters: Callable[[WhatsApp, ChatOpened], bool],
     ):
         super().__init__(callback, *filters)
 
@@ -407,8 +440,8 @@ class TemplateStatusHandler(Handler):
             :class:`pywa.types.TemplateStatus` and returns a :class:`bool`)
     """
 
-    __field_name__ = "message_template_status_update"
-    __update_constructor__ = TemplateStatus.from_update
+    _field_name = "message_template_status_update"
+    _update_constructor = TemplateStatus.from_update
 
     def __init__(
         self,
@@ -437,8 +470,8 @@ class FlowCompletionHandler(Handler):
 
     """
 
-    __field_name__ = "messages"
-    __update_constructor__ = FlowCompletion.from_update
+    _field_name = "messages"
+    _update_constructor = FlowCompletion.from_update
 
     def __init__(
         self,
@@ -468,8 +501,8 @@ class RawUpdateHandler(Handler):
             returns a :class:`bool`)
     """
 
-    __field_name__ = None
-    __update_constructor__ = lambda _, data: data  # noqa
+    _field_name = None
+    _update_constructor = lambda _, data: data  # noqa
 
     def __init__(
         self,
@@ -725,6 +758,41 @@ class HandlerDecorators:
             callback: Callable[[WhatsApp, MessageStatus], Any],
         ) -> Callable[[WhatsApp, MessageStatus], Any]:
             self.add_handlers(MessageStatusHandler(callback, *filters))
+            return callback
+
+        return decorator
+
+    def on_chat_opened(
+        self: WhatsApp,
+        *filters: Callable[[WhatsApp, ChatOpened], bool],
+    ) -> Callable[
+        [Callable[[WhatsApp, ChatOpened], Any]],
+        Callable[[WhatsApp, ChatOpened], Any],
+    ]:
+        """
+        Decorator to register a function as a callback for incoming chat opened (User opens a chat).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`ChatOpenedHandler`.
+
+        Example:
+
+            >>> from pywa.types import ChatOpened
+            >>> from pywa import filters as fil
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_chat_opened()
+            ... def chat_opened_handler(client: WhatsApp, chat_opened: ChatOpened):
+            ...     print(f"The user {chat_opened.from_user.wa_id} just opened a chat with us!")
+
+        Args:
+            *filters: Filters to apply to the incoming chat opened (filters are function that take a
+                :class:`pywa.WhatsApp` instance and the incoming :class:`pywa.types.ChatOpened` and return :class:`bool`).
+        """
+
+        @functools.wraps(self.on_chat_opened)
+        def decorator(
+            callback: Callable[[WhatsApp, ChatOpened], Any],
+        ) -> Callable[[WhatsApp, ChatOpened], Any]:
+            self.add_handlers(ChatOpenedHandler(callback, *filters))
             return callback
 
         return decorator

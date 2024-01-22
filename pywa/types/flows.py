@@ -87,7 +87,7 @@ class FlowCompletion(BaseUserUpdate):
         timestamp: The timestamp when the message was sent.
         reply_to_message: The message to which this message is a reply to.
         body: The body of the message.
-        token: The token of the flow.
+        token: The token of the flow. can be ``None`` in some cases :|
         response: The response from the flow.
     """
 
@@ -98,13 +98,17 @@ class FlowCompletion(BaseUserUpdate):
     timestamp: datetime.datetime
     reply_to_message: ReplyToMessage | None
     body: str
-    token: str
+    token: str | None
     response: dict[str, Any]
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> FlowCompletion:
         msg = (value := update["entry"][0]["changes"][0]["value"])["messages"][0]
         response = json.loads(msg["interactive"]["nfm_reply"]["response_json"])
+        if (flow_token := response.get("flow_token")) is None:
+            _logger.warning(
+                "A flow completion message without flow token is received, This is a known issue on iOS devices."
+            )
         return cls(
             _client=client,
             raw=update,
@@ -115,7 +119,7 @@ class FlowCompletion(BaseUserUpdate):
             timestamp=datetime.datetime.fromtimestamp(int(msg["timestamp"])),
             reply_to_message=ReplyToMessage.from_dict(msg["context"]),
             body=msg["interactive"]["nfm_reply"]["body"],
-            token=response["flow_token"],
+            token=flow_token,
             response=response,
         )
 
@@ -139,7 +143,9 @@ class FlowRequestActionType(utils.StrEnum):
 
     @classmethod
     def _missing_(cls, value):
-        _logger.warning("Unknown flow request action type: %s", value)
+        _logger.warning(
+            "Unknown flow request action type: %s. Defaulting to UNKNOWN." % value
+        )
         return cls.UNKNOWN
 
 
@@ -384,7 +390,7 @@ class FlowStatus(utils.StrEnum):
 
     @classmethod
     def _missing_(cls, value):
-        _logger.warning("Unknown flow status: %s", value)
+        _logger.warning("Unknown flow status: %s. Defaulting to UNKNOWN." % value)
         return cls.UNKNOWN
 
 
@@ -414,7 +420,7 @@ class FlowCategory(utils.StrEnum):
 
     @classmethod
     def _missing_(cls, value):
-        _logger.warning("Unknown flow category: %s", value)
+        _logger.warning("Unknown flow category: %s. Defaulting to OTHER." % value)
         return cls.OTHER
 
 

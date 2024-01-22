@@ -246,7 +246,9 @@ def test_filters():
     for filename, tests in UPDATES[RANDOM_API_VER].items():
         for test in tests:
             for test_name, update in test.items():
-                for update_modifier, filter_func in FILTERS[filename][test_name]:
+                for update_modifier, filter_func in FILTERS.get(filename, {}).get(
+                    test_name, ()
+                ):
                     update = update_modifier(update)
                     try:
                         assert filter_func(WA_NO_FILTERS, update)

@@ -63,6 +63,8 @@ TYPES: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
     },
     "message_status": {
         "sent": [lambda s: s.status == MessageStatusType.SENT],
+        "delivered": [lambda s: s.status == MessageStatusType.DELIVERED],
+        "read": [lambda s: s.status == MessageStatusType.READ],
         "failed": [lambda s: s.error is not None],
     },
     "template_status": {
@@ -73,6 +75,10 @@ TYPES: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
             lambda f: f.token is not None,
             lambda f: "flow_token" in f.response,
         ],
+        "without_flow_token": [lambda f: f.token is None],
+    },
+    "chat_opened": {
+        "chat_opened": [lambda c: c.type == MessageType.REQUEST_WELCOME],
     },
 }
 

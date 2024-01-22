@@ -10,6 +10,7 @@ __all__ = [
 ]
 
 import dataclasses
+import logging
 import datetime as dt
 from typing import TYPE_CHECKING
 
@@ -21,6 +22,8 @@ from .others import Metadata, User
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
+
+_logger = logging.getLogger(__name__)
 
 
 class MessageStatusType(utils.StrEnum):
@@ -41,6 +44,9 @@ class MessageStatusType(utils.StrEnum):
 
     @classmethod
     def _missing_(cls, value: str) -> MessageStatusType:
+        _logger.warning(
+            "Unknown message status type: %s. Defaulting to FAILED." % value
+        )
         return cls.FAILED
 
 
@@ -66,6 +72,9 @@ class ConversationCategory(utils.StrEnum):
 
     @classmethod
     def _missing_(cls, value: str) -> ConversationCategory:
+        _logger.warning(
+            "Unknown conversation category: %s. Defaulting to UNKNOWN." % value
+        )
         return cls.UNKNOWN
 
 

@@ -91,7 +91,7 @@ class MessageType(utils.StrEnum):
 
     @classmethod
     def _missing_(cls, value: str) -> MessageType:
-        _logger.warning(f"Unknown message type: {value}")
+        _logger.warning("Unknown message type: %s. Defaulting to UNKNOWN." % value)
         return cls.UNKNOWN
 
 

@@ -13,6 +13,7 @@ __all__ = [
 
 import abc
 import dataclasses
+import logging
 import re
 import pathlib
 import datetime as dt
@@ -27,7 +28,7 @@ from .others import ProductsSection
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
 
-DEFAULT = object()
+_logger = logging.getLogger(__name__)
 
 
 def _get_examples_from_placeholders(
@@ -1505,6 +1506,7 @@ class TemplateStatus(BaseUpdate):
 
         @classmethod
         def _missing_(cls, value: str) -> TemplateStatus.TemplateEvent:
+            _logger.warning("Unknown template event: %s. Defaulting to UNKNOWN" % value)
             return cls.UNKNOWN
 
     class TemplateRejectionReason(utils.StrEnum):
@@ -1527,4 +1529,7 @@ class TemplateStatus(BaseUpdate):
 
         @classmethod
         def _missing_(cls, value: str):
+            _logger.warning(
+                "Unknown template rejection reason: %s. Defaulting to NONE" % value
+            )
             return cls.NONE
