@@ -3,6 +3,14 @@ Changelog
 
 NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 1.16.0 (2024-01-22)
+
+- [chat_opened] adding a new type: `ChatOpened`
+- [server] improve handlers and logs
+- [types] warning on missing enum constant
+- [flows] handle cases where there is no `flow_token` in `FlowCompletion` (When the flow completion sent from iOS)
+- [tests] adding more tests
+
 ### 1.15.0 (2024-01-14)
 
 - [client] Added `register_phone_number` method
