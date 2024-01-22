@@ -133,11 +133,12 @@ class Message(BaseUserUpdate):
         msg_type = msg["type"]
         context = msg.get("context", {})
         constructor = _FIELDS_TO_OBJECTS_CONSTRUCTORS.get(msg_type)
+        # noinspection PyArgumentList
         msg_content = (
-            {msg_type: constructor(msg[msg_type], _client=client)}  # noqa
+            {msg_type: constructor(msg[msg_type], _client=client)}
             if constructor is not None
             else {}
-        )  # noqa
+        )
         return cls(
             _client=client,
             raw=update,

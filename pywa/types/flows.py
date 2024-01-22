@@ -139,7 +139,9 @@ class FlowRequestActionType(utils.StrEnum):
 
     @classmethod
     def _missing_(cls, value):
-        _logger.warning("Unknown flow request action type: %s", value)
+        _logger.warning(
+            "Unknown flow request action type: %s. Defaulting to UNKNOWN." % value
+        )
         return cls.UNKNOWN
 
 
@@ -384,7 +386,7 @@ class FlowStatus(utils.StrEnum):
 
     @classmethod
     def _missing_(cls, value):
-        _logger.warning("Unknown flow status: %s", value)
+        _logger.warning("Unknown flow status: %s. Defaulting to UNKNOWN." % value)
         return cls.UNKNOWN
 
 
@@ -414,7 +416,7 @@ class FlowCategory(utils.StrEnum):
 
     @classmethod
     def _missing_(cls, value):
-        _logger.warning("Unknown flow category: %s", value)
+        _logger.warning("Unknown flow category: %s. Defaulting to OTHER." % value)
         return cls.OTHER
 
 
