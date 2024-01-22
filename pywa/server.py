@@ -145,14 +145,13 @@ class Server:
                     app_access_token = self.api.get_app_access_token(
                         app_id=app_id, app_secret=app_secret
                     )
+                    # noinspection PyProtectedMember
                     if not self.api.set_callback_url(
                         app_id=app_id,
                         app_access_token=app_access_token["access_token"],
                         callback_url=f"{callback_url}/{self._webhook_endpoint}",
                         verify_token=verify_token,
-                        fields=tuple(
-                            fields or Handler.__fields_to_subclasses__().keys()
-                        ),
+                        fields=tuple(fields or Handler._fields_to_subclasses().keys()),
                     )["success"]:
                         raise RuntimeError("Failed to register callback URL.")
                 except WhatsAppError as e:
@@ -164,6 +163,8 @@ class Server:
         """Call the handlers for the given update."""
         try:
             handler_type = self._get_handler(update=update)
+            if handler_type is None:
+                _logger.debug("No handler found for update: %s" % update)
         except (
             ValueError,
             KeyError,
@@ -173,24 +174,23 @@ class Server:
             _logger.exception("Failed to get handler for update: %s" % update)
             return
 
-        try:
-            # noinspection PyCallingNonCallable
-            constructed_update = handler_type.__update_constructor__(self, update)
-        except Exception:
-            _logger.exception("Failed to construct update: %s" % update)
-            return
-
-        for handler in self._handlers[handler_type]:
+        if handler_type is not None:
             try:
-                # noinspection PyCallingNonCallable
-                handler.handle(self, constructed_update)
-            except Exception as e:
-                if isinstance(e, StopHandling):
-                    break
-                _logger.exception(
-                    "An error occurred while %s was handling an update"
-                    % handler.callback.__name__,
-                )
+                # noinspection PyCallingNonCallable, PyProtectedMember
+                constructed_update = handler_type._update_constructor(self, update)
+                for handler in self._handlers[handler_type]:
+                    try:
+                        handler.handle(self, constructed_update)
+                    except Exception as e:
+                        if isinstance(e, StopHandling):
+                            break
+                        _logger.exception(
+                            "An error occurred while %s was handling an update"
+                            % handler.callback.__name__,
+                        )
+            except Exception:
+                _logger.exception("Failed to construct update: %s" % update)
+
         for raw_update_handler in self._handlers[RawUpdateHandler]:
             try:
                 raw_update_handler.handle(self, update)
@@ -240,7 +240,8 @@ class Server:
                 _logger.warning("PyWa Webhook: Unknown message type: %s" % value)
             return None
 
-        return Handler.__fields_to_subclasses__().get(field)
+        # noinspection PyProtectedMember
+        return Handler._fields_to_subclasses().get(field)
 
     def _register_flow_endpoint_callback(
         self: WhatsApp,
@@ -295,7 +296,7 @@ class Server:
             )
 
         def flow_endpoint(payload: dict) -> tuple[str, int]:
-            """The actual registered endpoint callback. returns response, status code"""
+            """Called by the server when a flow request is received. Returns response and status code."""
             try:
                 decrypted_request, aes_key, iv = request_decryptor(
                     payload["encrypted_flow_data"],

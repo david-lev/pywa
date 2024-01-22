@@ -170,7 +170,7 @@ class Handler(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def __field_name__(self) -> str | None:
+    def _field_name(self) -> str | None:
         """
         The field name of the webhook update
         https://developers.facebook.com/docs/graph-api/webhooks/reference/whatsapp-business-account
@@ -178,7 +178,7 @@ class Handler(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def __update_constructor__(self) -> Callable[[WhatsApp, dict], BaseUpdate]:
+    def _update_constructor(self) -> Callable[[WhatsApp, dict], BaseUpdate]:
         """The constructor to use to construct the update object from the webhook update dict."""
 
     def __init__(
@@ -198,7 +198,7 @@ class Handler(abc.ABC):
 
     @staticmethod
     @functools.cache
-    def __fields_to_subclasses__() -> dict[str, Handler]:
+    def _fields_to_subclasses() -> dict[str, Handler]:
         """
         Return a dict of all the subclasses of `Handler` with their field name as the key.
         (e.g. ``{'messages': MessageHandler}``)
@@ -212,9 +212,9 @@ class Handler(abc.ABC):
         return cast(
             dict[str, Handler],
             {
-                h.__field_name__: h
+                h._field_name: h
                 for h in Handler.__subclasses__()
-                if h.__field_name__ is not None
+                if h._field_name is not None
             },
         )
 
@@ -245,8 +245,8 @@ class MessageHandler(Handler):
          :class:`pywa.types.Message` and returns a :class:`bool`)
     """
 
-    __field_name__ = "messages"
-    __update_constructor__ = Message.from_update
+    _field_name = "messages"
+    _update_constructor = Message.from_update
 
     def __init__(
         self,
@@ -279,8 +279,8 @@ class CallbackButtonHandler(Handler):
          filters will get the callback data after the factory is applied).
     """
 
-    __field_name__ = "messages"
-    __update_constructor__ = CallbackButton.from_update
+    _field_name = "messages"
+    _update_constructor = CallbackButton.from_update
 
     def __init__(
         self,
@@ -327,8 +327,8 @@ class CallbackSelectionHandler(Handler):
          filters will get the callback data after the factory is applied).
     """
 
-    __field_name__ = "messages"
-    __update_constructor__ = CallbackSelection.from_update
+    _field_name = "messages"
+    _update_constructor = CallbackSelection.from_update
 
     def __init__(
         self,
@@ -373,8 +373,8 @@ class MessageStatusHandler(Handler):
             :class:`pywa.types.MessageStatus` and returns a :class:`bool`)
     """
 
-    __field_name__ = "messages"
-    __update_constructor__ = MessageStatus.from_update
+    _field_name = "messages"
+    _update_constructor = MessageStatus.from_update
 
     def __init__(
         self,
@@ -405,8 +405,8 @@ class ChatOpenedHandler(Handler):
 
     """
 
-    __field_name__ = "messages"
-    __update_constructor__ = ChatOpened.from_update
+    _field_name = "messages"
+    _update_constructor = ChatOpened.from_update
 
     def __init__(
         self,
@@ -440,8 +440,8 @@ class TemplateStatusHandler(Handler):
             :class:`pywa.types.TemplateStatus` and returns a :class:`bool`)
     """
 
-    __field_name__ = "message_template_status_update"
-    __update_constructor__ = TemplateStatus.from_update
+    _field_name = "message_template_status_update"
+    _update_constructor = TemplateStatus.from_update
 
     def __init__(
         self,
@@ -470,8 +470,8 @@ class FlowCompletionHandler(Handler):
 
     """
 
-    __field_name__ = "messages"
-    __update_constructor__ = FlowCompletion.from_update
+    _field_name = "messages"
+    _update_constructor = FlowCompletion.from_update
 
     def __init__(
         self,
@@ -501,8 +501,8 @@ class RawUpdateHandler(Handler):
             returns a :class:`bool`)
     """
 
-    __field_name__ = None
-    __update_constructor__ = lambda _, data: data  # noqa
+    _field_name = None
+    _update_constructor = lambda _, data: data  # noqa
 
     def __init__(
         self,
