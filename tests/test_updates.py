@@ -74,6 +74,7 @@ TYPES: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
             lambda f: f.token is not None,
             lambda f: "flow_token" in f.response,
         ],
+        "without_flow_token": [lambda f: f.token is None],
     },
     "chat_opened": {
         "chat_opened": [lambda c: c.type == MessageType.REQUEST_WELCOME],
