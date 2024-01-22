@@ -1056,7 +1056,8 @@ Finally, let's update the flow's JSON with :meth:`~pywa.client.WhatsApp.update_f
         )
         print("Flow updated successfully")
     except FlowUpdatingError as e:
-        print(wa.get_flow_json(flow_id=flow_id).validation_errors)
+        print("Flow updating failed")
+        print(wa.get_flow(flow_id=flow_id).validation_errors)
 
 Storing Users
 ------------

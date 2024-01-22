@@ -425,6 +425,7 @@ If you are working back and forth on the FlowJSON, you can do something like thi
 
     try:
         wa.update_flow_json(flow_id, flow_json=your_flow_json)
+        print("Flow updated successfully!")
     except FlowUpdatingError:
         print("Error updating flow")
         print(wa.get_flow(flow_id).validation_errors)
@@ -458,7 +459,7 @@ Let's see how to send text message with flow:
 
     wa.send_message(
         to="1234567890",
-        text="Hi, We love to get your feedback on our service!",
+        text="Hi, You need to finish your sign up!",
         buttons=FlowButton(
             title="Finish Sign Up",
             flow_id="1234567890123456",  # The `static_flow` flow id from above
@@ -589,7 +590,7 @@ We need to tell WhatsApp to send the requests to our serve. :meth:`~pywa.client.
 
     wa.update_flow_metadata(
         flow_id="1234567890123456",  # The `dynamic_flow` flow id from above
-        endpoint_uri="https://our-server.com/flow"
+        endpoint_uri="https://your-server.com/flow"
     )
 
 Let's send the flow. this time with an image:
