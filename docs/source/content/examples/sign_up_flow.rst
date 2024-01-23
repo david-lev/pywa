@@ -1060,7 +1060,7 @@ Finally, let's update the flow's JSON with :meth:`~pywa.client.WhatsApp.update_f
         print(wa.get_flow(flow_id=flow_id).validation_errors)
 
 Storing Users
-------------
+-------------
 
 After the flow updates successfully, we can start with our server logic. First we need a simple user repository to store the users:
 

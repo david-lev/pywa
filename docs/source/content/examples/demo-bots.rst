@@ -19,7 +19,7 @@ This is a simple bot that welcomes the user when they send a message.
     flask_app = flask.Flask(__name__)
 
     wa = WhatsApp(
-        phone_number='your_phone_number',
+        phone_id='your_phone_number',
         token='your_token',
         server=flask_app,
         verify_token='xyzxyz',
@@ -50,7 +50,7 @@ This is a simple bot that echoes back the user's message.
     flask_app = flask.Flask(__name__)
 
     wa = WhatsApp(
-        phone_number='your_phone_number',
+        phone_id='your_phone_number',
         token='your_token',
         server=flask_app,
         verify_token='xyzxyz',
@@ -83,7 +83,7 @@ This is a simple bot that uploads files from URLs.
     flask_app = flask.Flask(__name__)
 
     wa = WhatsApp(
-        phone_number='your_phone_number',
+        phone_id='your_phone_number',
         token='your_token',
         server=flask_app,
         verify_token='xyzxyz',
@@ -125,7 +125,7 @@ Usage:
     flask_app = flask.Flask(__name__)
 
     wa = WhatsApp(
-        phone_number='your_phone_number',
+        phone_id='your_phone_number',
         token='your_token',
         server=flask_app,
         verify_token='xyzxyz',
@@ -179,7 +179,7 @@ A simple WhatsApp bot that translates text messages to other languages.
     translator = googletrans.Translator()
 
     wa = WhatsApp(
-        phone_number='your_phone_number',
+        phone_id='your_phone_number',
         token='your_token',
         server=flask_app,
         verify_token='xyzxyz',
@@ -283,7 +283,7 @@ This example shows how to create a simple bot that replies with a random image f
     flask_app = flask.Flask(__name__)
 
     wa = WhatsApp(
-        phone_number='your_phone_number',
+        phone_id='your_phone_number',
         token='your_token',
         server=flask_app,
         verify_token='xyzxyz',
@@ -317,7 +317,7 @@ This example shows how to create a bot that removes the background from an image
     flask_app = flask.Flask(__name__)
 
     wa = WhatsApp(
-        phone_number='your_phone_number',
+        phone_id='your_phone_number',
         token='your_token',
         server=flask_app,
         verify_token='xyzxyz',

@@ -322,7 +322,7 @@ main code, or when you want to dynamically register handlers programmatically.
 
 
 Available handlers
-^^^^^^^^^^^^^^^^^^
+__________________
 
 .. list-table::
    :widths: 20 20 60
@@ -352,6 +352,9 @@ Available handlers
    * - :meth:`~pywa.client.WhatsApp.on_template_status`
      - :class:`TemplateStatusHandler`
      - :class:`~pywa.types.template.TemplateStatus`
+   * - :meth:`~pywa.client.WhatsApp.on_chat_opened`
+     - :class:`ChatOpenedHandler`
+     - :class:`~pywa.types.chat_opened.ChatOpened`
    * - :meth:`~pywa.client.WhatsApp.on_raw_update`
      - :class:`RawUpdateHandler`
      - :class:`dict`
