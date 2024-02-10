@@ -264,11 +264,11 @@ class _TextFilters(_BaseUpdateFilters):
     """
 
     is_command: _MessageFilterT = lambda _, m: m.type == _Mt.TEXT and m.text.startswith(
-        ("!", "/", "#")
+        ("/", "!", "#")
     )
     """
-    Filter for text messages that are commands (start with ``!``, ``/``, or ``#``).
-        - Use _TextFilter.command if you want to filter for specific commands or prefixes.
+    Filter for text messages that are commands (start with ``/``, ``!``, or ``#``).
+        - Use text.command(...) if you want to filter for specific commands or prefixes.
 
     >>> filters.text.is_command
     """
@@ -373,17 +373,17 @@ class _TextFilters(_BaseUpdateFilters):
     @staticmethod
     def command(
         *cmds: str,
-        prefixes: str | Iterable[str] = "!",
+        prefixes: str | Iterable[str] = "/!",
         ignore_case: bool = False,
     ) -> _MessageFilterT:
         """
         Filter for text messages that are commands.
 
-        >>> text.command("start", "hello", prefixes=("!", "/"), ignore_case=True)
+        >>> text.command("start", "hello", prefixes="/", ignore_case=True)
 
         Args:
             *cmds: The command/s to filter for (e.g. "start", "hello").
-            prefixes: The prefix/s to filter for (default: "!", i.e. "!start").
+            prefixes: The prefix/s to filter for (default: "/!", i.e. "/start").
             ignore_case: Whether to ignore case when matching (default: ``False``).
         """
         cmds = tuple(c.lower() for c in cmds) if ignore_case else cmds
