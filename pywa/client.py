@@ -904,7 +904,7 @@ class WhatsApp(Server, HandlerDecorators):
             to=str(to),
             contacts=tuple(c.to_dict() for c in contact)
             if isinstance(contact, Iterable)
-            else (contact.to_dict()),
+            else (contact.to_dict(),),
             reply_to_message_id=reply_to_message_id,
         )["messages"][0]["id"]
 
