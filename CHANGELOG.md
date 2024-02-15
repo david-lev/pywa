@@ -3,6 +3,12 @@ Changelog
 
 NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 1.16.1 (2024-02-15)
+
+- [client] fix sending single contact
+- [filters] prioritize `/` over `!` in `filters.command(...)` and `filters.is_command`
+
+
 ### 1.16.0 (2024-01-22)
 
 - [chat_opened] adding a new type: `ChatOpened`
