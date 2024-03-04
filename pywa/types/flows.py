@@ -821,9 +821,15 @@ class ScreenData:
     """
 
     key: str
-    example: str | int | float | bool | dict | DataSource | Iterable[
-        str | int | float | bool | dict | DataSource
-    ]
+    example: (
+        str
+        | int
+        | float
+        | bool
+        | dict
+        | DataSource
+        | Iterable[str | int | float | bool | dict | DataSource]
+    )
 
     @property
     def data_key(self) -> str:
@@ -999,13 +1005,11 @@ class Component(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def type(self) -> ComponentType:
-        ...
+    def type(self) -> ComponentType: ...
 
     @property
     @abc.abstractmethod
-    def visible(self) -> bool | str | None:
-        ...
+    def visible(self) -> bool | str | None: ...
 
 
 class ComponentType(utils.StrEnum):
@@ -1144,28 +1148,23 @@ class FormComponent(Component, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def name(self) -> str:
-        ...
+    def name(self) -> str: ...
 
     @property
     @abc.abstractmethod
-    def label(self) -> str | DataKey:
-        ...
+    def label(self) -> str | DataKey: ...
 
     @property
     @abc.abstractmethod
-    def required(self) -> bool | str | DataKey | None:
-        ...
+    def required(self) -> bool | str | DataKey | None: ...
 
     @property
     @abc.abstractmethod
-    def enabled(self) -> bool | str | DataKey | None:
-        ...
+    def enabled(self) -> bool | str | DataKey | None: ...
 
     @property
     @abc.abstractmethod
-    def init_value(self) -> bool | str | DataKey | None:
-        ...
+    def init_value(self) -> bool | str | DataKey | None: ...
 
     @property
     def form_ref(self) -> str:
@@ -1205,8 +1204,7 @@ class TextComponent(Component, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def text(self) -> str | DataKey:
-        ...
+    def text(self) -> str | DataKey: ...
 
 
 class FontWeight(utils.StrEnum):
@@ -1348,13 +1346,11 @@ class TextEntryComponent(FormComponent, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def helper_text(self) -> str | DataKey | None:
-        ...
+    def helper_text(self) -> str | DataKey | None: ...
 
     @property
     @abc.abstractmethod
-    def error_message(self) -> str | DataKey | None:
-        ...
+    def error_message(self) -> str | DataKey | None: ...
 
 
 class InputType(utils.StrEnum):

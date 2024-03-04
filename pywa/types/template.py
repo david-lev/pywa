@@ -192,26 +192,22 @@ class Language(utils.StrEnum):
 class NewTemplateComponentABC(abc.ABC):
     @property
     @abc.abstractmethod
-    def type(self) -> ComponentType:
-        ...
+    def type(self) -> ComponentType: ...
 
 
 class NewTemplateHeaderABC(NewTemplateComponentABC, abc.ABC):
     @property
     @abc.abstractmethod
-    def format(self) -> HeaderFormatType:
-        ...
+    def format(self) -> HeaderFormatType: ...
 
 
 class NewButtonABC(abc.ABC):
     @property
     @abc.abstractmethod
-    def type(self) -> ButtonType:
-        ...
+    def type(self) -> ButtonType: ...
 
     @abc.abstractmethod
-    def to_dict(self, placeholder: tuple[str, str] = None) -> dict[str, str | None]:
-        ...
+    def to_dict(self, placeholder: tuple[str, str] = None) -> dict[str, str | None]: ...
 
 
 @dataclasses.dataclass(slots=True)
@@ -919,8 +915,7 @@ class ParamType(utils.StrEnum):
 class ComponentABC(abc.ABC):
     @property
     @abc.abstractmethod
-    def type(self) -> ParamType:
-        ...
+    def type(self) -> ParamType: ...
 
 
 @dataclasses.dataclass(slots=True)

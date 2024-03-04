@@ -591,14 +591,14 @@ class FlowButton:
     title: str
     flow_id: str | int
     flow_token: str
-    flow_action_type: Literal[
-        FlowActionType.NAVIGATE, FlowActionType.DATA_EXCHANGE
-    ] | None = None
+    flow_action_type: (
+        Literal[FlowActionType.NAVIGATE, FlowActionType.DATA_EXCHANGE] | None
+    ) = None
     flow_action_screen: str | None = None
     flow_action_payload: dict[str, Any] | None = None
-    flow_message_version: int | float | str | Literal[
+    flow_message_version: int | float | str | Literal[utils.Version.FLOW_MSG] = (
         utils.Version.FLOW_MSG
-    ] = utils.Version.FLOW_MSG
+    )
     mode: Literal[FlowStatus.PUBLISHED, FlowStatus.DRAFT] = FlowStatus.PUBLISHED
 
     def __post_init__(self):

@@ -1,4 +1,5 @@
 """Usefully filters to use in your handlers."""
+
 from __future__ import annotations
 
 __all__ = [
@@ -909,9 +910,9 @@ class _MessageStatusFilters(_BaseUpdateFilters):
         )
 
 
-message_status: _MessageStatusFilterT | type[
+message_status: _MessageStatusFilterT | type[_MessageStatusFilters] = (
     _MessageStatusFilters
-] = _MessageStatusFilters
+)
 
 
 class _TemplateStatusFilters(_BaseUpdateFilters):
@@ -963,6 +964,6 @@ class _TemplateStatusFilters(_BaseUpdateFilters):
         return lambda _, s: s.reason in reasons
 
 
-template_status: (
-    _TemplateStatusFilterT | type[_TemplateStatusFilters]
-) = _TemplateStatusFilters
+template_status: _TemplateStatusFilterT | type[_TemplateStatusFilters] = (
+    _TemplateStatusFilters
+)

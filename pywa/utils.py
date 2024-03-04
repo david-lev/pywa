@@ -98,16 +98,13 @@ class FromDict:
 
 
 class FastAPI(Protocol):
-    def get(self, path: str) -> Callable:
-        ...
+    def get(self, path: str) -> Callable: ...
 
-    def post(self, path: str) -> Callable:
-        ...
+    def post(self, path: str) -> Callable: ...
 
 
 class Flask(Protocol):
-    def route(self, rule: str, **options: Any) -> Callable:
-        ...
+    def route(self, rule: str, **options: Any) -> Callable: ...
 
 
 FlowRequestDecryptor: TypeAlias = (
