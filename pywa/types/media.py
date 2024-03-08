@@ -31,18 +31,15 @@ class BaseMedia(abc.ABC, utils.FromDict):
 
     @property
     @abc.abstractmethod
-    def id(self) -> str:
-        ...
+    def id(self) -> str: ...
 
     @property
     @abc.abstractmethod
-    def sha256(self) -> str:
-        ...
+    def sha256(self) -> str: ...
 
     @property
     @abc.abstractmethod
-    def mime_type(self) -> str:
-        ...
+    def mime_type(self) -> str: ...
 
     def get_media_url(self) -> str:
         """Gets the URL of the media. (expires after 5 minutes)"""

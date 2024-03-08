@@ -106,13 +106,11 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def metadata(self) -> Metadata:
-        ...
+    def metadata(self) -> Metadata: ...
 
     @property
     @abc.abstractmethod
-    def from_user(self) -> User:
-        ...
+    def from_user(self) -> User: ...
 
     @property
     def sender(self) -> str:
