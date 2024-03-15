@@ -1796,6 +1796,7 @@ class WhatsApp(Server, HandlerDecorators):
             "id",
             "name",
             "status",
+            "updated_at",
             "categories",
             "validation_errors",
             "json_version",

@@ -482,6 +482,7 @@ class FlowDetails:
         id: The ID of the flow.
         name: The name of the flow.
         status: The status of the flow.
+        updated_at: The last time the flow was updated (name, categories, endpoint_uri, json, etc.).
         json_version: The version of the flow JSON.
         data_api_version: The version to use during communication with the WhatsApp Flows Data Endpoint.
         categories: The categories of the flow.
@@ -504,6 +505,7 @@ class FlowDetails:
     preview: FlowPreview | None
     whatsapp_business_account: WhatsAppBusinessAccount | None
     application: FacebookApplication | None
+    updated_at: datetime.datetime | None = None
 
     @classmethod
     def from_dict(cls, data: dict, client: WhatsApp) -> FlowDetails:
@@ -532,6 +534,9 @@ class FlowDetails:
             application=FacebookApplication.from_dict(data["application"])
             if data.get("application")
             else None,
+            updated_at=datetime.datetime.strptime(
+                data["updated_at"], "%Y-%m-%dT%H:%M:%S%z"
+            ),
         )
 
     def publish(self) -> bool:
