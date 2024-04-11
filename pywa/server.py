@@ -164,14 +164,14 @@ class Server:
         try:
             handler_type = self._get_handler(update=update)
             if handler_type is None:
-                _logger.debug("No handler found for update: %s" % update)
+                _logger.debug("No handler found for update: %s", update)
         except (
             ValueError,
             KeyError,
             TypeError,
             IndexError,
         ):  # this endpoint got non-expected data
-            _logger.exception("Failed to get handler for update: %s" % update)
+            _logger.exception("Failed to get handler for update: %s", update)
             return
 
         if handler_type is not None:
@@ -185,11 +185,11 @@ class Server:
                         if isinstance(e, StopHandling):
                             break
                         _logger.exception(
-                            "An error occurred while %s was handling an update"
-                            % handler.callback.__name__,
+                            "An error occurred while %s was handling an update",
+                            handler.callback.__name__,
                         )
             except Exception:
-                _logger.exception("Failed to construct update: %s" % update)
+                _logger.exception("Failed to construct update: %s", update)
 
         for raw_update_handler in self._handlers[RawUpdateHandler]:
             try:
@@ -198,8 +198,8 @@ class Server:
                 if isinstance(e, StopHandling):
                     break
                 _logger.exception(
-                    "An error occurred while %s was handling an raw update"
-                    % raw_update_handler.callback.__name__,
+                    "An error occurred while %s was handling an raw update",
+                    raw_update_handler.callback.__name__,
                 )
 
     def _get_handler(self: WhatsApp, update: dict) -> type[Handler] | None:
@@ -230,14 +230,14 @@ class Server:
                         ) is not None:
                             return handler
                         _logger.warning(
-                            "PyWa Webhook: Unknown interactive message type: %s. Falling back to MessageHandler."
-                            % interactive_type
+                            "PyWa Webhook: Unknown interactive message type: %s. Falling back to MessageHandler.",
+                            interactive_type,
                         )
                     return _MESSAGE_TYPES.get(msg_type, MessageHandler)
 
                 elif "statuses" in value:  # status
                     return MessageStatusHandler
-                _logger.warning("PyWa Webhook: Unknown message type: %s" % value)
+                _logger.warning("PyWa Webhook: Unknown message type: %s", value)
             return None
 
         # noinspection PyProtectedMember
@@ -307,8 +307,9 @@ class Server:
                 )
             except Exception:
                 _logger.exception(
-                    "Flow Endpoint (%s): Decryption failed for payload: %s"
-                    % (endpoint, payload)
+                    "Flow Endpoint (%s): Decryption failed for payload: %s",
+                    endpoint,
+                    payload,
                 )
                 return "Decryption failed", FlowRequestCannotBeDecrypted.status_code
             if handle_health_check and decrypted_request["action"] == "ping":
@@ -326,9 +327,11 @@ class Server:
                 )
             except Exception:
                 _logger.exception(
-                    "Flow Endpoint (%s): Failed to construct FlowRequest from decrypted data: %s"
-                    % (endpoint, decrypted_request)
+                    "Flow Endpoint (%s): Failed to construct FlowRequest from decrypted data: %s",
+                    endpoint,
+                    decrypted_request,
                 )
+
                 return "Failed to construct FlowRequest", 500
             try:
                 response = callback(self, request)
@@ -347,8 +350,9 @@ class Server:
                 return e.__class__.__name__, e.status_code
             except Exception:
                 _logger.exception(
-                    "Flow Endpoint (%s): An error occurred while %s was handling a flow request"
-                    % (endpoint, callback.__name__)
+                    "Flow Endpoint (%s): An error occurred while %s was handling a flow request",
+                    endpoint,
+                    callback.__name__,
                 )
                 return "An error occurred", 500
 

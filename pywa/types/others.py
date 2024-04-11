@@ -91,7 +91,7 @@ class MessageType(utils.StrEnum):
 
     @classmethod
     def _missing_(cls, value: str) -> MessageType:
-        _logger.warning("Unknown message type: %s. Defaulting to UNKNOWN." % value)
+        _logger.warning("Unknown message type: %s. Defaulting to UNKNOWN.", value)
         return cls.UNKNOWN
 
 
@@ -251,7 +251,7 @@ class Contact:
                 if self.urls
                 else None,
                 "\n".join(
-                    f"ADR;type={a.type}:;;{';'.join((getattr(a, f) or '') for f in ('street', 'city', 'state', 'zip', 'country') )}"
+                    f"ADR;type={a.type}:;;{';'.join((getattr(a, f) or '') for f in ('street', 'city', 'state', 'zip', 'country'))}"
                     for a in self.addresses
                 )
                 if self.addresses
@@ -595,8 +595,9 @@ class Industry(utils.StrEnum):
     NOT_A_BIZ = "NOT_A_BIZ"
 
     @classmethod
-    def _missing_(cls, value: str) -> None:
-        return None
+    def _missing_(cls, value: str) -> Industry:
+        _logger.warning("Unknown industry: %s. Defaulting to UNDEFINED.", value)
+        return cls.UNDEFINED
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -632,7 +633,7 @@ class BusinessProfile:
             description=data.get("description"),
             email=data.get("email"),
             profile_picture_url=data.get("profile_picture_url"),
-            websites=tuple(data.get("websites", [])) or None,
+            websites=tuple(data.get("websites", ())) or None,
         )
 
 

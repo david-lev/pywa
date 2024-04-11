@@ -1501,7 +1501,7 @@ class TemplateStatus(BaseUpdate):
 
         @classmethod
         def _missing_(cls, value: str) -> TemplateStatus.TemplateEvent:
-            _logger.warning("Unknown template event: %s. Defaulting to UNKNOWN" % value)
+            _logger.warning("Unknown template event: %s. Defaulting to UNKNOWN", value)
             return cls.UNKNOWN
 
     class TemplateRejectionReason(utils.StrEnum):
@@ -1525,6 +1525,6 @@ class TemplateStatus(BaseUpdate):
         @classmethod
         def _missing_(cls, value: str):
             _logger.warning(
-                "Unknown template rejection reason: %s. Defaulting to NONE" % value
+                "Unknown template rejection reason: %s. Defaulting to NONE", value
             )
             return cls.NONE

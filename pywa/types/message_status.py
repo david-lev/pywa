@@ -44,9 +44,7 @@ class MessageStatusType(utils.StrEnum):
 
     @classmethod
     def _missing_(cls, value: str) -> MessageStatusType:
-        _logger.warning(
-            "Unknown message status type: %s. Defaulting to FAILED." % value
-        )
+        _logger.warning("Unknown message status type: %s. Defaulting to FAILED.", value)
         return cls.FAILED
 
 
@@ -73,7 +71,7 @@ class ConversationCategory(utils.StrEnum):
     @classmethod
     def _missing_(cls, value: str) -> ConversationCategory:
         _logger.warning(
-            "Unknown conversation category: %s. Defaulting to UNKNOWN." % value
+            "Unknown conversation category: %s. Defaulting to UNKNOWN.", value
         )
         return cls.UNKNOWN
 
