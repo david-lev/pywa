@@ -35,7 +35,8 @@ def is_cryptography_installed():
 
 class Version(enum.Enum):
     """
-    Enum for the latest and minimum versions of the WhatsApp API.
+    Enum for the latest and minimum versions of the `Graph API <https://developers.facebook.com/docs/graph-api>`_ and
+    `WhatsApp Flows <https://developers.facebook.com/docs/whatsapp/flows/changelogs>`_.
 
     - Use the constant to get the latest version. Example: ``WhatsApp(..., api_version=Version.GRAPH_API)``
     - Use the ``min`` attribute to get the minimum version. Example: Version.GRAPH_API.min
@@ -48,7 +49,7 @@ class Version(enum.Enum):
     """
 
     # KEY = (MIN_VERSION: str, LATEST_VERSION: str)
-    GRAPH_API = ("17.0", "18.0")
+    GRAPH_API = ("17.0", "19.0")
     FLOW_JSON = ("2.1", "3.1")
     FLOW_DATA_API = ("3.0", "3.0")
     FLOW_MSG = ("3", "3")
