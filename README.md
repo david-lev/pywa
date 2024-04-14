@@ -1,4 +1,4 @@
-![PyWa Logo](https://i.imgur.com/hbGP0rW.png)
+<img alt="PyWa Logo" height="250" src="https://pywa.readthedocs.io/en/latest/_static/pywa-logo.png" width="250"/>
 
 ________________________
 
