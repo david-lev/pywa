@@ -44,6 +44,7 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx_togglebutton",
     "sphinx.ext.autosectionlabel",
+    "m2r",
 ]
 
 # The suffix of source filenames.

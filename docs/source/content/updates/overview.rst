@@ -69,16 +69,38 @@ Account related updates:
    * - :py:class:`~pywa.types.template.TemplateStatus`
      - A template status update (e.g. approved, rejected, etc.)
 
-All user-related-updates have common methods:
 
 .. currentmodule:: pywa.types.base_update
+
+All updates have common methods and properties:
 
 .. list-table::
    :widths: 25 75
    :header-rows: 1
 
-   * - Method
+   * - Property
      - Description
+   * - :attr:`~BaseUpdate.id`
+     - The update ID
+   * - :attr:`~BaseUpdate.raw`
+     - The raw update data
+   * - :attr:`~BaseUpdate.timestamp`
+     - The timestamp of the update
+   * - :meth:`~BaseUpdate.stop_handling`
+     - Stop handling the update
+
+All user-related-updates have common methods and properties:
+
+.. list-table::
+   :widths: 25 75
+   :header-rows: 1
+
+   * - Method / Property
+     - Description
+   * - :attr:`~BaseUserUpdate.sender`
+     - The user id who sent the update
+   * - :attr:`~BaseUserUpdate.message_id_to_reply`
+     - The message id to reply to
    * - :meth:`~BaseUserUpdate.reply_text`
      - Reply to the update with a text message
    * - :meth:`~BaseUserUpdate.reply_image`

@@ -1,4 +1,5 @@
-sphinx-book-theme==1.0.1
+sphinx-book-theme==1.1.2
 sphinx-copybutton==0.5.2
-sphinxext-opengraph==0.8.2
+sphinxext-opengraph==0.9.1
 sphinx-togglebutton==0.3.2
+m2r==0.3.1

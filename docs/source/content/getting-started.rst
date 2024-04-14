@@ -4,9 +4,33 @@
 
 ⬇️ Installation
 ---------------
-.. include:: ../../../README.rst
-  :start-after: installation
-  :end-before: end-installation
+
+- **Install using pip3:**
+
+.. code-block:: bash
+
+    pip3 install -U pywa
+
+- **Install from source (the bleeding edge):**
+
+.. code-block:: bash
+
+    git clone https://github.com/david-lev/pywa.git
+    cd pywa && pip3 install -U .
+
+- **If you going to use the webhook features, here is shortcut to install the required dependencies:**
+
+.. code-block:: bash
+
+    pip3 install -U "pywa[flask]"
+    pip3 install -U "pywa[fastapi]"
+
+- **If you going to use the Flow features and want to use the default FlowRequestDecryptor and the default FlowResponseEncryptor, here is shortcut to install the required dependencies:**
+
+.. code-block:: bash
+
+    pip3 install -U "pywa[cryptography]"
+
 
 ================================
 
