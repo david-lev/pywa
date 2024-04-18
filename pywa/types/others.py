@@ -25,7 +25,7 @@ class User:
 
     Attributes:
         wa_id: The WhatsApp ID of the user (The phone number with the country code).
-        name: The name of the user (``None`` on :class:`MessageStatus`).
+        name: The name of the user (``None`` on :class:`MessageStatus` or when message type is :class:`MessageType.SYSTEM`).
     """
 
     wa_id: str

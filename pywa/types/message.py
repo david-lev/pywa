@@ -139,13 +139,19 @@ class Message(BaseUserUpdate):
             if constructor is not None
             else {}
         )
+        try:
+            usr = User.from_dict(value["contacts"][0])
+        except KeyError:
+            usr = User(
+                wa_id=msg["from"], name=None
+            )  # some messages don't have contacts
         return cls(
             _client=client,
             raw=update,
             id=msg["id"],
             type=MessageType(msg_type),
             **msg_content,
-            from_user=User.from_dict(value["contacts"][0]),
+            from_user=usr,
             timestamp=dt.datetime.fromtimestamp(int(msg["timestamp"])),
             metadata=Metadata.from_dict(value["metadata"]),
             forwarded=context.get("forwarded", False)
