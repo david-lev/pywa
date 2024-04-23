@@ -168,6 +168,7 @@ class WhatsAppCloudApi:
         text: str,
         preview_url: bool = False,
         reply_to_message_id: str | None = None,
+        tracker: str | None = None,
     ) -> dict[str, dict | list]:
         """
         Send a text message to a WhatsApp user.
@@ -185,6 +186,7 @@ class WhatsAppCloudApi:
             text: The text to send.
             preview_url: Whether to show a preview of the URL in the message.
             reply_to_message_id: The ID of the message to reply to.
+            tracker: The data that you can track by MessageStatus.
 
         Returns:
             The sent message.
@@ -197,6 +199,9 @@ class WhatsAppCloudApi:
         }
         if reply_to_message_id:
             data["context"] = {"message_id": reply_to_message_id}
+
+        if tracker:
+            data["biz_opaque_callback_data"] = tracker
 
         return self._make_request(
             method="POST",
@@ -312,6 +317,7 @@ class WhatsAppCloudApi:
         is_url: bool,
         caption: str | None = None,
         filename: str | None = None,
+        tracker: str | None = None,
     ) -> dict[str, dict | list]:
         """
         Send a media file to a WhatsApp user.
@@ -331,6 +337,7 @@ class WhatsAppCloudApi:
             media_type: The type of the media file (e.g. 'image', 'video', 'document').
             caption: The caption to send with the media file (only for images, videos and documents).
             filename: The filename to send with the media file (only for documents).
+            tracker: The data that you can track by MessageStatus.
 
         Returns:
             The sent message.
@@ -344,6 +351,7 @@ class WhatsAppCloudApi:
                 **({"caption": caption} if caption else {}),
                 **({"filename": filename} if filename else {}),
             },
+            **({"biz_opaque_callback_data": tracker} if tracker else {}),
         }
         return self._make_request(
             method="POST",
@@ -394,6 +402,7 @@ class WhatsAppCloudApi:
         longitude: float,
         name: str | None = None,
         address: str | None = None,
+        tracker: str | None = None,
     ) -> dict[str, dict | list]:
         """
         Send a location to a WhatsApp user.
@@ -412,6 +421,7 @@ class WhatsAppCloudApi:
             longitude: The longitude of the location.
             name: The name of the location.
             address: The address of the location.
+            tracker: The data that you can track by MessageStatus.
 
         Returns:
             The sent message.
@@ -426,6 +436,7 @@ class WhatsAppCloudApi:
                 "name": name,
                 "address": address,
             },
+            **({"biz_opaque_callback_data": tracker} if tracker else {}),
         }
 
         return self._make_request(
@@ -479,6 +490,7 @@ class WhatsAppCloudApi:
         body: str | None = None,
         footer: str | None = None,
         reply_to_message_id: str | None = None,
+        tracker: str | None = None,
     ) -> dict[str, dict | list]:
         """
         Send an interactive message to a WhatsApp user.
@@ -499,6 +511,7 @@ class WhatsAppCloudApi:
             body: The body of the message.
             footer: The footer of the message.
             reply_to_message_id: The ID of the message to reply to.
+            tracker: The data that you can track by MessageStatus.
 
         Returns:
             The sent message.
@@ -522,6 +535,7 @@ class WhatsAppCloudApi:
                     if reply_to_message_id
                     else {}
                 ),
+                **({"biz_opaque_callback_data": tracker} if tracker else {}),
             },
         )
 
@@ -557,6 +571,7 @@ class WhatsAppCloudApi:
         to: str,
         contacts: tuple[dict[str, Any], ...],
         reply_to_message_id: str | None = None,
+        tracker: str | None = None,
     ) -> dict[str, dict | list]:
         """
         Send a list of contacts to a WhatsApp user.
@@ -573,6 +588,7 @@ class WhatsAppCloudApi:
             to: The WhatsApp ID of the recipient.
             contacts: The contacts to send.
             reply_to_message_id: The ID of the message to reply to.
+            tracker: The data that you can track by MessageStatus.
 
         Returns:
             The sent message.
@@ -585,6 +601,8 @@ class WhatsAppCloudApi:
         }
         if reply_to_message_id:
             data["context"] = {"message_id": reply_to_message_id}
+        if tracker:
+            data["biz_opaque_callback_data"] = tracker
         return self._make_request(
             method="POST",
             endpoint=f"/{self.phone_id}/messages",
@@ -748,6 +766,7 @@ class WhatsAppCloudApi:
         to: str,
         template: dict,
         reply_to_message_id: str | None = None,
+        tracker: str | None = None,
     ) -> dict[str, dict | list]:
         """
         Send a template to a WhatsApp user.
@@ -756,6 +775,7 @@ class WhatsAppCloudApi:
             to: The WhatsApp ID of the recipient.
             template: The template to send.
             reply_to_message_id: The ID of the message to reply to.
+            tracker: The data that you can track by MessageStatus.
 
         Returns example::
 
@@ -774,6 +794,8 @@ class WhatsAppCloudApi:
         }
         if reply_to_message_id:
             data["context"] = {"message_id": reply_to_message_id}
+        if tracker:
+            data["biz_opaque_callback_data"] = tracker
         return self._make_request(
             method="POST",
             endpoint=f"/{self.phone_id}/messages",

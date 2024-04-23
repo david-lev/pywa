@@ -139,6 +139,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         quote: bool = False,
         preview_url: bool = False,
         keyboard: None = None,
+        tracker: str | None = None,
     ) -> str:
         """
         Reply to the message with text.
@@ -215,6 +216,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             quote: Whether to quote the replied message (default: False).
             preview_url: Whether to show a preview of the URL in the message (if any).
             keyboard: Deprecated and will be removed in a future version, use ``buttons`` instead.
+            tracker: The data to track the message with (optional, up to 512 characters).
 
         Returns:
             The ID of the sent reply.
@@ -228,6 +230,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             reply_to_message_id=self.message_id_to_reply if quote else None,
             preview_url=preview_url,
             keyboard=keyboard,
+            tracker=tracker,
         )
 
     reply = reply_text  # alias
@@ -241,6 +244,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         quote: bool = False,
         mime_type: str | None = None,
+        tracker: str | None = None,
     ) -> str:
         """
         Reply to the message with an image.
@@ -267,6 +271,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
              or file path that does not have an extension).
             quote: Whether to quote the replied message (default: False).
             body: Deprecated and will be removed in a future version, use ``caption`` instead.
+            tracker: The data to track the message with (optional, up to 512 characters).
 
         Returns:
             The ID of the sent reply.
@@ -280,6 +285,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             buttons=buttons,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             mime_type=mime_type,
+            tracker=tracker,
         )
 
     def reply_video(
@@ -291,6 +297,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         quote: bool = False,
         mime_type: str | None = None,
+        tracker: str | None = None,
     ) -> str:
         """
         Reply to the message with a video.
@@ -318,6 +325,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
              or file path that does not have an extension).
             quote: Whether to quote the replied message (default: False).
             body: Deprecated and will be removed in a future version, use ``caption`` instead.
+            tracker: The data to track the message with (optional, up to 512 characters).
 
         Returns:
             The ID of the sent reply.
@@ -343,6 +351,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         quote: bool = False,
         mime_type: str | None = None,
+        tracker: str | None = None,
     ) -> str:
         """
         Reply to the message with a document.
@@ -372,6 +381,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
              object, or file path that does not have an extension).
             body: Deprecated and will be removed in a future version, use ``caption`` instead.
             quote: Whether to quote the replied message (default: False).
+            tracker: The data to track the message with (optional, up to 512 characters).
 
         Returns:
             The ID of the sent reply.
@@ -386,12 +396,14 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             body=body,
             footer=footer,
             mime_type=mime_type,
+            tracker=tracker,
         )
 
     def reply_audio(
         self,
         audio: str | pathlib.Path | bytes | BinaryIO,
         mime_type: str | None = None,
+        tracker: str | None = None,
     ) -> str:
         """
         Reply to the message with an audio.
@@ -407,6 +419,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             audio: The audio file to reply with (either a media ID, URL, file path, bytes, or an open file object).
             mime_type: The mime type of the audio (optional, required when sending a audio as bytes or a file object,
              or file path that does not have an extension).
+             tracker: The data to track the message with (optional, up to 512 characters).
 
         Returns:
             The ID of the sent message.
@@ -415,12 +428,14 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             to=self.sender,
             audio=audio,
             mime_type=mime_type,
+            tracker=tracker,
         )
 
     def reply_sticker(
         self,
         sticker: str | pathlib.Path | bytes | BinaryIO,
         mime_type: str | None = None,
+        tracker: str | None = None,
     ) -> str:
         """
         Reply to the message with a sticker.
@@ -438,6 +453,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             sticker: The sticker to reply with (either a media ID, URL, file path, bytes, or an open file object).
             mime_type: The mime type of the sticker (optional, required when sending a sticker as bytes or a file
              object, or file path that does not have an extension).
+            tracker: The data to track the message with (optional, up to 512 characters).
 
         Returns:
             The ID of the sent reply.
@@ -446,6 +462,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             to=self.sender,
             sticker=sticker,
             mime_type=mime_type,
+            tracker=tracker,
         )
 
     def reply_location(
@@ -454,6 +471,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         longitude: float,
         name: str | None = None,
         address: str | None = None,
+        tracker: str | None = None,
     ) -> str:
         """
         Reply to the message with a location.
@@ -474,6 +492,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             longitude: The longitude of the location.
             name: The name of the location (optional).
             address: The address of the location (optional).
+            tracker: The data to track the message with (optional, up to 512 characters).
 
         Returns:
             The ID of the sent reply.
@@ -484,12 +503,14 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             longitude=longitude,
             name=name,
             address=address,
+            tracker=tracker,
         )
 
     def reply_contact(
         self,
         contact: Contact | Iterable[Contact],
         quote: bool = False,
+        tracker: str | None = None,
     ) -> str:
         """
         Reply to the message with a contact/s.
@@ -512,6 +533,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         Args:
             contact: The contact/s to send.
             quote: Whether to quote the replied message (default: False).
+            tracker: The data to track the message with (optional, up to 512 characters).
 
         Returns:
             The ID of the sent reply.
@@ -520,6 +542,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             to=self.sender,
             contact=contact,
             reply_to_message_id=self.message_id_to_reply if quote else None,
+            tracker=tracker,
         )
 
     def react(self, emoji: str) -> str:
@@ -565,6 +588,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         footer: str | None = None,
         thumbnail_product_sku: str | None = None,
         quote: bool = False,
+        tracker: str | None = None,
     ) -> str:
         """
         Reply to the message with a catalog.
@@ -584,6 +608,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             thumbnail_product_sku: The thumbnail of this item will be used as the message's header image (optional, if
                 not provided, the first item in the catalog will be used).
             quote: Whether to quote the replied message (default: False).
+            tracker: The data to track the message with (optional, up to 512 characters).
 
         Returns:
             The ID of the sent reply.
@@ -594,6 +619,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             footer=footer,
             thumbnail_product_sku=thumbnail_product_sku,
             reply_to_message_id=self.message_id_to_reply if quote else None,
+            tracker=tracker,
         )
 
     def reply_product(
@@ -603,6 +629,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         body: str | None = None,
         footer: str | None = None,
         quote: bool = False,
+        tracker: str | None = None,
     ) -> str:
         """
         Reply to the message with a product.
@@ -617,6 +644,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
             quote: Whether to quote the replied message (default: False).
+            tracker: The data to track the message with (optional, up to 512 characters).
 
         Returns:
             The ID of the sent reply.
@@ -628,6 +656,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             body=body,
             footer=footer,
             reply_to_message_id=self.message_id_to_reply if quote else None,
+            tracker=tracker,
         )
 
     def reply_products(
@@ -638,6 +667,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         body: str,
         footer: str | None = None,
         quote: bool = False,
+        tracker: str | None = None,
     ) -> str:
         """
         Reply to the message with a product.
@@ -674,6 +704,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
             quote: Whether to quote the replied message (default: False).
+            tracker: The data to track the message with (optional, up to 512 characters).
 
         Returns:
             The ID of the sent reply.
@@ -686,12 +717,14 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             body=body,
             footer=footer,
             reply_to_message_id=self.message_id_to_reply if quote else None,
+            tracker=tracker,
         )
 
     def reply_template(
         self,
         template: Template,
         quote: bool = False,
+        tracker: str | None = None,
     ) -> str:
         """
         Reply to the message with a template.
@@ -736,6 +769,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         Args:
             template: The template to send.
             quote: Whether to quote the replied message (default: False).
+            tracker: The data to track the message with (optional, up to 512 characters).
 
         Returns:
             The ID of the sent reply.
@@ -747,6 +781,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             to=self.sender,
             template=template,
             reply_to_message_id=quote if quote else None,
+            tracker=tracker,
         )
 
     def mark_as_read(self) -> bool:
