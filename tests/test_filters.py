@@ -224,6 +224,7 @@ FILTERS: dict[
                 fil.message_status.failed_with(131053),
             ),
         ],
+        "with_tracker": [(same, fil.message_status.with_tracker)],
     },
     "template_status": {
         "approved": [

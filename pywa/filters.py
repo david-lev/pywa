@@ -909,6 +909,13 @@ class _MessageStatusFilters(_BaseUpdateFilters):
             or s.error.error_code in error_codes
         )
 
+    with_tracker: _MessageStatusFilterT = lambda _, s: s.tracker is not None
+    """
+    Filter for messages that sent with tracker
+
+    >>> filters.message_status.with_tracker
+    """
+
 
 message_status: _MessageStatusFilterT | type[_MessageStatusFilters] = (
     _MessageStatusFilters
