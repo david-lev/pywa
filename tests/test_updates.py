@@ -67,6 +67,7 @@ TYPES: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
         "delivered": [lambda s: s.status == MessageStatusType.DELIVERED],
         "read": [lambda s: s.status == MessageStatusType.READ],
         "failed": [lambda s: s.error is not None],
+        "with_tracker": [lambda s: s.tracker is not None],
     },
     "template_status": {
         "approved": [lambda s: s.event == TemplateStatus.TemplateEvent.APPROVED],
