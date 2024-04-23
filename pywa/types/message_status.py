@@ -89,6 +89,7 @@ class MessageStatus(BaseUserUpdate):
         status: The status of the message.
         timestamp: The timestamp when the status was updated.
         from_user: The user who the message was sent to.
+        tracker: The tracker that the message was sent with.
         conversation: The conversation the given status notification belongs to (Optional).
         pricing_model: Type of pricing model used by the business. Current supported value is CBP.
         error: The error that occurred (if status is ``failed``).
@@ -99,6 +100,7 @@ class MessageStatus(BaseUserUpdate):
     from_user: User
     timestamp: dt.datetime
     status: MessageStatusType
+    tracker: str | None
     conversation: Conversation | None
     pricing_model: str | None
     error: WhatsAppError | None
@@ -115,6 +117,7 @@ class MessageStatus(BaseUserUpdate):
             status=MessageStatusType(status["status"]),
             timestamp=dt.datetime.fromtimestamp(int(status["timestamp"])),
             from_user=User(wa_id=status["recipient_id"], name=None),
+            tracker=status.get("biz_opaque_callback_data"),
             conversation=Conversation.from_dict(status["conversation"])
             if "conversation" in status
             else None,

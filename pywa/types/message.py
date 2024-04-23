@@ -220,6 +220,7 @@ class Message(BaseUserUpdate):
         preview_url: bool = False,
         reply_to_message_id: str = None,
         keyboard: None = None,
+        tracker: str | None = None,
     ) -> str:
         """
         Send the message to another user.
@@ -238,6 +239,7 @@ class Message(BaseUserUpdate):
             reply_to_message_id:  The message ID to reply to (optional).
             preview_url: Whether to show a preview of the URL in the message (if any).
             keyboard: Deprecated and will be removed in a future version, use ``buttons`` instead.
+            tracker: The track data of the message.
 
         Returns:
             The ID of the sent message.
@@ -257,6 +259,7 @@ class Message(BaseUserUpdate):
                     buttons=buttons,
                     reply_to_message_id=reply_to_message_id,
                     keyboard=keyboard,
+                    tracker=tracker,
                 )
             case MessageType.DOCUMENT:
                 return self._client.send_document(
@@ -268,6 +271,7 @@ class Message(BaseUserUpdate):
                     footer=footer,
                     buttons=keyboard or buttons,
                     reply_to_message_id=reply_to_message_id,
+                    tracker=tracker,
                 )
             case MessageType.IMAGE:
                 return self._client.send_image(
@@ -278,6 +282,7 @@ class Message(BaseUserUpdate):
                     footer=footer,
                     buttons=keyboard or buttons,
                     reply_to_message_id=reply_to_message_id,
+                    tracker=tracker,
                 )
             case MessageType.VIDEO:
                 return self._client.send_video(
@@ -288,9 +293,12 @@ class Message(BaseUserUpdate):
                     body=body,
                     footer=footer,
                     reply_to_message_id=reply_to_message_id,
+                    tracker=tracker,
                 )
             case MessageType.STICKER:
-                return self._client.send_sticker(to=to, sticker=self.sticker.id)
+                return self._client.send_sticker(
+                    to=to, sticker=self.sticker.id, tracker=tracker
+                )
             case MessageType.LOCATION:
                 return self._client.send_location(
                     to=to,
@@ -298,14 +306,18 @@ class Message(BaseUserUpdate):
                     longitude=self.location.longitude,
                     name=self.location.name,
                     address=self.location.address,
+                    tracker=tracker,
                 )
             case MessageType.AUDIO:
-                return self._client.send_audio(to=to, audio=self.audio.id)
+                return self._client.send_audio(
+                    to=to, audio=self.audio.id, tracker=tracker
+                )
             case MessageType.CONTACTS:
                 return self._client.send_contact(
                     to=to,
                     contact=self.contacts,
                     reply_to_message_id=reply_to_message_id,
+                    tracker=tracker,
                 )
             case MessageType.REACTION:
                 if reply_to_message_id is None:

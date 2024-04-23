@@ -247,6 +247,7 @@ class WhatsApp(Server, HandlerDecorators):
         preview_url: bool = False,
         reply_to_message_id: str | None = None,
         keyboard: None = None,
+        tracker: str | None = None,
     ) -> str:
         """
         Send a message to a WhatsApp user.
@@ -357,6 +358,7 @@ class WhatsApp(Server, HandlerDecorators):
             preview_url: Whether to show a preview of the URL in the message (if any).
             reply_to_message_id: The message ID to reply to (optional).
             keyboard: Deprecated and will be removed in a future version, use ``buttons`` instead.
+            tracker: The data to track the message with (optional, up to 512 characters).
 
         Returns:
             The message ID of the sent message.
@@ -377,6 +379,7 @@ class WhatsApp(Server, HandlerDecorators):
                 text=text,
                 preview_url=preview_url,
                 reply_to_message_id=reply_to_message_id,
+                tracker=tracker,
             )["messages"][0]["id"]
         type_, kb = _resolve_buttons_param(buttons)
         return self.api.send_interactive_message(
@@ -391,6 +394,7 @@ class WhatsApp(Server, HandlerDecorators):
             else None,
             body=text,
             footer=footer,
+            tracker=tracker,
         )["messages"][0]["id"]
 
     send_text = send_message  # alias
@@ -405,6 +409,7 @@ class WhatsApp(Server, HandlerDecorators):
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
+        tracker: str | None = None,
     ) -> str:
         """
         Send an image to a WhatsApp user.
@@ -432,6 +437,7 @@ class WhatsApp(Server, HandlerDecorators):
             mime_type: The mime type of the image (optional, required when sending an image as bytes or a file object,
              or file path that does not have an extension).
             body: Deprecated and will be removed in a future version, use ``caption`` instead.
+            tracker: The data to track the message with (optional, up to 512 characters).
 
         Returns:
             The message ID of the sent image message.
@@ -460,6 +466,7 @@ class WhatsApp(Server, HandlerDecorators):
                 is_url=is_url,
                 media_type="image",
                 caption=caption,
+                tracker=tracker,
             )["messages"][0]["id"]
         if not caption:
             raise ValueError(
@@ -479,6 +486,7 @@ class WhatsApp(Server, HandlerDecorators):
             body=caption,
             footer=footer,
             reply_to_message_id=reply_to_message_id,
+            tracker=tracker,
         )["messages"][0]["id"]
 
     def send_video(
@@ -491,6 +499,7 @@ class WhatsApp(Server, HandlerDecorators):
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
+        tracker: str | None = None,
     ) -> str:
         """
         Send a video to a WhatsApp user.
@@ -519,6 +528,7 @@ class WhatsApp(Server, HandlerDecorators):
             mime_type: The mime type of the video (optional, required when sending a video as bytes or a file object,
              or file path that does not have an extension).
             body: Deprecated and will be removed in a future version, use ``caption`` instead.
+            tracker: The data to track the message with (optional, up to 512 characters).
 
         Returns:
             The message ID of the sent video.
@@ -547,6 +557,7 @@ class WhatsApp(Server, HandlerDecorators):
                 is_url=is_url,
                 media_type="video",
                 caption=caption,
+                tracker=tracker,
             )["messages"][0]["id"]
         if not caption:
             raise ValueError(
@@ -566,6 +577,7 @@ class WhatsApp(Server, HandlerDecorators):
             body=caption,
             footer=footer,
             reply_to_message_id=reply_to_message_id,
+            tracker=tracker,
         )["messages"][0]["id"]
 
     def send_document(
@@ -579,6 +591,7 @@ class WhatsApp(Server, HandlerDecorators):
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
+        tracker: str | None = None,
     ) -> str:
         """
         Send a document to a WhatsApp user.
@@ -609,6 +622,7 @@ class WhatsApp(Server, HandlerDecorators):
             mime_type: The mime type of the document (optional, required when sending a document as bytes or a file
              object, or file path that does not have an extension).
             body: Deprecated and will be removed in a future version, use ``caption`` instead.
+            tracker: The data to track the message with (optional, up to 512 characters).
 
         Returns:
             The message ID of the sent document.
@@ -638,6 +652,7 @@ class WhatsApp(Server, HandlerDecorators):
                 media_type="document",
                 caption=caption,
                 filename=filename,
+                tracker=tracker,
             )["messages"][0]["id"]
         if not caption:
             raise ValueError(
@@ -658,6 +673,7 @@ class WhatsApp(Server, HandlerDecorators):
             body=caption,
             footer=footer,
             reply_to_message_id=reply_to_message_id,
+            tracker=tracker,
         )["messages"][0]["id"]
 
     def send_audio(
@@ -665,6 +681,7 @@ class WhatsApp(Server, HandlerDecorators):
         to: str | int,
         audio: str | pathlib.Path | bytes | BinaryIO,
         mime_type: str | None = None,
+        tracker: str | None = None,
     ) -> str:
         """
         Send an audio file to a WhatsApp user.
@@ -682,6 +699,7 @@ class WhatsApp(Server, HandlerDecorators):
             audio: The audio file to send (either a media ID, URL, file path, bytes, or an open file object).
             mime_type: The mime type of the audio file (optional, required when sending an audio file as bytes or a file
              object, or file path that does not have an extension).
+            tracker: The data to track the message with (optional, up to 512 characters).
 
         Returns:
             The message ID of the sent audio file.
@@ -698,6 +716,7 @@ class WhatsApp(Server, HandlerDecorators):
             media_id_or_url=audio,
             is_url=is_url,
             media_type="audio",
+            tracker=tracker,
         )["messages"][0]["id"]
 
     def send_sticker(
@@ -705,6 +724,7 @@ class WhatsApp(Server, HandlerDecorators):
         to: str | int,
         sticker: str | pathlib.Path | bytes | BinaryIO,
         mime_type: str | None = None,
+        tracker: str | None = None,
     ) -> str:
         """
         Send a sticker to a WhatsApp user.
@@ -724,6 +744,7 @@ class WhatsApp(Server, HandlerDecorators):
             sticker: The sticker to send (either a media ID, URL, file path, bytes, or an open file object).
             mime_type: The mime type of the sticker (optional, required when sending a sticker as bytes or a file
              object, or file path that does not have an extension).
+            tracker: The data to track the message with (optional, up to 512 characters).
 
         Returns:
             The message ID of the sent message.
@@ -740,6 +761,7 @@ class WhatsApp(Server, HandlerDecorators):
             media_id_or_url=sticker,
             is_url=is_url,
             media_type="sticker",
+            tracker=tracker,
         )["messages"][0]["id"]
 
     def send_reaction(
@@ -818,6 +840,7 @@ class WhatsApp(Server, HandlerDecorators):
         longitude: float,
         name: str | None = None,
         address: str | None = None,
+        tracker: str | None = None,
     ) -> str:
         """
         Send a location to a WhatsApp user.
@@ -839,6 +862,7 @@ class WhatsApp(Server, HandlerDecorators):
             longitude: The longitude of the location.
             name: The name of the location (optional).
             address: The address of the location (optional).
+            tracker: The data to track the message with (optional, up to 512 characters).
 
         Returns:
             The message ID of the sent location.
@@ -849,15 +873,19 @@ class WhatsApp(Server, HandlerDecorators):
             longitude=longitude,
             name=name,
             address=address,
+            tracker=tracker,
         )["messages"][0]["id"]
 
-    def request_location(self, to: str | int, text: str) -> str:
+    def request_location(
+        self, to: str | int, text: str, tracker: str | None = None
+    ) -> str:
         """
         Send a text message with button to request the user's location.
 
         Args:
             to: The phone ID of the WhatsApp user.
             text: The text to send with the button.
+            tracker: The data to track the message with (optional, up to 512 characters).
 
         Returns:
             The message ID of the sent message.
@@ -867,6 +895,7 @@ class WhatsApp(Server, HandlerDecorators):
             type_="location_request_message",
             action={"name": "send_location"},
             body=text,
+            tracker=tracker,
         )["messages"][0]["id"]
 
     def send_contact(
@@ -874,6 +903,7 @@ class WhatsApp(Server, HandlerDecorators):
         to: str | int,
         contact: Contact | Iterable[Contact],
         reply_to_message_id: str | None = None,
+        tracker: str | None = None,
     ) -> str:
         """
         Send a contact/s to a WhatsApp user.
@@ -896,6 +926,7 @@ class WhatsApp(Server, HandlerDecorators):
             to: The phone ID of the WhatsApp user.
             contact: The contact/s to send.
             reply_to_message_id: The message ID to reply to (optional).
+            tracker: The data to track the message with (optional, up to 512 characters).
 
         Returns:
             The message ID of the sent message.
@@ -906,6 +937,7 @@ class WhatsApp(Server, HandlerDecorators):
             if isinstance(contact, Iterable)
             else (contact.to_dict(),),
             reply_to_message_id=reply_to_message_id,
+            tracker=tracker,
         )["messages"][0]["id"]
 
     def send_catalog(
@@ -915,6 +947,7 @@ class WhatsApp(Server, HandlerDecorators):
         footer: str | None = None,
         thumbnail_product_sku: str | None = None,
         reply_to_message_id: str | None = None,
+        tracker: str | None = None,
     ) -> str:
         """
         Send the business catalog to a WhatsApp user.
@@ -936,6 +969,7 @@ class WhatsApp(Server, HandlerDecorators):
             thumbnail_product_sku: The thumbnail of this item will be used as the message's header image (optional, if
                 not provided, the first item in the catalog will be used).
             reply_to_message_id: The message ID to reply to (optional).
+            tracker: The data to track the message with (optional, up to 512 characters).
 
         Returns:
             The message ID of the sent message.
@@ -958,6 +992,7 @@ class WhatsApp(Server, HandlerDecorators):
             body=body,
             footer=footer,
             reply_to_message_id=reply_to_message_id,
+            tracker=tracker,
         )["messages"][0]["id"]
 
     def send_product(
@@ -968,6 +1003,7 @@ class WhatsApp(Server, HandlerDecorators):
         body: str | None = None,
         footer: str | None = None,
         reply_to_message_id: str | None = None,
+        tracker: str | None = None,
     ) -> str:
         """
         Send a product from a business catalog to a WhatsApp user.
@@ -993,6 +1029,7 @@ class WhatsApp(Server, HandlerDecorators):
             body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
             reply_to_message_id: The message ID to reply to (optional).
+            tracker: The data to track the message with (optional, up to 512 characters).
 
         Returns:
             The message ID of the sent message.
@@ -1007,6 +1044,7 @@ class WhatsApp(Server, HandlerDecorators):
             body=body,
             footer=footer,
             reply_to_message_id=reply_to_message_id,
+            tracker=tracker,
         )["messages"][0]["id"]
 
     def send_products(
@@ -1018,6 +1056,7 @@ class WhatsApp(Server, HandlerDecorators):
         body: str,
         footer: str | None = None,
         reply_to_message_id: str | None = None,
+        tracker: str | None = None,
     ) -> str:
         """
         Send products from a business catalog to a WhatsApp user.
@@ -1055,6 +1094,7 @@ class WhatsApp(Server, HandlerDecorators):
             body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
             reply_to_message_id: The message ID to reply to (optional).
+            tracker: The data to track the message with (optional, up to 512 characters).
 
         Returns:
             The message ID of the sent message.
@@ -1070,6 +1110,7 @@ class WhatsApp(Server, HandlerDecorators):
             body=body,
             footer=footer,
             reply_to_message_id=reply_to_message_id,
+            tracker=tracker,
         )["messages"][0]["id"]
 
     def mark_message_as_read(
@@ -1483,6 +1524,7 @@ class WhatsApp(Server, HandlerDecorators):
         to: str | int,
         template: Template,
         reply_to_message_id: str | None = None,
+        tracker: str | None = None,
     ) -> str:
         """
         Send a template to a WhatsApp user.
@@ -1529,6 +1571,7 @@ class WhatsApp(Server, HandlerDecorators):
             to: The phone ID of the WhatsApp user.
             template: The template to send.
             reply_to_message_id: The message ID to reply to (optional).
+            tracker: The data to track the message with (optional, up to 512 characters).
 
         Returns:
             The message ID of the sent template.
@@ -1566,6 +1609,7 @@ class WhatsApp(Server, HandlerDecorators):
             to=str(to),
             template=template.to_dict(is_header_url=is_url),
             reply_to_message_id=reply_to_message_id,
+            tracker=tracker,
         )["messages"][0]["id"]
 
     def create_flow(
