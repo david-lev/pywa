@@ -35,6 +35,7 @@ from pywa.types import (
     FlowButton,
     ChatOpened,
     MessageType,
+    FlowStatus,
 )
 from pywa.types.base_update import BaseUpdate
 from pywa.types.callback import CallbackDataT, CallbackData
@@ -383,7 +384,7 @@ class WhatsApp(Server, HandlerDecorators):
                 typ=MessageType.TEXT.value,
                 msg={"body": text, "preview_url": preview_url},
                 reply_to_message_id=reply_to_message_id,
-                tracker=_resolve_tracker_param(tracker),
+                biz_opaque_callback_data=_resolve_tracker_param(tracker),
             )["messages"][0]["id"]
         typ, kb = _resolve_buttons_param(buttons)
         return self.api.send_message(
@@ -402,7 +403,7 @@ class WhatsApp(Server, HandlerDecorators):
                 footer=footer,
             ),
             reply_to_message_id=reply_to_message_id,
-            tracker=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     send_text = send_message  # alias
@@ -476,7 +477,7 @@ class WhatsApp(Server, HandlerDecorators):
                     is_url=is_url,
                     caption=caption,
                 ),
-                tracker=_resolve_tracker_param(tracker),
+                biz_opaque_callback_data=_resolve_tracker_param(tracker),
             )["messages"][0]["id"]
         if not caption:
             raise ValueError(
@@ -499,7 +500,7 @@ class WhatsApp(Server, HandlerDecorators):
                 footer=footer,
             ),
             reply_to_message_id=reply_to_message_id,
-            tracker=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_video(
@@ -572,7 +573,7 @@ class WhatsApp(Server, HandlerDecorators):
                     is_url=is_url,
                     caption=caption,
                 ),
-                tracker=_resolve_tracker_param(tracker),
+                biz_opaque_callback_data=_resolve_tracker_param(tracker),
             )["messages"][0]["id"]
         if not caption:
             raise ValueError(
@@ -595,7 +596,7 @@ class WhatsApp(Server, HandlerDecorators):
                 footer=footer,
             ),
             reply_to_message_id=reply_to_message_id,
-            tracker=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_document(
@@ -671,7 +672,7 @@ class WhatsApp(Server, HandlerDecorators):
                     is_url=is_url,
                     caption=caption,
                 ),
-                tracker=_resolve_tracker_param(tracker),
+                biz_opaque_callback_data=_resolve_tracker_param(tracker),
             )["messages"][0]["id"]
         if not caption:
             raise ValueError(
@@ -695,7 +696,7 @@ class WhatsApp(Server, HandlerDecorators):
                 footer=footer,
             ),
             reply_to_message_id=reply_to_message_id,
-            tracker=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_audio(
@@ -740,7 +741,7 @@ class WhatsApp(Server, HandlerDecorators):
                 media_id_or_url=audio,
                 is_url=is_url,
             ),
-            tracker=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_sticker(
@@ -787,7 +788,7 @@ class WhatsApp(Server, HandlerDecorators):
                 media_id_or_url=sticker,
                 is_url=is_url,
             ),
-            tracker=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_reaction(
@@ -830,7 +831,7 @@ class WhatsApp(Server, HandlerDecorators):
             to=str(to),
             typ=MessageType.REACTION.value,
             msg={"emoji": emoji, "message_id": message_id},
-            tracker=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def remove_reaction(
@@ -870,7 +871,7 @@ class WhatsApp(Server, HandlerDecorators):
             to=str(to),
             typ=MessageType.REACTION.value,
             msg={"emoji": "", "message_id": message_id},
-            tracker=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_location(
@@ -916,7 +917,7 @@ class WhatsApp(Server, HandlerDecorators):
                 "name": name,
                 "address": address,
             },
-            tracker=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def request_location(
@@ -941,7 +942,7 @@ class WhatsApp(Server, HandlerDecorators):
                 action={"name": "send_location"},
                 body=text,
             ),
-            tracker=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_contact(
@@ -984,7 +985,7 @@ class WhatsApp(Server, HandlerDecorators):
             if isinstance(contact, Iterable)
             else (contact.to_dict(),),
             reply_to_message_id=reply_to_message_id,
-            tracker=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_catalog(
@@ -1042,7 +1043,7 @@ class WhatsApp(Server, HandlerDecorators):
                 footer=footer,
             ),
             reply_to_message_id=reply_to_message_id,
-            tracker=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_product(
@@ -1097,7 +1098,7 @@ class WhatsApp(Server, HandlerDecorators):
                 footer=footer,
             ),
             reply_to_message_id=reply_to_message_id,
-            tracker=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_products(
@@ -1169,7 +1170,7 @@ class WhatsApp(Server, HandlerDecorators):
                 footer=footer,
             ),
             reply_to_message_id=reply_to_message_id,
-            tracker=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def mark_message_as_read(
@@ -1573,7 +1574,7 @@ class WhatsApp(Server, HandlerDecorators):
         self._validate_business_account_id_provided()
         return TemplateResponse(
             **self.api.create_template(
-                business_account_id=self.business_account_id,
+                waba_id=self.business_account_id,
                 template=template.to_dict(placeholder=placeholder),
             )
         )
@@ -1669,7 +1670,7 @@ class WhatsApp(Server, HandlerDecorators):
             typ="template",
             msg=template.to_dict(is_header_url=is_url),
             reply_to_message_id=reply_to_message_id,
-            tracker=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def create_flow(
@@ -1677,12 +1678,13 @@ class WhatsApp(Server, HandlerDecorators):
         name: str,
         categories: Iterable[FlowCategory | str],
         clone_flow_id: str | None = None,
+        endpoint_uri: str | None = None,
     ) -> str:
         """
         Create a flow.
 
         - This method requires the WhatsApp Business account ID to be provided when initializing the client.
-        - New Flows are created in DRAFT status.
+        - New Flows are created in :class:`FlowStatus.DRAFT` status.
         - To update the flow json, use :py:func:`~pywa.client.WhatsApp.update_flow`.
         - To send a flow, use :py:func:`~pywa.client.WhatsApp.send_flow`.
 
@@ -1690,6 +1692,8 @@ class WhatsApp(Server, HandlerDecorators):
             name: The name of the flow.
             categories: The categories of the flow.
             clone_flow_id: The flow ID to clone (optional).
+            endpoint_uri: The URL of the FlowJSON Endpoint. Starting from Flow 3.0 this property should be
+             specified only gere. Do not provide this field if you are cloning a Flow with version below 3.0.
 
         Example:
 
@@ -1711,7 +1715,8 @@ class WhatsApp(Server, HandlerDecorators):
             name=name,
             categories=tuple(map(str, categories)),
             clone_flow_id=clone_flow_id,
-            business_account_id=self.business_account_id,
+            endpoint_uri=endpoint_uri,
+            waba_id=self.business_account_id,
         )["id"]
 
     def update_flow_metadata(
@@ -1935,7 +1940,7 @@ class WhatsApp(Server, HandlerDecorators):
         return tuple(
             FlowDetails.from_dict(data=data, client=self)
             for data in self.api.get_flows(
-                business_account_id=self.business_account_id,
+                waba_id=self.business_account_id,
                 fields=_get_flow_fields(invalidate_preview=invalidate_preview),
             )["data"]
         )

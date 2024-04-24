@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 class WhatsAppCloudApi:
-    """Internal methods for the WhatsApp client."""
+    """Internal methods for the WhatsApp client. Do not use this class directly."""
 
     def __init__(
         self,
@@ -72,6 +72,8 @@ class WhatsAppCloudApi:
         """
         Get an access token for an app.
 
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/facebook-login/guides/access-tokens/#apptokens>`_.
+
         Return example::
 
             {
@@ -98,7 +100,7 @@ class WhatsAppCloudApi:
             },
         )
 
-    def set_callback_url(
+    def set_app_callback_url(
         self,
         app_id: int,
         app_access_token: str,
@@ -108,6 +110,8 @@ class WhatsAppCloudApi:
     ) -> dict[str, bool]:
         """
         Set the callback URL for the webhook.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/graph-api/reference/app/subscriptions>`_.
 
         Return example::
 
@@ -137,12 +141,76 @@ class WhatsAppCloudApi:
             },
         )
 
+    def set_waba_callback_url(
+        self,
+        waba_id: str,
+        callback_url: str,
+        verify_token: str,
+    ) -> dict[str, bool]:
+        """
+        Set an alternate callback URL on a WABA.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/embedded-signup/webhooks/override#set-waba-alternate-callback>`_.
+
+        Return example::
+
+            {
+                'success': True
+            }
+
+        Args:
+            waba_id: The ID of the WhatsApp Business Account.
+            callback_url: The URL to set.
+            verify_token: The verify token to challenge the webhook with.
+
+        Returns:
+            The success of the operation.
+        """
+        return self._make_request(
+            method="POST",
+            endpoint=f"/{waba_id}/subscribed_apps",
+            json={
+                "override_callback_uri": callback_url,
+                "verify_token": verify_token,
+            },
+        )
+
+    def set_phone_callback_url(
+        self,
+        callback_url: str,
+        verify_token: str,
+    ) -> dict[str, bool]:
+        """
+        Set an alternate callback URL on the business phone number.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/embedded-signup/webhooks/override#set-phone-number-alternate-callback>`_.
+
+        Args:
+            callback_url: The URL to set.
+            verify_token: The verify token to challenge the webhook with.
+
+        Returns:
+            The success of the operation.
+        """
+        return self._make_request(
+            method="POST",
+            endpoint=f"/{self.phone_id}/",
+            json={
+                "webhook_configuration": {
+                    "override_callback_uri": callback_url,
+                    "verify_token": verify_token,
+                }
+            },
+        )
+
     def set_business_public_key(
         self,
         public_key: str,
     ) -> dict[str, bool]:
         """
         Set the public key of the business.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/whatsapp-business-encryption/#set-business-public-key>`_.
 
         Return example::
 
@@ -170,6 +238,8 @@ class WhatsAppCloudApi:
     ) -> dict[str, str]:
         """
         Upload a media file to WhatsApp.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#upload-media>`_.
 
         Return example::
 
@@ -203,8 +273,8 @@ class WhatsAppCloudApi:
     def get_media_url(self, media_id: str) -> dict:
         """
         Get the URL of a media file.
-            - The url is valid for 5 minutes and can be downloaded only with access token.
-            - For more info: https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#retrieve-media-url
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#retrieve-media-url>`_.
 
         Return example::
 
@@ -233,6 +303,8 @@ class WhatsAppCloudApi:
         """
         Get the bytes of a media file from WhatsApp servers.
 
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#download-media>`_.
+
         Args:
             media_url: The URL of the media file (from ``get_media_url``).
             **kwargs: Additional arguments to pass to the request.
@@ -249,6 +321,8 @@ class WhatsAppCloudApi:
     def delete_media(self, media_id: str) -> dict[str, bool]:
         """
         Delete a media file from WhatsApp servers.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#delete-media>`_.
 
         Return example::
 
@@ -304,17 +378,19 @@ class WhatsAppCloudApi:
         typ: str,
         msg: dict[str, str | list[str]] | tuple[dict],
         reply_to_message_id: str | None = None,
-        tracker: str | None = None,
+        biz_opaque_callback_data: str | None = None,
     ) -> dict[str, dict | list]:
         """
         Send a message to a WhatsApp user.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages>`_.
 
         Args:
             to: The phone number to send the message to.
             typ: The type of the message (e.g. ``text``, ``image``, etc.).
             msg: The message object to send.
             reply_to_message_id: The ID of the message to reply to.
-            tracker: The tracker to send with the message.
+            biz_opaque_callback_data: The tracker to send with the message.
 
         Returns:
             The response from the WhatsApp Cloud API.
@@ -327,8 +403,8 @@ class WhatsAppCloudApi:
         }
         if reply_to_message_id:
             data["context"] = {"message_id": reply_to_message_id}
-        if tracker:
-            data["biz_opaque_callback_data"] = tracker
+        if biz_opaque_callback_data:
+            data["biz_opaque_callback_data"] = biz_opaque_callback_data
         return self._make_request(
             method="POST",
             endpoint=f"/{self.phone_id}/messages",
@@ -339,6 +415,10 @@ class WhatsAppCloudApi:
         self, pin: str, data_localization_region: str = None
     ) -> dict[str, bool]:
         """
+        Register a phone number.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/registration#register>`_.
+
         Return example:
             {
                 'success': True,
@@ -365,6 +445,8 @@ class WhatsAppCloudApi:
     def mark_message_as_read(self, message_id: str) -> dict[str, bool]:
         """
         Mark a message as read.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/mark-message-as-read>`_.
 
         Return example::
 
@@ -393,6 +475,8 @@ class WhatsAppCloudApi:
     ) -> dict[str, list[dict[str, str | list[str]]]]:
         """
         Get the business profile.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/business-profiles/#get-business-profile>`_.
 
         Return example::
 
@@ -432,6 +516,8 @@ class WhatsAppCloudApi:
         """
         Update the business profile.
 
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/business-profiles/#update-business-profile>`_.
+
         Args:
             data: The data to update the business profile with.
 
@@ -451,6 +537,8 @@ class WhatsAppCloudApi:
     def get_commerce_settings(self) -> dict[str, list[dict]]:
         """
         Get the commerce settings of the business catalog.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/sell-products-and-services/set-commerce-settings/#get-commerce-settings>`_.
 
         Return example::
 
@@ -473,6 +561,8 @@ class WhatsAppCloudApi:
         """
         Change the commerce settings of the business catalog.
 
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/sell-products-and-services/set-commerce-settings>`_.
+
         Args:
             data: The data to update the commerce settings with.
 
@@ -490,14 +580,16 @@ class WhatsAppCloudApi:
 
     def create_template(
         self,
-        business_account_id: str,
+        waba_id: str,
         template: dict[str, str | list[str]],
     ) -> dict[str, str]:
         """
         Create a message template.
 
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#creating-templates>`_.
+
         Args:
-            business_account_id: The ID of the business account.
+            waba_id: The ID of the WhatsApp Business Account.
             template: The template to create.
 
         Return example::
@@ -510,25 +602,29 @@ class WhatsAppCloudApi:
         """
         return self._make_request(
             method="POST",
-            endpoint=f"/{business_account_id}/message_templates",
+            endpoint=f"/{waba_id}/message_templates",
             json=template,
         )
 
     def create_flow(
         self,
-        business_account_id: str,
+        waba_id: str,
         name: str,
         categories: tuple[str, ...],
         clone_flow_id: str | None = None,
+        endpoint_uri: str | None = None,
     ) -> dict[str, str]:
         """
         Create or clone a flow.
 
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowsapi#create>`_.
+
         Args:
-            business_account_id: The ID of the business account.
+            waba_id: The ID of the WhatsApp Business Account.
             name: The name of the flow.
             categories: The categories of the flow.
             clone_flow_id: The ID of the flow to clone.
+            endpoint_uri: The endpoint URI of the flow.
 
         Return example::
 
@@ -540,10 +636,11 @@ class WhatsAppCloudApi:
             "name": name,
             "categories": categories,
             **({"clone_flow_id": clone_flow_id} if clone_flow_id else {}),
+            **({"endpoint_uri": endpoint_uri} if endpoint_uri else {}),
         }
         return self._make_request(
             method="POST",
-            endpoint=f"/{business_account_id}/flows",
+            endpoint=f"/{waba_id}/flows",
             json=data,
         )
 
@@ -556,6 +653,8 @@ class WhatsAppCloudApi:
     ) -> dict[str, bool]:
         """
         Update the metadata of a flow.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowsapi#update>`_.
 
         Args:
             flow_id: The ID of the flow.
@@ -583,6 +682,8 @@ class WhatsAppCloudApi:
     def update_flow_json(self, flow_id: str, flow_json: str) -> dict:
         """
         Update the JSON of a flow.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowsapi#update-json>`_.
 
         Args:
             flow_id: The ID of the flow.
@@ -629,6 +730,8 @@ class WhatsAppCloudApi:
         """
         Publish a flow.
 
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowsapi#publish>`_.
+
         Args:
             flow_id: The ID of the flow.
 
@@ -649,6 +752,8 @@ class WhatsAppCloudApi:
     ) -> dict[str, bool]:
         """
         Delete a flow.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowsapi#delete>`_.
 
         Args:
             flow_id: The ID of the flow.
@@ -672,6 +777,8 @@ class WhatsAppCloudApi:
         """
         Deprecate a flow.
 
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowsapi#deprecate>`_.
+
         Args:
             flow_id: The ID of the flow.
 
@@ -694,6 +801,8 @@ class WhatsAppCloudApi:
     ) -> dict[str, Any]:
         """
         Get a flow.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowsapi#details>`_.
 
         Args:
             flow_id: The ID of the flow.
@@ -732,14 +841,16 @@ class WhatsAppCloudApi:
 
     def get_flows(
         self,
-        business_account_id: str,
+        waba_id: str,
         fields: tuple[str, ...] | None = None,
     ) -> dict[str, list[dict[str, Any]]]:
         """
         Get all flows.
 
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowsapi#list>`_.
+
         Args:
-            business_account_id: The ID of the business account.
+            waba_id: The ID of the WhatsApp Business Account.
             fields: The fields to get.
 
         Return example::
@@ -761,7 +872,7 @@ class WhatsAppCloudApi:
               ]
             }
         """
-        endpoint = f"/{business_account_id}/flows"
+        endpoint = f"/{waba_id}/flows"
         if fields:
             endpoint += f"?fields={','.join(fields)}"
         return self._make_request(
@@ -775,6 +886,8 @@ class WhatsAppCloudApi:
     ) -> dict[str, list | dict]:
         """
         Get all assets of a flow.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowsapi#asset-list>`_.
 
         Args:
             flow_id: The ID of the flow.

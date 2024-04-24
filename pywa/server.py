@@ -167,7 +167,7 @@ class Server:
                         app_id=app_id, app_secret=app_secret
                     )
                     # noinspection PyProtectedMember
-                    if not self.api.set_callback_url(
+                    if not self.api.set_app_callback_url(
                         app_id=app_id,
                         app_access_token=app_access_token["access_token"],
                         callback_url=full_url,
