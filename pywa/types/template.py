@@ -16,7 +16,7 @@ import dataclasses
 import logging
 import re
 import pathlib
-import datetime as dt
+import datetime
 from typing import TYPE_CHECKING, Any, BinaryIO, Iterable, Literal
 
 from pywa import utils
@@ -1437,7 +1437,7 @@ class TemplateStatus(BaseUpdate):
     """
 
     id: str
-    timestamp: dt.datetime
+    timestamp: datetime.datetime
     event: TemplateEvent
     message_template_id: int
     message_template_name: str
@@ -1453,7 +1453,7 @@ class TemplateStatus(BaseUpdate):
             _client=client,
             raw=update,
             id=data["id"],
-            timestamp=dt.datetime.fromtimestamp(data["time"]),
+            timestamp=datetime.datetime.fromtimestamp(data["time"]),
             event=cls.TemplateEvent(value["event"]),
             message_template_id=value["message_template_id"],
             message_template_name=value["message_template_name"],

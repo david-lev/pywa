@@ -10,7 +10,7 @@ __all__ = [
 import abc
 import pathlib
 import dataclasses
-import datetime as dt
+import datetime
 from typing import TYPE_CHECKING, BinaryIO, Iterable
 
 from .others import Contact, Metadata, ProductsSection, User
@@ -18,7 +18,7 @@ from .others import Contact, Metadata, ProductsSection, User
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
 
-    from .callback import Button, ButtonUrl, SectionList, FlowButton
+    from .callback import Button, ButtonUrl, SectionList, FlowButton, CallbackDataT
     from .template import Template
 
 
@@ -62,7 +62,7 @@ class BaseUpdate(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def timestamp(self) -> dt.datetime:
+    def timestamp(self) -> datetime.datetime:
         """The timestamp the update was sent"""
         ...
 
@@ -139,7 +139,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         quote: bool = False,
         preview_url: bool = False,
         keyboard: None = None,
-        tracker: str | None = None,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         Reply to the message with text.
@@ -216,7 +216,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             quote: Whether to quote the replied message (default: False).
             preview_url: Whether to show a preview of the URL in the message (if any).
             keyboard: Deprecated and will be removed in a future version, use ``buttons`` instead.
-            tracker: The data to track the message with (optional, up to 512 characters).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The ID of the sent reply.
@@ -244,7 +244,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         quote: bool = False,
         mime_type: str | None = None,
-        tracker: str | None = None,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         Reply to the message with an image.
@@ -271,7 +271,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
              or file path that does not have an extension).
             quote: Whether to quote the replied message (default: False).
             body: Deprecated and will be removed in a future version, use ``caption`` instead.
-            tracker: The data to track the message with (optional, up to 512 characters).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The ID of the sent reply.
@@ -297,7 +297,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         quote: bool = False,
         mime_type: str | None = None,
-        tracker: str | None = None,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         Reply to the message with a video.
@@ -325,7 +325,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
              or file path that does not have an extension).
             quote: Whether to quote the replied message (default: False).
             body: Deprecated and will be removed in a future version, use ``caption`` instead.
-            tracker: The data to track the message with (optional, up to 512 characters).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The ID of the sent reply.
@@ -339,6 +339,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             body=body,
             footer=footer,
             mime_type=mime_type,
+            tracker=tracker,
         )
 
     def reply_document(
@@ -351,7 +352,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         quote: bool = False,
         mime_type: str | None = None,
-        tracker: str | None = None,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         Reply to the message with a document.
@@ -381,7 +382,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
              object, or file path that does not have an extension).
             body: Deprecated and will be removed in a future version, use ``caption`` instead.
             quote: Whether to quote the replied message (default: False).
-            tracker: The data to track the message with (optional, up to 512 characters).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The ID of the sent reply.
@@ -403,7 +404,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         self,
         audio: str | pathlib.Path | bytes | BinaryIO,
         mime_type: str | None = None,
-        tracker: str | None = None,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         Reply to the message with an audio.
@@ -419,7 +420,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             audio: The audio file to reply with (either a media ID, URL, file path, bytes, or an open file object).
             mime_type: The mime type of the audio (optional, required when sending a audio as bytes or a file object,
              or file path that does not have an extension).
-             tracker: The data to track the message with (optional, up to 512 characters).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The ID of the sent message.
@@ -435,7 +436,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         self,
         sticker: str | pathlib.Path | bytes | BinaryIO,
         mime_type: str | None = None,
-        tracker: str | None = None,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         Reply to the message with a sticker.
@@ -453,7 +454,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             sticker: The sticker to reply with (either a media ID, URL, file path, bytes, or an open file object).
             mime_type: The mime type of the sticker (optional, required when sending a sticker as bytes or a file
              object, or file path that does not have an extension).
-            tracker: The data to track the message with (optional, up to 512 characters).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The ID of the sent reply.
@@ -471,7 +472,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         longitude: float,
         name: str | None = None,
         address: str | None = None,
-        tracker: str | None = None,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         Reply to the message with a location.
@@ -492,7 +493,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             longitude: The longitude of the location.
             name: The name of the location (optional).
             address: The address of the location (optional).
-            tracker: The data to track the message with (optional, up to 512 characters).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The ID of the sent reply.
@@ -510,7 +511,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         self,
         contact: Contact | Iterable[Contact],
         quote: bool = False,
-        tracker: str | None = None,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         Reply to the message with a contact/s.
@@ -533,7 +534,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         Args:
             contact: The contact/s to send.
             quote: Whether to quote the replied message (default: False).
-            tracker: The data to track the message with (optional, up to 512 characters).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The ID of the sent reply.
@@ -545,7 +546,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             tracker=tracker,
         )
 
-    def react(self, emoji: str) -> str:
+    def react(self, emoji: str, tracker: CallbackDataT | None = None) -> str:
         """
         React to the message with an emoji.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.send_reaction` with ``to`` and ``message_id``.
@@ -556,6 +557,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
 
         Args:
             emoji: The emoji to react with.
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The ID of the sent reaction.
@@ -564,9 +566,10 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             to=self.sender,
             emoji=emoji,
             message_id=self.message_id_to_reply,
+            tracker=tracker,
         )
 
-    def unreact(self) -> str:
+    def unreact(self, tracker: CallbackDataT | None = None) -> str:
         """
         Remove the reaction from the message.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.remove_reaction` with ``to`` and ``message_id``.
@@ -575,11 +578,14 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
 
             >>> msg.unreact()
 
+        Args:
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+
         Returns:
             The ID of the sent unreaction.
         """
         return self._client.remove_reaction(
-            to=self.sender, message_id=self.message_id_to_reply
+            to=self.sender, message_id=self.message_id_to_reply, tracker=tracker
         )
 
     def reply_catalog(
@@ -588,7 +594,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         footer: str | None = None,
         thumbnail_product_sku: str | None = None,
         quote: bool = False,
-        tracker: str | None = None,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         Reply to the message with a catalog.
@@ -608,7 +614,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             thumbnail_product_sku: The thumbnail of this item will be used as the message's header image (optional, if
                 not provided, the first item in the catalog will be used).
             quote: Whether to quote the replied message (default: False).
-            tracker: The data to track the message with (optional, up to 512 characters).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The ID of the sent reply.
@@ -629,7 +635,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         body: str | None = None,
         footer: str | None = None,
         quote: bool = False,
-        tracker: str | None = None,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         Reply to the message with a product.
@@ -644,7 +650,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
             quote: Whether to quote the replied message (default: False).
-            tracker: The data to track the message with (optional, up to 512 characters).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The ID of the sent reply.
@@ -667,7 +673,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         body: str,
         footer: str | None = None,
         quote: bool = False,
-        tracker: str | None = None,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         Reply to the message with a product.
@@ -704,7 +710,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
             quote: Whether to quote the replied message (default: False).
-            tracker: The data to track the message with (optional, up to 512 characters).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The ID of the sent reply.
@@ -724,7 +730,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         self,
         template: Template,
         quote: bool = False,
-        tracker: str | None = None,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         Reply to the message with a template.
@@ -769,7 +775,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         Args:
             template: The template to send.
             quote: Whether to quote the replied message (default: False).
-            tracker: The data to track the message with (optional, up to 512 characters).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The ID of the sent reply.

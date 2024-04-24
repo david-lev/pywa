@@ -11,7 +11,7 @@ import mimetypes
 import os
 import pathlib
 import warnings
-from typing import BinaryIO, Iterable, Literal
+from typing import BinaryIO, Iterable, Literal, Any
 
 import requests
 
@@ -33,8 +33,11 @@ from pywa.types import (
     Template,
     TemplateResponse,
     FlowButton,
+    ChatOpened,
+    MessageType,
 )
 from pywa.types.base_update import BaseUpdate
+from pywa.types.callback import CallbackDataT, CallbackData
 from pywa.types.flows import (
     FlowCategory,
     FlowJSON,
@@ -42,6 +45,7 @@ from pywa.types.flows import (
     FlowValidationError,
     FlowAsset,
 )
+from pywa.types.others import InteractiveType
 from pywa.utils import FastAPI, Flask
 from pywa.server import Server
 
@@ -247,7 +251,7 @@ class WhatsApp(Server, HandlerDecorators):
         preview_url: bool = False,
         reply_to_message_id: str | None = None,
         keyboard: None = None,
-        tracker: str | None = None,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         Send a message to a WhatsApp user.
@@ -358,7 +362,7 @@ class WhatsApp(Server, HandlerDecorators):
             preview_url: Whether to show a preview of the URL in the message (if any).
             reply_to_message_id: The message ID to reply to (optional).
             keyboard: Deprecated and will be removed in a future version, use ``buttons`` instead.
-            tracker: The data to track the message with (optional, up to 512 characters).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The message ID of the sent message.
@@ -374,27 +378,31 @@ class WhatsApp(Server, HandlerDecorators):
             )
 
         if not buttons:
-            return self.api.send_text_message(
+            return self.api.send_message(
                 to=str(to),
-                text=text,
-                preview_url=preview_url,
+                typ=MessageType.TEXT.value,
+                msg={"body": text, "preview_url": preview_url},
                 reply_to_message_id=reply_to_message_id,
-                tracker=tracker,
+                tracker=_resolve_tracker_param(tracker),
             )["messages"][0]["id"]
-        type_, kb = _resolve_buttons_param(buttons)
-        return self.api.send_interactive_message(
+        typ, kb = _resolve_buttons_param(buttons)
+        return self.api.send_message(
             to=str(to),
-            type_=type_,
-            action=kb,
-            header={
-                "type": "text",
-                "text": header,
-            }
-            if header
-            else None,
-            body=text,
-            footer=footer,
-            tracker=tracker,
+            typ=MessageType.INTERACTIVE.value,
+            msg=_get_interactive_msg(
+                typ=typ,
+                action=kb,
+                header={
+                    "type": MessageType.TEXT.value,
+                    "text": header,
+                }
+                if header
+                else None,
+                body=text,
+                footer=footer,
+            ),
+            reply_to_message_id=reply_to_message_id,
+            tracker=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     send_text = send_message  # alias
@@ -409,7 +417,7 @@ class WhatsApp(Server, HandlerDecorators):
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
-        tracker: str | None = None,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         Send an image to a WhatsApp user.
@@ -437,7 +445,7 @@ class WhatsApp(Server, HandlerDecorators):
             mime_type: The mime type of the image (optional, required when sending an image as bytes or a file object,
              or file path that does not have an extension).
             body: Deprecated and will be removed in a future version, use ``caption`` instead.
-            tracker: The data to track the message with (optional, up to 512 characters).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The message ID of the sent image message.
@@ -460,33 +468,38 @@ class WhatsApp(Server, HandlerDecorators):
             filename=None,
         )
         if not buttons:
-            return self.api.send_media(
+            return self.api.send_message(
                 to=str(to),
-                media_id_or_url=image,
-                is_url=is_url,
-                media_type="image",
-                caption=caption,
-                tracker=tracker,
+                typ=MessageType.IMAGE.value,
+                msg=_get_media_msg(
+                    media_id_or_url=image,
+                    is_url=is_url,
+                    caption=caption,
+                ),
+                tracker=_resolve_tracker_param(tracker),
             )["messages"][0]["id"]
         if not caption:
             raise ValueError(
                 "A caption must be provided when sending an image with buttons."
             )
-        type_, kb = _resolve_buttons_param(buttons)
-        return self.api.send_interactive_message(
+        typ, kb = _resolve_buttons_param(buttons)
+        return self.api.send_message(
             to=str(to),
-            type_=type_,
-            action=kb,
-            header={
-                "type": "image",
-                "image": {
-                    "link" if is_url else "id": image,
+            typ=MessageType.INTERACTIVE.value,
+            msg=_get_interactive_msg(
+                typ=typ,
+                action=kb,
+                header={
+                    "type": MessageType.IMAGE.value,
+                    "image": {
+                        "link" if is_url else "id": image,
+                    },
                 },
-            },
-            body=caption,
-            footer=footer,
+                body=caption,
+                footer=footer,
+            ),
             reply_to_message_id=reply_to_message_id,
-            tracker=tracker,
+            tracker=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_video(
@@ -499,7 +512,7 @@ class WhatsApp(Server, HandlerDecorators):
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
-        tracker: str | None = None,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         Send a video to a WhatsApp user.
@@ -528,7 +541,7 @@ class WhatsApp(Server, HandlerDecorators):
             mime_type: The mime type of the video (optional, required when sending a video as bytes or a file object,
              or file path that does not have an extension).
             body: Deprecated and will be removed in a future version, use ``caption`` instead.
-            tracker: The data to track the message with (optional, up to 512 characters).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The message ID of the sent video.
@@ -551,33 +564,38 @@ class WhatsApp(Server, HandlerDecorators):
             filename=None,
         )
         if not buttons:
-            return self.api.send_media(
+            return self.api.send_message(
                 to=str(to),
-                media_id_or_url=video,
-                is_url=is_url,
-                media_type="video",
-                caption=caption,
-                tracker=tracker,
+                typ=MessageType.VIDEO.value,
+                msg=_get_media_msg(
+                    media_id_or_url=video,
+                    is_url=is_url,
+                    caption=caption,
+                ),
+                tracker=_resolve_tracker_param(tracker),
             )["messages"][0]["id"]
         if not caption:
             raise ValueError(
                 "A caption must be provided when sending a video with buttons."
             )
-        type_, kb = _resolve_buttons_param(buttons)
-        return self.api.send_interactive_message(
+        typ, kb = _resolve_buttons_param(buttons)
+        return self.api.send_message(
             to=str(to),
-            type_=type_,
-            action=kb,
-            header={
-                "type": "video",
-                "video": {
-                    "link" if is_url else "id": video,
+            typ=MessageType.INTERACTIVE.value,
+            msg=_get_interactive_msg(
+                typ=typ,
+                action=kb,
+                header={
+                    "type": MessageType.VIDEO.value,
+                    "video": {
+                        "link" if is_url else "id": video,
+                    },
                 },
-            },
-            body=caption,
-            footer=footer,
+                body=caption,
+                footer=footer,
+            ),
             reply_to_message_id=reply_to_message_id,
-            tracker=tracker,
+            tracker=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_document(
@@ -591,7 +609,7 @@ class WhatsApp(Server, HandlerDecorators):
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
-        tracker: str | None = None,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         Send a document to a WhatsApp user.
@@ -622,7 +640,7 @@ class WhatsApp(Server, HandlerDecorators):
             mime_type: The mime type of the document (optional, required when sending a document as bytes or a file
              object, or file path that does not have an extension).
             body: Deprecated and will be removed in a future version, use ``caption`` instead.
-            tracker: The data to track the message with (optional, up to 512 characters).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The message ID of the sent document.
@@ -645,35 +663,39 @@ class WhatsApp(Server, HandlerDecorators):
             media_type=None,
         )
         if not buttons:
-            return self.api.send_media(
+            return self.api.send_message(
                 to=str(to),
-                media_id_or_url=document,
-                is_url=is_url,
-                media_type="document",
-                caption=caption,
-                filename=filename,
-                tracker=tracker,
+                typ=MessageType.DOCUMENT.value,
+                msg=_get_media_msg(
+                    media_id_or_url=document,
+                    is_url=is_url,
+                    caption=caption,
+                ),
+                tracker=_resolve_tracker_param(tracker),
             )["messages"][0]["id"]
         if not caption:
             raise ValueError(
                 "A caption must be provided when sending a document with buttons."
             )
         type_, kb = _resolve_buttons_param(buttons)
-        return self.api.send_interactive_message(
+        return self.api.send_message(
             to=str(to),
-            type_=type_,
-            action=kb,
-            header={
-                "type": "document",
-                "document": {
-                    "link" if is_url else "id": document,
-                    "filename": filename,
+            typ=MessageType.INTERACTIVE.value,
+            msg=_get_interactive_msg(
+                typ=type_,
+                action=kb,
+                header={
+                    "type": MessageType.DOCUMENT.value,
+                    "document": {
+                        "link" if is_url else "id": document,
+                        "filename": filename,
+                    },
                 },
-            },
-            body=caption,
-            footer=footer,
+                body=caption,
+                footer=footer,
+            ),
             reply_to_message_id=reply_to_message_id,
-            tracker=tracker,
+            tracker=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_audio(
@@ -681,7 +703,7 @@ class WhatsApp(Server, HandlerDecorators):
         to: str | int,
         audio: str | pathlib.Path | bytes | BinaryIO,
         mime_type: str | None = None,
-        tracker: str | None = None,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         Send an audio file to a WhatsApp user.
@@ -699,7 +721,7 @@ class WhatsApp(Server, HandlerDecorators):
             audio: The audio file to send (either a media ID, URL, file path, bytes, or an open file object).
             mime_type: The mime type of the audio file (optional, required when sending an audio file as bytes or a file
              object, or file path that does not have an extension).
-            tracker: The data to track the message with (optional, up to 512 characters).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The message ID of the sent audio file.
@@ -711,12 +733,14 @@ class WhatsApp(Server, HandlerDecorators):
             media_type="audio",
             filename=None,
         )
-        return self.api.send_media(
+        return self.api.send_message(
             to=str(to),
-            media_id_or_url=audio,
-            is_url=is_url,
-            media_type="audio",
-            tracker=tracker,
+            typ=MessageType.AUDIO.value,
+            msg=_get_media_msg(
+                media_id_or_url=audio,
+                is_url=is_url,
+            ),
+            tracker=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_sticker(
@@ -724,7 +748,7 @@ class WhatsApp(Server, HandlerDecorators):
         to: str | int,
         sticker: str | pathlib.Path | bytes | BinaryIO,
         mime_type: str | None = None,
-        tracker: str | None = None,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         Send a sticker to a WhatsApp user.
@@ -744,7 +768,7 @@ class WhatsApp(Server, HandlerDecorators):
             sticker: The sticker to send (either a media ID, URL, file path, bytes, or an open file object).
             mime_type: The mime type of the sticker (optional, required when sending a sticker as bytes or a file
              object, or file path that does not have an extension).
-            tracker: The data to track the message with (optional, up to 512 characters).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The message ID of the sent message.
@@ -756,12 +780,14 @@ class WhatsApp(Server, HandlerDecorators):
             filename=None,
             media_type="sticker",
         )
-        return self.api.send_media(
+        return self.api.send_message(
             to=str(to),
-            media_id_or_url=sticker,
-            is_url=is_url,
-            media_type="sticker",
-            tracker=tracker,
+            typ=MessageType.STICKER.value,
+            msg=_get_media_msg(
+                media_id_or_url=sticker,
+                is_url=is_url,
+            ),
+            tracker=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_reaction(
@@ -769,13 +795,17 @@ class WhatsApp(Server, HandlerDecorators):
         to: str | int,
         emoji: str,
         message_id: str,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         React to a message with an emoji.
             - You can react to incoming messages by using the
               :py:func:`~pywa.types.base_update.BaseUserUpdate.react` method on every update.
 
-                >>> msg.react('👍')
+                >>> wa = WhatsApp(...)
+                >>> @wa.on_message()
+                ... def message_handler(wa: WhatsApp, msg: Message):
+                ...     msg.react('👍')
 
         Example:
 
@@ -790,28 +820,34 @@ class WhatsApp(Server, HandlerDecorators):
             to: The phone ID of the WhatsApp user.
             emoji: The emoji to react with.
             message_id: The message ID to react to.
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The message ID of the reaction (You can't use this message id to remove the reaction or perform any other
             action on it. instead, use the message ID of the message you reacted to).
         """
-        return self.api.send_reaction(
+        return self.api.send_message(
             to=str(to),
-            emoji=emoji,
-            message_id=message_id,
+            typ=MessageType.REACTION.value,
+            msg={"emoji": emoji, "message_id": message_id},
+            tracker=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def remove_reaction(
         self,
         to: str | int,
         message_id: str,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
-        Remove a reaction from a message.
+        Remove reaction from a message.
             - You can remove reactions from incoming messages by using the
               :py:func:`~pywa.types.base_update.BaseUserUpdate.unreact` method on every update.
 
-              >>> msg.unreact()
+                >>> wa = WhatsApp(...)
+                >>> @wa.on_message()
+                ... def message_handler(wa: WhatsApp, msg: Message):
+                ...     msg.unreact()
 
         Example:
 
@@ -824,14 +860,18 @@ class WhatsApp(Server, HandlerDecorators):
         Args:
             to: The phone ID of the WhatsApp user.
             message_id: The message ID to remove the reaction from.
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The message ID of the reaction (You can't use this message id to re-react or perform any other action on it.
             instead, use the message ID of the message you unreacted to).
         """
-        return self.api.send_reaction(to=str(to), emoji="", message_id=message_id)[
-            "messages"
-        ][0]["id"]
+        return self.api.send_message(
+            to=str(to),
+            typ=MessageType.REACTION.value,
+            msg={"emoji": "", "message_id": message_id},
+            tracker=_resolve_tracker_param(tracker),
+        )["messages"][0]["id"]
 
     def send_location(
         self,
@@ -840,7 +880,7 @@ class WhatsApp(Server, HandlerDecorators):
         longitude: float,
         name: str | None = None,
         address: str | None = None,
-        tracker: str | None = None,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         Send a location to a WhatsApp user.
@@ -862,22 +902,25 @@ class WhatsApp(Server, HandlerDecorators):
             longitude: The longitude of the location.
             name: The name of the location (optional).
             address: The address of the location (optional).
-            tracker: The data to track the message with (optional, up to 512 characters).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The message ID of the sent location.
         """
-        return self.api.send_location(
+        return self.api.send_message(
             to=str(to),
-            latitude=latitude,
-            longitude=longitude,
-            name=name,
-            address=address,
-            tracker=tracker,
+            typ=MessageType.LOCATION.value,
+            msg={
+                "latitude": latitude,
+                "longitude": longitude,
+                "name": name,
+                "address": address,
+            },
+            tracker=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def request_location(
-        self, to: str | int, text: str, tracker: str | None = None
+        self, to: str | int, text: str, tracker: CallbackDataT | None = None
     ) -> str:
         """
         Send a text message with button to request the user's location.
@@ -885,17 +928,20 @@ class WhatsApp(Server, HandlerDecorators):
         Args:
             to: The phone ID of the WhatsApp user.
             text: The text to send with the button.
-            tracker: The data to track the message with (optional, up to 512 characters).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The message ID of the sent message.
         """
-        return self.api.send_interactive_message(
+        return self.api.send_message(
             to=str(to),
-            type_="location_request_message",
-            action={"name": "send_location"},
-            body=text,
-            tracker=tracker,
+            typ=MessageType.INTERACTIVE.value,
+            msg=_get_interactive_msg(
+                typ=InteractiveType.LOCATION_REQUEST_MESSAGE.value,
+                action={"name": "send_location"},
+                body=text,
+            ),
+            tracker=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_contact(
@@ -903,7 +949,7 @@ class WhatsApp(Server, HandlerDecorators):
         to: str | int,
         contact: Contact | Iterable[Contact],
         reply_to_message_id: str | None = None,
-        tracker: str | None = None,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         Send a contact/s to a WhatsApp user.
@@ -926,18 +972,19 @@ class WhatsApp(Server, HandlerDecorators):
             to: The phone ID of the WhatsApp user.
             contact: The contact/s to send.
             reply_to_message_id: The message ID to reply to (optional).
-            tracker: The data to track the message with (optional, up to 512 characters).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The message ID of the sent message.
         """
-        return self.api.send_contacts(
+        return self.api.send_message(
             to=str(to),
-            contacts=tuple(c.to_dict() for c in contact)
+            typ=MessageType.CONTACTS.value,
+            msg=tuple(c.to_dict() for c in contact)
             if isinstance(contact, Iterable)
             else (contact.to_dict(),),
             reply_to_message_id=reply_to_message_id,
-            tracker=tracker,
+            tracker=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_catalog(
@@ -947,7 +994,7 @@ class WhatsApp(Server, HandlerDecorators):
         footer: str | None = None,
         thumbnail_product_sku: str | None = None,
         reply_to_message_id: str | None = None,
-        tracker: str | None = None,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         Send the business catalog to a WhatsApp user.
@@ -969,30 +1016,33 @@ class WhatsApp(Server, HandlerDecorators):
             thumbnail_product_sku: The thumbnail of this item will be used as the message's header image (optional, if
                 not provided, the first item in the catalog will be used).
             reply_to_message_id: The message ID to reply to (optional).
-            tracker: The data to track the message with (optional, up to 512 characters).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The message ID of the sent message.
         """
-        return self.api.send_interactive_message(
+        return self.api.send_message(
             to=str(to),
-            type_="catalog_message",
-            action={
-                "name": "catalog_message",
-                **(
-                    {
-                        "parameters": {
-                            "thumbnail_product_retailer_id": thumbnail_product_sku,
+            typ=MessageType.INTERACTIVE.value,
+            msg=_get_interactive_msg(
+                typ=InteractiveType.CATALOG_MESSAGE.value,
+                action={
+                    "name": "catalog_message",
+                    **(
+                        {
+                            "parameters": {
+                                "thumbnail_product_retailer_id": thumbnail_product_sku,
+                            }
                         }
-                    }
-                    if thumbnail_product_sku
-                    else {}
-                ),
-            },
-            body=body,
-            footer=footer,
+                        if thumbnail_product_sku
+                        else {}
+                    ),
+                },
+                body=body,
+                footer=footer,
+            ),
             reply_to_message_id=reply_to_message_id,
-            tracker=tracker,
+            tracker=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_product(
@@ -1003,7 +1053,7 @@ class WhatsApp(Server, HandlerDecorators):
         body: str | None = None,
         footer: str | None = None,
         reply_to_message_id: str | None = None,
-        tracker: str | None = None,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         Send a product from a business catalog to a WhatsApp user.
@@ -1029,22 +1079,25 @@ class WhatsApp(Server, HandlerDecorators):
             body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
             reply_to_message_id: The message ID to reply to (optional).
-            tracker: The data to track the message with (optional, up to 512 characters).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The message ID of the sent message.
         """
-        return self.api.send_interactive_message(
+        return self.api.send_message(
             to=str(to),
-            type_="product",
-            action={
-                "catalog_id": catalog_id,
-                "product_retailer_id": sku,
-            },
-            body=body,
-            footer=footer,
+            typ=MessageType.INTERACTIVE.value,
+            msg=_get_interactive_msg(
+                typ=InteractiveType.PRODUCT.value,
+                action={
+                    "catalog_id": catalog_id,
+                    "product_retailer_id": sku,
+                },
+                body=body,
+                footer=footer,
+            ),
             reply_to_message_id=reply_to_message_id,
-            tracker=tracker,
+            tracker=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_products(
@@ -1056,7 +1109,7 @@ class WhatsApp(Server, HandlerDecorators):
         body: str,
         footer: str | None = None,
         reply_to_message_id: str | None = None,
-        tracker: str | None = None,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         Send products from a business catalog to a WhatsApp user.
@@ -1094,23 +1147,29 @@ class WhatsApp(Server, HandlerDecorators):
             body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
             reply_to_message_id: The message ID to reply to (optional).
-            tracker: The data to track the message with (optional, up to 512 characters).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The message ID of the sent message.
         """
-        return self.api.send_interactive_message(
+        return self.api.send_message(
             to=str(to),
-            type_="product_list",
-            action={
-                "catalog_id": catalog_id,
-                "sections": tuple(ps.to_dict() for ps in product_sections),
-            },
-            header={"type": "text", "text": title},
-            body=body,
-            footer=footer,
+            typ=MessageType.INTERACTIVE.value,
+            msg=_get_interactive_msg(
+                typ=InteractiveType.PRODUCT_LIST.value,
+                action={
+                    "catalog_id": catalog_id,
+                    "sections": tuple(ps.to_dict() for ps in product_sections),
+                },
+                header={
+                    "type": MessageType.TEXT.value,
+                    "text": title,
+                },
+                body=body,
+                footer=footer,
+            ),
             reply_to_message_id=reply_to_message_id,
-            tracker=tracker,
+            tracker=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def mark_message_as_read(
@@ -1524,7 +1583,7 @@ class WhatsApp(Server, HandlerDecorators):
         to: str | int,
         template: Template,
         reply_to_message_id: str | None = None,
-        tracker: str | None = None,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         Send a template to a WhatsApp user.
@@ -1571,7 +1630,7 @@ class WhatsApp(Server, HandlerDecorators):
             to: The phone ID of the WhatsApp user.
             template: The template to send.
             reply_to_message_id: The message ID to reply to (optional).
-            tracker: The data to track the message with (optional, up to 512 characters).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The message ID of the sent template.
@@ -1605,11 +1664,12 @@ class WhatsApp(Server, HandlerDecorators):
                     media_type="video",
                     filename=None,
                 )
-        return self.api.send_template(
+        return self.api.send_message(
             to=str(to),
-            template=template.to_dict(is_header_url=is_url),
+            typ="template",
+            msg=template.to_dict(is_header_url=is_url),
             reply_to_message_id=reply_to_message_id,
-            tracker=tracker,
+            tracker=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def create_flow(
@@ -1833,24 +1893,6 @@ class WhatsApp(Server, HandlerDecorators):
         """
         return self.api.deprecate_flow(flow_id=str(flow_id))["success"]
 
-    @staticmethod
-    def _get_flow_fields(invalidate_preview: bool) -> tuple[str, ...]:
-        """Internal method to get the fields of a flow."""
-        return (
-            "id",
-            "name",
-            "status",
-            "updated_at",
-            "categories",
-            "validation_errors",
-            "json_version",
-            "data_api_version",
-            "endpoint_uri",
-            f"preview.invalidate({'true' if invalidate_preview else 'false'})",
-            "whatsapp_business_account",
-            "application",
-        )
-
     def get_flow(
         self,
         flow_id: str | int,
@@ -1869,7 +1911,7 @@ class WhatsApp(Server, HandlerDecorators):
         return FlowDetails.from_dict(
             data=self.api.get_flow(
                 flow_id=str(flow_id),
-                fields=self._get_flow_fields(invalidate_preview=invalidate_preview),
+                fields=_get_flow_fields(invalidate_preview=invalidate_preview),
             ),
             client=self,
         )
@@ -1894,7 +1936,7 @@ class WhatsApp(Server, HandlerDecorators):
             FlowDetails.from_dict(data=data, client=self)
             for data in self.api.get_flows(
                 business_account_id=self.business_account_id,
-                fields=self._get_flow_fields(invalidate_preview=invalidate_preview),
+                fields=_get_flow_fields(invalidate_preview=invalidate_preview),
             )["data"]
         )
 
@@ -1953,18 +1995,20 @@ class WhatsApp(Server, HandlerDecorators):
 
 def _resolve_buttons_param(
     buttons: Iterable[Button] | ButtonUrl | FlowButton | SectionList,
-) -> tuple[str, dict]:
+) -> tuple[InteractiveType, dict]:
     """
     Internal method to resolve `buttons` parameter. Returns a tuple of (type, buttons).
     """
     if isinstance(buttons, SectionList):
-        return "list", buttons.to_dict()
+        return InteractiveType.LIST.value, buttons.to_dict()
     elif isinstance(buttons, ButtonUrl):
-        return "cta_url", buttons.to_dict()
+        return InteractiveType.CTA_URL.value, buttons.to_dict()
     elif isinstance(buttons, FlowButton):
-        return "flow", buttons.to_dict()
+        return InteractiveType.FLOW.value, buttons.to_dict()
     else:  # assume its a list of buttons
-        return "button", {"buttons": tuple(b.to_dict() for b in buttons)}
+        return InteractiveType.BUTTON.value, {
+            "buttons": tuple(b.to_dict() for b in buttons)
+        }
 
 
 _media_types_default_filenames = {
@@ -1995,4 +2039,56 @@ def _resolve_media_param(
         media=media,
         mime_type=mime_type,
         filename=_media_types_default_filenames.get(media_type, filename),
+    )
+
+
+def _resolve_tracker_param(tracker: CallbackDataT | None) -> str | None:
+    """Internal method to resolve the `tracker` parameter."""
+    return tracker.to_str() if isinstance(tracker, CallbackData) else tracker
+
+
+def _get_interactive_msg(
+    typ: InteractiveType,
+    action: dict[str, Any],
+    header: dict | None = None,
+    body: str | None = None,
+    footer: str | None = None,
+):
+    return {
+        "type": typ,
+        "action": action,
+        **({"header": header} if header else {}),
+        **({"body": {"text": body}} if body else {}),
+        **({"footer": {"text": footer}} if footer else {}),
+    }
+
+
+def _get_media_msg(
+    media_id_or_url: str,
+    is_url: bool,
+    caption: str | None = None,
+    filename: str | None = None,
+):
+    return {
+        ("link" if is_url else "id"): media_id_or_url,
+        **({"caption": caption} if caption else {}),
+        **({"filename": filename} if filename else {}),
+    }
+
+
+def _get_flow_fields(invalidate_preview: bool) -> tuple[str, ...]:
+    """Internal method to get the fields of a flow."""
+    return (
+        "id",
+        "name",
+        "status",
+        "updated_at",
+        "categories",
+        "validation_errors",
+        "json_version",
+        "data_api_version",
+        "endpoint_uri",
+        f"preview.invalidate({'true' if invalidate_preview else 'false'})",
+        "whatsapp_business_account",
+        "application",
     )

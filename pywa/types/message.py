@@ -5,7 +5,7 @@ from __future__ import annotations
 __all__ = ["Message"]
 
 import dataclasses
-import datetime as dt
+import datetime
 from typing import TYPE_CHECKING, Any, Callable, Iterable
 
 from pywa.errors import WhatsAppError
@@ -84,7 +84,7 @@ class Message(BaseUserUpdate):
     type: MessageType
     metadata: Metadata
     from_user: User
-    timestamp: dt.datetime
+    timestamp: datetime.datetime
     reply_to_message: ReplyToMessage | None
     forwarded: bool
     forwarded_many_times: bool
@@ -152,7 +152,7 @@ class Message(BaseUserUpdate):
             type=MessageType(msg_type),
             **msg_content,
             from_user=usr,
-            timestamp=dt.datetime.fromtimestamp(int(msg["timestamp"])),
+            timestamp=datetime.datetime.fromtimestamp(int(msg["timestamp"])),
             metadata=Metadata.from_dict(value["metadata"]),
             forwarded=context.get("forwarded", False)
             or context.get("frequently_forwarded", False),

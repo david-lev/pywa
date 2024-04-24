@@ -95,6 +95,24 @@ class MessageType(utils.StrEnum):
         return cls.UNKNOWN
 
 
+class InteractiveType(utils.StrEnum):
+    """
+    Interactive types.
+
+    Attributes:
+
+    """
+
+    BUTTON = "button"
+    CTA_URL = "cta_url"
+    CATALOG_MESSAGE = "catalog_message"
+    LIST = "list"
+    PRODUCT = "product"
+    PRODUCT_LIST = "product_list"
+    FLOW = "flow"
+    LOCATION_REQUEST_MESSAGE = "location_request_message"
+
+
 @dataclasses.dataclass(frozen=True, slots=True)
 class Reaction(utils.FromDict):
     """

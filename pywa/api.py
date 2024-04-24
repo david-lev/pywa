@@ -162,53 +162,6 @@ class WhatsAppCloudApi:
             data={"business_public_key": public_key},
         )
 
-    def send_text_message(
-        self,
-        to: str,
-        text: str,
-        preview_url: bool = False,
-        reply_to_message_id: str | None = None,
-        tracker: str | None = None,
-    ) -> dict[str, dict | list]:
-        """
-        Send a text message to a WhatsApp user.
-
-        Return example::
-
-            {
-                'messaging_product': 'whatsapp',
-                'contacts': [{'input': '1234567890', 'wa_id': '1234567890'}],
-                'messages': [{'id': 'wamid.XXXXXXXXXXXXXXXX=='}]
-            }
-
-        Args:
-            to: The WhatsApp ID of the recipient.
-            text: The text to send.
-            preview_url: Whether to show a preview of the URL in the message.
-            reply_to_message_id: The ID of the message to reply to.
-            tracker: The data that you can track by MessageStatus.
-
-        Returns:
-            The sent message.
-        """
-        data = {
-            **self._common_keys,
-            "to": to,
-            "type": "text",
-            "text": {"body": text, "preview_url": preview_url},
-        }
-        if reply_to_message_id:
-            data["context"] = {"message_id": reply_to_message_id}
-
-        if tracker:
-            data["biz_opaque_callback_data"] = tracker
-
-        return self._make_request(
-            method="POST",
-            endpoint=f"/{self.phone_id}/messages",
-            json=data,
-        )
-
     def upload_media(
         self,
         media: bytes,
@@ -309,142 +262,6 @@ class WhatsAppCloudApi:
         """
         return self._make_request(method="DELETE", endpoint=f"/{media_id}")
 
-    def send_media(
-        self,
-        to: str,
-        media_id_or_url: str,
-        media_type: str,
-        is_url: bool,
-        caption: str | None = None,
-        filename: str | None = None,
-        tracker: str | None = None,
-    ) -> dict[str, dict | list]:
-        """
-        Send a media file to a WhatsApp user.
-
-        Return example::
-
-            {
-                'messaging_product': 'whatsapp',
-                'contacts': [{'input': '1234567890', 'wa_id': '1234567890'}],
-                'messages': [{'id': 'wamid.XXXXXXXXXXXXXXXX=='}]
-            }
-
-        Args:
-            to: The WhatsApp ID of the recipient.
-            media_id_or_url: The ID or URL of the media file to send.
-            is_url: Whether the media_id_or_url is a URL or an ID.
-            media_type: The type of the media file (e.g. 'image', 'video', 'document').
-            caption: The caption to send with the media file (only for images, videos and documents).
-            filename: The filename to send with the media file (only for documents).
-            tracker: The data that you can track by MessageStatus.
-
-        Returns:
-            The sent message.
-        """
-        data = {
-            **self._common_keys,
-            "to": to,
-            "type": media_type,
-            media_type: {
-                ("link" if is_url else "id"): media_id_or_url,
-                **({"caption": caption} if caption else {}),
-                **({"filename": filename} if filename else {}),
-            },
-            **({"biz_opaque_callback_data": tracker} if tracker else {}),
-        }
-        return self._make_request(
-            method="POST",
-            endpoint=f"/{self.phone_id}/messages",
-            json=data,
-        )
-
-    def send_reaction(
-        self,
-        to: str,
-        emoji: str,
-        message_id: str,
-    ) -> dict[str, dict | list]:
-        """
-        Send a reaction to a message.
-
-        Return example::
-
-            {
-                'messaging_product': 'whatsapp',
-                'contacts': [{'input': '1234567890', 'wa_id': '1234567890'}],
-                'messages': [{'id': 'wamid.XXXXXXXXXXXXXXXX=='}]
-            }
-
-        Args:
-            to: The WhatsApp ID of the recipient.
-            emoji: The emoji to react with (empty to remove reaction).
-            message_id: The ID of the message to react to.
-
-        Returns:
-            The sent message.
-        """
-        return self._make_request(
-            method="POST",
-            endpoint=f"/{self.phone_id}/messages/",
-            json={
-                **self._common_keys,
-                "to": to,
-                "type": "reaction",
-                "reaction": {"emoji": emoji, "message_id": message_id},
-            },
-        )
-
-    def send_location(
-        self,
-        to: str,
-        latitude: float,
-        longitude: float,
-        name: str | None = None,
-        address: str | None = None,
-        tracker: str | None = None,
-    ) -> dict[str, dict | list]:
-        """
-        Send a location to a WhatsApp user.
-
-        Return example::
-
-            {
-                'messaging_product': 'whatsapp',
-                'contacts': [{'input': '1234567890', 'wa_id': '1234567890'}],
-                'messages': [{'id': 'wamid.XXXXXXXXXXXXXXXX=='}]
-            }
-
-        Args:
-            to: The WhatsApp ID of the recipient.
-            latitude: The latitude of the location.
-            longitude: The longitude of the location.
-            name: The name of the location.
-            address: The address of the location.
-            tracker: The data that you can track by MessageStatus.
-
-        Returns:
-            The sent message.
-        """
-        data = {
-            **self._common_keys,
-            "to": to,
-            "type": "location",
-            "location": {
-                "latitude": latitude,
-                "longitude": longitude,
-                "name": name,
-                "address": address,
-            },
-            **({"biz_opaque_callback_data": tracker} if tracker else {}),
-        }
-
-        return self._make_request(
-            method="POST",
-            endpoint=f"/{self.phone_id}/messages",
-            json=data,
-        )
-
     def send_raw_request(self, method: str, endpoint: str, **kwargs) -> Any:
         """
         Send a raw request to WhatsApp Cloud API.
@@ -481,62 +298,41 @@ class WhatsAppCloudApi:
             **kwargs,
         )
 
-    def send_interactive_message(
+    def send_message(
         self,
         to: str,
-        type_: str,
-        action: dict[str, Any],
-        header: dict | None = None,
-        body: str | None = None,
-        footer: str | None = None,
+        typ: str,
+        msg: dict[str, str | list[str]] | tuple[dict],
         reply_to_message_id: str | None = None,
         tracker: str | None = None,
     ) -> dict[str, dict | list]:
         """
-        Send an interactive message to a WhatsApp user.
-
-        Return example::
-
-            {
-                'messaging_product': 'whatsapp',
-                'contacts': [{'input': '1234567890', 'wa_id': '1234567890'}],
-                'messages': [{'id': 'wamid.XXXXXXXXXXXXXXXX=='}]
-            }
+        Send a message to a WhatsApp user.
 
         Args:
-            to: The WhatsApp ID of the recipient.
-            type_: The type of the message (e.g. ``list``, ``button``, ``product``, etc.).
-            action: The action of the message.
-            header: The header of the message.
-            body: The body of the message.
-            footer: The footer of the message.
+            to: The phone number to send the message to.
+            typ: The type of the message (e.g. ``text``, ``image``, etc.).
+            msg: The message object to send.
             reply_to_message_id: The ID of the message to reply to.
-            tracker: The data that you can track by MessageStatus.
+            tracker: The tracker to send with the message.
 
         Returns:
-            The sent message.
+            The response from the WhatsApp Cloud API.
         """
+        data = {
+            **self._common_keys,
+            "to": to,
+            "type": typ,
+            typ: msg,
+        }
+        if reply_to_message_id:
+            data["context"] = {"message_id": reply_to_message_id}
+        if tracker:
+            data["biz_opaque_callback_data"] = tracker
         return self._make_request(
             method="POST",
             endpoint=f"/{self.phone_id}/messages",
-            json={
-                **self._common_keys,
-                "to": to,
-                "type": "interactive",
-                "interactive": {
-                    "type": type_,
-                    "action": action,
-                    **({"header": header} if header else {}),
-                    **({"body": {"text": body}} if body else {}),
-                    **({"footer": {"text": footer}} if footer else {}),
-                },
-                **(
-                    {"context": {"message_id": reply_to_message_id}}
-                    if reply_to_message_id
-                    else {}
-                ),
-                **({"biz_opaque_callback_data": tracker} if tracker else {}),
-            },
+            json=data,
         )
 
     def register_phone_number(
@@ -564,49 +360,6 @@ class WhatsAppCloudApi:
                     else {}
                 ),
             },
-        )
-
-    def send_contacts(
-        self,
-        to: str,
-        contacts: tuple[dict[str, Any], ...],
-        reply_to_message_id: str | None = None,
-        tracker: str | None = None,
-    ) -> dict[str, dict | list]:
-        """
-        Send a list of contacts to a WhatsApp user.
-
-        Return example::
-
-            {
-                'messaging_product': 'whatsapp',
-                'contacts': [{'input': '1234567890', 'wa_id': '1234567890'}],
-                'messages': [{'id': 'wamid.XXXXXXXXXXXXXXXX=='}]
-            }
-
-        Args:
-            to: The WhatsApp ID of the recipient.
-            contacts: The contacts to send.
-            reply_to_message_id: The ID of the message to reply to.
-            tracker: The data that you can track by MessageStatus.
-
-        Returns:
-            The sent message.
-        """
-        data = {
-            **self._common_keys,
-            "to": to,
-            "type": "contacts",
-            "contacts": tuple(contacts),
-        }
-        if reply_to_message_id:
-            data["context"] = {"message_id": reply_to_message_id}
-        if tracker:
-            data["biz_opaque_callback_data"] = tracker
-        return self._make_request(
-            method="POST",
-            endpoint=f"/{self.phone_id}/messages",
-            json=data,
         )
 
     def mark_message_as_read(self, message_id: str) -> dict[str, bool]:
@@ -759,47 +512,6 @@ class WhatsAppCloudApi:
             method="POST",
             endpoint=f"/{business_account_id}/message_templates",
             json=template,
-        )
-
-    def send_template(
-        self,
-        to: str,
-        template: dict,
-        reply_to_message_id: str | None = None,
-        tracker: str | None = None,
-    ) -> dict[str, dict | list]:
-        """
-        Send a template to a WhatsApp user.
-
-        Args:
-            to: The WhatsApp ID of the recipient.
-            template: The template to send.
-            reply_to_message_id: The ID of the message to reply to.
-            tracker: The data that you can track by MessageStatus.
-
-        Returns example::
-
-            {
-                'messaging_product': 'whatsapp',
-                'contacts': [{'input': '1234567890', 'wa_id': '1234567890'}],
-                'messages': [{'id': 'wamid.XXXXXXXXXXXXXXXX=='}]
-            }
-
-        """
-        data = {
-            **self._common_keys,
-            "to": to,
-            "type": "template",
-            "template": template,
-        }
-        if reply_to_message_id:
-            data["context"] = {"message_id": reply_to_message_id}
-        if tracker:
-            data["biz_opaque_callback_data"] = tracker
-        return self._make_request(
-            method="POST",
-            endpoint=f"/{self.phone_id}/messages",
-            json=data,
         )
 
     def create_flow(

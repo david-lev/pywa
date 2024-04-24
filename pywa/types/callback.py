@@ -14,7 +14,7 @@ __all__ = [
 ]
 
 import dataclasses
-import datetime as dt
+import datetime
 import enum
 import types
 from typing import (
@@ -32,7 +32,7 @@ from typing import (
 
 from .base_update import BaseUserUpdate  # noqa
 from .flows import FlowStatus, FlowActionType
-from .others import MessageType, Metadata, ReplyToMessage, User
+from .others import MessageType, Metadata, ReplyToMessage, User, InteractiveType
 from .. import utils
 
 if TYPE_CHECKING:
@@ -244,7 +244,7 @@ CallbackDataT = TypeVar(
     "CallbackDataT",
     bound=str | CallbackData | Iterable[CallbackData | Any],
 )
-"""Type hint for ``callback_data`` parameter in :class:`Button` and :class:`SectionRow`."""
+"""Type hint for ``callback_data`` parameter in :class:`Button` and :class:`SectionRow` and for ``tracker``'s"""
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -316,7 +316,7 @@ class CallbackButton(BaseUserUpdate, Generic[CallbackDataT]):
     type: MessageType
     metadata: Metadata
     from_user: User
-    timestamp: dt.datetime
+    timestamp: datetime.datetime
     reply_to_message: ReplyToMessage
     data: CallbackDataT
     title: str
@@ -340,7 +340,7 @@ class CallbackButton(BaseUserUpdate, Generic[CallbackDataT]):
             metadata=Metadata.from_dict(value["metadata"]),
             type=MessageType(msg_type),
             from_user=User.from_dict(value["contacts"][0]),
-            timestamp=dt.datetime.fromtimestamp(int(msg["timestamp"])),
+            timestamp=datetime.datetime.fromtimestamp(int(msg["timestamp"])),
             reply_to_message=ReplyToMessage.from_dict(msg["context"]),
             data=data,
             title=title,
@@ -424,7 +424,7 @@ class CallbackSelection(BaseUserUpdate, Generic[CallbackDataT]):
     type: MessageType
     metadata: Metadata
     from_user: User
-    timestamp: dt.datetime
+    timestamp: datetime.datetime
     reply_to_message: ReplyToMessage
     data: CallbackDataT
     title: str
@@ -440,7 +440,7 @@ class CallbackSelection(BaseUserUpdate, Generic[CallbackDataT]):
             metadata=Metadata.from_dict(value["metadata"]),
             type=MessageType(msg["type"]),
             from_user=User.from_dict(value["contacts"][0]),
-            timestamp=dt.datetime.fromtimestamp(int(msg["timestamp"])),
+            timestamp=datetime.datetime.fromtimestamp(int(msg["timestamp"])),
             reply_to_message=ReplyToMessage.from_dict(msg["context"]),
             data=msg["interactive"]["list_reply"]["id"],
             title=msg["interactive"]["list_reply"]["title"],
@@ -499,7 +499,7 @@ class ButtonUrl:
 
     def to_dict(self) -> dict:
         return {
-            "name": "cta_url",
+            "name": InteractiveType.CTA_URL,
             "parameters": {"display_text": self.title, "url": self.url},
         }
 
@@ -613,7 +613,7 @@ class FlowButton:
 
     def to_dict(self) -> dict:
         return {
-            "name": "flow",
+            "name": InteractiveType.FLOW,
             "parameters": {
                 "mode": self.mode.lower(),
                 "flow_message_version": str(self.flow_message_version),
