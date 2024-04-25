@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import base64
+import functools
 import json
 import dataclasses
 import enum
 import importlib
+import warnings
 from typing import Any, Callable, Protocol, TypeAlias
 
 
@@ -258,3 +260,43 @@ def rename_func(extended_with: str) -> Callable:
         return func
 
     return inner
+
+
+def deprecated(
+    *,
+    arg: str,
+    use_instead: str | None,
+    expected_type: Any,
+) -> Callable:
+    """
+    Decorator to deprecate an argument and suggest (warnings.warn) using another one instead.
+
+    Args:
+        arg: The old argument name that is deprecated.
+        use_instead: The new argument name to use instead (if any).
+        expected_type: The expected type of the old argument. If the type is different, a warning will be raised.
+
+    Returns:
+        Callable: The decorated function.
+    """
+
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            if arg in kwargs and not isinstance(kwargs[arg], expected_type):
+                warnings.simplefilter("always", DeprecationWarning)
+                warnings.warn(
+                    message=f"{func.__name__}: `{arg}` is deprecated and will be removed in a future version."
+                    + f" Use `{use_instead}` instead."
+                    if use_instead
+                    else "",
+                    category=DeprecationWarning,
+                    stacklevel=2,
+                )
+                if use_instead:
+                    kwargs[use_instead] = kwargs.pop(arg)
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
