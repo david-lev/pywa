@@ -5,13 +5,15 @@ from __future__ import annotations
 __all__ = ["WhatsApp"]
 
 import collections
+import functools
 import hashlib
 import json
 import mimetypes
 import os
 import pathlib
 import warnings
-from typing import BinaryIO, Iterable, Literal, Any
+from types import NoneType
+from typing import BinaryIO, Iterable, Literal, Any, Callable
 
 import requests
 
@@ -33,11 +35,9 @@ from pywa.types import (
     Template,
     TemplateResponse,
     FlowButton,
-    ChatOpened,
     MessageType,
     FlowStatus,
 )
-from pywa.types.base_update import BaseUpdate
 from pywa.types.callback import CallbackDataT, CallbackData
 from pywa.types.flows import (
     FlowCategory,
@@ -50,7 +50,8 @@ from pywa.types.others import InteractiveType
 from pywa.utils import FastAPI, Flask
 from pywa.server import Server
 
-_MISSING = object()
+_MISSING: object | None = object()
+"""A sentinel value to indicate a missing value to distinguish from ``None``."""
 
 
 class WhatsApp(Server, HandlerDecorators):
@@ -242,6 +243,7 @@ class WhatsApp(Server, HandlerDecorators):
                 continue
             self._handlers[handler.__class__].append(handler)
 
+    @utils.deprecated(arg="keyboard", use_instead="buttons", expected_type=NoneType)
     def send_message(
         self,
         to: str | int,
@@ -355,9 +357,9 @@ class WhatsApp(Server, HandlerDecorators):
         Args:
             to: The phone ID of the WhatsApp user.
             text: The text to send (`markdown <https://faq.whatsapp.com/539178204879377>`_ allowed, max 4096 characters).
-            header: The header of the message (if keyboard is provided, optional, up to 60 characters,
+            header: The header of the message (if ``buttons`` are provided, optional, up to 60 characters,
              no `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
-            footer: The footer of the message (if keyboard is provided, optional, up to 60 characters,
+            footer: The footer of the message (if ``buttons`` are provided, optional, up to 60 characters,
              `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the message (optional).
             preview_url: Whether to show a preview of the URL in the message (if any).
@@ -368,20 +370,10 @@ class WhatsApp(Server, HandlerDecorators):
         Returns:
             The message ID of the sent message.
         """
-        if keyboard is not None:
-            buttons = keyboard
-            warnings.simplefilter("always", DeprecationWarning)
-            warnings.warn(
-                message="send_message | reply_text: "
-                "`keyboard` is deprecated and will be removed in a future version, use `buttons` instead.",
-                category=DeprecationWarning,
-                stacklevel=2,
-            )
-
         if not buttons:
             return self.api.send_message(
                 to=str(to),
-                typ=MessageType.TEXT.value,
+                typ=MessageType.TEXT,
                 msg={"body": text, "preview_url": preview_url},
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=_resolve_tracker_param(tracker),
@@ -389,12 +381,12 @@ class WhatsApp(Server, HandlerDecorators):
         typ, kb = _resolve_buttons_param(buttons)
         return self.api.send_message(
             to=str(to),
-            typ=MessageType.INTERACTIVE.value,
+            typ=MessageType.INTERACTIVE,
             msg=_get_interactive_msg(
                 typ=typ,
                 action=kb,
                 header={
-                    "type": MessageType.TEXT.value,
+                    "type": MessageType.TEXT,
                     "text": header,
                 }
                 if header
@@ -408,6 +400,7 @@ class WhatsApp(Server, HandlerDecorators):
 
     send_text = send_message  # alias
 
+    @utils.deprecated(arg="body", use_instead="caption", expected_type=NoneType)
     def send_image(
         self,
         to: str | int,
@@ -451,27 +444,18 @@ class WhatsApp(Server, HandlerDecorators):
         Returns:
             The message ID of the sent image message.
         """
-        if body is not None:
-            warnings.simplefilter("always", DeprecationWarning)
-            warnings.warn(
-                message="send_image | reply_image: "
-                "`body` is deprecated and will be removed in a future version, use `caption` instead.",
-                category=DeprecationWarning,
-                stacklevel=2,
-            )
-            caption = body
 
         is_url, image = _resolve_media_param(
             wa=self,
             media=image,
             mime_type=mime_type,
-            media_type="image",
+            media_type=MessageType.IMAGE,
             filename=None,
         )
         if not buttons:
             return self.api.send_message(
                 to=str(to),
-                typ=MessageType.IMAGE.value,
+                typ=MessageType.IMAGE,
                 msg=_get_media_msg(
                     media_id_or_url=image,
                     is_url=is_url,
@@ -486,12 +470,12 @@ class WhatsApp(Server, HandlerDecorators):
         typ, kb = _resolve_buttons_param(buttons)
         return self.api.send_message(
             to=str(to),
-            typ=MessageType.INTERACTIVE.value,
+            typ=MessageType.INTERACTIVE,
             msg=_get_interactive_msg(
                 typ=typ,
                 action=kb,
                 header={
-                    "type": MessageType.IMAGE.value,
+                    "type": MessageType.IMAGE,
                     "image": {
                         "link" if is_url else "id": image,
                     },
@@ -503,6 +487,7 @@ class WhatsApp(Server, HandlerDecorators):
             biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
+    @utils.deprecated(arg="body", use_instead="caption", expected_type=NoneType)
     def send_video(
         self,
         to: str | int,
@@ -547,27 +532,17 @@ class WhatsApp(Server, HandlerDecorators):
         Returns:
             The message ID of the sent video.
         """
-        if body is not None:
-            warnings.simplefilter("always", DeprecationWarning)
-            warnings.warn(
-                message="send_video | reply_video: "
-                "`body` is deprecated and will be removed in a future version, use `caption` instead.",
-                category=DeprecationWarning,
-                stacklevel=2,
-            )
-            caption = body
-
         is_url, video = _resolve_media_param(
             wa=self,
             media=video,
             mime_type=mime_type,
-            media_type="video",
+            media_type=MessageType.VIDEO,
             filename=None,
         )
         if not buttons:
             return self.api.send_message(
                 to=str(to),
-                typ=MessageType.VIDEO.value,
+                typ=MessageType.VIDEO,
                 msg=_get_media_msg(
                     media_id_or_url=video,
                     is_url=is_url,
@@ -582,12 +557,12 @@ class WhatsApp(Server, HandlerDecorators):
         typ, kb = _resolve_buttons_param(buttons)
         return self.api.send_message(
             to=str(to),
-            typ=MessageType.INTERACTIVE.value,
+            typ=MessageType.INTERACTIVE,
             msg=_get_interactive_msg(
                 typ=typ,
                 action=kb,
                 header={
-                    "type": MessageType.VIDEO.value,
+                    "type": MessageType.VIDEO,
                     "video": {
                         "link" if is_url else "id": video,
                     },
@@ -599,6 +574,7 @@ class WhatsApp(Server, HandlerDecorators):
             biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
+    @utils.deprecated(arg="body", use_instead="caption", expected_type=NoneType)
     def send_document(
         self,
         to: str | int,
@@ -646,16 +622,6 @@ class WhatsApp(Server, HandlerDecorators):
         Returns:
             The message ID of the sent document.
         """
-        if body is not None:
-            warnings.simplefilter("always", DeprecationWarning)
-            warnings.warn(
-                message="send_document | reply_document: "
-                "`body` is deprecated and will be removed in a future version, use `caption` instead.",
-                category=DeprecationWarning,
-                stacklevel=2,
-            )
-            caption = body
-
         is_url, document = _resolve_media_param(
             wa=self,
             media=document,
@@ -666,7 +632,7 @@ class WhatsApp(Server, HandlerDecorators):
         if not buttons:
             return self.api.send_message(
                 to=str(to),
-                typ=MessageType.DOCUMENT.value,
+                typ=MessageType.DOCUMENT,
                 msg=_get_media_msg(
                     media_id_or_url=document,
                     is_url=is_url,
@@ -681,12 +647,12 @@ class WhatsApp(Server, HandlerDecorators):
         type_, kb = _resolve_buttons_param(buttons)
         return self.api.send_message(
             to=str(to),
-            typ=MessageType.INTERACTIVE.value,
+            typ=MessageType.INTERACTIVE,
             msg=_get_interactive_msg(
                 typ=type_,
                 action=kb,
                 header={
-                    "type": MessageType.DOCUMENT.value,
+                    "type": MessageType.DOCUMENT,
                     "document": {
                         "link" if is_url else "id": document,
                         "filename": filename,
@@ -731,12 +697,12 @@ class WhatsApp(Server, HandlerDecorators):
             wa=self,
             media=audio,
             mime_type=mime_type,
-            media_type="audio",
+            media_type=MessageType.AUDIO,
             filename=None,
         )
         return self.api.send_message(
             to=str(to),
-            typ=MessageType.AUDIO.value,
+            typ=MessageType.AUDIO,
             msg=_get_media_msg(
                 media_id_or_url=audio,
                 is_url=is_url,
@@ -779,11 +745,11 @@ class WhatsApp(Server, HandlerDecorators):
             media=sticker,
             mime_type=mime_type,
             filename=None,
-            media_type="sticker",
+            media_type=MessageType.STICKER,
         )
         return self.api.send_message(
             to=str(to),
-            typ=MessageType.STICKER.value,
+            typ=MessageType.STICKER,
             msg=_get_media_msg(
                 media_id_or_url=sticker,
                 is_url=is_url,
@@ -829,7 +795,7 @@ class WhatsApp(Server, HandlerDecorators):
         """
         return self.api.send_message(
             to=str(to),
-            typ=MessageType.REACTION.value,
+            typ=MessageType.REACTION,
             msg={"emoji": emoji, "message_id": message_id},
             biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
@@ -869,7 +835,7 @@ class WhatsApp(Server, HandlerDecorators):
         """
         return self.api.send_message(
             to=str(to),
-            typ=MessageType.REACTION.value,
+            typ=MessageType.REACTION,
             msg={"emoji": "", "message_id": message_id},
             biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
@@ -910,7 +876,7 @@ class WhatsApp(Server, HandlerDecorators):
         """
         return self.api.send_message(
             to=str(to),
-            typ=MessageType.LOCATION.value,
+            typ=MessageType.LOCATION,
             msg={
                 "latitude": latitude,
                 "longitude": longitude,
@@ -936,7 +902,7 @@ class WhatsApp(Server, HandlerDecorators):
         """
         return self.api.send_message(
             to=str(to),
-            typ=MessageType.INTERACTIVE.value,
+            typ=MessageType.INTERACTIVE,
             msg=_get_interactive_msg(
                 typ=InteractiveType.LOCATION_REQUEST_MESSAGE.value,
                 action={"name": "send_location"},
@@ -980,7 +946,7 @@ class WhatsApp(Server, HandlerDecorators):
         """
         return self.api.send_message(
             to=str(to),
-            typ=MessageType.CONTACTS.value,
+            typ=MessageType.CONTACTS,
             msg=tuple(c.to_dict() for c in contact)
             if isinstance(contact, Iterable)
             else (contact.to_dict(),),
@@ -1024,7 +990,7 @@ class WhatsApp(Server, HandlerDecorators):
         """
         return self.api.send_message(
             to=str(to),
-            typ=MessageType.INTERACTIVE.value,
+            typ=MessageType.INTERACTIVE,
             msg=_get_interactive_msg(
                 typ=InteractiveType.CATALOG_MESSAGE.value,
                 action={
@@ -1087,7 +1053,7 @@ class WhatsApp(Server, HandlerDecorators):
         """
         return self.api.send_message(
             to=str(to),
-            typ=MessageType.INTERACTIVE.value,
+            typ=MessageType.INTERACTIVE,
             msg=_get_interactive_msg(
                 typ=InteractiveType.PRODUCT.value,
                 action={
@@ -1155,7 +1121,7 @@ class WhatsApp(Server, HandlerDecorators):
         """
         return self.api.send_message(
             to=str(to),
-            typ=MessageType.INTERACTIVE.value,
+            typ=MessageType.INTERACTIVE,
             msg=_get_interactive_msg(
                 typ=InteractiveType.PRODUCT_LIST.value,
                 action={
@@ -1163,7 +1129,7 @@ class WhatsApp(Server, HandlerDecorators):
                     "sections": tuple(ps.to_dict() for ps in product_sections),
                 },
                 header={
-                    "type": MessageType.TEXT.value,
+                    "type": MessageType.TEXT,
                     "text": title,
                 },
                 body=body,
@@ -1488,14 +1454,22 @@ class WhatsApp(Server, HandlerDecorators):
             raise ValueError("At least one argument must be provided")
         return self.api.update_commerce_settings(data)["success"]
 
-    def _validate_business_account_id_provided(self):
-        """Internal method to validate that the business account ID was provided."""
-        if self.business_account_id is None:
-            raise ValueError(
-                "You must provide the WhatsApp business account ID when using this method. "
-                "You can provide it when initializing the client or by setting the `business_account_id` attribute."
-            )
+    @staticmethod
+    def _validate_waba_id_provided(func) -> Callable:
+        """Internal decorator to validate the waba id is provided."""
 
+        @functools.wraps(func)
+        def wrapper(self, *args, **kwargs):
+            if self.business_account_id is None:
+                raise ValueError(
+                    f"You must provide the WhatsApp business account ID when using the `{func.__name__}` method.\n"
+                    ">> You can provide it when initializing the client or by setting the `business_account_id` attr."
+                )
+            return func(self, *args, **kwargs)
+
+        return wrapper
+
+    @_validate_waba_id_provided
     def create_template(
         self,
         template: NewTemplate,
@@ -1565,13 +1539,11 @@ class WhatsApp(Server, HandlerDecorators):
 
         Args:
             template: The template to create.
-             <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/supported-languages>`_).
             placeholder: The placeholders start & end (optional, default: ``('{', '}')``)).
 
         Returns:
             The template created response. containing the template ID, status and category.
         """
-        self._validate_business_account_id_provided()
         return TemplateResponse(
             **self.api.create_template(
                 waba_id=self.business_account_id,
@@ -1646,7 +1618,7 @@ class WhatsApp(Server, HandlerDecorators):
                     wa=self,
                     media=template.header.image,
                     mime_type=template.header.mime_type,
-                    media_type="image",
+                    media_type=MessageType.IMAGE,
                     filename=None,
                 )
             case Template.Document:
@@ -1662,7 +1634,7 @@ class WhatsApp(Server, HandlerDecorators):
                     wa=self,
                     media=template.header.video,
                     mime_type=template.header.mime_type,
-                    media_type="video",
+                    media_type=MessageType.VIDEO,
                     filename=None,
                 )
         return self.api.send_message(
@@ -1673,6 +1645,7 @@ class WhatsApp(Server, HandlerDecorators):
             biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
+    @_validate_waba_id_provided
     def create_flow(
         self,
         name: str,
@@ -1710,7 +1683,6 @@ class WhatsApp(Server, HandlerDecorators):
         Raises:
             FlowBlockedByIntegrity: If you can't create a flow because of integrity issues.
         """
-        self._validate_business_account_id_provided()
         return self.api.create_flow(
             name=name,
             categories=tuple(map(str, categories)),
@@ -1921,6 +1893,7 @@ class WhatsApp(Server, HandlerDecorators):
             client=self,
         )
 
+    @_validate_waba_id_provided
     def get_flows(
         self,
         invalidate_preview: bool = True,
@@ -1936,7 +1909,6 @@ class WhatsApp(Server, HandlerDecorators):
         Returns:
             The details of all flows.
         """
-        self._validate_business_account_id_provided()
         return tuple(
             FlowDetails.from_dict(data=data, client=self)
             for data in self.api.get_flows(
@@ -2002,7 +1974,7 @@ def _resolve_buttons_param(
     buttons: Iterable[Button] | ButtonUrl | FlowButton | SectionList,
 ) -> tuple[InteractiveType, dict]:
     """
-    Internal method to resolve `buttons` parameter. Returns a tuple of (type, buttons).
+    Internal method to resolve ``buttons`` parameter. Returns a tuple of (``type``, ``buttons``).
     """
     if isinstance(buttons, SectionList):
         return InteractiveType.LIST.value, buttons.to_dict()
@@ -2010,17 +1982,17 @@ def _resolve_buttons_param(
         return InteractiveType.CTA_URL.value, buttons.to_dict()
     elif isinstance(buttons, FlowButton):
         return InteractiveType.FLOW.value, buttons.to_dict()
-    else:  # assume its a list of buttons
+    else:  # assume its list of buttons
         return InteractiveType.BUTTON.value, {
             "buttons": tuple(b.to_dict() for b in buttons)
         }
 
 
 _media_types_default_filenames = {
-    "image": "image.jpg",
-    "video": "video.mp4",
-    "audio": "audio.mp3",
-    "sticker": "sticker.webp",
+    MessageType.IMAGE: "image.jpg",
+    MessageType.VIDEO: "video.mp4",
+    MessageType.AUDIO: "audio.mp3",
+    MessageType.STICKER: "sticker.webp",
 }
 
 
@@ -2029,10 +2001,13 @@ def _resolve_media_param(
     media: str | pathlib.Path | bytes | BinaryIO,
     mime_type: str | None,
     filename: str | None,
-    media_type: Literal["image", "video", "audio", "sticker"] | None,
+    media_type: Literal[
+        MessageType.IMAGE, MessageType.VIDEO, MessageType.AUDIO, MessageType.STICKER
+    ]
+    | None,
 ) -> tuple[bool, str]:
     """
-    Internal method to resolve the `media` parameter. Returns a tuple of (is_url, media_id_or_url).
+    Internal method to resolve the ``media`` parameter. Returns a tuple of (``is_url``, ``media_id_or_url``).
     """
     if isinstance(media, (str, pathlib.Path)):
         if str(media).startswith(("https://", "http://")):

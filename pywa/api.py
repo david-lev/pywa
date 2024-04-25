@@ -35,10 +35,6 @@ class WhatsAppCloudApi:
             "Authorization": f"Bearer {token}",
             "User-Agent": f"PyWa/{pywa.__version__}",
         }
-        self._common_keys = {
-            "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-        }
 
     def __str__(self) -> str:
         return f"WhatsAppCloudApi(phone_id={self.phone_id!r})"
@@ -396,7 +392,8 @@ class WhatsAppCloudApi:
             The response from the WhatsApp Cloud API.
         """
         data = {
-            **self._common_keys,
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
             "to": to,
             "type": typ,
             typ: msg,
@@ -432,7 +429,7 @@ class WhatsAppCloudApi:
             method="POST",
             endpoint=f"/{self.phone_id}/register",
             json={
-                **self._common_keys,
+                "messaging_product": "whatsapp",
                 "pin": pin,
                 **(
                     {"data_localization_region": data_localization_region}
