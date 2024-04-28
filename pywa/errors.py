@@ -17,6 +17,8 @@ class WhatsAppError(Exception):
 
     Attributes:
         error_code: The error code.
+        error_subcode: The error subcode (optional).
+        type: The error type (optional).
         message: The error message.
         details: The error details (optional).
         fbtrace_id: The Facebook trace ID (optional).
@@ -35,8 +37,12 @@ class WhatsAppError(Exception):
         fbtrace_id: str | None,
         href: str | None,
         raw_response: requests.Response | None,
+        error_subcode: int | None = None,
+        err_type: str | None = None,
     ) -> None:
         self.error_code = error_code
+        self.error_subcode = error_subcode
+        self.type = err_type
         self.message = message
         self.details = details
         self.fbtrace_id = fbtrace_id
@@ -60,6 +66,8 @@ class WhatsAppError(Exception):
             details=error.get("error_data", {}).get("details", None),
             fbtrace_id=error.get("fbtrace_id"),
             href=error.get("href"),
+            error_subcode=error.get("error_subcode"),
+            err_type=error.get("type"),
         )
 
     @staticmethod
@@ -301,6 +309,12 @@ class TemplateParamValueInvalid(SendMessageError):
     __error_codes__ = (132008,)
 
 
+class TemplateParamFormatMismatch(SendMessageError):
+    """Variable parameter values formatted incorrectly."""
+
+    __error_codes__ = (132012,)
+
+
 class TemplatePaused(SendMessageError):
     """Template is paused due to low quality so it cannot be sent in a template message."""
 
@@ -359,6 +373,18 @@ class BusinessPaymentIssue(SendMessageError):
     """Message failed to send because there were one or more errors related to your payment method."""
 
     __error_codes__ = (131042,)
+
+
+class IncorrectCertificate(SendMessageError):
+    """Message failed to send due to a phone number registration error."""
+
+    __error_codes__ = (131045,)
+
+
+class AccountInMaintenanceMode(SendMessageError):
+    """Business Account is in maintenance mode"""
+
+    __error_codes__ = (131057,)
 
 
 # ====================================================================================================
