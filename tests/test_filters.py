@@ -195,8 +195,8 @@ FILTERS: dict[
         "sent_to": [
             (lambda m: modify_send_to(m, "123"), fil.sent_to(phone_number_id="123"))
         ],
-        "send_to_me": [
-            (lambda m: modify_send_to(m, WA_NO_FILTERS.phone_id), fil.send_to_me)
+        "sent_to_me": [
+            (lambda m: modify_send_to(m, WA_NO_FILTERS.phone_id), fil.sent_to_me)
         ],
         "from_users": [(lambda m: modify_send_from(m, "123"), fil.from_users("123"))],
         "from_countries": [

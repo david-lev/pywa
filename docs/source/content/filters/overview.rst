@@ -14,16 +14,16 @@ Here is an example of how to use them:
 
     from pywa import WhatsApp
     from pywa.types import Message, CallbackButton, Button
-    from pywa.filters import text, callback
+    from pywa import filters as fil
 
     wa = WhatsApp(...)
 
-    @wa.on_message(text.startswith('Hello', 'Hi', ignore_case=True))
+    @wa.on_message(fil.startswith('Hello', 'Hi', ignore_case=True))
     def handle_hello(wa: WhatsApp, msg: Message):
         msg.react('👋')
         msg.reply(f'Hello {msg.from_user.name}!', buttons=[Button('Click me!', 'click')])
 
-    @wa.on_callback(callback.data_matches('click'))
+    @wa.on_callback(fil.matches('click'))
     def handle_click(wa: WhatsApp, clb: CallbackButton):
         clb.reply('You clicked me!')
 

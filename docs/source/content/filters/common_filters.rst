@@ -7,7 +7,7 @@ Common filters
 .. autofunction:: any_
 .. autofunction:: not_
 .. autofunction:: sent_to
-.. autoattribute:: pywa.filters.send_to_me
+.. autoattribute:: pywa.filters.sent_to_me
 .. autofunction:: from_users
 .. autofunction:: from_countries
 .. autofunction:: matches

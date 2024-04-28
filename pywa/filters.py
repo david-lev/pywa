@@ -12,7 +12,7 @@ __all__ = [
     "replays_to",
     "has_referred_product",
     "sent_to",
-    "send_to_me",
+    "sent_to_me",
     "from_users",
     "from_countries",
     "matches",
@@ -152,13 +152,13 @@ def sent_to(*, display_phone_number: str = None, phone_number_id: str = None):
     )
 
 
-send_to_me: _MessageFilterT = lambda wa, m: sent_to(phone_number_id=wa.phone_id)(wa, m)
+sent_to_me: _MessageFilterT = lambda wa, m: sent_to(phone_number_id=wa.phone_id)(wa, m)
 """
 Filter for updates that are sent to the client phone number.
 
 - Use this filter when you choose not filter updates (e.g. ``WhatsApp(..., filter_updates=False)``) so you can still filter for messages that are sent to the client phone number.
 
->>> send_to_me
+>>> sent_to_me
 """
 
 
