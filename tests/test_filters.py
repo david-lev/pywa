@@ -31,15 +31,29 @@ FILTERS: dict[
     "message": {
         "text": [
             (same, fil.text),
+            (lambda m: modify_text(m, "hello"), fil.matches("hello")),
             (lambda m: modify_text(m, "hello"), fil.text.matches("hello")),
+            (
+                lambda m: modify_text(m, "hello"),
+                fil.matches("hello", ignore_case=True),
+            ),
             (
                 lambda m: modify_text(m, "hello"),
                 fil.text.matches("hello", ignore_case=True),
             ),
+            (lambda m: modify_text(m, "hi hello"), fil.contains("hello")),
             (lambda m: modify_text(m, "hi hello"), fil.text.contains("hello")),
             (
                 lambda m: modify_text(m, "hi Hello"),
+                fil.contains("hello", "Hi", ignore_case=True),
+            ),
+            (
+                lambda m: modify_text(m, "hi Hello"),
                 fil.text.contains("hello", "Hi", ignore_case=True),
+            ),
+            (
+                lambda m: modify_text(m, "hi bye"),
+                fil.startswith("hi"),
             ),
             (
                 lambda m: modify_text(m, "hi bye"),
@@ -47,7 +61,15 @@ FILTERS: dict[
             ),
             (
                 lambda m: modify_text(m, "hi bye"),
+                fil.startswith("Hi", ignore_case=True),
+            ),
+            (
+                lambda m: modify_text(m, "hi bye"),
                 fil.text.startswith("Hi", ignore_case=True),
+            ),
+            (
+                lambda m: modify_text(m, "hi bye"),
+                fil.endswith("bye"),
             ),
             (
                 lambda m: modify_text(m, "hi bye"),
@@ -55,7 +77,15 @@ FILTERS: dict[
             ),
             (
                 lambda m: modify_text(m, "hi bye"),
+                fil.endswith("Bye", ignore_case=True),
+            ),
+            (
+                lambda m: modify_text(m, "hi bye"),
                 fil.text.endswith("Bye", ignore_case=True),
+            ),
+            (
+                lambda m: modify_text(m, "hi bye"),
+                fil.regex(r"^hi", r"bye$"),
             ),
             (
                 lambda m: modify_text(m, "hi bye"),
@@ -84,7 +114,7 @@ FILTERS: dict[
         ],
         "image": [
             (same, fil.image),
-            (lambda m: add_caption(m), fil.image.has_caption),
+            (lambda m: add_caption(m, "caption"), fil.image.has_caption),
             (
                 lambda m: modify_img_mime_type(m, "image/jpeg"),
                 fil.image.mimetypes("image/jpeg"),
@@ -92,11 +122,11 @@ FILTERS: dict[
         ],
         "video": [
             (same, fil.video),
-            (lambda m: add_caption(m), fil.video.has_caption),
+            (lambda m: add_caption(m, "caption"), fil.video.has_caption),
         ],
         "document": [
             (same, fil.document),
-            (lambda m: add_caption(m), fil.document.has_caption),
+            (lambda m: add_caption(m, "caption"), fil.document.has_caption),
         ],
         "audio": [
             (same, fil.audio.audio),
@@ -183,7 +213,15 @@ FILTERS: dict[
         "button": [
             (
                 lambda m: modify_callback_data(m, "hi"),
+                fil.matches("hi"),
+            ),
+            (
+                lambda m: modify_callback_data(m, "hi"),
                 fil.callback.data_matches("hi"),
+            ),
+            (
+                lambda m: modify_callback_data(m, "Hi"),
+                fil.matches("hi", ignore_case=True),
             ),
             (
                 lambda m: modify_callback_data(m, "Hi"),
@@ -191,7 +229,15 @@ FILTERS: dict[
             ),
             (
                 lambda m: modify_callback_data(m, "hi bye"),
+                fil.contains("hi"),
+            ),
+            (
+                lambda m: modify_callback_data(m, "hi bye"),
                 fil.callback.data_contains("hi"),
+            ),
+            (
+                lambda m: modify_callback_data(m, "hi bye"),
+                fil.contains("Hi", ignore_case=True),
             ),
             (
                 lambda m: modify_callback_data(m, "hi bye"),
@@ -199,7 +245,15 @@ FILTERS: dict[
             ),
             (
                 lambda m: modify_callback_data(m, "hi bye"),
+                fil.startswith("hi"),
+            ),
+            (
+                lambda m: modify_callback_data(m, "hi bye"),
                 fil.callback.data_startswith("hi"),
+            ),
+            (
+                lambda m: modify_callback_data(m, "hi bye"),
+                fil.startswith("Hi", ignore_case=True),
             ),
             (
                 lambda m: modify_callback_data(m, "hi bye"),
@@ -207,11 +261,23 @@ FILTERS: dict[
             ),
             (
                 lambda m: modify_callback_data(m, "hi bye"),
+                fil.endswith("bye"),
+            ),
+            (
+                lambda m: modify_callback_data(m, "hi bye"),
                 fil.callback.data_endswith("bye"),
             ),
             (
                 lambda m: modify_callback_data(m, "hi bye"),
+                fil.endswith("Bye", ignore_case=True),
+            ),
+            (
+                lambda m: modify_callback_data(m, "hi bye"),
                 fil.callback.data_endswith("Bye", ignore_case=True),
+            ),
+            (
+                lambda m: modify_callback_data(m, "data:123"),
+                fil.regex("^data:", r"\d{3}$"),
             ),
             (
                 lambda m: modify_callback_data(m, "data:123"),
@@ -240,7 +306,10 @@ FILTERS: dict[
                 fil.message_status.failed_with(131053),
             ),
         ],
-        "with_tracker": [(same, fil.message_status.with_tracker)],
+        "with_tracker": [
+            (same, fil.message_status.with_tracker),
+            (lambda s: modify_status_tracker(s, "tracker"), fil.matches("tracker")),
+        ],
     },
     "template_status": {
         "approved": [
@@ -279,8 +348,8 @@ def modify_text(msg: Message, to: str):
     return dataclasses.replace(msg, text=to)
 
 
-def add_caption(msg: Message):
-    return dataclasses.replace(msg, caption="Caption")
+def add_caption(msg: Message, caption: str):
+    return dataclasses.replace(msg, caption=caption)
 
 
 def modify_img_mime_type(msg: Message, mime_type: str):
@@ -401,3 +470,7 @@ def modify_referred_product(msg: Message, product: str):
         referred_product=ReferredProduct(catalog_id="123", sku=product),
     )
     return dataclasses.replace(msg, reply_to_message=reply_to_msg)
+
+
+def modify_status_tracker(s: MessageStatus, tracker: str):
+    return dataclasses.replace(s, tracker=tracker)

@@ -12,11 +12,6 @@ Message Filters
 ----------------
 
 .. autoclass:: text
-.. automethod:: text.matches
-.. automethod:: text.contains
-.. automethod:: text.startswith
-.. automethod:: text.endswith
-.. automethod:: text.regex
 .. automethod:: text.length
 .. automethod:: text.is_command
 .. automethod:: text.command

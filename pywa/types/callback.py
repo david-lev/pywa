@@ -321,6 +321,8 @@ class CallbackButton(BaseUserUpdate, Generic[CallbackDataT]):
     data: CallbackDataT
     title: str
 
+    _txt_fields = ("data",)
+
     @classmethod
     def from_update(cls, client: "WhatsApp", update: dict) -> "CallbackButton":
         msg = (value := update["entry"][0]["changes"][0]["value"])["messages"][0]
@@ -429,6 +431,8 @@ class CallbackSelection(BaseUserUpdate, Generic[CallbackDataT]):
     data: CallbackDataT
     title: str
     description: str | None
+
+    _txt_fields = ("data",)
 
     @classmethod
     def from_update(cls, client: "WhatsApp", update: dict) -> "CallbackSelection":

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import base64
+import functools
 import json
 import dataclasses
 import enum
 import importlib
+import warnings
 from typing import Any, Callable, Protocol, TypeAlias
 
 
@@ -258,3 +260,22 @@ def rename_func(extended_with: str) -> Callable:
         return func
 
     return inner
+
+
+def deprecated_func(use_instead: str | None) -> Callable:
+    """Mark a function as deprecated."""
+
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            msg = (
+                f"Function `{func.__name__}` is deprecated and will be removed in a future version"
+                + (f". Use `{use_instead}` instead." if use_instead else ".")
+            )
+            warnings.simplefilter("always", DeprecationWarning)
+            warnings.warn(message=msg, category=DeprecationWarning, stacklevel=2)
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator

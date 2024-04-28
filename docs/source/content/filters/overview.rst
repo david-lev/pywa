@@ -46,13 +46,13 @@ Here is some examples:
     from pywa import filters as fil  # short name for convenience
 
     # message text must start with "Hello" and (end with "World" or have a length between 1 and 10)
-    fil.all_(fil.text.startswith("Hello"), fil.any_(fil.text.endswith("World"), fil.text.length((1, 10))))
+    fil.all_(fil.startswith("Hello"), fil.any_(fil.endswith("World"), fil.text.length((1, 10))))
 
     # message must be a photo or a (video of type "video/mp4" and have a caption)
     fil.any_(fil.image, fil.all_(fil.video.mimetypes("video/mp4"), fil.video.has_caption))
 
     # message must not contain "bad word"
-    fil.not_(fil.text.contains("bad word"))
+    fil.not_(fil.contains("bad word"))
 
 
 .. role:: python(code)
@@ -61,9 +61,9 @@ Here is some examples:
 .. tip::
     :class: dropdown
 
-    Keep in mind that all match-filters (:meth:`text.matches`, :meth:`text.contains`, etc) will return ``True`` if
+    Keep in mind that all match-filters (:meth:`matches`, :meth:`contains`, etc) will return ``True`` if
     **ANY** of the given matches are found. so there is no need to do something like
-    :python:`any_(text.matches('hello'), text.matches('hi'))`, you can just do :python:`text.matches('hello', 'hi')`.
+    :python:`any_(matches('hello'), matches('hi'))`, you can just do :python:`matches('hello', 'hi')`.
 
 ----------------------------------------
 

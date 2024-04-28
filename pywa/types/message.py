@@ -102,6 +102,8 @@ class Message(BaseUserUpdate):
     system: System | None = None
     error: WhatsAppError | None = None
 
+    _txt_fields = ("text", "caption")
+
     @property
     def message_id_to_reply(self) -> str:
         """The ID of the message to reply to."""

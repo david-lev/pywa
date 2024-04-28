@@ -10,3 +10,8 @@ Common filters
 .. autoattribute:: pywa.filters.send_to_me
 .. autofunction:: from_users
 .. autofunction:: from_countries
+.. autofunction:: matches
+.. autofunction:: contains
+.. autofunction:: startswith
+.. autofunction:: endswith
+.. autofunction:: regex

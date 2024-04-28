@@ -152,6 +152,8 @@ class MessageStatus(BaseUserUpdate, Generic[CallbackDataT]):
     pricing_model: str | None
     error: WhatsAppError | None
 
+    _txt_fields = ("tracker",)
+
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> MessageStatus:
         status = (value := update["entry"][0]["changes"][0]["value"])["statuses"][0]

@@ -104,6 +104,9 @@ class BaseUpdate(abc.ABC):
 class BaseUserUpdate(BaseUpdate, abc.ABC):
     """Base class for all user-related update types (message, callback, etc.)."""
 
+    _txt_fields = None
+    """Contains the text fields of the update to use when filtering."""
+
     @property
     @abc.abstractmethod
     def metadata(self) -> Metadata: ...

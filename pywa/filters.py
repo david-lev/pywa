@@ -15,6 +15,11 @@ __all__ = [
     "send_to_me",
     "from_users",
     "from_countries",
+    "matches",
+    "contains",
+    "startswith",
+    "endswith",
+    "regex",
     "text",
     "media",
     "image",
@@ -35,7 +40,7 @@ __all__ = [
 import abc
 import re
 from typing import TYPE_CHECKING, Callable, Iterable, TypeAlias, TypeVar
-
+from pywa import utils as _utils
 from pywa.errors import ReEngagementMessage, WhatsAppError
 from pywa.types import CallbackButton as _Clb, CallbackSelection as _Cls
 from pywa.types import Message as _Msg
@@ -187,6 +192,160 @@ def from_countries(
     return lambda _, m: m.from_user.wa_id.startswith(codes)
 
 
+def matches(
+    *strings: str, ignore_case: bool = False
+) -> _MessageFilterT | _CallbackFilterT | _MessageStatusFilterT:
+    """
+    Filter for messages that are matching (``==``) any of the given strings.
+
+    The strings will be checked against the following fields:
+        - :class:`Message`: ``text``, ``caption``
+        - :class:`CallbackButton`: ``data``
+        - :class:`CallbackSelection`: ``data``
+        - :class:`MessageStatus`: ``tracker``
+
+    >>> matches("Hello", "Hi")
+
+    Args:
+        *strings: The strings to match.
+        ignore_case: Whether to ignore case when matching.
+    """
+    strings = tuple(m.lower() for m in strings) if ignore_case else strings
+    return (
+        lambda _, m: any(
+            (txt.lower() if ignore_case else txt) in strings
+            for txt_field in m._txt_fields
+            if (txt := getattr(m, txt_field)) is not None
+        )
+        if getattr(m, "_txt_fields", None)
+        else False
+    )
+
+
+def startswith(
+    *prefixes: str, ignore_case: bool = False
+) -> _MessageFilterT | _CallbackFilterT | _MessageStatusFilterT:
+    """
+    Filter for updates that start with any of the given prefixes.
+
+    The prefixes will be checked against the following fields:
+        - :class:`Message`: ``text``, ``caption``
+        - :class:`CallbackButton`: ``data``
+        - :class:`CallbackSelection`: ``data``
+        - :class:`MessageStatus`: ``tracker``
+
+    >>> startswith("Hello", "Hi", ignore_case=True)
+
+    Args:
+        *prefixes: The prefixes to match.
+        ignore_case: Whether to ignore case when matching.
+    """
+    prefixes = tuple(m.lower() for m in prefixes) if ignore_case else prefixes
+    return (
+        lambda _, u: any(
+            (txt.lower() if ignore_case else txt).startswith(prefixes)
+            for txt_field in u._txt_fields
+            if (txt := getattr(u, txt_field)) is not None
+        )
+        if getattr(u, "_txt_fields", None)
+        else False
+    )
+
+
+def endswith(
+    *suffixes: str, ignore_case: bool = False
+) -> _MessageFilterT | _CallbackFilterT | _MessageStatusFilterT:
+    """
+    Filter for updates that end with any of the given suffixes.
+
+    The suffixes will be checked against the following fields:
+        - :class:`Message`: ``text``, ``caption``
+        - :class:`CallbackButton`: ``data``
+        - :class:`CallbackSelection`: ``data``
+        - :class:`MessageStatus`: ``tracker``
+
+    >>> endswith("Hello", "Hi", ignore_case=True)
+
+    Args:
+        *suffixes: The suffixes to match.
+        ignore_case: Whether to ignore case when matching.
+    """
+    suffixes = tuple(m.lower() for m in suffixes) if ignore_case else suffixes
+    return (
+        lambda _, u: any(
+            (txt.lower() if ignore_case else txt).endswith(suffixes)
+            for txt_field in u._txt_fields
+            if (txt := getattr(u, txt_field)) is not None
+        )
+        if getattr(u, "_txt_fields", None)
+        else False
+    )
+
+
+def contains(
+    *words: str, ignore_case: bool = False
+) -> _MessageFilterT | _CallbackFilterT | _MessageStatusFilterT:
+    """
+    Filter for updates that contain any of the given words.
+
+    The words will be checked against the following fields:
+        - :class:`Message`: ``text``, ``caption``
+        - :class:`CallbackButton`: ``data``
+        - :class:`CallbackSelection`: ``data``
+        - :class:`MessageStatus`: ``tracker``
+
+    >>> contains("Hello", "Hi", ignore_case=True)
+
+    Args:
+        *words: The words to match.
+        ignore_case: Whether to ignore case when matching.
+    """
+    words = tuple(m.lower() for m in words) if ignore_case else words
+    return (
+        lambda _, u: any(
+            word in (txt.lower() if ignore_case else txt)
+            for word in words
+            for txt_field in u._txt_fields
+            if (txt := getattr(u, txt_field)) is not None
+        )
+        if getattr(u, "_txt_fields", None)
+        else False
+    )
+
+
+def regex(
+    *patterns: str | re.Pattern, flags: int = 0
+) -> _MessageFilterT | _CallbackFilterT | _MessageStatusFilterT:
+    """
+    Filter for updates that match any of the given regex patterns.
+
+    The patterns will be checked against the following fields:
+        - :class:`Message`: ``text``, ``caption``
+        - :class:`CallbackButton`: ``data``
+        - :class:`CallbackSelection`: ``data``
+        - :class:`MessageStatus`: ``tracker``
+
+    >>> regex(r"Hello|Hi")
+
+    Args:
+        *patterns: The regex patterns to match.
+        flags: The regex flags to use.
+    """
+    patterns = tuple(
+        p if isinstance(p, re.Pattern) else re.compile(p, flags) for p in patterns
+    )
+    return (
+        lambda _, u: any(
+            re.match(p, txt)
+            for p in patterns
+            for txt_field in u._txt_fields
+            if (txt := getattr(u, txt_field)) is not None
+        )
+        if getattr(u, "_txt_fields", None)
+        else False
+    )
+
+
 class _BaseUpdateFilters(abc.ABC):
     """
     Base class for all filters.
@@ -300,86 +459,43 @@ class _TextFilters(_BaseUpdateFilters):
     """
 
     @staticmethod
-    def matches(*matches: str, ignore_case: bool = False) -> _MessageFilterT:
-        """
-        Filter for text messages that match exactly any of the given text/s.
-
-        >>> text.matches("Hello","Hi")
-
-        Args:
-            *matches: The text/s to filter for.
-            ignore_case: Whether to ignore case when matching (default: ``False``).
-        """
-        matches = tuple(m.lower() for m in matches) if ignore_case else matches
-        return (
-            lambda _, m: _TextFilters._match_type(m)
-            and (m.text.lower() if ignore_case else m.text) in matches
+    @_utils.deprecated_func(use_instead="filters.matches(...)")
+    def matches(*strings: None, ignore_case: None = False) -> None:
+        """Deprecated. Use ``filters.matches(...)`` instead."""
+        return lambda _, m: _TextFilters._match_type(m) and matches(
+            *strings, ignore_case=ignore_case
         )
 
     @staticmethod
-    def contains(*matches: str, ignore_case: bool = False) -> _MessageFilterT:
-        """
-        Filter for text messages that contain any of the given text/s.
-
-        >>> text.contains("Cat","Dog",ignore_case=True)
-
-        Args:
-            *matches: The text/s to filter for.
-            ignore_case: Whether to ignore case when matching. (default: ``False``).
-        """
-        matches = tuple(m.lower() for m in matches) if ignore_case else matches
-        return lambda _, m: _TextFilters._match_type(m) and any(
-            t in (m.text.lower() if ignore_case else m.text) for t in matches
+    @_utils.deprecated_func(use_instead="filters.contains(...)")
+    def contains(*words: None, ignore_case: None = False) -> None:
+        """Deprecated. Use ``filters.contains(...)`` instead."""
+        return lambda _, m: _TextFilters._match_type(m) and contains(
+            *words, ignore_case=ignore_case
         )
 
     @staticmethod
-    def startswith(*matches: str, ignore_case: bool = False) -> _MessageFilterT:
-        """
-        Filter for text messages that start with any of the given text/s.
-
-        >>> text.startswith("What", "When", ignore_case=True)
-
-        Args:
-            *matches: The text/s to filter for.
-            ignore_case: Whether to ignore case when matching (default: ``False``).
-        """
-        matches = tuple(m.lower() for m in matches) if ignore_case else matches
-        return lambda _, m: _TextFilters._match_type(m) and (
-            m.text.lower() if ignore_case else m.text
-        ).startswith(matches)
-
-    @staticmethod
-    def endswith(*matches: str, ignore_case: bool = False) -> _MessageFilterT:
-        """
-        Filter for text messages that end with any of the given text/s.
-
-        >>> text.endswith("Bye", "See you", ignore_case=True)
-
-        Args:
-            *matches: The text/s to filter for.
-            ignore_case: Whether to ignore case when matching (default: ``False``).
-        """
-        matches = tuple(m.lower() for m in matches) if ignore_case else matches
-        return lambda _, m: _TextFilters._match_type(m) and (
-            m.text.lower() if ignore_case else m.text
-        ).endswith(matches)
-
-    @staticmethod
-    def regex(*patterns: str | re.Pattern, flags: int = 0) -> _MessageFilterT:
-        """
-        Filter for text messages that match any of the given regexes.
-
-        >>> text.regex(r"^hello", r"bye$")
-
-        Args:
-            *patterns: The regex/regexes to filter for.
-            flags: The regex flags to use (default: ``0``).
-        """
-        patterns = tuple(
-            re.compile(p, flags) if isinstance(p, str) else p for p in patterns
+    @_utils.deprecated_func(use_instead="filters.startswith(...)")
+    def startswith(*prefixes: None, ignore_case: None = False) -> None:
+        """Deprecated. Use ``filters.startswith(...)`` instead."""
+        return lambda _, m: _TextFilters._match_type(m) and startswith(
+            *prefixes, ignore_case=ignore_case
         )
-        return lambda _, m: _TextFilters._match_type(m) and any(
-            re.match(p, m.text, flags) for p in patterns
+
+    @staticmethod
+    @_utils.deprecated_func(use_instead="filters.endswith(...)")
+    def endswith(*suffixes: None, ignore_case: None = False) -> None:
+        """Deprecated. Use ``filters.endswith(...)`` instead."""
+        return lambda _, m: _TextFilters._match_type(m) and endswith(
+            *suffixes, ignore_case=ignore_case
+        )
+
+    @staticmethod
+    @_utils.deprecated_func(use_instead="filters.regex(...)")
+    def regex(*patterns: None, flags: None = 0) -> None:
+        """Deprecated. Use ``filters.regex(...)`` instead."""
+        return lambda _, m: _TextFilters._match_type(m) and regex(
+            *patterns, flags=flags
         )
 
     @staticmethod
@@ -791,81 +907,34 @@ class _CallbackFilters(_BaseUpdateFilters):
     """
 
     @staticmethod
-    def data_matches(*matches: str, ignore_case: bool = False) -> _CallbackFilterT:
-        """
-        Filter for callbacks their data match exactly the given string/s.
-
-        >>> callback.data_matches("menu")
-        >>> callback.data_matches("back","return","exit")
-
-        Args:
-            *matches: The string/s to match.
-            ignore_case: Whether to ignore case when matching (default: False).
-        """
-        matches = tuple(m.lower() for m in matches) if ignore_case else matches
-        return lambda _, c: (c.data.lower() if ignore_case else c.data) in matches
+    @_utils.deprecated_func(use_instead="filters.matches(...)")
+    def data_matches(*strings: None, ignore_case: None = False) -> None:
+        """Deprecated. Use ``filters.matches(...)`` instead."""
+        return matches(*strings, ignore_case=ignore_case)
 
     @staticmethod
-    def data_startswith(*matches: str, ignore_case: bool = False) -> _CallbackFilterT:
-        """
-        Filter for callbacks their data starts with the given string/s.
-
-        >>> callback.data_startswith("id:")
-
-        Args:
-            *matches: The string/s to match.
-            ignore_case: Whether to ignore case when matching (default: False).
-        """
-        matches = tuple(m.lower() for m in matches) if ignore_case else matches
-        return lambda _, c: (c.data.lower() if ignore_case else c.data).startswith(
-            matches
-        )
+    @_utils.deprecated_func(use_instead="filters.data_startswith(...)")
+    def data_startswith(*prefixes: None, ignore_case: None = False) -> None:
+        """Deprecated. Use ``filters.startswith(...)`` instead."""
+        return startswith(*prefixes, ignore_case=ignore_case)
 
     @staticmethod
-    def data_endswith(*matches: str, ignore_case: bool = False) -> _CallbackFilterT:
-        """
-        Filter for callbacks their data ends with the given string/s.
-
-        >>> callback.data_endswith(":true", ":false")
-
-        Args:
-            *matches: The string/s to match.
-            ignore_case: Whether to ignore case when matching (default: False).
-        """
-        matches = tuple(m.lower() for m in matches) if ignore_case else matches
-        return lambda _, c: (c.data.lower() if ignore_case else c.data).endswith(
-            matches
-        )
+    @_utils.deprecated_func(use_instead="filters.data_endswith(...)")
+    def data_endswith(*suffixes: None, ignore_case: bool = None) -> None:
+        """Deprecated. Use ``filters.endswith(...)`` instead."""
+        return endswith(*suffixes, ignore_case=ignore_case)
 
     @staticmethod
-    def data_contains(*matches: str, ignore_case: bool = False) -> _CallbackFilterT:
-        """
-        Filter for callbacks their data contains the given string/s.
-
-        >>> callback.data_contains("back")
-
-        Args:
-            *matches: The string/s to match.
-            ignore_case: Whether to ignore case when matching (default: False).
-        """
-        matches = tuple(m.lower() for m in matches) if ignore_case else matches
-        return lambda _, c: any(
-            (m in (c.data.lower() if ignore_case else c.data) for m in matches)
-        )
+    @_utils.deprecated_func(use_instead="filters.data_contains(...)")
+    def data_contains(*words: None, ignore_case: bool = None) -> None:
+        """Deprecated. Use ``filters.contains(...)`` instead."""
+        return contains(*words, ignore_case=ignore_case)
 
     @staticmethod
-    def data_regex(*patterns: str | re.Pattern, flags: int = 0) -> _CallbackFilterT:
-        """
-        Filter for callbacks their data matches the given regex/regexes.
-
-        >>> callback.data_regex(r"^id:", r"true$")
-
-        Args:
-            *patterns: The regex/regexes to match.
-            flags: The regex flags to use (default: 0).
-        """
-        patterns = tuple(re.compile(p) if isinstance(p, str) else p for p in patterns)
-        return lambda _, c: any((re.match(p, c.data, flags) for p in patterns))
+    @_utils.deprecated_func(use_instead="filters.data_regex(...)")
+    def data_regex(*patterns: None, flags: None = 0) -> None:
+        """Deprecated. Use ``filters.regex(...)`` instead."""
+        return regex(*patterns, flags=flags)
 
 
 callback: _CallbackFilterT | type[_CallbackFilters] = _CallbackFilters
