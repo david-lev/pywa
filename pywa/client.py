@@ -243,7 +243,6 @@ class WhatsApp(Server, HandlerDecorators):
                 continue
             self._handlers[handler.__class__].append(handler)
 
-    @utils.deprecated(arg="keyboard", use_instead="buttons", expected_type=NoneType)
     def send_message(
         self,
         to: str | int,
@@ -370,6 +369,16 @@ class WhatsApp(Server, HandlerDecorators):
         Returns:
             The message ID of the sent message.
         """
+        if keyboard is not None:
+            buttons = keyboard
+            warnings.simplefilter("always", DeprecationWarning)
+            warnings.warn(
+                message="send_message | reply_text: "
+                "`keyboard` is deprecated and will be removed in a future version, use `buttons` instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+
         if not buttons:
             return self.api.send_message(
                 to=str(to),
@@ -400,7 +409,6 @@ class WhatsApp(Server, HandlerDecorators):
 
     send_text = send_message  # alias
 
-    @utils.deprecated(arg="body", use_instead="caption", expected_type=NoneType)
     def send_image(
         self,
         to: str | int,
@@ -445,6 +453,16 @@ class WhatsApp(Server, HandlerDecorators):
             The message ID of the sent image message.
         """
 
+        if body is not None:
+            caption = body
+            warnings.simplefilter("always", DeprecationWarning)
+            warnings.warn(
+                message="send_image | reply_image: "
+                "`body` is deprecated and will be removed in a future version, use `caption` instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+
         is_url, image = _resolve_media_param(
             wa=self,
             media=image,
@@ -487,7 +505,6 @@ class WhatsApp(Server, HandlerDecorators):
             biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
-    @utils.deprecated(arg="body", use_instead="caption", expected_type=NoneType)
     def send_video(
         self,
         to: str | int,
@@ -532,6 +549,17 @@ class WhatsApp(Server, HandlerDecorators):
         Returns:
             The message ID of the sent video.
         """
+
+        if body is not None:
+            caption = body
+            warnings.simplefilter("always", DeprecationWarning)
+            warnings.warn(
+                message="send_video | reply_video: "
+                "`body` is deprecated and will be removed in a future version, use `caption` instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+
         is_url, video = _resolve_media_param(
             wa=self,
             media=video,
@@ -574,7 +602,6 @@ class WhatsApp(Server, HandlerDecorators):
             biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
-    @utils.deprecated(arg="body", use_instead="caption", expected_type=NoneType)
     def send_document(
         self,
         to: str | int,
@@ -622,6 +649,17 @@ class WhatsApp(Server, HandlerDecorators):
         Returns:
             The message ID of the sent document.
         """
+
+        if body is not None:
+            caption = body
+            warnings.simplefilter("always", DeprecationWarning)
+            warnings.warn(
+                message="send_document | reply_document: "
+                "`body` is deprecated and will be removed in a future version, use `caption` instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+
         is_url, document = _resolve_media_param(
             wa=self,
             media=document,
@@ -771,7 +809,7 @@ class WhatsApp(Server, HandlerDecorators):
 
                 >>> wa = WhatsApp(...)
                 >>> @wa.on_message()
-                ... def message_handler(wa: WhatsApp, msg: Message):
+                ... def message_handler(_: WhatsApp, msg: Message):
                 ...     msg.react('👍')
 
         Example:
@@ -813,7 +851,7 @@ class WhatsApp(Server, HandlerDecorators):
 
                 >>> wa = WhatsApp(...)
                 >>> @wa.on_message()
-                ... def message_handler(wa: WhatsApp, msg: Message):
+                ... def message_handler(_: WhatsApp, msg: Message):
                 ...     msg.unreact()
 
         Example:
