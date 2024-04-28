@@ -10,6 +10,8 @@ from pywa.types import (
     CallbackButton,
     MessageStatus,
     TemplateStatus,
+    ReplyToMessage,
+    ReferredProduct,
 )
 from pywa.types.base_update import BaseUpdate
 from tests.common import UPDATES, API_VERSIONS, WA_NO_FILTERS
@@ -159,6 +161,20 @@ FILTERS: dict[
         ],
         "unsupported": [(same, fil.unsupported)],
         "reply": [(same, fil.reply)],
+        "replays_to": [(lambda m: modify_replies_to(m, "123"), fil.replays_to("123"))],
+        "sent_to": [
+            (lambda m: modify_send_to(m, "123"), fil.sent_to(phone_number_id="123"))
+        ],
+        "send_to_me": [
+            (lambda m: modify_send_to(m, WA_NO_FILTERS.phone_id), fil.send_to_me)
+        ],
+        "from_users": [(lambda m: modify_send_from(m, "123"), fil.from_users("123"))],
+        "from_countries": [
+            (lambda m: modify_send_from(m, "97212345678"), fil.from_countries("972"))
+        ],
+        "has_referred_product": [
+            (lambda m: modify_referred_product(m, "IPHONE"), fil.has_referred_product)
+        ],
         "forwarded": [(same, fil.forwarded)],
         "forwarded_many_times": [(same, fil.forwarded)],
         "interactive_message_with_err": [],
@@ -355,3 +371,33 @@ def modify_callback_data(clb: CallbackButton | CallbackSelection, data: str):
 
 def modify_status_err(status: MessageStatus, err: WhatsAppError):
     return dataclasses.replace(status, error=err)
+
+
+def modify_send_from(msg: Message, wa_id: str):
+    return dataclasses.replace(
+        msg, from_user=dataclasses.replace(msg.from_user, wa_id=wa_id)
+    )
+
+
+def modify_send_to(msg: Message, wa_id: str):
+    return dataclasses.replace(
+        msg, metadata=dataclasses.replace(msg.metadata, phone_number_id=wa_id)
+    )
+
+
+def modify_replies_to(msg: Message, message_id: str):
+    return dataclasses.replace(
+        msg,
+        reply_to_message=dataclasses.replace(
+            msg.reply_to_message, message_id=message_id
+        ),
+    )
+
+
+def modify_referred_product(msg: Message, product: str):
+    reply_to_msg = ReplyToMessage(
+        message_id=msg.id,
+        from_user_id=msg.from_user.wa_id,
+        referred_product=ReferredProduct(catalog_id="123", sku=product),
+    )
+    return dataclasses.replace(msg, reply_to_message=reply_to_msg)

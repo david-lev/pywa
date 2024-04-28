@@ -9,8 +9,10 @@ __all__ = [
     "forwarded",
     "forwarded_many_times",
     "reply",
+    "replays_to",
     "has_referred_product",
     "sent_to",
+    "send_to_me",
     "from_users",
     "from_countries",
     "text",
@@ -74,6 +76,19 @@ Filter for messages that reply to another message.
 >>> filters.reply
 """
 
+
+def replays_to(*msg_ids: str) -> _MessageFilterT:
+    """
+    Filter for messages that reply to any of the given message ids.
+
+    >>> replays_to("wamid.HBKHUIyNTM4NjAfiefhwojfMTNFQ0Q2MERGRjVDMUHUIGGA=")
+    """
+    return (
+        lambda _, m: m.reply_to_message is not None
+        and m.reply_to_message.message_id in msg_ids
+    )
+
+
 has_referred_product: _MessageFilterT = lambda _, m: (
     m.reply_to_message is not None and m.reply_to_message.referred_product is not None
 )
@@ -130,6 +145,16 @@ def sent_to(*, display_phone_number: str = None, phone_number_id: str = None):
         if display_phone_number
         else m.metadata.phone_number_id == phone_number_id
     )
+
+
+send_to_me: _MessageFilterT = lambda wa, m: sent_to(phone_number_id=wa.phone_id)(wa, m)
+"""
+Filter for updates that are sent to the client phone number.
+
+- Use this filter when you choose not filter updates (e.g. ``WhatsApp(..., filter_updates=False)``) so you can still filter for messages that are sent to the client phone number.
+
+>>> send_to_me
+"""
 
 
 def from_users(
@@ -214,7 +239,7 @@ class _MediaFilters(_BaseUpdateFilters):
         """
         Filter for media messages that match any of the given mime types.
 
-        - `\`Supported Media Types\` on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#supported-media-types>`_.
+        - `Supported Media Types on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#supported-media-types>`_.
 
         >>> media.mimetypes("application/pdf", "image/png")
         >>> video.mimetypes("video/mp4")
@@ -344,7 +369,7 @@ class _TextFilters(_BaseUpdateFilters):
         """
         Filter for text messages that match any of the given regexes.
 
-        >>> text.regex(r"Hello\s+World", r"Bye\s+World", flags=re.IGNORECASE)
+        >>> text.regex(r"^hello", r"bye$")
 
         Args:
             *patterns: The regex/regexes to filter for.
@@ -833,7 +858,7 @@ class _CallbackFilters(_BaseUpdateFilters):
         """
         Filter for callbacks their data matches the given regex/regexes.
 
-        >>> callback.data_regex(r"^\d+$")  # only digits
+        >>> callback.data_regex(r"^id:", r"true$")
 
         Args:
             *patterns: The regex/regexes to match.

@@ -4,8 +4,8 @@ ________________________
 
 # [PyWa](https://github.com/david-lev/pywa) • Python wrapper for the WhatsApp Cloud API
 
-![PyPI Downloads](https://img.shields.io/pypi/dm/pywa)
-[![PyPI Version](https://badge.fury.io/py/pywa.svg)](https://badge.fury.io/py/pywa)
+[![PyPi Downloads](https://img.shields.io/pypi/dm/pywa)](https://pypi.org/project/pywa/)
+[![PyPI Version](https://badge.fury.io/py/pywa.svg)](https://pypi.org/project/pywa/)
 ![Tests](https://img.shields.io/github/actions/workflow/status/david-lev/pywa/python-app.yml?label=Tests)
 [![Docs](https://readthedocs.org/projects/pywa/badge/?version=latest&)](https://pywa.readthedocs.io)
 [![License](https://img.shields.io/github/license/david-lev/pywa)](https://github.com/david-lev/pywa/blob/master/LICENSE)

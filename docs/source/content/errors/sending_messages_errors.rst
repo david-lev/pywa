@@ -23,6 +23,8 @@ Sending Messages Errors
     :show-inheritance:
 .. autoclass:: TemplateParamCountMismatch()
     :show-inheritance:
+.. autoclass:: TemplateParamFormatMismatch()
+    :show-inheritance:
 .. autoclass:: TemplateNotExists()
     :show-inheritance:
 .. autoclass:: TemplateTextTooLong()
@@ -38,4 +40,8 @@ Sending Messages Errors
 .. autoclass:: RecipientCannotBeSender()
     :show-inheritance:
 .. autoclass:: BusinessPaymentIssue()
+    :show-inheritance:
+.. autoclass:: IncorrectCertificate()
+    :show-inheritance:
+.. autoclass:: AccountInMaintenanceMode()
     :show-inheritance:
