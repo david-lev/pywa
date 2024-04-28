@@ -1,4 +1,13 @@
-"""Usefully filters to use in your handlers."""
+"""
+Usefully filters to use in your handlers.
+
+>>> from pywa import filters as fil
+>>> from pywa import WhatsApp, types
+>>> wa = WhatsApp(...)
+>>> @wa.on_message(fil.startswith("Hi", "Hello", ignore_case=True))
+... def on_hi_msg(_: WhatsApp, m: types.Message):
+...     print("This is a welcome message!")
+"""
 
 from __future__ import annotations
 
@@ -106,27 +115,27 @@ Filter for messages that user sends to ask about a product
 
 def all_(*filters: Callable[[_Wa, _T], bool]) -> Callable[[_Wa, _T], bool]:
     """
-    Filter for updates that pass all the given filters.
+    Returns ``True`` if all the given filters return ``True``. Behaves like ``and`` between filters.
 
-    >>> all_(text.startswith("Hello"), text.endswith("Word"))
+    >>> all_(startswith("Hello"), endswith("Word"))
     """
     return lambda wa, m: all(f(wa, m) for f in filters)
 
 
 def any_(*filters: Callable[[_Wa, _T], bool]) -> Callable[[_Wa, _T], bool]:
     """
-    Filter for updates that pass any of the given filters.
+    Returns ``True`` if any of the given filters returns ``True``. Behaves like ``or`` between filters.
 
-    >>> any_(text.contains("Hello"), text.regex(r"^World"))
+    >>> any_(contains("Hello"), regex(r"^World"))
     """
     return lambda wa, m: any(f(wa, m) for f in filters)
 
 
 def not_(fil: Callable[[_Wa, _T], bool]) -> Callable[[_Wa, _T], bool]:
     """
-    Filter for updates that don't pass the given filter.
+    Negates the given filter. Behaves like ``not``
 
-    >>> not_(text.contains("Hello"))
+    >>> not_(contains("Hello"))
     """
     return lambda wa, m: not fil(wa, m)
 
