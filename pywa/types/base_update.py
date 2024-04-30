@@ -18,7 +18,14 @@ from .others import Contact, Metadata, ProductsSection, User
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
 
-    from .callback import Button, ButtonUrl, SectionList, FlowButton, CallbackDataT
+    from .callback import (
+        Button,
+        ButtonUrl,
+        SectionList,
+        FlowButton,
+        CallbackDataT,
+        CallbackData,
+    )
     from .template import Template
 
 

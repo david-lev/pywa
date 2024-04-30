@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.dynamic]
 version = {attr = "pywa.__version__"}
-readme = {file = "README.rst", content-type = "text/x-rst"}
+readme = {file = "README.md", content-type = "text/markdown"}
 dependencies = {file = "requirements.txt"}
 
 [tool.setuptools.packages.find]
@@ -20,19 +20,19 @@ requires-python = ">=3.10"
 authors = [
     {name = "David Lev", email = "davidlev@telegmail.com"},
 ]
-keywords = ['whatsapp', 'whatsapp-api', 'whatsapp-cloud-api', 'whatsapp-cloud', 'whatsapp-api-python',
-    'whatsapp-cloud-api-python', 'pywa', 'wapy', 'wa', 'wa-api', 'wa-cloud-api', 'wa-cloud', 'wa-api-python',
-    'wa-cloud-api-python', 'whatsapp-webhook', 'whatsapp-webhook-python', 'whatsapp-webhook-api', 'whatsapp-flows',
-    'whatsapp-cloud-api-flows'
+keywords = ["whatsapp", "whatsapp-api", "whatsapp-cloud-api", "whatsapp-cloud", "whatsapp-api-python",
+    "whatsapp-cloud-api-python", "pywa", "wapy", "wa", "wa-api", "wa-cloud-api", "wa-cloud", "wa-api-python",
+    "wa-cloud-api-python", "whatsapp-webhook", "whatsapp-webhook-python", "whatsapp-webhook-api", "whatsapp-flows",
+    "whatsapp-cloud-api-flows"
 ]
 classifiers = [
-    'Topic :: Communications :: Chat',
-    'Topic :: Communications',
-    'Topic :: Utilities',
-    'Development Status :: 5 - Production/Stable',
-    'Intended Audience :: Developers',
-    'License :: OSI Approved :: MIT License',
-    'Operating System :: OS Independent',
+    "Topic :: Communications :: Chat",
+    "Topic :: Communications",
+    "Topic :: Utilities",
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Topic :: Internet",
     "Topic :: Software Development :: Libraries",
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -40,9 +40,9 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-flask = ['flask']
-fastapi = ['fastapi', 'uvicorn[standard]']
-cryptography = ['cryptography']
+flask = ["flask"]
+fastapi = ["fastapi", "uvicorn[standard]"]
+cryptography = ["cryptography"]
 
 [project.urls]
 "Documentation" = "https://pywa.readthedocs.io/"

@@ -22,7 +22,9 @@ Client Reference
 .. automethod:: WhatsApp.download_media
 .. automethod:: WhatsApp.get_media_url
 .. automethod:: WhatsApp.get_business_profile
+.. automethod:: WhatsApp.get_business_phone_number
 .. automethod:: WhatsApp.update_business_profile
+.. automethod:: WhatsApp.update_conversational_automation
 .. automethod:: WhatsApp.set_business_public_key
 .. automethod:: WhatsApp.get_commerce_settings
 .. automethod:: WhatsApp.update_commerce_settings

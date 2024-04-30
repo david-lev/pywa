@@ -5,6 +5,12 @@ Others
 
 .. autoclass:: BusinessProfile()
 
+.. autoclass:: BusinessPhoneNumber()
+
+.. autoclass:: ConversationalAutomation()
+
+.. autoclass:: Command()
+
 .. autoclass:: CommerceSettings()
 
 .. autoclass:: Industry()

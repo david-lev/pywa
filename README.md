@@ -61,14 +61,13 @@ wa.send_message(
 )
 ```
 
-- Create a WhatsApp client, pass a web server app ([Flask](https://flask.palletsprojects.com/) in this example) and start the webhook:
+- To listen to updates, create a `WhatsApp` client, pass a web server app ([Flask](https://flask.palletsprojects.com/) in this example) and register callbacks:
 > See [Handlers](https://pywa.readthedocs.io/en/latest/content/handlers/overview.html) for more information.
 
 ```python
-from pywa import WhatsApp
-from flask import Flask
+from pywa import WhatsApp, filters
 from pywa.types import Message, CallbackButton, Button
-from pywa.filters import text, callback
+from flask import Flask
 
 flask_app = Flask(__name__)
 wa = WhatsApp(
@@ -81,7 +80,7 @@ wa = WhatsApp(
     app_secret='yyyyyy'
 )
 
-@wa.on_message(text.matches('Hello', 'Hi'))
+@wa.on_message(filters.matches('Hello', 'Hi'))
 def hello(client: WhatsApp, msg: Message):
     msg.react('👋')
     msg.reply_text(
@@ -94,7 +93,7 @@ def hello(client: WhatsApp, msg: Message):
         ]
     )
 
-@wa.on_callback_button(callback.data_startswith('id'))
+@wa.on_callback_button(filters.startswith('id'))
 def click_me(client: WhatsApp, clb: CallbackButton):
     clb.reply_text('You clicked me!')
 

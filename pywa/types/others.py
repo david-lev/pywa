@@ -11,6 +11,7 @@ from pywa import utils
 
 if TYPE_CHECKING:
     from message_status import MessageStatus
+    from chat_opened import ChatOpened
     from media import Image, Video, Document, Audio, Sticker
     from callback import CallbackButton, CallbackSelection
     from pywa.client import WhatsApp
@@ -711,3 +712,167 @@ class FacebookApplication(utils.FromDict):
     id: str
     name: str
     link: str
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class Command:
+    """
+    Represents a command in a conversational automation.
+
+    See `Conversational Automation <https://developers.facebook.com/docs/whatsapp/cloud-api/phone-numbers/conversational-components/#commands>`_.
+
+    Attributes:
+        name: The name of the command (without the slash).
+        description: The description of the command.
+    """
+
+    name: str
+    description: str
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            name=data.get("command_name"),
+            description=data.get("command_description"),
+        )
+
+    def to_dict(self):
+        return {
+            "command_name": self.name,
+            "command_description": self.description,
+        }
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class ConversationalAutomation:
+    """
+    Represents a conversational automation.
+
+    See `Conversational Automation <https://developers.facebook.com/docs/whatsapp/cloud-api/phone-numbers/conversational-components>`_.
+
+    Attributes:
+        id: The ID of the WhatsApp Business Phone Number.
+        chat_opened_enabled: Whether the welcome message is enabled (if so, you can listen to the :class:`ChatOpened` event).
+        ice_breakers: See `Ice Breakers <https://developers.facebook.com/docs/whatsapp/cloud-api/phone-numbers/conversational-components/#ice-breakers>`_.
+        commands: The `commands <https://developers.facebook.com/docs/whatsapp/cloud-api/phone-numbers/conversational-components/#commands>`_.
+    """
+
+    id: str
+    chat_opened_enabled: bool
+    ice_breakers: tuple[str] | None
+    commands: tuple[Command] | None
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            id=data.get("id"),
+            chat_opened_enabled=data.get("enable_welcome_message", False),
+            ice_breakers=tuple(data.get("prompts", ())) or None,
+            commands=tuple(
+                Command.from_dict(command) for command in data.get("commands", ())
+            )
+            or None,
+        )
+
+
+@dataclasses.dataclass
+class BusinessPhoneNumber:
+    """
+    Represents a WhatsApp Business Phone Number.
+
+    See `WhatsApp Business Phone Number <https://developers.facebook.com/docs/graph-api/reference/whats-app-business-account-to-number-current-status/>`_.
+
+    Attributes:
+        id: The ID of the phone number.
+        verified_name: The name that appears in WhatsApp Manager and WhatsApp client chat thread headers,
+         chat lists, and profile, if `display criteria <https://developers.facebook.com/docs/whatsapp/cloud-api/phone-numbers/#display-names>`_ is met.
+        display_phone_number: International format representation of the phone number.
+        conversational_automation: Conversational Automation feature config for this phone number.
+        status: The operating status of the phone number (eg. connected, rate limited, warned).
+        quality_rating: The quality rating of the phone number.
+        quality_score: Quality score of the phone.
+        webhook_configuration: The webhook configuration of the phone number.
+        name_status: The status of the name review.
+        new_name_status: The status of the review of the new name requested.
+        code_verification_status: Indicates the phone number's one-time password (OTP) verification status. Values can be NOT_VERIFIED, VERIFIED, or EXPIRED.
+         Only phone numbers with a VERIFIED status can be registered. See `Manage Phone Numbers and Certificates <https://developers.facebook.com/docs/whatsapp/embedded-signup/manage-accounts/phone-numbers#manage-phone-numbers-and-certificates>`_.
+        account_mode: The account mode of the phone number. See `Filtering Phone Numbers <https://developers.facebook.com/docs/whatsapp/business-management-api/manage-phone-numbers#filter-phone-numbers>`_.
+        is_official_business_account: Indicates if phone number is associated with an Official Business Account.
+        is_pin_enabled: Returns True if a pin for two-step verification is enabled.
+        is_preverified_number: Returns true if the phone number was pre-verified
+        messaging_limit_tier: Current messaging limit tier.
+        search_visibility: The availability of the phone_number in the WhatsApp Business search.
+        platform_type: Platform the business phone number is registered with. Values can be CLOUD_API, ON_PREMISE, or NOT_APPLICABLE.
+         If NOT_APPLICABLE, the number is not registered with Cloud API or On-Premises API.
+        throughput: The business phone number's Cloud API throughput level. See `Phone Number Throughput <https://developers.facebook.com/docs/whatsapp/cloud-api/overview/#throughput>`_.
+        eligibility_for_api_business_global_search: Status of eligibility in the API Business Global Search.
+        health_status: health_status
+        certificate: Certificate of the phone number
+        new_certificate: Certificate of the new name that was requested
+        last_onboarded_time: Indicates when the user added the business phone number to their WhatsApp Business Account
+         (when the user completed the Embedded Signup flow).
+
+
+    """
+
+    id: str
+    verified_name: str | None
+    display_phone_number: str | None
+    conversational_automation: ConversationalAutomation | None
+    status: str | None
+    quality_rating: str | None
+    quality_score: dict[str, str] | None
+    webhook_configuration: dict[str, str] | None
+    name_status: str | None
+    new_name_status: str | None
+    code_verification_status: str | None
+    account_mode: str | None
+    is_official_business_account: bool
+    is_pin_enabled: bool
+    is_preverified_number: bool
+    messaging_limit_tier: str | None
+    search_visibility: str | None
+    platform_type: str | None
+    throughput: dict[str, str] | None
+    eligibility_for_api_business_global_search: str | None
+    health_status: dict[str, str] | None
+    certificate: str | None
+    new_certificate: str | None
+    last_onboarded_time: str | None
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            id=data.get("id"),
+            verified_name=data.get("verified_name"),
+            display_phone_number=data.get("display_phone_number"),
+            status=data.get("status"),
+            conversational_automation=ConversationalAutomation.from_dict(
+                data["conversational_automation"]
+            )
+            if data.get("conversational_automation")
+            else None,
+            quality_rating=data.get("quality_rating"),
+            quality_score=data.get("quality_score"),
+            webhook_configuration=data.get("webhook_configuration"),
+            name_status=data.get("name_status"),
+            new_name_status=data.get("new_name_status"),
+            code_verification_status=data.get("code_verification_status"),
+            account_mode=data.get("account_mode"),
+            is_official_business_account=data.get(
+                "is_official_business_account", False
+            ),
+            is_pin_enabled=data.get("is_pin_enabled", False),
+            is_preverified_number=data.get("is_preverified_number", False),
+            messaging_limit_tier=data.get("messaging_limit_tier"),
+            search_visibility=data.get("search_visibility"),
+            platform_type=data.get("platform_type"),
+            throughput=data.get("throughput"),
+            eligibility_for_api_business_global_search=data.get(
+                "eligibility_for_api_business_global_search"
+            ),
+            health_status=data.get("health_status"),
+            certificate=data.get("certificate"),
+            new_certificate=data.get("new_certificate"),
+            last_onboarded_time=data.get("last_onboarded_time"),
+        )

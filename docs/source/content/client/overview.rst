@@ -57,7 +57,9 @@ The available methods are:
        :meth:`~WhatsApp.get_flow_assets`
    * - Business profile
      - :meth:`~WhatsApp.get_business_profile`,
+       :meth:`~WhatsApp.get_business_phone_number`,
        :meth:`~WhatsApp.update_business_profile`
+       :meth:`~WhatsApp.update_conversational_automation`
        :meth:`~WhatsApp.set_business_public_key`
    * - Commerce
      - :meth:`~WhatsApp.get_commerce_settings`,

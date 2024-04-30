@@ -24,6 +24,7 @@ from .message_status import (
 )
 from .others import (
     BusinessProfile,
+    BusinessPhoneNumber,
     CommerceSettings,
     Contact,
     Industry,
@@ -38,6 +39,8 @@ from .others import (
     ReferredProduct,
     System,
     User,
+    Command,
+    ConversationalAutomation,
 )
 from .template import (
     NewTemplate,

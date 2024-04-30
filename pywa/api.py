@@ -467,8 +467,80 @@ class WhatsAppCloudApi:
             },
         )
 
+    def get_business_phone_number(
+        self, fields: tuple[str, ...] | None = None
+    ) -> dict[str, Any]:
+        """
+        Get the business phone number.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/graph-api/reference/whats-app-business-account-to-number-current-status/>`_.
+
+        Return example::
+
+            {
+                'verified_name': 'Test Number',
+                'code_verification_status': 'NOT_VERIFIED',
+                'display_phone_number': '+1 555-096-7852',
+                'quality_rating': 'GREEN',
+                'platform_type': 'CLOUD_API',
+                'throughput': {'level': 'STANDARD'},
+                'id': '277321005464405'
+
+            }
+        Args:
+            fields: The fields to get.
+
+        Returns:
+            The business phone number.
+        """
+        return self._make_request(
+            method="GET",
+            endpoint=f"/{self.phone_id}",
+            params={"fields": ",".join(fields)} if fields else None,
+        )
+
+    def update_conversational_automation(
+        self,
+        enable_welcome_message: bool | None = None,
+        prompts: tuple[dict] | None = None,
+        commands: str | None = None,
+    ) -> dict[str, bool]:
+        """
+        Update the conversational automation settings.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/phone-numbers/conversational-components/#configuring-via-the-api>`_.
+
+        Return example::
+
+            {
+                'success': True
+            }
+
+        Args:
+            enable_welcome_message: Enable the welcome message.
+            prompts: The prompts (ice breakers) to set.
+            commands: The commands to set.
+
+        Returns:
+            The success of the operation.
+        """
+        return self._make_request(
+            method="POST",
+            endpoint=f"/{self.phone_id}/conversational_automation",
+            params={
+                k: v
+                for k, v in {
+                    "enable_welcome_message": enable_welcome_message,
+                    "prompts": prompts,
+                    "commands": commands,
+                }.items()
+                if v is not None
+            },
+        )
+
     def get_business_profile(
         self,
+        fields: tuple[str, ...] | None = None,
     ) -> dict[str, list[dict[str, str | list[str]]]]:
         """
         Get the business profile.
@@ -492,19 +564,14 @@ class WhatsAppCloudApi:
                 "vertical": "INDUSTRY",
               }]
             }
+
+        Args:
+            fields: The fields to get.
         """
-        fields = (
-            "about",
-            "address",
-            "description",
-            "email",
-            "profile_picture_url",
-            "websites",
-            "vertical",
-        )
         return self._make_request(
             method="GET",
-            endpoint=f"/{self.phone_id}/whatsapp_business_profile?fields={','.join(fields)}",
+            endpoint=f"/{self.phone_id}/whatsapp_business_profile",
+            params={"fields": ",".join(fields)} if fields else None,
         )
 
     def update_business_profile(

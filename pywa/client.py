@@ -5,6 +5,7 @@ from __future__ import annotations
 __all__ = ["WhatsApp"]
 
 import collections
+import dataclasses
 import functools
 import hashlib
 import json
@@ -37,6 +38,9 @@ from pywa.types import (
     FlowButton,
     MessageType,
     FlowStatus,
+    BusinessPhoneNumber,
+    Command,
+    ChatOpened,
 )
 from pywa.types.callback import CallbackDataT, CallbackData
 from pywa.types.flows import (
@@ -1338,6 +1342,56 @@ class WhatsApp(Server, HandlerDecorators):
             f.write(content)
         return path
 
+    def get_business_phone_number(self) -> BusinessPhoneNumber:
+        """
+        Get the phone number of the WhatsApp Business account.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.get_business_phone_number()
+
+        Returns:
+            The phone number object.
+        """
+        return BusinessPhoneNumber.from_dict(
+            data=self.api.get_business_phone_number(
+                fields=tuple(
+                    field.name for field in dataclasses.fields(BusinessPhoneNumber)
+                )
+            )
+        )
+
+    def update_conversational_automation(
+        self,
+        enable_chat_opened: bool,
+        ice_breakers: Iterable[str] | None = None,
+        commands: Iterable[Command] | None = None,
+    ) -> bool:
+        """
+        Update the conversational automation settings of the WhatsApp Business account.
+
+        - You can receive the current conversational automation settings using :py:func:`~pywa.client.WhatsApp.get_business_phone_number` and accessing the ``conversational_automation`` attribute.
+        - Read more about `Conversational Automation <https://developers.facebook.com/docs/whatsapp/cloud-api/phone-numbers/conversational-components>`_.
+
+        Args:
+            enable_chat_opened: You can be notified whenever a WhatsApp user opens a chat with you for
+             the first time. This can be useful if you want to reply to these users with a special welcome message of
+             your own design (When enabled, you'll start receiving the :class:`ChatOpened` event).
+            ice_breakers: Ice Breakers are customizable, tappable text strings that appear in a message thread the
+             first time you chat with a user. For example, `Plan a trip` or `Create a workout plan`.
+            commands: Commands are text strings that WhatsApp users can see by typing a forward slash in a message
+             thread with your business.
+
+        Returns:
+            Whether the conversational automation settings were updated.
+        """
+        return self.api.update_conversational_automation(
+            enable_welcome_message=enable_chat_opened,
+            prompts=tuple(ice_breakers) if ice_breakers else None,
+            commands=json.dumps([c.to_dict() for c in commands]) if commands else None,
+        )["success"]
+
     def get_business_profile(self) -> BusinessProfile:
         """
         Get the business profile of the WhatsApp Business account.
@@ -1351,7 +1405,17 @@ class WhatsApp(Server, HandlerDecorators):
             The business profile.
         """
         return BusinessProfile.from_dict(
-            data=self.api.get_business_profile()["data"][0]
+            data=self.api.get_business_profile(
+                fields=(
+                    "about",
+                    "address",
+                    "description",
+                    "email",
+                    "profile_picture_url",
+                    "websites",
+                    "vertical",
+                )
+            )["data"][0]
         )
 
     def set_business_public_key(
