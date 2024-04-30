@@ -3,6 +3,19 @@ Changelog
 
 NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 1.17.0 (2024-04-30)
+
+- [client,message_status] Added param `tracker` to all send-message-methods in order to track the message status, allowing to pass `CallbackData` subclasses to`tracker` param
+- [client,api] adding `update_conversational_automation` and `get_business_phone_number` to add and get `commands`, `ice_breakers` and enable `ChatOpened` events
+- [filters] adding `send_to_me` filters shortcut and `replays_to` filters. mark as deprecated all match-specific-type filters and create generic `matches`, `regex` filters for all text containing updates
+- [flows] adding `updated_at` to `FlowDetails`
+- [message] fix `from_user` in system messages
+- [errors] adding optionals `error_subcode` and `type` to all errors
+- [logging] improve loggers performance
+- [utils] bump graph api version to 19.0 and expose `Version` in the package level
+- [docs] switch readme to markdown
+
+
 ### 1.16.2 (2024-02-15)
 
 - [client] fix sending single contact
