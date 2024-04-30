@@ -89,7 +89,7 @@ This is a simple bot that uploads files from URLs.
         verify_token='xyzxyz',
     )
 
-    @wa.on_message(filters.text.startswith('http'))
+    @wa.on_message(filters.startswith('http'))
     def download(_: WhatsApp, msg: Message):
         msg.reply_document(msg.text, filename=msg.text.split('/')[-1])
 
@@ -118,9 +118,8 @@ Usage:
 
     import re
     import flask  # pip3 install flask
-    from pywa import WhatsApp
+    from pywa import WhatsApp, filters
     from pywa.types import Message
-    from pywa.filters import text
 
     flask_app = flask.Flask(__name__)
 
@@ -133,7 +132,7 @@ Usage:
 
     pattern = re.compile(r'^(\d+)\s*([+*/-])\s*(\d+)$')
 
-    @wa.on_message(text.regex(pattern))
+    @wa.on_message(filters.regex(pattern))
     def calculator(_: WhatsApp, msg: Message):
         a, op, b = re.match(pattern, msg.text).groups()
         a, b = int(a), int(b)
@@ -235,7 +234,7 @@ A simple WhatsApp bot that translates text messages to other languages.
         # Save the message ID so we can use it later to get the original text.
         MESSAGE_ID_TO_TEXT[msg_id] = msg.text
 
-    @wa.on_callback_selection(filters.callback.data_startswith('translate:'))
+    @wa.on_callback_selection(filters.startswith('translate:'))
     def translate(_: WhatsApp, sel: CallbackSelection):
         lang_code = sel.data.split(':')[-1]
         try:

@@ -277,7 +277,7 @@ class CallbackButtonHandler(Handler):
         >>> from pywa import WhatsApp, filters as fil
         >>> wa = WhatsApp(...)
         >>> print_btn = lambda _, btn: print(btn)
-        >>> wa.add_handlers(CallbackButtonHandler(print_btn, fil.callback.data_startswith('id:')))
+        >>> wa.add_handlers(CallbackButtonHandler(print_btn, fil.startswith('id:')))
 
     Args:
         callback: The callback function (gets the WhatsApp instance and the callback as arguments)
@@ -324,7 +324,7 @@ class CallbackSelectionHandler(Handler):
         >>> from pywa import WhatsApp, filters as fil
         >>> wa = WhatsApp(...)
         >>> print_selection = lambda _, sel: print(sel)
-        >>> wa.add_handlers(CallbackSelectionHandler(print_selection, fil.callback.data_startswith('id:')))
+        >>> wa.add_handlers(CallbackSelectionHandler(print_selection, fil.startswith('id:')))
 
     Args:
         callback: The callback function. (Takes a :class:`pywa.WhatsApp` instance and a
@@ -635,7 +635,7 @@ class HandlerDecorators:
             >>> from pywa.types import Button
             >>> from pywa import filters as fil
             >>> wa = WhatsApp(...)
-            >>> @wa.on_message(fil.text.matches("Hello", "Hi", ignore_case=True))
+            >>> @wa.on_message(fil.matches("Hello", "Hi", ignore_case=True))
             ... def hello_handler(_: WhatsApp, msg: Message):
             ...     msg.react("👋")
             ...     msg.reply_text(text="Hello from PyWa!", quote=True, buttons=[Button("Help", data="help")
@@ -673,7 +673,7 @@ class HandlerDecorators:
             >>> from pywa.types import CallbackButton
             >>> from pywa import filters as fil
             >>> wa = WhatsApp(...)
-            >>> @wa.on_callback_button(fil.callback.data_matches("help"))
+            >>> @wa.on_callback_button(fil.matches("help"))
             ... def help_handler(_: WhatsApp, btn: CallbackButton):
             ...     btn.reply_text(text="What can I help you with?")
 
@@ -721,7 +721,7 @@ class HandlerDecorators:
             >>> from pywa.types import CallbackSelection
             >>> from pywa import filters as fil
             >>> wa = WhatsApp(...)
-            >>> @wa.on_callback_selection(fil.callback.data_startswith("id:"))
+            >>> @wa.on_callback_selection(fil.startswith("id:"))
             ... def id_handler(_: WhatsApp, sel: CallbackSelection):
             ...     sel.reply_text(text=f"Your ID is {sel.data.split(':', 1)[1]}")
 

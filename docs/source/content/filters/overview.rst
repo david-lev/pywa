@@ -103,6 +103,5 @@ Built-in Filters
 
     ./common_filters
     ./message_filters
-    ./callback_filters
     ./message_status_filters
     ./template_status_filters
