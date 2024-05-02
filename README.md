@@ -46,18 +46,18 @@ ________________________
 ----------------
 
 - Create a WhatsApp client and send a message
-
+> See [Getting Started](https://pywa.readthedocs.io/en/latest/content/getting-started.html) for more information.
 ```python
 from pywa import WhatsApp
 
 wa = WhatsApp(
-    phone_id='100458559237541',
-    token='xxxxxxxxxxxxxxx'
+    phone_id="100458559237541",
+    token="EAAEZC6hUxkTIB"
 )
 
 wa.send_message(
-    to='9876543210',
-    text='Hello from PyWa!'
+    to="9876543210",
+    text="Hello from PyWa!"
 )
 ```
 
@@ -71,31 +71,31 @@ from flask import Flask
 
 flask_app = Flask(__name__)
 wa = WhatsApp(
-    phone_id='1234567890',
-    token='xxxxxxx',
+    phone_id="1234567890",
+    token="xxxxxxx",
     server=flask_app,
-    callback_url='https://xyz.ngrok-free.app',
-    verify_token='xyz123',
+    callback_url="https://xyz.ngrok-free.app",
+    verify_token="xyz123",
     app_id=123456,
-    app_secret='yyyyyy'
+    app_secret="yyyyyy"
 )
 
-@wa.on_message(filters.matches('Hello', 'Hi'))
+@wa.on_message(filters.matches("Hello", "Hi"))
 def hello(client: WhatsApp, msg: Message):
-    msg.react('👋')
+    msg.react("👋")
     msg.reply_text(
-        text=f'Hello {msg.from_user.name}!',
+        text=f"Hello {msg.from_user.name}!",
         buttons=[
             Button(
-                title='Click me!',
-                callback_data='id:123'
+                title="Click me!",
+                callback_data="id:123"
             )
         ]
     )
 
-@wa.on_callback_button(filters.startswith('id'))
+@wa.on_callback_button(filters.startswith("id"))
 def click_me(client: WhatsApp, clb: CallbackButton):
-    clb.reply_text('You clicked me!')
+    clb.reply_text("You clicked me!")
 
 flask_app.run()  # Run the flask app to start the server
 ```
