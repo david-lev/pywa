@@ -212,6 +212,16 @@ class WhatsApp(Server, HandlerDecorators):
         self._phone_id = str(value)
         self.api.phone_id = self._phone_id
 
+    @property
+    def token(self) -> str:
+        """The token of the WhatsApp account."""
+        return self.api._session.headers["Authorization"].split(" ")[1]
+
+    @token.setter
+    def token(self, value: str) -> None:
+        """Update the token in API calls."""
+        self.api._session.headers["Authorization"] = f"Bearer {value}"
+
     def add_handlers(self, *handlers: Handler | FlowRequestHandler):
         """
         Add handlers programmatically instead of using decorators.
@@ -249,6 +259,55 @@ class WhatsApp(Server, HandlerDecorators):
                 )
                 continue
             self._handlers[handler.__class__].append(handler)
+
+    def remove_handlers(self, *handlers: Handler):
+        """
+        Remove handlers programmatically (not flow handlers).
+
+        - If you registered callback with decorator (so uou don't have reference to the handler object), you can use the :meth:`remove_callbacks` method to remove the callback.
+
+        Example:
+
+            >>> from pywa.handlers import MessageHandler, CallbackButtonHandler
+            >>> from pywa import filters as fil
+            >>> print_message = lambda _, msg: print(msg)
+            >>> wa = WhatsApp(...)
+            >>> message_handler = MessageHandler(print_message, fil.text)
+            >>> wa.add_handlers(message_handler)
+            >>> wa.remove_handlers(message_handler)
+
+        Args:
+            handlers: The handlers to remove.
+
+        Raises:
+            ValueError: If the handler is not registered.
+        """
+        for handler in handlers:
+            try:
+                self._handlers[handler.__class__].remove(handler)
+            except ValueError:
+                raise ValueError(f"Handler {handler} not registered.")
+
+    def remove_callbacks(self, *callbacks: Callable[[WhatsApp, Any], Any]):
+        """
+        Remove callbacks programmatically (not flow callbacks).
+
+        Example:
+
+            >>> from pywa.handlers import MessageHandler, CallbackButtonHandler
+            >>> from pywa import filters as fil
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_message(fil.text)
+            ... def message_handler(_: WhatsApp, msg: Message): print(msg)
+            >>> wa.remove_callbacks(message_handler)
+
+        Args:
+            callbacks: The callbacks to remove.
+        """
+        for handlers in self._handlers.values():
+            for handler in handlers:
+                if handler.callback in callbacks:
+                    handlers.remove(handler)
 
     def send_message(
         self,

@@ -4,6 +4,8 @@ Handler Objects
 .. currentmodule:: pywa.client
 
 .. automethod:: WhatsApp.add_handlers
+.. automethod:: WhatsApp.remove_handlers
+.. automethod:: WhatsApp.remove_callbacks
 
 -------------------
 
