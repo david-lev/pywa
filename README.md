@@ -47,6 +47,7 @@ ________________________
 
 - Create a WhatsApp client and send a message
 > See [Getting Started](https://pywa.readthedocs.io/en/latest/content/getting-started.html) for more information.
+
 ```python
 from pywa import WhatsApp
 
