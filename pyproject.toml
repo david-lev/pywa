@@ -18,7 +18,7 @@ dynamic = ["version", "readme", "dependencies"]
 license = { text = "MIT" }
 requires-python = ">=3.10"
 authors = [
-    {name = "David Lev", email = "davidlev@telegmail.com"},
+    {name = "David Lev", email = "david@davidlev.dev"},
 ]
 keywords = ["whatsapp", "whatsapp-api", "whatsapp-cloud-api", "whatsapp-cloud", "whatsapp-api-python",
     "whatsapp-cloud-api-python", "pywa", "wapy", "wa", "wa-api", "wa-cloud-api", "wa-cloud", "wa-api-python",
