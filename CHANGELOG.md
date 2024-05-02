@@ -3,6 +3,12 @@ Changelog
 
 NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 1.18.0 (2024-05-02)
+
+- [client] allow to modify token and remove handlers/callbacks
+- [tests] test client methods
+
+
 ### 1.17.0 (2024-04-30)
 
 - [client,message_status] Added param `tracker` to all send-message-methods in order to track the message status, allowing to pass `CallbackData` subclasses to`tracker` param
