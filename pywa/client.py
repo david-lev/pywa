@@ -226,6 +226,9 @@ class WhatsApp(Server, HandlerDecorators):
             ...     MessageHandler(print_message, fil.text),
             ...     CallbackButtonHandler(print_message),
             ... )
+
+        Args:
+            handlers: The handlers to add.
         """
         if self._server is None:
             raise ValueError(
@@ -946,7 +949,7 @@ class WhatsApp(Server, HandlerDecorators):
             to=str(to),
             typ=MessageType.INTERACTIVE,
             msg=_get_interactive_msg(
-                typ=InteractiveType.LOCATION_REQUEST_MESSAGE.value,
+                typ=InteractiveType.LOCATION_REQUEST_MESSAGE,
                 action={"name": "send_location"},
                 body=text,
             ),
@@ -1034,7 +1037,7 @@ class WhatsApp(Server, HandlerDecorators):
             to=str(to),
             typ=MessageType.INTERACTIVE,
             msg=_get_interactive_msg(
-                typ=InteractiveType.CATALOG_MESSAGE.value,
+                typ=InteractiveType.CATALOG_MESSAGE,
                 action={
                     "name": "catalog_message",
                     **(
@@ -1097,7 +1100,7 @@ class WhatsApp(Server, HandlerDecorators):
             to=str(to),
             typ=MessageType.INTERACTIVE,
             msg=_get_interactive_msg(
-                typ=InteractiveType.PRODUCT.value,
+                typ=InteractiveType.PRODUCT,
                 action={
                     "catalog_id": catalog_id,
                     "product_retailer_id": sku,
@@ -1165,7 +1168,7 @@ class WhatsApp(Server, HandlerDecorators):
             to=str(to),
             typ=MessageType.INTERACTIVE,
             msg=_get_interactive_msg(
-                typ=InteractiveType.PRODUCT_LIST.value,
+                typ=InteractiveType.PRODUCT_LIST,
                 action={
                     "catalog_id": catalog_id,
                     "sections": tuple(ps.to_dict() for ps in product_sections),
@@ -2079,15 +2082,13 @@ def _resolve_buttons_param(
     Internal method to resolve ``buttons`` parameter. Returns a tuple of (``type``, ``buttons``).
     """
     if isinstance(buttons, SectionList):
-        return InteractiveType.LIST.value, buttons.to_dict()
+        return InteractiveType.LIST, buttons.to_dict()
     elif isinstance(buttons, ButtonUrl):
-        return InteractiveType.CTA_URL.value, buttons.to_dict()
+        return InteractiveType.CTA_URL, buttons.to_dict()
     elif isinstance(buttons, FlowButton):
-        return InteractiveType.FLOW.value, buttons.to_dict()
+        return InteractiveType.FLOW, buttons.to_dict()
     else:  # assume its list of buttons
-        return InteractiveType.BUTTON.value, {
-            "buttons": tuple(b.to_dict() for b in buttons)
-        }
+        return InteractiveType.BUTTON, {"buttons": tuple(b.to_dict() for b in buttons)}
 
 
 _media_types_default_filenames = {

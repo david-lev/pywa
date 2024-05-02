@@ -572,7 +572,7 @@ class NewTemplate:
 
         Example:
             >>> from pywa.types import NewTemplate
-            >>> NewTemplate.Footer(text='Use the link below to log in to your account.')
+            >>> NewTemplate.Footer(text='⚡ Powered by PyWa')
 
         Attributes:
             text: Text to send with the footer (Up to 60 characters, no placeholders allowed).

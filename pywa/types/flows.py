@@ -197,8 +197,8 @@ class FlowRequest:
         When True, if flow endpoint register with ``acknowledge_errors=True``,
         pywa will acknowledge the error and ignore the response from the callback. The callback still be called.
         """
-        return any(
-            key in self.data for key in ("error_message", "error_key") if self.data
+        return self.data and any(
+            key in self.data for key in ("error_message", "error_key")
         )
 
     @property

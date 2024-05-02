@@ -124,7 +124,7 @@ class MessageStatus(BaseUserUpdate, Generic[CallbackDataT]):
         ...     tracker=(UserData(id=123, name='david', admin=True), State.START)
         ... )           # Here ^^^ we send a tuple of UserData and State
 
-        >>> @wa.on_message_status(factory=tuple[UserData, State]) # Use the factory parameter to convert the tracker data
+        >>> @wa.on_message_status(factory=(UserData, State)) # Use the factory parameter to convert the tracker data
         ... def on_user_data(_: WhatsApp, s: MessageStatus[tuple[UserData, State]]): # For autocomplete
         ...    user, state = s.tracker # Unpack the tuple
         ...    if user.admin: print(user.id, state)
