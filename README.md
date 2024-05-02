@@ -1,9 +1,11 @@
 <div style="display: flex; align-items: center;">
-    <img alt="PyWa Logo" height="150" src="https://pywa.readthedocs.io/en/latest/_static/pywa-logo.png" width="150"/>
-    <h1 style="margin-left: 20px;">PyWa • Python wrapper for the WhatsApp Cloud API</h1>
+    <a href="https://github.com/david-lev/pywa">
+        <img alt="PyWa Logo" height="150" src="https://pywa.readthedocs.io/en/latest/_static/pywa-logo.png" width="200"/>
+    </a>
+    <h1 style="margin-left: 20px;">
+        <a href="https://github.com/david-lev/pywa" style="text-decoration: none; color: inherit;">PyWa</a> • Python wrapper for the WhatsApp Cloud API
+    </h1>
 </div>
-
----
 
 [![PyPi Downloads](https://img.shields.io/pypi/dm/pywa)](https://pypi.org/project/pywa/)
 [![PyPI Version](https://badge.fury.io/py/pywa.svg)](https://pypi.org/project/pywa/)
