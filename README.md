@@ -1,8 +1,9 @@
-<img alt="PyWa Logo" height="250" src="https://pywa.readthedocs.io/en/latest/_static/pywa-logo.png" width="250"/>
+<div style="display: flex; align-items: center;">
+    <img alt="PyWa Logo" height="150" src="https://pywa.readthedocs.io/en/latest/_static/pywa-logo.png" width="150"/>
+    <h1 style="margin-left: 20px;">PyWa • Python wrapper for the WhatsApp Cloud API</h1>
+</div>
 
-________________________
-
-# [PyWa](https://github.com/david-lev/pywa) • Python wrapper for the WhatsApp Cloud API
+---
 
 [![PyPi Downloads](https://img.shields.io/pypi/dm/pywa)](https://pypi.org/project/pywa/)
 [![PyPI Version](https://badge.fury.io/py/pywa.svg)](https://pypi.org/project/pywa/)
