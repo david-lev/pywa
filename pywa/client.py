@@ -741,6 +741,7 @@ class WhatsApp(Server, HandlerDecorators):
                     media_id_or_url=document,
                     is_url=is_url,
                     caption=caption,
+                    filename=filename,
                 ),
                 biz_opaque_callback_data=_resolve_tracker_param(tracker),
             )["messages"][0]["id"]
