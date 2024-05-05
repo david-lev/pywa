@@ -3,6 +3,11 @@ Changelog
 
 NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 1.18.1 (2024-05-05)
+
+- [client] fix document filename
+
+
 ### 1.18.0 (2024-05-02)
 
 - [client] allow to modify token and remove handlers/callbacks
