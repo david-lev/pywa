@@ -145,6 +145,9 @@ ogp_image = "https://pywa.readthedocs.io/en/latest/_static/pywa-ogp.png"
 ogp_image_alt = "PyWa Logo"
 ogp_description_length = 300
 ogp_type = "website"
+ogp_custom_meta_tags = [
+    '<meta property="og:description" content="PyWa • Python wrapper for the WhatsApp Cloud API" /> '
+]
 
 html_extra_path = ["google898e98a538257a96.html"]
 
