@@ -6,10 +6,10 @@ import requests
 import requests_toolbelt
 
 import pywa
-from pywa.errors import WhatsAppError
+from .errors import WhatsAppError
 
 if TYPE_CHECKING:
-    from pywa import WhatsApp
+    from .client import WhatsApp
 
 
 class WhatsAppCloudApi:

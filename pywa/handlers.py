@@ -42,8 +42,8 @@ import functools
 import inspect
 from typing import TYPE_CHECKING, Any, Callable, cast, TypeAlias, Awaitable
 
-from pywa import utils
-from pywa.types import (
+from . import utils
+from .types import (
     CallbackButton,
     CallbackSelection,
     Message,
@@ -54,11 +54,11 @@ from pywa.types import (
     ChatOpened,
     CallbackData,
 )
-from pywa.types.flows import FlowCompletion, FlowResponseError  # noqa
+from .types.flows import FlowCompletion, FlowResponseError  # noqa
 
 if TYPE_CHECKING:
-    from pywa.client import WhatsApp
-    from pywa.types.base_update import BaseUpdate  # noqa
+    from .client import WhatsApp
+    from .types.base_update import BaseUpdate  # noqa
 
 _CallbackDataFactoryT: TypeAlias = (
     type[str]

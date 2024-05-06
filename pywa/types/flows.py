@@ -10,9 +10,9 @@ import logging
 import pathlib
 from typing import Iterable, TYPE_CHECKING, Any, BinaryIO, Literal
 
-from pywa import utils
-from pywa.types.base_update import BaseUserUpdate  # noqa
-from pywa.types.others import (
+from .. import utils
+from .base_update import BaseUserUpdate  # noqa
+from .others import (
     WhatsAppBusinessAccount,
     FacebookApplication,
     MessageType,
@@ -22,7 +22,7 @@ from pywa.types.others import (
 )
 
 if TYPE_CHECKING:
-    from pywa import WhatsApp
+    from ..client import WhatsApp
 
 _logger = logging.getLogger(__name__)
 

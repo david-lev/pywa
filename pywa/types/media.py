@@ -17,10 +17,10 @@ import dataclasses
 import mimetypes
 from typing import TYPE_CHECKING
 
-from pywa import utils
+from .. import utils
 
 if TYPE_CHECKING:
-    from pywa.client import WhatsApp
+    from ..client import WhatsApp
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)

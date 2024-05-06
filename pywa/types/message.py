@@ -8,7 +8,7 @@ import dataclasses
 import datetime
 from typing import TYPE_CHECKING, Any, Callable, Iterable
 
-from pywa.errors import WhatsAppError
+from ..errors import WhatsAppError
 
 from .base_update import BaseUserUpdate  # noqa
 from .callback import Button, ButtonUrl, SectionList
@@ -27,7 +27,7 @@ from .others import (
 )
 
 if TYPE_CHECKING:
-    from pywa.client import WhatsApp
+    from ..client import WhatsApp
 
 
 _FIELDS_TO_OBJECTS_CONSTRUCTORS: dict[str, Callable[[dict, WhatsApp], Any]] = dict(

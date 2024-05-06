@@ -1,15 +1,17 @@
 """This module contains the Server class, which is used to set up a webhook for receiving incoming updates."""
 
+__all__ = ["Server"]
+
 import asyncio
 import logging
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
 
-from pywa import utils, handlers
-from pywa.errors import WhatsAppError
-from pywa.handlers import Handler, ChatOpenedHandler  # noqa
-from pywa.handlers import (
+from . import utils, handlers
+from .errors import WhatsAppError
+from .handlers import Handler, ChatOpenedHandler  # noqa
+from .handlers import (
     CallbackButtonHandler,
     CallbackSelectionHandler,
     MessageHandler,
@@ -17,17 +19,17 @@ from pywa.handlers import (
     RawUpdateHandler,
     FlowCompletionHandler,
 )
-from pywa.types import MessageType, FlowRequest, FlowResponse
-from pywa.types.base_update import BaseUpdate, StopHandling  # noqa
-from pywa.types.flows import (
+from .types import MessageType, FlowRequest, FlowResponse
+from .types.base_update import BaseUpdate, StopHandling  # noqa
+from .types.flows import (
     FlowRequestCannotBeDecrypted,
     FlowResponseError,  # noqa
     FlowTokenNoLongerValid,
 )
-from pywa.utils import FastAPI, Flask
+from .utils import FastAPI, Flask
 
 if TYPE_CHECKING:
-    from pywa.client import WhatsApp
+    from .client import WhatsApp
 
 _VERIFY_TIMEOUT_SEC = 6
 

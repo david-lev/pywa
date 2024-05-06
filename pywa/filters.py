@@ -51,14 +51,14 @@ import abc
 import re
 from typing import TYPE_CHECKING, Callable, Iterable, TypeAlias, TypeVar
 from pywa import utils as _utils
-from pywa.errors import ReEngagementMessage, WhatsAppError
-from pywa.types import CallbackButton as _Clb, CallbackSelection as _Cls
-from pywa.types import Message as _Msg
-from pywa.types import MessageStatus as _Ms
-from pywa.types import MessageStatusType as _Mst
-from pywa.types import MessageType as _Mt
-from pywa.types import TemplateStatus as _Ts
-from pywa.types.base_update import BaseUpdate as _BaseUpdate  # noqa
+from .errors import ReEngagementMessage, WhatsAppError
+from .types import CallbackButton as _Clb, CallbackSelection as _Cls
+from .types import Message as _Msg
+from .types import MessageStatus as _Ms
+from .types import MessageStatusType as _Mst
+from .types import MessageType as _Mt
+from .types import TemplateStatus as _Ts
+from .types.base_update import BaseUpdate as _BaseUpdate  # noqa
 
 if TYPE_CHECKING:
     from pywa import WhatsApp as _Wa

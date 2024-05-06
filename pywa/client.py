@@ -18,10 +18,10 @@ from typing import BinaryIO, Iterable, Literal, Any, Callable
 
 import requests
 
-from pywa import utils
-from pywa.api import WhatsAppCloudApi
-from pywa.handlers import Handler, HandlerDecorators, FlowRequestHandler  # noqa
-from pywa.types import (
+from . import utils
+from .api import WhatsAppCloudApi
+from .handlers import Handler, HandlerDecorators, FlowRequestHandler  # noqa
+from .types import (
     BusinessProfile,
     Button,
     ButtonUrl,
@@ -42,25 +42,25 @@ from pywa.types import (
     Command,
     ChatOpened,
 )
-from pywa.types.callback import CallbackDataT, CallbackData
-from pywa.types.flows import (
+from .types.callback import CallbackDataT, CallbackData
+from .types.flows import (
     FlowCategory,
     FlowJSON,
     FlowDetails,
     FlowValidationError,
     FlowAsset,
 )
-from pywa.types.others import InteractiveType
-from pywa.utils import FastAPI, Flask
-from pywa.server import Server
+from .types.others import InteractiveType
+from .utils import FastAPI, Flask
+from .server import Server
 
 _MISSING: object | None = object()
 """A sentinel value to indicate a missing value to distinguish from ``None``."""
 
+_DEFAULT_WORKERS = min(32, (os.cpu_count() or 0) + 4)
+
 
 class WhatsApp(Server, HandlerDecorators):
-    _DEFAULT_WORKERS = min(32, (os.cpu_count() or 0) + 4)
-
     def __init__(
         self,
         phone_id: str | int,

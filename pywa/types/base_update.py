@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, BinaryIO, Iterable
 from .others import Contact, Metadata, ProductsSection, User
 
 if TYPE_CHECKING:
-    from pywa.client import WhatsApp
+    from ..client import WhatsApp
 
     from .callback import (
         Button,
