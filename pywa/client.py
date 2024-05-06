@@ -198,6 +198,7 @@ class WhatsApp(Server, HandlerDecorators):
             flows_request_decryptor=flows_request_decryptor,
             flows_response_encryptor=flows_response_encryptor,
             max_workers=max_workers,
+            auto_register_callback_url=True,
         )
 
     def __str__(self) -> str:

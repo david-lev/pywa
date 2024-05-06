@@ -64,6 +64,7 @@ class Server:
         flows_request_decryptor: utils.FlowRequestDecryptor | None,
         flows_response_encryptor: utils.FlowResponseEncryptor | None,
         max_workers: int,
+        auto_register_callback_url: bool,
     ):
         if server is None:
             self._server = None
@@ -83,7 +84,32 @@ class Server:
                 "When listening for incoming updates, a verify token must be provided.\n>> The verify token can "
                 "be any string. It is used to challenge the webhook endpoint to verify that the endpoint is valid."
             )
+        self._register_routes(verify_token=verify_token)
 
+        if callback_url is not None:
+            if app_id is None or app_secret is None:
+                raise ValueError(
+                    "When registering a callback URL, the app ID and app secret must be provided.\n>> See here how "
+                    "to get them: "
+                    "https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings/"
+                )
+            if auto_register_callback_url:
+                threading.Timer(
+                    interval=(verify_timeout - _VERIFY_TIMEOUT_SEC)
+                    if verify_timeout is not None
+                    and verify_timeout > _VERIFY_TIMEOUT_SEC
+                    else 0,
+                    function=self._register_callback_url,
+                    kwargs=dict(
+                        callback_url=callback_url,
+                        app_id=app_id,
+                        app_secret=app_secret,
+                        verify_token=verify_token,
+                        fields=fields,
+                    ),
+                ).start()
+
+    def _register_routes(self: "WhatsApp", verify_token: str) -> None:
         hub_vt = "hub.verify_token"
         hub_ch = "hub.challenge"
 
@@ -175,45 +201,35 @@ class Server:
                     f"The `server` must be one of {utils.ServerType.protocols_names()}"
                 )
 
-        if callback_url is not None:
-            if app_id is None or app_secret is None:
-                raise ValueError(
-                    "When registering a callback URL, the app ID and app secret must be provided.\n>> See here how "
-                    "to get them: "
-                    "https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings/"
-                )
-
-            # This is a non-blocking function that registers the callback URL.
-            # It must be called after the server is running so that the challenge can be verified.
-            def register_callback_url() -> None:
-                full_url = (
-                    f"{callback_url.rstrip('/')}/{self._webhook_endpoint.lstrip('/')}"
-                )
-                try:
-                    app_access_token = self.api.get_app_access_token(
-                        app_id=app_id, app_secret=app_secret
-                    )
-                    # noinspection PyProtectedMember
-                    if not self.api.set_app_callback_url(
-                        app_id=app_id,
-                        app_access_token=app_access_token["access_token"],
-                        callback_url=full_url,
-                        verify_token=verify_token,
-                        fields=tuple(fields or Handler._fields_to_subclasses().keys()),
-                    )["success"]:
-                        raise RuntimeError("Failed to register callback URL.")
-                    _logger.info("Callback URL '%s' registered successfully", full_url)
-                except WhatsAppError as e:
-                    raise RuntimeError(
-                        f"Failed to register callback URL '{full_url}'"
-                    ) from e
-
-            threading.Timer(
-                interval=(verify_timeout - _VERIFY_TIMEOUT_SEC)
-                if verify_timeout is not None and verify_timeout > _VERIFY_TIMEOUT_SEC
-                else 0,
-                function=register_callback_url,
-            ).start()
+    def _register_callback_url(
+        self: "WhatsApp",
+        callback_url: str,
+        app_id: int,
+        app_secret: str,
+        verify_token: str,
+        fields: tuple[str, ...] | None,
+    ) -> None:
+        """
+        This is a non-blocking function that registers the callback URL.
+        It must be called after the server is running so that the challenge can be verified.
+        """
+        full_url = f"{callback_url.rstrip('/')}/{self._webhook_endpoint.lstrip('/')}"
+        try:
+            app_access_token = self.api.get_app_access_token(
+                app_id=app_id, app_secret=app_secret
+            )
+            # noinspection PyProtectedMember
+            if not self.api.set_app_callback_url(
+                app_id=app_id,
+                app_access_token=app_access_token["access_token"],
+                callback_url=full_url,
+                verify_token=verify_token,
+                fields=tuple(fields or Handler._fields_to_subclasses().keys()),
+            )["success"]:
+                raise RuntimeError("Failed to register callback URL.")
+            _logger.info("Callback URL '%s' registered successfully", full_url)
+        except WhatsAppError as e:
+            raise RuntimeError(f"Failed to register callback URL '{full_url}'") from e
 
     async def _call_handlers(self: "WhatsApp", update: dict) -> None:
         """Call the handlers for the given update."""
