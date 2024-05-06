@@ -45,7 +45,7 @@ CallbackDataFactoryT: TypeAlias = (
     | type[CallbackData]
     | tuple[type[CallbackData | Any], ...]
     | list[type[CallbackData | Any]]
-    | Callable[[str], Any]
+    | Callable[[str], Any | Awaitable[Any]]
 )
 """Type hint for the callback data factory."""
 
@@ -73,29 +73,33 @@ def _resolve_callback_data_factory(
     field_name: str,
 ) -> tuple[CallbackDataFactoryT, Callable[[WhatsApp, Any], bool] | None]:
     """Internal function to resolve the callback data factory into a constractor and a filter."""
-    clb_filter = None
+    factory_filter = None
     if isinstance(
         factory, (tuple, list)
     ):  # The factory is a tuple|list of CallbackData subclasses or functions
 
-        def constractor(data: str) -> tuple[Any, ...] | list[Any, ...]:
+        async def constractor(data: str) -> tuple[Any, ...] | list[Any, ...]:
             objs = []
             for fact, split in zip(factory, data.split(CallbackData.__callback_sep__)):
                 if _safe_issubclass(fact, CallbackData):
                     objs.append(fact.from_str(split))
                 else:
-                    objs.append(fact(split))
+                    objs.append(
+                        await fact(split)
+                        if inspect.iscoroutinefunction(fact)
+                        else fact(split)
+                    )
             return factory.__class__(objs)
 
         if any(
             (
                 callback_datas := tuple(
-                    bool(issubclass(f, CallbackData)) for f in factory
+                    _safe_issubclass(f, CallbackData) for f in factory
                 )
             )
         ):
 
-            def clb_filter(
+            def factory_filter(
                 _: WhatsApp, update: CallbackButton | CallbackSelection | MessageStatus
             ) -> bool:
                 raw_data = getattr(update, field_name)
@@ -118,7 +122,7 @@ def _resolve_callback_data_factory(
     ):  # The factory is a single CallbackData subclass
         constractor = factory.from_str
 
-        def clb_filter(
+        def factory_filter(
             _: WhatsApp, update: CallbackButton | CallbackSelection | MessageStatus
         ) -> bool:
             raw_data = getattr(update, field_name)
@@ -133,7 +137,7 @@ def _resolve_callback_data_factory(
     else:  # The factory is a function or custom type
         constractor = factory
 
-    return constractor, clb_filter
+    return constractor, factory_filter
 
 
 async def _get_factored_update(
@@ -146,26 +150,31 @@ async def _get_factored_update(
     if handler.factory_before_filters and handler.factory_filter is not None:
         if handler.factory_filter(wa, update):
             data = getattr(update, field_name)
-            update = dataclasses.replace(
-                update, data=handler.factory(data) if data else None
+            if data is None:
+                return
+            factorized_data = (
+                await handler.factory(data)
+                if inspect.iscoroutinefunction(handler.factory)
+                else handler.factory(data)
             )
+            update = dataclasses.replace(update, data=factorized_data)
         else:
             return
     try:
-        pass_filters = all(
-            (
-                await f(wa, update) if inspect.iscoroutinefunction(f) else f(wa, update)
-                for f in (
-                    *(
-                        (handler.factory_filter,)
-                        if not handler.factory_before_filters
-                        and handler.factory_filter is not None
-                        else tuple()
-                    ),
-                    *handler.filters,
-                )
-            )
-        )
+        for f in (
+            *(
+                (handler.factory_filter,)
+                if not handler.factory_before_filters
+                and handler.factory_filter is not None
+                else tuple()
+            ),
+            *handler.filters,
+        ):
+            if inspect.iscoroutinefunction(f):
+                if not await f(wa, update):
+                    return
+            elif not f(wa, update):
+                return
     except AttributeError as e:
         if (
             not handler.factory_before_filters
@@ -177,13 +186,18 @@ async def _get_factored_update(
                 " was applied. Please set `factory_before_filters=True` in the callback constructor."
             ) from e
         raise
-    if pass_filters:
-        if not handler.factory_before_filters and handler.factory is not str:
-            data = getattr(update, field_name)
-            update = dataclasses.replace(
-                update, **{field_name: handler.factory(data) if data else None}
-            )
-        return update
+
+    if not handler.factory_before_filters and handler.factory is not str:
+        data = getattr(update, field_name)
+        if data is None:
+            return
+        factorized_data = (
+            await handler.factory(data)
+            if inspect.iscoroutinefunction(handler.factory)
+            else handler.factory(data)
+        )
+        update = dataclasses.replace(update, **{field_name: factorized_data})
+    return update
 
 
 class Handler(abc.ABC):
@@ -334,7 +348,15 @@ class CallbackButtonHandler(Handler):
     async def handle(self, wa: WhatsApp, clb: CallbackButton):
         update = await _get_factored_update(self, wa, clb, "data")
         if update is not None:
-            await super().handle(wa, update)
+            if inspect.iscoroutinefunction(self.callback):
+                await self.callback(wa, update)
+            else:
+                await wa._loop.run_in_executor(
+                    wa._executor,
+                    self.callback,
+                    wa,
+                    update,
+                )
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}(callback={self.callback!r}, filters={self.filters!r}, factory={self.factory!r})"
@@ -384,7 +406,15 @@ class CallbackSelectionHandler(Handler):
     async def handle(self, wa: WhatsApp, sel: CallbackSelection):
         update = await _get_factored_update(self, wa, sel, "data")
         if update is not None:
-            await super().handle(wa, update)
+            if inspect.iscoroutinefunction(self.callback):
+                await self.callback(wa, update)
+            else:
+                await wa._loop.run_in_executor(
+                    wa._executor,
+                    self.callback,
+                    wa,
+                    update,
+                )
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}(callback={self.callback!r}, filters={self.filters!r}, factory={self.factory!r})"
@@ -436,7 +466,15 @@ class MessageStatusHandler(Handler):
     async def handle(self, wa: WhatsApp, status: MessageStatus):
         update = await _get_factored_update(self, wa, status, "tracker")
         if update is not None:
-            await super().handle(wa, update)
+            if inspect.iscoroutinefunction(self.callback):
+                await self.callback(wa, update)
+            else:
+                await wa._loop.run_in_executor(
+                    wa._executor,
+                    self.callback,
+                    wa,
+                    update,
+                )
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}(callback={self.callback!r}, filters={self.filters!r}, factory={self.factory!r})"
