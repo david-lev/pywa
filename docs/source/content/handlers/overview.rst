@@ -228,10 +228,19 @@ Registering a callback function
 To handle the incoming updates, you need to register a callback function. This function will be called whenever an update
 is received from WhatsApp.
 
-.. attention::
-    :class: dropdown
+.. tip::
+    :class: note
 
-    All callback functions must be registered before starting the server. Otherwise, the updates will not be handled!
+    A callback function can be both a synchronous or an asynchronous function.
+
+
+.. attention::
+    :class: warning
+
+    The callback function must finish within ~25 seconds. Otherwise, WhatsApp will consider it as a timeout and will retry sending the update.
+
+    If you need to do a long operation, you may want to run it in a separate thread or process, or use an task queue.
+
 
 A callback function is a function that takes two (positional) arguments:
     - The WhatsApp client object (:class:`~pywa.client.WhatsApp`)

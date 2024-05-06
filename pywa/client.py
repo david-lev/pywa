@@ -59,6 +59,8 @@ _MISSING: object | None = object()
 
 
 class WhatsApp(Server, HandlerDecorators):
+    _DEFAULT_WORKERS = min(32, (os.cpu_count() or 0) + 4)
+
     def __init__(
         self,
         phone_id: str | int,
@@ -85,7 +87,7 @@ class WhatsApp(Server, HandlerDecorators):
         | None = utils.default_flow_request_decryptor,
         flows_response_encryptor: utils.FlowResponseEncryptor
         | None = utils.default_flow_response_encryptor,
-        max_workers: int = min(32, (os.cpu_count() or 0) + 4),
+        max_workers: int = _DEFAULT_WORKERS,
     ) -> None:
         """
         The WhatsApp client.
