@@ -4,6 +4,7 @@ Usefully filters to use in your handlers.
 >>> from pywa import filters as fil
 >>> from pywa import WhatsApp, types
 >>> wa = WhatsApp(...)
+
 >>> @wa.on_message(fil.startswith("Hi", "Hello", ignore_case=True))
 ... def on_hi_msg(_: WhatsApp, m: types.Message):
 ...     print("This is a welcome message!")

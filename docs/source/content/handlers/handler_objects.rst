@@ -5,7 +5,6 @@ Handler Objects
 
 .. automethod:: WhatsApp.add_handlers
 .. automethod:: WhatsApp.remove_handlers
-.. automethod:: WhatsApp.remove_callbacks
 
 -------------------
 

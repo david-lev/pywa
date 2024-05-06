@@ -21,7 +21,7 @@ Keyboard
 
 .. currentmodule:: pywa.handlers
 
-.. autoclass:: CallbackDataFactoryT()
+.. autoclass:: _CallbackDataFactoryT()
 
 ----------------
 

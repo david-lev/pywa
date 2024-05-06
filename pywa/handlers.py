@@ -1,5 +1,25 @@
 """
-This module contains the handlers for incoming updates.
+Handlers for incoming updates.
+
+>>> from pywa import handlers, filters
+>>> from pywa import WhatsApp
+>>> wa = WhatsApp(...)
+
+# Register a callback with decorators
+
+>>> @wa.on_message(filters.text)
+... async def print_text(wa, m):
+...     print(m.text)
+
+>>> wa.remove_callbacks(print_text)
+
+# Register a callback programmatically
+
+>>> print_msg_handler = handlers.MessageHandler(lambda w, m: print(m))
+>>> print_txt_handler = handlers.MessageHandler(lambda w, m: print(m.text), filters.text)
+>>> wa.add_handlers(print_msg_handler, print_txt_handler)
+>>> wa.remove_handlers(print_msg_handler, print_txt_handler)
+
 """
 
 from __future__ import annotations

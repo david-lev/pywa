@@ -64,15 +64,15 @@ class Server:
         business_private_key_password: str | None,
         flows_request_decryptor: utils.FlowRequestDecryptor | None,
         flows_response_encryptor: utils.FlowResponseEncryptor | None,
+        max_workers: int,
     ):
         if server is None:
             self._server = None
             return
         self._server = server
         self._server_type = utils.ServerType.from_app(server)
-        self._workers = min(32, (os.cpu_count() or 0) + 4)
-        self._executor = ThreadPoolExecutor(self._workers, thread_name_prefix="Handler")
-        self._loop = asyncio.new_event_loop()
+        self._executor = ThreadPoolExecutor(max_workers, thread_name_prefix="Handler")
+        self._loop = asyncio.get_event_loop()
         self._webhook_endpoint = webhook_endpoint
         self._private_key = business_private_key
         self._private_key_password = business_private_key_password
@@ -374,13 +374,13 @@ class Server:
                 )
             except Exception:
                 _logger.exception(
-                    "Flow Endpoint '(%s)': Decryption failed for payload: %s",
+                    "Flow Endpoint ('%s'): Decryption failed for payload: %s",
                     endpoint,
                     payload,
                 )
                 return "Decryption failed", FlowRequestCannotBeDecrypted.status_code
             _logger.debug(
-                "Flow Endpoint '(%s)': Received decrypted request: %s",
+                "Flow Endpoint ('%s'): Received decrypted request: %s",
                 endpoint,
                 decrypted_request,
             )
@@ -399,7 +399,7 @@ class Server:
                 )
             except Exception:
                 _logger.exception(
-                    "Flow Endpoint '(%s)': Failed to construct FlowRequest from decrypted data: %s",
+                    "Flow Endpoint ('%s'): Failed to construct FlowRequest from decrypted data: %s",
                     endpoint,
                     decrypted_request,
                 )
@@ -426,7 +426,7 @@ class Server:
                 return e.__class__.__name__, e.status_code
             except Exception:
                 _logger.exception(
-                    "Flow Endpoint '(%s)': An error occurred while %s was handling a flow request",
+                    "Flow Endpoint ('%s'): An error occurred while %s was handling a flow request",
                     endpoint,
                     callback.__name__,
                 )

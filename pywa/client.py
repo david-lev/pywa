@@ -85,6 +85,7 @@ class WhatsApp(Server, HandlerDecorators):
         | None = utils.default_flow_request_decryptor,
         flows_response_encryptor: utils.FlowResponseEncryptor
         | None = utils.default_flow_response_encryptor,
+        max_workers: int = min(32, (os.cpu_count() or 0) + 4),
     ) -> None:
         """
         The WhatsApp client.
@@ -148,6 +149,7 @@ class WhatsApp(Server, HandlerDecorators):
             business_private_key_password: The global private key password (if needed) to use in the ``flows_request_decryptor``
             flows_request_decryptor: The global flows requests decryptor implementation to use to decrypt Flows requests.
             flows_response_encryptor: The global flows response encryptor implementation to use to encrypt Flows responses.
+            max_workers: The maximum number of workers to use for handling incoming updates (optional, default: ``min(32,os.cpu_count()+4)``,
         """
         if not phone_id or not token:
             raise ValueError("phone_id and token must be provided.")
@@ -193,6 +195,7 @@ class WhatsApp(Server, HandlerDecorators):
             business_private_key_password=business_private_key_password,
             flows_request_decryptor=flows_request_decryptor,
             flows_response_encryptor=flows_response_encryptor,
+            max_workers=max_workers,
         )
 
     def __str__(self) -> str:
