@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     from pywa.client import WhatsApp
     from pywa.types.base_update import BaseUpdate  # noqa
 
-CallbackDataFactoryT: TypeAlias = (
+_CallbackDataFactoryT: TypeAlias = (
     type[str]
     | type[CallbackData]
     | tuple[type[CallbackData | Any], ...]
@@ -49,7 +49,7 @@ CallbackDataFactoryT: TypeAlias = (
 )
 """Type hint for the callback data factory."""
 
-FlowRequestHandlerT: TypeAlias = Callable[
+_FlowRequestHandlerT: TypeAlias = Callable[
     ["WhatsApp", FlowRequest],
     FlowResponse
     | FlowResponseError
@@ -68,10 +68,10 @@ def _safe_issubclass(obj: type, base: type) -> bool:
         return False
 
 
-def _resolve_callback_data_factory(
-    factory: CallbackDataFactoryT,
+def _resolve_factory(
+    factory: _CallbackDataFactoryT,
     field_name: str,
-) -> tuple[CallbackDataFactoryT, Callable[[WhatsApp, Any], bool] | None]:
+) -> tuple[_CallbackDataFactoryT, Callable[[WhatsApp, Any], bool] | None]:
     """Internal function to resolve the callback data factory into a constractor and a filter."""
     factory_filter = None
     if isinstance(
@@ -181,7 +181,7 @@ async def _get_factored_update(
             and isinstance(e.obj, str)
             and handler.factory is not str
         ):
-            raise TypeError(
+            raise AttributeError(
                 "It seems like your filters tried to access a field of the callback data before the factory"
                 " was applied. Please set `factory_before_filters=True` in the callback constructor."
             ) from e
@@ -335,13 +335,13 @@ class CallbackButtonHandler(Handler):
         self,
         callback: Callable[[WhatsApp, CallbackButton], Any | Awaitable[Any]],
         *filters: Callable[[WhatsApp, CallbackButton], bool | Awaitable[bool]],
-        factory: CallbackDataFactoryT = str,
+        factory: _CallbackDataFactoryT = str,
         factory_before_filters: bool = False,
     ):
         (
             self.factory,
             self.factory_filter,
-        ) = _resolve_callback_data_factory(factory, "data")
+        ) = _resolve_factory(factory, "data")
         self.factory_before_filters = factory_before_filters
         super().__init__(callback, *filters)
 
@@ -393,13 +393,13 @@ class CallbackSelectionHandler(Handler):
         self,
         callback: Callable[[WhatsApp, CallbackSelection], Any | Awaitable[Any]],
         *filters: Callable[[WhatsApp, CallbackSelection], bool | Awaitable[bool]],
-        factory: CallbackDataFactoryT = str,
+        factory: _CallbackDataFactoryT = str,
         factory_before_filters: bool = False,
     ):
         (
             self.factory,
             self.factory_filter,
-        ) = _resolve_callback_data_factory(factory, "data")
+        ) = _resolve_factory(factory, "data")
         self.factory_before_filters = factory_before_filters
         super().__init__(callback, *filters)
 
@@ -453,13 +453,13 @@ class MessageStatusHandler(Handler):
         self,
         callback: Callable[[WhatsApp, MessageStatus], Any | Awaitable[Any]],
         *filters: Callable[[WhatsApp, MessageStatus], bool | Awaitable[bool]],
-        factory: CallbackDataFactoryT = str,
+        factory: _CallbackDataFactoryT = str,
         factory_before_filters: bool = False,
     ):
         (
             self.factory,
             self.factory_filter,
-        ) = _resolve_callback_data_factory(factory, "tracker")
+        ) = _resolve_factory(factory, "tracker")
         self.factory_before_filters = factory_before_filters
         super().__init__(callback, *filters)
 
@@ -627,7 +627,7 @@ class FlowRequestHandler:
 
     def __init__(
         self,
-        callback: FlowRequestHandlerT,
+        callback: _FlowRequestHandlerT,
         *,
         endpoint: str,
         acknowledge_errors: bool = True,
@@ -724,7 +724,7 @@ class HandlerDecorators:
     def on_callback_button(
         self: WhatsApp,
         *filters: Callable[[WhatsApp, CallbackButton], bool | Awaitable[bool]],
-        factory: CallbackDataFactoryT = str,
+        factory: _CallbackDataFactoryT = str,
         factory_before_filters: bool = False,
     ) -> Callable[
         [Callable[[WhatsApp, CallbackButton], Any | Awaitable[Any]]],
@@ -772,7 +772,7 @@ class HandlerDecorators:
     def on_callback_selection(
         self: WhatsApp,
         *filters: Callable[[WhatsApp, CallbackSelection], bool | Awaitable[bool]],
-        factory: CallbackDataFactoryT = str,
+        factory: _CallbackDataFactoryT = str,
         factory_before_filters: bool = False,
     ) -> Callable[
         [Callable[[WhatsApp, CallbackSelection], Any | Awaitable[Any]]],
@@ -820,7 +820,7 @@ class HandlerDecorators:
     def on_message_status(
         self: WhatsApp,
         *filters: Callable[[WhatsApp, MessageStatus], bool | Awaitable[bool]],
-        factory: CallbackDataFactoryT = str,
+        factory: _CallbackDataFactoryT = str,
         factory_before_filters: bool = False,
     ) -> Callable[
         [Callable[[WhatsApp, MessageStatus], Any | Awaitable[Any]]],
@@ -985,7 +985,7 @@ class HandlerDecorators:
         private_key_password: str | None = None,
         request_decryptor: utils.FlowRequestDecryptor | None = None,
         response_encryptor: utils.FlowResponseEncryptor | None = None,
-    ) -> Callable[[FlowRequestHandlerT], FlowRequestHandlerT]:
+    ) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT]:
         """
         Decorator to register a function to handle and respond to incoming Flow Data Exchange requests.
 
@@ -1017,8 +1017,8 @@ class HandlerDecorators:
 
         @functools.wraps(self.on_flow_request)
         def decorator(
-            callback: FlowRequestHandlerT,
-        ) -> FlowRequestHandlerT:
+            callback: _FlowRequestHandlerT,
+        ) -> _FlowRequestHandlerT:
             self._register_flow_endpoint_callback(
                 endpoint=endpoint,
                 callback=callback,

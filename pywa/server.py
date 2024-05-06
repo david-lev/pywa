@@ -315,7 +315,7 @@ class Server:
     def _register_flow_endpoint_callback(
         self: "WhatsApp",
         endpoint: str,
-        callback: handlers.FlowRequestHandlerT,
+        callback: handlers._FlowRequestHandlerT,
         acknowledge_errors: bool,
         handle_health_check: bool,
         private_key: str | None,
