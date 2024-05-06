@@ -7,4 +7,5 @@ Python wrapper for the WhatsApp Cloud API - Async package
 """
 
 from .client import WhatsApp
-from pywa import Version, __version__, __author__, __license__, utils, errors, filters
+from .utils import Version
+from pywa import __version__, __author__, __license__
