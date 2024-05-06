@@ -332,7 +332,7 @@ class CallbackButtonHandler(Handler):
         super().__init__(callback, *filters)
 
     async def handle(self, wa: WhatsApp, clb: CallbackButton):
-        update = _get_factored_update(self, wa, clb, "data")
+        update = await _get_factored_update(self, wa, clb, "data")
         if update is not None:
             await super().handle(wa, update)
 
@@ -382,7 +382,7 @@ class CallbackSelectionHandler(Handler):
         super().__init__(callback, *filters)
 
     async def handle(self, wa: WhatsApp, sel: CallbackSelection):
-        update = _get_factored_update(self, wa, sel, "data")
+        update = await _get_factored_update(self, wa, sel, "data")
         if update is not None:
             await super().handle(wa, update)
 
@@ -434,7 +434,7 @@ class MessageStatusHandler(Handler):
         super().__init__(callback, *filters)
 
     async def handle(self, wa: WhatsApp, status: MessageStatus):
-        update = _get_factored_update(self, wa, status, "tracker")
+        update = await _get_factored_update(self, wa, status, "tracker")
         if update is not None:
             await super().handle(wa, update)
 
