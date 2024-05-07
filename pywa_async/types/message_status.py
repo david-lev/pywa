@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Generic
 
 from ..errors import WhatsAppError
 from .callback import CallbackDataT
-from .base_update import BaseUserUpdate  # noqa
+from .base_update import BaseUserUpdateAsync  # noqa
 from .others import Metadata, User
 
 if TYPE_CHECKING:
@@ -28,7 +28,7 @@ _logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class MessageStatus(BaseUserUpdate, Generic[CallbackDataT]):
+class MessageStatus(BaseUserUpdateAsync, Generic[CallbackDataT]):
     """
     Represents the status of a message.
 

@@ -10,7 +10,7 @@ import json
 import pathlib
 from typing import Iterable, TYPE_CHECKING, Any, BinaryIO
 
-from .base_update import BaseUserUpdate  # noqa
+from .base_update import BaseUserUpdateAsync  # noqa
 from .others import (
     WhatsAppBusinessAccount,
     FacebookApplication,
@@ -27,7 +27,7 @@ _logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
-class FlowCompletion(BaseUserUpdate):
+class FlowCompletion(BaseUserUpdateAsync):
     """
     A flow completion message. This update arrives when a user completes a flow.
 

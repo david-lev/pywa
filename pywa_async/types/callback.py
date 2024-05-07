@@ -25,7 +25,7 @@ from typing import (
     Literal,
 )
 
-from .base_update import BaseUserUpdate  # noqa
+from .base_update import BaseUserUpdateAsync  # noqa
 from .flows import FlowStatus, FlowActionType
 from .others import MessageType, Metadata, ReplyToMessage, User, InteractiveType
 from .. import utils
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class CallbackButton(BaseUserUpdate, Generic[CallbackDataT]):
+class CallbackButton(BaseUserUpdateAsync, Generic[CallbackDataT]):
     """
     Represents a callback button (Incoming update when user clicks on :class:`Button` or chooses
     :class:`Template.QuickReplyButtonData`).
@@ -137,7 +137,7 @@ class CallbackButton(BaseUserUpdate, Generic[CallbackDataT]):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class CallbackSelection(BaseUserUpdate, Generic[CallbackDataT]):
+class CallbackSelection(BaseUserUpdateAsync, Generic[CallbackDataT]):
     """
     Represents a callback selection (Incoming update when user clicks on :class:`SectionRow` in :class:`SectionList`).
 

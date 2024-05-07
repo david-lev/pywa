@@ -28,8 +28,10 @@ if TYPE_CHECKING:
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class BaseUserUpdate(BaseUserUpdate, abc.ABC):
+class BaseUserUpdateAsync(BaseUserUpdate, abc.ABC):
     """Base class for all user-related update types (message, callback, etc.)."""
+
+    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
 
     async def reply_text(
         self,

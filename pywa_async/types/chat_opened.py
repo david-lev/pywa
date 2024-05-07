@@ -4,7 +4,7 @@ import dataclasses
 import datetime
 from typing import TYPE_CHECKING
 
-from .base_update import BaseUserUpdate  # noqa
+from .base_update import BaseUserUpdateAsync  # noqa
 from .others import (
     MessageType,
     Metadata,
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
-class ChatOpened(BaseUserUpdate):
+class ChatOpened(BaseUserUpdateAsync):
     """
     Represents a chat opened in the first time by a user.
 

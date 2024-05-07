@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Iterable
 
 from pywa.errors import WhatsAppError
 
-from .base_update import BaseUserUpdate  # noqa
+from .base_update import BaseUserUpdateAsync  # noqa
 from .callback import Button, ButtonUrl, SectionList
 from .media import Audio, Document, Image, Sticker, Video
 from .others import (
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Message(BaseUserUpdate):
+class Message(BaseUserUpdateAsync):
     """
     A message received from a user.
 
