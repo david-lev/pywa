@@ -226,7 +226,7 @@ class WhatsApp(WhatsApp):
         ).start()
 
     async def _register_callback_url(
-        self: "WhatsApp",
+        self,
         callback_url: str,
         app_id: int,
         app_secret: str,
@@ -251,27 +251,6 @@ class WhatsApp(WhatsApp):
             _logger.info("Callback URL '%s' registered successfully", full_url)
         except WhatsAppError as e:
             raise RuntimeError(f"Failed to register callback URL '{full_url}'") from e
-
-    @property
-    def phone_id(self) -> str:
-        """The phone ID of the WhatsApp account."""
-        return self._phone_id
-
-    @phone_id.setter
-    def phone_id(self, value: str | int) -> None:
-        """Update the phone ID in API calls."""
-        self._phone_id = str(value)
-        self.api.phone_id = self._phone_id
-
-    @property
-    def token(self) -> str:
-        """The token of the WhatsApp account."""
-        return self.api._session.headers["Authorization"].split(" ")[1]
-
-    @token.setter
-    def token(self, value: str) -> None:
-        """Update the token in API calls."""
-        self.api._session.headers["Authorization"] = f"Bearer {value}"
 
     async def send_message(
         self,
