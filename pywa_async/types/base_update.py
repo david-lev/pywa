@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from pywa.types.base_update import BaseUpdate, BaseUserUpdate, StopHandling  # noqa MUST BE IMPORTED FIRST
-
 __all__ = [
     "StopHandling",
 ]
 
-import abc
+from pywa.types.base_update import *  # noqa MUST BE IMPORTED FIRST
+
+
 import pathlib
 import dataclasses
 from typing import TYPE_CHECKING, BinaryIO, Iterable
@@ -27,9 +27,8 @@ if TYPE_CHECKING:
     from .template import Template
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class BaseUserUpdateAsync(BaseUserUpdate, abc.ABC):
-    """Base class for all user-related update types (message, callback, etc.)."""
+class BaseUserUpdateAsync:
+    """Async Base class for all user-related update types (message, callback, etc.)."""
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
 

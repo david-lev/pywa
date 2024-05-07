@@ -1,33 +1,69 @@
 """This module contains the types related to WhatsApp Flows."""
 
 from __future__ import annotations
+
+__all__ = [
+    "FlowCompletion",
+    "FlowRequest",
+    "FlowResponse",
+    "FlowRequestCannotBeDecrypted",
+    "FlowRequestSignatureAuthenticationFailed",
+    "FlowTokenNoLongerValid",
+    "FlowCategory",
+    "FlowDetails",
+    "FlowStatus",
+    "FlowPreview",
+    "FlowValidationError",
+    "FlowAsset",
+    "FlowJSON",
+    "Screen",
+    "ScreenData",
+    "Layout",
+    "LayoutType",
+    "Form",
+    "DataKey",
+    "FormRef",
+    "TextHeading",
+    "TextSubheading",
+    "TextBody",
+    "TextCaption",
+    "FontWeight",
+    "TextInput",
+    "InputType",
+    "TextArea",
+    "CheckboxGroup",
+    "RadioButtonsGroup",
+    "Footer",
+    "OptIn",
+    "Dropdown",
+    "EmbeddedLink",
+    "DatePicker",
+    "Image",
+    "ScaleType",
+    "DataSource",
+    "Action",
+    "FlowActionType",
+    "ActionNext",
+    "ActionNextType",
+]
+
 from pywa.types.flows import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.flows import (
+    FlowDetails as _FlowDetails,
+    FlowCompletion as _FlowCompletion,
+)  # noqa MUST BE IMPORTED FIRST
+from .base_update import BaseUserUpdateAsync
 
-import logging
 import dataclasses
-import datetime
-import json
 import pathlib
-from typing import Iterable, TYPE_CHECKING, Any, BinaryIO
-
-from .base_update import BaseUserUpdateAsync  # noqa
-from .others import (
-    WhatsAppBusinessAccount,
-    FacebookApplication,
-    MessageType,
-    Metadata,
-    User,
-    ReplyToMessage,
-)
+from typing import Iterable, TYPE_CHECKING, BinaryIO
 
 if TYPE_CHECKING:
-    from pywa import WhatsApp
-
-_logger = logging.getLogger(__name__)
+    from ..client import WhatsApp
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
-class FlowCompletion(BaseUserUpdateAsync):
+class FlowCompletion(BaseUserUpdateAsync, _FlowCompletion):
     """
     A flow completion message. This update arrives when a user completes a flow.
 
@@ -45,41 +81,9 @@ class FlowCompletion(BaseUserUpdateAsync):
         response: The response from the flow.
     """
 
-    id: str
-    type: MessageType
-    metadata: Metadata
-    from_user: User
-    timestamp: datetime.datetime
-    reply_to_message: ReplyToMessage | None
-    body: str
-    token: str | None
-    response: dict[str, Any]
-
-    @classmethod
-    def from_update(cls, client: WhatsApp, update: dict) -> FlowCompletion:
-        msg = (value := update["entry"][0]["changes"][0]["value"])["messages"][0]
-        response = json.loads(msg["interactive"]["nfm_reply"]["response_json"])
-        if (flow_token := response.get("flow_token")) is None:
-            _logger.warning(
-                "A flow completion message without flow token is received, This is a known issue on iOS devices."
-            )
-        return cls(
-            _client=client,
-            raw=update,
-            id=msg["id"],
-            type=MessageType(msg["type"]),
-            metadata=Metadata.from_dict(value["metadata"]),
-            from_user=User.from_dict(value["contacts"][0]),
-            timestamp=datetime.datetime.fromtimestamp(int(msg["timestamp"])),
-            reply_to_message=ReplyToMessage.from_dict(msg["context"]),
-            body=msg["interactive"]["nfm_reply"]["body"],
-            token=flow_token,
-            response=response,
-        )
-
 
 @dataclasses.dataclass(slots=True, kw_only=True)
-class FlowDetails:
+class FlowDetails(_FlowDetails):
     """
     Represents the details of a flow.
 
@@ -101,50 +105,6 @@ class FlowDetails:
     """
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
-    id: str
-    name: str
-    status: FlowStatus
-    json_version: str | None
-    data_api_version: str | None
-    categories: tuple[FlowCategory, ...]
-    validation_errors: tuple[FlowValidationError, ...] | None
-    endpoint_uri: str | None
-    preview: FlowPreview | None
-    whatsapp_business_account: WhatsAppBusinessAccount | None
-    application: FacebookApplication | None
-    updated_at: datetime.datetime | None = None
-
-    @classmethod
-    def from_dict(cls, data: dict, client: WhatsApp) -> FlowDetails:
-        return cls(
-            _client=client,
-            id=data["id"],
-            name=data["name"],
-            status=FlowStatus(data["status"]),
-            categories=tuple(FlowCategory(c) for c in data["categories"]),
-            validation_errors=tuple(
-                FlowValidationError.from_dict(e) for e in data["validation_errors"]
-            )
-            or None,
-            json_version=data.get("json_version"),
-            data_api_version=data.get("data_api_version"),
-            endpoint_uri=data.get("endpoint_uri")
-            or data.get("data_channel_uri"),  # data_channel_uri removed at v19.0
-            preview=FlowPreview.from_dict(data["preview"])
-            if data.get("preview")
-            else None,
-            whatsapp_business_account=WhatsAppBusinessAccount.from_dict(
-                data["whatsapp_business_account"]
-            )
-            if data.get("whatsapp_business_account")
-            else None,
-            application=FacebookApplication.from_dict(data["application"])
-            if data.get("application")
-            else None,
-            updated_at=datetime.datetime.strptime(
-                data["updated_at"], "%Y-%m-%dT%H:%M:%S%z"
-            ),
-        )
 
     async def publish(self) -> bool:
         """

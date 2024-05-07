@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pywa.types.message_status import *  # noqa MUST BE IMPORTED FIRST
-
 __all__ = [
     "MessageStatus",
     "MessageStatusType",
@@ -11,24 +9,21 @@ __all__ = [
     "ConversationCategory",
 ]
 
-import dataclasses
-import logging
-import datetime
-from typing import TYPE_CHECKING, Generic
+from pywa.types.message_status import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.message_status import MessageStatus as _MessageStatus  # noqa MUST BE IMPORTED FIRST
 
-from ..errors import WhatsAppError
-from .callback import CallbackDataT
+
+import dataclasses
+from typing import TYPE_CHECKING
+
 from .base_update import BaseUserUpdateAsync  # noqa
-from .others import Metadata, User
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
 
-_logger = logging.getLogger(__name__)
-
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class MessageStatus(BaseUserUpdateAsync, Generic[CallbackDataT]):
+class MessageStatus(BaseUserUpdateAsync, _MessageStatus):
     """
     Represents the status of a message.
 
@@ -90,35 +85,3 @@ class MessageStatus(BaseUserUpdateAsync, Generic[CallbackDataT]):
         pricing_model: Type of pricing model used by the business. Current supported value is CBP.
         error: The error that occurred (if status is :class:`MessageStatusType.FAILED`).
     """
-
-    id: str
-    metadata: Metadata
-    from_user: User
-    timestamp: datetime.datetime
-    status: MessageStatusType
-    tracker: CallbackDataT | None
-    conversation: Conversation | None
-    pricing_model: str | None
-    error: WhatsAppError | None
-
-    _txt_fields = ("tracker",)
-
-    @classmethod
-    def from_update(cls, client: WhatsApp, update: dict) -> MessageStatus:
-        status = (value := update["entry"][0]["changes"][0]["value"])["statuses"][0]
-        error = value.get("errors", status.get("errors", (None,)))[0]
-        return cls(
-            _client=client,
-            raw=update,
-            id=status["id"],
-            metadata=Metadata.from_dict(value["metadata"]),
-            status=MessageStatusType(status["status"]),
-            timestamp=datetime.datetime.fromtimestamp(int(status["timestamp"])),
-            from_user=User(wa_id=status["recipient_id"], name=None),
-            tracker=status.get("biz_opaque_callback_data"),
-            conversation=Conversation.from_dict(status["conversation"])
-            if "conversation" in status
-            else None,
-            pricing_model=status.get("pricing", {}).get("pricing_model"),
-            error=WhatsAppError.from_dict(error=error) if error else None,
-        )

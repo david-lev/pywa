@@ -2,31 +2,21 @@
 
 from __future__ import annotations
 
-from pywa.types.message import *  # noqa MUST BE IMPORTED FIRST
-from pywa.types.message import _FIELDS_TO_OBJECTS_CONSTRUCTORS, _MEDIA_FIELDS
-
 __all__ = ["Message"]
 
-import dataclasses
-import datetime
-from typing import TYPE_CHECKING, Iterable
+from pywa.types.message import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.message import Message as _Message  # noqa MUST BE IMPORTED FIRST
 
-from pywa.errors import WhatsAppError
+
+import dataclasses
+from typing import TYPE_CHECKING, Iterable
 
 from .base_update import BaseUserUpdateAsync  # noqa
 from .callback import Button, ButtonUrl, SectionList
 from .media import Audio, Document, Image, Sticker, Video
 from .others import (
-    Contact,
-    Location,
     MessageType,
-    Metadata,
-    Order,
     ProductsSection,
-    Reaction,
-    ReplyToMessage,
-    System,
-    User,
 )
 
 if TYPE_CHECKING:
@@ -34,7 +24,7 @@ if TYPE_CHECKING:
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Message(BaseUserUpdateAsync):
+class Message(BaseUserUpdateAsync, _Message):
     """
     A message received from a user.
 
@@ -66,91 +56,13 @@ class Message(BaseUserUpdateAsync):
         error: The error of the message (if the message type is :class:`MessageType.UNSUPPORTED`).
     """
 
-    id: str
-    type: MessageType
-    metadata: Metadata
-    from_user: User
-    timestamp: datetime.datetime
-    reply_to_message: ReplyToMessage | None
-    forwarded: bool
-    forwarded_many_times: bool
-    text: str | None = None
+    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
+
     image: Image | None = None
     video: Video | None = None
     sticker: Sticker | None = None
     document: Document | None = None
     audio: Audio | None = None
-    caption: str | None = None
-    reaction: Reaction | None = None
-    location: Location | None = None
-    contacts: tuple[Contact, ...] | None = None
-    order: Order | None = None
-    system: System | None = None
-    error: WhatsAppError | None = None
-
-    _txt_fields = ("text", "caption")
-
-    @property
-    def message_id_to_reply(self) -> str:
-        """The ID of the message to reply to."""
-        return (
-            self.id if self.type != MessageType.REACTION else self.reaction.message_id
-        )
-
-    @property
-    def has_media(self) -> bool:
-        """
-        Whether the message has any media. (image, video, sticker, document or audio)
-            - If you want to get the media of the message, use :attr:`~Message.media` instead.
-        """
-        return self.media is not None
-
-    @property
-    def is_reply(self) -> bool:
-        """
-        Whether the message is a reply to another message.
-
-        - Reaction messages are also considered as replies (But ``.reply_to_message`` will be ``None``).
-        """
-        return self.reply_to_message is not None or self.reaction is not None
-
-    @classmethod
-    def from_update(cls, client: WhatsApp, update: dict) -> Message:
-        msg = (value := update["entry"][0]["changes"][0]["value"])["messages"][0]
-        error = value.get("errors", msg.get("errors", (None,)))[0]
-        msg_type = msg["type"]
-        context = msg.get("context", {})
-        constructor = _FIELDS_TO_OBJECTS_CONSTRUCTORS.get(msg_type)
-        # noinspection PyArgumentList
-        msg_content = (
-            {msg_type: constructor(msg[msg_type], _client=client)}
-            if constructor is not None
-            else {}
-        )
-        try:
-            usr = User.from_dict(value["contacts"][0])
-        except KeyError:
-            usr = User(
-                wa_id=msg["from"], name=None
-            )  # some messages don't have contacts
-        return cls(
-            _client=client,
-            raw=update,
-            id=msg["id"],
-            type=MessageType(msg_type),
-            **msg_content,
-            from_user=usr,
-            timestamp=datetime.datetime.fromtimestamp(int(msg["timestamp"])),
-            metadata=Metadata.from_dict(value["metadata"]),
-            forwarded=context.get("forwarded", False)
-            or context.get("frequently_forwarded", False),
-            forwarded_many_times=context.get("frequently_forwarded", False),
-            reply_to_message=ReplyToMessage.from_dict(context),
-            caption=msg.get(msg_type, {}).get("caption")
-            if msg_type in _MEDIA_FIELDS
-            else None,
-            error=WhatsAppError.from_dict(error=error) if error is not None else None,
-        )
 
     @property
     def media(
@@ -160,14 +72,7 @@ class Message(BaseUserUpdateAsync):
         The media of the message if any, otherwise ``None``. (image, video, sticker, document or audio)
             - If you want to check whether the message has any media, use :attr:`~Message.has_media` instead.
         """
-        return next(
-            (
-                getattr(self, media_type)
-                for media_type in _MEDIA_FIELDS
-                if getattr(self, media_type)
-            ),
-            None,
-        )
+        return super().media
 
     async def download_media(
         self,

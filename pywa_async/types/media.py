@@ -2,21 +2,37 @@
 
 from __future__ import annotations
 
-from pywa.types.media import *  # noqa MUST BE IMPORTED FIRST
-from pywa.types.media import BaseMedia  # noqa MUST BE IMPORTED FIRST
+__all__ = [
+    "Image",
+    "Video",
+    "Sticker",
+    "Document",
+    "Audio",
+    "MediaUrlResponse",
+]
 
-import abc
+from pywa.types.media import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.media import (
+    Image as _Image,
+    Video as _Video,
+    Sticker as _Sticker,
+    Document as _Document,
+    Audio as _Audio,
+)  # noqa MUST BE IMPORTED FIRST
+
 import dataclasses
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from pywa_async.client import WhatsApp
+    from ..client import WhatsApp
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class BaseMedia(BaseMedia, abc.ABC):
+class BaseMediaAsync:
     """Base class for all media types."""
 
+    id: str
+    sha256: str
+    mime_type: str
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
 
     async def get_media_url(self) -> str:
@@ -55,7 +71,7 @@ class BaseMedia(BaseMedia, abc.ABC):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Image(BaseMedia):
+class Image(BaseMediaAsync, _Image):
     """
     Represents an received image.
 
@@ -65,13 +81,9 @@ class Image(BaseMedia):
         mime_type: The MIME type of the image.
     """
 
-    id: str
-    sha256: str
-    mime_type: str
-
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Video(BaseMedia):
+class Video(BaseMediaAsync, _Video):
     """
     Represents a video.
 
@@ -81,13 +93,9 @@ class Video(BaseMedia):
         mime_type: The MIME type of the video.
     """
 
-    id: str
-    sha256: str
-    mime_type: str
-
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Sticker(BaseMedia):
+class Sticker(BaseMediaAsync, _Sticker):
     """
     Represents a sticker.
 
@@ -98,14 +106,9 @@ class Sticker(BaseMedia):
         animated: Whether the sticker is animated.
     """
 
-    id: str
-    sha256: str
-    mime_type: str
-    animated: bool
-
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Document(BaseMedia):
+class Document(BaseMediaAsync, _Document):
     """
     Represents a document.
 
@@ -116,14 +119,9 @@ class Document(BaseMedia):
         filename: The filename of the document (optional).
     """
 
-    id: str
-    sha256: str
-    mime_type: str
-    filename: str | None = None
-
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Audio(BaseMedia):
+class Audio(BaseMediaAsync, _Audio):
     """
     Represents an audio.
 
@@ -133,11 +131,6 @@ class Audio(BaseMedia):
         mime_type: The MIME type of the audio.
         voice: Whether the audio is a voice message or just an audio file.
     """
-
-    id: str
-    sha256: str
-    mime_type: str
-    voice: bool
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -152,6 +145,8 @@ class MediaUrlResponse(MediaUrlResponse):
         sha256: The SHA256 hash of the media.
         file_size: The size of the media in bytes.
     """
+
+    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
 
     async def download(
         self,

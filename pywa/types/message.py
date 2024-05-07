@@ -44,8 +44,6 @@ _FIELDS_TO_OBJECTS_CONSTRUCTORS: dict[str, Callable[[dict, WhatsApp], Any]] = di
     system=System.from_dict,
 )
 
-_MEDIA_FIELDS = {"image", "video", "sticker", "document", "audio"}
-
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Message(BaseUserUpdate):
@@ -102,6 +100,7 @@ class Message(BaseUserUpdate):
     system: System | None = None
     error: WhatsAppError | None = None
 
+    _media_fields = {"image", "video", "sticker", "document", "audio"}
     _txt_fields = ("text", "caption")
 
     @property
@@ -161,7 +160,7 @@ class Message(BaseUserUpdate):
             forwarded_many_times=context.get("frequently_forwarded", False),
             reply_to_message=ReplyToMessage.from_dict(context),
             caption=msg.get(msg_type, {}).get("caption")
-            if msg_type in _MEDIA_FIELDS
+            if msg_type in cls._media_fields
             else None,
             error=WhatsAppError.from_dict(error=error) if error is not None else None,
         )
@@ -177,7 +176,7 @@ class Message(BaseUserUpdate):
         return next(
             (
                 getattr(self, media_type)
-                for media_type in _MEDIA_FIELDS
+                for media_type in self._media_fields
                 if getattr(self, media_type)
             ),
             None,
