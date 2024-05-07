@@ -9,7 +9,7 @@ from pywa.types.message import Message as _Message  # noqa MUST BE IMPORTED FIRS
 
 
 import dataclasses
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING, Iterable, Callable, Any
 
 from .base_update import BaseUserUpdateAsync  # noqa
 from .callback import Button, ButtonUrl, SectionList
@@ -17,10 +17,29 @@ from .media import Audio, Document, Image, Sticker, Video
 from .others import (
     MessageType,
     ProductsSection,
+    Location,
+    Order,
+    Reaction,
+    System,
+    Contact,
 )
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
+
+_FIELDS_TO_OBJECTS_CONSTRUCTORS: dict[str, Callable[[dict, WhatsApp], Any]] = dict(
+    text=lambda m, _client: m["body"],
+    image=Image.from_dict,
+    video=Video.from_dict,
+    sticker=Sticker.from_dict,
+    document=Document.from_dict,
+    audio=Audio.from_dict,
+    reaction=Reaction.from_dict,
+    location=Location.from_dict,
+    contacts=lambda m, _client: tuple(Contact.from_dict(c) for c in m),
+    order=Order.from_dict,
+    system=System.from_dict,
+)
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -63,6 +82,9 @@ class Message(BaseUserUpdateAsync, _Message):
     sticker: Sticker | None = None
     document: Document | None = None
     audio: Audio | None = None
+    _fields_to_objects_constructors_getter = (
+        lambda self: _FIELDS_TO_OBJECTS_CONSTRUCTORS
+    )
 
     @property
     def media(
@@ -72,7 +94,14 @@ class Message(BaseUserUpdateAsync, _Message):
         The media of the message if any, otherwise ``None``. (image, video, sticker, document or audio)
             - If you want to check whether the message has any media, use :attr:`~Message.has_media` instead.
         """
-        return super().media
+        return next(
+            (
+                getattr(self, media_type)
+                for media_type in self._media_fields
+                if getattr(self, media_type)
+            ),
+            None,
+        )
 
     async def download_media(
         self,

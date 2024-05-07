@@ -30,6 +30,7 @@ __all__ = [
     "FlowCompletion",
     "FlowRequest",
     "FlowResponse",
+    "FlowResponseError",
     "FlowRequestCannotBeDecrypted",
     "FlowRequestSignatureAuthenticationFailed",
     "FlowTokenNoLongerValid",

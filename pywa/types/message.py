@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from types import MappingProxyType
+
 """This module contains the types related to messages."""
 
 __all__ = ["Message"]
@@ -102,6 +104,7 @@ class Message(BaseUserUpdate):
 
     _media_fields = {"image", "video", "sticker", "document", "audio"}
     _txt_fields = ("text", "caption")
+    _fields_to_objects_constructors_getter = lambda: _FIELDS_TO_OBJECTS_CONSTRUCTORS
 
     @property
     def message_id_to_reply(self) -> str:
@@ -133,7 +136,7 @@ class Message(BaseUserUpdate):
         error = value.get("errors", msg.get("errors", (None,)))[0]
         msg_type = msg["type"]
         context = msg.get("context", {})
-        constructor = _FIELDS_TO_OBJECTS_CONSTRUCTORS.get(msg_type)
+        constructor = cls._fields_to_objects_constructors_getter(cls).get(msg_type)
         # noinspection PyArgumentList
         msg_content = (
             {msg_type: constructor(msg[msg_type], _client=client)}

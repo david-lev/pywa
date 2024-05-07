@@ -6,6 +6,8 @@ from pywa.types.chat_opened import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.chat_opened import ChatOpened as _ChatOpened  # noqa MUST BE IMPORTED FIRST
 from .base_update import BaseUserUpdateAsync  # noqa
 
+import dataclasses
+
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
 class ChatOpened(BaseUserUpdateAsync, _ChatOpened):
