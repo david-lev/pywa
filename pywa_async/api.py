@@ -30,11 +30,13 @@ class WhatsAppCloudApi:
             )
         self._session = session
         self._base_url = f"{base_url}/v{api_version}"
-        self._session.headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {token}",
-            "User-Agent": f"PyWa/{pywa_async.__version__}",
-        }
+        self._session.headers.update(
+            {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {token}",
+                "User-Agent": f"PyWa/{pywa_async.__version__}",
+            }
+        )
 
     def __str__(self) -> str:
         return f"WhatsAppCloudApi(phone_id={self.phone_id!r})"
@@ -228,7 +230,7 @@ class WhatsAppCloudApi:
             data={"business_public_key": public_key},
         )
 
-    async def upload_media(  # TODO FIX UPLOAD MEDIA
+    async def upload_media(
         self,
         media: bytes,
         mime_type: str,
@@ -252,15 +254,18 @@ class WhatsAppCloudApi:
         Returns:
             A dict with the ID of the uploaded media file.
         """
-        headers = self._session.headers.copy()
-        headers["Content-Type"] = "multipart/form-data"
-        return await self._make_request(
-            method="POST",
-            endpoint="/media",
-            headers=headers,
-            files={"file": (filename, media, mime_type)},
-            data={"messaging_product": "whatsapp", "type": mime_type},
-        )
+        async with httpx.AsyncClient() as session:
+            session.headers["Authorization"] = self._session.headers["Authorization"]
+            res = await session.request(
+                method="POST",
+                url=f"{self._base_url}/{self.phone_id}/media",
+                files={
+                    "file": (filename, media, mime_type),
+                    "messaging_product": (None, "whatsapp"),
+                    "type": (None, mime_type),
+                },
+            )
+            return res.json()
 
     async def get_media_url(self, media_id: str) -> dict:
         """
