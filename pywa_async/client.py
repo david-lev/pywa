@@ -4,7 +4,9 @@ from __future__ import annotations
 
 __all__ = ["WhatsApp"]
 
+
 from pywa.client import (
+    WhatsApp,
     _DEFAULT_WORKERS,
     _MISSING,
     _resolve_buttons_param,
@@ -13,9 +15,10 @@ from pywa.client import (
     _get_media_msg,
     _get_flow_fields,
     _media_types_default_filenames,
-)
+)  # noqa MUST BE IMPORTED FIRST
 
-import collections
+import threading
+import logging
 import dataclasses
 import functools
 import hashlib
@@ -29,6 +32,7 @@ from typing import BinaryIO, Iterable, Literal, Any, Callable
 import httpx
 import requests
 
+from pywa.errors import WhatsAppError
 from . import utils
 from .api import WhatsAppCloudApi
 from .handlers import Handler, HandlerDecorators, FlowRequestHandler  # noqa
@@ -63,22 +67,16 @@ from .types.flows import (
 )
 from .types.others import InteractiveType
 from .utils import FastAPI, Flask
-from .server import Server
+
+_logger = logging.getLogger(__name__)
 
 
-class WhatsApp(
-    Server,
-    HandlerDecorators,
-):
+class WhatsApp(WhatsApp):
     def __init__(
         self,
         phone_id: str | int,
         token: str,
-        base_url: str = "https://graph.facebook.com",
-        api_version: str
-        | int
-        | float
-        | Literal[utils.Version.GRAPH_API] = utils.Version.GRAPH_API,
+        *,
         session: httpx.AsyncClient | None = None,
         server: Flask | FastAPI | None = None,
         webhook_endpoint: str = "/",
@@ -97,9 +95,14 @@ class WhatsApp(
         flows_response_encryptor: utils.FlowResponseEncryptor
         | None = utils.default_flow_response_encryptor,
         max_workers: int = _DEFAULT_WORKERS,
+        base_url: str = "https://graph.facebook.com",
+        api_version: str
+        | int
+        | float
+        | Literal[utils.Version.GRAPH_API] = utils.Version.GRAPH_API,
     ) -> None:
         """
-        The WhatsApp client.
+        The Async WhatsApp client.
             - Full documentation on `pywa.readthedocs.io <https://pywa.readthedocs.io>`_.
 
         Example without webhook:
@@ -122,7 +125,7 @@ class WhatsApp(
             ...     app_secret="my_app_secret",
             ... )
             >>> @wa.on_message()
-            ... def message_handler(_: WhatsApp, msg: Message): print(msg)
+            ... async def message_handler(_: WhatsApp, msg: Message): await msg.reply("Hello!")
             >>> flask_app.run(port=8000)
 
         Args:
@@ -162,45 +165,21 @@ class WhatsApp(
             flows_response_encryptor: The global flows response encryptor implementation to use to encrypt Flows responses.
             max_workers: The maximum number of workers to use for handling incoming updates (optional, default: ``min(32,os.cpu_count()+4)``,
         """
-        if not phone_id or not token:
-            raise ValueError("phone_id and token must be provided.")
-
-        try:
-            utils.Version.GRAPH_API.validate_min_version(str(api_version))
-        except ValueError:
-            warnings.warn(
-                message=f"PyWa officially supports WhatsApp Cloud API version {utils.Version.GRAPH_API.min} and up. "
-                f"Using version {api_version} is not officially supported and may cause unexpected behavior.",
-                category=RuntimeWarning,
-                stacklevel=2,
-            )
-
-        self._phone_id = str(phone_id)
-        self.filter_updates = filter_updates
-        self.business_account_id = (
-            str(business_account_id) if business_account_id is not None else None
-        )
-        self.api = WhatsAppCloudApi(
-            phone_id=self.phone_id,
-            token=token,
-            session=session or httpx.AsyncClient(),
-            base_url=base_url,
-            api_version=float(str(api_version)),
-        )
-
-        self._handlers: dict[
-            type[Handler] | None,
-            list[Handler],
-        ] = collections.defaultdict(list)
-
         super().__init__(
+            phone_id=phone_id,
+            token=token,
+            base_url=base_url,
+            api_version=api_version,
+            session=session,
             server=server,
             webhook_endpoint=webhook_endpoint,
+            verify_token=verify_token,
+            filter_updates=filter_updates,
+            business_account_id=business_account_id,
             callback_url=callback_url,
-            fields=tuple(fields) if fields else None,
+            fields=fields,
             app_id=app_id,
             app_secret=app_secret,
-            verify_token=verify_token,
             verify_timeout=verify_timeout,
             business_private_key=business_private_key,
             business_private_key_password=business_private_key_password,
@@ -209,11 +188,69 @@ class WhatsApp(
             max_workers=max_workers,
         )
 
-    def __str__(self) -> str:
-        return f"WhatsApp(phone_id={self.phone_id!r})"
+    def _set_api(
+        self,
+        session: httpx.AsyncClient | None,
+        token: str,
+        base_url: str,
+        api_version: float,
+    ) -> None:
+        self.api = WhatsAppCloudApi(
+            phone_id=self.phone_id,
+            token=token,
+            session=session or httpx.AsyncClient(),
+            base_url=base_url,
+            api_version=api_version,
+        )
 
-    def __repr__(self) -> str:
-        return self.__str__()
+    def _delayed_register_callback_url(
+        self,
+        callback_url: str,
+        app_id: int,
+        app_secret: str,
+        verify_token: str,
+        fields: tuple[str, ...] | None,
+        delay: int,
+    ) -> None:
+        threading.Timer(
+            delay,
+            function=lambda: self._loop.create_task(
+                self._register_callback_url(
+                    callback_url=callback_url,
+                    app_id=app_id,
+                    app_secret=app_secret,
+                    verify_token=verify_token,
+                    fields=fields,
+                )
+            ),
+        ).start()
+
+    async def _register_callback_url(
+        self: "WhatsApp",
+        callback_url: str,
+        app_id: int,
+        app_secret: str,
+        verify_token: str,
+        fields: tuple[str, ...] | None,
+    ) -> None:
+        full_url = f"{callback_url.rstrip('/')}/{self._webhook_endpoint.lstrip('/')}"
+        try:
+            app_access_token = await self.api.get_app_access_token(
+                app_id=app_id, app_secret=app_secret
+            )
+            # noinspection PyProtectedMember
+            res = await self.api.set_app_callback_url(
+                app_id=app_id,
+                app_access_token=app_access_token["access_token"],
+                callback_url=full_url,
+                verify_token=verify_token,
+                fields=tuple(fields or Handler._fields_to_subclasses().keys()),
+            )
+            if not res["success"]:
+                raise RuntimeError("Failed to register callback URL.")
+            _logger.info("Callback URL '%s' registered successfully", full_url)
+        except WhatsAppError as e:
+            raise RuntimeError(f"Failed to register callback URL '{full_url}'") from e
 
     @property
     def phone_id(self) -> str:
@@ -235,93 +272,6 @@ class WhatsApp(
     def token(self, value: str) -> None:
         """Update the token in API calls."""
         self.api._session.headers["Authorization"] = f"Bearer {value}"
-
-    def add_handlers(self, *handlers: Handler | FlowRequestHandler):
-        """
-        Add handlers programmatically instead of using decorators.
-
-        Example:
-
-            >>> from pywa_async.handlers import MessageHandler, CallbackButtonHandler
-            >>> from pywa_async import filters as fil
-            >>> print_message = lambda _, msg: print(msg)
-            >>> wa = WhatsApp(...)
-            >>> wa.add_handlers(
-            ...     MessageHandler(print_message, fil.text),
-            ...     CallbackButtonHandler(print_message),
-            ... )
-
-        Args:
-            handlers: The handlers to add.
-        """
-        if self._server is None:
-            raise ValueError(
-                "You must initialize the WhatsApp client with an web server"
-                " (Flask or FastAPI) in order to handle incoming updates."
-            )
-        for handler in handlers:
-            if isinstance(handler, FlowRequestHandler):
-                self._register_flow_endpoint_callback(
-                    endpoint=handler.endpoint,
-                    callback=handler.callback,
-                    acknowledge_errors=handler.acknowledge_errors,
-                    handle_health_check=handler.handle_health_check,
-                    private_key=handler.private_key,
-                    private_key_password=handler.private_key_password,
-                    request_decryptor=handler.request_decryptor,
-                    response_encryptor=handler.response_encryptor,
-                )
-                continue
-            self._handlers[handler.__class__].append(handler)
-
-    def remove_handlers(self, *handlers: Handler):
-        """
-        Remove handlers programmatically (not flow handlers).
-
-        - If you registered callback with decorator (so uou don't have reference to the handler object), you can use the :meth:`remove_callbacks` method to remove the callback.
-
-        Example:
-
-            >>> from pywa_async.handlers import MessageHandler, CallbackButtonHandler
-            >>> from pywa_async import filters as fil
-            >>> print_message = lambda _, msg: print(msg)
-            >>> wa = WhatsApp(...)
-            >>> message_handler = MessageHandler(print_message, fil.text)
-            >>> wa.add_handlers(message_handler)
-            >>> wa.remove_handlers(message_handler)
-
-        Args:
-            handlers: The handlers to remove.
-
-        Raises:
-            ValueError: If the handler is not registered.
-        """
-        for handler in handlers:
-            try:
-                self._handlers[handler.__class__].remove(handler)
-            except ValueError:
-                raise ValueError(f"Handler {handler} not registered.")
-
-    def remove_callbacks(self, *callbacks: Callable[[WhatsApp, Any], Any]):
-        """
-        Remove callbacks programmatically (not flow callbacks).
-
-        Example:
-
-            >>> from pywa_async.handlers import MessageHandler, CallbackButtonHandler
-            >>> from pywa_async import filters as fil
-            >>> wa = WhatsApp(...)
-            >>> @wa.on_message(fil.text)
-            ... def message_handler(_: WhatsApp, msg: Message): print(msg)
-            >>> wa.remove_callbacks(message_handler)
-
-        Args:
-            callbacks: The callbacks to remove.
-        """
-        for handlers in self._handlers.values():
-            for handler in handlers:
-                if handler.callback in callbacks:
-                    handlers.remove(handler)
 
     async def send_message(
         self,

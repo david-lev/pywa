@@ -66,7 +66,6 @@ class Server:
         flows_request_decryptor: utils.FlowRequestDecryptor | None,
         flows_response_encryptor: utils.FlowResponseEncryptor | None,
         max_workers: int,
-        auto_register_callback_url: bool,
     ):
         if server is None:
             self._server = None
@@ -95,21 +94,16 @@ class Server:
                     "to get them: "
                     "https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings/"
                 )
-            if auto_register_callback_url:
-                threading.Timer(
-                    interval=(verify_timeout - _VERIFY_TIMEOUT_SEC)
-                    if verify_timeout is not None
-                    and verify_timeout > _VERIFY_TIMEOUT_SEC
-                    else 0,
-                    function=self._register_callback_url,
-                    kwargs=dict(
-                        callback_url=callback_url,
-                        app_id=app_id,
-                        app_secret=app_secret,
-                        verify_token=verify_token,
-                        fields=fields,
-                    ),
-                ).start()
+            self._delayed_register_callback_url(
+                callback_url=callback_url,
+                app_id=app_id,
+                app_secret=app_secret,
+                verify_token=verify_token,
+                fields=fields,
+                delay=(verify_timeout - _VERIFY_TIMEOUT_SEC)
+                if verify_timeout is not None and verify_timeout > _VERIFY_TIMEOUT_SEC
+                else 0,
+            )
 
     def _register_routes(self: "WhatsApp", verify_token: str) -> None:
         hub_vt = "hub.verify_token"

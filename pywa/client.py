@@ -9,16 +9,18 @@ import dataclasses
 import functools
 import hashlib
 import json
+import logging
 import mimetypes
 import os
 import pathlib
+import threading
 import warnings
 from types import NoneType
 from typing import BinaryIO, Iterable, Literal, Any, Callable
 
 import requests
 
-from . import utils
+from . import utils, errors
 from .api import WhatsAppCloudApi
 from .handlers import Handler, HandlerDecorators, FlowRequestHandler  # noqa
 from .types import (
@@ -58,6 +60,9 @@ _MISSING: object | None = object()
 """A sentinel value to indicate a missing value to distinguish from ``None``."""
 
 _DEFAULT_WORKERS = min(32, (os.cpu_count() or 0) + 4)
+"""The default number of workers to use for handling incoming updates."""
+
+_logger = logging.getLogger(__name__)
 
 
 class WhatsApp(Server, HandlerDecorators):
@@ -171,13 +176,13 @@ class WhatsApp(Server, HandlerDecorators):
         self.business_account_id = (
             str(business_account_id) if business_account_id is not None else None
         )
-        self.api = WhatsAppCloudApi(
-            phone_id=self.phone_id,
-            token=token,
-            session=session or requests.Session(),
-            base_url=base_url,
-            api_version=float(str(api_version)),
-        )
+        # self.api = WhatsAppCloudApi(
+        #     phone_id=self.phone_id,
+        #     token=token,
+        #     session=session or requests.Session(),
+        #     base_url=base_url,
+        #     api_version=float(str(api_version)),
+        # )
 
         self._handlers: dict[
             type[Handler] | None,
@@ -198,8 +203,75 @@ class WhatsApp(Server, HandlerDecorators):
             flows_request_decryptor=flows_request_decryptor,
             flows_response_encryptor=flows_response_encryptor,
             max_workers=max_workers,
-            auto_register_callback_url=True,
         )
+
+        self._set_api(session, token, base_url, float(str(api_version)))
+
+    def _set_api(
+        self,
+        session: requests.Session | None,
+        token: str,
+        base_url: str,
+        api_version: float,
+    ) -> None:
+        self.api = WhatsAppCloudApi(
+            phone_id=self.phone_id,
+            token=token,
+            session=session or requests.Session(),
+            base_url=base_url,
+            api_version=api_version,
+        )
+
+    def _delayed_register_callback_url(
+        self,
+        callback_url: str,
+        app_id: int,
+        app_secret: str,
+        verify_token: str,
+        fields: tuple[str, ...] | None,
+        delay: int,
+    ) -> None:
+        threading.Timer(
+            interval=delay,
+            function=self._register_callback_url,
+            kwargs=dict(
+                callback_url=callback_url,
+                app_id=app_id,
+                app_secret=app_secret,
+                verify_token=verify_token,
+                fields=fields,
+            ),
+        ).start()
+
+    def _register_callback_url(
+        self,
+        callback_url: str,
+        app_id: int,
+        app_secret: str,
+        verify_token: str,
+        fields: tuple[str, ...] | None,
+    ) -> None:
+        """
+        This is a non-blocking function that registers the callback URL.
+        It must be called after the server is running so that the challenge can be verified.
+        """
+        full_url = f"{callback_url.rstrip('/')}/{self._webhook_endpoint.lstrip('/')}"
+        try:
+            app_access_token = self.api.get_app_access_token(
+                app_id=app_id, app_secret=app_secret
+            )
+            # noinspection PyProtectedMember
+            if not self.api.set_app_callback_url(
+                app_id=app_id,
+                app_access_token=app_access_token["access_token"],
+                callback_url=full_url,
+                verify_token=verify_token,
+                fields=tuple(fields or Handler._fields_to_subclasses().keys()),
+            )["success"]:
+                raise RuntimeError("Failed to register callback URL.")
+            _logger.info("Callback URL '%s' registered successfully", full_url)
+        except errors.WhatsAppError as e:
+            raise RuntimeError(f"Failed to register callback URL '{full_url}'") from e
 
     def __str__(self) -> str:
         return f"WhatsApp(phone_id={self.phone_id!r})"
