@@ -30,11 +30,13 @@ class WhatsAppCloudApi:
             )
         self._session = session
         self._base_url = f"{base_url}/v{api_version}"
-        self._session.headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {token}",
-            "User-Agent": f"PyWa/{pywa.__version__}",
-        }
+        self._session.headers.update(
+            {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {token}",
+                "User-Agent": f"PyWa/{pywa.__version__}",
+            }
+        )
 
     def __str__(self) -> str:
         return f"WhatsAppCloudApi(phone_id={self.phone_id!r})"

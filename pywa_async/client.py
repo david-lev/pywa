@@ -1,4 +1,4 @@
-"""The WhatsApp client."""
+"""The WhatsApp Async client."""
 
 from __future__ import annotations
 
@@ -27,15 +27,13 @@ import mimetypes
 import os
 import pathlib
 import warnings
-from typing import BinaryIO, Iterable, Literal, Any, Callable
+from typing import BinaryIO, Iterable, Literal, Callable
 
 import httpx
-import requests
 
-from pywa.errors import WhatsAppError
+from .errors import WhatsAppError
 from . import utils
-from .api import WhatsAppCloudApi
-from .handlers import Handler, HandlerDecorators, FlowRequestHandler  # noqa
+from .api import WhatsAppCloudApiAsync
 from .types import (
     BusinessProfile,
     Button,
@@ -188,6 +186,9 @@ class WhatsApp(WhatsApp):
             max_workers=max_workers,
         )
 
+    def __str__(self):
+        return f"WhatsAppAsync(phone_id={self.phone_id!r})"
+
     def _set_api(
         self,
         session: httpx.AsyncClient | None,
@@ -195,7 +196,7 @@ class WhatsApp(WhatsApp):
         base_url: str,
         api_version: float,
     ) -> None:
-        self.api = WhatsAppCloudApi(
+        self.api = WhatsAppCloudApiAsync(
             phone_id=self.phone_id,
             token=token,
             session=session or httpx.AsyncClient(),
@@ -233,24 +234,24 @@ class WhatsApp(WhatsApp):
         verify_token: str,
         fields: tuple[str, ...] | None,
     ) -> None:
-        full_url = f"{callback_url.rstrip('/')}/{self._webhook_endpoint.lstrip('/')}"
         try:
             app_access_token = await self.api.get_app_access_token(
                 app_id=app_id, app_secret=app_secret
             )
-            # noinspection PyProtectedMember
             res = await self.api.set_app_callback_url(
                 app_id=app_id,
                 app_access_token=app_access_token["access_token"],
-                callback_url=full_url,
+                callback_url=callback_url,
                 verify_token=verify_token,
-                fields=tuple(fields or Handler._fields_to_subclasses().keys()),
+                fields=fields,
             )
             if not res["success"]:
                 raise RuntimeError("Failed to register callback URL.")
-            _logger.info("Callback URL '%s' registered successfully", full_url)
+            _logger.info("Callback URL '%s' registered successfully", callback_url)
         except WhatsAppError as e:
-            raise RuntimeError(f"Failed to register callback URL '{full_url}'") from e
+            raise RuntimeError(
+                f"Failed to register callback URL '{callback_url}'"
+            ) from e
 
     async def send_message(
         self,
@@ -1289,7 +1290,7 @@ class WhatsApp(WhatsApp):
                 res = await (dl_session or httpx).get(url)
                 try:
                     res.raise_for_status()
-                except requests.HTTPError as e:
+                except httpx.HTTPError as e:
                     raise ValueError(
                         f"An error occurred while downloading from {url}"
                     ) from e
@@ -1367,7 +1368,7 @@ class WhatsApp(WhatsApp):
             path: The path where to save the file (if not provided, the current working directory will be used).
             filename: The name of the file (if not provided, it will be guessed from the URL + extension).
             in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
-            **kwargs: Additional arguments to pass to :py:func:`requests.get`.
+            **kwargs: Additional arguments to pass to :py:func:`httpx.get`.
 
         Returns:
             The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.

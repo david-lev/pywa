@@ -94,12 +94,13 @@ class Server:
                     "to get them: "
                     "https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings/"
                 )
+            # noinspection PyProtectedMember
             self._delayed_register_callback_url(
-                callback_url=callback_url,
+                callback_url=f"{callback_url.rstrip('/')}/{self._webhook_endpoint.lstrip('/')}",
                 app_id=app_id,
                 app_secret=app_secret,
                 verify_token=verify_token,
-                fields=fields,
+                fields=tuple(fields or Handler._fields_to_subclasses().keys()),
                 delay=(verify_timeout - _VERIFY_TIMEOUT_SEC)
                 if verify_timeout is not None and verify_timeout > _VERIFY_TIMEOUT_SEC
                 else 0,

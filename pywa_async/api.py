@@ -1,19 +1,19 @@
 """The internal API for the WhatsApp client."""
 
+from pywa.api import *  # noqa MUST BE IMPORTED FIRST
+
 from typing import Any, TYPE_CHECKING
 
 import httpx
 import requests_toolbelt
 
-import pywa_async
 from .errors import WhatsAppError
 
-if TYPE_CHECKING:
-    from pywa_async import WhatsApp
 
+class WhatsAppCloudApiAsync(WhatsAppCloudApi):
+    """Internal methods for the WhatsApp Async client. Do not use this class directly."""
 
-class WhatsAppCloudApi:
-    """Internal methods for the WhatsApp client. Do not use this class directly."""
+    _session: httpx.AsyncClient
 
     def __init__(
         self,
@@ -23,26 +23,16 @@ class WhatsAppCloudApi:
         base_url: str,
         api_version: float,
     ):
-        self.phone_id = phone_id
-        if session.headers.get("Authorization") is not None:
-            raise ValueError(
-                "You can't use the same requests.Session for multiple WhatsApp instances!"
-            )
-        self._session = session
-        self._base_url = f"{base_url}/v{api_version}"
-        self._session.headers.update(
-            {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {token}",
-                "User-Agent": f"PyWa/{pywa_async.__version__}",
-            }
+        super().__init__(
+            phone_id=phone_id,
+            token=token,
+            session=session,  # noqa
+            base_url=base_url,
+            api_version=api_version,
         )
 
-    def __str__(self) -> str:
-        return f"WhatsAppCloudApi(phone_id={self.phone_id!r})"
-
-    def __repr__(self) -> str:
-        return self.__str__()
+    def __str__(self):
+        return f"WhatsAppCloudApiAsync(phone_id={self.phone_id!r})"
 
     async def _make_request(self, method: str, endpoint: str, **kwargs) -> dict | list:
         """
@@ -256,16 +246,23 @@ class WhatsAppCloudApi:
         """
         async with httpx.AsyncClient() as session:
             session.headers["Authorization"] = self._session.headers["Authorization"]
-            res = await session.request(
-                method="POST",
-                url=f"{self._base_url}/{self.phone_id}/media",
-                files={
-                    "file": (filename, media, mime_type),
-                    "messaging_product": (None, "whatsapp"),
-                    "type": (None, mime_type),
-                },
-            )
-            return res.json()
+            try:
+                res = await session.request(
+                    method="POST",
+                    url=f"{self._base_url}/{self.phone_id}/media",
+                    files={
+                        "file": (filename, media, mime_type),
+                        "messaging_product": (None, "whatsapp"),
+                        "type": (None, mime_type),
+                    },
+                )
+                res.raise_for_status()
+                return res.json()
+            except httpx.HTTPStatusError as e:
+                print(e.response.json())
+                raise WhatsAppError.from_dict(
+                    error=e.response.json()["error"], response=e.response
+                )
 
     async def get_media_url(self, media_id: str) -> dict:
         """
