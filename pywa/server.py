@@ -4,7 +4,6 @@ __all__ = ["Server"]
 
 import asyncio
 import logging
-import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Callable
 

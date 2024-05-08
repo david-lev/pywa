@@ -22,6 +22,7 @@ if TYPE_CHECKING:
         ButtonUrl,
         SectionList,
         FlowButton,
+        CallbackData,
         CallbackDataT,
     )
     from .template import Template

@@ -74,8 +74,9 @@ from .types import (
     FlowStatus,
     BusinessPhoneNumber,
     Command,
+    CallbackData,
 )
-from .types.callback import CallbackDataT, CallbackData
+from .types.callback import CallbackDataT
 from .types.flows import (
     FlowCategory,
     FlowJSON,
