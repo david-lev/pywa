@@ -3,6 +3,11 @@ Changelog
 
 NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 1.19.0-rc.1 (2024-05-08)
+
+- [async] adding beta support for async!
+
+
 ### 1.18.1 (2024-05-05)
 
 - [client] fix document filename
