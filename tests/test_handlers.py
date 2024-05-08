@@ -5,8 +5,11 @@ import functools
 import pytest
 
 from pywa import handlers, types, WhatsApp
+from pywa_async import WhatsApp as WhatsAppAsync
+from pywa.handlers import Handler
 
 FAKE_WA = WhatsApp(phone_id="1234567890", token="1234567890:1234567890")
+FAKE_WA_ASYNC = WhatsAppAsync(phone_id="1234567890", token="1234567890:1234567890")
 
 CallbackButtonOnlyDataIsNeeded = functools.partial(
     types.CallbackButton,
@@ -30,6 +33,12 @@ CallbackButtonOnlyDataIsNeeded = functools.partial(
     ),
     title="Click me",
 )
+
+
+def test_all_handlers_in_handlers_to_update_constractor():
+    for wa in [FAKE_WA, FAKE_WA_ASYNC]:
+        for handler in Handler.__subclasses__():
+            assert handler in wa._handlers_to_update_constractor.keys()
 
 
 def test_safe_issubclas():

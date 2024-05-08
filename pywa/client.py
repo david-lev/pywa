@@ -182,7 +182,7 @@ class WhatsApp(Server, HandlerDecorators):
             list[Handler],
         ] = collections.defaultdict(list)
 
-        self._set_api(session, token, base_url, float(str(api_version)))
+        self._setup_api(session, token, base_url, float(str(api_version)))
 
         super().__init__(
             server=server,
@@ -200,7 +200,7 @@ class WhatsApp(Server, HandlerDecorators):
             max_workers=max_workers,
         )
 
-    def _set_api(
+    def _setup_api(
         self,
         session: requests.Session | None,
         token: str,

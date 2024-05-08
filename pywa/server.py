@@ -6,11 +6,11 @@ import asyncio
 import logging
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from . import utils, handlers
 from .errors import WhatsAppError
-from .handlers import Handler, ChatOpenedHandler  # noqa
+from .handlers import Handler, ChatOpenedHandler, TemplateStatusHandler  # noqa
 from .handlers import (
     CallbackButtonHandler,
     CallbackSelectionHandler,
@@ -19,7 +19,18 @@ from .handlers import (
     RawUpdateHandler,
     FlowCompletionHandler,
 )
-from .types import MessageType, FlowRequest, FlowResponse
+from .types import (
+    MessageType,
+    FlowRequest,
+    FlowResponse,
+    Message,
+    TemplateStatus,
+    MessageStatus,
+    CallbackButton,
+    CallbackSelection,
+    FlowCompletion,
+    ChatOpened,
+)
 from .types.base_update import BaseUpdate, StopHandling  # noqa
 from .types.flows import (
     FlowRequestCannotBeDecrypted,
@@ -253,7 +264,9 @@ class Server:
         if handler_type is not None:
             try:
                 # noinspection PyCallingNonCallable, PyProtectedMember
-                constructed_update = handler_type._update_constructor(self, update)
+                constructed_update = self._handlers_to_update_constractor[handler_type](
+                    self, update
+                )
                 for handler in self._handlers[handler_type]:
                     try:
                         await handler.handle(self, constructed_update)
@@ -277,6 +290,20 @@ class Server:
                     "An error occurred while %s was handling an raw update",
                     raw_update_handler.callback.__name__,
                 )
+
+    _handlers_to_update_constractor: dict[
+        type[Handler], Callable[["WhatsApp", dict], BaseUpdate]
+    ] = {
+        MessageHandler: Message.from_update,
+        MessageStatusHandler: MessageStatus.from_update,
+        CallbackButtonHandler: CallbackButton.from_update,
+        CallbackSelectionHandler: CallbackSelection.from_update,
+        ChatOpenedHandler: ChatOpened.from_update,
+        FlowCompletionHandler: FlowCompletion.from_update,
+        TemplateStatusHandler: TemplateStatus.from_update,
+        RawUpdateHandler: lambda _, data: data,
+    }
+    """A dictionary that maps handler types to their respective update constructors."""
 
     def _get_handler(self: "WhatsApp", update: dict) -> type[Handler] | None:
         """Get the handler for the given update."""

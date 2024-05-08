@@ -231,11 +231,6 @@ class Handler(abc.ABC):
         https://developers.facebook.com/docs/graph-api/webhooks/reference/whatsapp-business-account
         """
 
-    @property
-    @abc.abstractmethod
-    def _update_constructor(self) -> Callable[[WhatsApp, dict], BaseUpdate]:
-        """The constructor to use to construct the update object from the webhook update dict."""
-
     def __init__(
         self,
         callback: Callable[[WhatsApp, Any], Any],
@@ -315,7 +310,6 @@ class MessageHandler(Handler):
     """
 
     _field_name = "messages"
-    _update_constructor = Message.from_update
 
     def __init__(
         self,
@@ -349,7 +343,6 @@ class CallbackButtonHandler(Handler):
     """
 
     _field_name = "messages"
-    _update_constructor = CallbackButton.from_update
 
     def __init__(
         self,
@@ -407,7 +400,6 @@ class CallbackSelectionHandler(Handler):
     """
 
     _field_name = "messages"
-    _update_constructor = CallbackSelection.from_update
 
     def __init__(
         self,
@@ -467,7 +459,6 @@ class MessageStatusHandler(Handler):
     """
 
     _field_name = "messages"
-    _update_constructor = MessageStatus.from_update
 
     def __init__(
         self,
@@ -522,7 +513,6 @@ class ChatOpenedHandler(Handler):
     """
 
     _field_name = "messages"
-    _update_constructor = ChatOpened.from_update
 
     def __init__(
         self,
@@ -557,7 +547,6 @@ class TemplateStatusHandler(Handler):
     """
 
     _field_name = "message_template_status_update"
-    _update_constructor = TemplateStatus.from_update
 
     def __init__(
         self,
@@ -587,7 +576,6 @@ class FlowCompletionHandler(Handler):
     """
 
     _field_name = "messages"
-    _update_constructor = FlowCompletion.from_update
 
     def __init__(
         self,
@@ -618,7 +606,6 @@ class RawUpdateHandler(Handler):
     """
 
     _field_name = None
-    _update_constructor = lambda _, data: data  # noqa
 
     def __init__(
         self,

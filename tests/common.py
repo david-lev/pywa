@@ -19,9 +19,9 @@ UPDATES: dict[
     version: {
         update_filename.replace(".json", ""): [
             {
-                test_name: WA_NO_FILTERS._get_handler(update_obj)._update_constructor(
-                    WA_NO_FILTERS, update_obj
-                )
+                test_name: WA_NO_FILTERS._handlers_to_update_constractor[
+                    WA_NO_FILTERS._get_handler(update_obj)
+                ](WA_NO_FILTERS, update_obj)
             }  # noqa
             for test_name, update_obj in update_data.items()
         ]
