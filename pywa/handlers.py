@@ -136,7 +136,7 @@ def _call_callback_handler(
         if handler.factory_filter(wa, update):
             data = getattr(update, field_name)
             update = dataclasses.replace(
-                update, data=handler.factory(data) if data else None
+                update, **{field_name: handler.factory(data) if data else None}
             )
         else:
             return
