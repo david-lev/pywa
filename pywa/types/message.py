@@ -104,7 +104,22 @@ class Message(BaseUserUpdate):
 
     _media_fields = {"image", "video", "sticker", "document", "audio"}
     _txt_fields = ("text", "caption")
-    _fields_to_objects_constructors_getter = lambda: _FIELDS_TO_OBJECTS_CONSTRUCTORS
+    _fields_to_objects_constructors = MappingProxyType(
+        dict(
+            text=lambda m, _client: m["body"],
+            image=Image.from_dict,
+            video=Video.from_dict,
+            sticker=Sticker.from_dict,
+            document=Document.from_dict,
+            audio=Audio.from_dict,
+            reaction=Reaction.from_dict,
+            location=Location.from_dict,
+            contacts=lambda m, _client: tuple(Contact.from_dict(c) for c in m),
+            order=Order.from_dict,
+            system=System.from_dict,
+        )
+    )
+    """A mapping of message types to their respective constructors."""
 
     @property
     def message_id_to_reply(self) -> str:
@@ -136,7 +151,7 @@ class Message(BaseUserUpdate):
         error = value.get("errors", msg.get("errors", (None,)))[0]
         msg_type = msg["type"]
         context = msg.get("context", {})
-        constructor = cls._fields_to_objects_constructors_getter(cls).get(msg_type)
+        constructor = cls._fields_to_objects_constructors.get(msg_type)
         # noinspection PyArgumentList
         msg_content = (
             {msg_type: constructor(msg[msg_type], _client=client)}

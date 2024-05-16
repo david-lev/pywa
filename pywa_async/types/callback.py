@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class CallbackButton(BaseUserUpdateAsync, _CallbackButton):
+class CallbackButton(BaseUserUpdateAsync, _CallbackButton[CallbackDataT]):
     """
     Represents a callback button (Incoming update when user clicks on :class:`Button` or chooses
     :class:`Template.QuickReplyButtonData`).
@@ -96,7 +96,7 @@ class CallbackButton(BaseUserUpdateAsync, _CallbackButton):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class CallbackSelection(BaseUserUpdateAsync, _CallbackSelection):
+class CallbackSelection(BaseUserUpdateAsync, _CallbackSelection[CallbackDataT]):
     """
     Represents a callback selection (Incoming update when user clicks on :class:`SectionRow` in :class:`SectionList`).
 

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 __all__ = ["Message"]
 
+from types import MappingProxyType
+
 from pywa.types.message import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.message import Message as _Message  # noqa MUST BE IMPORTED FIRST
 
@@ -26,20 +28,6 @@ from .others import (
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
-
-_FIELDS_TO_OBJECTS_CONSTRUCTORS: dict[str, Callable[[dict, WhatsApp], Any]] = dict(
-    text=lambda m, _client: m["body"],
-    image=Image.from_dict,
-    video=Video.from_dict,
-    sticker=Sticker.from_dict,
-    document=Document.from_dict,
-    audio=Audio.from_dict,
-    reaction=Reaction.from_dict,
-    location=Location.from_dict,
-    contacts=lambda m, _client: tuple(Contact.from_dict(c) for c in m),
-    order=Order.from_dict,
-    system=System.from_dict,
-)
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -82,8 +70,15 @@ class Message(BaseUserUpdateAsync, _Message):
     sticker: Sticker | None = None
     document: Document | None = None
     audio: Audio | None = None
-    _fields_to_objects_constructors_getter = (
-        lambda self: _FIELDS_TO_OBJECTS_CONSTRUCTORS
+    _fields_to_objects_constructors = MappingProxyType(
+        _Message._fields_to_objects_constructors
+        | dict(
+            image=Image.from_dict,
+            video=Video.from_dict,
+            sticker=Sticker.from_dict,
+            document=Document.from_dict,
+            audio=Audio.from_dict,
+        )
     )
 
     @property
