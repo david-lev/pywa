@@ -6,7 +6,7 @@ __all__ = ["WhatsApp"]
 
 
 from pywa.client import (
-    WhatsApp,
+    WhatsApp as _WhatsApp,
     _DEFAULT_WORKERS,
     _MISSING,
     _resolve_buttons_param,
@@ -90,7 +90,7 @@ from .utils import FastAPI, Flask
 _logger = logging.getLogger(__name__)
 
 
-class WhatsApp(WhatsApp):
+class WhatsApp(_WhatsApp):
     def __init__(
         self,
         phone_id: str | int,
@@ -101,6 +101,7 @@ class WhatsApp(WhatsApp):
         webhook_endpoint: str = "/",
         verify_token: str | None = None,
         filter_updates: bool = True,
+        continue_handling: bool = True,
         business_account_id: str | int | None = None,
         callback_url: str | None = None,
         fields: Iterable[str] | None = None,
@@ -205,6 +206,7 @@ class WhatsApp(WhatsApp):
             flows_request_decryptor=flows_request_decryptor,
             flows_response_encryptor=flows_response_encryptor,
             max_workers=max_workers,
+            continue_handling=continue_handling,
         )
 
     def __str__(self):

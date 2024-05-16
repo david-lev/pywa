@@ -30,7 +30,7 @@ from .types import (
     FlowCompletion,
     ChatOpened,
 )
-from .types.base_update import BaseUpdate, StopHandling  # noqa
+from .types.base_update import BaseUpdate, StopHandling, ContinueHandling  # noqa
 from .types.flows import (
     FlowRequestCannotBeDecrypted,
     FlowResponseError,  # noqa
@@ -61,6 +61,20 @@ class Server:
     """This class is used internally by the :class:`WhatsApp` client to set up a webhook for receiving incoming
     requests."""
 
+    _handlers_to_update_constractor: dict[
+        type[Handler], Callable[["WhatsApp", dict], BaseUpdate]
+    ] = {
+        MessageHandler: Message.from_update,
+        MessageStatusHandler: MessageStatus.from_update,
+        CallbackButtonHandler: CallbackButton.from_update,
+        CallbackSelectionHandler: CallbackSelection.from_update,
+        ChatOpenedHandler: ChatOpened.from_update,
+        FlowCompletionHandler: FlowCompletion.from_update,
+        TemplateStatusHandler: TemplateStatus.from_update,
+        RawUpdateHandler: lambda _, data: data,
+    }
+    """A dictionary that maps handler types to their respective update constructors."""
+
     def __init__(
         self: "WhatsApp",
         server: Flask | FastAPI | None,
@@ -76,6 +90,7 @@ class Server:
         flows_request_decryptor: utils.FlowRequestDecryptor | None,
         flows_response_encryptor: utils.FlowResponseEncryptor | None,
         max_workers: int,
+        continue_handling: bool,
     ):
         if server is None:
             self._server = None
@@ -89,6 +104,7 @@ class Server:
         self._private_key_password = business_private_key_password
         self._flows_request_decryptor = flows_request_decryptor
         self._flows_response_encryptor = flows_response_encryptor
+        self._continue_handling = continue_handling
 
         if not verify_token:
             raise ValueError(
@@ -262,47 +278,37 @@ class Server:
 
         if handler_type is not None:
             try:
-                # noinspection PyCallingNonCallable, PyProtectedMember
                 constructed_update = self._handlers_to_update_constractor[handler_type](
                     self, update
                 )
-                for handler in self._handlers[handler_type]:
-                    try:
-                        await handler.handle(self, constructed_update)
-                    except Exception as e:
-                        if isinstance(e, StopHandling):
-                            break
-                        _logger.exception(
-                            "An error occurred while %s was handling an update",
-                            handler.callback.__name__,
-                        )
+                await self._call_callbacks(handler_type, constructed_update)
             except Exception:
                 _logger.exception("Failed to construct update: %s", update)
 
-        for raw_update_handler in self._handlers[RawUpdateHandler]:
+        await self._call_callbacks(RawUpdateHandler, update)
+
+    async def _call_callbacks(
+        self: "WhatsApp",
+        handler_type: type[Handler],
+        constructed_update: BaseUpdate | dict,
+    ) -> None:
+        """Call the handler type callbacks for the given update."""
+        for handler in self._handlers[handler_type]:
             try:
-                await raw_update_handler.handle(self, update)
+                await handler.handle(self, constructed_update)
+                if not self._continue_handling:
+                    break
+            except StopHandling:
+                break
+            except ContinueHandling:
+                continue
             except Exception as e:
                 if isinstance(e, StopHandling):
                     break
                 _logger.exception(
-                    "An error occurred while %s was handling an raw update",
-                    raw_update_handler.callback.__name__,
+                    "An error occurred while %s was handling an update",
+                    handler.callback.__name__,
                 )
-
-    _handlers_to_update_constractor: dict[
-        type[Handler], Callable[["WhatsApp", dict], BaseUpdate]
-    ] = {
-        MessageHandler: Message.from_update,
-        MessageStatusHandler: MessageStatus.from_update,
-        CallbackButtonHandler: CallbackButton.from_update,
-        CallbackSelectionHandler: CallbackSelection.from_update,
-        ChatOpenedHandler: ChatOpened.from_update,
-        FlowCompletionHandler: FlowCompletion.from_update,
-        TemplateStatusHandler: TemplateStatus.from_update,
-        RawUpdateHandler: lambda _, data: data,
-    }
-    """A dictionary that maps handler types to their respective update constructors."""
 
     def _get_handler(self: "WhatsApp", update: dict) -> type[Handler] | None:
         """Get the handler for the given update."""

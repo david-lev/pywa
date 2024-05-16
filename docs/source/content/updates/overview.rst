@@ -87,7 +87,9 @@ All updates have common methods and properties:
    * - :attr:`~BaseUpdate.timestamp`
      - The timestamp of the update
    * - :meth:`~BaseUpdate.stop_handling`
-     - Stop handling the update
+     - Stop next handlers from handling the update
+   * - :meth:`~BaseUpdate.continue_handling`
+     - Continue to the next handler
 
 All user-related-updates have common methods and properties:
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 __all__ = [
     "StopHandling",
+    "ContinueHandling",
 ]
 
 import abc
@@ -54,6 +55,31 @@ class StopHandling(Exception):
     pass
 
 
+class ContinueHandling(Exception):
+    """
+    Raise this exception to continue handling an update.
+
+    You can call ``.continue_handling()`` on every update object to raise this exception.
+
+    Example:
+
+            >>> from pywa import WhatsApp
+            >>> from pywa.types import Message
+            >>> wa = WhatsApp(...)
+
+            >>> @wa.on_message()
+            ... def callback(_: WhatsApp, msg: Message):
+            ...     msg.reply_text("Hello from PyWa!")
+            ...     msg.continue_handling()  # or raise ContinueHandling
+
+            >>> @wa.on_message()
+            ... def not_called(_: WhatsApp, msg: Message):
+            ...     msg.reply_text("This message will be sent")
+    """
+
+    pass
+
+
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class BaseUpdate(abc.ABC):
     """Base class for all update types."""
@@ -87,6 +113,8 @@ class BaseUpdate(abc.ABC):
         """
         Call this method to break out of the handler loop. other handlers will not be called.
 
+        - Use ``.continue_handling()`` to continue to the next handler in the handlers loop.
+
         This method just raises :class:`StopHandling` which is caught by the handler loop and breaks out of it.
 
         Example:
@@ -105,6 +133,31 @@ class BaseUpdate(abc.ABC):
             ...     msg.reply_text("This message will not be sent")
         """
         raise StopHandling
+
+    def continue_handling(self) -> None:
+        """
+        Call this method to continue to the next handler in the handlers loop.
+
+        - Use ``.stop_handling()`` to break out of the handler loop.
+
+        This method just raises :class:`ContinueHandling` which is caught by the handler loop and continues the loop.
+
+        Example:
+
+            >>> from pywa import WhatsApp
+            >>> from pywa.types import Message
+            >>> wa = WhatsApp(...)
+
+            >>> @wa.on_message()
+            ... def callback(_: WhatsApp, msg: Message):
+            ...     msg.reply_text("Hello from PyWa!")
+            ...     msg.continue_handling()
+
+            >>> @wa.on_message()
+            ... def callback_not_called(_: WhatsApp, msg: Message):
+            ...     msg.reply_text("This message will be sent")
+        """
+        raise ContinueHandling
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
