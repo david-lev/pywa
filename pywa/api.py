@@ -3,7 +3,6 @@
 from typing import Any, TYPE_CHECKING
 
 import requests
-import requests_toolbelt
 
 import pywa
 from .errors import WhatsAppError
@@ -253,19 +252,15 @@ class WhatsAppCloudApi:
             A dict with the ID of the uploaded media file.
         """
         headers = self._session.headers.copy()
-        form_data = requests_toolbelt.MultipartEncoder(
-            {
-                "file": (filename, media, mime_type),
-                "messaging_product": "whatsapp",
-                "type": mime_type,
-            }
-        )
-        headers["Content-Type"] = form_data.content_type
         return self._make_request(
             method="POST",
             endpoint=f"/{self.phone_id}/media",
             headers=headers,
-            data=form_data,
+            files={
+                "file": (filename, media, mime_type),
+                "messaging_product": (None, "whatsapp"),
+                "type": (None, mime_type),
+            },
         )
 
     def get_media_url(self, media_id: str) -> dict:
@@ -772,21 +767,17 @@ class WhatsAppCloudApi:
               ]
             }
         """
-        form_data = requests_toolbelt.MultipartEncoder(
-            {
-                "file": ("flow.json", flow_json, "application/json"),
-                "name": "flow.json",
-                "asset_type": "FLOW_JSON",
-                "messaging_product": "whatsapp",
-            }
-        )
         headers = self._session.headers.copy()
-        headers["Content-Type"] = form_data.content_type
         return self._make_request(
             method="POST",
             endpoint=f"/{flow_id}/assets",
             headers=headers,
-            data=form_data,
+            files={
+                "file": ("flow.json", flow_json, "application/json"),
+                "name": (None, "flow.json"),
+                "asset_type": (None, "FLOW_JSON"),
+                "messaging_product": (None, "whatsapp"),
+            },
         )
 
     def publish_flow(

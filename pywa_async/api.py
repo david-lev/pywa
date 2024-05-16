@@ -5,7 +5,6 @@ from pywa.api import *  # noqa MUST BE IMPORTED FIRST
 from typing import Any, TYPE_CHECKING
 
 import httpx
-import requests_toolbelt
 
 from .errors import WhatsAppError
 
@@ -768,21 +767,17 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
               ]
             }
         """
-        form_data = requests_toolbelt.MultipartEncoder(
-            {
-                "file": ("flow.json", flow_json, "application/json"),
-                "name": "flow.json",
-                "asset_type": "FLOW_JSON",
-                "messaging_product": "whatsapp",
-            }
-        )
         headers = self._session.headers.copy()
-        headers["Content-Type"] = form_data.content_type
         return await self._make_request(
             method="POST",
             endpoint=f"/{flow_id}/assets",
             headers=headers,
-            data=form_data,
+            files={
+                "file": ("flow.json", flow_json, "application/json"),
+                "name": (None, "flow.json"),
+                "asset_type": (None, "FLOW_JSON"),
+                "messaging_product": (None, "whatsapp"),
+            },
         )
 
     async def publish_flow(
