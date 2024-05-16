@@ -102,6 +102,7 @@ class WhatsApp(_WhatsApp):
         verify_token: str | None = None,
         filter_updates: bool = True,
         continue_handling: bool = True,
+        skip_duplicate_updates: bool = True,
         business_account_id: str | int | None = None,
         callback_url: str | None = None,
         fields: Iterable[str] | None = None,
@@ -207,6 +208,7 @@ class WhatsApp(_WhatsApp):
             flows_response_encryptor=flows_response_encryptor,
             max_workers=max_workers,
             continue_handling=continue_handling,
+            skip_duplicate_updates=skip_duplicate_updates,
         )
 
     def __str__(self):

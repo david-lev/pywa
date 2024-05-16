@@ -54,6 +54,15 @@ _INTERACTIVE_TYPES: dict[str, type[Handler]] = {
     "nfm_reply": FlowCompletionHandler,
 }
 
+
+def _extract_id_from_update(update: dict) -> str | None:
+    """Extract the ID from the given update."""
+    try:
+        return update["entry"][0]["changes"][0]["value"]["messages"][0]["id"]
+    except (KeyError, IndexError, TypeError):
+        return None
+
+
 _logger = logging.getLogger(__name__)
 
 
@@ -91,6 +100,7 @@ class Server:
         flows_response_encryptor: utils.FlowResponseEncryptor | None,
         max_workers: int,
         continue_handling: bool,
+        skip_duplicate_updates: bool,
     ):
         if server is None:
             self._server = None
@@ -105,6 +115,7 @@ class Server:
         self._flows_request_decryptor = flows_request_decryptor
         self._flows_response_encryptor = flows_response_encryptor
         self._continue_handling = continue_handling
+        self._skip_duplicate_updates = skip_duplicate_updates
 
         if not verify_token:
             raise ValueError(
@@ -152,15 +163,31 @@ class Server:
             )
             return "Error, invalid verification token", 403
 
+        self._updates_ids_in_process = set[str]()
+
         async def webhook_update_handler(update: dict) -> tuple[str, int]:
             """The webhook function that is called when an update is received."""
+            update_id: str | None = None
             _logger.debug(
                 "Webhook ('%s') received an update: %s",
                 self._webhook_endpoint,
                 update,
             )
-
+            if self._skip_duplicate_updates and (
+                update_id := _extract_id_from_update(update)
+            ):
+                if update_id in self._updates_ids_in_process:
+                    _logger.warning(
+                        "Webhook ('%s') received an update with an ID that is already being processed: %s",
+                        self._webhook_endpoint,
+                        update_id,
+                    )
+                    return "ok", 200
+                self._updates_ids_in_process.add(update_id)
             await self._call_handlers(update)
+            if self._skip_duplicate_updates and update_id is not None:
+                if update_id is not None:
+                    self._updates_ids_in_process.remove(update_id)
             return "ok", 200
 
         match self._server_type:

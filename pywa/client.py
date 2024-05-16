@@ -94,6 +94,7 @@ class WhatsApp(Server, HandlerDecorators):
         | None = utils.default_flow_response_encryptor,
         max_workers: int = _DEFAULT_WORKERS,
         continue_handling: bool = True,
+        skip_duplicate_updates: bool = True,
     ) -> None:
         """
         The WhatsApp client.
@@ -200,6 +201,7 @@ class WhatsApp(Server, HandlerDecorators):
             flows_response_encryptor=flows_response_encryptor,
             max_workers=max_workers,
             continue_handling=continue_handling,
+            skip_duplicate_updates=skip_duplicate_updates,
         )
 
     def _setup_api(
