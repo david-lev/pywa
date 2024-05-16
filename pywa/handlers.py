@@ -177,7 +177,7 @@ async def _get_factored_update(
                 if inspect.iscoroutinefunction(handler.factory)
                 else handler.factory(data)
             )
-            update = dataclasses.replace(update, data=factorized_data)
+            update = dataclasses.replace(update, **{field_name: factorized_data})
         else:
             return
     try:
