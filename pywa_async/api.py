@@ -767,11 +767,9 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
               ]
             }
         """
-        headers = self._session.headers.copy()
         return await self._make_request(
             method="POST",
             endpoint=f"/{flow_id}/assets",
-            headers=headers,
             files={
                 "file": ("flow.json", flow_json, "application/json"),
                 "name": (None, "flow.json"),

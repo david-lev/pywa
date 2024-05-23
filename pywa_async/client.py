@@ -1326,7 +1326,9 @@ class WhatsApp(_WhatsApp):
                     mime_type or mimetypes.guess_type(path)[0],
                 )
             elif (url := str(media)).startswith(("https://", "http://")):
-                res = await (dl_session or httpx).get(url)
+                res = await (
+                    dl_session or httpx.AsyncClient(follow_redirects=True)
+                ).get(url)
                 try:
                     res.raise_for_status()
                 except httpx.HTTPError as e:

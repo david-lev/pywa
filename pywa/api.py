@@ -31,7 +31,6 @@ class WhatsAppCloudApi:
         self._base_url = f"{base_url}/v{api_version}"
         self._session.headers.update(
             {
-                "Content-Type": "application/json",
                 "Authorization": f"Bearer {token}",
                 "User-Agent": f"PyWa/{pywa.__version__}",
             }
@@ -251,16 +250,11 @@ class WhatsAppCloudApi:
         Returns:
             A dict with the ID of the uploaded media file.
         """
-        headers = self._session.headers.copy()
         return self._make_request(
             method="POST",
             endpoint=f"/{self.phone_id}/media",
-            headers=headers,
-            files={
-                "file": (filename, media, mime_type),
-                "messaging_product": (None, "whatsapp"),
-                "type": (None, mime_type),
-            },
+            files=[("file", (filename, media, mime_type))],
+            data={"messaging_product": "whatsapp"},
         )
 
     def get_media_url(self, media_id: str) -> dict:
@@ -767,16 +761,14 @@ class WhatsAppCloudApi:
               ]
             }
         """
-        headers = self._session.headers.copy()
         return self._make_request(
             method="POST",
             endpoint=f"/{flow_id}/assets",
-            headers=headers,
-            files={
-                "file": ("flow.json", flow_json, "application/json"),
-                "name": (None, "flow.json"),
-                "asset_type": (None, "FLOW_JSON"),
-                "messaging_product": (None, "whatsapp"),
+            files=[("file", ("flow.json", flow_json, "application/json"))],
+            data={
+                "name": "flow.json",
+                "asset_type": "FLOW_JSON",
+                "messaging_product": "whatsapp",
             },
         )
 
