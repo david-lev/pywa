@@ -68,6 +68,7 @@ __all__ = [
     "DataSource",
     "Action",
     "FlowActionType",
+    "FlowRequestActionType",
     "ActionNext",
     "ActionNextType",
 ]
@@ -134,12 +135,14 @@ class FlowRequestActionType(utils.StrEnum):
         BACK: if the request is triggered when pressing back (The screen has ``refresh_on_back`` set to ``True``)
         DATA_EXCHANGE: if the request is triggered when submitting the screen (And the :class:`Action` name is ``FlowActionType.DATA_EXCHANGE``)
         PING: if the request is triggered by a health check (Ignore this requests by leaving ``handle_health_check`` to ``True``)
+        NAVIGATE: if the :class:`FlowButton` sent with ``FlowActionType.NAVIGATE`` and the screen is not in the routing model (the request will contain an error)
     """
 
     INIT = "INIT"
     BACK = "BACK"
     DATA_EXCHANGE = "data_exchange"
     PING = "ping"
+    NAVIGATE = "navigate"
     UNKNOWN = "UNKNOWN"
 
     @classmethod
