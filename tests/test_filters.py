@@ -14,9 +14,10 @@ from pywa.types import (
     ReferredProduct,
 )
 from pywa.types.base_update import BaseUpdate
-from tests.common import UPDATES, API_VERSIONS, WA_NO_FILTERS
+from tests.common import API_VERSIONS, CLIENTS
 
 _T = TypeVar("_T", bound=BaseUpdate)
+WHATSAPP_N = "1234567890"
 
 
 def same(x: _T) -> _T:
@@ -196,7 +197,7 @@ FILTERS: dict[
             (lambda m: modify_send_to(m, "123"), fil.sent_to(phone_number_id="123"))
         ],
         "sent_to_me": [
-            (lambda m: modify_send_to(m, WA_NO_FILTERS.phone_id), fil.sent_to_me)
+            (lambda m: modify_send_to(m, CLIENTS.keys()[0].phone_id), fil.sent_to_me)
         ],
         "from_users": [(lambda m: modify_send_from(m, "123"), fil.from_users("123"))],
         "from_countries": [
@@ -329,19 +330,20 @@ def test_combinations():
 
 
 def test_filters():
-    for filename, tests in UPDATES[RANDOM_API_VER].items():
-        for test in tests:
-            for test_name, update in test.items():
-                for update_modifier, filter_func in FILTERS.get(filename, {}).get(
-                    test_name, ()
-                ):
-                    update = update_modifier(update)
-                    try:
-                        assert filter_func(WA_NO_FILTERS, update)
-                    except AssertionError as e:
-                        raise AssertionError(
-                            f"Test {filename}/{test_name} failed on {update}"
-                        ) from e
+    for client, updates in CLIENTS.items():
+        for filename, tests in updates[RANDOM_API_VER].items():
+            for test in tests:
+                for test_name, update in test.items():
+                    for update_modifier, filter_func in FILTERS.get(filename, {}).get(
+                        test_name, ()
+                    ):
+                        update = update_modifier(update)
+                        try:
+                            assert filter_func(client, update)
+                        except AssertionError as e:
+                            raise AssertionError(
+                                f"Test {filename}/{test_name} failed on {update}"
+                            ) from e
 
 
 def modify_text(msg: Message, to: str):

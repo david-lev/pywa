@@ -10,26 +10,53 @@ import warnings
 from typing import Any, Callable, Protocol, TypeAlias
 
 
-def is_fastapi_app(app):
-    """Check if the app is a FastAPI app."""
-    try:
-        return isinstance(app, importlib.import_module("fastapi").FastAPI)
-    except ImportError:
-        return False
+class FastAPI(Protocol):
+    """Protocol for the `FastAPI <https://fastapi.tiangolo.com/>`_ app."""
+
+    def get(self, path: str) -> Callable: ...
+
+    def post(self, path: str) -> Callable: ...
 
 
-def is_flask_app(app):
-    """Check if the app is a Flask app."""
-    try:
-        return isinstance(app, importlib.import_module("flask").Flask)
-    except ImportError:
-        return False
+class Flask(Protocol):
+    """Protocol for the `Flask <https://flask.palletsprojects.com/>`_ app."""
+
+    def route(self, rule: str, **options: Any) -> Callable: ...
 
 
-def is_cryptography_installed():
+class ServerType(enum.Enum):
+    """Enum for the supported server types."""
+
+    FASTAPI = ("FASTAPI", FastAPI, lambda: importlib.import_module("fastapi").FastAPI)
+    FLASK = ("FLASK", Flask, lambda: importlib.import_module("flask").Flask)
+
+    def __new__(cls, name: str, protocol: Protocol, server: Callable):
+        obj = object.__new__(cls)
+        obj._value_ = name
+        obj.protocol = protocol
+        obj.server = server
+        return obj
+
+    @classmethod
+    def from_app(cls, app) -> ServerType | None:
+        """Get the server type from the app."""
+        for server_type in cls:
+            try:
+                if isinstance(app, server_type.server()):
+                    return server_type
+            except ImportError:
+                pass
+
+    @classmethod
+    def protocols_names(cls) -> tuple[str, ...]:
+        """Get the names of the protocols."""
+        return tuple(server_type.protocol.__name__ for server_type in cls)
+
+
+def is_installed(lib: str) -> bool:
     """Check if the cryptography library is installed."""
     try:
-        importlib.import_module("cryptography")
+        importlib.import_module(lib)
         return True
     except ImportError:
         return False
@@ -100,19 +127,9 @@ class FromDict:
         )
 
 
-class FastAPI(Protocol):
-    def get(self, path: str) -> Callable: ...
-
-    def post(self, path: str) -> Callable: ...
-
-
-class Flask(Protocol):
-    def route(self, rule: str, **options: Any) -> Callable: ...
-
-
-FlowRequestDecryptor: TypeAlias = (
-    Callable[[str, str, str, str, str | None], tuple[dict, bytes, bytes]],
-)
+FlowRequestDecryptor: TypeAlias = Callable[
+    [str, str, str, str, str | None], tuple[dict, bytes, bytes]
+]
 """
 Type hint for the function that decrypts the request from WhatsApp Flow.
 

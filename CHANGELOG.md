@@ -3,6 +3,26 @@ Changelog
 
 NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 1.19.0-rc.3 (2024-05-23)
+
+- [api] fix uploads
+- [server] expose `webhook_challenge_handler`, `webhook_update_handler` and `flow_request_handler`
+
+
+### 1.19.0-rc.2 (2024-05-17)
+
+- [client] adding `skip_duplicate_updates` when callbacks take too long to return (~25s), defaults to True
+- [client,handlers] allow to override `continue_handling`
+- [message] fix async constructors
+- [api] remove `requests_toolbelt` from deps
+- [handlers] fix dynamic field name when `factory_before_filters`
+
+
+### 1.19.0-rc.1 (2024-05-08)
+
+- [async] adding beta support for async!
+
+
 ### 1.18.1 (2024-05-05)
 
 - [client] fix document filename

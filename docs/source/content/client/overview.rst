@@ -8,9 +8,14 @@
     WORK IN PROGRESS
 
 
-The :class:`~WhatsApp` client has two responsibilities. Sending messages & handling updates.
+The :class:`~WhatsApp` client has 3 main responsibilities:
 
+1. Sending messages (text, media, location, contact, etc.)
+2. Creating and managing templates, flows, profile and other business-related resources
+3. Listening for incoming messages and events
 
+for sending messages and the other API calls, you will need to provide an phone number id that connects to the WhatsApp Cloud API.
+for listening to incoming messages and events, you will need to tell WhatsApp to send the events to a webhook that you provide.
 
 .. autoclass:: WhatsApp()
     :members: __init__

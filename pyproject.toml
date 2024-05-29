@@ -52,4 +52,4 @@ cryptography = ["cryptography"]
 "Changelog" = "https://github.com/david-lev/pywa/blob/master/CHANGELOG.md"
 
 [tool.ruff.lint]
-ignore = ["E731", "F401", "E402"]
+ignore = ["E731", "F401", "E402", "F405"]

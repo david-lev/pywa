@@ -7,14 +7,14 @@ import importlib
 import logging
 from typing import TYPE_CHECKING, Any, Iterable
 
-from pywa import utils
+from .. import utils
 
 if TYPE_CHECKING:
-    from message_status import MessageStatus
-    from chat_opened import ChatOpened
-    from media import Image, Video, Document, Audio, Sticker
-    from callback import CallbackButton, CallbackSelection
-    from pywa.client import WhatsApp
+    from .message_status import MessageStatus
+    from .chat_opened import ChatOpened
+    from .media import Image, Video, Document, Audio, Sticker
+    from .callback import CallbackButton, CallbackSelection
+    from ..client import WhatsApp
 
 _logger = logging.getLogger(__name__)
 

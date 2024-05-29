@@ -19,14 +19,14 @@ import pathlib
 import datetime
 from typing import TYPE_CHECKING, Any, BinaryIO, Iterable, Literal
 
-from pywa import utils
+from .. import utils
 
 from .base_update import BaseUpdate  # noqa
 from .callback import CallbackDataT, _resolve_callback_data  # noqa
 from .others import ProductsSection
 
 if TYPE_CHECKING:
-    from pywa.client import WhatsApp
+    from ..client import WhatsApp
 
 _logger = logging.getLogger(__name__)
 

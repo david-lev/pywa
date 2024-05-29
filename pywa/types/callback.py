@@ -36,8 +36,7 @@ from .others import MessageType, Metadata, ReplyToMessage, User, InteractiveType
 from .. import utils
 
 if TYPE_CHECKING:
-    from pywa.client import WhatsApp
-
+    from ..client import WhatsApp
     from .template import Template
 
 

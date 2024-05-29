@@ -2,19 +2,18 @@
 
 from __future__ import annotations
 
-
 __all__ = [
     "StopHandling",
     "ContinueHandling",
 ]
 
-import abc
+from pywa.types.base_update import *  # noqa MUST BE IMPORTED FIRST
+
+
 import pathlib
 import dataclasses
-import datetime
 from typing import TYPE_CHECKING, BinaryIO, Iterable
-
-from .others import Contact, Metadata, ProductsSection, User
+from .others import Contact, ProductsSection
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
@@ -24,176 +23,18 @@ if TYPE_CHECKING:
         ButtonUrl,
         SectionList,
         FlowButton,
-        CallbackDataT,
         CallbackData,
+        CallbackDataT,
     )
     from .template import Template
 
 
-class StopHandling(Exception):
-    """
-    Raise this exception to stop handling an update.
-
-    You can call ``.stop_handling()`` on every update object to raise this exception.
-
-    Example:
-
-            >>> from pywa import WhatsApp
-            >>> from pywa.types import Message
-            >>> wa = WhatsApp(...)
-
-            >>> @wa.on_message()
-            ... def callback(_: WhatsApp, msg: Message):
-            ...     msg.reply_text("Hello from PyWa!")
-            ...     msg.stop_handling()  # or raise StopHandling
-
-            >>> @wa.on_message()
-            ... def not_called(_: WhatsApp, msg: Message):
-            ...     msg.reply_text("This message will not be sent")
-    """
-
-    pass
-
-
-class ContinueHandling(Exception):
-    """
-    Raise this exception to continue handling an update.
-
-    You can call ``.continue_handling()`` on every update object to raise this exception.
-
-    Example:
-
-            >>> from pywa import WhatsApp
-            >>> from pywa.types import Message
-            >>> wa = WhatsApp(...)
-
-            >>> @wa.on_message()
-            ... def callback(_: WhatsApp, msg: Message):
-            ...     msg.reply_text("Hello from PyWa!")
-            ...     msg.continue_handling()  # or raise ContinueHandling
-
-            >>> @wa.on_message()
-            ... def not_called(_: WhatsApp, msg: Message):
-            ...     msg.reply_text("This message will be sent")
-    """
-
-    pass
-
-
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class BaseUpdate(abc.ABC):
-    """Base class for all update types."""
+class BaseUserUpdateAsync:
+    """Async Base class for all user-related update types (message, callback, etc.)."""
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
-    raw: dict = dataclasses.field(repr=False, hash=False, compare=False)
 
-    @property
-    @abc.abstractmethod
-    def id(self) -> str:
-        """The id of the update"""
-        ...
-
-    @property
-    @abc.abstractmethod
-    def timestamp(self) -> datetime.datetime:
-        """The timestamp the update was sent"""
-        ...
-
-    @classmethod
-    @abc.abstractmethod
-    def from_update(cls, client: WhatsApp, update: dict) -> BaseUpdate:
-        """Create an update object from a raw update dict."""
-        ...
-
-    def __hash__(self):
-        """Return the hash of the update ID."""
-        return hash(self.id)
-
-    def stop_handling(self) -> None:
-        """
-        Call this method to break out of the handler loop. other handlers will not be called.
-
-        - Use ``.continue_handling()`` to continue to the next handler in the handlers loop.
-
-        This method just raises :class:`StopHandling` which is caught by the handler loop and breaks out of it.
-
-        Example:
-
-            >>> from pywa import WhatsApp
-            >>> from pywa.types import Message
-            >>> wa = WhatsApp(...)
-
-            >>> @wa.on_message()
-            ... def callback(_: WhatsApp, msg: Message):
-            ...     msg.reply_text("Hello from PyWa!")
-            ...     msg.stop_handling()
-
-            >>> @wa.on_message()
-            ... def callback_not_called(_: WhatsApp, msg: Message):
-            ...     msg.reply_text("This message will not be sent")
-        """
-        raise StopHandling
-
-    def continue_handling(self) -> None:
-        """
-        Call this method to continue to the next handler in the handlers loop.
-
-        - Use ``.stop_handling()`` to break out of the handler loop.
-
-        This method just raises :class:`ContinueHandling` which is caught by the handler loop and continues the loop.
-
-        Example:
-
-            >>> from pywa import WhatsApp
-            >>> from pywa.types import Message
-            >>> wa = WhatsApp(...)
-
-            >>> @wa.on_message()
-            ... def callback(_: WhatsApp, msg: Message):
-            ...     msg.reply_text("Hello from PyWa!")
-            ...     msg.continue_handling()
-
-            >>> @wa.on_message()
-            ... def callback_not_called(_: WhatsApp, msg: Message):
-            ...     msg.reply_text("This message will be sent")
-        """
-        raise ContinueHandling
-
-
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class BaseUserUpdate(BaseUpdate, abc.ABC):
-    """Base class for all user-related update types (message, callback, etc.)."""
-
-    _txt_fields = None
-    """Contains the text fields of the update to use when filtering."""
-
-    @property
-    @abc.abstractmethod
-    def metadata(self) -> Metadata: ...
-
-    @property
-    @abc.abstractmethod
-    def from_user(self) -> User: ...
-
-    @property
-    def sender(self) -> str:
-        """
-        The WhatsApp ID of the sender.
-            - Shortcut for ``.from_user.wa_id``.
-        """
-        return self.from_user.wa_id
-
-    @property
-    def message_id_to_reply(self) -> str:
-        """
-        The ID of the message to reply to.
-
-        If you want to ``wa.send_x`` with ``reply_to_message_id`` in order to reply to a message, use this property
-        instead of ``id`` to prevent errors.
-        """
-        return self.id
-
-    def reply_text(
+    async def reply_text(
         self,
         text: str,
         header: str | None = None,
@@ -284,7 +125,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         Returns:
             The ID of the sent reply.
         """
-        return self._client.send_message(
+        return await self._client.send_message(
             to=self.sender,
             text=text,
             header=header,
@@ -298,7 +139,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
 
     reply = reply_text  # alias
 
-    def reply_image(
+    async def reply_image(
         self,
         image: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
@@ -339,7 +180,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         Returns:
             The ID of the sent reply.
         """
-        return self._client.send_image(
+        return await self._client.send_image(
             to=self.sender,
             image=image,
             caption=caption,
@@ -351,7 +192,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             tracker=tracker,
         )
 
-    def reply_video(
+    async def reply_video(
         self,
         video: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
@@ -393,7 +234,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         Returns:
             The ID of the sent reply.
         """
-        return self._client.send_video(
+        return await self._client.send_video(
             to=self.sender,
             video=video,
             caption=caption,
@@ -405,7 +246,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             tracker=tracker,
         )
 
-    def reply_document(
+    async def reply_document(
         self,
         document: str | pathlib.Path | bytes | BinaryIO,
         filename: str | None = None,
@@ -450,7 +291,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         Returns:
             The ID of the sent reply.
         """
-        return self._client.send_document(
+        return await self._client.send_document(
             to=self.sender,
             document=document,
             filename=filename,
@@ -463,7 +304,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             tracker=tracker,
         )
 
-    def reply_audio(
+    async def reply_audio(
         self,
         audio: str | pathlib.Path | bytes | BinaryIO,
         mime_type: str | None = None,
@@ -488,14 +329,14 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         Returns:
             The ID of the sent message.
         """
-        return self._client.send_audio(
+        return await self._client.send_audio(
             to=self.sender,
             audio=audio,
             mime_type=mime_type,
             tracker=tracker,
         )
 
-    def reply_sticker(
+    async def reply_sticker(
         self,
         sticker: str | pathlib.Path | bytes | BinaryIO,
         mime_type: str | None = None,
@@ -522,14 +363,14 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         Returns:
             The ID of the sent reply.
         """
-        return self._client.send_sticker(
+        return await self._client.send_sticker(
             to=self.sender,
             sticker=sticker,
             mime_type=mime_type,
             tracker=tracker,
         )
 
-    def reply_location(
+    async def reply_location(
         self,
         latitude: float,
         longitude: float,
@@ -561,7 +402,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         Returns:
             The ID of the sent reply.
         """
-        return self._client.send_location(
+        return await self._client.send_location(
             to=self.sender,
             latitude=latitude,
             longitude=longitude,
@@ -570,7 +411,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             tracker=tracker,
         )
 
-    def reply_contact(
+    async def reply_contact(
         self,
         contact: Contact | Iterable[Contact],
         quote: bool = False,
@@ -602,14 +443,14 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         Returns:
             The ID of the sent reply.
         """
-        return self._client.send_contact(
+        return await self._client.send_contact(
             to=self.sender,
             contact=contact,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             tracker=tracker,
         )
 
-    def react(self, emoji: str, tracker: CallbackDataT | None = None) -> str:
+    async def react(self, emoji: str, tracker: CallbackDataT | None = None) -> str:
         """
         React to the message with an emoji.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.send_reaction` with ``to`` and ``message_id``.
@@ -625,14 +466,14 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         Returns:
             The ID of the sent reaction.
         """
-        return self._client.send_reaction(
+        return await self._client.send_reaction(
             to=self.sender,
             emoji=emoji,
             message_id=self.message_id_to_reply,
             tracker=tracker,
         )
 
-    def unreact(self, tracker: CallbackDataT | None = None) -> str:
+    async def unreact(self, tracker: CallbackDataT | None = None) -> str:
         """
         Remove the reaction from the message.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.remove_reaction` with ``to`` and ``message_id``.
@@ -647,11 +488,11 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         Returns:
             The ID of the sent unreaction.
         """
-        return self._client.remove_reaction(
+        return await self._client.remove_reaction(
             to=self.sender, message_id=self.message_id_to_reply, tracker=tracker
         )
 
-    def reply_catalog(
+    async def reply_catalog(
         self,
         body: str,
         footer: str | None = None,
@@ -682,7 +523,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         Returns:
             The ID of the sent reply.
         """
-        return self._client.send_catalog(
+        return await self._client.send_catalog(
             to=self.sender,
             body=body,
             footer=footer,
@@ -691,7 +532,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             tracker=tracker,
         )
 
-    def reply_product(
+    async def reply_product(
         self,
         catalog_id: str,
         sku: str,
@@ -718,7 +559,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         Returns:
             The ID of the sent reply.
         """
-        return self._client.send_product(
+        return await self._client.send_product(
             to=self.sender,
             catalog_id=catalog_id,
             sku=sku,
@@ -728,7 +569,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             tracker=tracker,
         )
 
-    def reply_products(
+    async def reply_products(
         self,
         catalog_id: str,
         product_sections: Iterable[ProductsSection],
@@ -778,7 +619,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         Returns:
             The ID of the sent reply.
         """
-        return self._client.send_products(
+        return await self._client.send_products(
             to=self.sender,
             catalog_id=catalog_id,
             product_sections=product_sections,
@@ -789,7 +630,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             tracker=tracker,
         )
 
-    def reply_template(
+    async def reply_template(
         self,
         template: Template,
         quote: bool = False,
@@ -846,14 +687,14 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         Raises:
 
         """
-        return self._client.send_template(
+        return await self._client.send_template(
             to=self.sender,
             template=template,
             reply_to_message_id=quote if quote else None,
             tracker=tracker,
         )
 
-    def mark_as_read(self) -> bool:
+    async def mark_as_read(self) -> bool:
         """
         Mark the message as read.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.mark_message_as_read` with ``message_id``.
@@ -861,4 +702,6 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         Returns:
             Whether it was successful.
         """
-        return self._client.mark_message_as_read(message_id=self.message_id_to_reply)
+        return await self._client.mark_message_as_read(
+            message_id=self.message_id_to_reply
+        )

@@ -4,15 +4,15 @@ import dataclasses
 import datetime
 from typing import TYPE_CHECKING
 
-from pywa.types.base_update import BaseUserUpdate  # noqa
-from pywa.types.others import (
+from .base_update import BaseUserUpdate  # noqa
+from .others import (
     MessageType,
     Metadata,
     User,
 )
 
 if TYPE_CHECKING:
-    from pywa import WhatsApp
+    from ..client import WhatsApp
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)

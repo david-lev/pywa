@@ -1,54 +1,37 @@
-from __future__ import annotations
-
-from types import MappingProxyType
-
 """This module contains the types related to messages."""
+
+from __future__ import annotations
 
 __all__ = ["Message"]
 
+from types import MappingProxyType
+
+from pywa.types.message import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.message import Message as _Message  # noqa MUST BE IMPORTED FIRST
+
+
 import dataclasses
-import datetime
-from typing import TYPE_CHECKING, Any, Callable, Iterable
+from typing import TYPE_CHECKING, Iterable, Callable, Any
 
-from ..errors import WhatsAppError
-
-from .base_update import BaseUserUpdate  # noqa
+from .base_update import BaseUserUpdateAsync  # noqa
 from .callback import Button, ButtonUrl, SectionList
 from .media import Audio, Document, Image, Sticker, Video
 from .others import (
-    Contact,
-    Location,
     MessageType,
-    Metadata,
-    Order,
     ProductsSection,
+    Location,
+    Order,
     Reaction,
-    ReplyToMessage,
     System,
-    User,
+    Contact,
 )
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
 
 
-_FIELDS_TO_OBJECTS_CONSTRUCTORS: dict[str, Callable[[dict, WhatsApp], Any]] = dict(
-    text=lambda m, _client: m["body"],
-    image=Image.from_dict,
-    video=Video.from_dict,
-    sticker=Sticker.from_dict,
-    document=Document.from_dict,
-    audio=Audio.from_dict,
-    reaction=Reaction.from_dict,
-    location=Location.from_dict,
-    contacts=lambda m, _client: tuple(Contact.from_dict(c) for c in m),
-    order=Order.from_dict,
-    system=System.from_dict,
-)
-
-
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Message(BaseUserUpdate):
+class Message(BaseUserUpdateAsync, _Message):
     """
     A message received from a user.
 
@@ -80,108 +63,23 @@ class Message(BaseUserUpdate):
         error: The error of the message (if the message type is :class:`MessageType.UNSUPPORTED`).
     """
 
-    id: str
-    type: MessageType
-    metadata: Metadata
-    from_user: User
-    timestamp: datetime.datetime
-    reply_to_message: ReplyToMessage | None
-    forwarded: bool
-    forwarded_many_times: bool
-    text: str | None = None
+    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
+
     image: Image | None = None
     video: Video | None = None
     sticker: Sticker | None = None
     document: Document | None = None
     audio: Audio | None = None
-    caption: str | None = None
-    reaction: Reaction | None = None
-    location: Location | None = None
-    contacts: tuple[Contact, ...] | None = None
-    order: Order | None = None
-    system: System | None = None
-    error: WhatsAppError | None = None
-
-    _media_fields = {"image", "video", "sticker", "document", "audio"}
-    _txt_fields = ("text", "caption")
     _fields_to_objects_constructors = MappingProxyType(
-        dict(
-            text=lambda m, _client: m["body"],
+        _Message._fields_to_objects_constructors
+        | dict(
             image=Image.from_dict,
             video=Video.from_dict,
             sticker=Sticker.from_dict,
             document=Document.from_dict,
             audio=Audio.from_dict,
-            reaction=Reaction.from_dict,
-            location=Location.from_dict,
-            contacts=lambda m, _client: tuple(Contact.from_dict(c) for c in m),
-            order=Order.from_dict,
-            system=System.from_dict,
         )
     )
-    """A mapping of message types to their respective constructors."""
-
-    @property
-    def message_id_to_reply(self) -> str:
-        """The ID of the message to reply to."""
-        return (
-            self.id if self.type != MessageType.REACTION else self.reaction.message_id
-        )
-
-    @property
-    def has_media(self) -> bool:
-        """
-        Whether the message has any media. (image, video, sticker, document or audio)
-            - If you want to get the media of the message, use :attr:`~Message.media` instead.
-        """
-        return self.media is not None
-
-    @property
-    def is_reply(self) -> bool:
-        """
-        Whether the message is a reply to another message.
-
-        - Reaction messages are also considered as replies (But ``.reply_to_message`` will be ``None``).
-        """
-        return self.reply_to_message is not None or self.reaction is not None
-
-    @classmethod
-    def from_update(cls, client: WhatsApp, update: dict) -> Message:
-        msg = (value := update["entry"][0]["changes"][0]["value"])["messages"][0]
-        error = value.get("errors", msg.get("errors", (None,)))[0]
-        msg_type = msg["type"]
-        context = msg.get("context", {})
-        constructor = cls._fields_to_objects_constructors.get(msg_type)
-        # noinspection PyArgumentList
-        msg_content = (
-            {msg_type: constructor(msg[msg_type], _client=client)}
-            if constructor is not None
-            else {}
-        )
-        try:
-            usr = User.from_dict(value["contacts"][0])
-        except KeyError:
-            usr = User(
-                wa_id=msg["from"], name=None
-            )  # some messages don't have contacts
-        return cls(
-            _client=client,
-            raw=update,
-            id=msg["id"],
-            type=MessageType(msg_type),
-            **msg_content,
-            from_user=usr,
-            timestamp=datetime.datetime.fromtimestamp(int(msg["timestamp"])),
-            metadata=Metadata.from_dict(value["metadata"]),
-            forwarded=context.get("forwarded", False)
-            or context.get("frequently_forwarded", False),
-            forwarded_many_times=context.get("frequently_forwarded", False),
-            reply_to_message=ReplyToMessage.from_dict(context),
-            caption=msg.get(msg_type, {}).get("caption")
-            if msg_type in cls._media_fields
-            else None,
-            error=WhatsAppError.from_dict(error=error) if error is not None else None,
-        )
 
     @property
     def media(
@@ -200,7 +98,7 @@ class Message(BaseUserUpdate):
             None,
         )
 
-    def download_media(
+    async def download_media(
         self,
         filepath: str | None = None,
         filename: str | None = None,
@@ -223,13 +121,13 @@ class Message(BaseUserUpdate):
             ValueError: If the message does not contain any media.
         """
         try:
-            return self.media.download(
+            return await self.media.download(
                 path=filepath, filename=filename, in_memory=in_memory, **kwargs
             )
         except AttributeError:
             raise ValueError("Message does not contain any media.")
 
-    def copy(
+    async def copy(
         self,
         to: str,
         header: str | None = None,
@@ -269,7 +167,7 @@ class Message(BaseUserUpdate):
         """
         match self.type:
             case MessageType.TEXT:
-                return self._client.send_message(
+                return await self._client.send_message(
                     to=to,
                     text=self.text,
                     preview_url=preview_url,
@@ -281,7 +179,7 @@ class Message(BaseUserUpdate):
                     tracker=tracker,
                 )
             case MessageType.DOCUMENT:
-                return self._client.send_document(
+                return await self._client.send_document(
                     to=to,
                     document=self.document.id,
                     filename=self.document.filename,
@@ -293,7 +191,7 @@ class Message(BaseUserUpdate):
                     tracker=tracker,
                 )
             case MessageType.IMAGE:
-                return self._client.send_image(
+                return await self._client.send_image(
                     to=to,
                     image=self.image.id,
                     caption=self.caption,
@@ -304,7 +202,7 @@ class Message(BaseUserUpdate):
                     tracker=tracker,
                 )
             case MessageType.VIDEO:
-                return self._client.send_video(
+                return await self._client.send_video(
                     to=to,
                     video=self.video.id,
                     caption=self.caption,
@@ -315,11 +213,11 @@ class Message(BaseUserUpdate):
                     tracker=tracker,
                 )
             case MessageType.STICKER:
-                return self._client.send_sticker(
+                return await self._client.send_sticker(
                     to=to, sticker=self.sticker.id, tracker=tracker
                 )
             case MessageType.LOCATION:
-                return self._client.send_location(
+                return await self._client.send_location(
                     to=to,
                     latitude=self.location.latitude,
                     longitude=self.location.longitude,
@@ -328,11 +226,11 @@ class Message(BaseUserUpdate):
                     tracker=tracker,
                 )
             case MessageType.AUDIO:
-                return self._client.send_audio(
+                return await self._client.send_audio(
                     to=to, audio=self.audio.id, tracker=tracker
                 )
             case MessageType.CONTACTS:
-                return self._client.send_contact(
+                return await self._client.send_contact(
                     to=to,
                     contact=self.contacts,
                     reply_to_message_id=reply_to_message_id,
@@ -343,14 +241,14 @@ class Message(BaseUserUpdate):
                     raise ValueError(
                         "You need to provide `reply_to_message_id` in order to `copy` a reaction"
                     )
-                return self._client.send_reaction(
+                return await self._client.send_reaction(
                     to=to,
                     message_id=reply_to_message_id,
                     emoji=self.reaction.emoji or "",
                 )
             case MessageType.ORDER:
                 if len(self.order.products) == 1:
-                    return self._client.send_product(
+                    return await self._client.send_product(
                         to=to,
                         catalog_id=self.order.catalog_id,
                         sku=self.order.products[0].sku,
@@ -358,7 +256,7 @@ class Message(BaseUserUpdate):
                         footer=footer,
                         reply_to_message_id=reply_to_message_id,
                     )
-                return self._client.send_products(
+                return await self._client.send_products(
                     to=to,
                     catalog_id=self.order.catalog_id,
                     product_sections=(
@@ -373,7 +271,7 @@ class Message(BaseUserUpdate):
                     reply_to_message_id=reply_to_message_id,
                 )
             case MessageType.SYSTEM:
-                return self._client.send_message(
+                return await self._client.send_message(
                     to=to,
                     text=self.system.body,
                     header=header,

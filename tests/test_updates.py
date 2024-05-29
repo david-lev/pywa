@@ -6,7 +6,7 @@ from pywa.types import (
     TemplateStatus,
 )
 from pywa.types.media import Image, Video, Document, Audio
-from .common import UPDATES
+from .common import CLIENTS
 
 # {filename: {test_name: [test_funcs]}}
 TYPES: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
@@ -86,14 +86,15 @@ TYPES: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
 
 
 def test_types():
-    for version, files in UPDATES.items():
-        for filename, tests in files.items():
-            for test in tests:
-                for test_name, update in test.items():
-                    for test_func in TYPES[filename][test_name]:
-                        try:
-                            assert test_func(update)
-                        except AssertionError as e:
-                            raise AssertionError(
-                                f"Failed to assert test='{test_name}', v={version}, error={e}"
-                            )
+    for client, updates in CLIENTS.items():
+        for version, files in updates.items():
+            for filename, tests in files.items():
+                for test in tests:
+                    for test_name, update in test.items():
+                        for test_func in TYPES[filename][test_name]:
+                            try:
+                                assert test_func(update)
+                            except AssertionError as e:
+                                raise AssertionError(
+                                    f"Failed to assert test='{test_name}', v={version}, error={e}"
+                                )

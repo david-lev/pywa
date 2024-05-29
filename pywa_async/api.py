@@ -1,48 +1,39 @@
 """The internal API for the WhatsApp client."""
 
+from pywa.api import *  # noqa MUST BE IMPORTED FIRST
+
 from typing import Any, TYPE_CHECKING
 
-import requests
+import httpx
 
-import pywa
 from .errors import WhatsAppError
 
-if TYPE_CHECKING:
-    from .client import WhatsApp
 
+class WhatsAppCloudApiAsync(WhatsAppCloudApi):
+    """Internal methods for the WhatsApp Async client. Do not use this class directly."""
 
-class WhatsAppCloudApi:
-    """Internal methods for the WhatsApp client. Do not use this class directly."""
+    _session: httpx.AsyncClient
 
     def __init__(
         self,
         phone_id: str,
         token: str,
-        session: requests.Session,
+        session: httpx.AsyncClient,
         base_url: str,
         api_version: float,
     ):
-        self.phone_id = phone_id
-        if session.headers.get("Authorization") is not None:
-            raise ValueError(
-                "You can't use the same requests.Session for multiple WhatsApp instances!"
-            )
-        self._session = session
-        self._base_url = f"{base_url}/v{api_version}"
-        self._session.headers.update(
-            {
-                "Authorization": f"Bearer {token}",
-                "User-Agent": f"PyWa/{pywa.__version__}",
-            }
+        super().__init__(
+            phone_id=phone_id,
+            token=token,
+            session=session,  # noqa
+            base_url=base_url,
+            api_version=api_version,
         )
 
-    def __str__(self) -> str:
-        return f"WhatsAppCloudApi(phone_id={self.phone_id!r})"
+    def __str__(self):
+        return f"WhatsAppCloudApiAsync(phone_id={self.phone_id!r})"
 
-    def __repr__(self) -> str:
-        return self.__str__()
-
-    def _make_request(self, method: str, endpoint: str, **kwargs) -> dict | list:
+    async def _make_request(self, method: str, endpoint: str, **kwargs) -> dict | list:
         """
         Internal method to make a request to the WhatsApp Cloud API.
 
@@ -57,14 +48,16 @@ class WhatsAppCloudApi:
         Raises:
             WhatsAppError: If the request failed.
         """
-        res = self._session.request(
+        res = await self._session.request(
             method=method, url=f"{self._base_url}{endpoint}", **kwargs
         )
         if res.status_code >= 400:
             raise WhatsAppError.from_dict(error=res.json()["error"], response=res)
         return res.json()
 
-    def get_app_access_token(self, app_id: int, app_secret: str) -> dict[str, str]:
+    async def get_app_access_token(
+        self, app_id: int, app_secret: str
+    ) -> dict[str, str]:
         """
         Get an access token for an app.
 
@@ -86,7 +79,7 @@ class WhatsAppCloudApi:
             The access token and its type.
 
         """
-        return self._make_request(
+        return await self._make_request(
             method="GET",
             endpoint="/oauth/access_token",
             params={
@@ -96,7 +89,7 @@ class WhatsAppCloudApi:
             },
         )
 
-    def set_app_callback_url(
+    async def set_app_callback_url(
         self,
         app_id: int,
         app_access_token: str,
@@ -125,7 +118,7 @@ class WhatsAppCloudApi:
         Returns:
             The success of the operation.
         """
-        return self._make_request(
+        return await self._make_request(
             method="POST",
             endpoint=f"/{app_id}/subscriptions",
             params={
@@ -137,7 +130,7 @@ class WhatsAppCloudApi:
             },
         )
 
-    def set_waba_callback_url(
+    async def set_waba_callback_url(
         self,
         waba_id: str,
         callback_url: str,
@@ -162,7 +155,7 @@ class WhatsAppCloudApi:
         Returns:
             The success of the operation.
         """
-        return self._make_request(
+        return await self._make_request(
             method="POST",
             endpoint=f"/{waba_id}/subscribed_apps",
             json={
@@ -171,7 +164,7 @@ class WhatsAppCloudApi:
             },
         )
 
-    def set_phone_callback_url(
+    async def set_phone_callback_url(
         self,
         callback_url: str,
         verify_token: str,
@@ -188,7 +181,7 @@ class WhatsAppCloudApi:
         Returns:
             The success of the operation.
         """
-        return self._make_request(
+        return await self._make_request(
             method="POST",
             endpoint=f"/{self.phone_id}/",
             json={
@@ -199,7 +192,7 @@ class WhatsAppCloudApi:
             },
         )
 
-    def set_business_public_key(
+    async def set_business_public_key(
         self,
         public_key: str,
     ) -> dict[str, bool]:
@@ -220,13 +213,13 @@ class WhatsAppCloudApi:
         Returns:
             The success of the operation.
         """
-        return self._make_request(
+        return await self._make_request(
             method="POST",
             endpoint=f"/{self.phone_id}/whatsapp_business_encryption",
             data={"business_public_key": public_key},
         )
 
-    def upload_media(
+    async def upload_media(
         self,
         media: bytes,
         mime_type: str,
@@ -250,14 +243,27 @@ class WhatsAppCloudApi:
         Returns:
             A dict with the ID of the uploaded media file.
         """
-        return self._make_request(
-            method="POST",
-            endpoint=f"/{self.phone_id}/media",
-            files=[("file", (filename, media, mime_type))],
-            data={"messaging_product": "whatsapp"},
-        )
+        async with httpx.AsyncClient() as session:
+            session.headers["Authorization"] = self._session.headers["Authorization"]
+            try:
+                res = await session.request(
+                    method="POST",
+                    url=f"{self._base_url}/{self.phone_id}/media",
+                    files={
+                        "file": (filename, media, mime_type),
+                        "messaging_product": (None, "whatsapp"),
+                        "type": (None, mime_type),
+                    },
+                )
+                res.raise_for_status()
+                return res.json()
+            except httpx.HTTPStatusError as e:
+                print(e.response.json())
+                raise WhatsAppError.from_dict(
+                    error=e.response.json()["error"], response=e.response
+                )
 
-    def get_media_url(self, media_id: str) -> dict:
+    async def get_media_url(self, media_id: str) -> dict:
         """
         Get the URL of a media file.
 
@@ -280,9 +286,9 @@ class WhatsAppCloudApi:
         Returns:
             A dict with the URL and other info about the media file.
         """
-        return self._make_request(method="GET", endpoint=f"/{media_id}")
+        return await self._make_request(method="GET", endpoint=f"/{media_id}")
 
-    def get_media_bytes(
+    async def get_media_bytes(
         self,
         media_url: str,
         **kwargs,
@@ -301,11 +307,11 @@ class WhatsAppCloudApi:
         """
         headers = self._session.headers.copy()
         del headers["Content-Type"]
-        res = self._session.get(media_url, headers=headers, **kwargs)
+        res = await self._session.get(media_url, headers=headers, **kwargs)
         res.raise_for_status()
         return res.content, res.headers.get("Content-Type")
 
-    def delete_media(self, media_id: str) -> dict[str, bool]:
+    async def delete_media(self, media_id: str) -> dict[str, bool]:
         """
         Delete a media file from WhatsApp servers.
 
@@ -321,9 +327,9 @@ class WhatsAppCloudApi:
         Returns:
             True if the media file was deleted successfully, False otherwise.
         """
-        return self._make_request(method="DELETE", endpoint=f"/{media_id}")
+        return await self._make_request(method="DELETE", endpoint=f"/{media_id}")
 
-    def send_raw_request(self, method: str, endpoint: str, **kwargs) -> Any:
+    async def send_raw_request(self, method: str, endpoint: str, **kwargs) -> Any:
         """
         Send a raw request to WhatsApp Cloud API.
 
@@ -353,13 +359,13 @@ class WhatsAppCloudApi:
         Returns:
             The response from the WhatsApp Cloud API.
         """
-        return self._make_request(
+        return await self._make_request(
             method=method,
             endpoint=endpoint.format(phone_id=self.phone_id),
             **kwargs,
         )
 
-    def send_message(
+    async def send_message(
         self,
         to: str,
         typ: str,
@@ -393,13 +399,13 @@ class WhatsAppCloudApi:
             data["context"] = {"message_id": reply_to_message_id}
         if biz_opaque_callback_data:
             data["biz_opaque_callback_data"] = biz_opaque_callback_data
-        return self._make_request(
+        return await self._make_request(
             method="POST",
             endpoint=f"/{self.phone_id}/messages",
             json=data,
         )
 
-    def register_phone_number(
+    async def register_phone_number(
         self, pin: str, data_localization_region: str = None
     ) -> dict[str, bool]:
         """
@@ -416,7 +422,7 @@ class WhatsAppCloudApi:
             The success of the operation.
         """
 
-        return self._make_request(
+        return await self._make_request(
             method="POST",
             endpoint=f"/{self.phone_id}/register",
             json={
@@ -430,7 +436,7 @@ class WhatsAppCloudApi:
             },
         )
 
-    def mark_message_as_read(self, message_id: str) -> dict[str, bool]:
+    async def mark_message_as_read(self, message_id: str) -> dict[str, bool]:
         """
         Mark a message as read.
 
@@ -448,7 +454,7 @@ class WhatsAppCloudApi:
         Returns:
             The success of the operation.
         """
-        return self._make_request(
+        return await self._make_request(
             method="POST",
             endpoint=f"/{self.phone_id}/messages",
             json={
@@ -458,7 +464,7 @@ class WhatsAppCloudApi:
             },
         )
 
-    def get_business_phone_number(
+    async def get_business_phone_number(
         self, fields: tuple[str, ...] | None = None
     ) -> dict[str, Any]:
         """
@@ -484,13 +490,13 @@ class WhatsAppCloudApi:
         Returns:
             The business phone number.
         """
-        return self._make_request(
+        return await self._make_request(
             method="GET",
             endpoint=f"/{self.phone_id}",
             params={"fields": ",".join(fields)} if fields else None,
         )
 
-    def update_conversational_automation(
+    async def update_conversational_automation(
         self,
         enable_welcome_message: bool | None = None,
         prompts: tuple[dict] | None = None,
@@ -515,7 +521,7 @@ class WhatsAppCloudApi:
         Returns:
             The success of the operation.
         """
-        return self._make_request(
+        return await self._make_request(
             method="POST",
             endpoint=f"/{self.phone_id}/conversational_automation",
             params={
@@ -529,7 +535,7 @@ class WhatsAppCloudApi:
             },
         )
 
-    def get_business_profile(
+    async def get_business_profile(
         self,
         fields: tuple[str, ...] | None = None,
     ) -> dict[str, list[dict[str, str | list[str]]]]:
@@ -559,13 +565,13 @@ class WhatsAppCloudApi:
         Args:
             fields: The fields to get.
         """
-        return self._make_request(
+        return await self._make_request(
             method="GET",
             endpoint=f"/{self.phone_id}/whatsapp_business_profile",
             params={"fields": ",".join(fields)} if fields else None,
         )
 
-    def update_business_profile(
+    async def update_business_profile(
         self, data: dict[str, str | list[str]]
     ) -> dict[str, bool]:
         """
@@ -583,13 +589,13 @@ class WhatsAppCloudApi:
             }
         """
         data.update(messaging_product="whatsapp")
-        return self._make_request(
+        return await self._make_request(
             method="POST",
             endpoint=f"/{self.phone_id}/whatsapp_business_profile",
             json=data,
         )
 
-    def get_commerce_settings(self) -> dict[str, list[dict]]:
+    async def get_commerce_settings(self) -> dict[str, list[dict]]:
         """
         Get the commerce settings of the business catalog.
 
@@ -607,12 +613,12 @@ class WhatsAppCloudApi:
               ]
             }
         """
-        return self._make_request(
+        return await self._make_request(
             method="GET",
             endpoint=f"/{self.phone_id}/whatsapp_commerce_settings",
         )
 
-    def update_commerce_settings(self, data: dict) -> dict[str, bool]:
+    async def update_commerce_settings(self, data: dict) -> dict[str, bool]:
         """
         Change the commerce settings of the business catalog.
 
@@ -627,13 +633,13 @@ class WhatsAppCloudApi:
               "success": True
             }
         """
-        return self._make_request(
+        return await self._make_request(
             method="POST",
             endpoint=f"/{self.phone_id}/whatsapp_commerce_settings",
             params=data,
         )
 
-    def create_template(
+    async def create_template(
         self,
         waba_id: str,
         template: dict[str, str | list[str]],
@@ -655,13 +661,13 @@ class WhatsAppCloudApi:
                 "category": "MARKETING"
             }
         """
-        return self._make_request(
+        return await self._make_request(
             method="POST",
             endpoint=f"/{waba_id}/message_templates",
             json=template,
         )
 
-    def create_flow(
+    async def create_flow(
         self,
         waba_id: str,
         name: str,
@@ -693,13 +699,13 @@ class WhatsAppCloudApi:
             **({"clone_flow_id": clone_flow_id} if clone_flow_id else {}),
             **({"endpoint_uri": endpoint_uri} if endpoint_uri else {}),
         }
-        return self._make_request(
+        return await self._make_request(
             method="POST",
             endpoint=f"/{waba_id}/flows",
             json=data,
         )
 
-    def update_flow_metadata(
+    async def update_flow_metadata(
         self,
         flow_id: str,
         name: str | None = None,
@@ -728,13 +734,13 @@ class WhatsAppCloudApi:
             **({"endpoint_uri": endpoint_uri} if endpoint_uri else {}),
             **({"categories": categories} if categories else {}),
         }
-        return self._make_request(
+        return await self._make_request(
             method="POST",
             endpoint=f"/{flow_id}",
             json=data,
         )
 
-    def update_flow_json(self, flow_id: str, flow_json: str) -> dict:
+    async def update_flow_json(self, flow_id: str, flow_json: str) -> dict:
         """
         Update the JSON of a flow.
 
@@ -761,18 +767,18 @@ class WhatsAppCloudApi:
               ]
             }
         """
-        return self._make_request(
+        return await self._make_request(
             method="POST",
             endpoint=f"/{flow_id}/assets",
-            files=[("file", ("flow.json", flow_json, "application/json"))],
-            data={
-                "name": "flow.json",
-                "asset_type": "FLOW_JSON",
-                "messaging_product": "whatsapp",
+            files={
+                "file": ("flow.json", flow_json, "application/json"),
+                "name": (None, "flow.json"),
+                "asset_type": (None, "FLOW_JSON"),
+                "messaging_product": (None, "whatsapp"),
             },
         )
 
-    def publish_flow(
+    async def publish_flow(
         self,
         flow_id: str,
     ) -> dict[str, bool]:
@@ -790,12 +796,12 @@ class WhatsAppCloudApi:
               "success": true
             }
         """
-        return self._make_request(
+        return await self._make_request(
             method="POST",
             endpoint=f"/{flow_id}/publish",
         )
 
-    def delete_flow(
+    async def delete_flow(
         self,
         flow_id: str,
     ) -> dict[str, bool]:
@@ -814,12 +820,12 @@ class WhatsAppCloudApi:
             }
         """
 
-        return self._make_request(
+        return await self._make_request(
             method="DELETE",
             endpoint=f"/{flow_id}",
         )
 
-    def deprecate_flow(
+    async def deprecate_flow(
         self,
         flow_id: str,
     ) -> dict[str, bool]:
@@ -838,12 +844,12 @@ class WhatsAppCloudApi:
             }
         """
 
-        return self._make_request(
+        return await self._make_request(
             method="POST",
             endpoint=f"/{flow_id}/deprecate",
         )
 
-    def get_flow(
+    async def get_flow(
         self,
         flow_id: str,
         fields: tuple[str, ...] | None = None,
@@ -883,12 +889,12 @@ class WhatsAppCloudApi:
         endpoint = f"/{flow_id}"
         if fields:
             endpoint += f"?fields={','.join(fields)}"
-        return self._make_request(
+        return await self._make_request(
             method="GET",
             endpoint=endpoint,
         )
 
-    def get_flows(
+    async def get_flows(
         self,
         waba_id: str,
         fields: tuple[str, ...] | None = None,
@@ -924,12 +930,12 @@ class WhatsAppCloudApi:
         endpoint = f"/{waba_id}/flows"
         if fields:
             endpoint += f"?fields={','.join(fields)}"
-        return self._make_request(
+        return await self._make_request(
             method="GET",
             endpoint=endpoint,
         )
 
-    def get_flow_assets(
+    async def get_flow_assets(
         self,
         flow_id: str,
     ) -> dict[str, list | dict]:
@@ -959,7 +965,7 @@ class WhatsAppCloudApi:
               }
             }
         """
-        return self._make_request(
+        return await self._make_request(
             method="GET",
             endpoint=f"/{flow_id}/assets",
         )

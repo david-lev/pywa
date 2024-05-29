@@ -131,7 +131,7 @@ of the phone number you will use to send and receive messages. You will need to 
 
 .. attention::
 
-    If you haven't connected a real phone number to your app, you have the option to use a test phone number.
+    If you haven't connected a real phone number to your WhatsApp Business Account, you have the option to use a test phone number.
     This is a phone number that is provided by Meta and can be used for testing purposes only. You can send messages
     up to 5 different numbers and you must add them to the **Allowed Numbers** list. (Select the **Test number** in the ``From`` field
     and then in the **To** field, go to **Manage phone number list** and add the numbers you want to send messages to).

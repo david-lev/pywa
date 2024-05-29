@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 __all__ = [
     "Image",
     "Video",
@@ -12,45 +11,35 @@ __all__ = [
     "MediaUrlResponse",
 ]
 
-import abc
-import dataclasses
-import mimetypes
-from typing import TYPE_CHECKING
+from pywa.types.media import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.media import (
+    Image as _Image,
+    Video as _Video,
+    Sticker as _Sticker,
+    Document as _Document,
+    Audio as _Audio,
+)  # noqa MUST BE IMPORTED FIRST
 
-from .. import utils
+import dataclasses
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class BaseMedia(abc.ABC, utils.FromDict):
+class BaseMediaAsync:
     """Base class for all media types."""
 
+    id: str
+    sha256: str
+    mime_type: str
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
 
-    @property
-    @abc.abstractmethod
-    def id(self) -> str: ...
-
-    @property
-    @abc.abstractmethod
-    def sha256(self) -> str: ...
-
-    @property
-    @abc.abstractmethod
-    def mime_type(self) -> str: ...
-
-    def get_media_url(self) -> str:
+    async def get_media_url(self) -> str:
         """Gets the URL of the media. (expires after 5 minutes)"""
-        return self._client.get_media_url(media_id=self.id).url
+        return (await self._client.get_media_url(media_id=self.id)).url
 
-    @property
-    def extension(self) -> str | None:
-        """Gets the extension of the media (with dot.)"""
-        return mimetypes.guess_extension(self.mime_type)
-
-    def download(
+    async def download(
         self,
         path: str | None = None,
         filename: str | None = None,
@@ -61,7 +50,7 @@ class BaseMedia(abc.ABC, utils.FromDict):
         Download a media file from WhatsApp servers.
             - Same as :func:`~pywa.client.WhatsApp.download_media` with ``media_url=media.get_media_url()``
 
-        >>> message.image.download()
+        >>> await message.image.download()
 
         Args:
             path: The path where to save the file (if not provided, the current working directory will be used).
@@ -72,8 +61,8 @@ class BaseMedia(abc.ABC, utils.FromDict):
         Returns:
             The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
         """
-        return self._client.download_media(
-            url=self.get_media_url(),
+        return await self._client.download_media(
+            url=await self.get_media_url(),
             path=path,
             filename=filename,
             in_memory=in_memory,
@@ -82,7 +71,7 @@ class BaseMedia(abc.ABC, utils.FromDict):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Image(BaseMedia):
+class Image(BaseMediaAsync, _Image):
     """
     Represents an received image.
 
@@ -92,13 +81,9 @@ class Image(BaseMedia):
         mime_type: The MIME type of the image.
     """
 
-    id: str
-    sha256: str
-    mime_type: str
-
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Video(BaseMedia):
+class Video(BaseMediaAsync, _Video):
     """
     Represents a video.
 
@@ -108,13 +93,9 @@ class Video(BaseMedia):
         mime_type: The MIME type of the video.
     """
 
-    id: str
-    sha256: str
-    mime_type: str
-
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Sticker(BaseMedia):
+class Sticker(BaseMediaAsync, _Sticker):
     """
     Represents a sticker.
 
@@ -125,14 +106,9 @@ class Sticker(BaseMedia):
         animated: Whether the sticker is animated.
     """
 
-    id: str
-    sha256: str
-    mime_type: str
-    animated: bool
-
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Document(BaseMedia):
+class Document(BaseMediaAsync, _Document):
     """
     Represents a document.
 
@@ -143,14 +119,9 @@ class Document(BaseMedia):
         filename: The filename of the document (optional).
     """
 
-    id: str
-    sha256: str
-    mime_type: str
-    filename: str | None = None
-
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Audio(BaseMedia):
+class Audio(BaseMediaAsync, _Audio):
     """
     Represents an audio.
 
@@ -161,14 +132,9 @@ class Audio(BaseMedia):
         voice: Whether the audio is a voice message or just an audio file.
     """
 
-    id: str
-    sha256: str
-    mime_type: str
-    voice: bool
-
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class MediaUrlResponse(utils.FromDict):
+class MediaUrlResponse(MediaUrlResponse):
     """
     Represents a media response.
 
@@ -181,13 +147,8 @@ class MediaUrlResponse(utils.FromDict):
     """
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
-    id: str
-    url: str
-    mime_type: str
-    sha256: str
-    file_size: int
 
-    def download(
+    async def download(
         self,
         filepath: str | None = None,
         filename: str | None = None,
@@ -206,7 +167,7 @@ class MediaUrlResponse(utils.FromDict):
         Returns:
             The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
         """
-        return self._client.download_media(
+        return await self._client.download_media(
             url=self.url,
             path=filepath,
             filename=filename,

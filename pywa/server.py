@@ -1,16 +1,16 @@
 """This module contains the Server class, which is used to set up a webhook for receiving incoming updates."""
 
-from __future__ import annotations
+__all__ = ["Server"]
 
+import asyncio
 import logging
 import threading
-import time
-from typing import TYPE_CHECKING, Callable
+from concurrent.futures import ThreadPoolExecutor
+from typing import TYPE_CHECKING, Callable, Any, Tuple, Coroutine
 
-from pywa import utils
-from pywa.errors import WhatsAppError
-from pywa.handlers import Handler, ChatOpenedHandler  # noqa
-from pywa.handlers import (
+from . import utils, handlers, errors
+from .handlers import Handler, ChatOpenedHandler, TemplateStatusHandler  # noqa
+from .handlers import (
     CallbackButtonHandler,
     CallbackSelectionHandler,
     MessageHandler,
@@ -18,17 +18,28 @@ from pywa.handlers import (
     RawUpdateHandler,
     FlowCompletionHandler,
 )
-from pywa.types import MessageType, FlowRequest, FlowResponse
-from pywa.types.base_update import BaseUpdate, StopHandling  # noqa
-from pywa.types.flows import (
+from .types import (
+    MessageType,
+    FlowRequest,
+    FlowResponse,
+    Message,
+    TemplateStatus,
+    MessageStatus,
+    CallbackButton,
+    CallbackSelection,
+    FlowCompletion,
+    ChatOpened,
+)
+from .types.base_update import BaseUpdate, StopHandling, ContinueHandling  # noqa
+from .types.flows import (
     FlowRequestCannotBeDecrypted,
     FlowResponseError,  # noqa
     FlowTokenNoLongerValid,
 )
-from pywa.utils import FastAPI, Flask
+from .utils import FastAPI, Flask
 
 if TYPE_CHECKING:
-    from pywa.client import WhatsApp
+    from .client import WhatsApp
 
 _VERIFY_TIMEOUT_SEC = 6
 
@@ -43,6 +54,15 @@ _INTERACTIVE_TYPES: dict[str, type[Handler]] = {
     "nfm_reply": FlowCompletionHandler,
 }
 
+
+def _extract_id_from_update(update: dict) -> str | None:
+    """Extract the ID from the given update."""
+    try:
+        return update["entry"][0]["changes"][0]["value"]["messages"][0]["id"]
+    except (KeyError, IndexError, TypeError):
+        return None
+
+
 _logger = logging.getLogger(__name__)
 
 
@@ -50,8 +70,22 @@ class Server:
     """This class is used internally by the :class:`WhatsApp` client to set up a webhook for receiving incoming
     requests."""
 
+    _handlers_to_update_constractor: dict[
+        type[Handler], Callable[["WhatsApp", dict], BaseUpdate]
+    ] = {
+        MessageHandler: Message.from_update,
+        MessageStatusHandler: MessageStatus.from_update,
+        CallbackButtonHandler: CallbackButton.from_update,
+        CallbackSelectionHandler: CallbackSelection.from_update,
+        ChatOpenedHandler: ChatOpened.from_update,
+        FlowCompletionHandler: FlowCompletion.from_update,
+        TemplateStatusHandler: TemplateStatus.from_update,
+        RawUpdateHandler: lambda _, data: data,
+    }
+    """A dictionary that maps handler types to their respective update constructors."""
+
     def __init__(
-        self: WhatsApp,
+        self: "WhatsApp",
         server: Flask | FastAPI | None,
         webhook_endpoint: str,
         callback_url: str | None,
@@ -64,87 +98,33 @@ class Server:
         business_private_key_password: str | None,
         flows_request_decryptor: utils.FlowRequestDecryptor | None,
         flows_response_encryptor: utils.FlowResponseEncryptor | None,
+        max_workers: int,
+        continue_handling: bool,
+        skip_duplicate_updates: bool,
     ):
         if server is None:
             self._server = None
             return
         self._server = server
+        self._verify_token = verify_token
+        self._server_type = utils.ServerType.from_app(server)
+        self._executor = ThreadPoolExecutor(max_workers, thread_name_prefix="Handler")
+        self._loop = asyncio.get_event_loop()
         self._webhook_endpoint = webhook_endpoint
         self._private_key = business_private_key
         self._private_key_password = business_private_key_password
         self._flows_request_decryptor = flows_request_decryptor
         self._flows_response_encryptor = flows_response_encryptor
+        self._continue_handling = continue_handling
+        self._skip_duplicate_updates = skip_duplicate_updates
+        self._updates_ids_in_process = set[str]()
 
         if not verify_token:
             raise ValueError(
                 "When listening for incoming updates, a verify token must be provided.\n>> The verify token can "
                 "be any string. It is used to challenge the webhook endpoint to verify that the endpoint is valid."
             )
-
-        hub_vt = "hub.verify_token"
-        hub_ch = "hub.challenge"
-
-        def challenge_handler(vt: str, ch: str) -> tuple[str, int]:
-            """The challenge function that is called when the callback URL is registered."""
-            if vt == verify_token:
-                _logger.info(
-                    "Webhook ('%s') passed the verification challenge",
-                    self._webhook_endpoint,
-                )
-                return ch, 200
-            _logger.error(
-                "Webhook ('%s') failed the verification challenge. Expected verify_token: %s, received: %s",
-                self._webhook_endpoint,
-                verify_token,
-                vt,
-            )
-            return "Error, invalid verification token", 403
-
-        def webhook_update_handler(update: dict) -> tuple[str, int]:
-            """The webhook function that is called when an update is received."""
-            threading.Thread(target=self._call_handlers, args=(update,)).start()
-            _logger.debug(
-                "Webhook ('%s') received an update: %s",
-                self._webhook_endpoint,
-                update,
-            )
-            return "ok", 200
-
-        # Register the Flask or FastAPI routes for the webhook and challenge
-        if utils.is_flask_app(self._server):
-            import flask
-
-            @self._server.route(self._webhook_endpoint, methods=["GET"])
-            @utils.rename_func(f"({self.phone_id})")
-            def flask_challenge() -> tuple[str, int]:
-                return challenge_handler(
-                    vt=flask.request.args.get(hub_vt), ch=flask.request.args.get(hub_ch)
-                )
-
-            @self._server.route(self._webhook_endpoint, methods=["POST"])
-            @utils.rename_func(f"({self.phone_id})")
-            def flask_webhook() -> tuple[str, int]:
-                return webhook_update_handler(flask.request.json)
-
-        elif utils.is_fastapi_app(self._server):
-            import fastapi
-
-            @self._server.get(self._webhook_endpoint)
-            @utils.rename_func(f"({self.phone_id})")
-            def fastapi_challenge(
-                vt: str = fastapi.Query(..., alias=hub_vt),
-                ch: str = fastapi.Query(..., alias=hub_ch),
-            ):
-                content, status_code = challenge_handler(vt=vt, ch=ch)
-                return fastapi.Response(content=content, status_code=status_code)
-
-            @self._server.post(self._webhook_endpoint)
-            @utils.rename_func(f"({self.phone_id})")
-            def fastapi_webhook(payload: dict = fastapi.Body(...)):
-                content, status_code = webhook_update_handler(payload)
-                return fastapi.Response(content=content, status_code=status_code)
-        else:
-            raise ValueError("The `server` must be a Flask or FastAPI app.")
+        self._register_routes()
 
         if callback_url is not None:
             if app_id is None or app_secret is None:
@@ -153,37 +133,125 @@ class Server:
                     "to get them: "
                     "https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings/"
                 )
+            # noinspection PyProtectedMember
+            self._delayed_register_callback_url(
+                callback_url=f"{callback_url.rstrip('/')}/{self._webhook_endpoint.lstrip('/')}",
+                app_id=app_id,
+                app_secret=app_secret,
+                verify_token=verify_token,
+                fields=tuple(fields or Handler._fields_to_subclasses().keys()),
+                delay=(verify_timeout - _VERIFY_TIMEOUT_SEC)
+                if verify_timeout is not None and verify_timeout > _VERIFY_TIMEOUT_SEC
+                else 0,
+            )
 
-            # This is a non-blocking function that registers the callback URL.
-            # It must be called after the server is running so that the challenge can be verified.
-            def register_callback_url() -> None:
-                full_url = (
-                    f"{callback_url.rstrip('/')}/{self._webhook_endpoint.lstrip('/')}"
+    async def webhook_challenge_handler(self, vt: str, ch: str) -> tuple[str, int]:
+        """The challenge function that is called when the callback URL is registered."""
+        if vt == self._verify_token:
+            _logger.info(
+                "Webhook ('%s') passed the verification challenge",
+                self._webhook_endpoint,
+            )
+            return ch, 200
+        _logger.error(
+            "Webhook ('%s') failed the verification challenge. Expected verify_token: %s, received: %s",
+            self._webhook_endpoint,
+            self._verify_token,
+            vt,
+        )
+        return "Error, invalid verification token", 403
+
+    async def webhook_update_handler(self, update: dict) -> tuple[str, int]:
+        """The webhook function that is called when an update is received."""
+        update_id: str | None = None
+        _logger.debug(
+            "Webhook ('%s') received an update: %s",
+            self._webhook_endpoint,
+            update,
+        )
+        if self._skip_duplicate_updates and (
+            update_id := _extract_id_from_update(update)
+        ):
+            if update_id in self._updates_ids_in_process:
+                _logger.warning(
+                    "Webhook ('%s') received an update with an ID that is already being processed: %s",
+                    self._webhook_endpoint,
+                    update_id,
                 )
-                if verify_timeout is not None and verify_timeout > _VERIFY_TIMEOUT_SEC:
-                    time.sleep(verify_timeout - _VERIFY_TIMEOUT_SEC)
-                try:
-                    app_access_token = self.api.get_app_access_token(
-                        app_id=app_id, app_secret=app_secret
+                return "ok", 200
+            self._updates_ids_in_process.add(update_id)
+        await self._call_handlers(update)
+        if self._skip_duplicate_updates and update_id is not None:
+            if update_id is not None:
+                self._updates_ids_in_process.remove(update_id)
+        return "ok", 200
+
+    def _register_routes(self: "WhatsApp") -> None:
+        hub_vt = "hub.verify_token"
+        hub_ch = "hub.challenge"
+
+        match self._server_type:
+            case utils.ServerType.FLASK:
+                import flask
+
+                if utils.is_installed("asgiref"):  # flask[async]
+
+                    @self._server.route(self._webhook_endpoint, methods=["GET"])
+                    @utils.rename_func(f"({self.phone_id})")
+                    async def flask_challenge() -> tuple[str, int]:
+                        return await self.webhook_challenge_handler(
+                            vt=flask.request.args.get(hub_vt),
+                            ch=flask.request.args.get(hub_ch),
+                        )
+
+                    @self._server.route(self._webhook_endpoint, methods=["POST"])
+                    @utils.rename_func(f"({self.phone_id})")
+                    async def flask_webhook() -> tuple[str, int]:
+                        return await self.webhook_update_handler(flask.request.json)
+
+                else:  # flask
+
+                    @self._server.route(self._webhook_endpoint, methods=["GET"])
+                    @utils.rename_func(f"({self.phone_id})")
+                    def flask_challenge() -> tuple[str, int]:
+                        return self._loop.run_until_complete(
+                            self.webhook_challenge_handler(
+                                vt=flask.request.args.get(hub_vt),
+                                ch=flask.request.args.get(hub_ch),
+                            )
+                        )
+
+                    @self._server.route(self._webhook_endpoint, methods=["POST"])
+                    @utils.rename_func(f"({self.phone_id})")
+                    def flask_webhook() -> tuple[str, int]:
+                        return self._loop.run_until_complete(
+                            self.webhook_update_handler(flask.request.json)
+                        )
+
+            case utils.ServerType.FASTAPI:
+                import fastapi
+
+                @self._server.get(self._webhook_endpoint)
+                @utils.rename_func(f"({self.phone_id})")
+                async def fastapi_challenge(req: fastapi.Request) -> fastapi.Response:
+                    content, status_code = await self.webhook_challenge_handler(
+                        vt=req.query_params.get(hub_vt), ch=req.query_params.get(hub_ch)
                     )
-                    # noinspection PyProtectedMember
-                    if not self.api.set_app_callback_url(
-                        app_id=app_id,
-                        app_access_token=app_access_token["access_token"],
-                        callback_url=full_url,
-                        verify_token=verify_token,
-                        fields=tuple(fields or Handler._fields_to_subclasses().keys()),
-                    )["success"]:
-                        raise RuntimeError("Failed to register callback URL.")
-                    _logger.info("Callback URL '%s' registered successfully", full_url)
-                except WhatsAppError as e:
-                    raise RuntimeError(
-                        f"Failed to register callback URL '{full_url}'"
-                    ) from e
+                    return fastapi.Response(content=content, status_code=status_code)
 
-            threading.Thread(target=register_callback_url).start()
+                @self._server.post(self._webhook_endpoint)
+                @utils.rename_func(f"({self.phone_id})")
+                async def fastapi_webhook(req: fastapi.Request) -> fastapi.Response:
+                    content, status_code = await self.webhook_update_handler(
+                        await req.json()
+                    )
+                    return fastapi.Response(content=content, status_code=status_code)
+            case _:
+                raise ValueError(
+                    f"The `server` must be one of {utils.ServerType.protocols_names()}"
+                )
 
-    def _call_handlers(self: WhatsApp, update: dict) -> None:
+    async def _call_handlers(self: "WhatsApp", update: dict) -> None:
         """Call the handlers for the given update."""
         try:
             handler_type = self._get_handler(update=update)
@@ -207,33 +275,39 @@ class Server:
 
         if handler_type is not None:
             try:
-                # noinspection PyCallingNonCallable, PyProtectedMember
-                constructed_update = handler_type._update_constructor(self, update)
-                for handler in self._handlers[handler_type]:
-                    try:
-                        handler.handle(self, constructed_update)
-                    except Exception as e:
-                        if isinstance(e, StopHandling):
-                            break
-                        _logger.exception(
-                            "An error occurred while %s was handling an update",
-                            handler.callback.__name__,
-                        )
+                constructed_update = self._handlers_to_update_constractor[handler_type](
+                    self, update
+                )
+                await self._call_callbacks(handler_type, constructed_update)
             except Exception:
                 _logger.exception("Failed to construct update: %s", update)
 
-        for raw_update_handler in self._handlers[RawUpdateHandler]:
+        await self._call_callbacks(RawUpdateHandler, update)
+
+    async def _call_callbacks(
+        self: "WhatsApp",
+        handler_type: type[Handler],
+        constructed_update: BaseUpdate | dict,
+    ) -> None:
+        """Call the handler type callbacks for the given update."""
+        for handler in self._handlers[handler_type]:
             try:
-                raw_update_handler.handle(self, update)
+                await handler.handle(self, constructed_update)
+                if not self._continue_handling:
+                    break
+            except StopHandling:
+                break
+            except ContinueHandling:
+                continue
             except Exception as e:
                 if isinstance(e, StopHandling):
                     break
                 _logger.exception(
-                    "An error occurred while %s was handling an raw update",
-                    raw_update_handler.callback.__name__,
+                    "An error occurred while %s was handling an update",
+                    handler.callback.__name__,
                 )
 
-    def _get_handler(self: WhatsApp, update: dict) -> type[Handler] | None:
+    def _get_handler(self: "WhatsApp", update: dict) -> type[Handler] | None:
         """Get the handler for the given update."""
         try:
             field = update["entry"][0]["changes"][0]["field"]
@@ -279,25 +353,69 @@ class Server:
         # noinspection PyProtectedMember
         return Handler._fields_to_subclasses().get(field)
 
-    def _register_flow_endpoint_callback(
-        self: WhatsApp,
+    def _delayed_register_callback_url(
+        self: "WhatsApp",
+        callback_url: str,
+        app_id: int,
+        app_secret: str,
+        verify_token: str,
+        fields: tuple[str, ...] | None,
+        delay: int,
+    ) -> None:
+        threading.Timer(
+            interval=delay,
+            function=self._register_callback_url,
+            kwargs=dict(
+                callback_url=callback_url,
+                app_id=app_id,
+                app_secret=app_secret,
+                verify_token=verify_token,
+                fields=fields,
+            ),
+        ).start()
+
+    def _register_callback_url(
+        self: "WhatsApp",
+        callback_url: str,
+        app_id: int,
+        app_secret: str,
+        verify_token: str,
+        fields: tuple[str, ...] | None,
+    ) -> None:
+        """
+        This is a non-blocking function that registers the callback URL.
+        It must be called after the server is running so that the challenge can be verified.
+        """
+        try:
+            app_access_token = self.api.get_app_access_token(
+                app_id=app_id, app_secret=app_secret
+            )
+            # noinspection PyProtectedMember
+            if not self.api.set_app_callback_url(
+                app_id=app_id,
+                app_access_token=app_access_token["access_token"],
+                callback_url=callback_url,
+                verify_token=verify_token,
+                fields=fields,
+            )["success"]:
+                raise RuntimeError("Failed to register callback URL.")
+            _logger.info("Callback URL '%s' registered successfully", callback_url)
+        except errors.WhatsAppError as e:
+            raise RuntimeError(
+                f"Failed to register callback URL '{callback_url}'"
+            ) from e
+
+    def get_flow_request_handler(
+        self: "WhatsApp",
         endpoint: str,
-        callback: Callable[
-            [WhatsApp, FlowRequest], FlowResponse | FlowResponseError | dict | None
-        ],
+        callback: handlers._FlowRequestHandlerT,
         acknowledge_errors: bool,
         handle_health_check: bool,
         private_key: str | None,
         private_key_password: str | None,
         request_decryptor: utils.FlowRequestDecryptor | None,
         response_encryptor: utils.FlowResponseEncryptor | None,
-    ) -> None:
-        """Internal function to register a flow endpoint callback."""
-        if self._server is None:
-            raise ValueError(
-                "You must initialize the WhatsApp client with an web server"
-                " (Flask or FastAPI) in order to handle incoming flow requests."
-            )
+    ) -> Callable[[dict], Coroutine[Any, Any, tuple[str, int]]]:
         private_key = private_key or self._private_key
         private_key_password = private_key_password or self._private_key_password
         if not private_key:
@@ -320,7 +438,7 @@ class Server:
         if (
             request_decryptor is utils.default_flow_request_decryptor
             or response_encryptor is utils.default_flow_response_encryptor
-        ) and not utils.is_cryptography_installed():
+        ) and not utils.is_installed("cryptography"):
             raise ValueError(
                 "The default decryptor/encryptor requires the `cryptography` package to be installed."
                 '\n>> Install it with `pip install cryptography` / pip install "pywa[cryptography]"` or use a '
@@ -331,8 +449,8 @@ class Server:
                 "The flow endpoint cannot be the same as the webhook endpoint."
             )
 
-        def flow_request_handler(payload: dict) -> tuple[str, int]:
-            """Called by the server when a flow request is received. Returns response and status code."""
+        async def flow_request_handler(payload: dict) -> tuple[str, int]:
+            """Callback function that handles the incoming flow requests."""
             try:
                 decrypted_request, aes_key, iv = request_decryptor(
                     payload["encrypted_flow_data"],
@@ -343,13 +461,13 @@ class Server:
                 )
             except Exception:
                 _logger.exception(
-                    "Flow Endpoint '(%s)': Decryption failed for payload: %s",
+                    "Flow Endpoint ('%s'): Decryption failed for payload: %s",
                     endpoint,
                     payload,
                 )
                 return "Decryption failed", FlowRequestCannotBeDecrypted.status_code
             _logger.debug(
-                "Flow Endpoint '(%s)': Received decrypted request: %s",
+                "Flow Endpoint ('%s'): Received decrypted request: %s",
                 endpoint,
                 decrypted_request,
             )
@@ -368,14 +486,18 @@ class Server:
                 )
             except Exception:
                 _logger.exception(
-                    "Flow Endpoint '(%s)': Failed to construct FlowRequest from decrypted data: %s",
+                    "Flow Endpoint ('%s'): Failed to construct FlowRequest from decrypted data: %s",
                     endpoint,
                     decrypted_request,
                 )
 
                 return "Failed to construct FlowRequest", 500
             try:
-                response = callback(self, request)
+                response = (
+                    await callback(self, request)
+                    if asyncio.iscoroutinefunction(callback)
+                    else callback(self, request)
+                )
                 if isinstance(response, FlowResponseError):
                     raise response
             except FlowTokenNoLongerValid as e:
@@ -391,7 +513,7 @@ class Server:
                 return e.__class__.__name__, e.status_code
             except Exception:
                 _logger.exception(
-                    "Flow Endpoint '(%s)': An error occurred while %s was handling a flow request",
+                    "Flow Endpoint ('%s'): An error occurred while %s was handling a flow request",
                     endpoint,
                     callback.__name__,
                 )
@@ -418,22 +540,63 @@ class Server:
                 iv,
             ), 200
 
-        if utils.is_flask_app(self._server):
-            import flask
+        return flow_request_handler
 
-            @self._server.route(endpoint, methods=["POST"])
-            @utils.rename_func(f"({endpoint})")
-            def flask_flow() -> tuple[str, int]:
-                return flow_request_handler(flask.request.json)
+    def _register_flow_endpoint_callback(
+        self: "WhatsApp",
+        endpoint: str,
+        callback: handlers._FlowRequestHandlerT,
+        acknowledge_errors: bool,
+        handle_health_check: bool,
+        private_key: str | None,
+        private_key_password: str | None,
+        request_decryptor: utils.FlowRequestDecryptor | None,
+        response_encryptor: utils.FlowResponseEncryptor | None,
+    ) -> None:
+        """Internal function to register a flow endpoint callback."""
+        if self._server is None:
+            raise ValueError(
+                "You must initialize the WhatsApp client with an web server"
+                " (Flask or FastAPI) in order to handle incoming flow requests."
+            )
 
-        elif utils.is_fastapi_app(self._server):
-            import fastapi
+        handler = self.get_flow_request_handler(
+            endpoint=endpoint,
+            callback=callback,
+            acknowledge_errors=acknowledge_errors,
+            handle_health_check=handle_health_check,
+            private_key=private_key,
+            private_key_password=private_key_password,
+            request_decryptor=request_decryptor,
+            response_encryptor=response_encryptor,
+        )
 
-            @self._server.post(endpoint)
-            @utils.rename_func(f"({endpoint})")
-            def fastapi_flow(payload: dict = fastapi.Body(...)):
-                response, status_code = flow_request_handler(payload)
-                return fastapi.Response(
-                    content=response,
-                    status_code=status_code,
-                )
+        match self._server_type:
+            case utils.ServerType.FLASK:
+                import flask
+
+                if utils.is_installed("asgiref"):
+
+                    @self._server.route(endpoint, methods=["POST"])
+                    @utils.rename_func(f"({endpoint})")
+                    async def flask_flow() -> tuple[str, int]:
+                        return await handler(flask.request.json)
+                else:
+
+                    @self._server.route(endpoint, methods=["POST"])
+                    @utils.rename_func(f"({endpoint})")
+                    def flask_flow() -> tuple[str, int]:
+                        return self._loop.run_until_complete(
+                            handler(flask.request.json)
+                        )
+            case utils.ServerType.FASTAPI:
+                import fastapi
+
+                @self._server.post(endpoint)
+                @utils.rename_func(f"({endpoint})")
+                async def fastapi_flow(req: fastapi.Request) -> fastapi.Response:
+                    response, status_code = await handler(await req.json())
+                    return fastapi.Response(
+                        content=response,
+                        status_code=status_code,
+                    )

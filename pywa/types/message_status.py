@@ -16,14 +16,14 @@ import logging
 import datetime
 from typing import TYPE_CHECKING, Generic
 
-from pywa import utils
-from pywa.errors import WhatsAppError
+from .. import utils
+from ..errors import WhatsAppError
 
 from .base_update import BaseUserUpdate  # noqa
 from .others import Metadata, User
 
 if TYPE_CHECKING:
-    from pywa.client import WhatsApp
+    from ..client import WhatsApp
 
 _logger = logging.getLogger(__name__)
 
