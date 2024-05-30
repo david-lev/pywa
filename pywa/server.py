@@ -465,12 +465,12 @@ class Server:
         self: "WhatsApp",
         endpoint: str,
         callback: handlers._FlowRequestHandlerT,
-        acknowledge_errors: bool,
-        handle_health_check: bool,
-        private_key: str | None,
-        private_key_password: str | None,
-        request_decryptor: utils.FlowRequestDecryptor | None,
-        response_encryptor: utils.FlowResponseEncryptor | None,
+        acknowledge_errors: bool = True,
+        handle_health_check: bool = True,
+        private_key: str | None = None,
+        private_key_password: str | None = None,
+        request_decryptor: utils.FlowRequestDecryptor | None = None,
+        response_encryptor: utils.FlowResponseEncryptor | None = None,
     ) -> Callable[[dict], Coroutine[Any, Any, tuple[str, int]]]:
         """
         Get a function that handles the incoming flow requests.

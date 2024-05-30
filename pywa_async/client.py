@@ -96,7 +96,7 @@ class WhatsApp(_WhatsApp):
         token: str,
         *,
         session: httpx.AsyncClient | None = None,
-        server: Flask | FastAPI | None = None,
+        server: Flask | FastAPI | None = utils.MISSING,
         webhook_endpoint: str = "/",
         verify_token: str | None = None,
         filter_updates: bool = True,
