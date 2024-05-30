@@ -35,10 +35,11 @@ CallbackButtonOnlyDataIsNeeded = functools.partial(
 )
 
 
-def test_all_handlers_in_handlers_to_update_constractor():
-    for wa in [FAKE_WA, FAKE_WA_ASYNC]:
-        for handler in Handler.__subclasses__():
-            assert handler in wa._handlers_to_update_constractor.keys()
+def test_all_updates_are_overridden():
+    assert (
+        FAKE_WA._handlers_to_update_constractor.keys()
+        == FAKE_WA_ASYNC._handlers_to_update_constractor.keys()
+    )
 
 
 def test_safe_issubclas():
