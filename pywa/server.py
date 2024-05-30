@@ -169,6 +169,9 @@ class Server:
                 app = web.Application()
                 app.add_routes([web.get("/my_webhook", my_challenge_handler)])
 
+                if __name__ == "__main__":
+                    web.run_app(app, port=...)
+
         Args:
             vt: The verify token param (utils.HUB_VT).
             ch: The challenge param (utils.HUB_CH).
@@ -208,6 +211,12 @@ class Server:
                     async def my_webhook_handler(req: web.Request) -> web.Response:
                         res, status_code = await wa.webhook_update_handler(await req.json())
                         return web.Response(text=res, status=status_code)
+
+                    app = web.Application()
+                    app.add_routes([web.post("/my_webhook", my_webhook_handler)])
+
+                    if __name__ == "__main__":
+                        web.run_app(app, port=...)
 
         Args:
             update: The incoming update from the webhook.
@@ -304,7 +313,7 @@ class Server:
 
             case _:
                 raise ValueError(
-                    f"The `server` must be one of {utils.ServerType.protocols_names()}"
+                    f"The `server` must be one of {utils.ServerType.protocols_names()} or None for a custom server"
                 )
 
     async def _call_handlers(self: "WhatsApp", update: dict) -> None:
@@ -476,7 +485,36 @@ class Server:
         Get a function that handles the incoming flow requests.
 
         - Use this function only if you are using a custom server (e.g. Django, aiohttp, etc.), else use the
-            :meth:`WhatsApp.on_flow_request` decorator.
+          :meth:`WhatsApp.on_flow_request` decorator.
+
+
+        Example:
+
+            .. code-block:: python
+
+                from aiohttp import web
+                from pywa import WhatsApp, flows
+
+                wa = WhatsApp(..., server=None, business_private_key="...", business_private_key_password="...")
+
+                async def my_flow_callback(wa: WhatsApp, request: flows.FlowRequest) -> flows.FlowResponse:
+                    ...
+
+                flow_handler = wa.get_flow_request_handler(
+                    endpoint="/flow",
+                    callback=my_flow_callback,
+                )
+
+                async def my_flow_endpoint(req: web.Request) -> web.Response:
+                    response, status_code = await flow_handler(await req.json())
+                    return web.Response(text=response, status=status_code)
+
+                app = web.Application()
+                app.add_routes([web.post("/flow", my_flow_endpoint)])
+
+                if __name__ == "__main__":
+                    web.run_app(app, port=...)
+
 
         Args:
             endpoint: The endpoint to listen to (The endpoint uri you set to the flow. e.g ``/feedback_flow``).

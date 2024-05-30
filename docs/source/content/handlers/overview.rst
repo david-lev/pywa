@@ -233,13 +233,17 @@ is received from WhatsApp.
 
     A callback function can be both a synchronous or an asynchronous function.
 
+    .. code-block:: python
+        :emphasize-lines: 1
 
-.. attention::
-    :class: warning
+        from pywa import WhatsApp
 
-    The callback function must finish within ~25 seconds. Otherwise, WhatsApp will consider it as a timeout and will retry sending the update.
+        wa = WhatsApp(...)
 
-    If you need to do a long operation, you may want to run it in a separate thread or process, or use an task queue.
+        @wa.on_message()
+        async def handle_message(client: WhatsApp, message: Message):
+            print(message)
+
 
 
 A callback function is a function that takes two (positional) arguments:

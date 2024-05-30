@@ -17,6 +17,31 @@ The :class:`~WhatsApp` client has 3 main responsibilities:
 for sending messages and the other API calls, you will need to provide an phone number id that connects to the WhatsApp Cloud API.
 for listening to incoming messages and events, you will need to tell WhatsApp to send the events to a webhook that you provide.
 
+.. tip::
+    :class: note
+
+    Pywa provides two clients, synchronous and asynchronous, you can choose the one that fits your needs.
+
+    .. code-block:: python
+        :emphasize-lines: 1
+
+        from pywa import WhatsApp, types
+        wa = WhatsApp(...)
+
+        @wa.on_message()
+        def on_message(_: WhatsApp, msg: types.Message):
+            msg.reply("Hello!")
+
+    .. code-block:: python
+        :emphasize-lines: 1
+
+        from pywa_async import WhatsApp, types
+        wa = WhatsApp(...)
+
+        @wa.on_message()
+        async def on_message(_: WhatsApp, msg: types.Message):
+            await msg.reply("Hello!")
+
 .. autoclass:: WhatsApp()
     :members: __init__
 
@@ -69,6 +94,10 @@ The available methods are:
    * - Commerce
      - :meth:`~WhatsApp.get_commerce_settings`,
        :meth:`~WhatsApp.update_commerce_settings`
+   * - Server
+     - :meth:`~WhatsApp.webhook_update_handler`,
+       :meth:`~WhatsApp.webhook_challenge_handler`,
+       :meth:`~WhatsApp.get_flow_request_handler`
 
 .. toctree::
     client_reference

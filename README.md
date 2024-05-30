@@ -14,7 +14,7 @@ ________________________
 
 ________________________
 
-**PyWa is a Fast, Simple, Modern and easy-to-use Python framework for building WhatsApp bots using the WhatsApp Cloud API.**
+**PyWa is a Fast, Simple, Modern and easy-to-use asynchronous Python framework for building WhatsApp bots using the WhatsApp Cloud API.**
 
 📄 **Quick Documentation Index**
 --------------------------------
@@ -63,6 +63,7 @@ wa.send_message(
 ```
 
 - To listen to updates, create a `WhatsApp` client, pass a web server app ([Flask](https://flask.palletsprojects.com/) in this example) and register callbacks:
+
 > See [Handlers](https://pywa.readthedocs.io/en/latest/content/handlers/overview.html) for more information.
 
 ```python
@@ -142,8 +143,9 @@ See the [Documentation](https://pywa.readthedocs.io/) for detailed instructions
 ☑️ **TODO**
 ------------
 
-- Add support for async
-- Add support for more web frameworks (``Django``, ``Starlette``, etc.)
+- ~~Add support for async~~
+- ~~Add support for more web frameworks (Django, aiohttp, etc.)~~
+- ~~Add support for flows~~
 - Add support for more types of updates (``account_alerts``, ``phone_number_quality_updates``, ``template_category_updates``, etc.)
 - Add more examples and guides
 
