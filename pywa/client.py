@@ -55,8 +55,6 @@ from .types.others import InteractiveType
 from .utils import FastAPI, Flask
 from .server import Server
 
-_MISSING: object | None = object()
-"""A sentinel value to indicate a missing value to distinguish from ``None``."""
 
 _DEFAULT_WORKERS = min(32, (os.cpu_count() or 0) + 4)
 """The default number of workers to use for handling incoming updates."""
@@ -75,7 +73,7 @@ class WhatsApp(Server, HandlerDecorators):
         | float
         | Literal[utils.Version.GRAPH_API] = utils.Version.GRAPH_API,
         session: requests.Session | None = None,
-        server: Flask | FastAPI | None = None,
+        server: Flask | FastAPI | None = utils.MISSING,
         webhook_endpoint: str = "/",
         verify_token: str | None = None,
         filter_updates: bool = True,
@@ -263,7 +261,7 @@ class WhatsApp(Server, HandlerDecorators):
         Args:
             handlers: The handlers to add.
         """
-        if self._server is None:
+        if self._server is utils.MISSING:
             raise ValueError(
                 "You must initialize the WhatsApp client with an web server"
                 " (Flask or FastAPI) in order to handle incoming updates."
@@ -1529,13 +1527,13 @@ class WhatsApp(Server, HandlerDecorators):
 
     def update_business_profile(
         self,
-        about: str | None = _MISSING,
-        address: str | None = _MISSING,
-        description: str | None = _MISSING,
-        email: str | None = _MISSING,
-        profile_picture_handle: str | None = _MISSING,
-        industry: Industry | None = _MISSING,
-        websites: Iterable[str] | None = _MISSING,
+        about: str | None = utils.MISSING,
+        address: str | None = utils.MISSING,
+        description: str | None = utils.MISSING,
+        email: str | None = utils.MISSING,
+        profile_picture_handle: str | None = utils.MISSING,
+        industry: Industry | None = utils.MISSING,
+        websites: Iterable[str] | None = utils.MISSING,
     ) -> bool:
         """
         Update the business profile of the WhatsApp Business account.
@@ -1584,7 +1582,7 @@ class WhatsApp(Server, HandlerDecorators):
                 "vertical": industry,
                 "websites": websites,
             }.items()
-            if value is not _MISSING
+            if value is not utils.MISSING
         }
         return self.api.update_business_profile(data)["success"]
 

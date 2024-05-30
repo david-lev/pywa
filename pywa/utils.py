@@ -9,6 +9,13 @@ import importlib
 import warnings
 from typing import Any, Callable, Protocol, TypeAlias
 
+HUB_VT = "hub.verify_token"
+"""The key for the verify token in the query parameters of the webhook get request."""
+HUB_CH = "hub.challenge"
+"""The key for the challenge in the query parameters of the webhook get request."""
+MISSING: object | None = object()
+"""A sentinel value to indicate a missing value to distinguish from ``None``."""
+
 
 class FastAPI(Protocol):
     """Protocol for the `FastAPI <https://fastapi.tiangolo.com/>`_ app."""

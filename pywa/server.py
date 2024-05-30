@@ -102,12 +102,11 @@ class Server:
         continue_handling: bool,
         skip_duplicate_updates: bool,
     ):
-        if server is None:
-            self._server = None
-            return
         self._server = server
-        self._verify_token = verify_token
+        if server is utils.MISSING:
+            return
         self._server_type = utils.ServerType.from_app(server)
+        self._verify_token = verify_token
         self._executor = ThreadPoolExecutor(max_workers, thread_name_prefix="Handler")
         self._loop = asyncio.get_event_loop()
         self._webhook_endpoint = webhook_endpoint
@@ -146,7 +145,37 @@ class Server:
             )
 
     async def webhook_challenge_handler(self, vt: str, ch: str) -> tuple[str, int]:
-        """The challenge function that is called when the callback URL is registered."""
+        """
+        Handle the verification challenge from the webhook manually.
+
+        - Use this function only if you are using a custom server (e.g. Django, aiohttp, etc.).
+
+        Example:
+
+            .. code-block:: python
+
+                from aiohttp import web
+                from pywa import WhatsApp, utils
+
+                wa = WhatsApp(..., server=None)
+
+                async def my_challenge_handler(req: web.Request) -> web.Response:
+                    challenge, status_code = await wa.webhook_challenge_handler(
+                        vt=req.query[utils.HUB_VT],
+                        ch=req.query[utils.HUB_CH],
+                    )
+                    return web.Response(text=challenge, status=status_code)
+
+                app = web.Application()
+                app.add_routes([web.get("/my_webhook", my_challenge_handler)])
+
+        Args:
+            vt: The verify token param (utils.HUB_VT).
+            ch: The challenge param (utils.HUB_CH).
+
+        Returns:
+            A tuple containing the challenge and the status code.
+        """
         if vt == self._verify_token:
             _logger.info(
                 "Webhook ('%s') passed the verification challenge",
@@ -162,7 +191,30 @@ class Server:
         return "Error, invalid verification token", 403
 
     async def webhook_update_handler(self, update: dict) -> tuple[str, int]:
-        """The webhook function that is called when an update is received."""
+        """
+        Handle the incoming update from the webhook manually.
+
+        - Use this function only if you are using a custom server (e.g. Django, aiohttp, etc.).
+
+        Example:
+
+                .. code-block:: python
+
+                    from aiohttp import web
+                    from pywa import WhatsApp
+
+                    wa = WhatsApp(..., server=None)
+
+                    async def my_webhook_handler(req: web.Request) -> web.Response:
+                        res, status_code = await wa.webhook_update_handler(await req.json())
+                        return web.Response(text=res, status=status_code)
+
+        Args:
+            update: The incoming update from the webhook.
+
+        Returns:
+            A tuple containing the response and the status code.
+        """
         update_id: str | None = None
         _logger.debug(
             "Webhook ('%s') received an update: %s",
@@ -187,21 +239,19 @@ class Server:
         return "ok", 200
 
     def _register_routes(self: "WhatsApp") -> None:
-        hub_vt = "hub.verify_token"
-        hub_ch = "hub.challenge"
-
         match self._server_type:
             case utils.ServerType.FLASK:
                 import flask
 
                 if utils.is_installed("asgiref"):  # flask[async]
+                    _logger.info("Using Flask with ASGI")
 
                     @self._server.route(self._webhook_endpoint, methods=["GET"])
                     @utils.rename_func(f"({self.phone_id})")
                     async def flask_challenge() -> tuple[str, int]:
                         return await self.webhook_challenge_handler(
-                            vt=flask.request.args.get(hub_vt),
-                            ch=flask.request.args.get(hub_ch),
+                            vt=flask.request.args.get(utils.HUB_VT),
+                            ch=flask.request.args.get(utils.HUB_CH),
                         )
 
                     @self._server.route(self._webhook_endpoint, methods=["POST"])
@@ -210,14 +260,15 @@ class Server:
                         return await self.webhook_update_handler(flask.request.json)
 
                 else:  # flask
+                    _logger.info("Using Flask with WSGI")
 
                     @self._server.route(self._webhook_endpoint, methods=["GET"])
                     @utils.rename_func(f"({self.phone_id})")
                     def flask_challenge() -> tuple[str, int]:
                         return self._loop.run_until_complete(
                             self.webhook_challenge_handler(
-                                vt=flask.request.args.get(hub_vt),
-                                ch=flask.request.args.get(hub_ch),
+                                vt=flask.request.args.get(utils.HUB_VT),
+                                ch=flask.request.args.get(utils.HUB_CH),
                             )
                         )
 
@@ -229,13 +280,15 @@ class Server:
                         )
 
             case utils.ServerType.FASTAPI:
+                _logger.info("Using FastAPI")
                 import fastapi
 
                 @self._server.get(self._webhook_endpoint)
                 @utils.rename_func(f"({self.phone_id})")
                 async def fastapi_challenge(req: fastapi.Request) -> fastapi.Response:
                     content, status_code = await self.webhook_challenge_handler(
-                        vt=req.query_params.get(hub_vt), ch=req.query_params.get(hub_ch)
+                        vt=req.query_params.get(utils.HUB_VT),
+                        ch=req.query_params.get(utils.HUB_CH),
                     )
                     return fastapi.Response(content=content, status_code=status_code)
 
@@ -246,6 +299,9 @@ class Server:
                         await req.json()
                     )
                     return fastapi.Response(content=content, status_code=status_code)
+            case None:
+                _logger.info("Using a custom server")
+
             case _:
                 raise ValueError(
                     f"The `server` must be one of {utils.ServerType.protocols_names()}"
@@ -416,6 +472,26 @@ class Server:
         request_decryptor: utils.FlowRequestDecryptor | None,
         response_encryptor: utils.FlowResponseEncryptor | None,
     ) -> Callable[[dict], Coroutine[Any, Any, tuple[str, int]]]:
+        """
+        Get a function that handles the incoming flow requests.
+
+        - Use this function only if you are using a custom server (e.g. Django, aiohttp, etc.), else use the
+            :meth:`WhatsApp.on_flow_request` decorator.
+
+        Args:
+            endpoint: The endpoint to listen to (The endpoint uri you set to the flow. e.g ``/feedback_flow``).
+            callback: The callback function to call when a flow request is received.
+            acknowledge_errors: Whether to acknowledge errors (The return value of the callback will be ignored, and
+             pywa will acknowledge the error automatically).
+            handle_health_check: Whether to handle health checks (The callback will not be called for health checks).
+            private_key: The private key to use to decrypt the requests (Override the global ``business_private_key``).
+            private_key_password: The password to use to decrypt the private key (Override the global ``business_private_key_password``).
+            request_decryptor: The function to use to decrypt the requests (Override the global ``flows_request_decryptor``)
+            response_encryptor: The function to use to encrypt the responses (Override the global ``flows_response_encryptor``)
+
+        Returns:
+            A function that handles the incoming flow request and returns (response, status_code).
+        """
         private_key = private_key or self._private_key
         private_key_password = private_key_password or self._private_key_password
         if not private_key:

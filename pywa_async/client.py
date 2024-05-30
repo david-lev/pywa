@@ -8,7 +8,6 @@ __all__ = ["WhatsApp"]
 from pywa.client import (
     WhatsApp as _WhatsApp,
     _DEFAULT_WORKERS,
-    _MISSING,
     _resolve_buttons_param,
     _resolve_tracker_param,
     _get_interactive_msg,
@@ -1539,13 +1538,13 @@ class WhatsApp(_WhatsApp):
 
     async def update_business_profile(
         self,
-        about: str | None = _MISSING,
-        address: str | None = _MISSING,
-        description: str | None = _MISSING,
-        email: str | None = _MISSING,
-        profile_picture_handle: str | None = _MISSING,
-        industry: Industry | None = _MISSING,
-        websites: Iterable[str] | None = _MISSING,
+        about: str | None = utils.MISSING,
+        address: str | None = utils.MISSING,
+        description: str | None = utils.MISSING,
+        email: str | None = utils.MISSING,
+        profile_picture_handle: str | None = utils.MISSING,
+        industry: Industry | None = utils.MISSING,
+        websites: Iterable[str] | None = utils.MISSING,
     ) -> bool:
         """
         Update the business profile of the WhatsApp Business account.
@@ -1594,7 +1593,7 @@ class WhatsApp(_WhatsApp):
                 "vertical": industry,
                 "websites": websites,
             }.items()
-            if value is not _MISSING
+            if value is not utils.MISSING
         }
         return (await self.api.update_business_profile(data))["success"]
 
