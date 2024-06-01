@@ -3,6 +3,10 @@ Changelog
 
 NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 1.12.1 (2023-06-02)
+
+- [api] fix downloading media content-type
+
 ### 1.12.0 (2023-06-02)
 
 - [client] adding official support for async (limited support for now)
