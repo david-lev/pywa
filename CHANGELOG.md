@@ -3,6 +3,10 @@ Changelog
 
 NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 1.12.0 (2023-06-02)
+
+- [client] adding official support for async (limited support for now)
+
 ### 1.19.0-rc.3 (2024-05-23)
 
 - [api] fix uploads
