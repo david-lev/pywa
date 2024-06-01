@@ -127,26 +127,32 @@ class WhatsApp(_WhatsApp):
 
         Example without webhook:
 
+            >>> import asyncio
             >>> from pywa_async import WhatsApp
             >>> wa = WhatsApp(phone_id="100944",token="EAADKQl9oJxx")
+            >>> async def main():
+            ...     await wa.send_message(to="1234567890", text="Hello from PyWa!")
+            >>> asyncio.run(main())
 
-        Example with webhook (using Flask):
+        Example with webhook (using FastAPI):
 
+            >>> import fastapi, uvicorn
             >>> from pywa_async import WhatsApp
-            >>> from flask import Flask
-            >>> flask_app = Flask(__name__)
+            >>> fastapi_app = fastapi.FastAPI()
             >>> wa = WhatsApp(
             ...     phone_id="100944",
             ...     token="EAADKQl9oJxx",
-            ...     server=flask_app,
+            ...     server=fastapi_app,
             ...     callback_url='https://6b3e.ngrok.io',
             ...     verify_token="XYZ123",
             ...     app_id=1234567890,
             ...     app_secret="my_app_secret",
             ... )
             >>> @wa.on_message()
-            ... async def message_handler(_: WhatsApp, msg: Message): await msg.reply("Hello!")
-            >>> flask_app.run(port=8000)
+            ... async def message_handler(_: WhatsApp, msg: Message):
+            ...     await msg.reply("Hello!")
+
+            uvicorn main:fastapi_app --reload
 
         Args:
             phone_id: The Phone number ID (Not the phone number itself, the ID can be found in the App dashboard).
@@ -183,7 +189,9 @@ class WhatsApp(_WhatsApp):
             business_private_key_password: The global private key password (if needed) to use in the ``flows_request_decryptor``
             flows_request_decryptor: The global flows requests decryptor implementation to use to decrypt Flows requests.
             flows_response_encryptor: The global flows response encryptor implementation to use to encrypt Flows responses.
-            max_workers: The maximum number of workers to use for handling incoming updates (optional, default: ``min(32,os.cpu_count()+4)``,
+            max_workers: The maximum number of workers to use for handling incoming updates (optional, default: ``min(32,os.cpu_count()+4)``.
+            continue_handling: Whether to continue handling updates after a handler has been found (default: ``True``).
+            skip_duplicate_updates: Whether to skip duplicate updates (default: ``True``).
         """
         super().__init__(
             phone_id=phone_id,
@@ -214,7 +222,7 @@ class WhatsApp(_WhatsApp):
         return f"WhatsAppAsync(phone_id={self.phone_id!r})"
 
     _handlers_to_update_constractor: dict[
-        type[Handler], Callable[["WhatsApp", dict], BaseUpdate]
+        type[Handler], Callable[[WhatsApp, dict], BaseUpdate]
     ] = {
         MessageHandler: Message.from_update,
         MessageStatusHandler: MessageStatus.from_update,

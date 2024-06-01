@@ -102,6 +102,24 @@ def click_me(client: WhatsApp, clb: CallbackButton):
 flask_app.run()  # Run the flask app to start the server
 ```
 
+💫 **Async Usage**
+
+- PyWa supports async usage. Just replace all the imports from `pywa` to `pywa_async` and use `async`/`await`:
+
+```python
+from pywa_async import WhatsApp, types
+
+wa = WhatsApp(...)
+
+async def main():
+    await wa.send_message(...)
+
+@wa.on_message(...)
+async def hello(_: WhatsApp, msg: types.Message):
+    await msg.react("👋")
+    await msg.reply(...)
+```
+
 🎛 **Installation**
 --------------------
 

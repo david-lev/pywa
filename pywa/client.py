@@ -155,7 +155,9 @@ class WhatsApp(Server, HandlerDecorators):
             business_private_key_password: The global private key password (if needed) to use in the ``flows_request_decryptor``
             flows_request_decryptor: The global flows requests decryptor implementation to use to decrypt Flows requests.
             flows_response_encryptor: The global flows response encryptor implementation to use to encrypt Flows responses.
-            max_workers: The maximum number of workers to use for handling incoming updates (optional, default: ``min(32,os.cpu_count()+4)``,
+            max_workers: The maximum number of workers to use for handling incoming updates (optional, default: ``min(32,os.cpu_count()+4)``.
+            continue_handling: Whether to continue handling updates after a handler has been found (default: ``True``).
+            skip_duplicate_updates: Whether to skip duplicate updates (default: ``True``).
         """
         if not phone_id or not token:
             raise ValueError("phone_id and token must be provided.")
