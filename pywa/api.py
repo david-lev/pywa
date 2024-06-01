@@ -300,7 +300,6 @@ class WhatsAppCloudApi:
             The media file bytes and the MIME type (if available).
         """
         headers = self._session.headers.copy()
-        del headers["Content-Type"]
         res = self._session.get(media_url, headers=headers, **kwargs)
         res.raise_for_status()
         return res.content, res.headers.get("Content-Type")
