@@ -28,7 +28,7 @@ from .handlers import (
 )
 from pywa.types.base_update import BaseUpdate
 
-import threading
+import asyncio
 import logging
 import dataclasses
 import functools
@@ -259,18 +259,17 @@ class WhatsApp(_WhatsApp):
         fields: tuple[str, ...] | None,
         delay: int,
     ) -> None:
-        threading.Timer(
-            delay,
-            function=lambda: self._loop.create_task(
-                self._register_callback_url(
-                    callback_url=callback_url,
-                    app_id=app_id,
-                    app_secret=app_secret,
-                    verify_token=verify_token,
-                    fields=fields,
-                )
-            ),
-        ).start()
+        async def _sleep_and_register():
+            await asyncio.sleep(delay)
+            await self._register_callback_url(
+                callback_url=callback_url,
+                app_id=app_id,
+                app_secret=app_secret,
+                verify_token=verify_token,
+                fields=fields,
+            )
+
+        self._loop.create_task(_sleep_and_register())
 
     async def _register_callback_url(
         self,

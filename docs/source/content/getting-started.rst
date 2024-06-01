@@ -22,8 +22,8 @@
 
 .. code-block:: bash
 
-    pip3 install -U "pywa[flask]"
     pip3 install -U "pywa[fastapi]"
+    pip3 install -U "pywa[flask]"
 
 - **If you going to use the Flow features and want to use the default FlowRequestDecryptor and the default FlowResponseEncryptor, here is shortcut to install the required dependencies:**
 

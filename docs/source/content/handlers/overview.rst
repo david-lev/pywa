@@ -42,39 +42,6 @@ for you.
 This method requires the ID and the secret of the WhatsApp app.
 See `Here <https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings/>`_ how to get them.
 
-- Example using Flask
-
-.. toggle::
-
-    - Install `Flask <https://flask.palletsprojects.com/>`_ (``pip3 install -U "pywa[flask]"``):
-
-    .. code-block:: python
-        :caption: main.py
-        :emphasize-lines: 9, 10, 11, 12, 13
-
-        from flask import Flask
-        from pywa import WhatsApp
-
-        flask_app = Flask(__name__)
-
-        wa = WhatsApp(
-            phone_id='1234567890',
-            token='xxxxxx',
-            server=flask_app,
-            callback_url='https://12345678.ngrok.io',
-            verify_token='XYZ123',
-            app_id=123456,
-            app_secret='xxxxxx'
-        )
-
-        ... # register the handlers
-
-        if __name__ == '__main__':
-            # start the server with flask or gunicorn, waitress, etc.
-            flask_app.run(port=8000)
-
-    The port that flask is running on (``8000`` in the example above) must be the same port that the callback url is listening on (e.g. ``ngrok http 8000``).
-
 - Example using FastAPI
 
 .. toggle::
@@ -85,7 +52,6 @@ See `Here <https://developers.facebook.com/docs/development/create-an-app/app-da
         :caption: main.py
         :emphasize-lines: 10, 11, 12, 13, 14
 
-        import uvicorn
         from fastapi import FastAPI
         from pywa import WhatsApp
 
@@ -103,9 +69,11 @@ See `Here <https://developers.facebook.com/docs/development/create-an-app/app-da
 
         ... # register the handlers
 
-        if __name__ == '__main__':
-            # start the server with
-            uvicorn.run(fastapi_app, port=8000)
+
+    .. code-block:: bash
+        :caption: Terminal
+
+        uvicorn main:fastapi_app
 
     The port that fastapi is running on (``8000`` in the example above) must be the same port that the callback url is listening on (e.g. ``ngrok http 8000``).
 
@@ -126,36 +94,6 @@ AFTER you start the server, so pywa can handle the verification request from Wha
 
 So, start the server:
 
-- Example using Flask
-
-.. toggle::
-
-    - Install `Flask <https://flask.palletsprojects.com/>`_ (``pip3 install -U "pywa[flask]"``):
-
-    .. code-block:: python
-        :caption: main.py
-        :emphasize-lines: 9, 10
-
-        from flask import Flask
-        from pywa import WhatsApp
-
-        flask_app = Flask(__name__)
-
-        wa = WhatsApp(
-            phone_id='1234567890',
-            token='xxxxxx',
-            server=flask_app,
-            verify_token='XYZ123',
-        )
-
-        ... # register the handlers
-
-        if __name__ == '__main__':
-            # start the server with flask or gunicorn, waitress, etc.
-            flask_app.run(port=8000)
-
-    The port that flask is running on (``8000`` in the example above) must be the same port that the callback url is listening on (e.g. ``ngrok http 8000``).
-
 - Example using FastAPI
 
 .. toggle::
@@ -166,7 +104,6 @@ So, start the server:
         :caption: main.py
         :emphasize-lines: 10, 11
 
-        import uvicorn
         from fastapi import FastAPI
         from pywa import WhatsApp
 
@@ -181,9 +118,11 @@ So, start the server:
 
         ... # register the handlers
 
-        if __name__ == '__main__':
-            # start the server with
-            uvicorn.run(fastapi_app, port=8000)
+
+    .. code-block:: bash
+        :caption: Terminal
+
+        uvicorn main:fastapi_app
 
     The port that fastapi is running on (``8000`` in the example above) must be the same port that the callback url is listening on (e.g. ``ngrok http 8000``).
 
@@ -234,7 +173,7 @@ is received from WhatsApp.
     A callback function can be both a synchronous or an asynchronous function.
 
     .. code-block:: python
-        :emphasize-lines: 1
+        :emphasize-lines: 6
 
         from pywa import WhatsApp
 
@@ -272,10 +211,10 @@ The easiest way to register a callback function is to use the ``on_message`` and
 
     from pywa import WhatsApp
     from pywa.types import Message, CallbackButton
-    from flask import Flask
+    from fastapi import FastAPI
 
-    flask_app = Flask(__name__)
-    wa = WhatsApp(..., server=flask_app)
+    fastapi_app = FastAPI()
+    wa = WhatsApp(..., server=fastapi_app)
 
     @wa.on_message()
     def handle_message(client: WhatsApp, message: Message):
@@ -286,8 +225,11 @@ The easiest way to register a callback function is to use the ``on_message`` and
     def handle_callback_button(client: WhatsApp, clb: CallbackButton):
         print(clb.data)
 
-    if __name__ == '__main__':
-        flask_app.run(port=8000)  # start the server
+
+.. code-block:: bash
+    :caption: Terminal
+
+    uvicorn main:fastapi_app
 
 
 Using ``Handler`` objects
@@ -316,18 +258,21 @@ main code, or when you want to dynamically register handlers programmatically.
     from pywa import WhatsApp
     from pywa.handlers import MessageHandler, CallbackButtonHandler
     from my_handlers import handle_message, handle_callback_button
-    from flask import Flask
+    from fastapi import FastAPI
 
-    flask_app = Flask(__name__)
-    wa = WhatsApp(..., server=flask_app)
+    fastapi_app = FastAPI()
+    wa = WhatsApp(..., server=fastapi_app)
 
     wa.add_handlers(
         MessageHandler(handle_message),
         CallbackButtonHandler(handle_callback_button)
     )
 
-    if __name__ == '__main__':
-        flask_app.run(port=8000)  # start the server
+
+.. code-block:: bash
+    :caption: Terminal
+
+    uvicorn main:fastapi_app
 
 .. seealso::
 

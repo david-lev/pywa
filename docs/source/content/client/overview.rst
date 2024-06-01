@@ -22,6 +22,10 @@ for listening to incoming messages and events, you will need to tell WhatsApp to
 
     Pywa provides two clients, synchronous and asynchronous, you can choose the one that fits your needs.
 
+    .. important::
+
+        At the moment it seems that there are problems running with flask or with fastapi when running uvicorn from the code (and not from the command line).
+
     .. code-block:: python
         :emphasize-lines: 1
 

@@ -1102,17 +1102,18 @@ Sending the Flow
 To send the flow we need to initialize the :class:`~pywa.client.WhatsApp` client with some specific parameters:
 
 .. code-block:: python
+    :title: wa.py
     :linenos:
 
-    import flask
+    import fastapi
     from pywa import WhatsApp
 
-    flask_app = flask.Flask(__name__)
+    fastapi_app = fastapi.FastAPI()
 
     wa = WhatsApp(
         phone_id="1234567890",
         token="abcdefg",
-        server=flask_app,
+        server=fastapi_app,
         callback_url="https://my-server.com",
         webhook_endpoint="/webhook",
         verify_token="xyz123",
@@ -1127,7 +1128,7 @@ The :class:`~pywa.client.WhatsApp` class takes a few parameters:
 
 - ``phone_id``: The phone ID of the WhatsApp account that we are using to send and receive messages
 - ``token``: The token of the WhatsApp account that we are using to send and receive messages
-- ``server``: The Flask app that we created earlier, which will be used to register the routes
+- ``server``: The FastAPI app that we created earlier, which will be used to register the routes
 - ``callback_url``: The URL that WhatsApp will use to send us updates
 - ``webhook_endpoint``: The endpoint that WhatsApp will use to send us updates
 - ``verify_token``: Used by WhatsApp to challenge the server when we register the webhook
@@ -1388,11 +1389,9 @@ Running the Server
 
 The last thing that we need to do is run the server:
 
-.. code-block:: python
-    :linenos:
+.. code-block:: bash
 
-    if __name__ == "__main__":
-        flask_app.run()
+    uvicorn wa:fastapi_app
 
 What's Next?
 ------------

@@ -62,20 +62,21 @@ wa.send_message(
 )
 ```
 
-- To listen to updates, create a `WhatsApp` client, pass a web server app ([Flask](https://flask.palletsprojects.com/) in this example) and register callbacks:
+- To listen to updates, create a `WhatsApp` client, pass a web server app ([FastAPI](https://fastapi.tiangolo.com/) in this example) and register callbacks:
 
 > See [Handlers](https://pywa.readthedocs.io/en/latest/content/handlers/overview.html) for more information.
 
 ```python
+# wa.py
 from pywa import WhatsApp, filters
 from pywa.types import Message, CallbackButton, Button
-from flask import Flask
+from fastapi import FastAPI
 
-flask_app = Flask(__name__)
+fastapi_app = FastAPI()
 wa = WhatsApp(
     phone_id="1234567890",
     token="xxxxxxx",
-    server=flask_app,
+    server=fastapi_app,
     callback_url="https://xyz.ngrok-free.app",
     verify_token="xyz123",
     app_id=123456,
@@ -98,26 +99,38 @@ def hello(client: WhatsApp, msg: Message):
 @wa.on_callback_button(filters.startswith("id"))
 def click_me(client: WhatsApp, clb: CallbackButton):
     clb.reply_text("You clicked me!")
+```
 
-flask_app.run()  # Run the flask app to start the server
+- To run the server, use [uvicorn](https://www.uvicorn.org/) (`pip install uvicorn`) from the command line:
+
+```bash
+uvicorn wa:fastapi_app  # see uvicorn docs for more options (port, host, reload, etc.)
 ```
 
 💫 **Async Usage**
 
-- PyWa supports async usage. Just replace all the imports from `pywa` to `pywa_async` and use `async`/`await`:
+- PyWa has beta async support. At the moment it seems that there are problems running with flask or with fastapi when running uvicorn from the code (and not from the command line).
+To use the async version, just replace all the imports from `pywa` to `pywa_async` and use `async`/`await`:
 
 ```python
+# wa.py
+import fastapi
 from pywa_async import WhatsApp, types
 
-wa = WhatsApp(...)
+fastapi_app = fastapi.FastAPI()
+wa = WhatsApp(..., server=fastapi_app)
 
 async def main():
     await wa.send_message(...)
 
-@wa.on_message(...)
+@wa.on_message()
 async def hello(_: WhatsApp, msg: types.Message):
     await msg.react("👋")
     await msg.reply(...)
+```
+
+```bash
+uvicorn wa:fastapi_app
 ```
 
 🎛 **Installation**
@@ -138,8 +151,8 @@ pip3 install -U git+https://github.com/david-lev/pywa.git
 - **If you going to use the webhook features, here is shortcut to install the required dependencies:**
 
 ```bash
-pip3 install -U "pywa[flask]"
 pip3 install -U "pywa[fastapi]"
+pip3 install -U "pywa[flask]"
 ```
 
 - **If you going to use the Flow features and want to use the default FlowRequestDecryptor and the default FlowResponseEncryptor, here is shortcut to install the required dependencies:**
