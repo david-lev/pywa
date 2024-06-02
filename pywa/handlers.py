@@ -242,13 +242,13 @@ class Handler(abc.ABC):
         self.callback = callback
         self.filters = filters
 
-    async def handle(self, wa: WhatsApp, data: Any):
+    async def handle(self, wa: WhatsApp, data: Any) -> bool:
         for f in self.filters:
             if inspect.iscoroutinefunction(f):
                 if not await f(wa, data):
-                    return
-            elif not f(wa, data):
-                return
+                    return False
+            elif not await wa._loop.run_in_executor(wa._executor, f, wa, data):
+                return False
 
         if inspect.iscoroutinefunction(self.callback):
             await self.callback(wa, data)
@@ -259,6 +259,7 @@ class Handler(abc.ABC):
                 wa,
                 data,
             )
+        return True
 
     @staticmethod
     @functools.cache
@@ -339,7 +340,7 @@ class _FactoryHandler(Handler):
         self.factory_before_filters = factory_before_filters
         super().__init__(callback, *filters)
 
-    async def handle(self, wa: WhatsApp, data: Any):
+    async def handle(self, wa: WhatsApp, data: Any) -> bool:
         update = await _get_factored_update(self, wa, data, self._data_field)
         if update is not None:
             if inspect.iscoroutinefunction(self.callback):
@@ -351,6 +352,8 @@ class _FactoryHandler(Handler):
                     wa,
                     update,
                 )
+            return True
+        return False
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}(callback={self.callback!r}, filters={self.filters!r}, factory={self.factory!r})"

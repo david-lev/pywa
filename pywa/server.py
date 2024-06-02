@@ -242,9 +242,11 @@ class Server:
                 return "ok", 200
             self._updates_ids_in_process.add(update_id)
         await self._call_handlers(update)
-        if self._skip_duplicate_updates and update_id is not None:
-            if update_id is not None:
+        if self._skip_duplicate_updates:
+            try:
                 self._updates_ids_in_process.remove(update_id)
+            except KeyError:
+                pass
         return "ok", 200
 
     def _register_routes(self: "WhatsApp") -> None:
@@ -355,22 +357,21 @@ class Server:
         constructed_update: BaseUpdate | dict,
     ) -> None:
         """Call the handler type callbacks for the given update."""
+        handled = False
         for handler in self._handlers[handler_type]:
             try:
-                await handler.handle(self, constructed_update)
-                if not self._continue_handling:
-                    break
+                handled = await handler.handle(self, constructed_update)
             except StopHandling:
                 break
             except ContinueHandling:
                 continue
-            except Exception as e:
-                if isinstance(e, StopHandling):
-                    break
+            except Exception:
                 _logger.exception(
                     "An error occurred while %s was handling an update",
                     handler.callback.__name__,
                 )
+            if handled and not self._continue_handling:
+                break
 
     def _get_handler(self: "WhatsApp", update: dict) -> type[Handler] | None:
         """Get the handler for the given update."""
@@ -607,11 +608,12 @@ class Server:
 
                 return "Failed to construct FlowRequest", 500
             try:
-                response = (
-                    await callback(self, request)
-                    if asyncio.iscoroutinefunction(callback)
-                    else callback(self, request)
-                )
+                if asyncio.iscoroutinefunction(callback):
+                    response = await callback(self, request)
+                else:
+                    response = await self._loop.run_in_executor(
+                        self._executor, callback, self, request
+                    )
                 if isinstance(response, FlowResponseError):
                     raise response
             except FlowTokenNoLongerValid as e:

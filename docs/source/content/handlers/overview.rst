@@ -50,7 +50,8 @@ See `Here <https://developers.facebook.com/docs/development/create-an-app/app-da
 
     .. code-block:: python
         :caption: main.py
-        :emphasize-lines: 10, 11, 12, 13, 14
+        :linenos:
+        :emphasize-lines: 4, 9, 10, 11, 12, 13
 
         from fastapi import FastAPI
         from pywa import WhatsApp
@@ -102,7 +103,8 @@ So, start the server:
 
     .. code-block:: python
         :caption: main.py
-        :emphasize-lines: 10, 11
+        :linenos:
+        :emphasize-lines: 4, 9, 10
 
         from fastapi import FastAPI
         from pywa import WhatsApp
@@ -189,7 +191,7 @@ A callback function is a function that takes two (positional) arguments:
     - The WhatsApp client object (:class:`~pywa.client.WhatsApp`)
     - The update object (:class:`~pywa.types.Message`, :class:`~pywa.types.CallbackButton`, etc.)
 
-Here is an example of a callback function that prints messages
+Here is an example of a callback functions
 
 .. code-block:: python
     :emphasize-lines: 1, 4
@@ -208,6 +210,9 @@ Using decorators
 The easiest way to register a callback function is to use the ``on_message`` and the other ``on_...`` decorators:
 
 .. code-block:: python
+    :caption: main.py
+    :linenos:
+    :emphasize-lines: 8, 13
 
     from pywa import WhatsApp
     from pywa.types import Message, CallbackButton
@@ -241,6 +246,7 @@ main code, or when you want to dynamically register handlers programmatically.
 
 .. code-block:: python
     :caption: my_handlers.py
+    :linenos:
 
     from pywa import WhatsApp
     from pywa.types import Message, CallbackButton
@@ -254,6 +260,8 @@ main code, or when you want to dynamically register handlers programmatically.
 
 .. code-block:: python
     :caption: main.py
+    :linenos:
+    :emphasize-lines: 9, 10, 11, 12
 
     from pywa import WhatsApp
     from pywa.handlers import MessageHandler, CallbackButtonHandler
@@ -277,6 +285,72 @@ main code, or when you want to dynamically register handlers programmatically.
 .. seealso::
 
     See how to filter updates in `Filters <filters/overview.html>`_.
+
+
+Stop or continue handling updates
+_________________________________
+
+When a handler is called, when it finishes, in default, the next handler will be called.
+
+.. code-block:: python
+    :caption: main.py
+    :linenos:
+
+    from pywa import WhatsApp
+    from pywa.types import Message
+
+    wa = WhatsApp(...)
+
+    @wa.on_message()
+    def handle_message(client: WhatsApp, message: Message):
+        print(message)
+        # The next handler will be called
+
+    @wa.on_message()
+    def handle_message2(client: WhatsApp, message: Message):
+        print(message)
+        # The next handler will be called
+
+    ...
+
+
+You can change this behavior by setting the ``continue_handling`` to ``False`` when initializing :class:`~pywa.client.WhatsApp`.
+
+.. code-block:: python
+    :caption: main.py
+    :linenos:
+    :emphasize-lines: 1
+
+    wa = WhatsApp(..., continue_handling=False)
+
+    @wa.on_message()
+    def handle_message(client: WhatsApp, message: Message):
+        print(message)
+        # The next handler will NOT be called
+    ...
+
+You can also change this behavior inside the callback function by calling the :meth:`~pywa.types.base_update.BaseUpdate.stop_handling`
+or :meth:`~pywa.types.base_update.BaseUpdate.continue_handling` methods on the update object.
+
+.. code-block:: python
+    :caption: main.py
+    :linenos:
+    :emphasize-lines: 10, 12
+
+    from pywa import WhatsApp, filters
+    from pywa.types import Message
+
+    wa = WhatsApp(...)
+
+    @wa.on_message(filters.text)
+    def handle_message(client: WhatsApp, message: Message):
+        print(message)
+        if message.text == 'stop':
+            message.stop_handling() # The next handler will NOT be called
+        else:
+            message.continue_handling() # The next handler will be called
+
+    ...
 
 
 Available handlers

@@ -22,3 +22,9 @@ Others
 .. currentmodule:: pywa.utils
 
 .. autoclass:: Version()
+
+.. currentmodule:: pywa.types.base_update
+
+.. autoclass:: StopHandling()
+
+.. autoclass:: ContinueHandling()

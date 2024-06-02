@@ -1102,7 +1102,7 @@ Sending the Flow
 To send the flow we need to initialize the :class:`~pywa.client.WhatsApp` client with some specific parameters:
 
 .. code-block:: python
-    :title: wa.py
+    :caption: main.py
     :linenos:
 
     import fastapi
