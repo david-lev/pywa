@@ -40,6 +40,8 @@ __all__ = [
     "EmbeddedLink",
     "DatePicker",
     "Image",
+    "PhotoPicker",
+    "PhotoSource",
     "ScaleType",
     "DataSource",
     "Action",

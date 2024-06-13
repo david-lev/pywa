@@ -51,6 +51,10 @@ Here you will find all the components that make up a Flow JSON object.
 
 .. autoclass:: ScaleType()
 
+.. autoclass:: PhotoPicker()
+
+.. autoclass:: PhotoSource()
+
 .. autoclass:: DataSource()
 
 .. autoclass:: Action()

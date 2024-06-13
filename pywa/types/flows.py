@@ -64,6 +64,8 @@ __all__ = [
     "EmbeddedLink",
     "DatePicker",
     "Image",
+    "PhotoPicker",
+    "PhotoSource",
     "ScaleType",
     "DataSource",
     "Action",
@@ -1039,6 +1041,7 @@ class ComponentType(utils.StrEnum):
     EMBEDDED_LINK = "EmbeddedLink"
     DATE_PICKER = "DatePicker"
     IMAGE = "Image"
+    PHOTO_PICKER = "PhotoPicker"
 
 
 class _Ref:
@@ -1112,6 +1115,7 @@ class Form(Component):
         | DatePicker
         | EmbeddedLink
         | Image
+        | PhotoPicker
         | Footer
         | dict[str, Any]
     ]
@@ -1868,6 +1872,76 @@ class Image(Component):
     aspect_ratio: int | str | DataKey
     alt_text: str | DataKey | None = None
     visible: bool | str | DataKey | None = None
+
+
+class PhotoSource(utils.StrEnum):
+    """
+    The source where the image can be selected from.
+
+    Attributes:
+        CAMERA_GALLERY: User can select from gallery or take a photo
+        CAMERA: User can select only from gallery
+        GALLERY: User can only take a photo
+    """
+
+    CAMERA_GALLERY = "camera_gallery"
+    CAMERA = "camera"
+    GALLERY = "gallery"
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class PhotoPicker(FormComponent):
+    """
+    PhotoPicker component allows uploading media from camera or gallery
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components/media_upload#photopicker--early-release->`_.
+    - Added in v4.0
+    - Only 1 PhotoPicker is allowed per screen
+    - Using both :class:`PhotoPicker` and :class:`DocumentPicker` components on a single screen is not allowed.
+
+
+    Example:
+
+        >>> from pywa.types.flows import PhotoPicker, PhotoSource
+        >>> photo_picker = PhotoPicker(
+        ...     name='photo',
+        ...     label='Take a photo',
+        ...     description='We need your photo for verification',
+        ...     photo_source=PhotoSource.CAMERA,
+        ...     max_file_size_kb=10_000,  # 10MB
+        ...     min_uploaded_photos=1,
+        ...     max_uploaded_photos=3,
+        )
+
+    Attributes:
+        name: The unique name (id) for this component (to be used dynamically or in action payloads).
+        label: The label of the photo picker. Limited to 30 characters. Can be dynamic.
+        description: The description of the photo picker. Limited to 300 characters. Can be dynamic.
+        photo_source: The source where the image can be selected from. Default to ``PhotoSource.CAMERA_GALLERY``. Can be dynamic.
+        max_file_size_kb: The maximum file size in KB. Can be dynamic. Default value: 25600 (25 MiB)
+        min_uploaded_photos: The minimum number of photos that can be uploaded. Can be dynamic. This property determines whether the component is optional (set to 0) or required (set above 0).
+        max_uploaded_photos: The maximum number of photos that can be uploaded. Can be dynamic. Default value: 30
+        enabled: Whether the photo picker is enabled or not. Default to ``True``. Can be dynamic.
+        visible: Whether the photo picker is visible or not. Default to ``True``. Can be dynamic.
+        error_message: The error message of the photo picker. Can be dynamic.
+
+    """
+
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.PHOTO_PICKER, init=False, repr=False
+    )
+    required: None = dataclasses.field(default=None, init=False, repr=False)
+    init_value: None = dataclasses.field(default=None, init=False, repr=False)
+    name: str
+    label: str | DataKey
+    description: str | DataKey | None = None
+    photo_source: PhotoSource | str | DataKey | None = None
+    max_file_size_kb: int | str | DataKey | None = None
+    min_uploaded_photos: int | str | DataKey | None = None
+    max_uploaded_photos: int | str | DataKey | None = None
+    enabled: bool | str | DataKey | None = None
+    visible: bool | str | DataKey | None = None
+    error_message: str | DataKey | None = None
 
 
 class FlowActionType(utils.StrEnum):
