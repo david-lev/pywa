@@ -1509,7 +1509,8 @@ class CheckboxGroup(FormComponent):
     Attributes:
         name: The unique name (id) for this component (to be used dynamically or in action payloads).
         data_source: The data source of the checkbox group. Can be dynamic.
-        label: The label of the checkbox group. Limited to 30 characters. Can be dynamic.
+        label: The label of the checkbox group. Limited to 30 characters. Can be dynamic. Required starting from v4.0.
+        description: The description of the checkbox group. Limited to 300 characters. Can be dynamic. Added in v4.0.
         min_selected_items: The minimum number of items that can be selected. Minimum value is 1. Can be dynamic.
         max_selected_items: The maximum number of items that can be selected. Maximum value is 20. Can be dynamic.
         required: Whether the checkbox group is required or not. Can be dynamic.
@@ -1525,6 +1526,7 @@ class CheckboxGroup(FormComponent):
     name: str
     data_source: Iterable[DataSource] | str | DataKey
     label: str | DataKey | None = None
+    description: str | DataKey | None = None
     min_selected_items: int | str | DataKey | None = None
     max_selected_items: int | str | DataKey | None = None
     required: bool | str | DataKey | None = None
@@ -1560,7 +1562,8 @@ class RadioButtonsGroup(FormComponent):
     Attributes:
         name: The unique name (id) for this component (to be used dynamically or in action payloads).
         data_source: The data source of the radio buttons group. Can be dynamic.
-        label: The label of the radio buttons group. Limited to 30 characters. Can be dynamic.
+        label: The label of the radio buttons group. Limited to 30 characters. Can be dynamic. Required starting from v4.0.
+        description: The description of the radio buttons group. Limited to 300 characters. Can be dynamic. Added in v4.0.
         required: Whether the radio buttons group is required or not. Can be dynamic.
         visible: Whether the radio buttons group is visible or not. Default to ``True``. Can be dynamic.
         enabled: Whether the radio buttons group is enabled or not. Default to ``True``. Can be dynamic.
@@ -1574,9 +1577,57 @@ class RadioButtonsGroup(FormComponent):
     name: str
     data_source: Iterable[DataSource] | str | DataKey
     label: str | DataKey | None = None
+    description: str | DataKey | None = None
     required: bool | str | DataKey | None = None
     visible: bool | str | DataKey | None = None
     enabled: bool | str | DataKey | None = None
+    init_value: str | DataKey | None = None
+    on_select_action: Action | None = None
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class Dropdown(FormComponent):
+    """
+    Dropdown component allows users to pick a single selection from a list of options.
+
+    - This component must be inside a :class:`Form`.
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#drop>`_.
+
+    Example:
+
+        >>> from pywa.types.flows import Dropdown, DataSource
+        >>> dropdown = Dropdown(
+        ...     name='options',
+        ...     data_source=[
+        ...         DataSource(id='1', title='Option 1'),
+        ...         DataSource(id='2', title='Option 2'),
+        ...         DataSource(id='3', title='Option 3'),
+        ...     ],
+        ...     label='Options',
+        ...     required=True,
+        ...     init_value='1'
+        ... )
+
+    Attributes:
+        name: The unique name (id) for this component (to be used dynamically or in action payloads).
+        label: The label of the dropdown. Limited to 30 characters. Can be dynamic.
+        data_source: The data source of the dropdown. minimum 1 and maximum 200 items. Can be dynamic.
+        enabled: Whether the dropdown is enabled or not. Default to ``True``. Can be dynamic.
+        required: Whether the dropdown is required or not. Can be dynamic.
+        visible: Whether the dropdown is visible or not. Default to ``True``. Can be dynamic.
+        init_value: The default value (ID of the data source). Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic.
+        on_select_action: The action to perform when an item is selected.
+    """
+
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.DROPDOWN, init=False, repr=False
+    )
+    name: str
+    label: str | DataKey
+    data_source: Iterable[DataSource] | str | DataKey
+    enabled: bool | str | DataKey | None = None
+    required: bool | str | DataKey | None = None
+    visible: bool | str | DataKey | None = None
     init_value: str | DataKey | None = None
     on_select_action: Action | None = None
 
@@ -1666,53 +1717,6 @@ class OptIn(FormComponent):
     visible: bool | str | DataKey | None = None
     init_value: bool | str | DataKey | None = None
     on_click_action: Action | None = None
-
-
-@dataclasses.dataclass(slots=True, kw_only=True)
-class Dropdown(FormComponent):
-    """
-    Dropdown component allows users to pick a single selection from a list of options.
-
-    - This component must be inside a :class:`Form`.
-    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#drop>`_.
-
-    Example:
-
-        >>> from pywa.types.flows import Dropdown, DataSource
-        >>> dropdown = Dropdown(
-        ...     name='options',
-        ...     data_source=[
-        ...         DataSource(id='1', title='Option 1'),
-        ...         DataSource(id='2', title='Option 2'),
-        ...         DataSource(id='3', title='Option 3'),
-        ...     ],
-        ...     label='Options',
-        ...     required=True,
-        ...     init_value='1'
-        ... )
-
-    Attributes:
-        name: The unique name (id) for this component (to be used dynamically or in action payloads).
-        label: The label of the dropdown. Limited to 30 characters. Can be dynamic.
-        data_source: The data source of the dropdown. minimum 1 and maximum 200 items. Can be dynamic.
-        enabled: Whether the dropdown is enabled or not. Default to ``True``. Can be dynamic.
-        required: Whether the dropdown is required or not. Can be dynamic.
-        visible: Whether the dropdown is visible or not. Default to ``True``. Can be dynamic.
-        init_value: The default value (ID of the data source). Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic.
-        on_select_action: The action to perform when an item is selected.
-    """
-
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.DROPDOWN, init=False, repr=False
-    )
-    name: str
-    label: str | DataKey
-    data_source: Iterable[DataSource] | str | DataKey
-    enabled: bool | str | DataKey | None = None
-    required: bool | str | DataKey | None = None
-    visible: bool | str | DataKey | None = None
-    init_value: str | DataKey | None = None
-    on_select_action: Action | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
