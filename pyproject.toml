@@ -40,7 +40,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-flask = ["flask"]
+flask = ["flask[async]"]
 fastapi = ["fastapi", "uvicorn[standard]"]
 cryptography = ["cryptography"]
 

@@ -7,7 +7,6 @@ __all__ = ["WhatsApp"]
 
 from pywa.client import (
     WhatsApp as _WhatsApp,
-    _DEFAULT_WORKERS,
     _resolve_buttons_param,
     _resolve_tracker_param,
     _get_interactive_msg,
@@ -28,7 +27,6 @@ from .handlers import (
 )
 from pywa.types.base_update import BaseUpdate
 
-import asyncio
 import logging
 import dataclasses
 import functools
@@ -38,7 +36,7 @@ import mimetypes
 import os
 import pathlib
 import warnings
-from typing import BinaryIO, Iterable, Literal, Callable, Awaitable, Any
+from typing import BinaryIO, Iterable, Literal, Callable
 
 import httpx
 
@@ -50,7 +48,6 @@ from .types import (
     ChatOpened,
     FlowCompletion,
 )
-from .errors import WhatsAppError
 from . import utils
 from .api import WhatsAppCloudApiAsync
 
@@ -96,6 +93,7 @@ class WhatsApp(_WhatsApp):
         token: str,
         *,
         session: httpx.AsyncClient | None = None,
+        session_sync: httpx.Client | None = None,
         server: Flask | FastAPI | None = utils.MISSING,
         webhook_endpoint: str = "/",
         verify_token: str | None = None,
@@ -114,7 +112,6 @@ class WhatsApp(_WhatsApp):
         | None = utils.default_flow_request_decryptor,
         flows_response_encryptor: utils.FlowResponseEncryptor
         | None = utils.default_flow_response_encryptor,
-        max_workers: int = _DEFAULT_WORKERS,
         base_url: str = "https://graph.facebook.com",
         api_version: str
         | int
@@ -189,10 +186,10 @@ class WhatsApp(_WhatsApp):
             business_private_key_password: The global private key password (if needed) to use in the ``flows_request_decryptor``
             flows_request_decryptor: The global flows requests decryptor implementation to use to decrypt Flows requests.
             flows_response_encryptor: The global flows response encryptor implementation to use to encrypt Flows responses.
-            max_workers: The maximum number of workers to use for handling incoming updates (optional, default: ``min(32,os.cpu_count()+4)``.
             continue_handling: Whether to continue handling updates after a handler has been found (default: ``True``).
             skip_duplicate_updates: Whether to skip duplicate updates (default: ``True``).
         """
+        self._session_sync = session_sync
         super().__init__(
             phone_id=phone_id,
             token=token,
@@ -213,7 +210,6 @@ class WhatsApp(_WhatsApp):
             business_private_key_password=business_private_key_password,
             flows_request_decryptor=flows_request_decryptor,
             flows_response_encryptor=flows_response_encryptor,
-            max_workers=max_workers,
             continue_handling=continue_handling,
             skip_duplicate_updates=skip_duplicate_updates,
         )
@@ -246,57 +242,20 @@ class WhatsApp(_WhatsApp):
             phone_id=self.phone_id,
             token=token,
             session=session or httpx.AsyncClient(),
+            session_sync=self._session_sync or httpx.Client(),
             base_url=base_url,
             api_version=api_version,
         )
+        delattr(self, "_session_sync")
 
-    def _delayed_register_callback_url(
-        self,
-        callback_url: str,
-        app_id: int,
-        app_secret: str,
-        verify_token: str,
-        fields: tuple[str, ...] | None,
-        delay: int,
-    ) -> None:
-        async def _sleep_and_register():
-            await asyncio.sleep(delay)
-            await self._register_callback_url(
-                callback_url=callback_url,
-                app_id=app_id,
-                app_secret=app_secret,
-                verify_token=verify_token,
-                fields=fields,
-            )
+    @property
+    def token(self) -> str:
+        return super().token
 
-        self._loop.create_task(_sleep_and_register())
-
-    async def _register_callback_url(
-        self,
-        callback_url: str,
-        app_id: int,
-        app_secret: str,
-        verify_token: str,
-        fields: tuple[str, ...] | None,
-    ) -> None:
-        try:
-            app_access_token = await self.api.get_app_access_token(
-                app_id=app_id, app_secret=app_secret
-            )
-            res = await self.api.set_app_callback_url(
-                app_id=app_id,
-                app_access_token=app_access_token["access_token"],
-                callback_url=callback_url,
-                verify_token=verify_token,
-                fields=fields,
-            )
-            if not res["success"]:
-                raise RuntimeError("Failed to register callback URL.")
-            _logger.info("Callback URL '%s' registered successfully", callback_url)
-        except WhatsAppError as e:
-            raise RuntimeError(
-                f"Failed to register callback URL '{callback_url}'"
-            ) from e
+    @token.setter
+    def token(self, value: str) -> None:
+        super().token = value
+        self.api._session_sync.headers["Authorization"] = f"Bearer {value}"
 
     async def send_message(
         self,

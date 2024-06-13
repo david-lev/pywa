@@ -1,5 +1,6 @@
 """The internal API for the WhatsApp client."""
 
+import typing
 from typing import Any, TYPE_CHECKING
 
 import requests
@@ -23,18 +24,22 @@ class WhatsAppCloudApi:
         api_version: float,
     ):
         self.phone_id = phone_id
+        self._session = self._setup_session(session, token)
+        self._base_url = f"{base_url}/v{api_version}"
+
+    @staticmethod
+    def _setup_session(session, token: str) -> requests.Session:
         if session.headers.get("Authorization") is not None:
             raise ValueError(
                 "You can't use the same requests.Session for multiple WhatsApp instances!"
             )
-        self._session = session
-        self._base_url = f"{base_url}/v{api_version}"
-        self._session.headers.update(
+        session.headers.update(
             {
                 "Authorization": f"Bearer {token}",
                 "User-Agent": f"PyWa/{pywa.__version__}",
             }
         )
+        return session
 
     def __str__(self) -> str:
         return f"WhatsAppCloudApi(phone_id={self.phone_id!r})"

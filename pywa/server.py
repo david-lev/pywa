@@ -5,8 +5,7 @@ __all__ = ["Server"]
 import asyncio
 import logging
 import threading
-from concurrent.futures import ThreadPoolExecutor
-from typing import TYPE_CHECKING, Callable, Any, Tuple, Coroutine
+from typing import TYPE_CHECKING, Callable, Any, Coroutine
 
 from . import utils, handlers, errors
 from .handlers import Handler, ChatOpenedHandler, TemplateStatusHandler  # noqa
@@ -98,7 +97,6 @@ class Server:
         business_private_key_password: str | None,
         flows_request_decryptor: utils.FlowRequestDecryptor | None,
         flows_response_encryptor: utils.FlowResponseEncryptor | None,
-        max_workers: int,
         continue_handling: bool,
         skip_duplicate_updates: bool,
     ):
@@ -107,8 +105,6 @@ class Server:
             return
         self._server_type = utils.ServerType.from_app(server)
         self._verify_token = verify_token
-        self._executor = ThreadPoolExecutor(max_workers, thread_name_prefix="Handler")
-        self._loop = asyncio.get_event_loop()
         self._webhook_endpoint = webhook_endpoint
         self._private_key = business_private_key
         self._private_key_password = business_private_key_password
@@ -271,24 +267,10 @@ class Server:
                         return await self.webhook_update_handler(flask.request.json)
 
                 else:  # flask
-                    _logger.info("Using Flask with WSGI")
-
-                    @self._server.route(self._webhook_endpoint, methods=["GET"])
-                    @utils.rename_func(f"({self.phone_id})")
-                    def flask_challenge() -> tuple[str, int]:
-                        return self._loop.run_until_complete(
-                            self.webhook_challenge_handler(
-                                vt=flask.request.args.get(utils.HUB_VT),
-                                ch=flask.request.args.get(utils.HUB_CH),
-                            )
-                        )
-
-                    @self._server.route(self._webhook_endpoint, methods=["POST"])
-                    @utils.rename_func(f"({self.phone_id})")
-                    def flask_webhook() -> tuple[str, int]:
-                        return self._loop.run_until_complete(
-                            self.webhook_update_handler(flask.request.json)
-                        )
+                    raise ValueError(
+                        "Flask with ASGI is required to handle incoming updates asynchronously. Please install "
+                        """the `asgiref` package (`pip install "flask[async]"` / `pip install "asgiref"`)"""
+                    )
 
             case utils.ServerType.FASTAPI:
                 _logger.info("Using FastAPI")
@@ -611,9 +593,7 @@ class Server:
                 if asyncio.iscoroutinefunction(callback):
                     response = await callback(self, request)
                 else:
-                    response = await self._loop.run_in_executor(
-                        self._executor, callback, self, request
-                    )
+                    response = callback(self, request)
                 if isinstance(response, FlowResponseError):
                     raise response
             except FlowTokenNoLongerValid as e:
@@ -698,13 +678,10 @@ class Server:
                     async def flask_flow() -> tuple[str, int]:
                         return await handler(flask.request.json)
                 else:
-
-                    @self._server.route(endpoint, methods=["POST"])
-                    @utils.rename_func(f"({endpoint})")
-                    def flask_flow() -> tuple[str, int]:
-                        return self._loop.run_until_complete(
-                            handler(flask.request.json)
-                        )
+                    raise ValueError(
+                        "Flask with ASGI is required to handle incoming updates asynchronously. Please install "
+                        """the `asgiref` package (`pip install "flask[async]"` / `pip install "asgiref"`)"""
+                    )
             case utils.ServerType.FASTAPI:
                 import fastapi
 

@@ -247,18 +247,13 @@ class Handler(abc.ABC):
             if inspect.iscoroutinefunction(f):
                 if not await f(wa, data):
                     return False
-            elif not await wa._loop.run_in_executor(wa._executor, f, wa, data):
+            elif not f(wa, data):
                 return False
 
         if inspect.iscoroutinefunction(self.callback):
             await self.callback(wa, data)
         else:
-            await wa._loop.run_in_executor(
-                wa._executor,
-                self.callback,
-                wa,
-                data,
-            )
+            self.callback(wa, data)
         return True
 
     @staticmethod
@@ -346,12 +341,7 @@ class _FactoryHandler(Handler):
             if inspect.iscoroutinefunction(self.callback):
                 await self.callback(wa, update)
             else:
-                await wa._loop.run_in_executor(
-                    wa._executor,
-                    self.callback,
-                    wa,
-                    update,
-                )
+                await self.callback(wa, update)
             return True
         return False
 
