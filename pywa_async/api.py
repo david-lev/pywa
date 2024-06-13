@@ -718,6 +718,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         name: str | None = None,
         categories: tuple[str, ...] | None = None,
         endpoint_uri: str | None = None,
+        application_id: int | None = None,
     ) -> dict[str, bool]:
         """
         Update the metadata of a flow.
@@ -729,6 +730,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             name: The name of the flow.
             categories: The categories of the flow.
             endpoint_uri: The endpoint URI of the flow.
+            application_id: The ID of the application.
 
         Return example::
 
@@ -740,6 +742,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             **({"name": name} if name else {}),
             **({"endpoint_uri": endpoint_uri} if endpoint_uri else {}),
             **({"categories": categories} if categories else {}),
+            **({"application_id": application_id} if application_id else {}),
         }
         return await self._make_request(
             method="POST",

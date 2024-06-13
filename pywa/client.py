@@ -1879,6 +1879,7 @@ class WhatsApp(Server, HandlerDecorators):
         name: str | None = None,
         categories: Iterable[FlowCategory | str] | None = None,
         endpoint_uri: str | None = None,
+        application_id: int | None,
     ) -> bool:
         """
         Update the metadata of a flow.
@@ -1889,6 +1890,7 @@ class WhatsApp(Server, HandlerDecorators):
             categories: The new categories of the flow (optional).
             endpoint_uri: The URL of the FlowJSON Endpoint. Starting from FlowJSON 3.0 this property should be
              specified only gere. Do not provide this field if you are cloning a FlowJSON with version below 3.0.
+            application_id: The ID of the Meta application which will be connected to the Flow. All the flows with endpoints need to have an Application connected to them.
 
         Example:
 
@@ -1898,22 +1900,24 @@ class WhatsApp(Server, HandlerDecorators):
             ...     flow_id='1234567890',
             ...     name='Feedback',
             ...     categories=[FlowCategory.SURVEY, FlowCategory.OTHER],
-            ...     endpoint_uri='https://my-api-server/feedback_flow'
+            ...     endpoint_uri='https://my-api-server/feedback_flow',
+            ...     application_id=1234567890,
             ... )
 
         Returns:
             Whether the flow was updated.
 
         Raises:
-            ValueError: If neither ``name``, ``categories`` or ``endpoint_uri`` are provided.
+            ValueError: If neither of the arguments is provided.
         """
-        if name is None and categories is None and endpoint_uri is None:
+        if not any((name, categories, endpoint_uri, application_id)):
             raise ValueError("At least one argument must be provided")
         return self.api.update_flow_metadata(
             flow_id=str(flow_id),
             name=name,
             categories=tuple(map(str, categories)) if categories else None,
             endpoint_uri=endpoint_uri,
+            application_id=application_id,
         )["success"]
 
     def update_flow_json(
