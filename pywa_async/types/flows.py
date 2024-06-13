@@ -42,6 +42,7 @@ __all__ = [
     "Image",
     "PhotoPicker",
     "PhotoSource",
+    "DocumentPicker",
     "ScaleType",
     "DataSource",
     "Action",

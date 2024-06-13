@@ -66,6 +66,7 @@ __all__ = [
     "Image",
     "PhotoPicker",
     "PhotoSource",
+    "DocumentPicker",
     "ScaleType",
     "DataSource",
     "Action",
@@ -1042,6 +1043,7 @@ class ComponentType(utils.StrEnum):
     DATE_PICKER = "DatePicker"
     IMAGE = "Image"
     PHOTO_PICKER = "PhotoPicker"
+    DOCUMENT_PICKER = "DocumentPicker"
 
 
 class _Ref:
@@ -1116,6 +1118,7 @@ class Form(Component):
         | EmbeddedLink
         | Image
         | PhotoPicker
+        | DocumentPicker
         | Footer
         | dict[str, Any]
     ]
@@ -1939,6 +1942,60 @@ class PhotoPicker(FormComponent):
     max_file_size_kb: int | str | DataKey | None = None
     min_uploaded_photos: int | str | DataKey | None = None
     max_uploaded_photos: int | str | DataKey | None = None
+    enabled: bool | str | DataKey | None = None
+    visible: bool | str | DataKey | None = None
+    error_message: str | DataKey | None = None
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class DocumentPicker(FormComponent):
+    """
+    DocumentPicker component allows uploading files from the device
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components/media_upload#document-picker>`_.
+    - Added in v4.0
+    - Only 1 DocumentPicker is allowed per screen
+    - Using both :class:`PhotoPicker` and :class:`DocumentPicker` components on a single screen is not allowed.
+    - Note: some old Android and iOS OS versions don’t understand all mime types above. As a result, a user might be able to select a file with a different mime type to the ones specified.
+
+    Example:
+
+        >>> from pywa.types.flows import DocumentPicker
+        >>> document_picker = DocumentPicker(
+        ...     name='document',
+        ...     label='Upload your Driving License',
+        ...     description='We need your document for verification',
+        ...     max_file_size_kb=5_000,  # 5MB
+        ...     min_uploaded_documents=1,
+        ...     max_uploaded_documents=1,
+        ...     allowed_mime_types=['application/pdf', 'image/jpeg', 'image/png'],
+        )
+
+    Attributes:
+        name: The unique name (id) for this component (to be used dynamically or in action payloads).
+        label: The label of the document picker. Limited to 30 characters. Can be dynamic.
+        description: The description of the document picker. Limited to 300 characters. Can be dynamic.
+        max_file_size_kb: The maximum file size in KB. Can be dynamic. Default value: 25600 (25 MiB)
+        min_uploaded_documents: The minimum number of documents that can be uploaded. Can be dynamic. This property determines whether the component is optional (set to 0) or required (set above 0).
+        max_uploaded_documents: The maximum number of documents that can be uploaded. Can be dynamic. Default value: 30
+        allowed_mime_types: Specifies which document mime types can be selected. If it contains “image/jpeg”, picking photos from the gallery will be available as well. Can be dynamic. Default value: Any document from the supported mime types can be selected.
+        enabled: Whether the document picker is enabled or not. Default to ``True``. Can be dynamic.
+        visible: Whether the document picker is visible or not. Default to ``True``. Can be dynamic.
+        error_message: The error message of the document picker. Can be dynamic.
+    """
+
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.DOCUMENT_PICKER, init=False, repr=False
+    )
+    required: None = dataclasses.field(default=None, init=False, repr=False)
+    init_value: None = dataclasses.field(default=None, init=False, repr=False)
+    name: str
+    label: str | DataKey
+    description: str | DataKey | None = None
+    max_file_size_kb: int | str | DataKey | None = None
+    min_uploaded_documents: int | str | DataKey | None = None
+    max_uploaded_documents: int | str | DataKey | None = None
+    allowed_mime_types: Iterable[str] | str | DataKey | None = None
     enabled: bool | str | DataKey | None = None
     visible: bool | str | DataKey | None = None
     error_message: str | DataKey | None = None

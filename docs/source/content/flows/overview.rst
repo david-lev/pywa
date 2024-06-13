@@ -87,6 +87,7 @@ Every component on the FlowJSON, has a corresponding class in :mod:`pywa.types.f
        :class:`Dropdown`,
        :class:`OptIn`
        :class:`PhotoPicker`
+       :class:`DocumentPicker`
    * - Navigation
      - :class:`EmbeddedLink`,
        :class:`Footer`
