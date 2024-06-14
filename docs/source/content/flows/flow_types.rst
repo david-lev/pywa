@@ -36,3 +36,7 @@ Flow Types
 .. autofunction:: default_flow_request_decryptor
 
 .. autofunction:: default_flow_response_encryptor
+
+.. autofunction:: flow_request_media_decryptor_sync
+
+.. autofunction:: flow_request_media_decryptor_async

@@ -69,6 +69,31 @@ class BaseMediaAsync:
             **kwargs,
         )
 
+    @classmethod
+    def from_flow_completion(
+        cls, client: WhatsApp, media: dict[str, str]
+    ) -> BaseMediaAsync:
+        """
+        Create a media object from the media dict returned by the flow completion.
+
+        Example:
+            >>> from pywa_async import WhatsApp, types
+            >>> wa = WhatsApp()
+            >>> @wa.on_flow_completion()
+            ... async def on_flow_completion(_: WhatsApp, flow: types.FlowCompletion):
+            ...     img = types.Image.from_flow_completion(client=wa, media=flow.response['media'])
+            ...     await img.download()
+
+        Args:
+            client: The WhatsApp client.
+            media: The media dict returned by the flow completion.
+
+        Returns:
+            The media object (Image, Video, Sticker, Document, Audio).
+        """
+        # noinspection PyUnresolvedReferences
+        return cls.from_dict(media, _client=client)
+
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Image(BaseMediaAsync, _Image):

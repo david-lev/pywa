@@ -20,6 +20,7 @@ Media
 .. autoproperty:: BaseMedia.extension
 .. automethod:: BaseMedia.get_media_url
 .. automethod:: BaseMedia.download
+.. automethod:: BaseMedia.from_flow_completion
 
 ----------------
 

@@ -14,7 +14,7 @@ from .callback import (
     SectionRow,
     FlowButton,
 )
-from .media import MediaUrlResponse
+from .media import MediaUrlResponse, Audio, Document, Image, Sticker, Video
 from .message import Message
 from .message_status import (
     Conversation,

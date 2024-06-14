@@ -59,6 +59,13 @@ Or it can be dynamic; your server can respond to screen actions and determine th
 
 .. note::
 
+    WhatsApp just `announced <https://developers.facebook.com/docs/whatsapp/flows/changelogs#june-11th--2024-release>`_ on **Conditional Component Rendering**.
+    This feature allows you to conditionally render components based on the data that is available in the flow!
+
+    - See :class:`If` and :class:`Switch` components.
+
+.. note::
+
     WORK IN PROGRESS
 
     I really recommend you to read the `Flow JSON Docs <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson>`_ before you continue.
@@ -667,6 +674,15 @@ what screen to open next or complete the flow.
 
     If you want example of more complex flow, you can check out the `Sign up Flow Example <../examples/sign_up_flow.html>`_.
 
+
+.. note::
+
+    If you using :class:`PhotoPicker` or :class:`DocumentPicker` components, and handling requests containing their data, you need
+    to decrypt the files. ``pywa`` provides a helper function to decrypt the files:
+
+    - Syncronous: :func:`~pywa.utils.flow_request_media_decryptor_sync`
+    - Asyncronous: :func:`~pywa.utils.flow_request_media_decryptor_async`
+
 Getting Flow Completion message
 -------------------------------
 
@@ -694,6 +710,19 @@ Here is how to listen to flow completion request:
         print(flow.response)
 
 The .response attribute is the payload you sent when you completed the flow.
+
+.. note::
+
+    if you using :class:`PhotoPicker` or :class:`DocumentPicker` components, you will receive the files inside the flow completion .response.
+    You can constract them into pywa media objects using one of :class:`Image`, :class:`Video`, :class:`Audio`, :class:`Document` classes:
+
+    .. code-block:: python
+        :linenos:
+
+        from pywa.types import Image
+
+        image = Image.from_flow_completion(flow.response["image"])
+        image.download("path/to/save")
 
 
 .. toctree::

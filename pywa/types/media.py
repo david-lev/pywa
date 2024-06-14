@@ -80,6 +80,28 @@ class BaseMedia(abc.ABC, utils.FromDict):
             **kwargs,
         )
 
+    @classmethod
+    def from_flow_completion(cls, client: WhatsApp, media: dict[str, str]) -> BaseMedia:
+        """
+        Create a media object from the media dict returned by the flow completion.
+
+        Example:
+            >>> from pywa import WhatsApp, types
+            >>> wa = WhatsApp()
+            >>> @wa.on_flow_completion()
+            ... def on_flow_completion(_: WhatsApp, flow: types.FlowCompletion):
+            ...     img = types.Image.from_flow_completion(client=wa, media=flow.response['media'])
+            ...     img.download()
+
+        Args:
+            client: The WhatsApp client.
+            media: The media dict returned by the flow completion.
+
+        Returns:
+            The media object (Image, Video, Sticker, Document, Audio).
+        """
+        return cls.from_dict(media, _client=client)
+
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Image(BaseMedia):

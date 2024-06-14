@@ -1,13 +1,19 @@
 from __future__ import annotations
 
-import base64
 import functools
 import json
+import base64
+import hashlib
+import hmac
 import dataclasses
 import enum
 import importlib
 import warnings
 from typing import Any, Callable, Protocol, TypeAlias
+
+
+import httpx
+import requests
 
 HUB_VT = "hub.verify_token"
 """The key for the verify token in the query parameters of the webhook get request."""
@@ -274,6 +280,151 @@ def default_flow_response_encryptor(response: dict, aes_key: bytes, iv: bytes) -
         + encryptor.finalize()
         + encryptor.tag
     ).decode("utf-8")
+
+
+def _download_cdn_file_sync(
+    session: requests.Session | httpx.Client, url: str
+) -> bytes:
+    response = session.get(url)
+    response.raise_for_status()
+    return response.content
+
+
+async def _download_cdn_file_async(session: httpx.AsyncClient, url: str) -> bytes:
+    response = await session.get(url)
+    response.raise_for_status()
+    return response.content
+
+
+def flow_request_media_decryptor_sync(
+    encrypted_media: dict[str, str | dict[str, str]],
+    dl_session: requests.Session | httpx.Client | None = None,
+) -> tuple[str, str, bytes]:
+    """
+    Decrypt the encrypted media file from the flow request.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components/media_upload#endpoint>`_.
+    - This implementation requires ``cryptography`` to be installed. To install it, run ``pip3 install 'pywa[cryptography]'`` or ``pip3 install cryptography``.
+    - This implementation is synchronous. Use this if your flow request callback is synchronous, otherwise use :func:`flow_request_media_decryptor_async`.
+
+    Example:
+
+        >>> from pywa import WhatsApp, utils, types
+        >>> wa = WhatsApp(...)
+        >>> @wa.on_flow_request("/media-upload")
+        ... def on_media_upload_request(_: WhatsApp, flow: types.FlowRequest) -> types.FlowResponse | None:
+        ...     encrypted_media = flow.data["driver_license"][0]
+        ...     media_id, filename, decrypted_data = utils.flow_request_media_decryptor_sync(encrypted_media)
+        ...     with open(filename, "wb") as file:
+        ...         file.write(decrypted_data)
+        ...     return types.FlowResponse(...)
+
+    Args:
+        encrypted_media (dict): encrypted media data from the flow request (see example above).
+        dl_session (requests.Session | httpx.Client): download session. Optional.
+
+    Returns:
+        tuple[str, str, bytes]
+        - media_id (str): media ID
+        - filename (str): media filename
+        - decrypted_data (bytes): decrypted media file
+
+    Raises:
+        ValueError: If any of the hash verifications fail.
+    """
+    cdn_file = _download_cdn_file_sync(
+        dl_session or httpx.Client(), encrypted_media["cdn_url"]
+    )
+    return (
+        encrypted_media["media_id"],
+        encrypted_media["file_name"],
+        _flow_request_media_decryptor(cdn_file, encrypted_media["encryption_metadata"]),
+    )
+
+
+async def flow_request_media_decryptor_async(
+    encrypted_media: dict[str, str | dict[str, str]],
+    dl_session: httpx.AsyncClient | None = None,
+) -> tuple[str, str, bytes]:
+    """
+    Decrypt the encrypted media file from the flow request.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components/media_upload#endpoint>`_.
+    - This implementation requires ``cryptography`` to be installed. To install it, run ``pip3 install 'pywa[cryptography]'`` or ``pip3 install cryptography``.
+    - This implementation is asynchronous. Use this if your flow request callback is asynchronous, otherwise use :func:`flow_request_media_decryptor_sync`.
+
+    Example:
+
+        >>> from pywa import WhatsApp, utils, types
+        >>> wa = WhatsApp(...)
+        >>> @wa.on_flow_request("/media-upload")
+        ... async def on_media_upload_request(_: WhatsApp, flow: types.FlowRequest) -> types.FlowResponse | None:
+        ...     encrypted_media = flow.data["driver_license"][0]
+        ...     media_id, filename, decrypted_data = await utils.flow_request_media_decryptor_async(encrypted_media)
+        ...     with open(filename, "wb") as file:
+        ...         file.write(decrypted_data)
+        ...     return types.FlowResponse(...)
+
+    Args:
+        encrypted_media (dict): encrypted media data from the flow request (see example above).
+        dl_session (httpx.AsyncClient): download session. Optional.
+
+    Returns:
+        tuple[str, str, bytes]
+        - media_id (str): media ID
+        - filename (str): media filename
+        - decrypted_data (bytes): decrypted media file
+
+    Raises:
+        ValueError: If any of the hash verifications fail.
+    """
+    cdn_file = await _download_cdn_file_async(
+        dl_session or httpx.AsyncClient(), encrypted_media["cdn_url"]
+    )
+    return (
+        encrypted_media["media_id"],
+        encrypted_media["file_name"],
+        _flow_request_media_decryptor(cdn_file, encrypted_media["encryption_metadata"]),
+    )
+
+
+def _flow_request_media_decryptor(
+    cdn_file: bytes, encryption_metadata: dict[str, str]
+) -> bytes:
+    """The actual implementation of the media decryption."""
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+    from cryptography.hazmat.primitives.padding import PKCS7
+    from cryptography.hazmat.backends import default_backend
+
+    ciphertext = cdn_file[:-10]
+    sha256 = hashlib.sha256(cdn_file)
+    calculated_hash = base64.b64encode(sha256.digest()).decode()
+    if calculated_hash != encryption_metadata["encrypted_hash"]:
+        raise ValueError("CDN file hash verification failed")
+    if (
+        hmac.new(
+            base64.b64decode(encryption_metadata["hmac_key"]),
+            base64.b64decode(encryption_metadata["iv"]) + ciphertext,
+            hashlib.sha256,
+        ).digest()[:10]
+        != cdn_file[-10:]
+    ):
+        raise ValueError("HMAC verification failed")
+    decryptor = Cipher(
+        algorithms.AES(base64.b64decode(encryption_metadata["encryption_key"])),
+        modes.CBC(base64.b64decode(encryption_metadata["iv"])),
+        backend=default_backend(),
+    ).decryptor()
+    decrypted_data = decryptor.update(ciphertext) + decryptor.finalize()
+    unpadder = PKCS7(128).unpadder()
+    decrypted_data = unpadder.update(decrypted_data) + unpadder.finalize()
+    sha256 = hashlib.sha256(decrypted_data)
+    if (
+        base64.b64encode(sha256.digest()).decode()
+        != encryption_metadata["plaintext_hash"]
+    ):
+        raise ValueError("Decrypted data hash verification failed")
+    return decrypted_data
 
 
 def rename_func(extended_with: str) -> Callable:
