@@ -81,6 +81,7 @@ class Version(enum.Enum):
     `WhatsApp Flows <https://developers.facebook.com/docs/whatsapp/flows/changelogs>`_.
 
     - Use the constant to get the latest version. Example: ``WhatsApp(..., api_version=Version.GRAPH_API)``
+    - Using the latest version can break your code if the API changes. Use constants for stability.
     - Use the ``min`` attribute to get the minimum version. Example: Version.GRAPH_API.min
 
     Attributes:
@@ -92,7 +93,7 @@ class Version(enum.Enum):
 
     # KEY = (MIN_VERSION: str, LATEST_VERSION: str)
     GRAPH_API = ("17.0", "19.0")
-    FLOW_JSON = ("2.1", "3.1")
+    FLOW_JSON = ("2.1", "4.0")
     FLOW_DATA_API = ("3.0", "3.0")
     FLOW_MSG = ("3", "3")
 

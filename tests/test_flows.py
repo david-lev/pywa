@@ -1288,7 +1288,7 @@ def test_screen_data():
         layout=Layout(children=[]),
     )
 
-    flow_json = FlowJSON(screens=[screen_1, screen_2]).to_dict()
+    flow_json = FlowJSON(screens=[screen_1, screen_2], version=3.0).to_dict()
     assert flow_json["screens"][0] == flow_json["screens"][1]
 
     # ---
@@ -1338,7 +1338,7 @@ def test_screen_data():
         layout=Layout(children=[]),
     )
 
-    flow_json = FlowJSON(screens=[screen_1, screen_2]).to_dict()
+    flow_json = FlowJSON(screens=[screen_1, screen_2], version=3.0).to_dict()
     assert flow_json["screens"][0] == flow_json["screens"][1]
 
     # ---

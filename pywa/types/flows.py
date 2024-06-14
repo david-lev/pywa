@@ -744,7 +744,7 @@ class FlowJSON:
     """
 
     screens: Iterable[Screen]
-    version: str | float | Literal[utils.Version.FLOW_JSON] = utils.Version.FLOW_JSON
+    version: str | float | Literal[utils.Version.FLOW_JSON]
     data_api_version: str | float | Literal[utils.Version.FLOW_DATA_API] | None = None
     routing_model: dict[str, Iterable[str]] | None = None
     data_channel_uri: str | None = None
