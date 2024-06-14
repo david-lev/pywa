@@ -85,14 +85,15 @@ Every component on the FlowJSON, has a corresponding class in :mod:`pywa.types.f
        :class:`RadioButtonsGroup`,
        :class:`CheckboxGroup`,
        :class:`Dropdown`,
-       :class:`OptIn`
-       :class:`PhotoPicker`
+       :class:`OptIn`,
+       :class:`PhotoPicker`,
        :class:`DocumentPicker`
    * - Navigation
      - :class:`EmbeddedLink`,
        :class:`Footer`
    * - Conditional Component Rendering
-     - :class:`If`
+     - :class:`If`,
+       :class:`Switch`
 
 here is an example of static flow:
 

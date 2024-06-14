@@ -59,6 +59,8 @@ Here you will find all the components that make up a Flow JSON object.
 
 .. autoclass:: If()
 
+.. autoclass:: Switch()
+
 .. autoclass:: DataSource()
 
 .. autoclass:: Action()

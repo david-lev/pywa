@@ -69,6 +69,7 @@ __all__ = [
     "DocumentPicker",
     "ScaleType",
     "If",
+    "Switch",
     "DataSource",
     "Action",
     "FlowActionType",
@@ -1054,6 +1055,7 @@ class ComponentType(utils.StrEnum):
     PHOTO_PICKER = "PhotoPicker"
     DOCUMENT_PICKER = "DocumentPicker"
     IF = "If"
+    SWITCH = "Switch"
 
 
 class _Ref:
@@ -2052,6 +2054,33 @@ class If(Component):
     else_: Iterable[_SUPPOERTED_COMPONENTS] | None = None
 
 
+@dataclasses.dataclass(slots=True, kw_only=True)
+class Switch(Component):
+    """
+    Switch component allows users to add components based on a value of a data key / form ref.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#switch>`_.
+
+    Example:
+
+            >>> from pywa.types.flows import Switch, TextInput
+            >>> age = TextInput(name='age', label='Age')
+            >>> switch = Switch(
+            ...     value=age.form_ref,
+            ...     cases={
+            ...         '20': [TextInput(name='email', label='Email')],
+            ...         '30': [TextInput(name='phone', label='Phone')],
+            ...     }
+    """
+
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.SWITCH, init=False, repr=False
+    )
+    visible: None = dataclasses.field(default=None, init=False, repr=False)
+    value: DataKey | FormRef | str
+    cases: dict[str, Iterable[_SUPPOERTED_COMPONENTS]]
+
+
 class FlowActionType(utils.StrEnum):
     """
     Flow JSON provides a generic way to trigger asynchronous actions handled by a client through interactive UI elements.
@@ -2163,6 +2192,7 @@ _SUPPOERTED_COMPONENTS: TypeAlias = (
     | PhotoPicker
     | DocumentPicker
     | If
+    | Switch
     | Footer
     | dict[str, Any]
 )
