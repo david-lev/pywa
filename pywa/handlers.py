@@ -341,7 +341,7 @@ class _FactoryHandler(Handler):
             if inspect.iscoroutinefunction(self.callback):
                 await self.callback(wa, update)
             else:
-                await self.callback(wa, update)
+                self.callback(wa, update)
             return True
         return False
 
