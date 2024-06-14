@@ -3,17 +3,28 @@ Changelog
 
 NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-### 1.12.2 (2023-06-02)
+### 1.21.0 (2023-06-14)
+
+- [flows] added new components `PhotoPicker`, `DocumentPicker`, `If` and `Switch`
+- [flows] added `.data_key_of` and `.form_ref_of` to refer from other screens
+- [flows] added `description` to `CheckboxGroup` and to `RadioButtonsGroup`
+- [utils] adding `flow_request_media_decryptor` function to decrypt medias from flow requests
+- [client] allow updating flow application id with `update_flow_metadata`
+- [server] remove event loop
+- [docs] update examples
+- [version] bump `FLOW_JSON` version to `4.0`
+
+### 1.20.2 (2023-06-02)
 
 - [server] improve continue/stop handling
 
 
-### 1.12.1 (2023-06-02)
+### 1.20.1 (2023-06-02)
 
 - [api] fix downloading media content-type
 
 
-### 1.12.0 (2023-06-02)
+### 1.20.0 (2023-06-02)
 
 - [client] adding official support for async (limited support for now)
 
