@@ -759,7 +759,7 @@ class FlowJSON:
         return dataclasses.asdict(
             obj=self,
             dict_factory=lambda d: {
-                k.replace("_", "-").rstrip("_") if k not in _UNDERSCORE_FIELDS else k: v
+                k.replace("_", "-").rstrip("-") if k not in _UNDERSCORE_FIELDS else k: v
                 for (k, v) in d
                 if k not in _SKIP_KEYS and v is not None
             },
