@@ -1139,11 +1139,6 @@ def test_min_version():
         FlowJSON(version="1.0", screens=[])
 
 
-def test_data_channel_uri():
-    with pytest.raises(ValueError):
-        FlowJSON(version="3.0", data_channel_uri="https://example.com", screens=[])
-
-
 def test_empty_form():
     with pytest.raises(ValueError):
         Form(name="form", children=[])
@@ -1159,17 +1154,22 @@ def test_action():
 
 def test_form_ref():
     assert FormRef("test") == "${form.test}"
-    assert FormRef("test", "custom") == "${custom.test}"
+    assert FormRef("test", screen="START") == "${screen.START.form.test}"
     assert TextInput(name="test", label="Test").form_ref == "${form.test}"
     assert (
-        TextInput(name="test", label="Test").form_ref_of("custom_form")
-        == "${custom_form.test}"
+        TextInput(name="test", label="Test").form_ref_of(screen="START")
+        == "${screen.START.form.test}"
     )
 
 
 def test_data_key():
     assert DataKey("test") == "${data.test}"
+    assert DataKey("test", screen="START") == "${screen.START.data.test}"
     assert ScreenData(key="test", example="Example").data_key == "${data.test}"
+    assert (
+        ScreenData(key="test", example="Example").data_key_of(screen="START")
+        == "${screen.START.data.test}"
+    )
 
 
 def test_init_values():

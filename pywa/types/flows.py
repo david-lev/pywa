@@ -8,7 +8,7 @@ import datetime
 import json
 import logging
 import pathlib
-from typing import Iterable, TYPE_CHECKING, Any, BinaryIO, Literal
+from typing import Iterable, TYPE_CHECKING, Any, BinaryIO, Literal, TypeAlias
 
 from .. import utils
 from .base_update import BaseUserUpdate  # noqa
@@ -750,12 +750,6 @@ class FlowJSON:
     def __post_init__(self):
         self.version = str(self.version)
         utils.Version.FLOW_JSON.validate_min_version(self.version)
-        if self.data_channel_uri and float(self.version) >= 3.0:
-            raise ValueError(
-                "When using v3.0 or higher, `data_channel_uri` need to be set via WhatsApp.update_flow_metadata.\n"
-                ">>> wa = WhatsApp(...)\n"
-                f">>> wa.update_flow_metadata(flow_id, endpoint_uri={self.data_channel_uri!r})\n"
-            )
         if self.data_api_version:
             self.data_api_version = str(self.data_api_version)
             utils.Version.FLOW_DATA_API.validate_min_version(self.data_api_version)
@@ -848,6 +842,7 @@ class ScreenData:
         """
         The key for this data to use in the screen children.
             - A shortcut for :class:`DataKey` with this key.
+            - Use this property to reference this data in the screen children. Use the :meth:`data_key_of(screen)` to reference this data in ANOTHER screen children.
 
         Example:
 
@@ -862,6 +857,28 @@ class ScreenData:
 
         """
         return DataKey(self.key)
+
+    def data_key_of(self, screen: str) -> str:
+        """
+        The key for this data to use in ANOTHER screen children.
+            - A shortcut for :class:`DataKey` with this key and screen.
+            - Added in v4.0.
+
+        Example:
+
+            >>> from pywa.types.flows import Screen, ScreenData, TextHeading, DataKey
+            >>> screen = Screen(
+            ...     id='START',
+            ...     data=[dynamic_welcome := ScreenData(key='welcome', example='Welcome to my store!')],
+            ...     layout=Layout(children=[
+            ...         TextHeading(text=dynamic_welcome.data_key_of('START'), ...)
+            ...     ])
+            ... )
+
+        Args:
+            screen: The screen id to reference this data in its children.
+        """
+        return DataKey(key=self.key, screen=screen)
 
 
 _PY_TO_JSON_TYPES = {
@@ -992,6 +1009,7 @@ class Layout:
     Layout is the top level component that holds the other components.
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#layout>`_.
+    - Before v4.0, the following components must be wrapped in a :class:`Form` and can't be used directly in the layout: :class:`TextInput`, :class:`TextArea`, :class:`CheckboxGroup`, :class:`RadioButtonsGroup`, :class:`OptIn`, :class:`Dropdown` and :class:`DatePicker`.
 
     Attributes:
         type: The type of layout that is used to display the components (Default: ``LayoutType.SINGLE_COLUMN``).
@@ -999,17 +1017,7 @@ class Layout:
     """
 
     type: LayoutType = LayoutType.SINGLE_COLUMN
-    children: Iterable[
-        Form
-        | TextHeading
-        | TextSubheading
-        | TextBody
-        | TextCaption
-        | EmbeddedLink
-        | Image
-        | Footer
-        | dict[str, Any]
-    ]
+    children: Iterable[Form | _SUPPOERTED_COMPONENTS]
 
 
 class Component(abc.ABC):
@@ -1049,35 +1057,38 @@ class ComponentType(utils.StrEnum):
 class _Ref:
     """Base class for all variables"""
 
-    def __new__(cls, prefix: str, field: str) -> str:
-        return "${%s.%s}" % (prefix, field)
+    def __new__(cls, prefix: str, field: str, screen: str | None = None) -> str:
+        return "${%s%s.%s}" % (f"screen.{screen}." if screen else "", prefix, field)
 
 
 class DataKey(_Ref):
-    def __new__(cls, key: str):
+    def __new__(cls, key: str, screen: str | None = None):
         """
         Represents a data key (converts to ``${data.<key>}``).
 
         - Hint: use the ``.data_key`` property of :class:`ScreenData` to get the data key of a screen data.
+        - Hint: use the ``.data_key_of(screen)`` method of :class:`ScreenData` to get the data key from another screen.
 
         Args:
             key: The key to get from the :class:`Screen` .data attribute.
+            screen: The screen that contains the data. Added in v4.0.
         """
-        return super().__new__(cls, "data", key)
+        return super().__new__(cls, prefix="data", field=key, screen=screen)
 
 
 class FormRef(_Ref):
-    def __new__(cls, child_name: str, form_name: str = "form"):
+    def __new__(cls, child_name: str, screen: str | None = None):
         """
         Represents a form reference variable (converts to ``${form.<child>}``).
 
         - Hint: use the ``.form_ref`` property of each component to get the form reference variable of that component.
+        - Hint: use the ``.form_ref_of(screen)`` method of each component to get the form reference variable of that component with the given screen name.
 
         Args:
             child_name: The name of the :class:`Form` child to get the value from.
-            form_name: The name of the :class:`Form` to get the child from. Default to ``"form"``.
+            screen: The name of the screen that contains the form. Added in v4.0.
         """
-        return super().__new__(cls, form_name, child_name)
+        return super().__new__(cls, prefix="form", field=child_name, screen=screen)
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1085,7 +1096,7 @@ class Form(Component):
     """
     The form component is a container for other components that collects user input.
 
-    - The following components must be inside Form: :class:`TextInput`, :class:`TextArea`, :class:`CheckboxGroup`,
+    - Before v4.0, the following components must be inside Form: :class:`TextInput`, :class:`TextArea`, :class:`CheckboxGroup`,
       :class:`RadioButtonsGroup`, :class:`OptIn`, :class:`Dropdown` and :class:`DatePicker`.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#forms-and-form-properties>`_.
 
@@ -1103,25 +1114,7 @@ class Form(Component):
     )
     visible: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
-    children: Iterable[
-        TextHeading
-        | TextSubheading
-        | TextBody
-        | TextCaption
-        | TextInput
-        | TextArea
-        | CheckboxGroup
-        | RadioButtonsGroup
-        | OptIn
-        | Dropdown
-        | DatePicker
-        | EmbeddedLink
-        | Image
-        | PhotoPicker
-        | DocumentPicker
-        | Footer
-        | dict[str, Any]
-    ]
+    children: Iterable[_SUPPOERTED_COMPONENTS]
     init_values: dict[str, Any] | str | DataKey | None = None
     error_messages: dict[str, str] | str | DataKey | None = None
 
@@ -1160,7 +1153,7 @@ class Form(Component):
 
 
 class FormComponent(Component, abc.ABC):
-    """Base class for all components that must be inside a form"""
+    """Base class for all components that must be inside a form (if FlowJSON version is below 4.0)"""
 
     @property
     @abc.abstractmethod
@@ -1187,7 +1180,7 @@ class FormComponent(Component, abc.ABC):
         """
         The form reference variable for this component.
             - A shortcut for :class:`FormRef` with this component name.
-            - Use this when form name is ``"form"``, otherwise use ``.form_ref_of`` method.
+            - Use this when the reference is in the same screen. Use ``.form_ref_of(screen)`` when the reference is in another screen.
 
         Example:
 
@@ -1197,18 +1190,25 @@ class FormComponent(Component, abc.ABC):
         """
         return FormRef(self.name)
 
-    def form_ref_of(self, form_name: str) -> str:
+    def form_ref_of(self, screen: str) -> str:
         """
         The form reference variable for this component with the given form name.
-            - A shortcut for :class:`FormRef` with the given form name.
+            - A shortcut for :class:`FormRef` with the given screen name and this component name.
+            - Use ``.form_ref`` property when the reference is in the same screen.
+            - Added in v4.0.
 
         Example:
 
-            >>> from pywa.types.flows import Form, TextInput
-            >>> form = Form(name='my_form', children=[text_input := TextInput(name='email', ...)])
-            >>> text_input.form_ref_of('my_form')
+            >>> from pywa.types.flows import Screen, Layout, Form, TextInput
+            >>> screen = Screen(screen_name="WELCOME", layout=Layout(
+            ...     children=[Form(name='my_form', children=[text_input := TextInput(name='email', ...)])]
+            ... ))
+            >>> text_input.form_ref_of(screen='WELCOME')
+
+        Args:
+            screen: The name of the screen that contains the form.
         """
-        return FormRef(child_name=self.name, form_name=form_name)
+        return FormRef(child_name=self.name, screen=screen)
 
 
 class TextComponent(Component, abc.ABC):
@@ -1397,7 +1397,7 @@ class TextInput(TextEntryComponent):
     """
     Represents a text entry component that allows for a single line of text.
 
-    - This component must be inside a :class:`Form`.
+    - This component must be inside a :class:`Form` (if FlowJSON version is below 4.0).
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#textinput>`_.
 
     Example:
@@ -1448,7 +1448,7 @@ class TextArea(TextEntryComponent):
     """
     Represents a text entry component that allows for multiple lines of text.
 
-    - This component must be inside a :class:`Form`.
+    - This component must be inside a :class:`Form` (if FlowJSON version is below 4.0).
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#textarea>`_.
 
     Example:
@@ -1493,7 +1493,7 @@ class CheckboxGroup(FormComponent):
     """
     CheckboxGroup component allows users to pick multiple selections from a list of options.
 
-    - This component must be inside a :class:`Form`.
+    - This component must be inside a :class:`Form` (if FlowJSON version is below 4.0).
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#checkbox>`_.
 
     Example:
@@ -1548,7 +1548,7 @@ class RadioButtonsGroup(FormComponent):
     """
     RadioButtonsGroup component allows users to pick a single selection from a list of options.
 
-    - This component must be inside a :class:`Form`.
+    - This component must be inside a :class:`Form` (if FlowJSON version is below 4.0).
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#radio>`_.
 
     Example:
@@ -1597,7 +1597,7 @@ class Dropdown(FormComponent):
     """
     Dropdown component allows users to pick a single selection from a list of options.
 
-    - This component must be inside a :class:`Form`.
+    - This component must be inside a :class:`Form` (if FlowJSON version is below 4.0).
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#drop>`_.
 
     Example:
@@ -1691,7 +1691,7 @@ class OptIn(FormComponent):
     """
     OptIn component allows users to check a box to opt in for a specific purpose.
 
-    - This component must be inside a :class:`Form`.
+    - This component must be inside a :class:`Form` (if FlowJSON version is below 4.0).
     - Max number of Opt-Ins Per Screen is 5.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#opt>`_.
 
@@ -1731,7 +1731,6 @@ class EmbeddedLink(Component):
     """
     EmbeddedLink component allows users to navigate to another screen.
 
-    - This component must be inside a :class:`Form`.
     - Max Number of Embedded Links Per Screen is 2.
     - Empty or Blank value is not accepted for the text field.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#embed>`_.
@@ -1767,7 +1766,7 @@ class DatePicker(FormComponent):
     """
     DatePicker component allows users to select a date
 
-    - This component must be inside a :class:`Form`.
+    - This component must be inside a :class:`Form` (if FlowJSON version is below 4.0).
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#dp>`_.
 
     Example:
@@ -2093,3 +2092,24 @@ class Action:
                 raise ValueError(
                     "payload is required for FlowActionType.COMPLETE (use {} for empty payload)"
                 )
+
+
+_SUPPOERTED_COMPONENTS: TypeAlias = (
+    TextHeading
+    | TextSubheading
+    | TextBody
+    | TextCaption
+    | TextInput
+    | TextArea
+    | CheckboxGroup
+    | RadioButtonsGroup
+    | OptIn
+    | Dropdown
+    | DatePicker
+    | EmbeddedLink
+    | Image
+    | PhotoPicker
+    | DocumentPicker
+    | Footer
+    | dict[str, Any]
+)
