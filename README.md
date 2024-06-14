@@ -101,7 +101,7 @@ def click_me(client: WhatsApp, clb: CallbackButton):
     clb.reply_text("You clicked me!")
 ```
 
-- To run the server, use [uvicorn](https://www.uvicorn.org/) (`pip install uvicorn`) from the command line:
+- To run the server, use [uvicorn](https://www.uvicorn.org/) (`pip install "uvicorn[standard]"`):
 
 ```bash
 uvicorn wa:fastapi_app  # see uvicorn docs for more options (port, host, reload, etc.)
@@ -109,8 +109,7 @@ uvicorn wa:fastapi_app  # see uvicorn docs for more options (port, host, reload,
 
 💫 **Async Usage**
 
-- PyWa has beta async support. At the moment it seems that there are problems running with flask or with fastapi when running uvicorn from the code (and not from the command line).
-To use the async version, just replace all the imports from `pywa` to `pywa_async` and use `async`/`await`:
+- PyWa has beta async support. To use the async version, just replace all the imports from `pywa` to `pywa_async` and use `async`/`await`:
 
 ```python
 # wa.py
