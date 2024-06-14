@@ -91,6 +91,8 @@ Every component on the FlowJSON, has a corresponding class in :mod:`pywa.types.f
    * - Navigation
      - :class:`EmbeddedLink`,
        :class:`Footer`
+   * - Conditional Component Rendering
+     - :class:`If`
 
 here is an example of static flow:
 

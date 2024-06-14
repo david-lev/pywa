@@ -44,6 +44,7 @@ __all__ = [
     "PhotoSource",
     "DocumentPicker",
     "ScaleType",
+    "If",
     "DataSource",
     "Action",
     "FlowActionType",

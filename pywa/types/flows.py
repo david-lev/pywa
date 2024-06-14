@@ -68,6 +68,7 @@ __all__ = [
     "PhotoSource",
     "DocumentPicker",
     "ScaleType",
+    "If",
     "DataSource",
     "Action",
     "FlowActionType",
@@ -758,7 +759,7 @@ class FlowJSON:
         return dataclasses.asdict(
             obj=self,
             dict_factory=lambda d: {
-                k.replace("_", "-") if k not in _UNDERSCORE_FIELDS else k: v
+                k.replace("_", "-").rstrip("_") if k not in _UNDERSCORE_FIELDS else k: v
                 for (k, v) in d
                 if k not in _SKIP_KEYS and v is not None
             },
@@ -1052,6 +1053,7 @@ class ComponentType(utils.StrEnum):
     IMAGE = "Image"
     PHOTO_PICKER = "PhotoPicker"
     DOCUMENT_PICKER = "DocumentPicker"
+    IF = "If"
 
 
 class _Ref:
@@ -2000,6 +2002,56 @@ class DocumentPicker(FormComponent):
     error_message: str | DataKey | None = None
 
 
+@dataclasses.dataclass(slots=True, kw_only=True)
+class If(Component):
+    """
+    If component allows users to add components based on a condition.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#if>`_.
+    - It is allowed to nest up to 3 :class:`If` components.
+    - Should have at least one dynamic value (e.g. screen_data.data_key / form_comp.form_ref) in the condition.
+    - Should always be resolved into a boolean (i.e. no strings or number values).
+    - Can be used with literals but should not only contain literals.
+    - :class:`Footer` can be added within :class:`If` only in the first level, not inside a nested :class:`If`.
+    - If there is a :class:`Footer` within :class:`If`, it should exist in both branches (i.e. ``then`` and ``else``). This means that ``else`` becomes mandatory.
+    - If there is a :class:`Footer` within :class:`If` it cannot exist a footer outside, because the max count of :class:`Footer` is 1 per screen.
+
+    Example:
+
+            >>> from pywa.types.flows import If, TextInput, ScreenData
+            >>> screen_data = ScreenData(key="age", example=20)
+            >>> if_component = If(
+            ...     condition=f"{screen_data.data_key} > 20 && ({screen_data.data_key} < 30)",
+            ...     then=[
+            ...         TextInput(
+            ...             name='email',
+            ...             label='Email',
+            ...         ),
+            ...     ],
+            ...     else_=[
+            ...         TextInput(
+            ...             name='phone',
+            ...             label='Phone',
+            ...         ),
+            ...     ]
+            ... )
+
+    Attributes:
+        condition: Boolean expression, You can use both dynamic and static values. See `Supported Operators <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#supported-operators>`_.
+        then: The components that will be rendered when ``condition`` is ``True``.
+        else_: The components that will be rendered when ``condition`` is ``False``.
+
+    """
+
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.IF, init=False, repr=False
+    )
+    visible: None = dataclasses.field(default=None, init=False, repr=False)
+    condition: str
+    then: Iterable[_SUPPOERTED_COMPONENTS]
+    else_: Iterable[_SUPPOERTED_COMPONENTS] | None = None
+
+
 class FlowActionType(utils.StrEnum):
     """
     Flow JSON provides a generic way to trigger asynchronous actions handled by a client through interactive UI elements.
@@ -2110,6 +2162,7 @@ _SUPPOERTED_COMPONENTS: TypeAlias = (
     | Image
     | PhotoPicker
     | DocumentPicker
+    | If
     | Footer
     | dict[str, Any]
 )
