@@ -2,6 +2,12 @@
 .. mdinclude:: ../../README.md
 
 .. mdinclude:: ../../CHANGELOG.md
+    :start-line: 0
+    :end-line: 30
+
+For full changelog, see `here <content/changelog.html>`_.
+____________________________________________________
+
 
 🔗 **Contents**
 ---------------
@@ -22,3 +28,4 @@
     /content/errors/overview
     /content/types/overview
     /content/examples/overview
+    /content/changelog
