@@ -181,7 +181,7 @@ See the [Documentation](https://pywa.readthedocs.io/) for detailed instructions
 
 Feel free to open an issue if you have any suggestions. or even better - submit a PR!
 
-📝 **License**
+⚖️ **License**
 ---------------
 
 This project is licensed under the MIT License - see the
