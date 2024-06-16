@@ -2,10 +2,9 @@
 
 __all__ = ["Server"]
 
-import asyncio
 import logging
 import threading
-from typing import TYPE_CHECKING, Callable, Any, Coroutine
+from typing import TYPE_CHECKING, Callable
 
 from . import utils, handlers, errors
 from .handlers import Handler, ChatOpenedHandler, TemplateStatusHandler  # noqa
@@ -34,6 +33,7 @@ from .types.flows import (
     FlowRequestCannotBeDecrypted,
     FlowResponseError,  # noqa
     FlowTokenNoLongerValid,
+    FlowRequestActionType,
 )
 from .utils import FastAPI, Flask
 
@@ -41,7 +41,6 @@ if TYPE_CHECKING:
     from .client import WhatsApp
 
 _VERIFY_TIMEOUT_SEC = 6
-
 
 _MESSAGE_TYPES: dict[MessageType, type[Handler]] = {
     MessageType.BUTTON: CallbackButtonHandler,
@@ -463,7 +462,7 @@ class Server:
         private_key_password: str | None = None,
         request_decryptor: utils.FlowRequestDecryptor | None = None,
         response_encryptor: utils.FlowResponseEncryptor | None = None,
-    ) -> Callable[[dict], Coroutine[Any, Any, tuple[str, int]]]:
+    ) -> handlers.FlowRequestCallbackWrapper:
         """
         Get a function that handles the incoming flow requests.
 
@@ -513,130 +512,17 @@ class Server:
         Returns:
             A function that handles the incoming flow request and returns (response, status_code).
         """
-        private_key = private_key or self._private_key
-        private_key_password = private_key_password or self._private_key_password
-        if not private_key:
-            raise ValueError(
-                "A private_key must be provided in order to decrypt incoming requests. You can provide it when "
-                "initializing the WhatsApp client or when registering the flow request callback."
-            )
-        request_decryptor = request_decryptor or self._flows_request_decryptor
-        if not request_decryptor:
-            raise ValueError(
-                "A `request_decryptor` must be provided in order to decrypt incoming requests. You can provide it when "
-                "initializing the WhatsApp client or when registering the flow request callback."
-            )
-        response_encryptor = response_encryptor or self._flows_response_encryptor
-        if not response_encryptor:
-            raise ValueError(
-                "A `response_encryptor` must be provided in order to encrypt outgoing responses. You can provide it "
-                "when initializing the WhatsApp client or when registering the flow request callback."
-            )
-        if (
-            request_decryptor is utils.default_flow_request_decryptor
-            or response_encryptor is utils.default_flow_response_encryptor
-        ) and not utils.is_installed("cryptography"):
-            raise ValueError(
-                "The default decryptor/encryptor requires the `cryptography` package to be installed."
-                '\n>> Install it with `pip install cryptography` / pip install "pywa[cryptography]"` or use a '
-                "custom decryptor/encryptor."
-            )
-        if endpoint == self._webhook_endpoint:
-            raise ValueError(
-                "The flow endpoint cannot be the same as the webhook endpoint."
-            )
-
-        async def flow_request_handler(payload: dict) -> tuple[str, int]:
-            """Callback function that handles the incoming flow requests."""
-            try:
-                decrypted_request, aes_key, iv = request_decryptor(
-                    payload["encrypted_flow_data"],
-                    payload["encrypted_aes_key"],
-                    payload["initial_vector"],
-                    private_key,
-                    private_key_password,
-                )
-            except Exception:
-                _logger.exception(
-                    "Flow Endpoint ('%s'): Decryption failed for payload: %s",
-                    endpoint,
-                    payload,
-                )
-                return "Decryption failed", FlowRequestCannotBeDecrypted.status_code
-            _logger.debug(
-                "Flow Endpoint ('%s'): Received decrypted request: %s",
-                endpoint,
-                decrypted_request,
-            )
-            if handle_health_check and decrypted_request["action"] == "ping":
-                return response_encryptor(
-                    {
-                        "version": decrypted_request["version"],
-                        "data": {"status": "active"},
-                    },
-                    aes_key,
-                    iv,
-                ), 200
-            try:
-                request = FlowRequest.from_dict(
-                    data=decrypted_request, raw_encrypted=payload
-                )
-            except Exception:
-                _logger.exception(
-                    "Flow Endpoint ('%s'): Failed to construct FlowRequest from decrypted data: %s",
-                    endpoint,
-                    decrypted_request,
-                )
-
-                return "Failed to construct FlowRequest", 500
-            try:
-                if asyncio.iscoroutinefunction(callback):
-                    response = await callback(self, request)
-                else:
-                    response = callback(self, request)
-                if isinstance(response, FlowResponseError):
-                    raise response
-            except FlowTokenNoLongerValid as e:
-                return (
-                    response_encryptor(
-                        {"error_msg": e.error_message},
-                        aes_key,
-                        iv,
-                    ),
-                    e.status_code,
-                )
-            except FlowResponseError as e:
-                return e.__class__.__name__, e.status_code
-            except Exception:
-                _logger.exception(
-                    "Flow Endpoint ('%s'): An error occurred while %s was handling a flow request",
-                    endpoint,
-                    callback.__name__,
-                )
-                return "An error occurred", 500
-
-            if acknowledge_errors and request.has_error:
-                return response_encryptor(
-                    {
-                        "version": request.version,
-                        "data": {
-                            "acknowledged": True,
-                        },
-                    },
-                    aes_key,
-                    iv,
-                ), 200
-            if not isinstance(response, (FlowResponse | dict)):
-                raise TypeError(
-                    f"Flow endpoint '({endpoint})' callback must return a `FlowResponse` or `dict`, not {type(response)}"
-                )
-            return response_encryptor(
-                response.to_dict() if isinstance(response, FlowResponse) else response,
-                aes_key,
-                iv,
-            ), 200
-
-        return flow_request_handler
+        return handlers.FlowRequestCallbackWrapper(
+            wa=self,
+            endpoint=endpoint,
+            callback=callback,
+            acknowledge_errors=acknowledge_errors,
+            handle_health_check=handle_health_check,
+            private_key=private_key,
+            private_key_password=private_key_password,
+            request_decryptor=request_decryptor,
+            response_encryptor=response_encryptor,
+        )
 
     def _register_flow_endpoint_callback(
         self: "WhatsApp",
@@ -648,7 +534,7 @@ class Server:
         private_key_password: str | None,
         request_decryptor: utils.FlowRequestDecryptor | None,
         response_encryptor: utils.FlowResponseEncryptor | None,
-    ) -> None:
+    ) -> handlers.FlowRequestCallbackWrapper:
         """Internal function to register a flow endpoint callback."""
         if self._server is None:
             raise ValueError(
@@ -656,7 +542,7 @@ class Server:
                 " (Flask or FastAPI) in order to handle incoming flow requests."
             )
 
-        handler = self.get_flow_request_handler(
+        callback_wrapper = self.get_flow_request_handler(
             endpoint=endpoint,
             callback=callback,
             acknowledge_errors=acknowledge_errors,
@@ -676,7 +562,7 @@ class Server:
                     @self._server.route(endpoint, methods=["POST"])
                     @utils.rename_func(f"({endpoint})")
                     async def flask_flow() -> tuple[str, int]:
-                        return await handler(flask.request.json)
+                        return await callback_wrapper(flask.request.json)
                 else:
                     raise ValueError(
                         "Flask with ASGI is required to handle incoming updates asynchronously. Please install "
@@ -688,8 +574,10 @@ class Server:
                 @self._server.post(endpoint)
                 @utils.rename_func(f"({endpoint})")
                 async def fastapi_flow(req: fastapi.Request) -> fastapi.Response:
-                    response, status_code = await handler(await req.json())
+                    response, status_code = await callback_wrapper(await req.json())
                     return fastapi.Response(
                         content=response,
                         status_code=status_code,
                     )
+
+        return callback_wrapper
