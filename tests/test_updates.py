@@ -75,7 +75,7 @@ TYPES: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
     "flow_completion": {
         "completion": [
             lambda f: f.token is not None,
-            lambda f: "flow_token" in f.response,
+            lambda f: "flow_token" not in f.response,
         ],
         "without_flow_token": [lambda f: f.token is None],
     },
