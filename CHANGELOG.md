@@ -3,7 +3,15 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-#### 1.21.0 (2023-06-14)  **Latest**
+#### 1.22.0 (2023-06-16)  **Latest**
+
+- [handlers] introducing `FlowRequestCallbackWrapper` to help split flow endpoint logic to multiple handlers
+- [client] adding `add_flow_request_handler` method to register `FlowRequestHandler`s
+- [flows] pop `flow_token` from `FlowCompletion`.response
+- [docs] update examples
+
+
+#### 1.21.0 (2023-06-14)
 
 - [flows] added new components `PhotoPicker`, `DocumentPicker`, `If` and `Switch`
 - [flows] added `.data_key_of` and `.form_ref_of` to refer from other screens
@@ -14,15 +22,15 @@
 - [docs] update examples
 - [version] bump `FLOW_JSON` version to `4.0`
 
+
 #### 1.20.2 (2023-06-02)
 
 - [server] improve continue/stop handling
 
-
 #### 1.20.1 (2023-06-02)
 
-- [api] fix downloading media content-type
 
+- [api] fix downloading media content-type
 
 #### 1.20.0 (2023-06-02)
 
