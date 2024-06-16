@@ -1042,7 +1042,7 @@ WhatsApp will use to send data to our server. We can do this by using the :meth:
         endpoint_uri="https://my-server.com/sign-up-flow",
     )
 
-This endpoint must, of course, be pointing to our server. We can use ngrok or a similar tool to expose our server to the internet.
+This endpoint must, of course, be pointing to our server. We can use serveo, localtunnel or a similar tool to expose our server to the internet.
 
 Finally, let's update the flow's JSON with :meth:`~pywa.client.WhatsApp.update_flow_json`:
 
@@ -1241,58 +1241,104 @@ Now, let's handle the flow request. we can handle all the screens in one code bl
 .. code-block:: python
     :linenos:
 
-    def handle_signup_screen(request: FlowRequest) -> FlowResponse:
+    @on_sign_up_request.on(
+        action=FlowRequestActionType.DATA_EXCHANGE,
+        screen="SIGN_UP",
+        data_filter=lambda _, data: user_repository.exists(data["email"]),
+    )
+    def if_already_registered(_: WhatsApp, request: FlowRequest) -> FlowResponse | None:
+        return FlowResponse(
+            version=request.version,
+            screen="LOGIN",
+            error_message="You are already registered. Please login",
+            data={
+                "email_initial_value": request.data["email"],
+                "password_initial_value": request.data["password"],
+            },
+        )
 
-        if user_repository.exists(request.data["email"]):
-            return FlowResponse(
-                version=request.version,
-                screen="LOGIN",
-                error_message="You are already registered. Please login",
-                data={
-                    "email_initial_value": request.data["email"],
-                    "password_initial_value": request.data["password"],
-                },
-            )
-        elif request.data["password"] != request.data["confirm_password"]:
-            return FlowResponse(
-                version=request.version,
-                screen=request.screen,
-                error_message="Passwords do not match",
-                data={
-                    "first_name_initial_value": request.data["first_name"],
-                    "last_name_initial_value": request.data["last_name"],
-                    "email_initial_value": request.data["email"],
-                    "password_initial_value": "",
-                    "confirm_password_initial_value": "",
-                },
-            )
-        elif not any(char.isdigit() for char in request.data["password"]):
-            return FlowResponse(
-                version=request.version,
-                screen=request.screen,
-                error_message="Password must contain at least one number",
-                data={
-                    "first_name_initial_value": request.data["first_name"],
-                    "last_name_initial_value": request.data["last_name"],
-                    "email_initial_value": request.data["email"],
-                    "password_initial_value": "",
-                    "confirm_password_initial_value": "",
-                },
-            )
-        else:
-            user_repository.create(request.data["email"], request.data)
-            return FlowResponse(
-                version=request.version,
-                screen="LOGIN",
-                data={
-                    "email_initial_value": request.data["email"],
-                    "password_initial_value": "",
-                },
-            )
+    @on_sign_up_request.on(
+        action=FlowRequestActionType.DATA_EXCHANGE,
+        screen="SIGN_UP",
+        data_filter=lambda _, data: data["password"] != data["confirm_password"],
+    )
+    def if_passwords_dont_match(_: WhatsApp, request: FlowRequest) -> FlowResponse | None:
+        return FlowResponse(
+            version=request.version,
+            screen=request.screen,
+            error_message="Passwords do not match",
+            data={
+                "first_name_initial_value": request.data["first_name"],
+                "last_name_initial_value": request.data["last_name"],
+                "email_initial_value": request.data["email"],
+                "password_initial_value": "",
+                "confirm_password_initial_value": "",
+            },
+        )
+
+    @on_sign_up_request.on(
+        action=FlowRequestActionType.DATA_EXCHANGE,
+        screen="SIGN_UP",
+        data_filter=lambda _, data: not any(char.isdigit() for char in data["password"]),
+    )
+    def if_password_does_not_contain_number(
+        _: WhatsApp, request: FlowRequest
+    ) -> FlowResponse | None:
+        return FlowResponse(
+            version=request.version,
+            screen=request.screen,
+            error_message="Password must contain at least one number",
+            data={
+                "first_name_initial_value": request.data["first_name"],
+                "last_name_initial_value": request.data["last_name"],
+                "email_initial_value": request.data["email"],
+                "password_initial_value": "",
+                "confirm_password_initial_value": "",
+            },
+        )
+
+    @on_sign_up_request.on(action=FlowRequestActionType.DATA_EXCHANGE, screen="SIGN_UP")
+    def submit_signup(_: WhatsApp, request: FlowRequest) -> FlowResponse | None:
+        user_repository.create(request.data["email"], request.data)
+        return FlowResponse(
+            version=request.version,
+            screen="LOGIN",
+            data={
+                "email_initial_value": request.data["email"],
+                "password_initial_value": "",
+            },
+        )
+
 
 So, what's going on here?
 
+.. note::
+
+    The :meth:`~pywa.handlers.FlowRequestCallbackWrapper.on` decorator added in version ``1.22.0``.
+    before that, you need to handle the action and screen in the function itself (or manually filter the data).
+
+    .. code-block:: python
+        :linenos:
+
+        @wa.on_flow_request("/sign-up-flow")
+        def on_sign_up_request(_: WhatsApp, flow: FlowRequest) -> FlowResponse | None:
+            if flow.action == FlowRequestActionType.DATA_EXCHANGE:
+                if flow.screen == "SIGN_UP":
+                    if user_repository.exists(flow.data["email"]):
+                        ...
+                    elif flow.data["password"] != flow.data["confirm_password"]:
+                        ...
+                    elif not any(char.isdigit() for char in flow.data["password"]):
+                        ...
+                    else:
+                        ...
+                elif flow.screen == "LOGIN":
+                    ...
+                elif flow.screen == "LOGIN_SUCCESS":
+                    ...
+
 This function handles the ``SIGN_UP`` screen.
+
 We need to check a few things:
 
 - Check if the user is already registered. If they are, we need to navigate to the ``LOGIN`` screen and show an error message
@@ -1311,37 +1357,49 @@ Now, let's handle the ``LOGIN`` screen:
 .. code-block:: python
     :linenos:
 
-    def handle_login_screen(request: FlowRequest) -> FlowResponse:
+    @on_sign_up_request.on(
+        action=FlowRequestActionType.DATA_EXCHANGE,
+        screen="LOGIN",
+        data_filter=lambda _, data: not user_repository.exists(data["email"]),
+    )
+    def if_not_registered(_: WhatsApp, request: FlowRequest) -> FlowResponse | None:
+        return FlowResponse(
+            version=request.version,
+            screen="SIGN_UP",
+            error_message="You are not registered. Please sign up",
+            data={
+                "first_name_initial_value": "",
+                "last_name_initial_value": "",
+                "email_initial_value": request.data["email"],
+                "password_initial_value": "",
+                "confirm_password_initial_value": "",
+            },
+        )
 
-        if not user_repository.exists(request.data["email"]):
-            return FlowResponse(
-                version=request.version,
-                screen="SIGN_UP",
-                error_message="You are not registered. Please sign up",
-                data={
-                    "first_name_initial_value": "",
-                    "last_name_initial_value": "",
-                    "email_initial_value": request.data["email"],
-                    "password_initial_value": "",
-                    "confirm_password_initial_value": "",
-                },
-            )
-        elif not user_repository.is_password_valid(request.data["email"], request.data["password"]):
-            return FlowResponse(
-                version=request.version,
-                screen=request.screen,
-                error_message="Incorrect password",
-                data={
-                    "email_initial_value": request.data["email"],
-                    "password_initial_value": "",
-                },
-            )
-        else:
-            return FlowResponse(
-                version=request.version,
-                screen="LOGIN_SUCCESS",
-                data={},
-            )
+    @on_sign_up_request.on(
+        action=FlowRequestActionType.DATA_EXCHANGE,
+        screen="LOGIN",
+        data_filter=lambda _, data: not user_repository.is_password_valid(data["email"], data["password"]),
+    )
+    def if_incorrect_password(_: WhatsApp, request: FlowRequest) -> FlowResponse | None:
+        return FlowResponse(
+            version=request.version,
+            screen=request.screen,
+            error_message="Incorrect password",
+            data={
+                "email_initial_value": request.data["email"],
+                "password_initial_value": "",
+            },
+        )
+
+    @on_sign_up_request.on(action=FlowRequestActionType.DATA_EXCHANGE, screen="LOGIN")
+    def login_success(_: WhatsApp, request: FlowRequest) -> FlowResponse | None:
+        return FlowResponse(
+            version=request.version,
+            screen="LOGIN_SUCCESS",
+            data={},
+        )
+
 
 The ``LOGIN`` screen is very similar to the ``SIGN_UP`` screen. We need to check a few things:
 
@@ -1359,14 +1417,9 @@ Let's modify out ``on_sign_up_request`` callback function to handle the ``SIGN_U
 
     @wa.on_flow_request("/sign-up-flow")
     def on_sign_up_request(_: WhatsApp, flow: FlowRequest) -> FlowResponse | None:
-        if flow.has_error:
+        if flow.has_error:  # you can handle this also separately by registering another callback with @on_sign_up_request.on_errors
             logging.error("Flow request has error: %s", flow.data)
             return
-
-        if flow.screen == "SIGN_UP":
-            return handle_signup_screen(flow)
-        elif flow.screen == "LOGIN":
-            return handle_login_screen(flow)
 
 
 Handling Flow Completion

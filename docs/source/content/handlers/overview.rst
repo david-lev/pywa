@@ -14,17 +14,17 @@ This means that you can use the same server to handle other parts of your applic
 In order for WhatsApp to send the updates to your server, you need a callback url.
 
 The callback url must be a public, secure (HTTPS) url that points to your server (or your local machine if you are
-testing locally). You can use a service like `ngrok <https://ngrok.com/>`_ , `localtunnel <https://localtunnel.github.io/www/>`_
-or `serveo <https://serveo.net/>`_ to create a secure tunnel to which WhatsApp can send the updates. These services
+testing locally). You can use a service like `serveo <https://serveo.net/>`_ or `localtunnel <https://localtunnel.github.io/www/>`_
+to create a secure tunnel to which WhatsApp can send the updates. These services
 will give you a public url that points to your machine (where you run the code).
 
-Here is an example using ngrok (https://ngrok.com/download)
+Here is an example using serveo
 
-- You will get screen with the public url that points to your machine (The "Forwarding" line)
+- You will get screen with the public url that points to your machine
 
 .. code-block:: bash
 
-    ngrok http 8000
+    ssh -R 80:localhost:8080 serveo.net
 
 
 Once you have a public url, You need to register it. This can be done two ways:
@@ -51,18 +51,19 @@ See `Here <https://developers.facebook.com/docs/development/create-an-app/app-da
     .. code-block:: python
         :caption: main.py
         :linenos:
-        :emphasize-lines: 4, 9, 10, 11, 12, 13
+        :emphasize-lines: 5, 10, 11, 12, 13, 14, 20
 
-        from fastapi import FastAPI
+        import fastapi
+        import uvicorn
         from pywa import WhatsApp
 
-        fastapi_app = FastAPI()
+        fastapi_app = fastapi.FastAPI()
 
         wa = WhatsApp(
             phone_id='1234567890',
             token='xxxxxx',
             server=fastapi_app,
-            callback_url='https://12345678.ngrok.io',
+            callback_url='https://abc123.serveo.net',
             verify_token='XYZ123',
             app_id=123456,
             app_secret='xxxxxx'
@@ -70,13 +71,10 @@ See `Here <https://developers.facebook.com/docs/development/create-an-app/app-da
 
         ... # register the handlers
 
+        if __name__ == '__main__':
+            uvicorn.run(fastapi_app, port=8080)
 
-    .. code-block:: bash
-        :caption: Terminal
-
-        uvicorn main:fastapi_app
-
-    The port that fastapi is running on (``8000`` in the example above) must be the same port that the callback url is listening on (e.g. ``ngrok http 8000``).
+    The port that fastapi is running on (``8080`` in the example above) must be the same port that the callback url is listening on (e.g. ``ssh -R 80:localhost:8080 serveo.net``).
 
 
 --------------------------
@@ -104,12 +102,13 @@ So, start the server:
     .. code-block:: python
         :caption: main.py
         :linenos:
-        :emphasize-lines: 4, 9, 10
+        :emphasize-lines: 5, 10, 11, 17
 
-        from fastapi import FastAPI
+        import fastapi
+        import uvicorn
         from pywa import WhatsApp
 
-        fastapi_app = FastAPI()
+        fastapi_app = fastapi.FastAPI()
 
         wa = WhatsApp(
             phone_id='1234567890',
@@ -120,13 +119,10 @@ So, start the server:
 
         ... # register the handlers
 
+        if __name__ == '__main__':
+            uvicorn.run(fastapi_app, port=8080)
 
-    .. code-block:: bash
-        :caption: Terminal
-
-        uvicorn main:fastapi_app
-
-    The port that fastapi is running on (``8000`` in the example above) must be the same port that the callback url is listening on (e.g. ``ngrok http 8000``).
+    The port that fastapi is running on (``8080`` in the example above) must be the same port that the callback url is listening on (e.g. ``ssh -R 80:localhost:8080 serveo.net``).
 
 Then, register the callback url in the WhatsApp App Dashboard.
 

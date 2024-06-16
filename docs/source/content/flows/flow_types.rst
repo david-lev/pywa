@@ -40,3 +40,9 @@ Flow Types
 .. autofunction:: flow_request_media_decryptor_sync
 
 .. autofunction:: flow_request_media_decryptor_async
+
+
+.. currentmodule:: pywa.handlers
+
+.. autoclass:: FlowRequestCallbackWrapper
+    :members: on, on_errors, add_handler, set_errors_handler

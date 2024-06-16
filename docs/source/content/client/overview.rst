@@ -3,10 +3,6 @@
 
 .. currentmodule:: pywa.client
 
-.. note::
-
-    WORK IN PROGRESS
-
 
 The :class:`~WhatsApp` client has 3 main responsibilities:
 
@@ -21,8 +17,6 @@ for listening to incoming messages and events, you will need to tell WhatsApp to
     :class: note
 
     Pywa provides two clients, synchronous and asynchronous, you can choose the one that fits your needs.
-
-    .. important::
 
     .. code-block:: python
         :emphasize-lines: 1

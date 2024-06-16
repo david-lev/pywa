@@ -36,7 +36,7 @@
 
 
 Create a WhatsApp Application
-=============================
+-----------------------------
 
     You already have an app? skip to `Setup the App <#id1>`_.
 
@@ -102,7 +102,7 @@ To do that you need a Facebook Developer account. If you don't have one, `you ca
 --------------------
 
 Setup the App
-=============
+-------------
 
 
     You already have **Phone ID** and **Token**? skip to `Send a Message <#id2>`_.
@@ -146,7 +146,7 @@ of the phone number you will use to send and receive messages. You will need to 
 --------------------
 
 Send a Message
-==============
+--------------
 
 
 So now you have a ``phone id`` and a ``token``. You can use them to send messages:
@@ -184,7 +184,7 @@ And that's it! You are ready to send messages!
 --------------------
 
 Quick Start
-===========
+-----------
 
 Now you can continue to the next section and learn how to use the ``pywa`` package. here is a quick overview of the package:
 
