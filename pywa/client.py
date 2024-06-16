@@ -21,7 +21,12 @@ import requests
 
 from . import utils
 from .api import WhatsAppCloudApi
-from .handlers import Handler, HandlerDecorators, FlowRequestHandler  # noqa
+from .handlers import (
+    Handler,
+    HandlerDecorators,
+    FlowRequestHandler,
+    FlowRequestCallbackWrapper,
+)  # noqa
 from .types import (
     BusinessProfile,
     Button,
@@ -238,7 +243,43 @@ class WhatsApp(Server, HandlerDecorators):
         """Update the token in API calls."""
         self.api._session.headers["Authorization"] = f"Bearer {value}"
 
-    def add_handlers(self, *handlers: Handler | FlowRequestHandler):
+    def add_flow_request_handler(
+        self, handler: FlowRequestHandler
+    ) -> FlowRequestCallbackWrapper:
+        """
+        Add a flow request handler.
+
+        Example:
+
+                >>> from pywa.handlers import FlowRequestHandler
+                >>> from pywa import filters as fil
+                >>> wa = WhatsApp(...)
+                >>> wa.add_flow_request_handler(
+                ...     FlowRequestHandler(
+                ...         endpoint="/flow",
+                ...         callback=lambda _, flow: ...,
+                ...     )
+                ... ).set_errors_handler(lambda _, error: ...)
+                ... .add_handler(lambda _, flow: ..., screen="RECOMMENDED")
+
+        Args:
+            handler: The flow request handler to add.
+
+        Returns:
+            A wrapper to help split the logic of the handler.
+        """
+        return self._register_flow_endpoint_callback(
+            endpoint=handler.endpoint,
+            callback=handler.callback,
+            acknowledge_errors=handler.acknowledge_errors,
+            handle_health_check=handler.handle_health_check,
+            private_key=handler.private_key,
+            private_key_password=handler.private_key_password,
+            request_decryptor=handler.request_decryptor,
+            response_encryptor=handler.response_encryptor,
+        )
+
+    def add_handlers(self, *handlers: Handler):
         """
         Add handlers programmatically instead of using decorators.
 
@@ -263,16 +304,13 @@ class WhatsApp(Server, HandlerDecorators):
             )
         for handler in handlers:
             if isinstance(handler, FlowRequestHandler):
-                self._register_flow_endpoint_callback(
-                    endpoint=handler.endpoint,
-                    callback=handler.callback,
-                    acknowledge_errors=handler.acknowledge_errors,
-                    handle_health_check=handler.handle_health_check,
-                    private_key=handler.private_key,
-                    private_key_password=handler.private_key_password,
-                    request_decryptor=handler.request_decryptor,
-                    response_encryptor=handler.response_encryptor,
+                warnings.simplefilter("always", DeprecationWarning)
+                warnings.warn(
+                    message="The `add_handlers` method does not support `FlowRequestHandler`. Use `add_flow_request_handler` instead.",
+                    category=DeprecationWarning,
+                    stacklevel=2,
                 )
+                self.add_flow_request_handler(handler)
                 continue
             self._handlers[handler.__class__].append(handler)
 
