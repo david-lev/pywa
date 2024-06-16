@@ -410,6 +410,7 @@ Now, we need to wrap everything in a :class:`FlowJSON` object and create the flo
     from pywa.types.flows import FlowJSON
 
     SIGN_UP_FLOW_JSON = FlowJSON(
+        version=utils.Version.FLOW_JSON,
         data_api_version=utils.Version.FLOW_DATA_API,
         routing_model={
             "START": ["SIGN_UP", "LOGIN"],
@@ -463,6 +464,7 @@ Here is all the flow code in one place:
         )
 
         SIGN_UP_FLOW_JSON = FlowJSON(
+            version=utils.Version.FLOW_JSON,
             data_api_version=utils.Version.FLOW_DATA_API,
             routing_model={
                 "START": ["SIGN_UP", "LOGIN"],

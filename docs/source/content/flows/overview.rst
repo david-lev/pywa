@@ -112,6 +112,7 @@ here is an example of static flow:
         :emphasize-lines: 6, 13, 19, 25, 31, 36, 37, 38, 39, 40
 
         static_flow = FlowJSON(
+            version=utils.Version.FLOW_JSON,
             screens=[
                 Screen(
                     id="SIGN_UP",
@@ -248,6 +249,7 @@ Here is example of dynamic flow:
 
 
         dynamic_flow = FlowJSON(
+            version=utils.Version.FLOW_JSON,
             data_api_version=utils.Version.FLOW_DATA_API,
             routing_model={},
             screens=[
