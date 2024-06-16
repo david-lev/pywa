@@ -33,13 +33,16 @@ __all__ = [
     "TemplateStatusHandler",
     "FlowCompletionHandler",
     "FlowRequestHandler",
+    "FlowRequestCallbackWrapper",
     "ChatOpenedHandler",
 ]
 
 import abc
+import asyncio
 import dataclasses
 import functools
 import inspect
+import logging
 from typing import TYPE_CHECKING, Any, Callable, cast, TypeAlias, Awaitable
 
 from . import utils
@@ -54,7 +57,13 @@ from .types import (
     ChatOpened,
     CallbackData,
 )
-from .types.flows import FlowCompletion, FlowResponseError  # noqa
+from .types.flows import (
+    FlowCompletion,
+    FlowResponseError,
+    FlowRequestActionType,
+    FlowRequestCannotBeDecrypted,
+    FlowTokenNoLongerValid,
+)  # noqa
 
 if TYPE_CHECKING:
     from .client import WhatsApp
@@ -78,6 +87,8 @@ _FlowRequestHandlerT: TypeAlias = Callable[
     | Awaitable[FlowResponse | FlowResponseError | dict | None],
 ]
 """Type hint for the flow request handler."""
+
+_logger = logging.getLogger(__name__)
 
 
 def _safe_issubclass(obj: type, base: type) -> bool:
@@ -974,7 +985,10 @@ class HandlerDecorators:
         private_key_password: str | None = None,
         request_decryptor: utils.FlowRequestDecryptor | None = None,
         response_encryptor: utils.FlowResponseEncryptor | None = None,
-    ) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT]:
+    ) -> Callable[
+        [_FlowRequestHandlerT],
+        FlowRequestCallbackWrapper,
+    ]:
         """
         Decorator to register a function to handle and respond to incoming Flow Data Exchange requests.
 
@@ -1007,8 +1021,8 @@ class HandlerDecorators:
         @functools.wraps(self.on_flow_request)
         def decorator(
             callback: _FlowRequestHandlerT,
-        ) -> _FlowRequestHandlerT:
-            self._register_flow_endpoint_callback(
+        ) -> FlowRequestCallbackWrapper:
+            callback_wrapper = self._register_flow_endpoint_callback(
                 endpoint=endpoint,
                 callback=callback,
                 acknowledge_errors=acknowledge_errors,
@@ -1018,6 +1032,316 @@ class HandlerDecorators:
                 request_decryptor=request_decryptor,
                 response_encryptor=response_encryptor,
             )
+            return callback_wrapper
+
+        return decorator
+
+
+class FlowRequestCallbackWrapper:
+    """
+    This is a wrapper class for the flow request callback.
+    It allows you to add more handlers to the same endpoint and split the logic into multiple functions.
+
+    - THIS CLASS IS NOT MEANT TO BE INSTANTIATED DIRECTLY!
+    """
+
+    def __init__(
+        self,
+        wa: WhatsApp,
+        endpoint: str,
+        callback: _FlowRequestHandlerT,
+        acknowledge_errors: bool = True,
+        handle_health_check: bool = True,
+        private_key: str | None = None,
+        private_key_password: str | None = None,
+        request_decryptor: utils.FlowRequestDecryptor | None = None,
+        response_encryptor: utils.FlowResponseEncryptor | None = None,
+    ):
+        self._wa = wa
+        self._endpoint = endpoint
+        self._main_callback = callback
+        self._error_callback: _FlowRequestHandlerT | None = None
+        self._on_callbacks = list[
+            tuple[
+                FlowRequestActionType | str,
+                str | None,
+                Callable[["WhatsApp", dict | None], bool] | None,
+                _FlowRequestHandlerT,
+            ],
+        ]()  # [(action, screen?, data_filter?, callback), ...]
+        self._acknowledge_errors = acknowledge_errors
+        self._handle_health_check = handle_health_check
+        self._private_key = private_key or wa._private_key
+        self._private_key_password = private_key_password or wa._private_key_password
+
+        if self._endpoint == wa._webhook_endpoint:
+            raise ValueError(
+                "The flow endpoint cannot be the same as the WhatsApp webhook endpoint."
+            )
+        if not self._private_key:
+            raise ValueError(
+                "A private_key must be provided in order to decrypt incoming requests. You can provide it when "
+                "initializing the WhatsApp client or when registering the flow request callback."
+            )
+        self._request_decryptor = request_decryptor or wa._flows_request_decryptor
+        if not self._request_decryptor:
+            raise ValueError(
+                "A `request_decryptor` must be provided in order to decrypt incoming requests. You can provide it when "
+                "initializing the WhatsApp client or when registering the flow request callback."
+            )
+        self._response_encryptor = response_encryptor or wa._flows_response_encryptor
+        if not self._response_encryptor:
+            raise ValueError(
+                "A `response_encryptor` must be provided in order to encrypt outgoing responses. You can provide it "
+                "when initializing the WhatsApp client or when registering the flow request callback."
+            )
+        if (
+            self._request_decryptor is utils.default_flow_request_decryptor
+            or self._response_encryptor is utils.default_flow_response_encryptor
+        ) and not utils.is_installed("cryptography"):
+            raise ValueError(
+                "The default decryptor/encryptor requires the `cryptography` package to be installed."
+                '\n>> Install it with `pip install cryptography` / pip install "pywa[cryptography]"` or use a '
+                "custom decryptor/encryptor."
+            )
+
+    def on(
+        self,
+        *,
+        action: FlowRequestActionType,
+        screen: str | None = None,
+        data_filter: Callable[[WhatsApp, dict | None], bool] | None = None,
+    ) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT]:
+        """
+        Decorator to help you add more handlers to the same endpoint and split the logic into multiple functions.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_flow_request("/feedback_flow")
+            >>> def feedback_flow_handler(_: WhatsApp, flow: FlowRequest):
+            ...    if flow.has_error: print(flow.data)
+            >>> @feedback_flow_handler.on(action=FlowRequestActionType.INIT)
+            >>> def on_init(_: WhatsApp, flow: FlowRequest):
+            ...     ...
+            >>> @feedback_flow_handler.on(action=FlowRequestActionType.DATA_EXCHANGE, screen="SURVEY")
+            >>> def on_survey_data_exchange(_: WhatsApp, flow: FlowRequest):
+            ...     ...
+            >>> @feedback_flow_handler.on(..., data_filter=lambda _, data: data.get("rating") == 5)
+            >>> def on_rating_5(_: WhatsApp, flow: FlowRequest):
+            ...     ...
+
+        Args:
+            action: The action type to listen to.
+            screen: The screen ID to listen to.
+            data_filter: A filter function to apply to the incoming data.
+
+        Returns:
+            The function itself.
+        """
+
+        def decorator(callback: _FlowRequestHandlerT):
+            self.add_handler(
+                callback=callback, action=action, screen=screen, data_filter=data_filter
+            )
             return callback
 
         return decorator
+
+    def on_errors(self) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT]:
+        """
+        Decorator to add an error handler to the current endpoint.
+
+        - Shortcut for :func:`~pywa.client.FlowRequestCallbackWrapper.set_errors_handler`.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_flow_request("/feedback_flow")
+            >>> def feedback_flow_handler(_: WhatsApp, flow: FlowRequest):
+            ...    ...
+            >>> @feedback_flow_handler.on_errors()
+            >>> def on_error(_: WhatsApp, flow: FlowRequest):
+            ...     logging.error("An error occurred: %s", flow.data)
+
+        Returns:
+            The function itself.
+        """
+
+        def decorator(callback: _FlowRequestHandlerT):
+            self.set_errors_handler(callback)
+            return callback
+
+        return decorator
+
+    def add_handler(
+        self,
+        *,
+        callback: _FlowRequestHandlerT,
+        action: FlowRequestActionType,
+        screen: str | None = None,
+        data_filter: Callable[[WhatsApp, dict | None], bool] | None = None,
+    ) -> FlowRequestCallbackWrapper:
+        """
+        Add a handler to the current endpoint.
+
+        - You can add multiple handlers to the same endpoint and split the logic into multiple functions.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> def feedback_flow_handler(_: WhatsApp, flow: FlowRequest):
+            ...    ...
+            >>> on_init = lambda _, flow: ...
+            >>> on_survey_data_exchange = lambda _, flow: ...
+            >>> wa.add_flow_request_handler(
+            ...     FlowRequestHandler(callback=feedback_flow_handler, endpoint="/feedback_flow")
+            ... ).add_handler(callback=on_init, action=FlowRequestActionType.INIT)
+            ...  .add_handler(callback=on_survey_data_exchange, action=FlowRequestActionType.DATA_EXCHANGE, screen="SURVEY")
+
+
+        Args:
+            callback: The callback function to handle this particular request.
+            action: The action type to listen to.
+            screen: The screen ID to listen to.
+            data_filter: A filter function to apply to the incoming data.
+
+        Returns:
+            The current instance.
+        """
+        self._on_callbacks.append((action, screen, data_filter, callback))
+        return self
+
+    def set_errors_handler(
+        self, callback: _FlowRequestHandlerT
+    ) -> FlowRequestCallbackWrapper:
+        """
+        Add an error handler to the current endpoint.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> def feedback_flow_handler(_: WhatsApp, flow: FlowRequest):
+            ...    ...
+            >>> def on_error(_: WhatsApp, flow: FlowRequest):
+            ...     logging.error("An error occurred: %s", flow.data)
+            >>> wa.add_flow_request_handler(
+            ...
+
+        Args:
+            callback: The callback function to handle errors.
+
+        Returns:
+            The current instance.
+
+        Raises:
+            ValueError: If an error handler is already set for this endpoint.
+        """
+        if self._error_callback:
+            raise ValueError("An error handler is already set for this endpoint.")
+        self._error_callback = callback
+        return self
+
+    async def __call__(self, payload: dict) -> tuple[str, int]:
+        try:
+            decrypted_request, aes_key, iv = self._request_decryptor(
+                payload["encrypted_flow_data"],
+                payload["encrypted_aes_key"],
+                payload["initial_vector"],
+                self._private_key,
+                self._private_key_password,
+            )
+        except Exception:
+            _logger.exception(
+                "Flow Endpoint ('%s'): Decryption failed for payload: %s",
+                self._endpoint,
+                payload,
+            )
+            return "Decryption failed", FlowRequestCannotBeDecrypted.status_code
+        _logger.debug(
+            "Flow Endpoint ('%s'): Received decrypted request: %s",
+            self._endpoint,
+            decrypted_request,
+        )
+        if self._handle_health_check and decrypted_request["action"] == "ping":
+            return self._response_encryptor(
+                {
+                    "version": decrypted_request["version"],
+                    "data": {"status": "active"},
+                },
+                aes_key,
+                iv,
+            ), 200
+        try:
+            request = FlowRequest.from_dict(
+                data=decrypted_request, raw_encrypted=payload
+            )
+        except Exception:
+            _logger.exception(
+                "Flow Endpoint ('%s'): Failed to construct FlowRequest from decrypted data: %s",
+                self._endpoint,
+                decrypted_request,
+            )
+
+            return "Failed to construct FlowRequest", 500
+
+        if request.has_error and self._error_callback:
+            callback = self._error_callback
+        else:
+            for action, screen, data_filter, callback in self._on_callbacks:
+                if action == request.action and (
+                    screen is None or screen == request.screen
+                ):
+                    if data_filter is None or data_filter(self._wa, request.data):
+                        callback = callback
+                        break
+            else:
+                callback = self._main_callback
+
+        try:
+            if asyncio.iscoroutinefunction(callback):
+                response = await callback(self._wa, request)
+            else:
+                response = callback(self._wa, request)
+            if isinstance(response, FlowResponseError):
+                raise response
+        except FlowTokenNoLongerValid as e:
+            return (
+                self._response_encryptor(
+                    {"error_msg": e.error_message},
+                    aes_key,
+                    iv,
+                ),
+                e.status_code,
+            )
+        except FlowResponseError as e:
+            return e.__class__.__name__, e.status_code
+        except Exception:
+            _logger.exception(
+                "Flow Endpoint ('%s'): An error occurred while %s was handling a flow request",
+                self._endpoint,
+                callback.__name__,
+            )
+            return "An error occurred", 500
+
+        if self._acknowledge_errors and request.has_error:
+            return self._response_encryptor(
+                {
+                    "version": request.version,
+                    "data": {
+                        "acknowledged": True,
+                    },
+                },
+                aes_key,
+                iv,
+            ), 200
+        if not isinstance(response, (FlowResponse | dict)):
+            raise TypeError(
+                f"Flow endpoint ('{self._endpoint}') callback ('{callback.__name__}') must return a `FlowResponse`"
+                f" or `dict`, not {type(response)}"
+            )
+        return self._response_encryptor(
+            response.to_dict() if isinstance(response, FlowResponse) else response,
+            aes_key,
+            iv,
+        ), 200
