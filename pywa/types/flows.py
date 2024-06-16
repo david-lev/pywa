@@ -111,11 +111,15 @@ class FlowCompletion(BaseUserUpdate):
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> FlowCompletion:
         msg = (value := update["entry"][0]["changes"][0]["value"])["messages"][0]
-        response = json.loads(msg["interactive"]["nfm_reply"]["response_json"])
-        if (flow_token := response.get("flow_token")) is None:
+        response: dict = json.loads(msg["interactive"]["nfm_reply"]["response_json"])
+        if response.get("flow_token") is None:
+            flow_token = None
             _logger.warning(
                 "A flow completion message without flow token is received, This is a known issue on iOS devices."
             )
+        else:
+            flow_token = response.pop("flow_token")
+
         return cls(
             _client=client,
             raw=update,
@@ -737,7 +741,7 @@ class FlowJSON:
 
     Attributes:
         screens: The screens of the flow (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#screens>`_).
-        version: The Flow JSON version. Default to latest (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/versioning>`_).
+        version: The Flow JSON version. (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/versioning>`_).
         data_api_version: The version to use during communication with the WhatsApp Flows Data Endpoint. Use ``utils.Version.FLOW_DATA_API`` to get the latest version
         routing_model: Defines the rules for the screen by limiting the possible state transition. (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#routing-model>`_).
         data_channel_uri: The endpoint to use to communicate with your server (When using v3.0 or higher, this field need to be set via :meth:`WhatsApp.update_flow_metadata`).
