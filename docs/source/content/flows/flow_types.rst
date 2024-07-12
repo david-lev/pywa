@@ -23,9 +23,14 @@ Flow Types
 
 .. autoclass:: FlowAsset()
 
+.. autoclass:: FlowResponseError()
+    :show-inheritance:
+
 .. autoclass:: FlowTokenNoLongerValid()
+    :show-inheritance:
 
 .. autoclass:: FlowRequestSignatureAuthenticationFailed()
+    :show-inheritance:
 
 .. currentmodule:: pywa.utils
 

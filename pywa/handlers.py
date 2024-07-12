@@ -33,7 +33,6 @@ __all__ = [
     "TemplateStatusHandler",
     "FlowCompletionHandler",
     "FlowRequestHandler",
-    "FlowRequestCallbackWrapper",
     "ChatOpenedHandler",
 ]
 
@@ -677,7 +676,6 @@ class HandlerDecorators:
              instance and the incoming update as :class:`dict` and return a :class:`bool` if the update should be handled).
         """
 
-        @functools.wraps(self.on_raw_update)
         def decorator(
             callback: Callable[[WhatsApp, dict], Any | Awaitable[Any]],
         ) -> Callable[[WhatsApp, dict], Any | Awaitable[Any]]:
@@ -712,7 +710,6 @@ class HandlerDecorators:
              instance and the incoming :class:`pywa.types.Message` and return a boolean).
         """
 
-        @functools.wraps(self.on_message)
         def decorator(
             callback: Callable[[WhatsApp, Message], Any | Awaitable[Any]],
         ) -> Callable[[WhatsApp, Message], Any | Awaitable[Any]]:
@@ -753,7 +750,6 @@ class HandlerDecorators:
              filters will get the callback data after the factory is applied).
         """
 
-        @functools.wraps(self.on_callback_button)
         def decorator(
             callback: Callable[[WhatsApp, CallbackButton], Any | Awaitable[Any]],
         ) -> Callable[[WhatsApp, CallbackButton], Any | Awaitable[Any]]:
@@ -801,7 +797,6 @@ class HandlerDecorators:
              filters will get the callback data after the factory is applied).
         """
 
-        @functools.wraps(self.on_callback_selection)
         def decorator(
             callback: Callable[[WhatsApp, CallbackSelection], Any | Awaitable[Any]],
         ) -> Callable[[WhatsApp, CallbackSelection], Any | Awaitable[Any]]:
@@ -853,7 +848,6 @@ class HandlerDecorators:
                 filters will get the tracker data after the factory is applied).
         """
 
-        @functools.wraps(self.on_message_status)
         def decorator(
             callback: Callable[[WhatsApp, MessageStatus], Any | Awaitable[Any]],
         ) -> Callable[[WhatsApp, MessageStatus], Any | Awaitable[Any]]:
@@ -895,7 +889,6 @@ class HandlerDecorators:
                 :class:`pywa.WhatsApp` instance and the incoming :class:`pywa.types.ChatOpened` and return :class:`bool`).
         """
 
-        @functools.wraps(self.on_chat_opened)
         def decorator(
             callback: Callable[[WhatsApp, ChatOpened], Any | Awaitable[Any]],
         ) -> Callable[[WhatsApp, ChatOpened], Any | Awaitable[Any]]:
@@ -931,7 +924,6 @@ class HandlerDecorators:
                 :class:`pywa.WhatsApp` instance and the incoming :class:`pywa.types.TemplateStatus` and return :class:`bool`).
         """
 
-        @functools.wraps(self.on_template_status)
         def decorator(
             callback: Callable[[WhatsApp, TemplateStatus], Any | Awaitable[Any]],
         ) -> Callable[[WhatsApp, TemplateStatus], Any | Awaitable[Any]]:
@@ -966,7 +958,6 @@ class HandlerDecorators:
                 :class:`pywa.WhatsApp` instance and the incoming :class:`pywa.types.FlowCompletion` and return :class:`bool`).
         """
 
-        @functools.wraps(self.on_flow_completion)
         def decorator(
             callback: Callable[[WhatsApp, FlowCompletion], Any | Awaitable[Any]],
         ) -> Callable[[WhatsApp, FlowCompletion], Any | Awaitable[Any]]:
@@ -1018,7 +1009,6 @@ class HandlerDecorators:
             response_encryptor: The function to use to encrypt the responses (Override the global ``flows_response_encryptor``)
         """
 
-        @functools.wraps(self.on_flow_request)
         def decorator(
             callback: _FlowRequestHandlerT,
         ) -> FlowRequestCallbackWrapper:
@@ -1119,16 +1109,16 @@ class FlowRequestCallbackWrapper:
 
             >>> wa = WhatsApp(...)
             >>> @wa.on_flow_request("/feedback_flow")
-            >>> def feedback_flow_handler(_: WhatsApp, flow: FlowRequest):
-            ...    if flow.has_error: print(flow.data)
+            >>> def feedback_flow_handler(_: WhatsApp, req: FlowRequest):
+            ...    if req.has_error: print(req.data)
             >>> @feedback_flow_handler.on(action=FlowRequestActionType.INIT)
-            >>> def on_init(_: WhatsApp, flow: FlowRequest):
+            >>> def on_init(_: WhatsApp, req: FlowRequest):
             ...     ...
             >>> @feedback_flow_handler.on(action=FlowRequestActionType.DATA_EXCHANGE, screen="SURVEY")
-            >>> def on_survey_data_exchange(_: WhatsApp, flow: FlowRequest):
+            >>> def on_survey_data_exchange(_: WhatsApp, req: FlowRequest):
             ...     ...
             >>> @feedback_flow_handler.on(..., data_filter=lambda _, data: data.get("rating") == 5)
-            >>> def on_rating_5(_: WhatsApp, flow: FlowRequest):
+            >>> def on_rating_5(_: WhatsApp, req: FlowRequest):
             ...     ...
 
         Args:
@@ -1158,11 +1148,11 @@ class FlowRequestCallbackWrapper:
 
             >>> wa = WhatsApp(...)
             >>> @wa.on_flow_request("/feedback_flow")
-            >>> def feedback_flow_handler(_: WhatsApp, flow: FlowRequest):
+            >>> def feedback_flow_handler(_: WhatsApp, req: FlowRequest):
             ...    ...
             >>> @feedback_flow_handler.on_errors()
-            >>> def on_error(_: WhatsApp, flow: FlowRequest):
-            ...     logging.error("An error occurred: %s", flow.data)
+            >>> def on_error(_: WhatsApp, req: FlowRequest):
+            ...     logging.error("An error occurred: %s", req.data)
 
         Returns:
             The function itself.
@@ -1190,10 +1180,10 @@ class FlowRequestCallbackWrapper:
         Example:
 
             >>> wa = WhatsApp(...)
-            >>> def feedback_flow_handler(_: WhatsApp, flow: FlowRequest):
+            >>> def feedback_flow_handler(_: WhatsApp, req: FlowRequest):
             ...    ...
-            >>> on_init = lambda _, flow: ...
-            >>> on_survey_data_exchange = lambda _, flow: ...
+            >>> on_init = lambda _, req: ...
+            >>> on_survey_data_exchange = lambda _, req: ...
             >>> wa.add_flow_request_handler(
             ...     FlowRequestHandler(callback=feedback_flow_handler, endpoint="/feedback_flow")
             ... ).add_handler(callback=on_init, action=FlowRequestActionType.INIT)
@@ -1221,11 +1211,13 @@ class FlowRequestCallbackWrapper:
         Example:
 
             >>> wa = WhatsApp(...)
-            >>> def feedback_flow_handler(_: WhatsApp, flow: FlowRequest):
+            >>> def feedback_flow_handler(_: WhatsApp, req: FlowRequest):
             ...    ...
-            >>> def on_error(_: WhatsApp, flow: FlowRequest):
-            ...     logging.error("An error occurred: %s", flow.data)
+            >>> def on_error(_: WhatsApp, req: FlowRequest):
+            ...     logging.error("An error occurred: %s", req.data)
             >>> wa.add_flow_request_handler(
+            ...     FlowRequestHandler(callback=feedback_flow_handler, endpoint="/feedback_flow")
+            ... ).set_errors_handler(callback=on_error)
             ...
 
         Args:
@@ -1305,17 +1297,15 @@ class FlowRequestCallbackWrapper:
                 response = callback(self._wa, request)
             if isinstance(response, FlowResponseError):
                 raise response
-        except FlowTokenNoLongerValid as e:
+        except FlowResponseError as e:
             return (
                 self._response_encryptor(
-                    {"error_msg": e.error_message},
+                    e.body or {"error": e.__class__.__name__},
                     aes_key,
                     iv,
                 ),
                 e.status_code,
             )
-        except FlowResponseError as e:
-            return e.__class__.__name__, e.status_code
         except Exception:
             _logger.exception(
                 "Flow Endpoint ('%s'): An error occurred while %s was handling a flow request",

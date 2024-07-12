@@ -372,9 +372,11 @@ class FlowResponseError(Exception):
 
     - Subclass this exception to return or raise from the flow endpoint callback (@wa.on_flow_request).
     - Override the ``status_code`` attribute to set the status code of the response.
+    - Override the ``body`` attribute to set the body of the response (optional).
     """
 
     status_code: int
+    body: dict | None = None
 
 
 class FlowRequestCannotBeDecrypted(FlowResponseError):
@@ -420,7 +422,7 @@ class FlowTokenNoLongerValid(FlowResponseError):
     status_code = 427
 
     def __init__(self, error_message: str):
-        self.error_message = error_message
+        self.body = {"error_msg": error_message}
 
 
 class FlowStatus(utils.StrEnum):
