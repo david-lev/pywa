@@ -16,7 +16,6 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
 
     def __init__(
         self,
-        phone_id: str,
         token: str,
         session: httpx.AsyncClient,
         session_sync: httpx.Client,
@@ -24,7 +23,6 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         api_version: float,
     ):
         super().__init__(
-            phone_id=phone_id,
             token=token,
             session=session,  # noqa
             base_url=base_url,
@@ -33,7 +31,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         self._session_sync = self._setup_session(session_sync, token)
 
     def __str__(self):
-        return f"WhatsAppCloudApiAsync(phone_id={self.phone_id!r})"
+        return f"WhatsAppCloudApiAsync(session={self._session!r})"
 
     async def _make_request(self, method: str, endpoint: str, **kwargs) -> dict | list:
         """
@@ -65,7 +63,9 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             raise WhatsAppError.from_dict(error=res.json()["error"], response=res)
         return res.json()
 
-    def get_app_access_token(self, app_id: int, app_secret: str) -> dict[str, str]:
+    async def get_app_access_token(
+        self, app_id: int, app_secret: str
+    ) -> dict[str, str]:
         """
         Get an access token for an app.
 
@@ -176,6 +176,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         self,
         callback_url: str,
         verify_token: str,
+        phone_id: str,
     ) -> dict[str, bool]:
         """
         Set an alternate callback URL on the business phone number.
@@ -183,6 +184,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/embedded-signup/webhooks/override#set-phone-number-alternate-callback>`_.
 
         Args:
+            phone_id: The ID of the phone number to set the callback URL on.
             callback_url: The URL to set.
             verify_token: The verify token to challenge the webhook with.
 
@@ -191,7 +193,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         """
         return await self._make_request(
             method="POST",
-            endpoint=f"/{self.phone_id}/",
+            endpoint=f"/{phone_id}/",
             json={
                 "webhook_configuration": {
                     "override_callback_uri": callback_url,
@@ -202,6 +204,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
 
     async def set_business_public_key(
         self,
+        phone_id: str,
         public_key: str,
     ) -> dict[str, bool]:
         """
@@ -216,6 +219,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             }
 
         Args:
+            phone_id: The ID of the phone number to set the public key on.
             public_key: The public key to set.
 
         Returns:
@@ -223,12 +227,13 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         """
         return await self._make_request(
             method="POST",
-            endpoint=f"/{self.phone_id}/whatsapp_business_encryption",
+            endpoint=f"/{phone_id}/whatsapp_business_encryption",
             data={"business_public_key": public_key},
         )
 
     async def upload_media(
         self,
+        phone_id: str,
         media: bytes,
         mime_type: str,
         filename: str,
@@ -245,6 +250,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             }
 
         Args:
+            phone_id: The ID of the phone number to upload the media to.
             media: media bytes or open(path, 'rb') object
             mime_type: The type of the media file
             filename: The name of the media file
@@ -256,7 +262,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             try:
                 res = await session.request(
                     method="POST",
-                    url=f"{self._base_url}/{self.phone_id}/media",
+                    url=f"{self._base_url}/{phone_id}/media",
                     files={
                         "file": (filename, media, mime_type),
                         "messaging_product": (None, "whatsapp"),
@@ -341,7 +347,6 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         Send a raw request to WhatsApp Cloud API.
 
         - Use this method if you want to send a request that is not yet supported by pywa.
-        - The endpoint can contain path parameters (e.g. ``/{phone_id}/messages/``). only ``phone_id`` is supported.
         - Every request will automatically include the ``Authorization`` and ``Content-Type`` headers. you can override them by passing them in ``kwargs`` (headers={...}).
 
         Args:
@@ -368,12 +373,13 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         """
         return await self._make_request(
             method=method,
-            endpoint=endpoint.format(phone_id=self.phone_id),
+            endpoint=endpoint,
             **kwargs,
         )
 
     async def send_message(
         self,
+        sender: str,
         to: str,
         typ: str,
         msg: dict[str, str | list[str]] | tuple[dict],
@@ -386,6 +392,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages>`_.
 
         Args:
+            sender: The phone id to send the message from.
             to: The phone number to send the message to.
             typ: The type of the message (e.g. ``text``, ``image``, etc.).
             msg: The message object to send.
@@ -408,12 +415,15 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             data["biz_opaque_callback_data"] = biz_opaque_callback_data
         return await self._make_request(
             method="POST",
-            endpoint=f"/{self.phone_id}/messages",
+            endpoint=f"/{sender}/messages",
             json=data,
         )
 
     async def register_phone_number(
-        self, pin: str, data_localization_region: str = None
+        self,
+        phone_id: str,
+        pin: str,
+        data_localization_region: str = None,
     ) -> dict[str, bool]:
         """
         Register a phone number.
@@ -425,13 +435,18 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
                 'success': True,
             }
 
+        Args:
+            phone_id: The ID of the phone number to register.
+            pin: The pin to register the phone number with.
+            data_localization_region: The region to localize the data (Value must be a 2-letter ISO 3166 country code (e.g. IN) indicating the country where you want data-at-rest to be stored).
+
         Returns:
             The success of the operation.
         """
 
         return await self._make_request(
             method="POST",
-            endpoint=f"/{self.phone_id}/register",
+            endpoint=f"/{phone_id}/register",
             json={
                 "messaging_product": "whatsapp",
                 "pin": pin,
@@ -443,7 +458,11 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             },
         )
 
-    async def mark_message_as_read(self, message_id: str) -> dict[str, bool]:
+    async def mark_message_as_read(
+        self,
+        phone_id: str,
+        message_id: str,
+    ) -> dict[str, bool]:
         """
         Mark a message as read.
 
@@ -456,6 +475,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             }
 
         Args:
+            phone_id: The ID of the phone number that message belongs to.
             message_id: The ID of the message to mark as read.
 
         Returns:
@@ -463,7 +483,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         """
         return await self._make_request(
             method="POST",
-            endpoint=f"/{self.phone_id}/messages",
+            endpoint=f"/{phone_id}/messages",
             json={
                 "messaging_product": "whatsapp",
                 "status": "read",
@@ -472,7 +492,9 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         )
 
     async def get_business_phone_number(
-        self, fields: tuple[str, ...] | None = None
+        self,
+        phone_id: str,
+        fields: tuple[str, ...] | None = None,
     ) -> dict[str, Any]:
         """
         Get the business phone number.
@@ -492,6 +514,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
 
             }
         Args:
+            phone_id: The ID of the phone number to get.
             fields: The fields to get.
 
         Returns:
@@ -499,12 +522,13 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         """
         return await self._make_request(
             method="GET",
-            endpoint=f"/{self.phone_id}",
+            endpoint=f"/{phone_id}",
             params={"fields": ",".join(fields)} if fields else None,
         )
 
     async def update_conversational_automation(
         self,
+        phone_id: str,
         enable_welcome_message: bool | None = None,
         prompts: tuple[dict] | None = None,
         commands: str | None = None,
@@ -521,6 +545,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             }
 
         Args:
+            phone_id: The ID of the phone number to update.
             enable_welcome_message: Enable the welcome message.
             prompts: The prompts (ice breakers) to set.
             commands: The commands to set.
@@ -530,7 +555,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         """
         return await self._make_request(
             method="POST",
-            endpoint=f"/{self.phone_id}/conversational_automation",
+            endpoint=f"/{phone_id}/conversational_automation",
             params={
                 k: v
                 for k, v in {
@@ -544,6 +569,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
 
     async def get_business_profile(
         self,
+        phone_id: str,
         fields: tuple[str, ...] | None = None,
     ) -> dict[str, list[dict[str, str | list[str]]]]:
         """
@@ -570,16 +596,17 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             }
 
         Args:
+            phone_id: The ID of the phone number to get.
             fields: The fields to get.
         """
         return await self._make_request(
             method="GET",
-            endpoint=f"/{self.phone_id}/whatsapp_business_profile",
+            endpoint=f"/{phone_id}/whatsapp_business_profile",
             params={"fields": ",".join(fields)} if fields else None,
         )
 
     async def update_business_profile(
-        self, data: dict[str, str | list[str]]
+        self, phone_id: str, data: dict[str, str | list[str]]
     ) -> dict[str, bool]:
         """
         Update the business profile.
@@ -587,6 +614,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/business-profiles/#update-business-profile>`_.
 
         Args:
+            phone_id: The ID of the phone number to update.
             data: The data to update the business profile with.
 
         Return example::
@@ -598,11 +626,11 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         data.update(messaging_product="whatsapp")
         return await self._make_request(
             method="POST",
-            endpoint=f"/{self.phone_id}/whatsapp_business_profile",
+            endpoint=f"/{phone_id}/whatsapp_business_profile",
             json=data,
         )
 
-    async def get_commerce_settings(self) -> dict[str, list[dict]]:
+    async def get_commerce_settings(self, phone_id: str) -> dict[str, list[dict]]:
         """
         Get the commerce settings of the business catalog.
 
@@ -619,19 +647,30 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
                 }
               ]
             }
+
+        Args:
+            phone_id: The ID of the phone number to get.
+
+        Returns:
+            The commerce settings of the business catalog.
         """
         return await self._make_request(
             method="GET",
-            endpoint=f"/{self.phone_id}/whatsapp_commerce_settings",
+            endpoint=f"/{phone_id}/whatsapp_commerce_settings",
         )
 
-    async def update_commerce_settings(self, data: dict) -> dict[str, bool]:
+    async def update_commerce_settings(
+        self,
+        phone_id: str,
+        data: dict,
+    ) -> dict[str, bool]:
         """
         Change the commerce settings of the business catalog.
 
         - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/sell-products-and-services/set-commerce-settings>`_.
 
         Args:
+            phone_id: The ID of the phone number to update.
             data: The data to update the commerce settings with.
 
         Return example::
@@ -642,7 +681,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         """
         return await self._make_request(
             method="POST",
-            endpoint=f"/{self.phone_id}/whatsapp_commerce_settings",
+            endpoint=f"/{phone_id}/whatsapp_commerce_settings",
             params=data,
         )
 
