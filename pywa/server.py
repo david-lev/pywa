@@ -247,36 +247,34 @@ class Server:
     def _register_routes(self: "WhatsApp") -> None:
         match self._server_type:
             case utils.ServerType.FLASK:
-                import flask
-
-                if utils.is_installed("asgiref"):  # flask[async]
-                    _logger.info("Using Flask with ASGI")
-
-                    @self._server.route(self._webhook_endpoint, methods=["GET"])
-                    @utils.rename_func(f"({self.phone_id})")
-                    async def flask_challenge() -> tuple[str, int]:
-                        return await self.webhook_challenge_handler(
-                            vt=flask.request.args.get(utils.HUB_VT),
-                            ch=flask.request.args.get(utils.HUB_CH),
-                        )
-
-                    @self._server.route(self._webhook_endpoint, methods=["POST"])
-                    @utils.rename_func(f"({self.phone_id})")
-                    async def flask_webhook() -> tuple[str, int]:
-                        return await self.webhook_update_handler(flask.request.json)
-
-                else:  # flask
+                if not utils.is_installed("asgiref"):  # flask[async]
                     raise ValueError(
                         "Flask with ASGI is required to handle incoming updates asynchronously. Please install "
                         """the `asgiref` package (`pip install "flask[async]"` / `pip install "asgiref"`)"""
                     )
+
+                _logger.info("Using Flask with ASGI")
+                import flask
+
+                @self._server.route(self._webhook_endpoint, methods=["GET"])
+                @utils.rename_func(f"({self._webhook_endpoint})")
+                async def flask_challenge() -> tuple[str, int]:
+                    return await self.webhook_challenge_handler(
+                        vt=flask.request.args.get(utils.HUB_VT),
+                        ch=flask.request.args.get(utils.HUB_CH),
+                    )
+
+                @self._server.route(self._webhook_endpoint, methods=["POST"])
+                @utils.rename_func(f"({self._webhook_endpoint})")
+                async def flask_webhook() -> tuple[str, int]:
+                    return await self.webhook_update_handler(flask.request.json)
 
             case utils.ServerType.FASTAPI:
                 _logger.info("Using FastAPI")
                 import fastapi
 
                 @self._server.get(self._webhook_endpoint)
-                @utils.rename_func(f"({self.phone_id})")
+                @utils.rename_func(f"({self._webhook_endpoint})")
                 async def fastapi_challenge(req: fastapi.Request) -> fastapi.Response:
                     content, status_code = await self.webhook_challenge_handler(
                         vt=req.query_params.get(utils.HUB_VT),
@@ -285,7 +283,7 @@ class Server:
                     return fastapi.Response(content=content, status_code=status_code)
 
                 @self._server.post(self._webhook_endpoint)
-                @utils.rename_func(f"({self.phone_id})")
+                @utils.rename_func(f"({self._webhook_endpoint})")
                 async def fastapi_webhook(req: fastapi.Request) -> fastapi.Response:
                     content, status_code = await self.webhook_update_handler(
                         await req.json()
@@ -365,36 +363,37 @@ class Server:
         # The `messages` field needs to be handled differently because it can be a message, button, selection, or status
         # This check must return handler or None *BEFORE* getting the handler from the dict!!
         if field == "messages":
-            if not self.filter_updates or (
-                value["metadata"]["phone_number_id"] == self.phone_id
+            if self.filter_updates and (
+                value["metadata"]["phone_number_id"] != self.phone_id
             ):
-                if "messages" in value:
-                    msg_type = value["messages"][0]["type"]
-                    if msg_type == MessageType.INTERACTIVE:
-                        try:
-                            interactive_type = value["messages"][0]["interactive"][
-                                "type"
-                            ]
-                        except KeyError:  # value with errors, when a user tries to send the interactive msg again
-                            return MessageHandler
-                        if (
-                            handler := _INTERACTIVE_TYPES.get(interactive_type)
-                        ) is not None:
-                            return handler
-                        _logger.warning(
-                            "Webhook ('%s'): Unknown interactive message type: %s. Falling back to MessageHandler.",
-                            self._webhook_endpoint,
-                            interactive_type,
-                        )
-                    return _MESSAGE_TYPES.get(msg_type, MessageHandler)
+                return None
 
-                elif "statuses" in value:  # status
-                    return MessageStatusHandler
-                _logger.warning(
-                    "Webhook ('%s'): Unknown message type: %s",
-                    self._webhook_endpoint,
-                    value,
-                )
+            if "messages" in value:
+                msg_type = value["messages"][0]["type"]
+                if msg_type == MessageType.INTERACTIVE:
+                    try:
+                        interactive_type = value["messages"][0]["interactive"]["type"]
+                    except KeyError:  # value with errors, when a user tries to send the interactive msg again
+                        return MessageHandler
+                    if (
+                        handler := _INTERACTIVE_TYPES.get(interactive_type)
+                    ) is not None:
+                        return handler
+                    _logger.warning(
+                        "Webhook ('%s'): Unknown interactive message type: %s. Falling back to MessageHandler.",
+                        self._webhook_endpoint,
+                        interactive_type,
+                    )
+                return _MESSAGE_TYPES.get(msg_type, MessageHandler)
+
+            elif "statuses" in value:  # status
+                return MessageStatusHandler
+
+            _logger.warning(
+                "Webhook ('%s'): Unknown message type: %s",
+                self._webhook_endpoint,
+                value,
+            )
             return None
 
         # noinspection PyProtectedMember
@@ -555,19 +554,19 @@ class Server:
 
         match self._server_type:
             case utils.ServerType.FLASK:
-                import flask
-
-                if utils.is_installed("asgiref"):
-
-                    @self._server.route(endpoint, methods=["POST"])
-                    @utils.rename_func(f"({endpoint})")
-                    async def flask_flow() -> tuple[str, int]:
-                        return await callback_wrapper(flask.request.json)
-                else:
+                if not utils.is_installed("asgiref"):
                     raise ValueError(
                         "Flask with ASGI is required to handle incoming updates asynchronously. Please install "
                         """the `asgiref` package (`pip install "flask[async]"` / `pip install "asgiref"`)"""
                     )
+
+                import flask
+
+                @self._server.route(endpoint, methods=["POST"])
+                @utils.rename_func(f"({endpoint})")
+                async def flask_flow() -> tuple[str, int]:
+                    return await callback_wrapper(flask.request.json)
+
             case utils.ServerType.FASTAPI:
                 import fastapi
 
