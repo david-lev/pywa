@@ -63,9 +63,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             raise WhatsAppError.from_dict(error=res.json()["error"], response=res)
         return res.json()
 
-    async def get_app_access_token(
-        self, app_id: int, app_secret: str
-    ) -> dict[str, str]:
+    def get_app_access_token(self, app_id: int, app_secret: str) -> dict[str, str]:
         """
         Get an access token for an app.
 
