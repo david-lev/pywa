@@ -138,6 +138,7 @@ class Message(BaseUserUpdateAsync, _Message):
         reply_to_message_id: str = None,
         keyboard: None = None,
         tracker: str | None = None,
+        sender: str | int | None = None,
     ) -> str:
         """
         Send the message to another user.
@@ -157,6 +158,7 @@ class Message(BaseUserUpdateAsync, _Message):
             preview_url: Whether to show a preview of the URL in the message (if any).
             keyboard: Deprecated and will be removed in a future version, use ``buttons`` instead.
             tracker: The track data of the message.
+            sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
             The ID of the sent message.
@@ -168,6 +170,7 @@ class Message(BaseUserUpdateAsync, _Message):
         match self.type:
             case MessageType.TEXT:
                 return await self._client.send_message(
+                    sender=sender,
                     to=to,
                     text=self.text,
                     preview_url=preview_url,
@@ -180,6 +183,7 @@ class Message(BaseUserUpdateAsync, _Message):
                 )
             case MessageType.DOCUMENT:
                 return await self._client.send_document(
+                    sender=sender,
                     to=to,
                     document=self.document.id,
                     filename=self.document.filename,
@@ -192,6 +196,7 @@ class Message(BaseUserUpdateAsync, _Message):
                 )
             case MessageType.IMAGE:
                 return await self._client.send_image(
+                    sender=sender,
                     to=to,
                     image=self.image.id,
                     caption=self.caption,
@@ -203,6 +208,7 @@ class Message(BaseUserUpdateAsync, _Message):
                 )
             case MessageType.VIDEO:
                 return await self._client.send_video(
+                    sender=sender,
                     to=to,
                     video=self.video.id,
                     caption=self.caption,
@@ -214,10 +220,11 @@ class Message(BaseUserUpdateAsync, _Message):
                 )
             case MessageType.STICKER:
                 return await self._client.send_sticker(
-                    to=to, sticker=self.sticker.id, tracker=tracker
+                    sender=sender, to=to, sticker=self.sticker.id, tracker=tracker
                 )
             case MessageType.LOCATION:
                 return await self._client.send_location(
+                    sender=sender,
                     to=to,
                     latitude=self.location.latitude,
                     longitude=self.location.longitude,
@@ -227,10 +234,11 @@ class Message(BaseUserUpdateAsync, _Message):
                 )
             case MessageType.AUDIO:
                 return await self._client.send_audio(
-                    to=to, audio=self.audio.id, tracker=tracker
+                    sender=sender, to=to, audio=self.audio.id, tracker=tracker
                 )
             case MessageType.CONTACTS:
                 return await self._client.send_contact(
+                    sender=sender,
                     to=to,
                     contact=self.contacts,
                     reply_to_message_id=reply_to_message_id,
@@ -242,6 +250,7 @@ class Message(BaseUserUpdateAsync, _Message):
                         "You need to provide `reply_to_message_id` in order to `copy` a reaction"
                     )
                 return await self._client.send_reaction(
+                    sender=sender,
                     to=to,
                     message_id=reply_to_message_id,
                     emoji=self.reaction.emoji or "",
@@ -249,6 +258,7 @@ class Message(BaseUserUpdateAsync, _Message):
             case MessageType.ORDER:
                 if len(self.order.products) == 1:
                     return await self._client.send_product(
+                        sender=sender,
                         to=to,
                         catalog_id=self.order.catalog_id,
                         sku=self.order.products[0].sku,
@@ -257,6 +267,7 @@ class Message(BaseUserUpdateAsync, _Message):
                         reply_to_message_id=reply_to_message_id,
                     )
                 return await self._client.send_products(
+                    sender=sender,
                     to=to,
                     catalog_id=self.order.catalog_id,
                     product_sections=(
@@ -272,6 +283,7 @@ class Message(BaseUserUpdateAsync, _Message):
                 )
             case MessageType.SYSTEM:
                 return await self._client.send_message(
+                    sender=sender,
                     to=to,
                     text=self.system.body,
                     header=header,

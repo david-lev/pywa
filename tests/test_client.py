@@ -19,10 +19,7 @@ SENT_MESSAGE = {
 wa = WhatsApp(phone_id=PHONE_ID, token=TOKEN)
 
 
-def test_wa_without_phone_id_or_token():
-    with pytest.raises(ValueError):
-        WhatsApp(phone_id="", token="123")
-
+def test_wa_without_token():
     with pytest.raises(ValueError):
         WhatsApp(phone_id="123", token="")
 

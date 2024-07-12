@@ -100,7 +100,9 @@ All user-related-updates have common methods and properties:
    * - Method / Property
      - Description
    * - :attr:`~BaseUserUpdate.sender`
-     - The user id who sent the update
+     - The phone id who sent the update
+   * - :attr:`~BaseUserUpdate.recipient`
+     - The phone id who received the update
    * - :attr:`~BaseUserUpdate.message_id_to_reply`
      - The message id to reply to
    * - :meth:`~BaseUserUpdate.reply_text`

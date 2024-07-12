@@ -126,6 +126,7 @@ class BaseUserUpdateAsync:
             The ID of the sent reply.
         """
         return await self._client.send_message(
+            sender=self.recipient,
             to=self.sender,
             text=text,
             header=header,
@@ -181,6 +182,7 @@ class BaseUserUpdateAsync:
             The ID of the sent reply.
         """
         return await self._client.send_image(
+            sender=self.recipient,
             to=self.sender,
             image=image,
             caption=caption,
@@ -235,6 +237,7 @@ class BaseUserUpdateAsync:
             The ID of the sent reply.
         """
         return await self._client.send_video(
+            sender=self.recipient,
             to=self.sender,
             video=video,
             caption=caption,
@@ -292,6 +295,7 @@ class BaseUserUpdateAsync:
             The ID of the sent reply.
         """
         return await self._client.send_document(
+            sender=self.recipient,
             to=self.sender,
             document=document,
             filename=filename,
@@ -330,6 +334,7 @@ class BaseUserUpdateAsync:
             The ID of the sent message.
         """
         return await self._client.send_audio(
+            sender=self.recipient,
             to=self.sender,
             audio=audio,
             mime_type=mime_type,
@@ -364,6 +369,7 @@ class BaseUserUpdateAsync:
             The ID of the sent reply.
         """
         return await self._client.send_sticker(
+            sender=self.recipient,
             to=self.sender,
             sticker=sticker,
             mime_type=mime_type,
@@ -403,6 +409,7 @@ class BaseUserUpdateAsync:
             The ID of the sent reply.
         """
         return await self._client.send_location(
+            sender=self.recipient,
             to=self.sender,
             latitude=latitude,
             longitude=longitude,
@@ -444,6 +451,7 @@ class BaseUserUpdateAsync:
             The ID of the sent reply.
         """
         return await self._client.send_contact(
+            sender=self.recipient,
             to=self.sender,
             contact=contact,
             reply_to_message_id=self.message_id_to_reply if quote else None,
@@ -467,6 +475,7 @@ class BaseUserUpdateAsync:
             The ID of the sent reaction.
         """
         return await self._client.send_reaction(
+            sender=self.recipient,
             to=self.sender,
             emoji=emoji,
             message_id=self.message_id_to_reply,
@@ -489,7 +498,10 @@ class BaseUserUpdateAsync:
             The ID of the sent unreaction.
         """
         return await self._client.remove_reaction(
-            to=self.sender, message_id=self.message_id_to_reply, tracker=tracker
+            sender=self.recipient,
+            to=self.sender,
+            message_id=self.message_id_to_reply,
+            tracker=tracker,
         )
 
     async def reply_catalog(
@@ -524,6 +536,7 @@ class BaseUserUpdateAsync:
             The ID of the sent reply.
         """
         return await self._client.send_catalog(
+            sender=self.recipient,
             to=self.sender,
             body=body,
             footer=footer,
@@ -560,6 +573,7 @@ class BaseUserUpdateAsync:
             The ID of the sent reply.
         """
         return await self._client.send_product(
+            sender=self.recipient,
             to=self.sender,
             catalog_id=catalog_id,
             sku=sku,
@@ -620,6 +634,7 @@ class BaseUserUpdateAsync:
             The ID of the sent reply.
         """
         return await self._client.send_products(
+            sender=self.recipient,
             to=self.sender,
             catalog_id=catalog_id,
             product_sections=product_sections,
@@ -688,6 +703,7 @@ class BaseUserUpdateAsync:
 
         """
         return await self._client.send_template(
+            sender=self.recipient,
             to=self.sender,
             template=template,
             reply_to_message_id=quote if quote else None,
@@ -703,5 +719,5 @@ class BaseUserUpdateAsync:
             Whether it was successful.
         """
         return await self._client.mark_message_as_read(
-            message_id=self.message_id_to_reply
+            sender=self.recipient, message_id=self.message_id_to_reply
         )
