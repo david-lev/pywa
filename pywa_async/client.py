@@ -91,8 +91,8 @@ _logger = logging.getLogger(__name__)
 class WhatsApp(_WhatsApp):
     def __init__(
         self,
-        phone_id: str | int,
-        token: str,
+        phone_id: str | int | None = None,
+        token: str = None,
         *,
         session: httpx.AsyncClient | None = None,
         session_sync: httpx.Client | None = None,
@@ -154,7 +154,8 @@ class WhatsApp(_WhatsApp):
             uvicorn main:fastapi_app --reload
 
         Args:
-            phone_id: The Phone number ID (Not the phone number itself, the ID can be found in the App dashboard).
+            phone_id: The Phone number ID to send messages from (if you manage multiple WhatsApp business accounts
+             (e.g. partner solutions), you can specify the phone ID when sending messages, optional).
             token: The token of the WhatsApp business account (In production, you should
              `use permanent token <https://developers.facebook.com/docs/whatsapp/business-management-api/get-started>`_).
             base_url: The base URL of the WhatsApp API (Do not change unless you know what you're doing).
