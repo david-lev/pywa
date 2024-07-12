@@ -57,5 +57,6 @@ from .flows import (
     FlowActionType,
     FlowStatus,
     FlowCategory,
+    FlowRequestActionType,
 )
 from .chat_opened import ChatOpened

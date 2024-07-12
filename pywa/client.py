@@ -1917,7 +1917,7 @@ class WhatsApp(Server, HandlerDecorators):
         name: str | None = None,
         categories: Iterable[FlowCategory | str] | None = None,
         endpoint_uri: str | None = None,
-        application_id: int | None,
+        application_id: int | None = None,
     ) -> bool:
         """
         Update the metadata of a flow.

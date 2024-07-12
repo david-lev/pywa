@@ -4,7 +4,7 @@ Flow Types
 .. currentmodule:: pywa.types.flows
 
 .. autoclass:: FlowRequest()
-    :members: has_error, is_health_check
+    :members: has_error, is_health_check, respond
 
 .. autoclass:: FlowRequestActionType()
 

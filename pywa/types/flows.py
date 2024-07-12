@@ -112,13 +112,13 @@ class FlowCompletion(BaseUserUpdate):
     def from_update(cls, client: WhatsApp, update: dict) -> FlowCompletion:
         msg = (value := update["entry"][0]["changes"][0]["value"])["messages"][0]
         response: dict = json.loads(msg["interactive"]["nfm_reply"]["response_json"])
-        if response.get("flow_token") is None:
+        try:
+            flow_token = response.pop("flow_token")
+        except KeyError:
             flow_token = None
             _logger.warning(
                 "A flow completion message without flow token is received, This is a known issue on iOS devices."
             )
-        else:
-            flow_token = response.pop("flow_token")
 
         return cls(
             _client=client,
@@ -191,6 +191,56 @@ class FlowRequest:
         repr=False, hash=False, compare=False
     )
 
+    def respond(
+        self,
+        screen: str | None = None,
+        data: dict[
+            str,
+            str
+            | int
+            | float
+            | bool
+            | dict
+            | DataSource
+            | Iterable[str | int | float | bool | dict | DataSource],
+        ] = None,
+        error_message: str | None = None,
+        close_flow: bool = False,
+        flow_token: str | None = None,
+        version: str | None = None,
+    ) -> FlowResponse:
+        """
+        Create a response for this request.
+
+        - A shortcut for initializing a :class:`FlowResponse` with the same version as this request.
+
+        Example:
+
+            >>> wa = WhatsApp(business_private_key="...", ...)
+            >>> @wa.on_flow_request("/my-flow-endpoint")
+            ... def my_flow_endpoint(_: WhatsApp, req: FlowRequest) -> FlowResponse:
+            ...     return req.respond(
+            ...         screen="SCREEN_ID",
+            ...         data={"key": "value"},
+            ...     )
+
+        Args:
+            screen: The screen to display (if ``close_flow`` is ``False``).
+            data: The data to send to the screen or to add to flow completion message (default to empty dict).
+            error_message: This will redirect the user to ``screen`` and will trigger a snackbar error with the error_message present (if ``close_flow`` is ``False``).
+            close_flow: Whether to close the flow or just navigate to the screen.
+            flow_token: The flow token to close the flow (if ``close_flow`` is ``True``).
+            version: The version of the data exchange (Default to the request version).
+        """
+        return FlowResponse(
+            version=version or self.version,
+            data=data or {},
+            screen=screen,
+            error_message=error_message,
+            flow_token=flow_token,
+            close_flow=close_flow,
+        )
+
     @classmethod
     def from_dict(cls, data: dict, raw_encrypted: dict):
         return cls(
@@ -231,6 +281,7 @@ class FlowResponse:
     to display or to close the flow. You should return this response from your flow endpoint callback.
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/guides/implementingyourflowendpoint#data_exchange_request>`_.
+    - Use the :meth:`FlowRequest.respond` method to create a response for a request with the same version.
 
     Example:
 
@@ -251,7 +302,7 @@ class FlowResponse:
         screen: The screen to display (if the flow is not closed).
         data: The data to send to the screen or to add to flow completion message (default to empty dict).
         error_message: This will redirect the user to ``screen`` and will trigger a snackbar error with the error_message present (if the flow is not closed).
-        flow_token: The flow token to close the flow (if the flow is closed).
+        flow_token: The flow token to close the flow (if ``close_flow`` is ``True``).
         close_flow: Whether to close the flow or just navigate to the screen.
     """
 
@@ -625,6 +676,7 @@ class FlowDetails:
         name: str | None = None,
         categories: Iterable[FlowCategory | str] | None = None,
         endpoint_uri: str | None = None,
+        application_id: int | None = None,
     ) -> bool:
         """
         Update the metadata of this flow.
@@ -635,6 +687,7 @@ class FlowDetails:
             categories: The new categories of the flow (optional).
             endpoint_uri: The URL of the FlowJSON Endpoint. Starting from FlowJSON 3.0 this property should be
              specified only gere. Do not provide this field if you are cloning a FlowJSON with version below 3.0.
+            application_id: The ID of the Meta application which will be connected to the Flow. All the flows with endpoints need to have an Application connected to them.
 
         Example:
 
@@ -658,6 +711,7 @@ class FlowDetails:
             name=name,
             categories=categories,
             endpoint_uri=endpoint_uri,
+            application_id=application_id,
         )
         if success:
             if name:
@@ -2075,6 +2129,10 @@ class Switch(Component):
             ...         '20': [TextInput(name='email', label='Email')],
             ...         '30': [TextInput(name='phone', label='Phone')],
             ...     }
+
+    Attributes:
+        value: The key / ref to the data that will be used to determine which components to render.
+        cases: The components that will be rendered based on the value.
     """
 
     type: ComponentType = dataclasses.field(

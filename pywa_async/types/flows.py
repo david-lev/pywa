@@ -185,6 +185,7 @@ class FlowDetails(_FlowDetails):
         name: str | None = None,
         categories: Iterable[FlowCategory | str] | None = None,
         endpoint_uri: str | None = None,
+        application_id: int | None = None,
     ) -> bool:
         """
         Update the metadata of this flow.
@@ -195,6 +196,7 @@ class FlowDetails(_FlowDetails):
             categories: The new categories of the flow (optional).
             endpoint_uri: The URL of the FlowJSON Endpoint. Starting from FlowJSON 3.0 this property should be
              specified only gere. Do not provide this field if you are cloning a FlowJSON with version below 3.0.
+            application_id: The ID of the Meta application which will be connected to the Flow. All the flows with endpoints need to have an Application connected to them.
 
         Example:
 
@@ -218,6 +220,7 @@ class FlowDetails(_FlowDetails):
             name=name,
             categories=categories,
             endpoint_uri=endpoint_uri,
+            application_id=application_id,
         )
         if success:
             if name:
