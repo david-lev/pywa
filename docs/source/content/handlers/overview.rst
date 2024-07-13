@@ -14,17 +14,22 @@ This means that you can use the same server to handle other parts of your applic
 In order for WhatsApp to send the updates to your server, you need a callback url.
 
 The callback url must be a public, secure (HTTPS) url that points to your server (or your local machine if you are
-testing locally). You can use a service like `serveo <https://serveo.net/>`_ or `localtunnel <https://localtunnel.github.io/www/>`_
+testing locally). You can use a service like `Cloudflare Tunnel <https://developers.cloudflare.com/pages/how-to/preview-with-cloudflare-tunnel/>`_ or `localtunnel <https://localtunnel.github.io/www/>`_
 to create a secure tunnel to which WhatsApp can send the updates. These services
 will give you a public url that points to your machine (where you run the code).
 
-Here is an example using serveo
+.. tip::
+
+        Facebook keep blocking domains that are used by these services (e.g. ngrok, localtunnel, etc.). So, you may need to try multiple services to find one that works, or use a custom domain.
+
+
+Here is an example using Cloudflare Tunnel:
 
 - You will get screen with the public url that points to your machine
 
 .. code-block:: bash
 
-    ssh -R 80:localhost:8080 serveo.net
+    cloudflared tunnel --url http://localhost:8080
 
 
 Once you have a public url, You need to register it. This can be done two ways:
@@ -63,7 +68,7 @@ See `Here <https://developers.facebook.com/docs/development/create-an-app/app-da
             phone_id='1234567890',
             token='xxxxxx',
             server=fastapi_app,
-            callback_url='https://abc123.serveo.net',
+            callback_url='https://abc123.trycloudflare.com',
             verify_token='XYZ123',
             app_id=123456,
             app_secret='xxxxxx'
@@ -74,7 +79,7 @@ See `Here <https://developers.facebook.com/docs/development/create-an-app/app-da
         if __name__ == '__main__':
             uvicorn.run(fastapi_app, port=8080)
 
-    The port that fastapi is running on (``8080`` in the example above) must be the same port that the callback url is listening on (e.g. ``ssh -R 80:localhost:8080 serveo.net``).
+    The port that fastapi is running on (``8080`` in the example above) must be the same port that the callback url is listening on (e.g. ``cloudflared tunnel --url http://localhost:8080``).
 
 
 --------------------------
@@ -122,7 +127,7 @@ So, start the server:
         if __name__ == '__main__':
             uvicorn.run(fastapi_app, port=8080)
 
-    The port that fastapi is running on (``8080`` in the example above) must be the same port that the callback url is listening on (e.g. ``ssh -R 80:localhost:8080 serveo.net``).
+    The port that fastapi is running on (``8080`` in the example above) must be the same port that the callback url is listening on (e.g. ``cloudflared tunnel --url http://localhost:8080``).
 
 Then, register the callback url in the WhatsApp App Dashboard.
 

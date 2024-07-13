@@ -77,7 +77,7 @@ wa = WhatsApp(
     phone_id="1234567890",
     token="xxxxxxx",
     server=fastapi_app,
-    callback_url="https://abc123.serveo.net",
+    callback_url="https://yourdomain.com/",
     verify_token="xyz123",
     app_id=123456,
     app_secret="yyyyyy"
@@ -109,7 +109,7 @@ uvicorn wa:fastapi_app  # see uvicorn docs for more options (port, host, reload,
 
 💫 **Async Usage**
 
-- PyWa has beta async support. To use the async version, just replace all the imports from `pywa` to `pywa_async` and use `async`/`await`:
+- PyWa has async support! To use the async version, replace all the imports from `pywa` to `pywa_async` and use `async`/`await`:
 
 ```python
 # wa.py
