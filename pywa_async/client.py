@@ -98,6 +98,8 @@ class WhatsApp(_WhatsApp):
         session_sync: httpx.Client | None = None,
         server: Flask | FastAPI | None = utils.MISSING,
         webhook_endpoint: str = "/",
+        webhook_updates_validator: utils.WebhookUpdatesValidator
+        | None = utils.default_webhook_updates_validator,
         verify_token: str | None = None,
         filter_updates: bool = True,
         continue_handling: bool = True,
@@ -181,6 +183,7 @@ class WhatsApp(_WhatsApp):
              (optional, required when registering a ``callback_url``).
             webhook_endpoint: The endpoint to listen for incoming messages (if you're using the server for another purpose,
              or for multiple WhatsApp clients, you can change this to avoid conflicts).
+            webhook_updates_validator: The webhook updates validator to use (default: ``default_webhook_updates_validator``).
             filter_updates: Whether to filter out user updates that are not sent to this phone_id (default: ``True``, does
              not apply to raw updates or updates that are not user-related).
             business_account_id: The WhatsApp business account ID that owns the phone ID (optional, required for some API
@@ -215,6 +218,7 @@ class WhatsApp(_WhatsApp):
             flows_response_encryptor=flows_response_encryptor,
             continue_handling=continue_handling,
             skip_duplicate_updates=skip_duplicate_updates,
+            webhook_updates_validator=webhook_updates_validator,
         )
 
     def __str__(self):

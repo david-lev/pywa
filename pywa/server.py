@@ -98,6 +98,7 @@ class Server:
         flows_response_encryptor: utils.FlowResponseEncryptor | None,
         continue_handling: bool,
         skip_duplicate_updates: bool,
+        webhook_updates_validator: utils.WebhookUpdatesValidator | None,
     ):
         self._server = server
         if server is utils.MISSING:
@@ -108,7 +109,10 @@ class Server:
         self._private_key = business_private_key
         self._private_key_password = business_private_key_password
         self._flows_request_decryptor = flows_request_decryptor
+        self._app_id = app_id
+        self._app_secret = app_secret
         self._flows_response_encryptor = flows_response_encryptor
+        self._webhook_updates_validator = webhook_updates_validator
         self._continue_handling = continue_handling
         self._skip_duplicate_updates = skip_duplicate_updates
         self._updates_ids_in_process = set[str]()
@@ -118,6 +122,23 @@ class Server:
                 "When listening for incoming updates, a verify token must be provided.\n>> The verify token can "
                 "be any string. It is used to challenge the webhook endpoint to verify that the endpoint is valid."
             )
+        if webhook_updates_validator is not None:
+            if (
+                webhook_updates_validator is utils.default_webhook_updates_validator
+                and not app_secret
+            ):
+                _logger.warning(
+                    "The default webhook updates validator is used, but no app secret is provided. "
+                    "This may cause security issues (anyone can send updates to the webhook)."
+                    "\n>> You can set `app_secret` when initializing the WhatsApp client or disable the validator"
+                    " (webhook_updates_validator=None)."
+                )
+                self._webhook_updates_validator = None
+            elif not app_secret:
+                raise ValueError(
+                    "When using a custom webhook updates validator, the `app_secret` must be provided."
+                )
+
         self._register_routes()
 
         if callback_url is not None:
@@ -188,7 +209,9 @@ class Server:
         )
         return "Error, invalid verification token", 403
 
-    async def webhook_update_handler(self, update: dict) -> tuple[str, int]:
+    async def webhook_update_handler(
+        self, update: dict, raw_body: bytes | None = None, hmac_header: str = None
+    ) -> tuple[str, int]:
         """
         Handle the incoming update from the webhook manually.
 
@@ -199,12 +222,16 @@ class Server:
                 .. code-block:: python
 
                     from aiohttp import web
-                    from pywa import WhatsApp
+                    from pywa import WhatsApp, utils
 
                     wa = WhatsApp(..., server=None)
 
                     async def my_webhook_handler(req: web.Request) -> web.Response:
-                        res, status_code = await wa.webhook_update_handler(await req.json())
+                        res, status_code = await wa.webhook_update_handler(
+                            update=await req.json(),
+                            raw_body=await req.read(),
+                            hmac_header=req.headers.get(utils.HUB_SIG)
+                        )
                         return web.Response(text=res, status=status_code)
 
                     app = web.Application()
@@ -214,11 +241,31 @@ class Server:
                         web.run_app(app, port=...)
 
         Args:
-            update: The incoming update from the webhook.
+            update: The incoming update from the webhook (dict).
+            raw_body: The raw body of the request (to calculate the signature, optional).
+            hmac_header: The ``X-Hub-Signature-256`` header (to validate the signature, use ``utils.HUB_SIG`` for the key).
 
         Returns:
             A tuple containing the response and the status code.
         """
+        if (
+            self._webhook_updates_validator is not None
+        ):  # init should have set to None if no app_secret
+            if not hmac_header or not raw_body:
+                _logger.debug(
+                    "Webhook ('%s') received an update without a signature",
+                    self._webhook_endpoint,
+                )
+                return "Error, missing signature", 401
+            if not self._webhook_updates_validator(
+                self._app_secret, raw_body, hmac_header
+            ):
+                _logger.debug(
+                    "Webhook ('%s') received an update with an invalid signature",
+                    self._webhook_endpoint,
+                )
+                return "Error, invalid signature", 401
+
         update_id: str | None = None
         _logger.debug(
             "Webhook ('%s') received an update: %s",
@@ -267,7 +314,11 @@ class Server:
                 @self._server.route(self._webhook_endpoint, methods=["POST"])
                 @utils.rename_func(f"({self._webhook_endpoint})")
                 async def flask_webhook() -> tuple[str, int]:
-                    return await self.webhook_update_handler(flask.request.json)
+                    return await self.webhook_update_handler(
+                        update=flask.request.json,
+                        raw_body=flask.request.data,
+                        hmac_header=flask.request.headers.get(utils.HUB_SIG),
+                    )
 
             case utils.ServerType.FASTAPI:
                 _logger.info("Using FastAPI")
@@ -286,7 +337,9 @@ class Server:
                 @utils.rename_func(f"({self._webhook_endpoint})")
                 async def fastapi_webhook(req: fastapi.Request) -> fastapi.Response:
                     content, status_code = await self.webhook_update_handler(
-                        await req.json()
+                        update=await req.json(),
+                        raw_body=await req.body(),
+                        hmac_header=req.headers.get(utils.HUB_SIG),
                     )
                     return fastapi.Response(content=content, status_code=status_code)
             case None:

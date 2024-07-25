@@ -353,6 +353,32 @@ or :meth:`~pywa.types.base_update.BaseUpdate.continue_handling` methods on the u
 
     ...
 
+Validating the updates
+______________________
+
+WhatsApp recommends validating the updates by checking the signature of the update. This is done by comparing the
+signature of the update with the signature that WhatsApp sends in the headers of the request.
+
+To enable this feature, you need to pass the ``app_secret`` when initializing the WhatsApp client.
+
+.. code-block:: python
+    :caption: main.py
+    :linenos:
+    :emphasize-lines: 4
+
+    from pywa import WhatsApp
+
+    wa = WhatsApp(
+        app_secret='xxxx',
+        ...
+    )
+
+If the signature is invalid, pywa will return an ``HTTP 401 Unauthorized`` response.
+
+You can also override or disable the signature validation by passing the ``webhook_updates_validator``
+argument when initializing the WhatsApp client (``None`` to disable).
+
+
 
 Available handlers
 __________________

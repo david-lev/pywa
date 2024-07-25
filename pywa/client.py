@@ -92,6 +92,8 @@ class WhatsApp(Server, HandlerDecorators):
         | None = utils.default_flow_response_encryptor,
         continue_handling: bool = True,
         skip_duplicate_updates: bool = True,
+        webhook_updates_validator: utils.WebhookUpdatesValidator
+        | None = utils.default_webhook_updates_validator,
     ) -> None:
         """
         The WhatsApp client.
@@ -158,6 +160,7 @@ class WhatsApp(Server, HandlerDecorators):
             flows_response_encryptor: The global flows response encryptor implementation to use to encrypt Flows responses.
             continue_handling: Whether to continue handling updates after a handler has been found (default: ``True``).
             skip_duplicate_updates: Whether to skip duplicate updates (default: ``True``).
+            webhook_updates_validator: The webhook updates validator to use (default: ``default_webhook_updates_validator``).
         """
         if not token:
             raise ValueError(
@@ -204,6 +207,7 @@ class WhatsApp(Server, HandlerDecorators):
             flows_response_encryptor=flows_response_encryptor,
             continue_handling=continue_handling,
             skip_duplicate_updates=skip_duplicate_updates,
+            webhook_updates_validator=webhook_updates_validator,
         )
 
     def _setup_api(
