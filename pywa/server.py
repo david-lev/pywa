@@ -40,7 +40,6 @@ from .utils import FastAPI, Flask
 if TYPE_CHECKING:
     from .client import WhatsApp
 
-_VERIFY_TIMEOUT_SEC = 6
 
 _MESSAGE_TYPES: dict[MessageType, type[Handler]] = {
     MessageType.BUTTON: CallbackButtonHandler,
@@ -145,9 +144,7 @@ class Server:
                 app_secret=app_secret,
                 verify_token=verify_token,
                 fields=tuple(fields or Handler._fields_to_subclasses().keys()),
-                delay=(verify_timeout - _VERIFY_TIMEOUT_SEC)
-                if verify_timeout is not None and verify_timeout > _VERIFY_TIMEOUT_SEC
-                else 0,
+                delay=verify_timeout,
             )
 
     async def webhook_challenge_handler(self, vt: str, ch: str) -> tuple[str, int]:
@@ -483,7 +480,6 @@ class Server:
             app_access_token = self.api.get_app_access_token(
                 app_id=app_id, app_secret=app_secret
             )
-            # noinspection PyProtectedMember
             if not self.api.set_app_callback_url(
                 app_id=app_id,
                 app_access_token=app_access_token["access_token"],
@@ -495,7 +491,8 @@ class Server:
             _logger.info("Callback URL '%s' registered successfully", callback_url)
         except errors.WhatsAppError as e:
             raise RuntimeError(
-                f"Failed to register callback URL '{callback_url}'"
+                f"Failed to register callback URL '{callback_url}'. if you are using a slow/custom server, you can "
+                "increase the delay using the `verify_timeout` parameter when initializing the WhatsApp client."
             ) from e
 
     def get_flow_request_handler(

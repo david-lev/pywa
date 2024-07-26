@@ -15,6 +15,7 @@ from pywa.client import (
     _get_media_msg,
     _get_flow_fields,
     _media_types_default_filenames,
+    _DEFAULT_VERIFY_DELAY_SEC,
 )  # noqa MUST BE IMPORTED FIRST
 from .handlers import (
     MessageHandler,
@@ -31,7 +32,6 @@ from pywa.types.base_update import BaseUpdate
 
 import logging
 import dataclasses
-import functools
 import hashlib
 import json
 import mimetypes
@@ -108,7 +108,7 @@ class WhatsApp(_WhatsApp):
         fields: Iterable[str] | None = None,
         app_id: int | None = None,
         app_secret: str | None = None,
-        verify_timeout: int | None = None,
+        verify_timeout: int = _DEFAULT_VERIFY_DELAY_SEC,
         business_private_key: str | None = None,
         business_private_key_password: str | None = None,
         flows_request_decryptor: utils.FlowRequestDecryptor
@@ -165,12 +165,12 @@ class WhatsApp(_WhatsApp):
              use a custom session, e.g. for proxy support. Do not use the same session across multiple WhatsApp clients!).
             server: The Flask or FastAPI app instance to use for the webhook. required when you want to handle incoming
              updates.
-            callback_url: The callback URL of the server to register (optional, only if you want pywa to register the callback URL for
+            callback_url: The callback URL of the server (itself) to register (optional, only if you want pywa to register the callback URL for
              you).
             verify_token: The verify token of the registered ``callback_url`` (Required when ``server`` is provided.
              The verify token can be any string. It is used to challenge the webhook endpoint to verify that the
              endpoint is valid).
-            verify_timeout: The timeout (in seconds) to wait for the verify token to be sent to the server (optional,
+            verify_timeout: The delay (in seconds, default to 3) to wait for the verify token to be sent to the server (optional,
              for cases where the server/network is slow or the server is taking a long time to start).
             fields: The fields to register for the callback URL (optional, if not provided, all supported fields will be
              registered. modify this if you want to reduce the number of unused requests to your server).
@@ -179,12 +179,12 @@ class WhatsApp(_WhatsApp):
              (optional, required when registering a ``callback_url``).
             app_secret: The secret of the app in the
              `App Basic Settings <https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings>`_
-             (optional, required when registering a ``callback_url``).
+             (optional, recomended for validating updates, required when registering a ``callback_url``).
             webhook_endpoint: The endpoint to listen for incoming messages (if you're using the server for another purpose,
-             or for multiple WhatsApp clients, you can change this to avoid conflicts).
+             you can change this to avoid conflicts).
             filter_updates: Whether to filter out user updates that are not sent to this phone_id (default: ``True``, does
              not apply to raw updates or updates that are not user-related).
-            validate_updates: Whether to validate updates payloads (default: ``True``).
+            validate_updates: Whether to validate updates payloads (default: ``True``, ``app_secret`` required).
             business_account_id: The WhatsApp business account ID that owns the phone ID (optional, required for some API
              methods).
             business_private_key: The global private key to use in the ``flows_request_decryptor``

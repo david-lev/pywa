@@ -61,6 +61,8 @@ from .server import Server
 
 _logger = logging.getLogger(__name__)
 
+_DEFAULT_VERIFY_DELAY_SEC = 3
+
 
 class WhatsApp(Server, HandlerDecorators):
     def __init__(
@@ -82,7 +84,7 @@ class WhatsApp(Server, HandlerDecorators):
         fields: Iterable[str] | None = None,
         app_id: int | None = None,
         app_secret: str | None = None,
-        verify_timeout: int | None = None,
+        verify_timeout: int = _DEFAULT_VERIFY_DELAY_SEC,
         business_private_key: str | None = None,
         business_private_key_password: str | None = None,
         flows_request_decryptor: utils.FlowRequestDecryptor
@@ -131,12 +133,12 @@ class WhatsApp(Server, HandlerDecorators):
              use a custom session, e.g. for proxy support. Do not use the same session across multiple WhatsApp clients!).
             server: The Flask or FastAPI app instance to use for the webhook. required when you want to handle incoming
              updates.
-            callback_url: The callback URL of the server to register (optional, only if you want pywa to register the callback URL for
+            callback_url: The callback URL of the server (itself) to register (optional, only if you want pywa to register the callback URL for
              you).
             verify_token: The verify token of the registered ``callback_url`` (Required when ``server`` is provided.
              The verify token can be any string. It is used to challenge the webhook endpoint to verify that the
              endpoint is valid).
-            verify_timeout: The timeout (in seconds) to wait for the verify token to be sent to the server (optional,
+            verify_timeout: The delay (in seconds, default to 3) to wait for the verify token to be sent to the server (optional,
              for cases where the server/network is slow or the server is taking a long time to start).
             fields: The fields to register for the callback URL (optional, if not provided, all supported fields will be
              registered. modify this if you want to reduce the number of unused requests to your server).
@@ -145,7 +147,7 @@ class WhatsApp(Server, HandlerDecorators):
              (optional, required when registering a ``callback_url``).
             app_secret: The secret of the app in the
              `App Basic Settings <https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings>`_
-             (optional, required when registering a ``callback_url``).
+             (optional, recomended for validating updates, required when registering a ``callback_url``).
             webhook_endpoint: The endpoint to listen for incoming messages (if you're using the server for another purpose,
              or for multiple WhatsApp clients, you can change this to avoid conflicts).
             filter_updates: Whether to filter out user updates that are not sent to this phone_id (default: ``True``, does
@@ -158,7 +160,7 @@ class WhatsApp(Server, HandlerDecorators):
             flows_response_encryptor: The global flows response encryptor implementation to use to encrypt Flows responses.
             continue_handling: Whether to continue handling updates after a handler has been found (default: ``True``).
             skip_duplicate_updates: Whether to skip duplicate updates (default: ``True``).
-            validate_updates: Whether to validate updates payloads (default: ``True``).
+            validate_updates: Whether to validate updates payloads (default: ``True``, ``app_secret`` required).
         """
         if not token:
             raise ValueError(
@@ -198,7 +200,8 @@ class WhatsApp(Server, HandlerDecorators):
             app_id=app_id,
             app_secret=app_secret,
             verify_token=verify_token,
-            verify_timeout=verify_timeout,
+            verify_timeout=verify_timeout
+            or _DEFAULT_VERIFY_DELAY_SEC,  # backwards compatibility for None
             business_private_key=business_private_key,
             business_private_key_password=business_private_key_password,
             flows_request_decryptor=flows_request_decryptor,
