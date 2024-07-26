@@ -6,7 +6,6 @@ __all__ = ["WhatsApp"]
 
 import collections
 import dataclasses
-import functools
 import hashlib
 import json
 import logging
@@ -17,7 +16,7 @@ import warnings
 from types import NoneType
 from typing import BinaryIO, Iterable, Literal, Any, Callable
 
-import requests
+import httpx
 
 from . import utils
 from .api import WhatsAppCloudApi
@@ -73,7 +72,7 @@ class WhatsApp(Server, HandlerDecorators):
         | int
         | float
         | Literal[utils.Version.GRAPH_API] = utils.Version.GRAPH_API,
-        session: requests.Session | None = None,
+        session: httpx.Client | None = None,
         server: Flask | FastAPI | None = utils.MISSING,
         webhook_endpoint: str = "/",
         verify_token: str | None = None,
@@ -128,11 +127,11 @@ class WhatsApp(Server, HandlerDecorators):
              `use permanent token <https://developers.facebook.com/docs/whatsapp/business-management-api/get-started>`_).
             base_url: The base URL of the WhatsApp API (Do not change unless you know what you're doing).
             api_version: The API version of the WhatsApp Cloud API (default to the latest version).
-            session: The session to use for requests (default: new ``requests.Session()``, For cases where you want to
+            session: The session to use for requests (default: new ``httpx.Client()``, For cases where you want to
              use a custom session, e.g. for proxy support. Do not use the same session across multiple WhatsApp clients!).
             server: The Flask or FastAPI app instance to use for the webhook. required when you want to handle incoming
              updates.
-            callback_url: The callback URL to register (optional, only if you want pywa to register the callback URL for
+            callback_url: The callback URL of the server to register (optional, only if you want pywa to register the callback URL for
              you).
             verify_token: The verify token of the registered ``callback_url`` (Required when ``server`` is provided.
              The verify token can be any string. It is used to challenge the webhook endpoint to verify that the
@@ -211,14 +210,14 @@ class WhatsApp(Server, HandlerDecorators):
 
     def _setup_api(
         self,
-        session: requests.Session | None,
+        session: httpx.Client | None,
         token: str,
         base_url: str,
         api_version: float,
     ) -> None:
         self.api = WhatsAppCloudApi(
             token=token,
-            session=session or requests.Session(),
+            session=session or httpx.Client(),
             base_url=base_url,
             api_version=api_version,
         )
@@ -1381,7 +1380,7 @@ class WhatsApp(Server, HandlerDecorators):
         media: str | pathlib.Path | bytes | BinaryIO,
         mime_type: str | None = None,
         filename: str | None = None,
-        dl_session: requests.Session | None = None,
+        dl_session: httpx.Client | None = None,
         phone_id: str | None = None,
     ) -> str:
         """
@@ -1399,7 +1398,7 @@ class WhatsApp(Server, HandlerDecorators):
             media: The media to upload (can be a URL, bytes, or a file path).
             mime_type: The MIME type of the media (required if media is bytes or a file path).
             filename: The file name of the media (required if media is bytes).
-            dl_session: A requests session to use when downloading the media from a URL (optional, if not provided, a
+            dl_session: A httpx client to use when downloading the media from a URL (optional, if not provided, a
              new session will be created).
             phone_id: The phone ID to upload the media to (optional, if not provided, the client's phone ID will be used).
 
@@ -1422,10 +1421,16 @@ class WhatsApp(Server, HandlerDecorators):
                     mime_type or mimetypes.guess_type(path)[0],
                 )
             elif (url := str(media)).startswith(("https://", "http://")):
-                res = (dl_session or requests).get(url)
+                is_requests, err_cls = utils.is_requests_and_err(dl_session)
+                if is_requests:
+                    _logger.warning(
+                        "Using `requests.Session` is deprecated and will be removed in future versions. "
+                        "Please use `httpx.Client` instead."
+                    )
+                res = (dl_session or httpx).get(url)
                 try:
                     res.raise_for_status()
-                except requests.HTTPError as e:
+                except err_cls as e:
                     raise ValueError(
                         f"An error occurred while downloading from {url}"
                     ) from e
@@ -1502,7 +1507,7 @@ class WhatsApp(Server, HandlerDecorators):
             path: The path where to save the file (if not provided, the current working directory will be used).
             filename: The name of the file (if not provided, it will be guessed from the URL + extension).
             in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
-            **kwargs: Additional arguments to pass to :py:func:`requests.get`.
+            **kwargs: Additional arguments to pass to :py:func:`httpx.get`.
 
         Returns:
             The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.

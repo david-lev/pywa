@@ -9,11 +9,13 @@ import dataclasses
 import enum
 import importlib
 import warnings
+import logging
 from typing import Any, Callable, Protocol, TypeAlias
 
-
 import httpx
-import requests
+
+_logger = logging.getLogger(__name__)
+
 
 HUB_VT = "hub.verify_token"
 """The key for the verify token in the query parameters of the webhook get request."""
@@ -75,6 +77,16 @@ def is_installed(lib: str) -> bool:
         return True
     except ImportError:
         return False
+
+
+def is_requests_and_err(session) -> tuple[bool, type[Exception]]:
+    """Check if the given object is a requests/httpx session and return the error type."""
+    try:
+        if isinstance(session, importlib.import_module("requests").Session):
+            return True, importlib.import_module("requests").HTTPError
+        raise ImportError
+    except ImportError:
+        return False, importlib.import_module("httpx").HTTPStatusError
 
 
 class Version(enum.Enum):
@@ -295,9 +307,7 @@ def webhook_updates_validator(
     return hmac.compare_digest(signature, x_hub_signature.removeprefix("sha256="))
 
 
-def _download_cdn_file_sync(
-    session: requests.Session | httpx.Client, url: str
-) -> bytes:
+def _download_cdn_file_sync(session: httpx.Client, url: str) -> bytes:
     response = session.get(url)
     response.raise_for_status()
     return response.content
@@ -311,7 +321,7 @@ async def _download_cdn_file_async(session: httpx.AsyncClient, url: str) -> byte
 
 def flow_request_media_decryptor_sync(
     encrypted_media: dict[str, str | dict[str, str]],
-    dl_session: requests.Session | httpx.Client | None = None,
+    dl_session: httpx.Client | None = None,
 ) -> tuple[str, str, bytes]:
     """
     Decrypt the encrypted media file from the flow request.
@@ -334,7 +344,7 @@ def flow_request_media_decryptor_sync(
 
     Args:
         encrypted_media (dict): encrypted media data from the flow request (see example above).
-        dl_session (requests.Session | httpx.Client): download session. Optional.
+        dl_session (httpx.Client): download session. Optional.
 
     Returns:
         tuple[str, str, bytes]
@@ -345,6 +355,12 @@ def flow_request_media_decryptor_sync(
     Raises:
         ValueError: If any of the hash verifications fail.
     """
+    is_requests, _ = is_requests_and_err(dl_session)
+    if is_requests:
+        _logger.warning(
+            "Using `requests.Session` is deprecated and will be removed in future versions. "
+            "Please use `httpx.Client` instead."
+        )
     cdn_file = _download_cdn_file_sync(
         dl_session or httpx.Client(), encrypted_media["cdn_url"]
     )

@@ -165,7 +165,7 @@ class WhatsApp(_WhatsApp):
              use a custom session, e.g. for proxy support. Do not use the same session across multiple WhatsApp clients!).
             server: The Flask or FastAPI app instance to use for the webhook. required when you want to handle incoming
              updates.
-            callback_url: The callback URL to register (optional, only if you want pywa to register the callback URL for
+            callback_url: The callback URL of the server to register (optional, only if you want pywa to register the callback URL for
              you).
             verify_token: The verify token of the registered ``callback_url`` (Required when ``server`` is provided.
              The verify token can be any string. It is used to challenge the webhook endpoint to verify that the
@@ -1340,7 +1340,7 @@ class WhatsApp(_WhatsApp):
             media: The media to upload (can be a URL, bytes, or a file path).
             mime_type: The MIME type of the media (required if media is bytes or a file path).
             filename: The file name of the media (required if media is bytes).
-            dl_session: A requests session to use when downloading the media from a URL (optional, if not provided, a
+            dl_session: A httpx client to use when downloading the media from a URL (optional, if not provided, a
              new session will be created).
             phone_id: The phone ID to upload the media to (optional, if not provided, the client's phone ID will be used).
 

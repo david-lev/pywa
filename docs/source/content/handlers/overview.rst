@@ -370,6 +370,7 @@ To enable this feature, you need to pass the ``app_secret`` when initializing th
     from pywa import WhatsApp
 
     wa = WhatsApp(
+        validate_updates=True, # Default is True
         app_secret='xxxx',
         ...
     )

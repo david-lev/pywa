@@ -5,7 +5,7 @@ This module contains the errors that can be raised by the WhatsApp Cloud API or 
 import functools
 from typing import Iterable, Type
 
-import requests
+import httpx
 
 
 class WhatsAppError(Exception):
@@ -23,7 +23,7 @@ class WhatsAppError(Exception):
         details: The error details (optional).
         fbtrace_id: The Facebook trace ID (optional).
         href: The href to the documentation (optional).
-        raw_response: The :class:`requests.Response` obj that returned the error (optional, only if the error was raised
+        raw_response: The :class:`httpx.Response` obj that returned the error (optional, only if the error was raised
          from an API call).
     """
 
@@ -36,7 +36,7 @@ class WhatsAppError(Exception):
         details: str | None,
         fbtrace_id: str | None,
         href: str | None,
-        raw_response: requests.Response | None,
+        raw_response: httpx.Response | None,
         error_subcode: int | None = None,
         err_type: str | None = None,
     ) -> None:
@@ -56,7 +56,7 @@ class WhatsAppError(Exception):
 
     @classmethod
     def from_dict(
-        cls, error: dict, response: requests.Response | None = None
+        cls, error: dict, response: httpx.Response | None = None
     ) -> "WhatsAppError":
         """Create an error from a response."""
         return cls._get_exception(error["code"])(
