@@ -98,7 +98,7 @@ class Server:
         flows_response_encryptor: utils.FlowResponseEncryptor | None,
         continue_handling: bool,
         skip_duplicate_updates: bool,
-        webhook_updates_validator: utils.WebhookUpdatesValidator | None,
+        validate_updates: bool,
     ):
         self._server = server
         if server is utils.MISSING:
@@ -112,7 +112,7 @@ class Server:
         self._app_id = app_id
         self._app_secret = app_secret
         self._flows_response_encryptor = flows_response_encryptor
-        self._webhook_updates_validator = webhook_updates_validator
+        self._validate_updates = validate_updates
         self._continue_handling = continue_handling
         self._skip_duplicate_updates = skip_duplicate_updates
         self._updates_ids_in_process = set[str]()
@@ -122,22 +122,12 @@ class Server:
                 "When listening for incoming updates, a verify token must be provided.\n>> The verify token can "
                 "be any string. It is used to challenge the webhook endpoint to verify that the endpoint is valid."
             )
-        if webhook_updates_validator is not None:
-            if (
-                webhook_updates_validator is utils.default_webhook_updates_validator
-                and not app_secret
-            ):
-                _logger.warning(
-                    "The default webhook updates validator is used, but no app secret is provided. "
-                    "This may cause security issues (anyone can send updates to the webhook)."
-                    "\n>> You can set `app_secret` when initializing the WhatsApp client or disable the validator"
-                    " (webhook_updates_validator=None)."
-                )
-                self._webhook_updates_validator = None
-            elif not app_secret:
-                raise ValueError(
-                    "When using a custom webhook updates validator, the `app_secret` must be provided."
-                )
+        if validate_updates and not app_secret:
+            _logger.warning(
+                "No `app_secret` provided. Signature validation will be disabled "
+                "(not recommended. disable `validate_updates` to suppress this warning)"
+            )
+            self._validate_updates = False
 
         self._register_routes()
 
@@ -248,17 +238,17 @@ class Server:
         Returns:
             A tuple containing the response and the status code.
         """
-        if (
-            self._webhook_updates_validator is not None
-        ):  # init should have set to None if no app_secret
-            if not hmac_header or not raw_body:
+        if self._validate_updates:
+            if not hmac_header:
                 _logger.debug(
                     "Webhook ('%s') received an update without a signature",
                     self._webhook_endpoint,
                 )
                 return "Error, missing signature", 401
-            if not self._webhook_updates_validator(
-                self._app_secret, raw_body, hmac_header
+            if not utils.webhook_updates_validator(
+                app_secret=self._app_secret,
+                request_body=raw_body,
+                x_hub_signature=hmac_header,
             ):
                 _logger.debug(
                     "Webhook ('%s') received an update with an invalid signature",
@@ -366,9 +356,13 @@ class Server:
             IndexError,
         ):  # this endpoint got non-expected data
             _logger.exception(
-                "Webhook ('%s') received an invalid update: %s",
+                "Webhook ('%s') received an invalid update%s: %s",
                 self._webhook_endpoint,
+                " (Enable `validate_updates` to ignore updates with invalid data)"
+                if not self._validate_updates
+                else "",
                 update,
+                exc_info=None,
             )
             return
 

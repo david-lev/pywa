@@ -285,31 +285,10 @@ def default_flow_response_encryptor(response: dict, aes_key: bytes, iv: bytes) -
     ).decode("utf-8")
 
 
-WebhookUpdatesValidator: TypeAlias = Callable[[str, bytes, str], bool]
-"""
-Type hint for the function that validates the webhook update from WhatsApp.
-
-- All parameters need to be positional.
-- See :py:func:`default_webhook_update_validator` source code for an example.
-
-Args:
-    app_secret (str): app secret
-    request_body (bytes): request body
-    x_hub_signature (str): X-Hub-Signature-256 header
-
-Returns:
-    bool: whether the webhook update is valid
-"""
-
-
-def default_webhook_updates_validator(
+def webhook_updates_validator(
     app_secret: str, request_body: bytes, x_hub_signature: str
 ) -> bool:
-    """
-    The default webhook update validator for validating updates from WhatsApp.
-
-    - This implementation follows the :class:`WebhookUpdatesValidator` type hint.
-    """
+    """The webhook update validator for validating updates from WhatsApp."""
     signature = hmac.new(
         app_secret.encode("utf-8"), request_body, hashlib.sha256
     ).hexdigest()
