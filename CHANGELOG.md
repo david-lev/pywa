@@ -3,7 +3,14 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-#### 1.23.0 (2024-07-14)  **Latest**
+#### 1.24.0 (2024-07-26)  **Latest**
+
+- [server] validating `X-Hub-Signature-256` header
+- [requirements] removing `requests`
+- [server] default callback url registration delay to 3 sec
+
+
+#### 1.23.0 (2024-07-14)
 
 - [client] allowing to manage multiple numbers from the same client (Partner solutions)
 - [flows] adding `.respond()` shortcut for `FlowRequest`
