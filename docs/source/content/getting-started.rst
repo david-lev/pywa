@@ -180,6 +180,7 @@ And that's it! You are ready to send messages!
 
     - The ``to`` parameter must be a phone number with the country code. For example: ``+972123456789``, ``16315551234``. You can read more about the `phone number format here <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-messages#phone-number-formats>`_.
     - If you using the **Test Number**, remember to add the recipient number to the allowed numbers list.
+    - Free-form messages can only be received if the receiving number messaged the sending number in the last 24 hours, see `Whatsapp policy <https://business.whatsapp.com/policy>`_.
 
 --------------------
 
