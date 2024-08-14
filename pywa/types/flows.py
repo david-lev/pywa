@@ -835,6 +835,8 @@ class DataSource:
     """
     The data source of a component.
 
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#data-sources>`_.
+
     Example:
 
         >>> from pywa.types.flows import DataSource
@@ -848,6 +850,9 @@ class DataSource:
         description: The description of the data source. Limited to 300 characters.
         metadata: The metadata of the data source. Limited to 20 characters.
         enabled: Whether the data source is enabled or not. Default to ``True``.
+        image: The base64 encoded image of the data source. Limited to 1MB (added in v5.0).
+        alt_text: The alt text of the image. (added in v5.0).
+        color: 6-digit hex color code. (added in v5.0).
     """
 
     id: str
@@ -855,12 +860,17 @@ class DataSource:
     description: str | None = None
     metadata: str | None = None
     enabled: bool | None = None
+    image: str | None = None
+    alt_text: str | None = None
+    color: str | None = None
 
     def to_dict(self):
         """Called when used in :class:`FlowResponse`."""
         return dataclasses.asdict(
             obj=self,
-            dict_factory=lambda d: {k: v for (k, v) in d if v is not None},
+            dict_factory=lambda d: {
+                k.replace("_", "-"): v for (k, v) in d if v is not None
+            },
         )
 
 
