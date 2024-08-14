@@ -2196,6 +2196,7 @@ class WhatsApp(Server, HandlerDecorators):
         self,
         flow_id: str | int,
         invalidate_preview: bool = True,
+        phone_number_id: str | int | None = None,
     ) -> FlowDetails:
         """
         Get the details of a flow.
@@ -2203,6 +2204,7 @@ class WhatsApp(Server, HandlerDecorators):
         Args:
             flow_id: The flow ID.
             invalidate_preview: Whether to invalidate the preview (optional, default: True).
+            phone_number_id: To check that a flow can be used with a specific phone number (optional).
 
         Returns:
             The details of the flow.
@@ -2210,7 +2212,10 @@ class WhatsApp(Server, HandlerDecorators):
         return FlowDetails.from_dict(
             data=self.api.get_flow(
                 flow_id=str(flow_id),
-                fields=_get_flow_fields(invalidate_preview=invalidate_preview),
+                fields=_get_flow_fields(
+                    invalidate_preview=invalidate_preview,
+                    phone_number_id=phone_number_id,
+                ),
             ),
             client=self,
         )
@@ -2219,6 +2224,7 @@ class WhatsApp(Server, HandlerDecorators):
         self,
         invalidate_preview: bool = True,
         waba_id: str | None = None,
+        phone_number_id: str | int | None = None,
     ) -> tuple[FlowDetails, ...]:
         """
         Get the details of all flows belonging to the WhatsApp Business account.
@@ -2228,6 +2234,7 @@ class WhatsApp(Server, HandlerDecorators):
         Args:
             invalidate_preview: Whether to invalidate the preview (optional, default: True).
             waba_id: The WhatsApp Business account ID (Overrides the client's business account ID).
+            phone_number_id: To check that the flows can be used with a specific phone number (optional).
 
         Returns:
             The details of all flows.
@@ -2236,7 +2243,10 @@ class WhatsApp(Server, HandlerDecorators):
             FlowDetails.from_dict(data=data, client=self)
             for data in self.api.get_flows(
                 waba_id=_resolve_waba_id_param(self, waba_id),
-                fields=_get_flow_fields(invalidate_preview=invalidate_preview),
+                fields=_get_flow_fields(
+                    invalidate_preview=invalidate_preview,
+                    phone_number_id=phone_number_id,
+                ),
             )["data"]
         )
 
@@ -2406,7 +2416,9 @@ def _get_media_msg(
     }
 
 
-def _get_flow_fields(invalidate_preview: bool) -> tuple[str, ...]:
+def _get_flow_fields(
+    invalidate_preview: bool, phone_number_id: str | None
+) -> tuple[str, ...]:
     """Internal method to get the fields of a flow."""
     return (
         "id",
@@ -2421,4 +2433,7 @@ def _get_flow_fields(invalidate_preview: bool) -> tuple[str, ...]:
         f"preview.invalidate({'true' if invalidate_preview else 'false'})",
         "whatsapp_business_account",
         "application",
+        "health_status"
+        if not phone_number_id
+        else f"health_status.phone_number({phone_number_id})",
     )

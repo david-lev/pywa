@@ -545,18 +545,19 @@ class FlowDetails:
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowsapi#details>`_.
 
     Attributes:
-        id: The ID of the flow.
-        name: The name of the flow.
+        id: The unique ID of the Flow.
+        name: The user-defined name of the Flow which is not visible to users.
         status: The status of the flow.
         updated_at: The last time the flow was updated (name, categories, endpoint_uri, json, etc.).
-        json_version: The version of the flow JSON.
-        data_api_version: The version to use during communication with the WhatsApp Flows Data Endpoint.
+        json_version: The version specified by the developer in the Flow JSON asset uploaded.
+        data_api_version: The version of the Data API specified by the developer in the Flow JSON asset uploaded. Only for Flows with an Endpoint.
         categories: The categories of the flow.
-        validation_errors: The validation errors of the flow.
-        endpoint_uri: The endpoint URI of the flow.
-        preview: The preview of the flow.
-        whatsapp_business_account: The WhatsApp Business Account that owns the flow.
-        application: The application that owns the flow.
+        validation_errors: The validation errors of the flow (All errors must be fixed before the Flow can be published).
+        endpoint_uri: The URL of the WA Flow Endpoint specified by the developer via API or in the Builder UI (Was ``data_channel_uri`` before v19.0).
+        preview: The URL to the web preview page to visualize the flow and its expiry time.
+        whatsapp_business_account: The WhatsApp Business Account which owns the Flow.
+        application: The Facebook developer application used to create the Flow initially.
+        health_status: A summary of the Flows health status.
     """
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
@@ -572,6 +573,7 @@ class FlowDetails:
     whatsapp_business_account: WhatsAppBusinessAccount | None
     application: FacebookApplication | None
     updated_at: datetime.datetime | None = None
+    health_status: dict | None = None
 
     @classmethod
     def from_dict(cls, data: dict, client: WhatsApp) -> FlowDetails:
@@ -603,6 +605,7 @@ class FlowDetails:
             updated_at=datetime.datetime.strptime(
                 data["updated_at"], "%Y-%m-%dT%H:%M:%S%z"
             ),
+            health_status=data.get("health_status"),
         )
 
     def publish(self) -> bool:

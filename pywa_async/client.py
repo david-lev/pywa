@@ -2155,6 +2155,7 @@ class WhatsApp(_WhatsApp):
         self,
         flow_id: str | int,
         invalidate_preview: bool = True,
+        phone_number_id: str | int | None = None,
     ) -> FlowDetails:
         """
         Get the details of a flow.
@@ -2162,6 +2163,7 @@ class WhatsApp(_WhatsApp):
         Args:
             flow_id: The flow ID.
             invalidate_preview: Whether to invalidate the preview (optional, default: True).
+            phone_number_id: To check that a flow can be used with a specific phone number (optional).
 
         Returns:
             The details of the flow.
@@ -2170,7 +2172,10 @@ class WhatsApp(_WhatsApp):
             data=(
                 await self.api.get_flow(
                     flow_id=str(flow_id),
-                    fields=_get_flow_fields(invalidate_preview=invalidate_preview),
+                    fields=_get_flow_fields(
+                        invalidate_preview=invalidate_preview,
+                        phone_number_id=phone_number_id,
+                    ),
                 )
             ),
             client=self,
@@ -2180,6 +2185,7 @@ class WhatsApp(_WhatsApp):
         self,
         invalidate_preview: bool = True,
         waba_id: str | None = None,
+        phone_number_id: str | int | None = None,
     ) -> tuple[FlowDetails, ...]:
         """
         Get the details of all flows belonging to the WhatsApp Business account.
@@ -2189,6 +2195,7 @@ class WhatsApp(_WhatsApp):
         Args:
             invalidate_preview: Whether to invalidate the preview (optional, default: True).
             waba_id: The WhatsApp Business account ID (Overrides the client's business account ID).
+            phone_number_id: To check that the flows can be used with a specific phone number (optional).
 
         Returns:
             The details of all flows.
@@ -2198,7 +2205,10 @@ class WhatsApp(_WhatsApp):
             for data in (
                 await self.api.get_flows(
                     waba_id=_resolve_waba_id_param(self, waba_id),
-                    fields=_get_flow_fields(invalidate_preview=invalidate_preview),
+                    fields=_get_flow_fields(
+                        invalidate_preview=invalidate_preview,
+                        phone_number_id=phone_number_id,
+                    ),
                 )
             )["data"]
         )
