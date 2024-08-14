@@ -286,13 +286,12 @@ class FlowResponse:
     Example:
 
         >>> from pywa import WhatsApp
-        >>> from pywa.types.flows import FlowResponse
+        >>> from pywa.types import FlowResponse
 
         >>> wa = WhatsApp(business_private_key="...", ...)
         >>> @wa.on_flow_request("/my-flow-endpoint")
-        ... def my_flow_endpoint(flow_request: FlowRequest) -> FlowResponse:
-        ...     return FlowResponse(
-        ...         version=flow_request.version,
+        ... def my_flow_endpoint(_: WhatsApp, req: FlowRequest) -> FlowResponse:
+        ...     return req.respond(
         ...         screen="SCREEN_ID",
         ...         data={"key": "value"},
         ...     )
@@ -411,11 +410,17 @@ class FlowTokenNoLongerValid(FlowResponseError):
     Example:
 
         >>> from pywa.types.flows import FlowTokenNoLongerValid
-        >>> raise FlowTokenNoLongerValid(error_message='The order has already been placed')
+        >>> wa = WhatsApp(...)
+        >>> @wa.on_flow_request("/my-flow-endpoint")
+        ... def my_flow_endpoint(wa: WhatsApp, req: FlowRequest) -> FlowResponse:
+        ...     if req.flow_token == "123":  # you see the token is no longer valid
+        ...         # wa.send_message(..., buttons=FlowButton(...))  # resend the flow?
+        ...         raise FlowTokenNoLongerValid(error_message='Open the flow again to continue.')
+        ...    ...
 
-    - The layout will be closed and the ``FlowButton`` will be disabled for the user.
-      You can send a new message to the user generating a new Flow token.
-      This action may be used to prevent users from initiating the same Flow again.
+    - The layout will be closed and the :class:`FlowButton` will be disabled for the user.
+    - You can send a new message to the user generating a new Flow token.
+    - This action may be used to prevent users from initiating the same Flow again.
     - You are able to set an error message to display to the user. e.g. “The order has already been placed”
     """
 
@@ -839,7 +844,6 @@ class DataSource:
 
     Example:
 
-        >>> from pywa.types.flows import DataSource
         >>> option_1 = DataSource(id='1', title='Option 1')
         >>> option_2 = DataSource(id='2', title='Option 2')
         >>> checkbox_group = CheckboxGroup(data_source=[option_1, option_2], ...)
@@ -884,12 +888,12 @@ class ScreenData:
 
     Example:
 
-        >>> from pywa.types.flows import ScreenData
-        >>> dynamic_welcome = ScreenData(key='welcome', example='Welcome to my store!')
-        >>> is_email_required = ScreenData(key='is_email_required', example=False)
-        >>> screen = Screen(
+        >>> Screen(
         ...     id='START',
-        ...     data=[dynamic_welcome, is_email_required],
+        ...     data=[
+        ...         dynamic_welcome := ScreenData(key='welcome', example='Welcome to my store!')
+        ...         is_email_required := ScreenData(key='is_email_required', example=False)
+        ...     ],
         ...     layout=Layout(children=[Form(children=[
         ...         TextHeading(text=dynamic_welcome.data_key, ...),
         ...         TextInput(required=is_email_required.data_key, input_type=InputType.EMAIL, ...)
@@ -913,46 +917,56 @@ class ScreenData:
     )
 
     @property
-    def data_key(self) -> str:
+    def data_key(self) -> DataKey:
         """
-        The key for this data to use in the screen children.
-            - A shortcut for :class:`DataKey` with this key.
+        The key for this data to use in the same screen children.
             - Use this property to reference this data in the screen children. Use the :meth:`data_key_of(screen)` to reference this data in ANOTHER screen children.
+            - A shortcut for :class:`DataKey` with this key.
 
         Example:
 
-            >>> from pywa.types.flows import Screen, ScreenData, TextHeading, DataKey
-            >>> screen = Screen(
-            ...     id='START',
-            ...     data=[dynamic_welcome := ScreenData(key='welcome', example='Welcome to my store!')],
-            ...     layout=Layout(children=[
-            ...         TextHeading(text=dynamic_welcome.data_key, ...)
-            ...     ])
+            >>> FlowJSON(
+            ...     screens=[
+            ...         Screen(
+            ...             id='START',
+            ...             data=[dynamic_welcome := ScreenData(key='welcome', example='Welcome to my store!')],
+            ...             layout=Layout(children=[TextHeading(text=dynamic_welcome.data_key, ...)])  # Use the data key here
+            ...         )
+            ...     ],
+            ...     ...
             ... )
-
         """
-        return DataKey(self.key)
+        # noinspection PyTypeChecker
+        return DataKey(key=self.key)
 
-    def data_key_of(self, screen: str) -> str:
+    def data_key_of(self, screen: Screen | str) -> DataKey:
         """
         The key for this data to use in ANOTHER screen children.
+            - If you want to reference this data in the same screen children, use the :meth:`data_key` property.
             - A shortcut for :class:`DataKey` with this key and screen.
             - Added in v4.0.
 
         Example:
 
-            >>> from pywa.types.flows import Screen, ScreenData, TextHeading, DataKey
-            >>> screen = Screen(
-            ...     id='START',
-            ...     data=[dynamic_welcome := ScreenData(key='welcome', example='Welcome to my store!')],
-            ...     layout=Layout(children=[
-            ...         TextHeading(text=dynamic_welcome.data_key_of('START'), ...)
-            ...     ])
+            >>> FlowJSON(
+            ...     screens=[
+            ...         start := Screen(
+            ...             id='START',
+            ...             data=[dynamic_welcome := ScreenData(key='welcome', example='Welcome to my store!')],
+            ...             layout=Layout(children=[...])
+            ...         ),
+            ...         Screen(
+            ...             id='END',
+            ...             layout=Layout(children=[TextHeading(text=dynamic_welcome.data_key_of(start), ...)]) # Use the data key with the screen here
+            ...         )
+            ...     ],
+            ...     ...
             ... )
 
         Args:
             screen: The screen id to reference this data in its children.
         """
+        # noinspection PyTypeChecker
         return DataKey(key=self.key, screen=screen)
 
 
@@ -974,8 +988,7 @@ class Screen:
 
     Example:
 
-        >>> from pywa.types.flows import Screen
-        >>> screen = Screen(
+        >>> Screen(
         ...     id='START',
         ...     title='Welcome',
         ...     data=[ScreenData(key='welcome', example='Welcome to my store!')],
@@ -1132,39 +1145,115 @@ class ComponentType(utils.StrEnum):
 
 
 class _Ref:
-    """Base class for all variables"""
+    """Base class for all references"""
 
-    def __new__(cls, prefix: str, field: str, screen: str | None = None) -> str:
-        return "${%s%s.%s}" % (f"screen.{screen}." if screen else "", prefix, field)
+    def __new__(
+        cls, prefix: str, field: str, screen: Screen | str | None = None
+    ) -> str:
+        return "${%s%s.%s}" % (
+            f"screen.{screen.id if isinstance(screen, Screen) else screen}."
+            if screen
+            else "",
+            prefix,
+            field,
+        )
 
 
 class DataKey(_Ref):
-    def __new__(cls, key: str, screen: str | None = None):
-        """
-        Represents a data key (converts to ``${data.<key>}``).
+    """
+    Represents a data key (converts to ``${data.<key>}`` | ``${screen.<screen>.data.<key>}``).
 
-        - Hint: use the ``.data_key`` property of :class:`ScreenData` to get the data key of a screen data.
-        - Hint: use the ``.data_key_of(screen)`` method of :class:`ScreenData` to get the data key from another screen.
+    Example:
 
-        Args:
-            key: The key to get from the :class:`Screen` .data attribute.
-            screen: The screen that contains the data. Added in v4.0.
-        """
+            - Hint: use the ``.data_key`` property of :class:`ScreenData` to get the data key of a screen data.
+            - Hint: use the ``.data_key_of(screen)`` method of :class:`ScreenData` to get the data key from another screen.
+
+            >>> FlowJSON(
+            ...     screens=[
+            ...         other := Screen(id='OTHER', data=[is_visible := ScreenData(key='is_visible', example=True)]),
+            ...         Screen(
+            ...             id='START',
+            ...             data=[welcome := ScreenData(key='welcome', example='Welcome to my store!')],
+            ...             layout=Layout(children=[
+            ...                 TextHeading(
+            ...                     text=welcome.data_key, # data in the same screen
+            ...                     visible=is_visible.data_key_of(other) # data from other screen
+            ...                 )
+            ...             ])
+            ...         )
+            ...     ]
+            ... )
+
+            - Or if you want to use DataKey directly:
+
+            >>> FlowJSON(
+            ...     screens=[
+            ...         Screen(id='OTHER', data=[ScreenData(key='welcome', example='Welcome to my store!')])
+            ...         Screen(id='START', layout=Layout(children=[TextHeading(text=DataKey(key='welcome', screen='OTHER'))]))
+            ...     ]
+            ... )
+
+    Args:
+        key: The key to get from the :class:`Screen` .data attribute.
+        screen: The screen that contains the data (needed if the data is from another screen). Added in v4.0.
+    """
+
+    def __new__(cls, key: str, screen: Screen | str | None = None):
         return super().__new__(cls, prefix="data", field=key, screen=screen)
 
 
 class FormRef(_Ref):
-    def __new__(cls, child_name: str, screen: str | None = None):
-        """
-        Represents a form reference variable (converts to ``${form.<child>}``).
+    """
+    Represents a form reference variable (converts to ``${form.<child>}`` | ``${screen.<screen>.form.<child>}``).
+
+    Example:
 
         - Hint: use the ``.form_ref`` property of each component to get the form reference variable of that component.
         - Hint: use the ``.form_ref_of(screen)`` method of each component to get the form reference variable of that component with the given screen name.
 
-        Args:
-            child_name: The name of the :class:`Form` child to get the value from.
-            screen: The name of the screen that contains the form. Added in v4.0.
-        """
+        >>> FlowJSON(
+        ...     screens=[
+        ...         other := Screen(
+        ...             id='OTHER',
+        ...             layout=Layout(children=[Form(children=[email := TextInput(name='email', ...), ...])])
+        ...         ),
+        ...         Screen(
+        ...             id='START',
+        ...             layout=Layout(children=[
+        ...                 phone := TextInput(name='phone', ...),
+        ...                 TextBody(text=phone.form_ref, ...),  # form reference from the same screen
+        ...                 TextCaption(text=email.form_ref_of(other), ...)  # form reference from another screen
+        ...             ])
+        ...         )
+        ...     ]
+        ... )
+
+        - Or if you want to use FormRef directly:
+
+        >>> FlowJSON(
+        ...     screens=[
+        ...         Screen(
+        ...             id='OTHER',
+        ...             layout=Layout(children=[Form(children=[email := TextInput(name='email', ...), ...])])
+        ...         ),
+        ...         Screen(
+        ...             id='START',
+        ...             layout=Layout(children=[
+        ...                 phone := TextInput(name='phone', ...),
+        ...                 TextBody(text=FormRef('phone')),
+        ...                 TextCaption(text=FormRef('email', screen='OTHER'))
+        ...             ])
+        ...         )
+        ...     ]
+        ... )
+
+
+    Args:
+        child_name: The name of the :class:`Form` child to get the value from.
+        screen: The name of the screen that contains the form. Added in v4.0.
+    """
+
+    def __new__(cls, child_name: str, screen: Screen | str | None = None):
         return super().__new__(cls, prefix="form", field=child_name, screen=screen)
 
 
@@ -1192,8 +1281,8 @@ class Form(Component):
     visible: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
     children: Iterable[_SUPPOERTED_COMPONENTS]
-    init_values: dict[str, Any] | str | DataKey | None = None
-    error_messages: dict[str, str] | str | DataKey | None = None
+    init_values: dict[str, Any] | str | DataKey | FormRef | None = None
+    error_messages: dict[str, str] | str | DataKey | FormRef | None = None
 
     def __post_init__(self):
         if not self.children:
@@ -1238,7 +1327,7 @@ class FormComponent(Component, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def label(self) -> str | DataKey: ...
+    def label(self) -> str | DataKey | FormRef: ...
 
     @property
     @abc.abstractmethod
@@ -1250,24 +1339,36 @@ class FormComponent(Component, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def init_value(self) -> bool | str | DataKey | None: ...
+    def init_value(self) -> bool | str | DataKey | FormRef | None: ...
 
     @property
-    def form_ref(self) -> str:
+    def form_ref(self) -> FormRef:
         """
         The form reference variable for this component.
-            - A shortcut for :class:`FormRef` with this component name.
             - Use this when the reference is in the same screen. Use ``.form_ref_of(screen)`` when the reference is in another screen.
+            - A shortcut for :class:`FormRef` with this component name.
 
         Example:
 
-            >>> from pywa.types.flows import Form, TextInput
-            >>> form = Form(children=[text_input := TextInput(name='email', ...)])
-            >>> text_input.form_ref
+            >>> FlowJSON(
+            ...     screens=[
+            ...         Screen(
+            ...             id='START',
+            ...             layout=Layout(children=[
+            ...                 Form(children=[
+            ...                     text_input := TextInput(name='email', ...),
+            ...                     TextHeading(text="Your email is:", ...)
+            ...                     TextCaption(text=text_input.form_ref, ...)
+            ...                 ]),
+            ...                 Footer(label='Submit', action=Action(payload={'email': text_input.form_ref}))
+            ...         ])
+            ...     ]
+            ... )
         """
+        # noinspection PyTypeChecker
         return FormRef(self.name)
 
-    def form_ref_of(self, screen: str) -> str:
+    def form_ref_of(self, screen: Screen | str) -> FormRef:
         """
         The form reference variable for this component with the given form name.
             - A shortcut for :class:`FormRef` with the given screen name and this component name.
@@ -1276,15 +1377,25 @@ class FormComponent(Component, abc.ABC):
 
         Example:
 
-            >>> from pywa.types.flows import Screen, Layout, Form, TextInput
-            >>> screen = Screen(screen_name="WELCOME", layout=Layout(
-            ...     children=[Form(name='my_form', children=[text_input := TextInput(name='email', ...)])]
-            ... ))
-            >>> text_input.form_ref_of(screen='WELCOME')
+            >>> FlowJSON(
+            ...     screens=[
+            ...         other := Screen(
+            ...             id='OTHER',
+            ...             layout=Layout(children=[Form(children=[email := TextInput(name='email', ...), ...])])
+            ...         ),
+            ...         Screen(
+            ...             id='START',
+            ...             layout=Layout(children=[
+            ...                 TextCaption(text=email.form_ref_of(other), ...)  # form reference from another screen
+            ...             ])
+            ...         )
+            ...     ]
+            ... )
 
         Args:
-            screen: The name of the screen that contains the form.
+            screen: The screen that contains the form.
         """
+        # noinspection PyTypeChecker
         return FormRef(child_name=self.name, screen=screen)
 
 
@@ -1297,7 +1408,7 @@ class TextComponent(Component, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def text(self) -> str | DataKey: ...
+    def text(self) -> str | DataKey | FormRef: ...
 
 
 class FontWeight(utils.StrEnum):
@@ -1326,8 +1437,7 @@ class TextHeading(TextComponent):
 
     Example:
 
-        >>> from pywa.types.flows import TextHeading
-        >>> heading = TextHeading(text='Heading', visible=True)
+        >>> TextHeading(text='Heading', visible=True)
 
     Attributes:
         text: The text of the heading. Limited to 4096 characters. Can be dynamic.
@@ -1337,8 +1447,8 @@ class TextHeading(TextComponent):
     type: ComponentType = dataclasses.field(
         default=ComponentType.TEXT_HEADING, init=False, repr=False
     )
-    text: str | DataKey
-    visible: bool | str | DataKey | None = None
+    text: str | DataKey | FormRef
+    visible: bool | str | DataKey | FormRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1350,8 +1460,7 @@ class TextSubheading(TextComponent):
 
     Example:
 
-        >>> from pywa.types.flows import TextSubheading
-        >>> subheading = TextSubheading(text='Subheading', visible=True)
+        >>> TextSubheading(text='Subheading', visible=True)
 
     Attributes:
         text: The text of the subheading. Limited to 60 characters. Can be dynamic.
@@ -1361,8 +1470,8 @@ class TextSubheading(TextComponent):
     type: ComponentType = dataclasses.field(
         default=ComponentType.TEXT_SUBHEADING, init=False, repr=False
     )
-    text: str | DataKey
-    visible: bool | str | DataKey | None = None
+    text: str | DataKey | FormRef
+    visible: bool | str | DataKey | FormRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1374,10 +1483,10 @@ class TextBody(TextComponent):
 
     Example:
 
-        >>> from pywa.types.flows import TextBody, FontWeight
-        >>> body = TextBody(
+        >>> TextBody(
         ...     text='Body',
         ...     font_weight=FontWeight.BOLD,
+        ...     strikethrough=True,
         ...     visible=True
         ... )
 
@@ -1391,10 +1500,10 @@ class TextBody(TextComponent):
     type: ComponentType = dataclasses.field(
         default=ComponentType.TEXT_BODY, init=False, repr=False
     )
-    text: str | DataKey
-    font_weight: FontWeight | str | DataKey | None = None
-    strikethrough: bool | str | DataKey | None = None
-    visible: bool | str | DataKey | None = None
+    text: str | DataKey | FormRef
+    font_weight: FontWeight | str | DataKey | FormRef | None = None
+    strikethrough: bool | str | DataKey | FormRef | None = None
+    visible: bool | str | DataKey | FormRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1406,8 +1515,7 @@ class TextCaption(TextComponent):
 
     Example:
 
-        >>> from pywa.types.flows import TextCaption, FontWeight
-        >>> caption = TextCaption(
+        >>> TextCaption(
         ...     text='Caption',
         ...     font_weight=FontWeight.ITALIC,
         ...     strikethrough=True,
@@ -1424,10 +1532,10 @@ class TextCaption(TextComponent):
     type: ComponentType = dataclasses.field(
         default=ComponentType.TEXT_CAPTION, init=False, repr=False
     )
-    text: str | DataKey
-    font_weight: FontWeight | str | DataKey | None = None
-    strikethrough: bool | str | DataKey | None = None
-    visible: bool | str | DataKey | None = None
+    text: str | DataKey | FormRef
+    font_weight: FontWeight | str | DataKey | FormRef | None = None
+    strikethrough: bool | str | DataKey | FormRef | None = None
+    visible: bool | str | DataKey | FormRef | None = None
 
 
 class TextEntryComponent(FormComponent, abc.ABC):
@@ -1439,11 +1547,11 @@ class TextEntryComponent(FormComponent, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def helper_text(self) -> str | DataKey | None: ...
+    def helper_text(self) -> str | DataKey | FormRef | None: ...
 
     @property
     @abc.abstractmethod
-    def error_message(self) -> str | DataKey | None: ...
+    def error_message(self) -> str | DataKey | FormRef | None: ...
 
 
 class InputType(utils.StrEnum):
@@ -1479,8 +1587,7 @@ class TextInput(TextEntryComponent):
 
     Example:
 
-        >>> from pywa.types.flows import TextInput, InputType
-        >>> text_input = TextInput(
+        >>> TextInput(
         ...     name='email',
         ...     label='Email',
         ...     input_type=InputType.EMAIL,
@@ -1508,16 +1615,16 @@ class TextInput(TextEntryComponent):
         default=ComponentType.TEXT_INPUT, init=False, repr=False
     )
     name: str
-    label: str | DataKey
-    input_type: InputType | str | DataKey | None = None
-    required: bool | str | DataKey | None = None
-    min_chars: int | str | DataKey | None = None
-    max_chars: int | str | DataKey | None = None
-    helper_text: str | DataKey | None = None
-    enabled: bool | str | DataKey | None = None
-    visible: bool | str | DataKey | None = None
-    init_value: str | DataKey | None = None
-    error_message: str | DataKey | None = None
+    label: str | DataKey | FormRef
+    input_type: InputType | str | DataKey | FormRef | None = None
+    required: bool | str | DataKey | FormRef | None = None
+    min_chars: int | str | DataKey | FormRef | None = None
+    max_chars: int | str | DataKey | FormRef | None = None
+    helper_text: str | DataKey | FormRef | None = None
+    enabled: bool | str | DataKey | FormRef | None = None
+    visible: bool | str | DataKey | FormRef | None = None
+    init_value: str | DataKey | FormRef | None = None
+    error_message: str | DataKey | FormRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1530,8 +1637,7 @@ class TextArea(TextEntryComponent):
 
     Example:
 
-        >>> from pywa.types.flows import TextArea
-        >>> text_area = TextArea(
+        >>> TextArea(
         ...     name='description',
         ...     label='Description',
         ...     required=True,
@@ -1555,14 +1661,14 @@ class TextArea(TextEntryComponent):
         default=ComponentType.TEXT_AREA, init=False, repr=False
     )
     name: str
-    label: str | DataKey
-    required: bool | str | DataKey | None = None
-    max_length: int | str | DataKey | None = None
-    helper_text: str | DataKey | None = None
-    enabled: bool | str | DataKey | None = None
-    visible: bool | str | DataKey | None = None
-    init_value: str | DataKey | None = None
-    error_message: str | DataKey | None = None
+    label: str | DataKey | FormRef
+    required: bool | str | DataKey | FormRef | None = None
+    max_length: int | str | DataKey | FormRef | None = None
+    helper_text: str | DataKey | FormRef | None = None
+    enabled: bool | str | DataKey | FormRef | None = None
+    visible: bool | str | DataKey | FormRef | None = None
+    init_value: str | DataKey | FormRef | None = None
+    error_message: str | DataKey | FormRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1575,8 +1681,7 @@ class CheckboxGroup(FormComponent):
 
     Example:
 
-        >>> from pywa.types.flows import CheckboxGroup, DataSource
-        >>> checkbox_group = CheckboxGroup(
+        >>> CheckboxGroup(
         ...     name='options',
         ...     data_source=[
         ...         DataSource(id='1', title='Option 1'),
@@ -1608,15 +1713,15 @@ class CheckboxGroup(FormComponent):
         default=ComponentType.CHECKBOX_GROUP, init=False, repr=False
     )
     name: str
-    data_source: Iterable[DataSource] | str | DataKey
-    label: str | DataKey | None = None
-    description: str | DataKey | None = None
-    min_selected_items: int | str | DataKey | None = None
-    max_selected_items: int | str | DataKey | None = None
-    required: bool | str | DataKey | None = None
-    visible: bool | str | DataKey | None = None
-    enabled: bool | str | DataKey | None = None
-    init_value: list[str] | str | DataKey | None = None
+    data_source: Iterable[DataSource] | str | DataKey | FormRef
+    label: str | DataKey | FormRef | None = None
+    description: str | DataKey | FormRef | None = None
+    min_selected_items: int | str | DataKey | FormRef | None = None
+    max_selected_items: int | str | DataKey | FormRef | None = None
+    required: bool | str | DataKey | FormRef | None = None
+    visible: bool | str | DataKey | FormRef | None = None
+    enabled: bool | str | DataKey | FormRef | None = None
+    init_value: list[str] | str | DataKey | FormRef | None = None
     on_select_action: Action | None = None
 
 
@@ -1630,8 +1735,7 @@ class RadioButtonsGroup(FormComponent):
 
     Example:
 
-        >>> from pywa.types.flows import RadioButtonsGroup, DataSource
-        >>> radio_buttons_group = RadioButtonsGroup(
+        >>> RadioButtonsGroup(
         ...     name='options',
         ...     data_source=[
         ...         DataSource(id='1', title='Option 1'),
@@ -1659,13 +1763,13 @@ class RadioButtonsGroup(FormComponent):
         default=ComponentType.RADIO_BUTTONS_GROUP, init=False, repr=False
     )
     name: str
-    data_source: Iterable[DataSource] | str | DataKey
-    label: str | DataKey | None = None
-    description: str | DataKey | None = None
-    required: bool | str | DataKey | None = None
-    visible: bool | str | DataKey | None = None
-    enabled: bool | str | DataKey | None = None
-    init_value: str | DataKey | None = None
+    data_source: Iterable[DataSource] | str | DataKey | FormRef
+    label: str | DataKey | FormRef | None = None
+    description: str | DataKey | FormRef | None = None
+    required: bool | str | DataKey | FormRef | None = None
+    visible: bool | str | DataKey | FormRef | None = None
+    enabled: bool | str | DataKey | FormRef | None = None
+    init_value: str | DataKey | FormRef | None = None
     on_select_action: Action | None = None
 
 
@@ -1679,8 +1783,7 @@ class Dropdown(FormComponent):
 
     Example:
 
-        >>> from pywa.types.flows import Dropdown, DataSource
-        >>> dropdown = Dropdown(
+        >>> Dropdown(
         ...     name='options',
         ...     data_source=[
         ...         DataSource(id='1', title='Option 1'),
@@ -1707,12 +1810,12 @@ class Dropdown(FormComponent):
         default=ComponentType.DROPDOWN, init=False, repr=False
     )
     name: str
-    label: str | DataKey
-    data_source: Iterable[DataSource] | str | DataKey
-    enabled: bool | str | DataKey | None = None
-    required: bool | str | DataKey | None = None
-    visible: bool | str | DataKey | None = None
-    init_value: str | DataKey | None = None
+    label: str | DataKey | FormRef
+    data_source: Iterable[DataSource] | str | DataKey | FormRef
+    enabled: bool | str | DataKey | FormRef | None = None
+    required: bool | str | DataKey | FormRef | None = None
+    visible: bool | str | DataKey | FormRef | None = None
+    init_value: str | DataKey | FormRef | None = None
     on_select_action: Action | None = None
 
 
@@ -1725,22 +1828,36 @@ class Footer(Component):
 
     Example:
 
-        >>> from pywa.types.flows import Footer, Action, FlowActionType, ActionNext
-        >>> submit_footer = Footer(
-        ...     label='Submit',
+        - Exchange data with your server (@wa.on_flow_request(...))
+
+        >>> Footer(
+        ...     label='Sign up',
         ...     on_click_action=Action(
-        ...         name=FlowActionType.COMPLETE,
-        ...         payload={'data': 'value'}
+        ...         name=FlowActionType.DATA_EXCHANGE,
+        ...         payload={'email': '...', 'phone': '...'}
         ...     )
         ... )
 
-        >>> navigation_footer = Footer(
+        - Go to the next screen:
+
+        >>> Footer(
         ...     label='Next',
         ...     on_click_action=Action(
         ...         name=FlowActionType.NAVIGATE,
-        ...         next=ActionNext(name='NEXT_SCREEN'),
-        ...         payload={'data': 'value'}
+        ...         next=ActionNext(name='NEXT_SCREEN')
         ...     )
+        ... )
+
+        - Complete the flow when the user clicks the footer:
+
+        >>> Footer(
+        ...     label='Submit',
+        ...     on_click_action=Action(
+        ...         name=FlowActionType.COMPLETE,
+        ...         payload={'email': '...', 'phone': '...'}
+        ...     )
+        ... )
+
 
     Attributes:
         label: The label of the footer. Limited to 35 characters. Can be dynamic.
@@ -1755,12 +1872,12 @@ class Footer(Component):
         default=ComponentType.FOOTER, init=False, repr=False
     )
     visible: None = dataclasses.field(default=None, init=False, repr=False)
-    label: str | DataKey
+    label: str | DataKey | FormRef
     on_click_action: Action
-    left_caption: str | DataKey | None = None
-    center_caption: str | DataKey | None = None
-    right_caption: str | DataKey | None = None
-    enabled: bool | str | DataKey | None = None
+    left_caption: str | DataKey | FormRef | None = None
+    center_caption: str | DataKey | FormRef | None = None
+    right_caption: str | DataKey | FormRef | None = None
+    enabled: bool | str | DataKey | FormRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1774,8 +1891,7 @@ class OptIn(FormComponent):
 
     Example:
 
-        >>> from pywa.types.flows import OptIn
-        >>> opt_in = OptIn(
+        >>> OptIn(
         ...     name='opt_in',
         ...     label='I agree to the terms and conditions',
         ...     required=True,
@@ -1796,10 +1912,10 @@ class OptIn(FormComponent):
     )
     enabled: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
-    label: str | DataKey
-    required: bool | str | DataKey | None = None
-    visible: bool | str | DataKey | None = None
-    init_value: bool | str | DataKey | None = None
+    label: str | DataKey | FormRef
+    required: bool | str | DataKey | FormRef | None = None
+    visible: bool | str | DataKey | FormRef | None = None
+    init_value: bool | str | DataKey | FormRef | None = None
     on_click_action: Action | None = None
 
 
@@ -1814,8 +1930,7 @@ class EmbeddedLink(Component):
 
     Example:
 
-        >>> from pywa.types.flows import EmbeddedLink, Action, ActionNext
-        >>> embedded_link = EmbeddedLink(
+        >>> EmbeddedLink(
         ...     text='Sign up',
         ...     on_click_action=Action(
         ...         name=FlowActionType.NAVIGATE,
@@ -1833,9 +1948,9 @@ class EmbeddedLink(Component):
     type: ComponentType = dataclasses.field(
         default=ComponentType.EMBEDDED_LINK, init=False, repr=False
     )
-    text: str | DataKey
+    text: str | DataKey | FormRef
     on_click_action: Action
-    visible: bool | str | DataKey | None = None
+    visible: bool | str | DataKey | FormRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1848,8 +1963,7 @@ class DatePicker(FormComponent):
 
     Example:
 
-        >>> from pywa.types.flows import DatePicker
-        >>> date_picker = DatePicker(
+        >>> DatePicker(
         ...     name='date',
         ...     label='Appointment Date',
         ...     min_date='1577829600000',
@@ -1882,16 +1996,16 @@ class DatePicker(FormComponent):
         default=ComponentType.DATE_PICKER, init=False, repr=False
     )
     name: str
-    label: str | DataKey
-    min_date: str | str | DataKey | None = None
-    max_date: str | str | DataKey | None = None
-    unavailable_dates: Iterable[str] | str | DataKey | None = None
-    helper_text: str | DataKey | None = None
-    enabled: bool | str | DataKey | None = None
-    required: bool | str | DataKey | None = None
-    visible: bool | str | DataKey | None = None
-    init_value: str | DataKey | None = None
-    error_message: str | DataKey | None = None
+    label: str | DataKey | FormRef
+    min_date: str | str | DataKey | FormRef | None = None
+    max_date: str | str | DataKey | FormRef | None = None
+    unavailable_dates: Iterable[str] | str | DataKey | FormRef | None = None
+    helper_text: str | DataKey | FormRef | None = None
+    enabled: bool | str | DataKey | FormRef | None = None
+    required: bool | str | DataKey | FormRef | None = None
+    visible: bool | str | DataKey | FormRef | None = None
+    init_value: str | DataKey | FormRef | None = None
+    error_message: str | DataKey | FormRef | None = None
     on_select_action: Action | None = None
 
 
@@ -1922,8 +2036,7 @@ class Image(Component):
 
     Example:
 
-        >>> from pywa.types.flows import Image, ScaleType
-        >>> image = Image(
+        >>> Image(
         ...     src='iVBORw0KGgoAAAANSUhEUgAAAlgAAAM...',
         ...     width=100,
         ...     height=100,
@@ -1944,13 +2057,13 @@ class Image(Component):
     type: ComponentType = dataclasses.field(
         default=ComponentType.IMAGE, init=False, repr=False
     )
-    src: str | DataKey
-    width: int | str | DataKey | None = None
-    height: int | str | DataKey | None = None
-    scale_type: ScaleType | str | DataKey | None = None
-    aspect_ratio: int | str | DataKey
-    alt_text: str | DataKey | None = None
-    visible: bool | str | DataKey | None = None
+    src: str | DataKey | FormRef
+    width: int | str | DataKey | FormRef | None = None
+    height: int | str | DataKey | FormRef | None = None
+    scale_type: ScaleType | str | DataKey | FormRef | None = None
+    aspect_ratio: int | str | DataKey | FormRef
+    alt_text: str | DataKey | FormRef | None = None
+    visible: bool | str | DataKey | FormRef | None = None
 
 
 class PhotoSource(utils.StrEnum):
@@ -1981,8 +2094,7 @@ class PhotoPicker(FormComponent):
 
     Example:
 
-        >>> from pywa.types.flows import PhotoPicker, PhotoSource
-        >>> photo_picker = PhotoPicker(
+        >>> PhotoPicker(
         ...     name='photo',
         ...     label='Take a photo',
         ...     description='We need your photo for verification',
@@ -2012,15 +2124,15 @@ class PhotoPicker(FormComponent):
     required: None = dataclasses.field(default=None, init=False, repr=False)
     init_value: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
-    label: str | DataKey
-    description: str | DataKey | None = None
-    photo_source: PhotoSource | str | DataKey | None = None
-    max_file_size_kb: int | str | DataKey | None = None
-    min_uploaded_photos: int | str | DataKey | None = None
-    max_uploaded_photos: int | str | DataKey | None = None
-    enabled: bool | str | DataKey | None = None
-    visible: bool | str | DataKey | None = None
-    error_message: str | DataKey | None = None
+    label: str | DataKey | FormRef
+    description: str | DataKey | FormRef | None = None
+    photo_source: PhotoSource | str | DataKey | FormRef | None = None
+    max_file_size_kb: int | str | DataKey | FormRef | None = None
+    min_uploaded_photos: int | str | DataKey | FormRef | None = None
+    max_uploaded_photos: int | str | DataKey | FormRef | None = None
+    enabled: bool | str | DataKey | FormRef | None = None
+    visible: bool | str | DataKey | FormRef | None = None
+    error_message: str | DataKey | FormRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -2036,8 +2148,7 @@ class DocumentPicker(FormComponent):
 
     Example:
 
-        >>> from pywa.types.flows import DocumentPicker
-        >>> document_picker = DocumentPicker(
+        >>> DocumentPicker(
         ...     name='document',
         ...     label='Upload your Driving License',
         ...     description='We need your document for verification',
@@ -2066,15 +2177,15 @@ class DocumentPicker(FormComponent):
     required: None = dataclasses.field(default=None, init=False, repr=False)
     init_value: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
-    label: str | DataKey
-    description: str | DataKey | None = None
-    max_file_size_kb: int | str | DataKey | None = None
-    min_uploaded_documents: int | str | DataKey | None = None
-    max_uploaded_documents: int | str | DataKey | None = None
-    allowed_mime_types: Iterable[str] | str | DataKey | None = None
-    enabled: bool | str | DataKey | None = None
-    visible: bool | str | DataKey | None = None
-    error_message: str | DataKey | None = None
+    label: str | DataKey | FormRef
+    description: str | DataKey | FormRef | None = None
+    max_file_size_kb: int | str | DataKey | FormRef | None = None
+    min_uploaded_documents: int | str | DataKey | FormRef | None = None
+    max_uploaded_documents: int | str | DataKey | FormRef | None = None
+    allowed_mime_types: Iterable[str] | str | DataKey | FormRef | None = None
+    enabled: bool | str | DataKey | FormRef | None = None
+    visible: bool | str | DataKey | FormRef | None = None
+    error_message: str | DataKey | FormRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -2093,21 +2204,19 @@ class If(Component):
 
     Example:
 
-            >>> from pywa.types.flows import If, TextInput, ScreenData
-            >>> screen_data = ScreenData(key="age", example=20)
-            >>> if_component = If(
-            ...     condition=f"{screen_data.data_key} > 20 && ({screen_data.data_key} < 30)",
+            >>> age = ScreenData(key="age", example=20)
+            >>> opt_in = OptIn(name="opt_in", ...)
+            >>> If(
+            ...     condition=f"{age.data_key} > 21 && {opt_in.form_ref}",
             ...     then=[
+            ...         TextHeading(text="Welcome to the club!"),
             ...         TextInput(
             ...             name='email',
             ...             label='Email',
             ...         ),
             ...     ],
             ...     else_=[
-            ...         TextInput(
-            ...             name='phone',
-            ...             label='Phone',
-            ...         ),
+            ...         TextHeading(text="You are not eligible!"),
             ...     ]
             ... )
 
@@ -2136,13 +2245,13 @@ class Switch(Component):
 
     Example:
 
-            >>> from pywa.types.flows import Switch, TextInput
             >>> age = TextInput(name='age', label='Age')
             >>> switch = Switch(
             ...     value=age.form_ref,
             ...     cases={
+            ...         '10': [TextHeading(text='Under 18')],
+            ...         ...
             ...         '20': [TextInput(name='email', label='Email')],
-            ...         '30': [TextInput(name='phone', label='Phone')],
             ...     }
 
     Attributes:
@@ -2215,7 +2324,6 @@ class Action:
 
     Example:
 
-        >>> from pywa.types.flows import Action, FlowActionType, ActionNext
         >>> complete_action = Action(
         ...     name=FlowActionType.COMPLETE,
         ...     payload={'data': 'value'}
