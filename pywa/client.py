@@ -2102,28 +2102,8 @@ class WhatsApp(Server, HandlerDecorators):
         Raises:
             FlowUpdatingError: If the flow json is invalid or the flow is already published.
         """
-        json_str = None
-        to_dump = None
-        if isinstance(flow_json, (str, pathlib.Path)):
-            as_path = pathlib.Path(flow_json)
-            try:
-                if as_path.is_file():
-                    with open(as_path, "r") as f:
-                        json_str = f.read()
-            except OSError:  # file name too long or other OS error
-                pass
-        elif isinstance(flow_json, FlowJSON):
-            to_dump = flow_json.to_dict()
-        elif isinstance(flow_json, dict):
-            to_dump = flow_json
-        elif isinstance(flow_json, bytes):
-            json_str = flow_json.decode()
-
-        if to_dump is not None:
-            json_str = json.dumps(to_dump)
-        res = self.api.update_flow_json(
-            flow_id=str(flow_id), flow_json=json_str or flow_json
-        )
+        json_str = _resolve_flow_json_param(flow_json)
+        res = self.api.update_flow_json(flow_id=str(flow_id), flow_json=json_str)
         return res["success"], tuple(
             FlowValidationError.from_dict(data) for data in res["validation_errors"]
         )
@@ -2385,6 +2365,36 @@ def _resolve_waba_id_param(wa: WhatsApp, waba_id: str | None) -> str:
     raise ValueError(
         "When initializing WhatsApp without business_account_id, waba_id must be provided."
     )
+
+
+def _resolve_flow_json_param(
+    flow_json: FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO,
+) -> str:
+    """Internal method to solve the `flow_json` parameter"""
+    json_str, to_dump = None, None
+    if isinstance(flow_json, (str, pathlib.Path)):  # json str or path to json file
+        as_path = pathlib.Path(flow_json)
+        try:
+            if as_path.is_file():
+                with open(as_path, "r") as f:
+                    json_str = f.read()
+        except OSError:
+            json_str = flow_json
+    elif isinstance(flow_json, bytes):
+        json_str = flow_json.decode()
+    elif isinstance(flow_json, FlowJSON):
+        to_dump = flow_json.to_dict()
+    elif isinstance(flow_json, dict):
+        to_dump = flow_json
+    else:
+        raise TypeError(
+            "`flow_json` must be a FlowJSON object, dict, json string, json file path or json bytes"
+        )
+
+    if to_dump is not None:
+        json_str = json.dumps(to_dump, indent=4, ensure_ascii=False)
+
+    return json_str
 
 
 def _get_interactive_msg(
