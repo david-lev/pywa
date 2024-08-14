@@ -2376,7 +2376,7 @@ def _resolve_flow_json_param(
         as_path = pathlib.Path(flow_json)
         try:
             if as_path.is_file():
-                with open(as_path, "r") as f:
+                with open(as_path, "r", encoding="utf-8") as f:
                     json_str = f.read()
         except OSError:
             json_str = flow_json
