@@ -1959,6 +1959,7 @@ class DatePicker(FormComponent):
     DatePicker component allows users to select a date
 
     - This component must be inside a :class:`Form` (if FlowJSON version is below 4.0).
+    - Starting from FlowJSON version 5.0, you can use date/datetime python objects or a formatted date string in the format "YYYY-MM-DD", such as "2024-10-21" or
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#dp>`_.
 
     Example:
@@ -1966,11 +1967,11 @@ class DatePicker(FormComponent):
         >>> DatePicker(
         ...     name='date',
         ...     label='Appointment Date',
-        ...     min_date='1577829600000',
-        ...     max_date='1704060000000',
+        ...     min_date=datetime.date(2024, 7, 21),
+        ...     max_date=datetime.date(2024, 10, 21),
         ...     unavailable_dates=[
-        ...         '1609452000000',
-        ...         '1640988000000'
+        ...         datetime.date(2024, 7, 25),
+        ...         datetime.date(2024, 7, 26),
         ...     ],
         ...     helper_text='Select a date',
         ...     required=True
@@ -1980,9 +1981,9 @@ class DatePicker(FormComponent):
     Attributes:
         name: The unique name (id) for this component (to be used dynamically or in action payloads).
         label: The label of the date picker. Limited to 40 characters. Can be dynamic.
-        min_date: The minimum date (timestamp in ms) that can be selected. Can be dynamic.
-        max_date: The maximum date (timestamp in ms) that can be selected. Can be dynamic.
-        unavailable_dates: The dates (timestamp in ms) that cannot be selected. Can be dynamic.
+        min_date: The minimum date (date/datetime/timestamp) that can be selected. Can be dynamic.
+        max_date: The maximum date (date/datetime/timestamp) that can be selected. Can be dynamic.
+        unavailable_dates: The dates (dates/datetimes/timestamps) that cannot be selected. Can be dynamic.
         helper_text: The helper text of the date picker. Limited to 80 characters. Can be dynamic.
         enabled: Whether the date picker is enabled or not. Default to ``True``. Can be dynamic.
         required: Whether the date picker is required or not. Can be dynamic.
@@ -1997,16 +1998,30 @@ class DatePicker(FormComponent):
     )
     name: str
     label: str | DataKey | FormRef
-    min_date: str | str | DataKey | FormRef | None = None
-    max_date: str | str | DataKey | FormRef | None = None
-    unavailable_dates: Iterable[str] | str | DataKey | FormRef | None = None
+    min_date: datetime.date | str | DataKey | FormRef | None = None
+    max_date: datetime.date | str | DataKey | FormRef | None = None
+    unavailable_dates: (
+        Iterable[datetime.date | str] | str | DataKey | FormRef | None
+    ) = None
     helper_text: str | DataKey | FormRef | None = None
     enabled: bool | str | DataKey | FormRef | None = None
     required: bool | str | DataKey | FormRef | None = None
     visible: bool | str | DataKey | FormRef | None = None
-    init_value: str | DataKey | FormRef | None = None
+    init_value: datetime.date | str | DataKey | FormRef | None = None
     error_message: str | DataKey | FormRef | None = None
     on_select_action: Action | None = None
+
+    def __post_init__(self):
+        date_fmt = "%Y-%m-%d"
+        for attr in {"min_date", "max_date", "init_value"}:
+            value = getattr(self, attr)
+            if isinstance(value, datetime.date):
+                setattr(self, attr, value.strftime(date_fmt))
+        if self.unavailable_dates:
+            self.unavailable_dates = [
+                date.strftime(date_fmt) if isinstance(date, datetime.date) else date
+                for date in self.unavailable_dates
+            ]
 
 
 class ScaleType(utils.StrEnum):
