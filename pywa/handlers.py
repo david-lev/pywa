@@ -245,12 +245,14 @@ class Handler(abc.ABC):
         self,
         callback: Callable[[WhatsApp, Any], Any],
         *filters: Callable[[WhatsApp, Any], bool],
+        priority: int,
     ):
         """
         Initialize a new callback.
         """
         self.callback = callback
         self.filters = filters
+        self.priority = priority
 
     async def handle(self, wa: WhatsApp, data: Any) -> bool:
         for f in self.filters:
@@ -289,7 +291,7 @@ class Handler(abc.ABC):
         )
 
     def __str__(self) -> str:
-        return f"{self.__class__.__name__}(callback={self.callback!r}, filters={self.filters!r})"
+        return f"{self.__class__.__name__}({self.callback=!r}, {self.filters=!r}, {self.priority=})"
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -313,6 +315,7 @@ class MessageHandler(Handler):
          arguments)
         *filters: The filters to apply to the callback (Takes a :class:`pywa.WhatsApp` instance and a
          :class:`pywa.types.Message` and returns a :class:`bool`)
+        priority: The priority of the handler (default: ``0``)
     """
 
     _field_name = "messages"
@@ -321,8 +324,9 @@ class MessageHandler(Handler):
         self,
         callback: Callable[[WhatsApp, Message], Any | Awaitable[Any]],
         *filters: Callable[[WhatsApp, Message], bool | Awaitable[bool]],
+        priority: int = 0,
     ):
-        super().__init__(callback, *filters)
+        super().__init__(callback, *filters, priority=priority)
 
 
 class _FactoryHandler(Handler):
@@ -337,13 +341,14 @@ class _FactoryHandler(Handler):
         *filters: Callable[[WhatsApp, Any], bool | Awaitable[bool]],
         factory: _CallbackDataFactoryT = str,
         factory_before_filters: bool = False,
+        priority: int = 0,
     ):
         (
             self.factory,
             self.factory_filter,
         ) = _resolve_factory(factory, self._data_field)
         self.factory_before_filters = factory_before_filters
-        super().__init__(callback, *filters)
+        super().__init__(callback, *filters, priority=priority)
 
     async def handle(self, wa: WhatsApp, data: Any) -> bool:
         update = await _get_factored_update(self, wa, data, self._data_field)
@@ -356,7 +361,7 @@ class _FactoryHandler(Handler):
         return False
 
     def __str__(self) -> str:
-        return f"{self.__class__.__name__}(callback={self.callback!r}, filters={self.filters!r}, factory={self.factory!r})"
+        return f"{self.__class__.__name__}({self.callback=!r}, {self.filters=!r}, {self.factory=!r}, {self.priority=!r})"
 
 
 class CallbackButtonHandler(_FactoryHandler):
@@ -380,6 +385,7 @@ class CallbackButtonHandler(_FactoryHandler):
          subclass of :class:`CallbackData`, a matching filter is automatically added).
         factory_before_filters: Whether to apply the factory before the filters (default: ``False``. If ``True``, the
          filters will get the callback data after the factory is applied).
+        priority: The priority of the handler (default: ``0``)
     """
 
     _data_field = "data"
@@ -390,12 +396,14 @@ class CallbackButtonHandler(_FactoryHandler):
         *filters: Callable[[WhatsApp, CallbackButton], bool | Awaitable[bool]],
         factory: _CallbackDataFactoryT = str,
         factory_before_filters: bool = False,
+        priority: int = 0,
     ):
         super().__init__(
             callback,
             *filters,
             factory=factory,
             factory_before_filters=factory_before_filters,
+            priority=priority,
         )
 
 
@@ -420,7 +428,8 @@ class CallbackSelectionHandler(_FactoryHandler):
         factory: The constructor/s to use to construct the callback data (default: :class:`str`. If the factory is a
          subclass of :class:`CallbackData`, a matching filter is automatically added).
         factory_before_filters: Whether to apply the factory before the filters (default: ``False``. If ``True``, the
-         filters will get the callback data after the factory is applied).
+         filters will get the callback data after the factory is applied)
+        priority: The priority of the handler (default: ``0``)
     """
 
     _data_field = "data"
@@ -431,12 +440,14 @@ class CallbackSelectionHandler(_FactoryHandler):
         *filters: Callable[[WhatsApp, CallbackSelection], bool | Awaitable[bool]],
         factory: _CallbackDataFactoryT = str,
         factory_before_filters: bool = False,
+        priority: int = 0,
     ):
         super().__init__(
             callback,
             *filters,
             factory=factory,
             factory_before_filters=factory_before_filters,
+            priority=priority,
         )
 
 
@@ -463,7 +474,8 @@ class MessageStatusHandler(_FactoryHandler):
         factory: The constructor/s to use to construct the tracker data (default: :class:`str`. If the factory is a
             subclass of :class:`CallbackData`, a matching filter is automatically added).
         factory_before_filters: Whether to apply the factory before the filters (default: ``False``. If ``True``, the
-            filters will get the tracker data after the factory is applied).
+            filters will get the tracker data after the factory is applied)
+        priority: The priority of the handler (default: ``0``)
     """
 
     _data_field = "tracker"
@@ -474,12 +486,14 @@ class MessageStatusHandler(_FactoryHandler):
         *filters: Callable[[WhatsApp, MessageStatus], bool | Awaitable[bool]],
         factory: _CallbackDataFactoryT = str,
         factory_before_filters: bool = False,
+        priority: int = 0,
     ):
         super().__init__(
             callback,
             *filters,
             factory=factory,
             factory_before_filters=factory_before_filters,
+            priority=priority,
         )
 
 
@@ -501,6 +515,7 @@ class ChatOpenedHandler(Handler):
             :class:`pywa.types.ChatOpened` as arguments)
         *filters: The filters to apply to the handler (Takes a :class:`pywa.WhatsApp` instance and a
             :class:`pywa.types.ChatOpened` and returns a :class:`bool`)
+        priority: The priority of the handler (default: ``0``)
 
     """
 
@@ -510,8 +525,9 @@ class ChatOpenedHandler(Handler):
         self,
         callback: Callable[[WhatsApp, ChatOpened], Any | Awaitable[Any]],
         *filters: Callable[[WhatsApp, ChatOpened], bool | Awaitable[bool]],
+        priority: int = 0,
     ):
-        super().__init__(callback, *filters)
+        super().__init__(callback, *filters, priority=priority)
 
 
 class TemplateStatusHandler(Handler):
@@ -536,6 +552,7 @@ class TemplateStatusHandler(Handler):
             :class:`pywa.types.TemplateStatus` as arguments)
         *filters: The filters to apply to the handler (Takes a :class:`pywa.WhatsApp` instance and a
             :class:`pywa.types.TemplateStatus` and returns a :class:`bool`)
+        priority: The priority of the handler (default: ``0``)
     """
 
     _field_name = "message_template_status_update"
@@ -544,8 +561,9 @@ class TemplateStatusHandler(Handler):
         self,
         callback: Callable[[WhatsApp, TemplateStatus], Any | Awaitable[Any]],
         *filters: Callable[[WhatsApp, TemplateStatus], bool | Awaitable[bool]],
+        priority: int = 0,
     ):
-        super().__init__(callback, *filters)
+        super().__init__(callback, *filters, priority=priority)
 
 
 class FlowCompletionHandler(Handler):
@@ -564,6 +582,9 @@ class FlowCompletionHandler(Handler):
     Args:
         callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a
             :class:`pywa.types.FlowCompletion` as arguments)
+        *filters: The filters to apply to the handler (Takes a :class:`pywa.WhatsApp` instance and a
+            :class:`pywa.types.FlowCompletion` and returns a :class:`bool`)
+        priority: The priority of the handler (default: ``0``)
 
     """
 
@@ -573,8 +594,9 @@ class FlowCompletionHandler(Handler):
         self,
         callback: Callable[[WhatsApp, FlowCompletion], Any | Awaitable[Any]],
         *filters: Callable[[WhatsApp, FlowCompletion], bool | Awaitable[bool]],
+        priority: int = 0,
     ):
-        super().__init__(callback, *filters)
+        super().__init__(callback, *filters, priority=priority)
 
 
 class RawUpdateHandler(Handler):
@@ -595,6 +617,7 @@ class RawUpdateHandler(Handler):
         handler: The callback function (Takes a :class:`pywa.WhatsApp` instance and a :class:`dict` as arguments)
         *filters: The filters to apply to the handler (Takes a :class:`pywa.WhatsApp` instance and a :class:`dict` and
             returns a :class:`bool`)
+        priority: The priority of the handler (default: ``0``)
     """
 
     _field_name = None
@@ -603,8 +626,9 @@ class RawUpdateHandler(Handler):
         self,
         callback: Callable[[WhatsApp, dict], Any | Awaitable[Any]],
         *filters: Callable[[WhatsApp, dict], bool | Awaitable[bool]],
+        priority: int = 0,
     ):
-        super().__init__(callback, *filters)
+        super().__init__(callback, *filters, priority=priority)
 
 
 class FlowRequestHandler:
@@ -653,7 +677,9 @@ class HandlerDecorators:
         raise TypeError("This class cannot be instantiated.")
 
     def on_raw_update(
-        self: WhatsApp, *filters: Callable[[WhatsApp, dict], bool | Awaitable[bool]]
+        self: WhatsApp,
+        *filters: Callable[[WhatsApp, dict], bool | Awaitable[bool]],
+        priority: int = 0,
     ) -> Callable[
         [Callable[[WhatsApp, dict], Any | Awaitable[Any]]],
         Callable[[WhatsApp, dict], Any | Awaitable[Any]],
@@ -674,18 +700,21 @@ class HandlerDecorators:
         Args:
             *filters: Filters to apply to the incoming updates (filters are function that take a :class:`pywa.WhatsApp`
              instance and the incoming update as :class:`dict` and return a :class:`bool` if the update should be handled).
+            priority: The priority of the handler (default: ``0``).
         """
 
         def decorator(
             callback: Callable[[WhatsApp, dict], Any | Awaitable[Any]],
         ) -> Callable[[WhatsApp, dict], Any | Awaitable[Any]]:
-            self.add_handlers(RawUpdateHandler(callback, *filters))
+            self.add_handlers(RawUpdateHandler(callback, *filters, priority=priority))
             return callback
 
         return decorator
 
     def on_message(
-        self: WhatsApp, *filters: Callable[[WhatsApp, Message], bool | Awaitable[bool]]
+        self: WhatsApp,
+        *filters: Callable[[WhatsApp, Message], bool | Awaitable[bool]],
+        priority: int = 0,
     ) -> Callable[
         [Callable[[WhatsApp, Message], Any | Awaitable[Any]]],
         Callable[[WhatsApp, Message], Any | Awaitable[Any]],
@@ -708,12 +737,13 @@ class HandlerDecorators:
         Args:
             *filters: Filters to apply to the incoming messages (filters are function that take a :class:`pywa.WhatsApp`
              instance and the incoming :class:`pywa.types.Message` and return a boolean).
+            priority: The priority of the handler (default: ``0``).
         """
 
         def decorator(
             callback: Callable[[WhatsApp, Message], Any | Awaitable[Any]],
         ) -> Callable[[WhatsApp, Message], Any | Awaitable[Any]]:
-            self.add_handlers(MessageHandler(callback, *filters))
+            self.add_handlers(MessageHandler(callback, *filters, priority=priority))
             return callback
 
         return decorator
@@ -723,6 +753,7 @@ class HandlerDecorators:
         *filters: Callable[[WhatsApp, CallbackButton], bool | Awaitable[bool]],
         factory: _CallbackDataFactoryT = str,
         factory_before_filters: bool = False,
+        priority: int = 0,
     ) -> Callable[
         [Callable[[WhatsApp, CallbackButton], Any | Awaitable[Any]]],
         Callable[[WhatsApp, CallbackButton], Any | Awaitable[Any]],
@@ -748,6 +779,7 @@ class HandlerDecorators:
              subclass of :class:`CallbackData`, a matching filter is automatically added).
             factory_before_filters: Whether to apply the factory before the filters (default: ``False``. If ``True``, the
              filters will get the callback data after the factory is applied).
+            priority: The priority of the handler (default: ``0``).
         """
 
         def decorator(
@@ -759,6 +791,7 @@ class HandlerDecorators:
                     *filters,
                     factory=factory,
                     factory_before_filters=factory_before_filters,
+                    priority=priority,
                 )
             )
             return callback
@@ -770,6 +803,7 @@ class HandlerDecorators:
         *filters: Callable[[WhatsApp, CallbackSelection], bool | Awaitable[bool]],
         factory: _CallbackDataFactoryT = str,
         factory_before_filters: bool = False,
+        priority: int = 0,
     ) -> Callable[
         [Callable[[WhatsApp, CallbackSelection], Any | Awaitable[Any]]],
         Callable[[WhatsApp, CallbackSelection], Any | Awaitable[Any]],
@@ -795,6 +829,7 @@ class HandlerDecorators:
              subclass of :class:`CallbackData`, a matching filter is automatically added).
             factory_before_filters: Whether to apply the factory before the filters (default: ``False``. If ``True``, the
              filters will get the callback data after the factory is applied).
+            priority: The priority of the handler (default: ``0``).
         """
 
         def decorator(
@@ -806,6 +841,7 @@ class HandlerDecorators:
                     *filters,
                     factory=factory,
                     factory_before_filters=factory_before_filters,
+                    priority=priority,
                 )
             )
             return callback
@@ -817,6 +853,7 @@ class HandlerDecorators:
         *filters: Callable[[WhatsApp, MessageStatus], bool | Awaitable[bool]],
         factory: _CallbackDataFactoryT = str,
         factory_before_filters: bool = False,
+        priority: int = 0,
     ) -> Callable[
         [Callable[[WhatsApp, MessageStatus], Any | Awaitable[Any]]],
         Callable[[WhatsApp, MessageStatus], Any | Awaitable[Any]],
@@ -846,6 +883,7 @@ class HandlerDecorators:
                 subclass of :class:`CallbackData`, a matching filter is automatically added).
             factory_before_filters: Whether to apply the factory before the filters (default: ``False``. If ``True``, the
                 filters will get the tracker data after the factory is applied).
+            priority: The priority of the handler (default: ``0``).
         """
 
         def decorator(
@@ -857,6 +895,7 @@ class HandlerDecorators:
                     *filters,
                     factory=factory,
                     factory_before_filters=factory_before_filters,
+                    priority=priority,
                 )
             )
             return callback
@@ -866,6 +905,7 @@ class HandlerDecorators:
     def on_chat_opened(
         self: WhatsApp,
         *filters: Callable[[WhatsApp, ChatOpened], bool | Awaitable[bool]],
+        priority: int = 0,
     ) -> Callable[
         [Callable[[WhatsApp, ChatOpened], Any | Awaitable[Any]]],
         Callable[[WhatsApp, ChatOpened], Any | Awaitable[Any]],
@@ -887,12 +927,13 @@ class HandlerDecorators:
         Args:
             *filters: Filters to apply to the incoming chat opened (filters are function that take a
                 :class:`pywa.WhatsApp` instance and the incoming :class:`pywa.types.ChatOpened` and return :class:`bool`).
+            priority: The priority of the handler (default: ``0``).
         """
 
         def decorator(
             callback: Callable[[WhatsApp, ChatOpened], Any | Awaitable[Any]],
         ) -> Callable[[WhatsApp, ChatOpened], Any | Awaitable[Any]]:
-            self.add_handlers(ChatOpenedHandler(callback, *filters))
+            self.add_handlers(ChatOpenedHandler(callback, *filters, priority=priority))
             return callback
 
         return decorator
@@ -900,6 +941,7 @@ class HandlerDecorators:
     def on_template_status(
         self: WhatsApp,
         *filters: Callable[[WhatsApp, TemplateStatus], bool | Awaitable[bool]],
+        priority: int = 0,
     ) -> Callable[
         [Callable[[WhatsApp, TemplateStatus], Any | Awaitable[Any]]],
         Callable[[WhatsApp, TemplateStatus], Any | Awaitable[Any]],
@@ -922,12 +964,15 @@ class HandlerDecorators:
         Args:
             *filters: Filters to apply to the incoming template status changes (filters are function that take a
                 :class:`pywa.WhatsApp` instance and the incoming :class:`pywa.types.TemplateStatus` and return :class:`bool`).
+            priority: The priority of the handler (default: ``0``).
         """
 
         def decorator(
             callback: Callable[[WhatsApp, TemplateStatus], Any | Awaitable[Any]],
         ) -> Callable[[WhatsApp, TemplateStatus], Any | Awaitable[Any]]:
-            self.add_handlers(TemplateStatusHandler(callback, *filters))
+            self.add_handlers(
+                TemplateStatusHandler(callback, *filters, priority=priority)
+            )
             return callback
 
         return decorator
@@ -935,6 +980,7 @@ class HandlerDecorators:
     def on_flow_completion(
         self: WhatsApp,
         *filters: Callable[[WhatsApp, FlowCompletion], bool | Awaitable[bool]],
+        priority: int = 0,
     ) -> Callable[
         [Callable[[WhatsApp, FlowCompletion], Any | Awaitable[Any]]],
         Callable[[WhatsApp, FlowCompletion], Any | Awaitable[Any]],
@@ -956,12 +1002,15 @@ class HandlerDecorators:
         Args:
             *filters: Filters to apply to the incoming flow completion (filters are function that take a
                 :class:`pywa.WhatsApp` instance and the incoming :class:`pywa.types.FlowCompletion` and return :class:`bool`).
+            priority: The priority of the handler (default: ``0``).
         """
 
         def decorator(
             callback: Callable[[WhatsApp, FlowCompletion], Any | Awaitable[Any]],
         ) -> Callable[[WhatsApp, FlowCompletion], Any | Awaitable[Any]]:
-            self.add_handlers(FlowCompletionHandler(callback, *filters))
+            self.add_handlers(
+                FlowCompletionHandler(callback, *filters, priority=priority)
+            )
             return callback
 
         return decorator

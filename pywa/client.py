@@ -4,6 +4,7 @@ from __future__ import annotations
 
 __all__ = ["WhatsApp"]
 
+import bisect
 import collections
 import dataclasses
 import hashlib
@@ -292,7 +293,7 @@ class WhatsApp(Server, HandlerDecorators):
             response_encryptor=handler.response_encryptor,
         )
 
-    def add_handlers(self, *handlers: Handler):
+    def add_handlers(self, *handlers: Handler) -> None:
         """
         Add handlers programmatically instead of using decorators.
 
@@ -325,9 +326,11 @@ class WhatsApp(Server, HandlerDecorators):
                 )
                 self.add_flow_request_handler(handler)
                 continue
-            self._handlers[handler.__class__].append(handler)
+            bisect.insort(
+                self._handlers[handler.__class__], handler, key=lambda x: -x.priority
+            )
 
-    def remove_handlers(self, *handlers: Handler):
+    def remove_handlers(self, *handlers: Handler, silent: bool = False) -> None:
         """
         Remove handlers programmatically (not flow handlers).
 
@@ -345,17 +348,19 @@ class WhatsApp(Server, HandlerDecorators):
 
         Args:
             handlers: The handlers to remove.
+            silent: Whether to suppress the error if the handler is not registered (default: ``False``).
 
         Raises:
-            ValueError: If the handler is not registered.
+            ValueError: If the handler is not registered and ``silent`` is ``False``.
         """
         for handler in handlers:
             try:
                 self._handlers[handler.__class__].remove(handler)
             except ValueError:
-                raise ValueError(f"Handler {handler} not registered.")
+                if not silent:
+                    raise ValueError(f"Handler {handler} not registered.")
 
-    def remove_callbacks(self, *callbacks: Callable[[WhatsApp, Any], Any]):
+    def remove_callbacks(self, *callbacks: Callable[[WhatsApp, Any], Any]) -> None:
         """
         Remove callbacks programmatically (not flow callbacks).
 
