@@ -3,7 +3,19 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-#### 1.24.0 (2024-07-26)  **Latest**
+#### 1.25.0 (2024-08-15)  **Latest**
+
+- [handlers] adding priority
+- [client] adding QR methods (create update get and delete)
+- [client] adding `get_flow_metrics` method
+- [flows] adding to `DataSource` support for images/colors
+- [flows] support `datetime` objs in `DatePicker`
+- [flows] support `Screen` when using `.data_key_of(...)` and `.form_ref_of(...)`
+- [flows] update flow json with indent and without ensuring ascii
+- [flows] adding `health_status` to `FlowDetails`
+
+
+#### 1.24.0 (2024-07-26)
 
 - [server] validating `X-Hub-Signature-256` header
 - [requirements] removing `requests`
