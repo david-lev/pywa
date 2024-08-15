@@ -81,10 +81,10 @@ class WhatsApp(Server, HandlerDecorators):
         filter_updates: bool = True,
         business_account_id: str | int | None = None,
         callback_url: str | None = None,
-        fields: Iterable[str] | None = None,
+        webhook_fields: Iterable[str] | None = None,
         app_id: int | None = None,
         app_secret: str | None = None,
-        verify_timeout: int = _DEFAULT_VERIFY_DELAY_SEC,
+        webhook_challenge_delay: int = _DEFAULT_VERIFY_DELAY_SEC,
         business_private_key: str | None = None,
         business_private_key_password: str | None = None,
         flows_request_decryptor: utils.FlowRequestDecryptor
@@ -94,6 +94,7 @@ class WhatsApp(Server, HandlerDecorators):
         continue_handling: bool = True,
         skip_duplicate_updates: bool = True,
         validate_updates: bool = True,
+        **kwargs: Any,
     ) -> None:
         """
         The WhatsApp client.
@@ -133,14 +134,13 @@ class WhatsApp(Server, HandlerDecorators):
              use a custom session, e.g. for proxy support. Do not use the same session across multiple WhatsApp clients!).
             server: The Flask or FastAPI app instance to use for the webhook. required when you want to handle incoming
              updates.
-            callback_url: The callback URL of the server (itself) to register (optional, only if you want pywa to register the callback URL for
-             you).
+            callback_url: The server URL to register (without endpoint. optional).
             verify_token: The verify token of the registered ``callback_url`` (Required when ``server`` is provided.
              The verify token can be any string. It is used to challenge the webhook endpoint to verify that the
              endpoint is valid).
-            verify_timeout: The delay (in seconds, default to 3) to wait for the verify token to be sent to the server (optional,
+            webhook_challenge_delay: The delay (in seconds, default to 3) to wait for the verify token to be sent to the server (optional,
              for cases where the server/network is slow or the server is taking a long time to start).
-            fields: The fields to register for the callback URL (optional, if not provided, all supported fields will be
+            webhook_fields: The fields to register for the callback URL (optional, if not provided, all supported fields will be
              registered. modify this if you want to reduce the number of unused requests to your server).
             app_id: The ID of the app in the
              `App Basic Settings <https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings>`_
@@ -152,7 +152,7 @@ class WhatsApp(Server, HandlerDecorators):
              or for multiple WhatsApp clients, you can change this to avoid conflicts).
             filter_updates: Whether to filter out user updates that are not sent to this phone_id (default: ``True``, does
              not apply to raw updates or updates that are not user-related).
-            business_account_id: The WhatsApp business account ID that owns the phone ID (optional, required for some API
+            business_account_id: The WhatsApp business account ID (waba id) that owns the phone ID (optional, required for some API
              methods).
             business_private_key: The global private key to use in the ``flows_request_decryptor``
             business_private_key_password: The global private key password (if needed) to use in the ``flows_request_decryptor``
@@ -176,6 +176,21 @@ class WhatsApp(Server, HandlerDecorators):
                 stacklevel=2,
             )
 
+        deprecated_fields = {}
+        if "fields" in kwargs:
+            deprecated_fields["fields"] = "webhook_fields"
+            webhook_fields = kwargs.pop("fields")
+        if "verify_timeout" in kwargs:
+            deprecated_fields["verify_timeout"] = "webhook_challenge_delay"
+            webhook_challenge_delay = kwargs.pop("verify_timeout")
+        for old, new in deprecated_fields.items():
+            warnings.simplefilter("always", DeprecationWarning)
+            warnings.warn(
+                message=f"`{old}` is deprecated and will be removed in a future version, use `{new}` instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+
         self.phone_id = str(phone_id) if phone_id is not None else None
         if phone_id is None:
             self.filter_updates = False
@@ -196,12 +211,12 @@ class WhatsApp(Server, HandlerDecorators):
             server=server,
             webhook_endpoint=webhook_endpoint,
             callback_url=callback_url,
-            fields=tuple(fields) if fields else None,
+            webhook_fields=tuple(webhook_fields) if webhook_fields else None,
             app_id=app_id,
             app_secret=app_secret,
             verify_token=verify_token,
-            verify_timeout=verify_timeout
-            or _DEFAULT_VERIFY_DELAY_SEC,  # backwards compatibility for None
+            webhook_challenge_delay=webhook_challenge_delay
+            or _DEFAULT_VERIFY_DELAY_SEC,
             business_private_key=business_private_key,
             business_private_key_password=business_private_key_password,
             flows_request_decryptor=flows_request_decryptor,

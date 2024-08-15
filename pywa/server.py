@@ -86,11 +86,11 @@ class Server:
         server: Flask | FastAPI | None,
         webhook_endpoint: str,
         callback_url: str | None,
-        fields: tuple[str, ...] | None,
+        webhook_fields: tuple[str, ...] | None,
         app_id: int | None,
         app_secret: str | None,
         verify_token: str | None,
-        verify_timeout: int | None,
+        webhook_challenge_delay: int | None,
         business_private_key: str | None,
         business_private_key_password: str | None,
         flows_request_decryptor: utils.FlowRequestDecryptor | None,
@@ -143,8 +143,8 @@ class Server:
                 app_id=app_id,
                 app_secret=app_secret,
                 verify_token=verify_token,
-                fields=tuple(fields or Handler._fields_to_subclasses().keys()),
-                delay=verify_timeout,
+                fields=tuple(webhook_fields or Handler._fields_to_subclasses().keys()),
+                delay=webhook_challenge_delay,
             )
 
     async def webhook_challenge_handler(self, vt: str, ch: str) -> tuple[str, int]:

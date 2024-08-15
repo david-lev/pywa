@@ -64,12 +64,6 @@ Or it can be dynamic; your server can respond to screen actions and determine th
 
     - See :class:`If` and :class:`Switch` components.
 
-.. note::
-
-    WORK IN PROGRESS
-
-    I really recommend you to read the `Flow JSON Docs <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson>`_ before you continue.
-    A full guide will be added soon.
 
 Every component on the FlowJSON, has a corresponding class in :mod:`pywa.types.flows`:
 
@@ -451,10 +445,6 @@ To test your flow you need to sent it:
 Sending Flow
 ------------
 
-.. note::
-
-    WORK IN PROGRESS
-
 .. currentmodule:: pywa.types.callback
 
 Flow is just a :class:`FlowButton` attached to a message.
@@ -687,10 +677,6 @@ what screen to open next or complete the flow.
 
 Getting Flow Completion message
 -------------------------------
-
-.. note::
-
-    WORK IN PROGRESS
 
 When the user completes the flow, you will receive a request to your webhook with the payload you sent when you completed the flow.
 
