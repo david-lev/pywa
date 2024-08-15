@@ -85,9 +85,16 @@ The available methods are:
    * - Business profile
      - :meth:`~WhatsApp.get_business_profile`,
        :meth:`~WhatsApp.get_business_phone_number`,
-       :meth:`~WhatsApp.update_business_profile`
-       :meth:`~WhatsApp.update_conversational_automation`
+       :meth:`~WhatsApp.update_business_profile`,
+       :meth:`~WhatsApp.update_conversational_automation`,
        :meth:`~WhatsApp.set_business_public_key`
+       :meth:`~WhatsApp.register_phone_number`,
+   * - QR Codes
+     - :meth:`~WhatsApp.create_qr_code`,
+       :meth:`~WhatsApp.get_qr_code`,
+       :meth:`~WhatsApp.get_qr_codes`,
+       :meth:`~WhatsApp.update_qr_code`,
+       :meth:`~WhatsApp.delete_qr_code`
    * - Commerce
      - :meth:`~WhatsApp.get_commerce_settings`,
        :meth:`~WhatsApp.update_commerce_settings`

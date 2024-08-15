@@ -51,6 +51,7 @@ from .types import (
     FlowCategory,
     FlowMetricName,
     FlowMetricGranularity,
+    QRCode,
 )
 from .types.callback import CallbackDataT, CallbackData
 from .types.flows import (
@@ -2343,6 +2344,119 @@ class WhatsApp(Server, HandlerDecorators):
             phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
             pin=str(pin),
             data_localization_region=data_localization_region,
+        )["success"]
+
+    def create_qr_code(
+        self,
+        prefilled_message: str,
+        image_type: Literal["PNG", "SVG"] = "PNG",
+        phone_id: str | None = None,
+    ) -> QRCode:
+        """
+        Create a QR code for a prefilled message.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/qr-code>`_
+
+        Args:
+            prefilled_message: The prefilled message.
+            image_type: The type of the image (``PNG`` or ``SVG``. default: ``PNG``).
+            phone_id: The phone ID to create the QR code for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            The QR code.
+        """
+        return QRCode.from_dict(
+            self.api.create_qr_code(
+                phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+                prefilled_message=prefilled_message,
+                generate_qr_image=image_type,
+            )
+        )
+
+    def get_qr_code(
+        self,
+        code: str,
+        phone_id: str | None = None,
+    ) -> QRCode | None:
+        """
+        Get a QR code.
+
+        Args:
+            code: The QR code.
+            phone_id: The phone ID to get the QR code for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            The QR code if found, otherwise None.
+        """
+        qrs = self.api.get_qr_code(
+            phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+            code=code,
+        )["data"]
+        return QRCode.from_dict(qrs[0]) if qrs else None
+
+    def get_qr_codes(
+        self,
+        phone_id: str | None = None,
+    ) -> tuple[QRCode, ...]:
+        """
+        Get all QR codes associated with the WhatsApp Business account.
+
+        Args:
+            phone_id: The phone ID to get the QR codes for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            Tuple of QR codes.
+        """
+        return tuple(
+            QRCode.from_dict(qr)
+            for qr in self.api.get_qr_codes(
+                phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+            )["data"]
+        )
+
+    def update_qr_code(
+        self,
+        code: str,
+        prefilled_message: str,
+        phone_id: str | None = None,
+    ) -> QRCode:
+        """
+        Update a QR code.
+
+        Args:
+            code: The QR code.
+            prefilled_message: The prefilled message.
+            phone_id: The phone ID to update the QR code for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            The updated QR code.
+        """
+        return QRCode.from_dict(
+            self.api.update_qr_code(
+                phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+                code=code,
+                prefilled_message=prefilled_message,
+            )
+        )
+
+    def delete_qr_code(
+        self,
+        code: str,
+        phone_id: str | None = None,
+    ) -> bool:
+        """
+        Delete a QR code.
+
+        Args:
+            code: The QR code.
+            phone_id: The phone ID to delete the QR code for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            Whether the QR code was deleted.
+        """
+        return self.api.delete_qr_code(
+            phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+            code=code,
         )["success"]
 
 

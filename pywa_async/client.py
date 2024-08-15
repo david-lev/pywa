@@ -77,6 +77,7 @@ from .types import (
     BusinessPhoneNumber,
     Command,
     CallbackData,
+    QRCode,
 )
 from .types.callback import CallbackDataT
 from .types.flows import (
@@ -2293,6 +2294,125 @@ class WhatsApp(_WhatsApp):
                 phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
                 pin=str(pin),
                 data_localization_region=data_localization_region,
+            )
+        )["success"]
+
+    async def create_qr_code(
+        self,
+        prefilled_message: str,
+        image_type: Literal["PNG", "SVG"] = "PNG",
+        phone_id: str | None = None,
+    ) -> QRCode:
+        """
+        Create a QR code for a prefilled message.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/qr-code>`_
+
+        Args:
+            prefilled_message: The prefilled message.
+            image_type: The type of the image (``PNG`` or ``SVG``. default: ``PNG``).
+            phone_id: The phone ID to create the QR code for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            The QR code.
+        """
+        return QRCode.from_dict(
+            await self.api.create_qr_code(
+                phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+                prefilled_message=prefilled_message,
+                generate_qr_image=image_type,
+            )
+        )
+
+    async def get_qr_code(
+        self,
+        code: str,
+        phone_id: str | None = None,
+    ) -> QRCode | None:
+        """
+        Get a QR code.
+
+        Args:
+            code: The QR code.
+            phone_id: The phone ID to get the QR code for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            The QR code if found, otherwise None.
+        """
+        qrs = (
+            await self.api.get_qr_code(
+                phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+                code=code,
+            )
+        )["data"]
+        return QRCode.from_dict(qrs[0]) if qrs else None
+
+    async def get_qr_codes(
+        self,
+        phone_id: str | None = None,
+    ) -> tuple[QRCode, ...]:
+        """
+        Get all QR codes associated with the WhatsApp Business account.
+
+        Args:
+            phone_id: The phone ID to get the QR codes for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            Tuple of QR codes.
+        """
+        return tuple(
+            QRCode.from_dict(qr)
+            for qr in (
+                await self.api.get_qr_codes(
+                    phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+                )
+            )["data"]
+        )
+
+    async def update_qr_code(
+        self,
+        code: str,
+        prefilled_message: str,
+        phone_id: str | None = None,
+    ) -> QRCode:
+        """
+        Update a QR code.
+
+        Args:
+            code: The QR code.
+            prefilled_message: The prefilled message.
+            phone_id: The phone ID to update the QR code for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            The updated QR code.
+        """
+        return QRCode.from_dict(
+            await self.api.update_qr_code(
+                phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+                code=code,
+                prefilled_message=prefilled_message,
+            )
+        )
+
+    async def delete_qr_code(
+        self,
+        code: str,
+        phone_id: str | None = None,
+    ) -> bool:
+        """
+        Delete a QR code.
+
+        Args:
+            code: The QR code.
+            phone_id: The phone ID to delete the QR code for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            Whether the QR code was deleted.
+        """
+        return (
+            await self.api.delete_qr_code(
+                phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+                code=code,
             )
         )["success"]
 

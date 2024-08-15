@@ -876,3 +876,31 @@ class BusinessPhoneNumber:
             new_certificate=data.get("new_certificate"),
             last_onboarded_time=data.get("last_onboarded_time"),
         )
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class QRCode:
+    """
+    Customers can scan a QR code from their phone to quickly begin a conversation with your business.
+    The WhatsApp Business Management API allows you to create and access these QR codes and associated short links.
+
+    Attributes:
+        code: The code of the QR code.
+        prefilled_message: The message that will be prefilled when the user starts a conversation with the business using the QR code.
+        deep_link_url: The deep link URL of the QR code.
+        qr_image_url: The URL of the QR code image (return only when creating a QR code).
+    """
+
+    code: str
+    prefilled_message: str
+    deep_link_url: str
+    qr_image_url: str | None
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            code=data.get("code"),
+            prefilled_message=data.get("prefilled_message"),
+            deep_link_url=data.get("deep_link_url"),
+            qr_image_url=data.get("qr_image_url"),
+        )

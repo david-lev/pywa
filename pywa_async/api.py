@@ -1016,3 +1016,143 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             method="GET",
             endpoint=f"/{flow_id}/assets",
         )
+
+    async def create_qr_code(
+        self, phone_id: str, prefilled_message: str, generate_qr_image: str
+    ) -> dict:
+        """
+        Create a QR code.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/qr-codes/#create-qr-code>`_.
+
+        Args:
+            phone_id: The ID of the phone number to create the QR code on.
+            prefilled_message: The prefilled message to set.
+            generate_qr_image: PNG or SVG
+
+        Return example::
+
+            {
+              "code": "4O4YGZEG3RIVE1",
+              "prefilled_message": "Cyber Monday 1",
+              "deep_link_url": "https://wa.me/message/4O4YGZEG3RIVE1",
+              "qr_image_url": "https://scontent-iad3-2.xx.fbcdn.net/..."
+            }
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint=f"/{phone_id}/message_qrdls",
+            json={
+                "prefilled_message": prefilled_message,
+                "generate_qr_image": generate_qr_image,
+            },
+        )
+
+    async def get_qr_code(
+        self,
+        phone_id: str,
+        code: str,
+    ) -> dict:
+        """
+        Get a QR code.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/qr-codes/#get-qr-code>`_.
+
+        Args:
+            phone_id: The ID of the phone number to get the QR code from.
+            code: The code of the QR code.
+
+        Return example::
+
+            {
+              "data": [
+                {
+                  "code": "4O4YGZEG3RIVE1",
+                  "prefilled_message": "Cyber Monday",
+                  "deep_link_url": "https://wa.me/message/4O4YGZEG3RIVE1"
+                }
+              ]
+            }
+        """
+        return await self._make_request(
+            method="GET",
+            endpoint=f"/{phone_id}/message_qrdls/{code}",
+        )
+
+    async def get_qr_codes(self, phone_id: str) -> dict:
+        """
+        Get all QR codes.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/qr-codes/#get-qr-codes>`_.
+
+        Return example::
+
+            {
+              "data": [
+                {
+                  "code": "4O4YGZEG3RIVE1",
+                  "prefilled_message": "Cyber Monday 1",
+                  "deep_link_url": "https://wa.me/message/4O4YGZEG3RIVE1",
+                  "qr_image_url": "https://scontent-iad3-2.xx.fbcdn.net/..."
+                }
+              ]
+            }
+
+        Args:
+            phone_id: The ID of the phone number to get the QR codes from.
+        """
+        return await self._make_request(
+            method="GET",
+            endpoint=f"/{phone_id}/message_qrdls",
+        )
+
+    async def update_qr_code(
+        self,
+        phone_id: str,
+        code: str,
+        prefilled_message: str,
+    ) -> dict:
+        """
+        Update a QR code.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/qr-codes/#update-qr-code>`_.
+
+        Return example::
+
+            {
+              "code": "4O4YGZEG3RIVE1",
+              "prefilled_message": "Cyber Tuesday",
+              "deep_link_url": "https://wa.me/message/4O4YGZEG3RIVE1"
+            }
+
+        Args:
+            phone_id: The ID of the phone number to update the QR code on.
+            code: The code of the QR code.
+            prefilled_message: The prefilled message to set.
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint=f"/{phone_id}/message_qrdls",
+            json={"code": code, "prefilled_message": prefilled_message},
+        )
+
+    async def delete_qr_code(self, phone_id: str, code: str):
+        """
+        Delete a QR code.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/qr-codes/#delete-qr-code>`_.
+
+        Return example::
+
+            {
+              "success": True
+            }
+
+        Args:
+            phone_id: The ID of the phone number to delete the QR code from.
+            code: The code of the QR code.
+        """
+        return await self._make_request(
+            method="DELETE",
+            endpoint=f"/{phone_id}/message_qrdls/{code}",
+        )

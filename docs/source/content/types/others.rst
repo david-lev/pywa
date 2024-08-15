@@ -9,6 +9,8 @@ Others
 
 .. autoclass:: ConversationalAutomation()
 
+.. autoclass:: QRCode()
+
 .. autoclass:: Command()
 
 .. autoclass:: CommerceSettings()

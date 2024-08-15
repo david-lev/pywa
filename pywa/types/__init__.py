@@ -41,6 +41,7 @@ from .others import (
     User,
     Command,
     ConversationalAutomation,
+    QRCode,
 )
 from .template import (
     NewTemplate,
