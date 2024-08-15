@@ -15,9 +15,11 @@ from pywa.client import (
     _get_interactive_msg,
     _get_media_msg,
     _get_flow_fields,
+    _get_flow_metric_field,
     _media_types_default_filenames,
     _DEFAULT_VERIFY_DELAY_SEC,
 )  # noqa MUST BE IMPORTED FIRST
+from pywa.types import FlowMetricName, FlowMetricGranularity
 from .handlers import (
     MessageHandler,
     MessageStatusHandler,
@@ -33,6 +35,7 @@ from pywa.types.base_update import BaseUpdate
 
 import logging
 import dataclasses
+import datetime
 import hashlib
 import json
 import mimetypes
@@ -2194,6 +2197,43 @@ class WhatsApp(_WhatsApp):
                 )
             )["data"]
         )
+
+    async def get_flow_metrics(
+        self,
+        flow_id: str | int,
+        metric_name: FlowMetricName,
+        granularity: FlowMetricGranularity,
+        since: datetime.date | str | None = None,
+        until: datetime.date | str | None = None,
+    ) -> dict:
+        """
+        Get the metrics of a flow.
+
+        Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/metrics_api>`_.
+
+        Args:
+            flow_id: The flow ID.
+            metric_name: See `Available Metrics <https://developers.facebook.com/docs/whatsapp/flows/reference/metrics_api#available_metrics>`_.
+            granularity: Time granularity.
+            since: Start of the time period. If not specified, the oldest allowed date will be used. Oldest allowed date depends on the specified time granularity: DAY - 90 days, HOUR - 30 days.
+            until: End of the time period. If not specified, the current date will be used.
+
+        Returns:
+
+        """
+        return (
+            await self.api.get_flow(
+                flow_id=str(flow_id),
+                fields=(
+                    _get_flow_metric_field(
+                        metric_name=metric_name,
+                        granularity=granularity,
+                        since=since,
+                        until=until,
+                    ),
+                ),
+            )
+        )["metric"]
 
     async def get_flow_assets(
         self,

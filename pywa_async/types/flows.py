@@ -12,6 +12,8 @@ __all__ = [
     "FlowTokenNoLongerValid",
     "FlowCategory",
     "FlowDetails",
+    "FlowMetricName",
+    "FlowMetricGranularity",
     "FlowStatus",
     "FlowPreview",
     "FlowValidationError",

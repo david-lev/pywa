@@ -23,6 +23,10 @@ Flow Types
 
 .. autoclass:: FlowAsset()
 
+.. autoclass:: FlowMetricName()
+
+.. autoclass:: FlowMetricGranularity()
+
 .. autoclass:: FlowResponseError()
     :show-inheritance:
 

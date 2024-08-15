@@ -80,6 +80,7 @@ The available methods are:
        :meth:`~WhatsApp.deprecate_flow`,
        :meth:`~WhatsApp.get_flow`,
        :meth:`~WhatsApp.get_flows`,
+       :meth:`~WhatsApp.get_flow_metrics`,
        :meth:`~WhatsApp.get_flow_assets`
    * - Business profile
      - :meth:`~WhatsApp.get_business_profile`,

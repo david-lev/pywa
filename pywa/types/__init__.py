@@ -58,5 +58,7 @@ from .flows import (
     FlowStatus,
     FlowCategory,
     FlowRequestActionType,
+    FlowMetricName,
+    FlowMetricGranularity,
 )
 from .chat_opened import ChatOpened

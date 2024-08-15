@@ -7,6 +7,7 @@ __all__ = ["WhatsApp"]
 import bisect
 import collections
 import dataclasses
+import datetime
 import hashlib
 import json
 import logging
@@ -47,10 +48,12 @@ from .types import (
     BusinessPhoneNumber,
     Command,
     ChatOpened,
+    FlowCategory,
+    FlowMetricName,
+    FlowMetricGranularity,
 )
 from .types.callback import CallbackDataT, CallbackData
 from .types.flows import (
-    FlowCategory,
     FlowJSON,
     FlowDetails,
     FlowValidationError,
@@ -2250,6 +2253,41 @@ class WhatsApp(Server, HandlerDecorators):
             )["data"]
         )
 
+    def get_flow_metrics(
+        self,
+        flow_id: str | int,
+        metric_name: FlowMetricName,
+        granularity: FlowMetricGranularity,
+        since: datetime.date | str | None = None,
+        until: datetime.date | str | None = None,
+    ) -> dict:
+        """
+        Get the metrics of a flow.
+
+        Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/metrics_api>`_.
+
+        Args:
+            flow_id: The flow ID.
+            metric_name: See `Available Metrics <https://developers.facebook.com/docs/whatsapp/flows/reference/metrics_api#available_metrics>`_.
+            granularity: Time granularity.
+            since: Start of the time period. If not specified, the oldest allowed date will be used. Oldest allowed date depends on the specified time granularity: DAY - 90 days, HOUR - 30 days.
+            until: End of the time period. If not specified, the current date will be used.
+
+        Returns:
+
+        """
+        return self.api.get_flow(
+            flow_id=str(flow_id),
+            fields=(
+                _get_flow_metric_field(
+                    metric_name=metric_name,
+                    granularity=granularity,
+                    since=since,
+                    until=until,
+                ),
+            ),
+        )["metric"]
+
     def get_flow_assets(
         self,
         flow_id: str | int,
@@ -2466,4 +2504,26 @@ def _get_flow_fields(
         "health_status"
         if not phone_number_id
         else f"health_status.phone_number({phone_number_id})",
+    )
+
+
+def _get_flow_metric_field(
+    metric_name: FlowMetricName,
+    granularity: FlowMetricGranularity,
+    since: datetime.date | str | None,
+    until: datetime.date | str | None,
+) -> str:
+    date_fmt = "%Y-%m-%d"
+    return (
+        f"metric.name({metric_name}).granularity({granularity})"
+        + (
+            f".since({since.strftime(date_fmt) if isinstance(since, datetime.date) else since})"
+            if since
+            else ""
+        )
+        + (
+            f".until({until.strftime(date_fmt) if isinstance(until, datetime.date) else until})"
+            if until
+            else ""
+        )
     )

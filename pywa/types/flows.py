@@ -36,6 +36,8 @@ __all__ = [
     "FlowTokenNoLongerValid",
     "FlowCategory",
     "FlowDetails",
+    "FlowMetricName",
+    "FlowMetricGranularity",
     "FlowStatus",
     "FlowPreview",
     "FlowValidationError",
@@ -755,6 +757,42 @@ class FlowDetails:
         )
         self.validation_errors = errors or None
         return is_success
+
+
+class FlowMetricName(utils.StrEnum):
+    """
+    The name of the metric
+
+    See `Available Metrics <https://developers.facebook.com/docs/whatsapp/flows/reference/metrics_api#available_metrics>`_.
+
+    Attributes:
+        ENDPOINT_REQUEST_COUNT: Flow endpoint request count.
+        ENDPOINT_REQUEST_ERROR: Flow endpoint errors.
+        ENDPOINT_REQUEST_ERROR_RATE: Flow endpoint request error rate.
+        ENDPOINT_REQUEST_LATENCY_SECONDS_CEIL: Flow endpoint latency in seconds.
+        ENDPOINT_AVAILABILITY: Flow endpoint request error rate.
+    """
+
+    ENDPOINT_REQUEST_COUNT = "ENDPOINT_REQUEST_COUNT"
+    ENDPOINT_REQUEST_ERROR = "ENDPOINT_REQUEST_ERROR"
+    ENDPOINT_REQUEST_ERROR_RATE = "ENDPOINT_REQUEST_ERROR_RATE"
+    ENDPOINT_REQUEST_LATENCY_SECONDS_CEIL = "ENDPOINT_REQUEST_LATENCY_SECONDS_CEIL"
+    ENDPOINT_AVAILABILITY = "ENDPOINT_AVAILABILITY"
+
+
+class FlowMetricGranularity(utils.StrEnum):
+    """
+    The granularity of the metric
+
+    Attributes:
+        DAY: Daily granularity.
+        HOUR: Hourly granularity.
+        LIFETIME: Lifetime granularity.
+    """
+
+    DAY = "DAY"
+    HOUR = "HOUR"
+    LIFETIME = "LIFETIME"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)

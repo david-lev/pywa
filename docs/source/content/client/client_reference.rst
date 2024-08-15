@@ -37,6 +37,7 @@ Client Reference
 .. automethod:: WhatsApp.deprecate_flow
 .. automethod:: WhatsApp.get_flow
 .. automethod:: WhatsApp.get_flows
+.. automethod:: WhatsApp.get_flow_metrics
 .. automethod:: WhatsApp.get_flow_assets
 .. automethod:: WhatsApp.register_phone_number
 .. automethod:: WhatsApp.webhook_update_handler
