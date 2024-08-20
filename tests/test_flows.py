@@ -1444,7 +1444,12 @@ async def test_flow_callback_wrapper():
         raw=...,
         raw_encrypted=...,
     )
-    wrapper = wa.get_flow_request_handler(endpoint="/flow", callback=main_handler)
+    wrapper = wa.get_flow_request_handler(
+        endpoint="/flow",
+        callback=main_handler,
+        request_decryptor=...,
+        response_encryptor=...,
+    )
     assert await wrapper._get_callback(req) is main_handler
 
     def data_exchange_start_screen_callback(_, __): ...
