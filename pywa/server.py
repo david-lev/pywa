@@ -100,9 +100,6 @@ class Server:
         validate_updates: bool,
     ):
         self._server = server
-        if server is utils.MISSING:
-            return
-        self._server_type = utils.ServerType.from_app(server)
         self._verify_token = verify_token
         self._webhook_endpoint = webhook_endpoint
         self._private_key = business_private_key
@@ -115,6 +112,10 @@ class Server:
         self._continue_handling = continue_handling
         self._skip_duplicate_updates = skip_duplicate_updates
         self._updates_ids_in_process = set[str]()
+
+        if server is utils.MISSING:
+            return
+        self._server_type = utils.ServerType.from_app(server)
 
         if not verify_token:
             raise ValueError(
@@ -581,8 +582,13 @@ class Server:
         """Internal function to register a flow endpoint callback."""
         if self._server is None:
             raise ValueError(
+                "When using a custom server, you must use the `get_flow_request_handler` method to get the flow "
+                "request handler and call it manually."
+            )
+        elif self._server is utils.MISSING:
+            raise ValueError(
                 "You must initialize the WhatsApp client with an web server"
-                " (Flask or FastAPI) in order to handle incoming flow requests."
+                f" ({utils.ServerType.protocols_names()}) in order to handle incoming flow requests."
             )
 
         callback_wrapper = self.get_flow_request_handler(

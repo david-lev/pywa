@@ -38,6 +38,7 @@ __all__ = [
 
 import abc
 import asyncio
+import collections
 import dataclasses
 import functools
 import inspect
@@ -61,7 +62,7 @@ from .types.flows import (
     FlowResponseError,
     FlowRequestActionType,
     FlowRequestCannotBeDecrypted,
-    FlowTokenNoLongerValid,
+    Screen,
 )  # noqa
 
 if TYPE_CHECKING:
@@ -200,10 +201,9 @@ async def _get_factored_update(
             ),
             *handler.filters,
         ):
-            if inspect.iscoroutinefunction(f):
-                if not await f(wa, update):
-                    return
-            elif not f(wa, update):
+            if not (
+                await f(wa, update) if inspect.iscoroutinefunction(f) else f(wa, update)
+            ):
                 return
     except AttributeError as e:
         if (
@@ -244,7 +244,7 @@ class Handler(abc.ABC):
     def __init__(
         self,
         callback: Callable[[WhatsApp, Any], Any],
-        *filters: Callable[[WhatsApp, Any], bool],
+        *filters: Callable[[WhatsApp, Any], bool | Awaitable[bool]],
         priority: int,
     ):
         """
@@ -255,17 +255,15 @@ class Handler(abc.ABC):
         self.priority = priority
 
     async def handle(self, wa: WhatsApp, data: Any) -> bool:
-        for f in self.filters:
-            if inspect.iscoroutinefunction(f):
-                if not await f(wa, data):
-                    return False
-            elif not f(wa, data):
-                return False
+        if not all(
+            await f(wa, data) if inspect.iscoroutinefunction(f) else f(wa, data)
+            for f in self.filters
+        ):
+            return False
 
-        if inspect.iscoroutinefunction(self.callback):
-            await self.callback(wa, data)
-        else:
-            self.callback(wa, data)
+        await self.callback(wa, data) if inspect.iscoroutinefunction(
+            self.callback
+        ) else self.callback(wa, data)
         return True
 
     @staticmethod
@@ -353,10 +351,9 @@ class _FactoryHandler(Handler):
     async def handle(self, wa: WhatsApp, data: Any) -> bool:
         update = await _get_factored_update(self, wa, data, self._data_field)
         if update is not None:
-            if inspect.iscoroutinefunction(self.callback):
-                await self.callback(wa, update)
-            else:
-                self.callback(wa, update)
+            await self.callback(wa, update) if inspect.iscoroutinefunction(
+                self.callback
+            ) else self.callback(wa, update)
             return True
         return False
 
@@ -1100,14 +1097,17 @@ class FlowRequestCallbackWrapper:
         self._endpoint = endpoint
         self._main_callback = callback
         self._error_callback: _FlowRequestHandlerT | None = None
-        self._on_callbacks = list[
-            tuple[
-                FlowRequestActionType | str,
-                str | None,
-                Callable[["WhatsApp", dict | None], bool] | None,
-                _FlowRequestHandlerT,
+        self._on_callbacks: dict[
+            tuple[FlowRequestActionType | str, str | None],
+            list[
+                tuple[
+                    Callable[["WhatsApp", dict | None], bool | Awaitable[bool]] | None,
+                    _FlowRequestHandlerT,
+                ]
             ],
-        ]()  # [(action, screen?, data_filter?, callback), ...]
+        ] = collections.defaultdict(
+            list
+        )  # {(action, screen?): [(data_filter?, callback)]}
         self._acknowledge_errors = acknowledge_errors
         self._handle_health_check = handle_health_check
         self._private_key = private_key or wa._private_key
@@ -1148,7 +1148,7 @@ class FlowRequestCallbackWrapper:
         self,
         *,
         action: FlowRequestActionType,
-        screen: str | None = None,
+        screen: Screen | str | None = None,
         data_filter: Callable[[WhatsApp, dict | None], bool] | None = None,
     ) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT]:
         """
@@ -1218,7 +1218,7 @@ class FlowRequestCallbackWrapper:
         *,
         callback: _FlowRequestHandlerT,
         action: FlowRequestActionType,
-        screen: str | None = None,
+        screen: Screen | str | None = None,
         data_filter: Callable[[WhatsApp, dict | None], bool] | None = None,
     ) -> FlowRequestCallbackWrapper:
         """
@@ -1248,7 +1248,9 @@ class FlowRequestCallbackWrapper:
         Returns:
             The current instance.
         """
-        self._on_callbacks.append((action, screen, data_filter, callback))
+        self._on_callbacks[
+            (action, screen.id if isinstance(screen, Screen) else screen)
+        ].append((data_filter, callback))
         return self
 
     def set_errors_handler(
@@ -1283,7 +1285,34 @@ class FlowRequestCallbackWrapper:
         self._error_callback = callback
         return self
 
+    async def _get_callback(self, req: FlowRequest) -> _FlowRequestHandlerT:
+        """Resolve the callback to use for the incoming request."""
+        if req.has_error and self._error_callback:
+            return self._error_callback
+        for data_filter, callback in (
+            *self._on_callbacks[(req.action, None)],  # No screen priority
+            *self._on_callbacks[(req.action, req.screen)],
+        ):
+            if data_filter is None or (
+                await data_filter(self._wa, req.data)
+                if asyncio.iscoroutinefunction(data_filter)
+                else data_filter(self._wa, req.data)
+            ):
+                return callback
+        return self._main_callback
+
     async def __call__(self, payload: dict) -> tuple[str, int]:
+        """
+        Handle the incoming request.
+
+        - This method is called automatically by pywa, or manually when using custom server.
+
+        Args:
+            payload: The incoming request payload.
+
+        Returns:
+            A tuple containing the response data and the status code.
+        """
         try:
             decrypted_request, aes_key, iv = self._request_decryptor(
                 payload["encrypted_flow_data"],
@@ -1314,9 +1343,7 @@ class FlowRequestCallbackWrapper:
                 iv,
             ), 200
         try:
-            request = FlowRequest.from_dict(
-                data=decrypted_request, raw_encrypted=payload
-            )
+            req = FlowRequest.from_dict(data=decrypted_request, raw_encrypted=payload)
         except Exception:
             _logger.exception(
                 "Flow Endpoint ('%s'): Failed to construct FlowRequest from decrypted data: %s",
@@ -1326,26 +1353,15 @@ class FlowRequestCallbackWrapper:
 
             return "Failed to construct FlowRequest", 500
 
-        if request.has_error and self._error_callback:
-            callback = self._error_callback
-        else:
-            for action, screen, data_filter, callback in self._on_callbacks:
-                if action == request.action and (
-                    screen is None or screen == request.screen
-                ):
-                    if data_filter is None or data_filter(self._wa, request.data):
-                        callback = callback
-                        break
-            else:
-                callback = self._main_callback
-
+        callback = await self._get_callback(req)
         try:
-            if asyncio.iscoroutinefunction(callback):
-                response = await callback(self._wa, request)
-            else:
-                response = callback(self._wa, request)
-            if isinstance(response, FlowResponseError):
-                raise response
+            res = (
+                await callback(self._wa, req)
+                if asyncio.iscoroutinefunction(callback)
+                else callback(self._wa, req)
+            )
+            if isinstance(res, FlowResponseError):
+                raise res
         except FlowResponseError as e:
             return (
                 self._response_encryptor(
@@ -1363,10 +1379,10 @@ class FlowRequestCallbackWrapper:
             )
             return "An error occurred", 500
 
-        if self._acknowledge_errors and request.has_error:
+        if self._acknowledge_errors and req.has_error:
             return self._response_encryptor(
                 {
-                    "version": request.version,
+                    "version": req.version,
                     "data": {
                         "acknowledged": True,
                     },
@@ -1374,13 +1390,13 @@ class FlowRequestCallbackWrapper:
                 aes_key,
                 iv,
             ), 200
-        if not isinstance(response, (FlowResponse | dict)):
+        if not isinstance(res, (FlowResponse | dict)):
             raise TypeError(
                 f"Flow endpoint ('{self._endpoint}') callback ('{callback.__name__}') must return a `FlowResponse`"
-                f" or `dict`, not {type(response)}"
+                f" or `dict`, not {type(res)}"
             )
         return self._response_encryptor(
-            response.to_dict() if isinstance(response, FlowResponse) else response,
+            res.to_dict() if isinstance(res, FlowResponse) else res,
             aes_key,
             iv,
         ), 200

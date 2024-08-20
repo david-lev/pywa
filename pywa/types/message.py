@@ -8,7 +8,7 @@ __all__ = ["Message"]
 
 import dataclasses
 import datetime
-from typing import TYPE_CHECKING, Any, Callable, Iterable
+from typing import TYPE_CHECKING, Iterable
 
 from ..errors import WhatsAppError
 
@@ -30,21 +30,6 @@ from .others import (
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
-
-
-_FIELDS_TO_OBJECTS_CONSTRUCTORS: dict[str, Callable[[dict, WhatsApp], Any]] = dict(
-    text=lambda m, _client: m["body"],
-    image=Image.from_dict,
-    video=Video.from_dict,
-    sticker=Sticker.from_dict,
-    document=Document.from_dict,
-    audio=Audio.from_dict,
-    reaction=Reaction.from_dict,
-    location=Location.from_dict,
-    contacts=lambda m, _client: tuple(Contact.from_dict(c) for c in m),
-    order=Order.from_dict,
-    system=System.from_dict,
-)
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)

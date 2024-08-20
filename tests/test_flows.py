@@ -1,7 +1,9 @@
+import dataclasses
 import json
 
 import pytest
 
+from pywa import WhatsApp, handlers, utils
 from pywa.types.flows import (
     FlowJSON,
     Screen,
@@ -29,8 +31,11 @@ from pywa.types.flows import (
     FormRef,
     ScreenData,
     FlowResponse,
+    FlowRequest,
+    FlowRequestActionType,
 )
 from pywa.utils import Version
+from tests import common
 
 FLOWS_VERSION = "2.1"
 
@@ -1420,3 +1425,75 @@ def test_flow_response_with_data_sources():
         data={"data_source": [DataSource(id="1", title="Example")]},
         screen="TEST",
     ).to_dict()["data"]["data_source"] == [{"id": "1", "title": "Example"}]
+
+
+@pytest.mark.asyncio
+async def test_flow_callback_wrapper():
+    wa = WhatsApp(
+        token="xxx", server=None, business_private_key="xxx", verify_token="fdfd"
+    )
+
+    def main_handler(_, __): ...
+
+    req = FlowRequest(
+        version=...,
+        action=FlowRequestActionType.DATA_EXCHANGE,
+        flow_token="xyz",
+        screen="START",
+        data={},
+        raw=...,
+        raw_encrypted=...,
+    )
+    wrapper = wa.get_flow_request_handler(endpoint="/flow", callback=main_handler)
+    assert await wrapper._get_callback(req) is main_handler
+
+    def data_exchange_start_screen_callback(_, __): ...
+
+    wrapper.add_handler(
+        callback=data_exchange_start_screen_callback,
+        action=FlowRequestActionType.DATA_EXCHANGE,
+        screen="START",
+    )
+    req = dataclasses.replace(req, screen="START")
+    assert await wrapper._get_callback(req) is data_exchange_start_screen_callback
+
+    def data_exchange_callback_without_screen(_, __): ...
+
+    wrapper.add_handler(
+        callback=data_exchange_callback_without_screen,
+        action=FlowRequestActionType.DATA_EXCHANGE,
+        screen=None,
+    )
+    assert await wrapper._get_callback(req) is data_exchange_callback_without_screen
+
+    def init_with_data_filter(_, __): ...
+
+    wrapper._on_callbacks.clear()
+    wrapper.add_handler(
+        callback=init_with_data_filter,
+        action=FlowRequestActionType.INIT,
+        screen=None,
+        data_filter=lambda _, data: data.get("age") >= 20,
+    )
+    req = dataclasses.replace(req, action=FlowRequestActionType.INIT, data={"age": 20})
+    assert await wrapper._get_callback(req) is init_with_data_filter
+
+
+def test_flows_server():
+    with pytest.raises(ValueError, match="^When using a custom server.*"):
+        wa = WhatsApp(token=..., server=None, verify_token=...)
+        wa.add_flow_request_handler(
+            handlers.FlowRequestHandler(
+                callback=...,
+                endpoint=...,
+            )
+        )
+
+    with pytest.raises(ValueError, match="^You must initialize the WhatsApp client.*"):
+        wa = WhatsApp(token=..., server=utils.MISSING)
+        wa.add_flow_request_handler(
+            handlers.FlowRequestHandler(
+                callback=...,
+                endpoint=...,
+            )
+        )
