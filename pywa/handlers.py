@@ -255,11 +255,11 @@ class Handler(abc.ABC):
         self.priority = priority
 
     async def handle(self, wa: WhatsApp, data: Any) -> bool:
-        if not all(
-            await f(wa, data) if inspect.iscoroutinefunction(f) else f(wa, data)
-            for f in self.filters
-        ):
-            return False
+        for f in self.filters:
+            if not (
+                await f(wa, data) if inspect.iscoroutinefunction(f) else f(wa, data)
+            ):
+                return False
 
         await self.callback(wa, data) if inspect.iscoroutinefunction(
             self.callback
