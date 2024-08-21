@@ -1149,7 +1149,8 @@ class FlowRequestCallbackWrapper:
         *,
         action: FlowRequestActionType,
         screen: Screen | str | None = None,
-        data_filter: Callable[[WhatsApp, dict | None], bool] | None = None,
+        data_filter: Callable[[WhatsApp, dict | None], bool | Awaitable[bool]]
+        | None = None,
     ) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT]:
         """
         Decorator to help you add more handlers to the same endpoint and split the logic into multiple functions.
@@ -1172,7 +1173,7 @@ class FlowRequestCallbackWrapper:
 
         Args:
             action: The action type to listen to.
-            screen: The screen ID to listen to.
+            screen: The screen ID to listen to (if screen is not provided, the handler will be called for all screens for this action!).
             data_filter: A filter function to apply to the incoming data.
 
         Returns:
@@ -1219,7 +1220,8 @@ class FlowRequestCallbackWrapper:
         callback: _FlowRequestHandlerT,
         action: FlowRequestActionType,
         screen: Screen | str | None = None,
-        data_filter: Callable[[WhatsApp, dict | None], bool] | None = None,
+        data_filter: Callable[[WhatsApp, dict | None], bool | Awaitable[bool]]
+        | None = None,
     ) -> FlowRequestCallbackWrapper:
         """
         Add a handler to the current endpoint.
@@ -1242,7 +1244,7 @@ class FlowRequestCallbackWrapper:
         Args:
             callback: The callback function to handle this particular request.
             action: The action type to listen to.
-            screen: The screen ID to listen to.
+            screen: The screen ID to listen to (if screen is not provided, the handler will be called for all screens for this action!).
             data_filter: A filter function to apply to the incoming data.
 
         Returns:
