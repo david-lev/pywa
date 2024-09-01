@@ -56,10 +56,9 @@ See `Here <https://developers.facebook.com/docs/development/create-an-app/app-da
     .. code-block:: python
         :caption: main.py
         :linenos:
-        :emphasize-lines: 5, 10, 11, 12, 13, 14, 20
+        :emphasize-lines: 4, 9, 10, 11, 12, 13
 
         import fastapi
-        import uvicorn
         from pywa import WhatsApp
 
         fastapi_app = fastapi.FastAPI()
@@ -76,8 +75,11 @@ See `Here <https://developers.facebook.com/docs/development/create-an-app/app-da
 
         ... # register the handlers
 
-        if __name__ == '__main__':
-            uvicorn.run(fastapi_app, port=8080)
+
+    .. code-block:: bash
+        :caption: Terminal
+
+        fastapi dev main.py --port 8080
 
     The port that fastapi is running on (``8080`` in the example above) must be the same port that the callback url is listening on (e.g. ``cloudflared tunnel --url http://localhost:8080``).
 
@@ -107,10 +109,9 @@ So, start the server:
     .. code-block:: python
         :caption: main.py
         :linenos:
-        :emphasize-lines: 5, 10, 11, 17
+        :emphasize-lines: 4, 9, 10
 
         import fastapi
-        import uvicorn
         from pywa import WhatsApp
 
         fastapi_app = fastapi.FastAPI()
@@ -124,8 +125,11 @@ So, start the server:
 
         ... # register the handlers
 
-        if __name__ == '__main__':
-            uvicorn.run(fastapi_app, port=8080)
+
+    .. code-block:: bash
+        :caption: Terminal
+
+        fastapi dev main.py --port 8080
 
     The port that fastapi is running on (``8080`` in the example above) must be the same port that the callback url is listening on (e.g. ``cloudflared tunnel --url http://localhost:8080``).
 
@@ -235,7 +239,7 @@ The easiest way to register a callback function is to use the ``on_message`` and
 .. code-block:: bash
     :caption: Terminal
 
-    uvicorn main:fastapi_app
+    fastapi dev main.py
 
 
 Using ``Handler`` objects
@@ -281,7 +285,7 @@ main code, or when you want to dynamically register handlers programmatically.
 .. code-block:: bash
     :caption: Terminal
 
-    uvicorn main:fastapi_app
+    fastapi dev main.py
 
 .. seealso::
 

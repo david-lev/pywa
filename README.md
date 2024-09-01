@@ -101,10 +101,10 @@ def click_me(client: WhatsApp, clb: CallbackButton):
     clb.reply_text("You clicked me!")
 ```
 
-- To run the server, use [uvicorn](https://www.uvicorn.org/) (`pip install "uvicorn[standard]"`):
+- To run the server, use [fastapi-cli](https://fastapi.tiangolo.com/#run-it) (`pip install "fastapi[standard]"`):
 
 ```bash
-uvicorn wa:fastapi_app  # see uvicorn docs for more options (port, host, reload, etc.)
+fastapi dev wa.py  # see uvicorn docs for more options (port, host, reload, etc.)
 ```
 
 💫 **Async Usage**
@@ -129,7 +129,7 @@ async def hello(_: WhatsApp, msg: types.Message):
 ```
 
 ```bash
-uvicorn wa:fastapi_app
+fastapi dev wa.py
 ```
 
 🎛 **Installation**

@@ -1446,7 +1446,7 @@ The last thing that we need to do is run the server:
 
 .. code-block:: bash
 
-    uvicorn wa:fastapi_app
+    fastapi dev wa.py
 
 What's Next?
 ------------
