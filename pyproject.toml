@@ -5,6 +5,7 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.dynamic]
 version = {attr = "pywa.__version__"}
 readme = {file = "README.md", content-type = "text/markdown"}
+dependencies = {file = "requirements.txt"}
 
 [tool.setuptools.packages.find]
 include = ["pywa*"]
@@ -13,12 +14,9 @@ exclude = ["tests*"]
 [project]
 name = "pywa"
 description = "Python wrapper for the WhatsApp Cloud API"
-dynamic = ["version", "readme"]
+dynamic = ["version", "readme", "dependencies"]
 license = { text = "MIT" }
 requires-python = ">=3.10"
-dependencies = [
-    "httpx>=0.27.0",
-]
 authors = [
     {name = "David Lev", email = "david@davidlev.dev"},
 ]
@@ -45,14 +43,6 @@ classifiers = [
 flask = ["flask[async]"]
 fastapi = ["fastapi[standard]"]
 cryptography = ["cryptography"]
-dev = [
-    "httpx==0.27.2",
-    "pytest==8.3.2",
-    "pytest-asyncio==0.24.0",
-    "pytest-mock==3.14.0",
-    "ruff==0.6.3",
-    "pre-commit==3.8.0",
-]
 
 [project.urls]
 "Documentation" = "https://pywa.readthedocs.io/"
