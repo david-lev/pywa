@@ -4,10 +4,15 @@ __all__ = ["Server"]
 
 import logging
 import threading
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, TypedDict
 
 from . import utils, handlers, errors
-from .handlers import Handler, ChatOpenedHandler, TemplateStatusHandler  # noqa
+from .handlers import (
+    Handler,
+    ChatOpenedHandler,
+    TemplateStatusHandler,
+    _EncryptedFlowRequestType,
+)  # noqa
 from .handlers import (
     CallbackButtonHandler,
     CallbackSelectionHandler,
@@ -157,6 +162,8 @@ class Server:
         Example:
 
             .. code-block:: python
+                :emphasize-lines: 4, 7, 8, 9, 10
+                :linenos:
 
                 from aiohttp import web
                 from pywa import WhatsApp, utils
@@ -208,6 +215,8 @@ class Server:
         Example:
 
                 .. code-block:: python
+                    :emphasize-lines: 4, 7, 8, 9, 10, 11
+                    :linenos:
 
                     from aiohttp import web
                     from pywa import WhatsApp, utils
@@ -538,6 +547,8 @@ class Server:
         Example:
 
             .. code-block:: python
+                :emphasize-lines: 4, 15
+                :linenos:
 
                 from aiohttp import web
                 from pywa import WhatsApp, flows
@@ -553,7 +564,7 @@ class Server:
                 )
 
                 async def my_flow_endpoint(req: web.Request) -> web.Response:
-                    response, status_code = await flow_handler(await req.json())
+                    response, status_code = await flow_handler.handle(await req.json())
                     return web.Response(text=response, status=status_code)
 
                 app = web.Application()
@@ -635,7 +646,7 @@ class Server:
 
                 @self._server.route(endpoint, methods=["POST"])
                 @utils.rename_func(f"({endpoint})")
-                async def flask_flow() -> tuple[str, int]:
+                async def pywa_flow() -> tuple[str, int]:
                     return await callback_wrapper(flask.request.json)
 
             case utils.ServerType.FASTAPI:
@@ -643,8 +654,10 @@ class Server:
 
                 @self._server.post(endpoint)
                 @utils.rename_func(f"({endpoint})")
-                async def fastapi_flow(req: fastapi.Request) -> fastapi.Response:
-                    response, status_code = await callback_wrapper(await req.json())
+                async def pywa_flow(
+                    flow_req: _EncryptedFlowRequestType,
+                ) -> fastapi.Response:
+                    response, status_code = await callback_wrapper(flow_req)
                     return fastapi.Response(
                         content=response,
                         status_code=status_code,

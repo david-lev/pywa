@@ -43,7 +43,7 @@ import dataclasses
 import functools
 import inspect
 import logging
-from typing import TYPE_CHECKING, Any, Callable, cast, TypeAlias, Awaitable
+from typing import TYPE_CHECKING, Any, Callable, cast, TypeAlias, Awaitable, TypedDict
 
 from . import utils
 from .types import (
@@ -87,6 +87,15 @@ _FlowRequestHandlerT: TypeAlias = Callable[
     | Awaitable[FlowResponse | FlowResponseError | dict | None],
 ]
 """Type hint for the flow request handler."""
+
+
+class _EncryptedFlowRequestType(TypedDict):
+    """Encrypted Flow Request Type."""
+
+    encrypted_flow_data: str
+    encrypted_aes_key: str
+    initial_vector: str
+
 
 _logger = logging.getLogger(__name__)
 
@@ -1140,7 +1149,7 @@ class FlowRequestCallbackWrapper:
         ) and not utils.is_installed("cryptography"):
             raise ValueError(
                 "The default decryptor/encryptor requires the `cryptography` package to be installed."
-                '\n>> Install it with `pip install cryptography` / pip install "pywa[cryptography]"` or use a '
+                '\n>> Install it with `pip install cryptography` / pip install "pywa[cryptography]" or use a '
                 "custom decryptor/encryptor."
             )
 
@@ -1303,9 +1312,52 @@ class FlowRequestCallbackWrapper:
                 return callback
         return self._main_callback
 
-    async def __call__(self, payload: dict) -> tuple[str, int]:
+    async def handle(self, payload: _EncryptedFlowRequestType) -> tuple[str, int]:
         """
-        Handle the incoming request.
+        Handle the incoming flow request.
+
+        - This method should be called when using a custom server.
+
+        Example:
+
+            .. code-block:: python
+                :emphasize-lines: 4, 14
+                :linenos:
+
+                from aiohttp import web
+                from pywa import WhatsApp, flows
+
+                wa = WhatsApp(..., server=None, business_private_key="...", business_private_key_password="...")
+
+                async def my_flow_callback(wa: WhatsApp, request: flows.FlowRequest) -> flows.FlowResponse:
+                    ...
+
+                flow_handler = wa.get_flow_request_handler(
+                    endpoint="/flow",
+                    callback=my_flow_callback,
+                )
+
+                async def my_flow_endpoint(req: web.Request) -> web.Response:
+                    response, status_code = await flow_handler.handle(await req.json())
+                    return web.Response(text=response, status=status_code)
+
+                app = web.Application()
+                app.add_routes([web.post("/flow", my_flow_endpoint)])
+
+                if __name__ == "__main__":
+                    web.run_app(app, port=...)
+
+        Args:
+            payload: The incoming request payload.
+
+        Returns:
+            A tuple containing the response data (json string) and the status code.
+        """
+        return await self(payload)
+
+    async def __call__(self, payload: _EncryptedFlowRequestType) -> tuple[str, int]:
+        """
+        Handle the incoming request internally.
 
         - This method is called automatically by pywa, or manually when using custom server.
 
