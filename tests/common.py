@@ -29,7 +29,7 @@ for client, updates in CLIENTS.items():
             ]
             for update_filename, update_data in {
                 pathlib.Path(update_filename).name: json.load(
-                    open(update_filename, "r")
+                    open(update_filename, "r", encoding="utf-8")
                 )
                 for update_filename in pathlib.Path(
                     f"tests/data/updates/{version}"

@@ -1128,7 +1128,9 @@ FLOWS = {
 
 
 def test_flows_to_json():
-    with open(f"tests/data/flows/{FLOWS_VERSION}/examples.json", "r") as f:
+    with open(
+        f"tests/data/flows/{FLOWS_VERSION}/examples.json", "r", encoding="utf-8"
+    ) as f:
         examples = json.load(f)
     for flow_name, flow in FLOWS.items():
         try:
