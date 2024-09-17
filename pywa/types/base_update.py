@@ -478,6 +478,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
     def reply_audio(
         self,
         audio: str | pathlib.Path | bytes | BinaryIO,
+        quote: bool = False,
         mime_type: str | None = None,
         tracker: CallbackDataT | None = None,
     ) -> str:
@@ -493,6 +494,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
 
         Args:
             audio: The audio file to reply with (either a media ID, URL, file path, bytes, or an open file object).
+            quote: Whether to quote the replied message (default: False).
             mime_type: The mime type of the audio (optional, required when sending a audio as bytes or a file object,
              or file path that does not have an extension).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
@@ -504,6 +506,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             sender=self.recipient,
             to=self.sender,
             audio=audio,
+            reply_to_message_id=self.message_id_to_reply if quote else None,
             mime_type=mime_type,
             tracker=tracker,
         )
