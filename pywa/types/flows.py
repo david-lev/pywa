@@ -1166,6 +1166,7 @@ class ComponentType(utils.StrEnum):
     TEXT_SUBHEADING = "TextSubheading"
     TEXT_BODY = "TextBody"
     TEXT_CAPTION = "TextCaption"
+    RICH_TEXT = "RichText"
     TEXT_INPUT = "TextInput"
     TEXT_AREA = "TextArea"
     CHECKBOX_GROUP = "CheckboxGroup"
@@ -1538,7 +1539,8 @@ class TextBody(TextComponent):
     type: ComponentType = dataclasses.field(
         default=ComponentType.TEXT_BODY, init=False, repr=False
     )
-    text: str | DataKey | FormRef
+    text: str | list[str] | DataKey | FormRef
+    markdown: bool | str | DataKey | FormRef | None = None
     font_weight: FontWeight | str | DataKey | FormRef | None = None
     strikethrough: bool | str | DataKey | FormRef | None = None
     visible: bool | str | DataKey | FormRef | None = None
@@ -1570,9 +1572,36 @@ class TextCaption(TextComponent):
     type: ComponentType = dataclasses.field(
         default=ComponentType.TEXT_CAPTION, init=False, repr=False
     )
-    text: str | DataKey | FormRef
+    text: str | list[str] | DataKey | FormRef
+    markdown: bool | str | DataKey | FormRef | None = None
     font_weight: FontWeight | str | DataKey | FormRef | None = None
     strikethrough: bool | str | DataKey | FormRef | None = None
+    visible: bool | str | DataKey | FormRef | None = None
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class RichText(TextComponent):
+    """
+    Represents text that is displayed as a rich text.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#richtext>`_.
+
+    Example:
+
+        >>> RichText(
+        ...     text=['**bold**'],
+        ... )
+
+
+    Attributes:
+        text:
+        visible: Whether the caption is visible or not. Default to ``True``, Can be dynamic.
+    """
+
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.RICH_TEXT, init=False, repr=False
+    )
+    text: str | list[str] | DataKey | FormRef
     visible: bool | str | DataKey | FormRef | None = None
 
 

@@ -53,6 +53,7 @@ __all__ = [
     "FlowActionType",
     "ActionNext",
     "ActionNextType",
+    "RichText"
 ]
 
 from pywa.types.flows import *  # noqa MUST BE IMPORTED FIRST
