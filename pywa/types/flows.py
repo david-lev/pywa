@@ -1049,6 +1049,7 @@ class Screen:
          the back button while on this screen (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#additional-information-on-refresh-on-back>`_).
         layout: Associated screen UI Layout that is shown to the user (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#layout>`_).
         success: To indicate whether terminating on that screen results in a successful flow completion.
+        sensitive: This array contains the names of the fields in the screen that contain sensitive data, and should be hidden in the response summary displayed to the user. (added in v5.1)
     """
 
     id: str
@@ -1058,6 +1059,7 @@ class Screen:
     success: bool | None = None
     refresh_on_back: bool | None = None
     layout: Layout
+    sensitive: Iterable[str] | None = None
 
     def __post_init__(self):
         if not self.data or isinstance(self.data, dict):
