@@ -30,6 +30,7 @@ __all__ = [
     "TextSubheading",
     "TextBody",
     "TextCaption",
+    "RichText",
     "FontWeight",
     "TextInput",
     "InputType",
@@ -51,9 +52,9 @@ __all__ = [
     "DataSource",
     "Action",
     "FlowActionType",
+    "FlowRequestActionType",
     "ActionNext",
     "ActionNextType",
-    "RichText"
 ]
 
 from pywa.types.flows import *  # noqa MUST BE IMPORTED FIRST
