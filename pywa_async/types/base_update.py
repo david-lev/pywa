@@ -427,10 +427,10 @@ class BaseUserUpdateAsync:
         )
 
     async def reply_request_location(
-            self,
-            text: str,
-            quote: bool = False,
-            tracker: CallbackDataT | None = None,
+        self,
+        text: str,
+        quote: bool = False,
+        tracker: CallbackDataT | None = None,
     ) -> str:
         """
         Reply to the message with a request for the user's location.
