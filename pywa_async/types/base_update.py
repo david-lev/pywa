@@ -9,7 +9,6 @@ __all__ = [
 
 from pywa.types.base_update import *  # noqa MUST BE IMPORTED FIRST
 
-
 import pathlib
 import dataclasses
 from typing import TYPE_CHECKING, BinaryIO, Iterable
@@ -388,6 +387,7 @@ class BaseUserUpdateAsync:
         longitude: float,
         name: str | None = None,
         address: str | None = None,
+        quote: bool = False,
         tracker: CallbackDataT | None = None,
     ) -> str:
         """
@@ -409,6 +409,7 @@ class BaseUserUpdateAsync:
             longitude: The longitude of the location.
             name: The name of the location (optional).
             address: The address of the location (optional).
+            quote: Whether to quote the replied message (default: False).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
@@ -421,6 +422,7 @@ class BaseUserUpdateAsync:
             longitude=longitude,
             name=name,
             address=address,
+            reply_to_message_id=self.message_id_to_reply if quote else None,
             tracker=tracker,
         )
 
