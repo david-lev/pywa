@@ -868,6 +868,7 @@ class WhatsApp(Server, HandlerDecorators):
         to: str | int,
         audio: str | pathlib.Path | bytes | BinaryIO,
         mime_type: str | None = None,
+        reply_to_message_id: str | None = None,
         tracker: CallbackDataT | None = None,
         sender: str | int | None = None,
     ) -> str:
@@ -887,6 +888,7 @@ class WhatsApp(Server, HandlerDecorators):
             audio: The audio file to send (either a media ID, URL, file path, bytes, or an open file object).
             mime_type: The mime type of the audio file (optional, required when sending an audio file as bytes or a file
              object, or file path that does not have an extension).
+            reply_to_message_id: The message ID to reply to (optional).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
@@ -911,6 +913,7 @@ class WhatsApp(Server, HandlerDecorators):
                 media_id_or_url=audio,
                 is_url=is_url,
             ),
+            reply_to_message_id=reply_to_message_id,
             biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
@@ -919,6 +922,7 @@ class WhatsApp(Server, HandlerDecorators):
         to: str | int,
         sticker: str | pathlib.Path | bytes | BinaryIO,
         mime_type: str | None = None,
+        reply_to_message_id: str | None = None,
         tracker: CallbackDataT | None = None,
         sender: str | int | None = None,
     ) -> str:
@@ -940,6 +944,7 @@ class WhatsApp(Server, HandlerDecorators):
             sticker: The sticker to send (either a media ID, URL, file path, bytes, or an open file object).
             mime_type: The mime type of the sticker (optional, required when sending a sticker as bytes or a file
              object, or file path that does not have an extension).
+            reply_to_message_id: The message ID to reply to (optional).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
@@ -964,6 +969,7 @@ class WhatsApp(Server, HandlerDecorators):
                 media_id_or_url=sticker,
                 is_url=is_url,
             ),
+            reply_to_message_id=reply_to_message_id,
             biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
@@ -1063,6 +1069,7 @@ class WhatsApp(Server, HandlerDecorators):
         longitude: float,
         name: str | None = None,
         address: str | None = None,
+        reply_to_message_id: str | None = None,
         tracker: CallbackDataT | None = None,
         sender: str | int | None = None,
     ) -> str:
@@ -1086,6 +1093,7 @@ class WhatsApp(Server, HandlerDecorators):
             longitude: The longitude of the location.
             name: The name of the location (optional).
             address: The address of the location (optional).
+            reply_to_message_id: The message ID to reply to (optional).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
@@ -1102,6 +1110,7 @@ class WhatsApp(Server, HandlerDecorators):
                 "name": name,
                 "address": address,
             },
+            reply_to_message_id=reply_to_message_id,
             biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
@@ -1109,15 +1118,25 @@ class WhatsApp(Server, HandlerDecorators):
         self,
         to: str | int,
         text: str,
+        reply_to_message_id: str | None = None,
         tracker: CallbackDataT | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
         Send a text message with button to request the user's location.
 
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.request_location(
+            ...     to='1234567890',
+            ...     text='Please share your location with us.',
+            ... )
+
         Args:
             to: The phone ID of the WhatsApp user.
             text: The text to send with the button.
+            reply_to_message_id: The message ID to reply to (optional).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
@@ -1133,6 +1152,7 @@ class WhatsApp(Server, HandlerDecorators):
                 action={"name": "send_location"},
                 body=text,
             ),
+            reply_to_message_id=reply_to_message_id,
             biz_opaque_callback_data=_resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 

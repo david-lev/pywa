@@ -9,7 +9,6 @@ __all__ = [
 
 from pywa.types.base_update import *  # noqa MUST BE IMPORTED FIRST
 
-
 import pathlib
 import dataclasses
 from typing import TYPE_CHECKING, BinaryIO, Iterable
@@ -311,6 +310,7 @@ class BaseUserUpdateAsync:
     async def reply_audio(
         self,
         audio: str | pathlib.Path | bytes | BinaryIO,
+        quote: bool = False,
         mime_type: str | None = None,
         tracker: CallbackDataT | None = None,
     ) -> str:
@@ -326,6 +326,7 @@ class BaseUserUpdateAsync:
 
         Args:
             audio: The audio file to reply with (either a media ID, URL, file path, bytes, or an open file object).
+            quote: Whether to quote the replied message (default: False).
             mime_type: The mime type of the audio (optional, required when sending a audio as bytes or a file object,
              or file path that does not have an extension).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
@@ -337,6 +338,7 @@ class BaseUserUpdateAsync:
             sender=self.recipient,
             to=self.sender,
             audio=audio,
+            reply_to_message_id=self.message_id_to_reply if quote else None,
             mime_type=mime_type,
             tracker=tracker,
         )
@@ -344,6 +346,7 @@ class BaseUserUpdateAsync:
     async def reply_sticker(
         self,
         sticker: str | pathlib.Path | bytes | BinaryIO,
+        quote: bool = False,
         mime_type: str | None = None,
         tracker: CallbackDataT | None = None,
     ) -> str:
@@ -361,6 +364,7 @@ class BaseUserUpdateAsync:
 
         Args:
             sticker: The sticker to reply with (either a media ID, URL, file path, bytes, or an open file object).
+            quote: Whether to quote the replied message (default: False).
             mime_type: The mime type of the sticker (optional, required when sending a sticker as bytes or a file
              object, or file path that does not have an extension).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
@@ -372,6 +376,7 @@ class BaseUserUpdateAsync:
             sender=self.recipient,
             to=self.sender,
             sticker=sticker,
+            reply_to_message_id=self.message_id_to_reply if quote else None,
             mime_type=mime_type,
             tracker=tracker,
         )
@@ -382,6 +387,7 @@ class BaseUserUpdateAsync:
         longitude: float,
         name: str | None = None,
         address: str | None = None,
+        quote: bool = False,
         tracker: CallbackDataT | None = None,
     ) -> str:
         """
@@ -403,6 +409,7 @@ class BaseUserUpdateAsync:
             longitude: The longitude of the location.
             name: The name of the location (optional).
             address: The address of the location (optional).
+            quote: Whether to quote the replied message (default: False).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
@@ -415,6 +422,40 @@ class BaseUserUpdateAsync:
             longitude=longitude,
             name=name,
             address=address,
+            reply_to_message_id=self.message_id_to_reply if quote else None,
+            tracker=tracker,
+        )
+
+    async def reply_request_location(
+        self,
+        text: str,
+        quote: bool = False,
+        tracker: CallbackDataT | None = None,
+    ) -> str:
+        """
+        Reply to the message with a request for the user's location.
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.request_location` with ``to`` and ``reply_to_message_id``.
+
+        Example:
+
+                >>> msg.reply_request_location(
+                ...     text='Please share your location',
+                ... )
+
+
+        Args:
+            text: The text to send with the request.
+            quote: Whether to quote the replied message (default: False).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+
+        Returns:
+            The ID of the sent reply.
+        """
+        return await self._client.request_location(
+            sender=self.recipient,
+            to=self.sender,
+            text=text,
+            reply_to_message_id=self.message_id_to_reply if quote else None,
             tracker=tracker,
         )
 
