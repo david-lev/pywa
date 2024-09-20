@@ -823,6 +823,7 @@ class WhatsApp(_WhatsApp):
         to: str | int,
         sticker: str | pathlib.Path | bytes | BinaryIO,
         mime_type: str | None = None,
+        reply_to_message_id: str | None = None,
         tracker: CallbackDataT | None = None,
         sender: str | int | None = None,
     ) -> str:
@@ -844,6 +845,7 @@ class WhatsApp(_WhatsApp):
             sticker: The sticker to send (either a media ID, URL, file path, bytes, or an open file object).
             mime_type: The mime type of the sticker (optional, required when sending a sticker as bytes or a file
              object, or file path that does not have an extension).
+            reply_to_message_id: The message ID to reply to (optional).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
@@ -869,6 +871,7 @@ class WhatsApp(_WhatsApp):
                     media_id_or_url=sticker,
                     is_url=is_url,
                 ),
+                reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=_resolve_tracker_param(tracker),
             )
         )["messages"][0]["id"]
