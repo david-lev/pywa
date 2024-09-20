@@ -426,6 +426,39 @@ class BaseUserUpdateAsync:
             tracker=tracker,
         )
 
+    async def reply_request_location(
+            self,
+            text: str,
+            quote: bool = False,
+            tracker: CallbackDataT | None = None,
+    ) -> str:
+        """
+        Reply to the message with a request for the user's location.
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.request_location` with ``to`` and ``reply_to_message_id``.
+
+        Example:
+
+                >>> msg.reply_request_location(
+                ...     text='Please share your location',
+                ... )
+
+
+        Args:
+            text: The text to send with the request.
+            quote: Whether to quote the replied message (default: False).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+
+        Returns:
+            The ID of the sent reply.
+        """
+        return await self._client.request_location(
+            sender=self.recipient,
+            to=self.sender,
+            text=text,
+            reply_to_message_id=self.message_id_to_reply if quote else None,
+            tracker=tracker,
+        )
+
     async def reply_contact(
         self,
         contact: Contact | Iterable[Contact],
