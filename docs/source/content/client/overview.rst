@@ -56,6 +56,7 @@ The available methods are:
        :meth:`~WhatsApp.send_audio`,
        :meth:`~WhatsApp.send_document`,
        :meth:`~WhatsApp.send_location`,
+       :meth:`~WhatsApp.request_location`,
        :meth:`~WhatsApp.send_contact`,
        :meth:`~WhatsApp.send_sticker`,
        :meth:`~WhatsApp.send_template`,
