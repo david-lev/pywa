@@ -3,7 +3,16 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-#### 1.25.0 (2024-08-15)  **Latest**
+#### 1.26.0 (2024-09-22) **Latest**
+
+- [flows] adding support of `RichText`
+- [flows] adding support of `markdown` in `TextBody` and `TextCaption`
+- [flows] adding `sensitive` attr to Screen, allowing to hide specific fields from the response summary
+- [client] adding `reply_to_message` arg to `send_location`, `request_location`, `send_sticker`, and `send_audio`
+- [message] adding `reply_location_request`
+
+
+#### 1.25.0 (2024-08-15)
 
 - [handlers] adding priority
 - [client] adding QR methods (create update get and delete)
