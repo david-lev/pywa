@@ -117,6 +117,8 @@ All user-related-updates have common methods and properties:
      - Reply to the update with a document message
    * - :meth:`~BaseUserUpdate.reply_location`
      - Reply to the update with a location message
+   * - :meth:`~BaseUserUpdate.reply_location_request`
+     - Request a location from the user
    * - :meth:`~BaseUserUpdate.reply_contact`
      - Reply to the update with a contact message
    * - :meth:`~BaseUserUpdate.reply_sticker`

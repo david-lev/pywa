@@ -594,7 +594,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             tracker=tracker,
         )
 
-    def reply_request_location(
+    def reply_location_request(
         self,
         text: str,
         quote: bool = False,
@@ -606,7 +606,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
 
         Example:
 
-                >>> msg.reply_request_location(
+                >>> msg.reply_location_request(
                 ...     text='Please share your location',
                 ... )
 

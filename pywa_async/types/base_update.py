@@ -426,7 +426,7 @@ class BaseUserUpdateAsync:
             tracker=tracker,
         )
 
-    async def reply_request_location(
+    async def reply_location_request(
         self,
         text: str,
         quote: bool = False,
@@ -438,7 +438,7 @@ class BaseUserUpdateAsync:
 
         Example:
 
-                >>> msg.reply_request_location(
+                >>> msg.reply_location_request(
                 ...     text='Please share your location',
                 ... )
 
