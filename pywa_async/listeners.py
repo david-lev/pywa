@@ -90,7 +90,7 @@ class AsyncListeners:
         cancelers: _CancelersT = None,
         timeout: int | None = None,
         to_phone_id: str | int | None = None,
-    ) -> _UserUpdateT | None:
+    ) -> _UserUpdateT:
         """
         Asynchronously listen for a specific type of update from a specific user
         """

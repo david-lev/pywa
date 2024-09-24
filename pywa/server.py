@@ -273,11 +273,6 @@ class Server:
             update_id := _extract_id_from_update(update)
         ):
             if update_id in self._updates_ids_in_process:
-                _logger.warning(
-                    "Webhook ('%s') received an update with an ID that is already being processed: %s",
-                    self._webhook_endpoint,
-                    update_id,
-                )
                 return "ok", 200
             self._updates_ids_in_process.add(update_id)
         await self._call_handlers(update)
