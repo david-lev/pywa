@@ -14,6 +14,8 @@ import dataclasses
 import datetime
 from typing import TYPE_CHECKING, BinaryIO, Iterable
 
+from pywa import utils
+
 from .others import Contact, Metadata, ProductsSection, User
 
 if TYPE_CHECKING:
@@ -190,6 +192,13 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             - Shortcut for ``.metadata.phone_number_id``.
         """
         return self.metadata.phone_number_id
+
+    @property
+    def listener_identifier(self) -> tuple[str, str]:
+        """
+        The listener identifier of the message.
+        """
+        return utils.listener_identifier(sender=self.sender, recipient=self.recipient)
 
     @property
     def message_id_to_reply(self) -> str:

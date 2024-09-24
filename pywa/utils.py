@@ -483,3 +483,8 @@ def deprecated_func(use_instead: str | None) -> Callable:
         return wrapper
 
     return decorator
+
+
+def listener_identifier(sender: str | int, recipient: str | int) -> tuple[str, str]:
+    """Create a unique identifier for a listener."""
+    return str(sender), str(recipient)

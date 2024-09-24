@@ -46,6 +46,7 @@ from typing import BinaryIO, Iterable, Literal, Callable
 
 import httpx
 
+from .listeners import Listener, AsyncListeners
 from .types import (
     TemplateStatus,
     MessageStatus,
@@ -93,7 +94,7 @@ from .utils import FastAPI, Flask
 _logger = logging.getLogger(__name__)
 
 
-class WhatsApp(_WhatsApp):
+class WhatsApp(_WhatsApp, AsyncListeners):
     def __init__(
         self,
         phone_id: str | int | None = None,
@@ -200,6 +201,7 @@ class WhatsApp(_WhatsApp):
             skip_duplicate_updates: Whether to skip duplicate updates (default: ``True``).
         """
         self._session_sync = session_sync
+        self._listeners = dict[tuple[str, str], Listener]()
         super().__init__(
             phone_id=phone_id,
             token=token,
@@ -267,6 +269,20 @@ class WhatsApp(_WhatsApp):
     def token(self, value: str) -> None:
         super().token = value
         self.api._session_sync.headers["Authorization"] = f"Bearer {value}"
+
+    async def _call_callbacks(
+        self: "WhatsApp",
+        handler_type: type[Handler],
+        constructed_update: BaseUpdate | dict,
+    ) -> None:
+        if isinstance(
+            RawUpdateHandler, handler_type
+        ) or not await self._answer_listener(
+            constructed_update
+        ):  # TODO better approach
+            await super()._call_callbacks(
+                handler_type=handler_type, constructed_update=constructed_update
+            )
 
     async def send_message(
         self,
