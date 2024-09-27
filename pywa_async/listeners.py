@@ -1,9 +1,17 @@
 from __future__ import annotations
 
+
+from pywa.listeners import (
+    ListenerTimeout,
+    ListenerCanceled as _ListenerCanceled,
+    Listener as _Listener,
+)
+
 import asyncio
 from collections.abc import Iterable
 from typing import TypeVar, Callable, TYPE_CHECKING, Coroutine, TypeAlias, Awaitable
 
+from pywa.types.base_update import BaseUserUpdate
 from .types import (
     Message,
     CallbackButton,
@@ -53,16 +61,12 @@ _FiltersT: TypeAlias = (
 )
 
 
-class ListenerTimeout(Exception):
-    pass
-
-
-class ListenerCanceled(Exception):
-    def __init__(self, update: BaseUserUpdateAsync):
+class ListenerCanceled(_ListenerCanceled):
+    def __init__(self, update: BaseUserUpdateAsync | None = None):
         self.update = update
 
 
-class Listener:
+class Listener(_Listener):
     def __init__(
         self,
         wa: WhatsApp,
@@ -73,12 +77,25 @@ class Listener:
         cancelers: _CancelersT,
     ):
         self.type = typ
-        self.filters = filters
-        self.cancelers = cancelers
+        self.filters = filters or ()
+        self.cancelers = cancelers or ()
         self.future: asyncio.Future[_UserUpdateT] = asyncio.Future()
         self.future.add_done_callback(
             lambda _: wa.remove_listener(from_user, to_phone_id)
         )
+
+    def set_result(self, result: _UserUpdateT) -> None:
+        self.future.set_result(result)
+
+    def set_exception(self, exception: Exception) -> None:
+        self.future.set_exception(exception)
+
+    def cancel(self, update: BaseUserUpdate | None = None) -> None:
+        self.cancelled_update = update
+        self.future.cancel()
+
+    def is_set(self) -> bool:
+        return self.future.done()
 
 
 class AsyncListeners:
@@ -110,64 +127,6 @@ class AsyncListeners:
             result = await asyncio.wait_for(listener.future, timeout)
             return result
         except asyncio.TimeoutError:
-            raise ListenerTimeout
-        except asyncio.CancelledError as e:
-            raise ListenerCanceled(e.args[0])
-
-    async def _answer_listener(self: WhatsApp, update: BaseUserUpdateAsync) -> bool:
-        """
-        Answer a listener with an update
-
-        Args:
-            update (BaseUpdate): The update to answer the listener with
-
-        Returns:
-            bool: True if the listener was answered or canceled, False otherwise
-        """
-        if not isinstance(update, BaseUserUpdateAsync):
-            return False
-        listener = self._listeners.get(update.listener_identifier)
-        if listener is None:
-            return False
-        try:
-            if isinstance(update, listener.type):
-                for f in listener.filters or ():
-                    if not (
-                        await f(self, update)
-                        if asyncio.iscoroutinefunction(f)
-                        else f(self, update)
-                    ):
-                        break
-                else:
-                    listener.future.set_result(update)
-                    return True
-
-            if listener.cancelers:
-                for c in listener.cancelers:
-                    if (
-                        await c(self, update)
-                        if asyncio.iscoroutinefunction(c)
-                        else c(self, update)
-                    ):
-                        listener.future.cancel(update)
-                        return True
-
-        except Exception as e:
-            listener.future.set_exception(e)
-            return True
-
-        return True
-
-    def remove_listener(
-        self: WhatsApp, from_user: str | int, to_phone_id: str | int | None = None
-    ) -> None:
-        """
-        Remove a listener
-        """
-        recipient = _resolve_phone_id_param(self, to_phone_id, "to_phone_id")
-        listener_identifier = utils.listener_identifier(
-            sender=from_user, recipient=recipient
-        )
-        listener = self._listeners.get(listener_identifier)
-        listener.future.cancel()
-        del self._listeners[listener_identifier]
+            raise ListenerTimeout(timeout)
+        except asyncio.CancelledError:
+            raise ListenerCanceled(listener.cancelled_update)

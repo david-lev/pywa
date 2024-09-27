@@ -33,7 +33,12 @@ from .types import (
     FlowCompletion,
     ChatOpened,
 )
-from .types.base_update import BaseUpdate, StopHandling, ContinueHandling  # noqa
+from .types.base_update import (
+    BaseUpdate,
+    StopHandling,
+    ContinueHandling,
+    BaseUserUpdate,
+)  # noqa
 from .types.flows import (
     FlowRequestCannotBeDecrypted,
     FlowResponseError,  # noqa
@@ -406,6 +411,10 @@ class Server:
         constructed_update: BaseUpdate | dict,
     ) -> None:
         """Call the handler type callbacks for the given update."""
+        if isinstance(constructed_update, BaseUserUpdate):
+            if await self._answer_listener(constructed_update):
+                return
+
         handled = False
         for handler in self._handlers[handler_type]:
             try:
@@ -421,6 +430,33 @@ class Server:
                 )
             if handled and not self._continue_handling:
                 break
+
+    async def _answer_listener(self: "WhatsApp", update: BaseUserUpdate) -> bool:
+        """
+        Answer a listener with an update
+
+        Args:
+            update (BaseUpdate): The update to answer the listener with
+
+        Returns:
+            bool: True if the listener was answered or canceled, False otherwise
+        """
+        listener = self._listeners.get(update.listener_identifier)
+        if listener is None:
+            return False
+        try:
+            if isinstance(update, listener.type):
+                if await listener.apply_filters(self, update):
+                    listener.set_result(update)
+                    return True
+
+            if await listener.apply_cancelers(self, update):
+                listener.cancel(update)
+
+        except Exception as e:
+            listener.set_exception(e)
+
+        return True
 
     def _get_handler(self: "WhatsApp", update: dict) -> type[Handler] | None:
         """Get the handler for the given update."""

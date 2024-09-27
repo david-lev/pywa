@@ -28,6 +28,7 @@ from .handlers import (
     FlowRequestHandler,
     FlowRequestCallbackWrapper,
 )  # noqa
+from .listeners import Listeners, Listener
 from .types import (
     BusinessProfile,
     Button,
@@ -69,7 +70,7 @@ _logger = logging.getLogger(__name__)
 _DEFAULT_VERIFY_DELAY_SEC = 3
 
 
-class WhatsApp(Server, HandlerDecorators):
+class WhatsApp(Server, HandlerDecorators, Listeners):
     def __init__(
         self,
         phone_id: str | int | None = None,
@@ -209,6 +210,7 @@ class WhatsApp(Server, HandlerDecorators):
             type[Handler] | None,
             list[Handler],
         ] = collections.defaultdict(list)
+        self._listeners = dict[tuple[str, str], Listener]()
 
         self._setup_api(session, token, base_url, float(str(api_version)))
 
