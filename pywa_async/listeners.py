@@ -9,7 +9,7 @@ from pywa.listeners import (
 
 import asyncio
 from collections.abc import Iterable
-from typing import TypeVar, Callable, TYPE_CHECKING, Coroutine, TypeAlias, Awaitable
+from typing import Callable, TYPE_CHECKING, TypeAlias, Awaitable
 
 from pywa.types.base_update import BaseUserUpdate
 from .types import (
@@ -36,14 +36,7 @@ _SuppoertedUserUpdate: TypeAlias = (
     | FlowCompletion
 )
 
-_UserUpdateT = TypeVar(
-    "_UserUpdateT",
-    bound=_SuppoertedUserUpdate,
-)
-_UserUpdateCancelT = TypeVar(
-    "_UserUpdateCancelT",
-    bound=_SuppoertedUserUpdate,
-)
+
 _CancelersT: TypeAlias = (
     Iterable[
         Callable[
@@ -57,7 +50,7 @@ _CancelersT: TypeAlias = (
     | None
 )
 _FiltersT: TypeAlias = (
-    Iterable[Callable[["WhatsApp", _UserUpdateT], bool | Awaitable[bool]]] | None
+    Iterable[Callable[["WhatsApp", BaseUserUpdate], bool | Awaitable[bool]]] | None
 )
 
 
@@ -70,21 +63,19 @@ class Listener(_Listener):
     def __init__(
         self,
         wa: WhatsApp,
-        from_user: str | int,
-        to_phone_id: str | int,
-        typ: type[_UserUpdateT],
+        to: str | int,
+        sent_to_phone_id: str | int,
         filters: _FiltersT,
         cancelers: _CancelersT,
     ):
-        self.type = typ
         self.filters = filters or ()
         self.cancelers = cancelers or ()
-        self.future: asyncio.Future[_UserUpdateT] = asyncio.Future()
+        self.future: asyncio.Future[_SuppoertedUserUpdate] = asyncio.Future()
         self.future.add_done_callback(
-            lambda _: wa.remove_listener(from_user, to_phone_id)
+            lambda _: wa.remove_listener(from_user=to, phone_id=sent_to_phone_id)
         )
 
-    def set_result(self, result: _UserUpdateT) -> None:
+    def set_result(self, result: _SuppoertedUserUpdate) -> None:
         self.future.set_result(result)
 
     def set_exception(self, exception: Exception) -> None:
@@ -101,31 +92,28 @@ class Listener(_Listener):
 class AsyncListeners:
     async def listen(
         self: WhatsApp,
-        to: type[_UserUpdateT],
-        from_user: str | int,
+        to: str | int,
         filters: _FiltersT = None,
         cancelers: _CancelersT = None,
         timeout: int | None = None,
-        to_phone_id: str | int | None = None,
-    ) -> _UserUpdateT:
+        sent_to_phone_id: str | int | None = None,
+    ) -> _SuppoertedUserUpdate:
         """
         Asynchronously listen for a specific type of update from a specific user
         """
-        recipient = _resolve_phone_id_param(self, to_phone_id, "to_phone_id")
+        recipient = _resolve_phone_id_param(self, sent_to_phone_id, "sent_to_phone_id")
         listener = Listener(
             wa=self,
-            from_user=from_user,
-            to_phone_id=recipient,
-            typ=to,
+            to=to,
+            sent_to_phone_id=recipient,
             filters=filters,
             cancelers=cancelers,
         )
-        self._listeners[
-            utils.listener_identifier(sender=from_user, recipient=recipient)
-        ] = listener
+        self._listeners[utils.listener_identifier(sender=to, recipient=recipient)] = (
+            listener
+        )
         try:
-            result = await asyncio.wait_for(listener.future, timeout)
-            return result
+            return await asyncio.wait_for(listener.future, timeout=timeout)
         except asyncio.TimeoutError:
             raise ListenerTimeout(timeout)
         except asyncio.CancelledError:

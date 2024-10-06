@@ -8,8 +8,9 @@ __all__ = [
 import asyncio
 import threading
 from collections.abc import Iterable
-from typing import TypeVar, Callable, TYPE_CHECKING, TypeAlias, Awaitable
+from typing import Callable, TYPE_CHECKING, TypeAlias, Awaitable
 
+from pywa import utils
 from .types import (
     Message,
     CallbackButton,
@@ -18,7 +19,6 @@ from .types import (
     ChatOpened,
     FlowCompletion,
 )
-from pywa import utils
 from .types.base_update import BaseUserUpdate
 
 if TYPE_CHECKING:
@@ -33,14 +33,7 @@ _SuppoertedUserUpdate: TypeAlias = (
     | FlowCompletion
 )
 
-_UserUpdateT = TypeVar(
-    "_UserUpdateT",
-    bound=_SuppoertedUserUpdate,
-)
-_UserUpdateCancelT = TypeVar(
-    "_UserUpdateCancelT",
-    bound=_SuppoertedUserUpdate,
-)
+
 _CancelersT: TypeAlias = (
     Iterable[
         Callable[
@@ -54,7 +47,8 @@ _CancelersT: TypeAlias = (
     | None
 )
 _FiltersT: TypeAlias = (
-    Iterable[Callable[["WhatsApp", _UserUpdateT], bool | Awaitable[bool]]] | None
+    Iterable[Callable[["WhatsApp", _SuppoertedUserUpdate], bool | Awaitable[bool]]]
+    | None
 )
 
 
@@ -71,19 +65,17 @@ class ListenerCanceled(Exception):
 class Listener:
     def __init__(
         self,
-        typ: type[_UserUpdateT],
         filters: _FiltersT,
         cancelers: _CancelersT,
     ):
-        self.type = typ
         self.filters = filters or ()
         self.cancelers = cancelers or ()
         self.event = threading.Event()
-        self.result: _UserUpdateT | None = None
+        self.result: BaseUserUpdate | None = None
         self.cancelled_update: BaseUserUpdate | None = None
         self.exception = None
 
-    def set_result(self, result: _UserUpdateT) -> None:
+    def set_result(self, result: BaseUserUpdate) -> None:
         self.result = result
         self.event.set()
 
@@ -118,27 +110,22 @@ class Listener:
 class Listeners:
     def listen(
         self: WhatsApp,
-        to: type[_UserUpdateT],
-        from_user: str | int,
+        to: str | int,
         filters: _FiltersT = None,
         cancelers: _CancelersT = None,
         timeout: int | None = None,
-        to_phone_id: str | int | None = None,
-    ) -> _UserUpdateT:
-        """
-        Asynchronously listen for a specific type of update from a specific user
-        """
+        sent_to_phone_id: str | int | None = None,
+    ) -> _SuppoertedUserUpdate:
         from .client import _resolve_phone_id_param
 
-        recipient = _resolve_phone_id_param(self, to_phone_id, "to_phone_id")
+        recipient = _resolve_phone_id_param(self, sent_to_phone_id, "sent_to_phone_id")
         listener = Listener(
-            typ=to,
             filters=filters,
             cancelers=cancelers,
         )
-        self._listeners[
-            utils.listener_identifier(sender=from_user, recipient=recipient)
-        ] = listener
+        self._listeners[utils.listener_identifier(sender=to, recipient=recipient)] = (
+            listener
+        )
         try:
             if not listener.event.wait(timeout):
                 raise ListenerTimeout(timeout)
@@ -148,24 +135,24 @@ class Listeners:
                 raise listener.exception
             return listener.result
         finally:
-            self.remove_listener(from_user, recipient)
+            self.remove_listener(from_user=to, phone_id=recipient)
 
     def remove_listener(
-        self: WhatsApp, from_user: str | int, to_phone_id: str | int | None = None
+        self: WhatsApp, from_user: str | int, phone_id: str | int | None = None
     ) -> None:
         """
         Remove and cancel a listener
 
         Args:
-            from_user: The user that the listener is listening for
-            to_phone_id: The phone id that the listener is listening for
+            from_user: The user that the listener is listening to
+            phone_id: The phone id that the listener is listening for
 
         Raises:
             ValueError: If the listener does not exist
         """
         from .client import _resolve_phone_id_param
 
-        recipient = _resolve_phone_id_param(self, to_phone_id, "to_phone_id")
+        recipient = _resolve_phone_id_param(self, phone_id, "phone_id")
         listener_identifier = utils.listener_identifier(
             sender=from_user, recipient=recipient
         )

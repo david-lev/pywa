@@ -445,10 +445,9 @@ class Server:
         if listener is None:
             return False
         try:
-            if isinstance(update, listener.type):
-                if await listener.apply_filters(self, update):
-                    listener.set_result(update)
-                    return True
+            if await listener.apply_filters(self, update):
+                listener.set_result(update)
+                return True
 
             if await listener.apply_cancelers(self, update):
                 listener.cancel(update)
