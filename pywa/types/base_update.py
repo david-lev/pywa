@@ -28,13 +28,8 @@ if TYPE_CHECKING:
         FlowButton,
         CallbackDataT,
         CallbackData,
-        CallbackSelection,
-        CallbackButton,
     )
     from .template import Template
-    from .flows import FlowCompletion
-    from .message import Message
-    from .message_status import MessageStatus
 
 
 class StopHandling(Exception):
@@ -167,15 +162,43 @@ class BaseUpdate(abc.ABC):
         raise ContinueHandling
 
 
-class _ClientShortcuts(abc.ABC):
-    """
-    Shortcuts for sending messages, media, and other types of content in response to an update.
-    """
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class BaseUserUpdate(BaseUpdate, abc.ABC):
+    """Base class for all user-related update types (message, callback, etc.)."""
 
-    id: str
-    _client: WhatsApp
-    sender: str
-    recipient: str
+    _txt_fields = None
+    """Contains the text fields of the update to use when filtering."""
+
+    @property
+    @abc.abstractmethod
+    def metadata(self) -> Metadata: ...
+
+    @property
+    @abc.abstractmethod
+    def from_user(self) -> User: ...
+
+    @property
+    def sender(self) -> str:
+        """
+        The WhatsApp ID of the sender who sent the message.
+            - Shortcut for ``.from_user.wa_id``.
+        """
+        return self.from_user.wa_id
+
+    @property
+    def recipient(self) -> str:
+        """
+        The WhatsApp ID which the message was sent to.
+            - Shortcut for ``.metadata.phone_number_id``.
+        """
+        return self.metadata.phone_number_id
+
+    @property
+    def listener_identifier(self) -> tuple[str, str]:
+        """
+        The listener identifier of the message.
+        """
+        return utils.listener_identifier(sender=self.sender, recipient=self.recipient)
 
     @property
     def message_id_to_reply(self) -> str:
@@ -916,120 +939,3 @@ class _ClientShortcuts(abc.ABC):
         return self._client.mark_message_as_read(
             sender=self.recipient, message_id=self.message_id_to_reply
         )
-
-
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
-    """Base class for all user-related update types (message, callback, etc.)."""
-
-    _txt_fields = None
-    """Contains the text fields of the update to use when filtering."""
-
-    @property
-    @abc.abstractmethod
-    def metadata(self) -> Metadata: ...
-
-    @property
-    @abc.abstractmethod
-    def from_user(self) -> User: ...
-
-    @property
-    def sender(self) -> str:
-        """
-        The WhatsApp ID of the sender who sent the message.
-            - Shortcut for ``.from_user.wa_id``.
-        """
-        return self.from_user.wa_id
-
-    @property
-    def recipient(self) -> str:
-        """
-        The WhatsApp ID which the message was sent to.
-            - Shortcut for ``.metadata.phone_number_id``.
-        """
-        return self.metadata.phone_number_id
-
-    @property
-    def listener_identifier(self) -> tuple[str, str]:
-        """
-        The listener identifier of the message.
-        """
-        return utils.listener_identifier(sender=self.sender, recipient=self.recipient)
-
-    @property
-    def message_id_to_reply(self) -> str:
-        """
-        The ID of the message to reply to.
-
-        If you want to ``wa.send_x`` with ``reply_to_message_id`` in order to reply to a message, use this property
-        instead of ``id`` to prevent errors.
-        """
-        return self.id
-
-
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class BaseSentUpdate(_ClientShortcuts):
-    """Base class for all sent update types."""
-
-    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
-    id: str
-    to_user: User
-    from_phone_id: str
-
-    @property
-    def recipient(self) -> str:
-        """
-        The WhatsApp ID which the message was sent to.
-            - Shortcut for ``.metadata.phone_number_id``.
-        """
-        return self.to_user.wa_id
-
-    @property
-    def sender(self) -> str:
-        """
-        The WhatsApp ID of the sender who sent the message.
-            - Shortcut for ``.from_user.wa_id``.
-        """
-        return self.from_phone_id
-
-    @classmethod
-    @abc.abstractmethod
-    def from_sent_update(
-        cls, client: WhatsApp, update: dict, from_phone_id: str
-    ) -> BaseSentUpdate:
-        """Create a sent update object from a raw update dict."""
-        ...
-
-    @staticmethod
-    def _get_id_user_from_sent(sent: dict) -> tuple[str, User]:
-        return sent["messages"][0]["id"], User(sent["contacts"][0]["wa_id"], name=None)
-
-
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class SentMessage(BaseSentUpdate):
-    def wait_for_reply(self) -> Message: ...
-
-    def wait_for_read(self) -> MessageStatus: ...
-
-    def wait_for_delivered(self) -> MessageStatus: ...
-
-
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class SentCallbackButton(BaseSentUpdate):
-    _options: set[str]
-
-    def wait_for_click(self) -> CallbackButton: ...
-
-
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class SentCallbackSelection(BaseSentUpdate):
-    _options: set[str]
-
-    def wait_for_selection(self) -> CallbackSelection: ...
-
-
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class SentFlow(BaseSentUpdate):
-    _flow_token: str
-
-    def wait_for_completion(self) -> FlowCompletion: ...

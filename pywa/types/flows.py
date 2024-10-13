@@ -10,6 +10,8 @@ import logging
 import pathlib
 from typing import Iterable, TYPE_CHECKING, Any, BinaryIO, Literal, TypeAlias
 
+import httpx
+
 from .. import utils
 from .base_update import BaseUserUpdate  # noqa
 from .others import (
@@ -275,6 +277,33 @@ class FlowRequest:
         pywa will not call the callback and will return a health check response.
         """
         return self.action == FlowRequestActionType.PING
+
+    def decrypt_media(
+        self, key: str, index: int = 0, dl_session: httpx.Client | None = None
+    ) -> tuple[str, str, bytes]:
+        """
+        Decrypt the encrypted media file from the flow request.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_flow_request("/my-flow-endpoint")
+            ... def my_flow_endpoint(_: WhatsApp, req: types.FlowRequest):
+            ...     media_id, filename, decrypted_data = req.decrypt_media(key="driver_license", index=0)
+            ...     with open(filename, "wb") as file:
+            ...         file.write(decrypted_data)
+            ...     return req.respond(...)
+
+        Args:
+            key: The key of the media in the data (e.g. ``"driver_license"``).
+            index: The index of the media in the data (default to ``0``).
+            dl_session: The HTTPX client session to download the media (optional, new session will be created if not provided).
+        """
+        return utils.flow_request_media_decryptor(
+            encrypted_media=self.data[key][index],
+            dl_session=dl_session,
+        )
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
