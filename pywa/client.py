@@ -16,11 +16,11 @@ import os
 import pathlib
 import warnings
 from types import NoneType
-from typing import BinaryIO, Iterable, Literal, Any, Callable
+from typing import BinaryIO, Iterable, Literal, Any, Callable, TypeVar
 
 import httpx
 
-from . import utils
+from . import utils, _helpers as helpers
 from .api import WhatsAppCloudApi
 from .handlers import (
     Handler,
@@ -53,8 +53,8 @@ from .types import (
     FlowMetricName,
     FlowMetricGranularity,
     QRCode,
+    CallbackData,
 )
-from .types.callback import CallbackDataT, CallbackData
 from .types.flows import (
     FlowJSON,
     FlowDetails,
@@ -397,7 +397,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         preview_url: bool = False,
         reply_to_message_id: str | None = None,
         keyboard: None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -515,7 +515,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         Returns:
             The message ID of the sent message.
         """
-        sender = _resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_phone_id_param(self, sender, "sender")
         if keyboard is not None:
             buttons = keyboard
             warnings.simplefilter("always", DeprecationWarning)
@@ -532,14 +532,14 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                 typ=MessageType.TEXT,
                 msg={"body": text, "preview_url": preview_url},
                 reply_to_message_id=reply_to_message_id,
-                biz_opaque_callback_data=_resolve_tracker_param(tracker),
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             )["messages"][0]["id"]
-        typ, kb = _resolve_buttons_param(buttons)
+        typ, kb = helpers.resolve_buttons_param(buttons)
         return self.api.send_message(
             sender=sender,
             to=str(to),
             typ=MessageType.INTERACTIVE,
-            msg=_get_interactive_msg(
+            msg=helpers.get_interactive_msg(
                 typ=typ,
                 action=kb,
                 header={
@@ -552,7 +552,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                 footer=footer,
             ),
             reply_to_message_id=reply_to_message_id,
-            biz_opaque_callback_data=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     send_text = send_message  # alias
@@ -567,7 +567,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -602,7 +602,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         Returns:
             The message ID of the sent image message.
         """
-        sender = _resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_phone_id_param(self, sender, "sender")
         if body is not None:
             caption = body
             warnings.simplefilter("always", DeprecationWarning)
@@ -612,36 +612,34 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                 category=DeprecationWarning,
                 stacklevel=2,
             )
-        is_url, image = _resolve_media_param(
+        is_url, image = helpers.resolve_media_param(
             wa=self,
-            phone_id=sender,
             media=image,
             mime_type=mime_type,
-            media_type=MessageType.IMAGE,
             filename=None,
+            media_type=MessageType.IMAGE,
+            phone_id=sender,
         )
         if not buttons:
             return self.api.send_message(
                 sender=sender,
                 to=str(to),
                 typ=MessageType.IMAGE,
-                msg=_get_media_msg(
-                    media_id_or_url=image,
-                    is_url=is_url,
-                    caption=caption,
+                msg=helpers.get_media_msg(
+                    media_id_or_url=image, is_url=is_url, caption=caption
                 ),
-                biz_opaque_callback_data=_resolve_tracker_param(tracker),
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             )["messages"][0]["id"]
         if not caption:
             raise ValueError(
                 "A caption must be provided when sending an image with buttons."
             )
-        typ, kb = _resolve_buttons_param(buttons)
+        typ, kb = helpers.resolve_buttons_param(buttons)
         return self.api.send_message(
             sender=sender,
             to=str(to),
             typ=MessageType.INTERACTIVE,
-            msg=_get_interactive_msg(
+            msg=helpers.get_interactive_msg(
                 typ=typ,
                 action=kb,
                 header={
@@ -654,7 +652,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                 footer=footer,
             ),
             reply_to_message_id=reply_to_message_id,
-            biz_opaque_callback_data=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_video(
@@ -667,7 +665,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -703,7 +701,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         Returns:
             The message ID of the sent video.
         """
-        sender = _resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_phone_id_param(self, sender, "sender")
         if body is not None:
             caption = body
             warnings.simplefilter("always", DeprecationWarning)
@@ -713,12 +711,12 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                 category=DeprecationWarning,
                 stacklevel=2,
             )
-        is_url, video = _resolve_media_param(
+        is_url, video = helpers.resolve_media_param(
             wa=self,
             media=video,
             mime_type=mime_type,
-            media_type=MessageType.VIDEO,
             filename=None,
+            media_type=MessageType.VIDEO,
             phone_id=sender,
         )
         if not buttons:
@@ -726,23 +724,21 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                 sender=sender,
                 to=str(to),
                 typ=MessageType.VIDEO,
-                msg=_get_media_msg(
-                    media_id_or_url=video,
-                    is_url=is_url,
-                    caption=caption,
+                msg=helpers.get_media_msg(
+                    media_id_or_url=video, is_url=is_url, caption=caption
                 ),
-                biz_opaque_callback_data=_resolve_tracker_param(tracker),
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             )["messages"][0]["id"]
         if not caption:
             raise ValueError(
                 "A caption must be provided when sending a video with buttons."
             )
-        typ, kb = _resolve_buttons_param(buttons)
+        typ, kb = helpers.resolve_buttons_param(buttons)
         return self.api.send_message(
             sender=sender,
             to=str(to),
             typ=MessageType.INTERACTIVE,
-            msg=_get_interactive_msg(
+            msg=helpers.get_interactive_msg(
                 typ=typ,
                 action=kb,
                 header={
@@ -755,7 +751,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                 footer=footer,
             ),
             reply_to_message_id=reply_to_message_id,
-            biz_opaque_callback_data=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_document(
@@ -769,7 +765,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -808,7 +804,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             The message ID of the sent document.
         """
 
-        sender = _resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_phone_id_param(self, sender, "sender")
         if body is not None:
             caption = body
             warnings.simplefilter("always", DeprecationWarning)
@@ -818,7 +814,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                 category=DeprecationWarning,
                 stacklevel=2,
             )
-        is_url, document = _resolve_media_param(
+        is_url, document = helpers.resolve_media_param(
             wa=self,
             media=document,
             mime_type=mime_type,
@@ -831,24 +827,24 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                 sender=sender,
                 to=str(to),
                 typ=MessageType.DOCUMENT,
-                msg=_get_media_msg(
+                msg=helpers.get_media_msg(
                     media_id_or_url=document,
                     is_url=is_url,
                     caption=caption,
                     filename=filename,
                 ),
-                biz_opaque_callback_data=_resolve_tracker_param(tracker),
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             )["messages"][0]["id"]
         if not caption:
             raise ValueError(
                 "A caption must be provided when sending a document with buttons."
             )
-        typ, kb = _resolve_buttons_param(buttons)
+        typ, kb = helpers.resolve_buttons_param(buttons)
         return self.api.send_message(
             sender=sender,
             to=str(to),
             typ=MessageType.INTERACTIVE,
-            msg=_get_interactive_msg(
+            msg=helpers.get_interactive_msg(
                 typ=typ,
                 action=kb,
                 header={
@@ -862,7 +858,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                 footer=footer,
             ),
             reply_to_message_id=reply_to_message_id,
-            biz_opaque_callback_data=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_audio(
@@ -871,7 +867,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         audio: str | pathlib.Path | bytes | BinaryIO,
         mime_type: str | None = None,
         reply_to_message_id: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -898,25 +894,22 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             The message ID of the sent audio file.
         """
 
-        sender = _resolve_phone_id_param(self, sender, "sender")
-        is_url, audio = _resolve_media_param(
+        sender = helpers.resolve_phone_id_param(self, sender, "sender")
+        is_url, audio = helpers.resolve_media_param(
             wa=self,
             media=audio,
             mime_type=mime_type,
-            media_type=MessageType.AUDIO,
             filename=None,
+            media_type=MessageType.AUDIO,
             phone_id=sender,
         )
         return self.api.send_message(
             sender=sender,
             to=str(to),
             typ=MessageType.AUDIO,
-            msg=_get_media_msg(
-                media_id_or_url=audio,
-                is_url=is_url,
-            ),
+            msg=helpers.get_media_msg(media_id_or_url=audio, is_url=is_url),
             reply_to_message_id=reply_to_message_id,
-            biz_opaque_callback_data=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_sticker(
@@ -925,7 +918,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         sticker: str | pathlib.Path | bytes | BinaryIO,
         mime_type: str | None = None,
         reply_to_message_id: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -954,8 +947,8 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             The message ID of the sent message.
         """
 
-        sender = _resolve_phone_id_param(self, sender, "sender")
-        is_url, sticker = _resolve_media_param(
+        sender = helpers.resolve_phone_id_param(self, sender, "sender")
+        is_url, sticker = helpers.resolve_media_param(
             wa=self,
             media=sticker,
             mime_type=mime_type,
@@ -967,12 +960,9 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             sender=sender,
             to=str(to),
             typ=MessageType.STICKER,
-            msg=_get_media_msg(
-                media_id_or_url=sticker,
-                is_url=is_url,
-            ),
+            msg=helpers.get_media_msg(media_id_or_url=sticker, is_url=is_url),
             reply_to_message_id=reply_to_message_id,
-            biz_opaque_callback_data=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_reaction(
@@ -980,7 +970,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         to: str | int,
         emoji: str,
         message_id: str,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -1014,18 +1004,18 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             action on it. instead, use the message ID of the message you reacted to).
         """
         return self.api.send_message(
-            sender=_resolve_phone_id_param(self, sender, "sender"),
+            sender=helpers.resolve_phone_id_param(self, sender, "sender"),
             to=str(to),
             typ=MessageType.REACTION,
             msg={"emoji": emoji, "message_id": message_id},
-            biz_opaque_callback_data=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def remove_reaction(
         self,
         to: str | int,
         message_id: str,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -1057,11 +1047,11 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             instead, use the message ID of the message you unreacted to).
         """
         return self.api.send_message(
-            sender=_resolve_phone_id_param(self, sender, "sender"),
+            sender=helpers.resolve_phone_id_param(self, sender, "sender"),
             to=str(to),
             typ=MessageType.REACTION,
             msg={"emoji": "", "message_id": message_id},
-            biz_opaque_callback_data=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_location(
@@ -1072,7 +1062,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         name: str | None = None,
         address: str | None = None,
         reply_to_message_id: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -1103,7 +1093,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             The message ID of the sent location.
         """
         return self.api.send_message(
-            sender=_resolve_phone_id_param(self, sender, "sender"),
+            sender=helpers.resolve_phone_id_param(self, sender, "sender"),
             to=str(to),
             typ=MessageType.LOCATION,
             msg={
@@ -1113,7 +1103,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                 "address": address,
             },
             reply_to_message_id=reply_to_message_id,
-            biz_opaque_callback_data=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def request_location(
@@ -1121,7 +1111,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         to: str | int,
         text: str,
         reply_to_message_id: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -1146,16 +1136,16 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             The message ID of the sent message.
         """
         return self.api.send_message(
-            sender=_resolve_phone_id_param(self, sender, "sender"),
+            sender=helpers.resolve_phone_id_param(self, sender, "sender"),
             to=str(to),
             typ=MessageType.INTERACTIVE,
-            msg=_get_interactive_msg(
+            msg=helpers.get_interactive_msg(
                 typ=InteractiveType.LOCATION_REQUEST_MESSAGE,
                 action={"name": "send_location"},
                 body=text,
             ),
             reply_to_message_id=reply_to_message_id,
-            biz_opaque_callback_data=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_contact(
@@ -1163,7 +1153,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         to: str | int,
         contact: Contact | Iterable[Contact],
         reply_to_message_id: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -1194,14 +1184,14 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             The message ID of the sent message.
         """
         return self.api.send_message(
-            sender=_resolve_phone_id_param(self, sender, "sender"),
+            sender=helpers.resolve_phone_id_param(self, sender, "sender"),
             to=str(to),
             typ=MessageType.CONTACTS,
             msg=tuple(c.to_dict() for c in contact)
             if isinstance(contact, Iterable)
             else (contact.to_dict(),),
             reply_to_message_id=reply_to_message_id,
-            biz_opaque_callback_data=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_catalog(
@@ -1211,7 +1201,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         footer: str | None = None,
         thumbnail_product_sku: str | None = None,
         reply_to_message_id: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -1241,10 +1231,10 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             The message ID of the sent message.
         """
         return self.api.send_message(
-            sender=_resolve_phone_id_param(self, sender, "sender"),
+            sender=helpers.resolve_phone_id_param(self, sender, "sender"),
             to=str(to),
             typ=MessageType.INTERACTIVE,
-            msg=_get_interactive_msg(
+            msg=helpers.get_interactive_msg(
                 typ=InteractiveType.CATALOG_MESSAGE,
                 action={
                     "name": "catalog_message",
@@ -1262,7 +1252,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                 footer=footer,
             ),
             reply_to_message_id=reply_to_message_id,
-            biz_opaque_callback_data=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_product(
@@ -1273,7 +1263,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         body: str | None = None,
         footer: str | None = None,
         reply_to_message_id: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -1307,10 +1297,10 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             The message ID of the sent message.
         """
         return self.api.send_message(
-            sender=_resolve_phone_id_param(self, sender, "sender"),
+            sender=helpers.resolve_phone_id_param(self, sender, "sender"),
             to=str(to),
             typ=MessageType.INTERACTIVE,
-            msg=_get_interactive_msg(
+            msg=helpers.get_interactive_msg(
                 typ=InteractiveType.PRODUCT,
                 action={
                     "catalog_id": catalog_id,
@@ -1320,7 +1310,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                 footer=footer,
             ),
             reply_to_message_id=reply_to_message_id,
-            biz_opaque_callback_data=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def send_products(
@@ -1332,7 +1322,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         body: str,
         footer: str | None = None,
         reply_to_message_id: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -1378,10 +1368,10 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             The message ID of the sent message.
         """
         return self.api.send_message(
-            sender=_resolve_phone_id_param(self, sender, "sender"),
+            sender=helpers.resolve_phone_id_param(self, sender, "sender"),
             to=str(to),
             typ=MessageType.INTERACTIVE,
-            msg=_get_interactive_msg(
+            msg=helpers.get_interactive_msg(
                 typ=InteractiveType.PRODUCT_LIST,
                 action={
                     "catalog_id": catalog_id,
@@ -1395,7 +1385,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                 footer=footer,
             ),
             reply_to_message_id=reply_to_message_id,
-            biz_opaque_callback_data=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def mark_message_as_read(
@@ -1420,7 +1410,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             Whether the message was marked as read.
         """
         return self.api.mark_message_as_read(
-            phone_id=_resolve_phone_id_param(self, sender, "sender"),
+            phone_id=helpers.resolve_phone_id_param(self, sender, "sender"),
             message_id=message_id,
         )["success"]
 
@@ -1460,7 +1450,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                 - If provided ``media`` is URL and the URL is invalid or media cannot be downloaded.
                 - If provided ``media`` is bytes and ``filename`` or ``mime_type`` is not provided.
         """
-        phone_id = _resolve_phone_id_param(self, phone_id, "phone_id")
+        phone_id = helpers.resolve_phone_id_param(self, phone_id, "phone_id")
 
         if isinstance(media, (str, pathlib.Path)):
             if (path := pathlib.Path(media)).is_file():
@@ -1595,7 +1585,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         """
         return BusinessPhoneNumber.from_dict(
             data=self.api.get_business_phone_number(
-                phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 fields=tuple(
                     field.name for field in dataclasses.fields(BusinessPhoneNumber)
                 ),
@@ -1629,7 +1619,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             Whether the conversational automation settings were updated.
         """
         return self.api.update_conversational_automation(
-            phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
             enable_welcome_message=enable_chat_opened,
             prompts=tuple(ice_breakers) if ice_breakers else None,
             commands=json.dumps([c.to_dict() for c in commands]) if commands else None,
@@ -1655,7 +1645,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         """
         return BusinessProfile.from_dict(
             data=self.api.get_business_profile(
-                phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 fields=(
                     "about",
                     "address",
@@ -1692,7 +1682,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             Whether the business public key was set.
         """
         return self.api.set_business_public_key(
-            phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
             public_key=public_key,
         )["success"]
 
@@ -1758,7 +1748,8 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             if value is not utils.MISSING
         }
         return self.api.update_business_profile(
-            phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"), data=data
+            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+            data=data,
         )["success"]
 
     def get_commerce_settings(
@@ -1778,7 +1769,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         """
         return CommerceSettings.from_dict(
             data=self.api.get_commerce_settings(
-                phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
             )["data"][0]
         )
 
@@ -1821,7 +1812,8 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         if not data:
             raise ValueError("At least one argument must be provided")
         return self.api.update_commerce_settings(
-            phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"), data=data
+            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+            data=data,
         )["success"]
 
     def create_template(
@@ -1902,7 +1894,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         """
         return TemplateResponse(
             **self.api.create_template(
-                waba_id=_resolve_waba_id_param(self, waba_id),
+                waba_id=helpers.resolve_waba_id_param(self, waba_id),
                 template=template.to_dict(placeholder=placeholder),
             )
         )
@@ -1912,7 +1904,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         to: str | int,
         template: Template,
         reply_to_message_id: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -1969,34 +1961,34 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         Raises:
 
         """
-        sender = _resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_phone_id_param(self, sender, "sender")
         is_url = None
         match type(template.header):
             case Template.Image:
-                is_url, template.header.image = _resolve_media_param(
+                is_url, template.header.image = helpers.resolve_media_param(
                     wa=self,
                     media=template.header.image,
                     mime_type=template.header.mime_type,
-                    media_type=MessageType.IMAGE,
                     filename=None,
+                    media_type=MessageType.IMAGE,
                     phone_id=sender,
                 )
             case Template.Document:
-                is_url, template.header.document = _resolve_media_param(
+                is_url, template.header.document = helpers.resolve_media_param(
                     wa=self,
                     media=template.header.document,
-                    mime_type="application/pdf",  # the only supported mime type in template's document header
+                    mime_type="application/pdf",
                     filename=template.header.filename,
                     media_type=None,
                     phone_id=sender,
                 )
             case Template.Video:
-                is_url, template.header.video = _resolve_media_param(
+                is_url, template.header.video = helpers.resolve_media_param(
                     wa=self,
                     media=template.header.video,
                     mime_type=template.header.mime_type,
-                    media_type=MessageType.VIDEO,
                     filename=None,
+                    media_type=MessageType.VIDEO,
                     phone_id=sender,
                 )
         return self.api.send_message(
@@ -2005,7 +1997,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             typ="template",
             msg=template.to_dict(is_header_url=is_url),
             reply_to_message_id=reply_to_message_id,
-            biz_opaque_callback_data=_resolve_tracker_param(tracker),
+            biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
         )["messages"][0]["id"]
 
     def create_flow(
@@ -2052,7 +2044,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             categories=tuple(map(str, categories)),
             clone_flow_id=clone_flow_id,
             endpoint_uri=endpoint_uri,
-            waba_id=_resolve_waba_id_param(self, waba_id),
+            waba_id=helpers.resolve_waba_id_param(self, waba_id),
         )["id"]
 
     def update_flow_metadata(
@@ -2148,7 +2140,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         Raises:
             FlowUpdatingError: If the flow json is invalid or the flow is already published.
         """
-        json_str = _resolve_flow_json_param(flow_json)
+        json_str = helpers.resolve_flow_json_param(flow_json)
         res = self.api.update_flow_json(flow_id=str(flow_id), flow_json=json_str)
         return res["success"], tuple(
             FlowValidationError.from_dict(data) for data in res["validation_errors"]
@@ -2238,7 +2230,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         return FlowDetails.from_dict(
             data=self.api.get_flow(
                 flow_id=str(flow_id),
-                fields=_get_flow_fields(
+                fields=helpers.get_flow_fields(
                     invalidate_preview=invalidate_preview,
                     phone_number_id=phone_number_id,
                 ),
@@ -2268,8 +2260,8 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         return tuple(
             FlowDetails.from_dict(data=data, client=self)
             for data in self.api.get_flows(
-                waba_id=_resolve_waba_id_param(self, waba_id),
-                fields=_get_flow_fields(
+                waba_id=helpers.resolve_waba_id_param(self, waba_id),
+                fields=helpers.get_flow_fields(
                     invalidate_preview=invalidate_preview,
                     phone_number_id=phone_number_id,
                 ),
@@ -2302,7 +2294,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         return self.api.get_flow(
             flow_id=str(flow_id),
             fields=(
-                _get_flow_metric_field(
+                helpers.get_flow_metric_field(
                     metric_name=metric_name,
                     granularity=granularity,
                     since=since,
@@ -2363,7 +2355,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             The success of the registration.
         """
         return self.api.register_phone_number(
-            phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
             pin=str(pin),
             data_localization_region=data_localization_region,
         )["success"]
@@ -2389,7 +2381,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         """
         return QRCode.from_dict(
             self.api.create_qr_code(
-                phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 prefilled_message=prefilled_message,
                 generate_qr_image=image_type,
             )
@@ -2411,7 +2403,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             The QR code if found, otherwise None.
         """
         qrs = self.api.get_qr_code(
-            phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
             code=code,
         )["data"]
         return QRCode.from_dict(qrs[0]) if qrs else None
@@ -2432,7 +2424,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         return tuple(
             QRCode.from_dict(qr)
             for qr in self.api.get_qr_codes(
-                phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
             )["data"]
         )
 
@@ -2455,7 +2447,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         """
         return QRCode.from_dict(
             self.api.update_qr_code(
-                phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 code=code,
                 prefilled_message=prefilled_message,
             )
@@ -2477,189 +2469,6 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             Whether the QR code was deleted.
         """
         return self.api.delete_qr_code(
-            phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
             code=code,
         )["success"]
-
-
-def _resolve_buttons_param(
-    buttons: Iterable[Button] | ButtonUrl | FlowButton | SectionList,
-) -> tuple[InteractiveType, dict]:
-    """
-    Internal method to resolve ``buttons`` parameter. Returns a tuple of (``type``, ``buttons``).
-    """
-    if isinstance(buttons, SectionList):
-        return InteractiveType.LIST, buttons.to_dict()
-    elif isinstance(buttons, ButtonUrl):
-        return InteractiveType.CTA_URL, buttons.to_dict()
-    elif isinstance(buttons, FlowButton):
-        return InteractiveType.FLOW, buttons.to_dict()
-    else:  # assume its list of buttons
-        return InteractiveType.BUTTON, {"buttons": tuple(b.to_dict() for b in buttons)}
-
-
-_media_types_default_filenames = {
-    MessageType.IMAGE: "image.jpg",
-    MessageType.VIDEO: "video.mp4",
-    MessageType.AUDIO: "audio.mp3",
-    MessageType.STICKER: "sticker.webp",
-}
-
-
-def _resolve_media_param(
-    wa: WhatsApp,
-    media: str | pathlib.Path | bytes | BinaryIO,
-    mime_type: str | None,
-    filename: str | None,
-    media_type: Literal[
-        MessageType.IMAGE, MessageType.VIDEO, MessageType.AUDIO, MessageType.STICKER
-    ]
-    | None,
-    phone_id: str,
-) -> tuple[bool, str]:
-    """
-    Internal method to resolve the ``media`` parameter. Returns a tuple of (``is_url``, ``media_id_or_url``).
-    """
-    if isinstance(media, (str, pathlib.Path)):
-        if str(media).startswith(("https://", "http://")):
-            return True, media
-        elif str(media).isdigit() and not pathlib.Path(media).is_file():
-            return False, media  # assume it's a media ID
-    # assume its bytes or a file path
-    return False, wa.upload_media(
-        phone_id=phone_id,
-        media=media,
-        mime_type=mime_type,
-        filename=_media_types_default_filenames.get(media_type, filename),
-    )
-
-
-def _resolve_tracker_param(tracker: CallbackDataT | None) -> str | None:
-    """Internal method to resolve the `tracker` parameter."""
-    return tracker.to_str() if isinstance(tracker, CallbackData) else tracker
-
-
-def _resolve_phone_id_param(wa: WhatsApp, phone_id: str | None, arg_name: str) -> str:
-    """Internal method to resolve the `phone_id` parameter."""
-    if phone_id is not None:
-        return phone_id
-    if wa.phone_id is not None:
-        return wa.phone_id
-    raise ValueError(
-        f"When initializing WhatsApp without phone_id, {arg_name} must be provided."
-    )
-
-
-def _resolve_waba_id_param(wa: WhatsApp, waba_id: str | None) -> str:
-    """Internal method to resolve the `waba_id` parameter."""
-    if waba_id is not None:
-        return waba_id
-    if wa.business_account_id is not None:
-        return wa.business_account_id
-    raise ValueError(
-        "When initializing WhatsApp without business_account_id, waba_id must be provided."
-    )
-
-
-def _resolve_flow_json_param(
-    flow_json: FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO,
-) -> str:
-    """Internal method to solve the `flow_json` parameter"""
-    json_str, to_dump = None, None
-    if isinstance(flow_json, (str, pathlib.Path)):  # json str or path to json file
-        as_path = pathlib.Path(flow_json)
-        try:
-            if as_path.is_file():
-                with open(as_path, "r", encoding="utf-8") as f:
-                    json_str = f.read()
-        except OSError:
-            json_str = flow_json
-    elif isinstance(flow_json, bytes):
-        json_str = flow_json.decode()
-    elif isinstance(flow_json, FlowJSON):
-        to_dump = flow_json.to_dict()
-    elif isinstance(flow_json, dict):
-        to_dump = flow_json
-    else:
-        raise TypeError(
-            "`flow_json` must be a FlowJSON object, dict, json string, json file path or json bytes"
-        )
-
-    if to_dump is not None:
-        json_str = json.dumps(to_dump, indent=4, ensure_ascii=False)
-
-    return json_str
-
-
-def _get_interactive_msg(
-    typ: InteractiveType,
-    action: dict[str, Any],
-    header: dict | None = None,
-    body: str | None = None,
-    footer: str | None = None,
-):
-    return {
-        "type": typ,
-        "action": action,
-        **({"header": header} if header else {}),
-        **({"body": {"text": body}} if body else {}),
-        **({"footer": {"text": footer}} if footer else {}),
-    }
-
-
-def _get_media_msg(
-    media_id_or_url: str,
-    is_url: bool,
-    caption: str | None = None,
-    filename: str | None = None,
-):
-    return {
-        ("link" if is_url else "id"): media_id_or_url,
-        **({"caption": caption} if caption else {}),
-        **({"filename": filename} if filename else {}),
-    }
-
-
-def _get_flow_fields(
-    invalidate_preview: bool, phone_number_id: str | None
-) -> tuple[str, ...]:
-    """Internal method to get the fields of a flow."""
-    return (
-        "id",
-        "name",
-        "status",
-        "updated_at",
-        "categories",
-        "validation_errors",
-        "json_version",
-        "data_api_version",
-        "endpoint_uri",
-        f"preview.invalidate({'true' if invalidate_preview else 'false'})",
-        "whatsapp_business_account",
-        "application",
-        "health_status"
-        if not phone_number_id
-        else f"health_status.phone_number({phone_number_id})",
-    )
-
-
-def _get_flow_metric_field(
-    metric_name: FlowMetricName,
-    granularity: FlowMetricGranularity,
-    since: datetime.date | str | None,
-    until: datetime.date | str | None,
-) -> str:
-    date_fmt = "%Y-%m-%d"
-    return (
-        f"metric.name({metric_name}).granularity({granularity})"
-        + (
-            f".since({since.strftime(date_fmt) if isinstance(since, datetime.date) else since})"
-            if since
-            else ""
-        )
-        + (
-            f".until({until.strftime(date_fmt) if isinstance(until, datetime.date) else until})"
-            if until
-            else ""
-        )
-    )

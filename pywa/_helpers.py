@@ -16,10 +16,9 @@ from pywa.types import (
     Button,
 )
 from pywa.types.others import InteractiveType
-from pywa.types.callback import CallbackDataT
 
 
-def _resolve_buttons_param(
+def resolve_buttons_param(
     buttons: Iterable[Button] | ButtonUrl | FlowButton | SectionList,
 ) -> tuple[InteractiveType, dict]:
     """
@@ -43,7 +42,7 @@ _media_types_default_filenames = {
 }
 
 
-def _resolve_media_param(
+def resolve_media_param(
     wa: WhatsApp,
     media: str | pathlib.Path | bytes | BinaryIO,
     mime_type: str | None,
@@ -71,12 +70,12 @@ def _resolve_media_param(
     )
 
 
-def _resolve_tracker_param(tracker: CallbackDataT | None) -> str | None:
+def resolve_tracker_param(tracker: str | CallbackData | None) -> str | None:
     """Internal method to resolve the `tracker` parameter."""
     return tracker.to_str() if isinstance(tracker, CallbackData) else tracker
 
 
-def _resolve_phone_id_param(wa: WhatsApp, phone_id: str | None, arg_name: str) -> str:
+def resolve_phone_id_param(wa: WhatsApp, phone_id: str | None, arg_name: str) -> str:
     """Internal method to resolve the `phone_id` parameter."""
     if phone_id is not None:
         return phone_id
@@ -87,7 +86,7 @@ def _resolve_phone_id_param(wa: WhatsApp, phone_id: str | None, arg_name: str) -
     )
 
 
-def _resolve_waba_id_param(wa: WhatsApp, waba_id: str | None) -> str:
+def resolve_waba_id_param(wa: WhatsApp, waba_id: str | None) -> str:
     """Internal method to resolve the `waba_id` parameter."""
     if waba_id is not None:
         return waba_id
@@ -98,7 +97,7 @@ def _resolve_waba_id_param(wa: WhatsApp, waba_id: str | None) -> str:
     )
 
 
-def _resolve_flow_json_param(
+def resolve_flow_json_param(
     flow_json: FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO,
 ) -> str:
     """Internal method to solve the `flow_json` parameter"""
@@ -128,7 +127,7 @@ def _resolve_flow_json_param(
     return json_str
 
 
-def _get_interactive_msg(
+def get_interactive_msg(
     typ: InteractiveType,
     action: dict[str, Any],
     header: dict | None = None,
@@ -144,7 +143,7 @@ def _get_interactive_msg(
     }
 
 
-def _get_media_msg(
+def get_media_msg(
     media_id_or_url: str,
     is_url: bool,
     caption: str | None = None,
@@ -157,7 +156,7 @@ def _get_media_msg(
     }
 
 
-def _get_flow_fields(
+def get_flow_fields(
     invalidate_preview: bool, phone_number_id: str | None
 ) -> tuple[str, ...]:
     """Internal method to get the fields of a flow."""
@@ -180,7 +179,7 @@ def _get_flow_fields(
     )
 
 
-def _get_flow_metric_field(
+def get_flow_metric_field(
     metric_name: FlowMetricName,
     granularity: FlowMetricGranularity,
     since: datetime.date | str | None,
@@ -200,3 +199,12 @@ def _get_flow_metric_field(
             else ""
         )
     )
+
+
+def resolve_callback_data(data: str | CallbackData) -> str:
+    """Internal function to convert callback data to a string."""
+    if isinstance(data, CallbackData):
+        return data.to_str()
+    elif isinstance(data, str):
+        return data
+    raise TypeError(f"Invalid callback data type {type(data)}")

@@ -10,7 +10,6 @@ __all__ = [
     "SectionList",
     "FlowButton",
     "CallbackData",
-    "CallbackDataT",
 ]
 
 import dataclasses
@@ -33,7 +32,7 @@ from typing import (
 from .base_update import BaseUserUpdate  # noqa
 from .flows import FlowStatus, FlowActionType
 from .others import MessageType, Metadata, ReplyToMessage, User, InteractiveType
-from .. import utils
+from .. import utils, _helpers as helpers
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
@@ -228,26 +227,15 @@ class CallbackData:
             values.append(self._not_contains(value, self.__callback_sep__))
         return self.__callback_data_sep__.join(values)
 
-    @classmethod
-    def join_to_str(cls, *datas: Any) -> str:
-        """Internal function to join multiple callback objects to a callback string."""
-        return cls.__callback_sep__.join(
-            data.to_str()
-            if isinstance(data, CallbackData)
-            else cls._not_contains(data, cls.__callback_data_sep__)
-            for data in datas
-        )
 
-
-CallbackDataT = TypeVar(
-    "CallbackDataT",
-    bound=str | CallbackData | Iterable[CallbackData | Any],
+_CallbackDataT = TypeVar(
+    "_CallbackDataT",
+    bound=CallbackData,
 )
-"""Type hint for ``callback_data`` parameter in :class:`Button` and :class:`SectionRow` and for ``tracker``'s"""
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class CallbackButton(BaseUserUpdate, Generic[CallbackDataT]):
+class CallbackButton(BaseUserUpdate, Generic[_CallbackDataT]):
     """
     Represents a callback button (Incoming update when user clicks on :class:`Button` or chooses
     :class:`Template.QuickReplyButtonData`).
@@ -278,24 +266,6 @@ class CallbackButton(BaseUserUpdate, Generic[CallbackDataT]):
         ... def on_user_data(_: WhatsApp, btn: CallbackButton[UserData]): # For autocomplete
         ...    if btn.data.admin: print(btn.data.id) # Access the data object as an attribute
 
-    You can even use multiple factories, and not only ``CallbackData`` subclasses!
-
-        >>> from enum import Enum
-        >>> class State(str, Enum):
-        ...     START = 's'
-        ...     END = 'e'
-
-        >>> wa.send_message(
-        ...     to='972987654321',
-        ...     text='Click the button to get the user and state',
-        ...     buttons=[Button(title='Get user', callback_data=(UserData(id=123, name='david', admin=True), State.START))]
-        ... )                                     # Here ^^^ we send a tuple of UserData and State
-
-        >>> @wa.on_callback_button(factory=(UserData, State)) # Use the factory parameter to convert the callback data
-        ... def on_user_data(_: WhatsApp, btn: CallbackButton[tuple[UserData, State]]): # For autocomplete
-        ...    user, state = btn.data # Unpack the tuple
-        ...    if user.admin: print(user.id, state)
-
 
     Attributes:
         id: The ID of the message.
@@ -317,7 +287,7 @@ class CallbackButton(BaseUserUpdate, Generic[CallbackDataT]):
     from_user: User
     timestamp: datetime.datetime
     reply_to_message: ReplyToMessage
-    data: CallbackDataT
+    data: _CallbackDataT
     title: str
 
     _txt_fields = ("data",)
@@ -349,7 +319,7 @@ class CallbackButton(BaseUserUpdate, Generic[CallbackDataT]):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class CallbackSelection(BaseUserUpdate, Generic[CallbackDataT]):
+class CallbackSelection(BaseUserUpdate, Generic[_CallbackDataT]):
     """
     Represents a callback selection (Incoming update when user clicks on :class:`SectionRow` in :class:`SectionList`).
 
@@ -385,30 +355,6 @@ class CallbackSelection(BaseUserUpdate, Generic[CallbackDataT]):
         ... def on_user_data(_: WhatsApp, sel: CallbackSelection[UserData]): # For autocomplete
         ...    if sel.data.admin: print(sel.data.id) # Access the data object as an attribute
 
-    You can even use multiple factories, and not only ``CallbackData`` subclasses!
-
-        >>> from enum import Enum
-        >>> class State(str, Enum):
-        ...     START = 's'
-        ...     END = 'e'
-
-        >>> wa.send_message(
-        ...     to='972987654321',
-        ...     text='Click the button to get the user and state',
-        ...     buttons=SectionList(
-        ...         button_title='Get user', sections=[
-        ...             Section(title='Users', rows=[
-        ...                 SectionRow(title='Get user', callback_data=(UserData(id=123, name='david', admin=True), State.START))
-        ...             ])                              # Here ^^^ we send a tuple of UserData and State
-        ...         ]
-        ...     )
-        ... )
-
-        >>> @wa.on_callback_selection(factory=(UserData, State)) # Use the factory parameter to convert the callback data
-        ... def on_user_data(_: WhatsApp, sel: CallbackSelection[tuple[UserData, State]]): # For autocomplete
-        ...    user, state = sel.data # Unpack the tuple
-        ...    if user.admin: print(user.id, state)
-
     Attributes:
         id: The ID of the message.
         metadata: The metadata of the message (to which phone number it was sent).
@@ -427,7 +373,7 @@ class CallbackSelection(BaseUserUpdate, Generic[CallbackDataT]):
     from_user: User
     timestamp: datetime.datetime
     reply_to_message: ReplyToMessage
-    data: CallbackDataT
+    data: _CallbackDataT
     title: str
     description: str | None
 
@@ -451,18 +397,6 @@ class CallbackSelection(BaseUserUpdate, Generic[CallbackDataT]):
         )
 
 
-def _resolve_callback_data(data: CallbackDataT) -> str:
-    """Internal function to convert callback data to a string."""
-    if isinstance(data, str):
-        return data
-    elif isinstance(data, CallbackData):
-        return data.to_str()
-    elif isinstance(data, Iterable):
-        if any(isinstance(item, CallbackData) for item in data):
-            return CallbackData.join_to_str(*data)
-    raise TypeError(f"Invalid callback data type {type(data)}")
-
-
 @dataclasses.dataclass(slots=True)
 class Button:
     """
@@ -475,13 +409,13 @@ class Button:
     """
 
     title: str
-    callback_data: CallbackDataT
+    callback_data: str | CallbackData
 
     def to_dict(self) -> dict:
         return {
             "type": "reply",
             "reply": {
-                "id": _resolve_callback_data(self.callback_data),
+                "id": helpers.resolve_callback_data(self.callback_data),
                 "title": self.title,
             },
         }
@@ -520,12 +454,12 @@ class SectionRow:
     """
 
     title: str
-    callback_data: CallbackDataT
+    callback_data: str | CallbackData
     description: str | None = None
 
     def to_dict(self) -> dict:
         d = {
-            "id": _resolve_callback_data(self.callback_data),
+            "id": helpers.resolve_callback_data(self.callback_data),
             "title": self.title,
         }
         if self.description:

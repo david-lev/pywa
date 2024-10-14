@@ -10,13 +10,13 @@ __all__ = [
     "SectionList",
     "FlowButton",
     "CallbackData",
-    "CallbackDataT",
 ]
 
 from pywa.types.callback import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.callback import (
     CallbackButton as _CallbackButton,
     CallbackSelection as _CallbackSelection,
+    _CallbackDataT,
 )  # noqa MUST BE IMPORTED FIRST
 from .base_update import BaseUserUpdateAsync
 
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class CallbackButton(BaseUserUpdateAsync, _CallbackButton[CallbackDataT]):
+class CallbackButton(BaseUserUpdateAsync, _CallbackButton[_CallbackDataT]):
     """
     Represents a callback button (Incoming update when user clicks on :class:`Button` or chooses
     :class:`Template.QuickReplyButtonData`).
@@ -61,24 +61,6 @@ class CallbackButton(BaseUserUpdateAsync, _CallbackButton[CallbackDataT]):
         ... def on_user_data(_: WhatsApp, btn: CallbackButton[UserData]): # For autocomplete
         ...    if btn.data.admin: print(btn.data.id) # Access the data object as an attribute
 
-    You can even use multiple factories, and not only ``CallbackData`` subclasses!
-
-        >>> from enum import Enum
-        >>> class State(str, Enum):
-        ...     START = 's'
-        ...     END = 'e'
-
-        >>> wa.send_message(
-        ...     to='972987654321',
-        ...     text='Click the button to get the user and state',
-        ...     buttons=[Button(title='Get user', callback_data=(UserData(id=123, name='david', admin=True), State.START))]
-        ... )                                     # Here ^^^ we send a tuple of UserData and State
-
-        >>> @wa.on_callback_button(factory=(UserData, State)) # Use the factory parameter to convert the callback data
-        ... def on_user_data(_: WhatsApp, btn: CallbackButton[tuple[UserData, State]]): # For autocomplete
-        ...    user, state = btn.data # Unpack the tuple
-        ...    if user.admin: print(user.id, state)
-
 
     Attributes:
         id: The ID of the message.
@@ -96,7 +78,7 @@ class CallbackButton(BaseUserUpdateAsync, _CallbackButton[CallbackDataT]):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class CallbackSelection(BaseUserUpdateAsync, _CallbackSelection[CallbackDataT]):
+class CallbackSelection(BaseUserUpdateAsync, _CallbackSelection[_CallbackDataT]):
     """
     Represents a callback selection (Incoming update when user clicks on :class:`SectionRow` in :class:`SectionList`).
 
@@ -131,30 +113,6 @@ class CallbackSelection(BaseUserUpdateAsync, _CallbackSelection[CallbackDataT]):
         >>> @wa.on_callback_selection(factory=UserData) # Use the factory parameter to convert the callback data
         ... def on_user_data(_: WhatsApp, sel: CallbackSelection[UserData]): # For autocomplete
         ...    if sel.data.admin: print(sel.data.id) # Access the data object as an attribute
-
-    You can even use multiple factories, and not only ``CallbackData`` subclasses!
-
-        >>> from enum import Enum
-        >>> class State(str, Enum):
-        ...     START = 's'
-        ...     END = 'e'
-
-        >>> wa.send_message(
-        ...     to='972987654321',
-        ...     text='Click the button to get the user and state',
-        ...     buttons=SectionList(
-        ...         button_title='Get user', sections=[
-        ...             Section(title='Users', rows=[
-        ...                 SectionRow(title='Get user', callback_data=(UserData(id=123, name='david', admin=True), State.START))
-        ...             ])                              # Here ^^^ we send a tuple of UserData and State
-        ...         ]
-        ...     )
-        ... )
-
-        >>> @wa.on_callback_selection(factory=(UserData, State)) # Use the factory parameter to convert the callback data
-        ... def on_user_data(_: WhatsApp, sel: CallbackSelection[tuple[UserData, State]]): # For autocomplete
-        ...    user, state = sel.data # Unpack the tuple
-        ...    if user.admin: print(user.id, state)
 
     Attributes:
         id: The ID of the message.

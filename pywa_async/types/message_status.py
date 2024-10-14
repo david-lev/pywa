@@ -17,14 +17,14 @@ import dataclasses
 from typing import TYPE_CHECKING
 
 from .base_update import BaseUserUpdateAsync  # noqa
-from .callback import CallbackDataT
+from .callback import _CallbackDataT
 
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class MessageStatus(BaseUserUpdateAsync, _MessageStatus[CallbackDataT]):
+class MessageStatus(BaseUserUpdateAsync, _MessageStatus[_CallbackDataT]):
     """
     Represents the status of a message.
 
@@ -55,24 +55,6 @@ class MessageStatus(BaseUserUpdateAsync, _MessageStatus[CallbackDataT]):
         >>> @wa.on_message_status(factory=UserData) # Use the factory parameter to convert the tracker data
         ... def on_status(_: WhatsApp, s: MessageStatus[UserData]): # For autocomplete
         ...    if s.tracker.admin: print(s.tracker.id) # Access the tracker data
-
-    You can even use multiple factories, and not only ``CallbackData`` subclasses!
-
-        >>> from enum import Enum
-        >>> class State(str, Enum):
-        ...     START = 's'
-        ...     END = 'e'
-
-        >>> wa.send_message(
-        ...     to='972987654321',
-        ...     text='Hi user',
-        ...     tracker=(UserData(id=123, name='david', admin=True), State.START)
-        ... )           # Here ^^^ we send a tuple of UserData and State
-
-        >>> @wa.on_message_status(factory=(UserData, State)) # Use the factory parameter to convert the tracker data
-        ... def on_user_data(_: WhatsApp, s: MessageStatus[tuple[UserData, State]]): # For autocomplete
-        ...    user, state = s.tracker # Unpack the tuple
-        ...    if user.admin: print(user.id, state)
 
 
     Attributes:

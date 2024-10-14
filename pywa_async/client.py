@@ -7,19 +7,9 @@ __all__ = ["WhatsApp"]
 
 from pywa.client import (
     WhatsApp as _WhatsApp,
-    _resolve_buttons_param,
-    _resolve_tracker_param,
-    _resolve_waba_id_param,
-    _resolve_phone_id_param,
-    _resolve_flow_json_param,
-    _get_interactive_msg,
-    _get_media_msg,
-    _get_flow_fields,
-    _get_flow_metric_field,
-    _media_types_default_filenames,
     _DEFAULT_VERIFY_DELAY_SEC,
 )  # noqa MUST BE IMPORTED FIRST
-from pywa.types import FlowMetricName, FlowMetricGranularity
+from pywa import _helpers as helpers
 from .handlers import (
     MessageHandler,
     MessageStatusHandler,
@@ -79,8 +69,9 @@ from .types import (
     Command,
     CallbackData,
     QRCode,
+    FlowMetricName,
+    FlowMetricGranularity,
 )
-from .types.callback import CallbackDataT
 from .types.flows import (
     FlowCategory,
     FlowJSON,
@@ -280,7 +271,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         preview_url: bool = False,
         reply_to_message_id: str | None = None,
         keyboard: None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -398,7 +389,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         Returns:
             The message ID of the sent message.
         """
-        sender = _resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_phone_id_param(self, sender, "sender")
         if keyboard is not None:
             buttons = keyboard
             warnings.simplefilter("always", DeprecationWarning)
@@ -416,16 +407,16 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                     typ=MessageType.TEXT,
                     msg={"body": text, "preview_url": preview_url},
                     reply_to_message_id=reply_to_message_id,
-                    biz_opaque_callback_data=_resolve_tracker_param(tracker),
+                    biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
                 )
             )["messages"][0]["id"]
-        typ, kb = _resolve_buttons_param(buttons)
+        typ, kb = helpers.resolve_buttons_param(buttons)
         return (
             await self.api.send_message(
                 sender=sender,
                 to=str(to),
                 typ=MessageType.INTERACTIVE,
-                msg=_get_interactive_msg(
+                msg=helpers.get_interactive_msg(
                     typ=typ,
                     action=kb,
                     header={
@@ -438,7 +429,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                     footer=footer,
                 ),
                 reply_to_message_id=reply_to_message_id,
-                biz_opaque_callback_data=_resolve_tracker_param(tracker),
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             )
         )["messages"][0]["id"]
 
@@ -454,7 +445,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -489,7 +480,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         Returns:
             The message ID of the sent image message.
         """
-        sender = _resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_phone_id_param(self, sender, "sender")
         if body is not None:
             caption = body
             warnings.simplefilter("always", DeprecationWarning)
@@ -513,25 +504,23 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                     sender=sender,
                     to=str(to),
                     typ=MessageType.IMAGE,
-                    msg=_get_media_msg(
-                        media_id_or_url=image,
-                        is_url=is_url,
-                        caption=caption,
+                    msg=helpers.get_media_msg(
+                        media_id_or_url=image, is_url=is_url, caption=caption
                     ),
-                    biz_opaque_callback_data=_resolve_tracker_param(tracker),
+                    biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
                 )
             )["messages"][0]["id"]
         if not caption:
             raise ValueError(
                 "A caption must be provided when sending an image with buttons."
             )
-        typ, kb = _resolve_buttons_param(buttons)
+        typ, kb = helpers.resolve_buttons_param(buttons)
         return (
             await self.api.send_message(
                 sender=sender,
                 to=str(to),
                 typ=MessageType.INTERACTIVE,
-                msg=_get_interactive_msg(
+                msg=helpers.get_interactive_msg(
                     typ=typ,
                     action=kb,
                     header={
@@ -544,7 +533,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                     footer=footer,
                 ),
                 reply_to_message_id=reply_to_message_id,
-                biz_opaque_callback_data=_resolve_tracker_param(tracker),
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             )
         )["messages"][0]["id"]
 
@@ -558,7 +547,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -594,7 +583,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         Returns:
             The message ID of the sent video.
         """
-        sender = _resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_phone_id_param(self, sender, "sender")
         if body is not None:
             caption = body
             warnings.simplefilter("always", DeprecationWarning)
@@ -618,25 +607,23 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                     sender=sender,
                     to=str(to),
                     typ=MessageType.VIDEO,
-                    msg=_get_media_msg(
-                        media_id_or_url=video,
-                        is_url=is_url,
-                        caption=caption,
+                    msg=helpers.get_media_msg(
+                        media_id_or_url=video, is_url=is_url, caption=caption
                     ),
-                    biz_opaque_callback_data=_resolve_tracker_param(tracker),
+                    biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
                 )
             )["messages"][0]["id"]
         if not caption:
             raise ValueError(
                 "A caption must be provided when sending a video with buttons."
             )
-        typ, kb = _resolve_buttons_param(buttons)
+        typ, kb = helpers.resolve_buttons_param(buttons)
         return (
             await self.api.send_message(
                 sender=sender,
                 to=str(to),
                 typ=MessageType.INTERACTIVE,
-                msg=_get_interactive_msg(
+                msg=helpers.get_interactive_msg(
                     typ=typ,
                     action=kb,
                     header={
@@ -649,7 +636,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                     footer=footer,
                 ),
                 reply_to_message_id=reply_to_message_id,
-                biz_opaque_callback_data=_resolve_tracker_param(tracker),
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             )
         )["messages"][0]["id"]
 
@@ -664,7 +651,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -703,7 +690,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             The message ID of the sent document.
         """
 
-        sender = _resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_phone_id_param(self, sender, "sender")
         if body is not None:
             caption = body
             warnings.simplefilter("always", DeprecationWarning)
@@ -727,26 +714,26 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                     sender=sender,
                     to=str(to),
                     typ=MessageType.DOCUMENT,
-                    msg=_get_media_msg(
+                    msg=helpers.get_media_msg(
                         media_id_or_url=document,
                         is_url=is_url,
                         caption=caption,
                         filename=filename,
                     ),
-                    biz_opaque_callback_data=_resolve_tracker_param(tracker),
+                    biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
                 )
             )["messages"][0]["id"]
         if not caption:
             raise ValueError(
                 "A caption must be provided when sending a document with buttons."
             )
-        typ, kb = _resolve_buttons_param(buttons)
+        typ, kb = helpers.resolve_buttons_param(buttons)
         return (
             await self.api.send_message(
                 sender=sender,
                 to=str(to),
                 typ=MessageType.INTERACTIVE,
-                msg=_get_interactive_msg(
+                msg=helpers.get_interactive_msg(
                     typ=typ,
                     action=kb,
                     header={
@@ -760,7 +747,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                     footer=footer,
                 ),
                 reply_to_message_id=reply_to_message_id,
-                biz_opaque_callback_data=_resolve_tracker_param(tracker),
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             )
         )["messages"][0]["id"]
 
@@ -770,7 +757,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         audio: str | pathlib.Path | bytes | BinaryIO,
         mime_type: str | None = None,
         reply_to_message_id: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -797,7 +784,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             The message ID of the sent audio file.
         """
 
-        sender = _resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_phone_id_param(self, sender, "sender")
         is_url, audio = await _resolve_media_param(
             wa=self,
             media=audio,
@@ -811,12 +798,9 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                 sender=sender,
                 to=str(to),
                 typ=MessageType.AUDIO,
-                msg=_get_media_msg(
-                    media_id_or_url=audio,
-                    is_url=is_url,
-                ),
+                msg=helpers.get_media_msg(media_id_or_url=audio, is_url=is_url),
                 reply_to_message_id=reply_to_message_id,
-                biz_opaque_callback_data=_resolve_tracker_param(tracker),
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             )
         )["messages"][0]["id"]
 
@@ -826,7 +810,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         sticker: str | pathlib.Path | bytes | BinaryIO,
         mime_type: str | None = None,
         reply_to_message_id: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -855,7 +839,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             The message ID of the sent message.
         """
 
-        sender = _resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_phone_id_param(self, sender, "sender")
         is_url, sticker = await _resolve_media_param(
             wa=self,
             media=sticker,
@@ -869,12 +853,9 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                 sender=sender,
                 to=str(to),
                 typ=MessageType.STICKER,
-                msg=_get_media_msg(
-                    media_id_or_url=sticker,
-                    is_url=is_url,
-                ),
+                msg=helpers.get_media_msg(media_id_or_url=sticker, is_url=is_url),
                 reply_to_message_id=reply_to_message_id,
-                biz_opaque_callback_data=_resolve_tracker_param(tracker),
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             )
         )["messages"][0]["id"]
 
@@ -883,7 +864,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         to: str | int,
         emoji: str,
         message_id: str,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -918,11 +899,11 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         """
         return (
             await self.api.send_message(
-                sender=_resolve_phone_id_param(self, sender, "sender"),
+                sender=helpers.resolve_phone_id_param(self, sender, "sender"),
                 to=str(to),
                 typ=MessageType.REACTION,
                 msg={"emoji": emoji, "message_id": message_id},
-                biz_opaque_callback_data=_resolve_tracker_param(tracker),
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             )
         )["messages"][0]["id"]
 
@@ -930,7 +911,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         self,
         to: str | int,
         message_id: str,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -963,11 +944,11 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         """
         return (
             await self.api.send_message(
-                sender=_resolve_phone_id_param(self, sender, "sender"),
+                sender=helpers.resolve_phone_id_param(self, sender, "sender"),
                 to=str(to),
                 typ=MessageType.REACTION,
                 msg={"emoji": "", "message_id": message_id},
-                biz_opaque_callback_data=_resolve_tracker_param(tracker),
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             )
         )["messages"][0]["id"]
 
@@ -979,7 +960,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         name: str | None = None,
         address: str | None = None,
         reply_to_message_id: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -1011,7 +992,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         """
         return (
             await self.api.send_message(
-                sender=_resolve_phone_id_param(self, sender, "sender"),
+                sender=helpers.resolve_phone_id_param(self, sender, "sender"),
                 to=str(to),
                 typ=MessageType.LOCATION,
                 msg={
@@ -1021,7 +1002,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                     "address": address,
                 },
                 reply_to_message_id=reply_to_message_id,
-                biz_opaque_callback_data=_resolve_tracker_param(tracker),
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             )
         )["messages"][0]["id"]
 
@@ -1030,7 +1011,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         to: str | int,
         text: str,
         reply_to_message_id: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -1056,16 +1037,16 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         """
         return (
             await self.api.send_message(
-                sender=_resolve_phone_id_param(self, sender, "sender"),
+                sender=helpers.resolve_phone_id_param(self, sender, "sender"),
                 to=str(to),
                 typ=MessageType.INTERACTIVE,
-                msg=_get_interactive_msg(
+                msg=helpers.get_interactive_msg(
                     typ=InteractiveType.LOCATION_REQUEST_MESSAGE,
                     action={"name": "send_location"},
                     body=text,
                 ),
                 reply_to_message_id=reply_to_message_id,
-                biz_opaque_callback_data=_resolve_tracker_param(tracker),
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             )
         )["messages"][0]["id"]
 
@@ -1074,7 +1055,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         to: str | int,
         contact: Contact | Iterable[Contact],
         reply_to_message_id: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -1106,14 +1087,14 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         """
         return (
             await self.api.send_message(
-                sender=_resolve_phone_id_param(self, sender, "sender"),
+                sender=helpers.resolve_phone_id_param(self, sender, "sender"),
                 to=str(to),
                 typ=MessageType.CONTACTS,
                 msg=tuple(c.to_dict() for c in contact)
                 if isinstance(contact, Iterable)
                 else (contact.to_dict(),),
                 reply_to_message_id=reply_to_message_id,
-                biz_opaque_callback_data=_resolve_tracker_param(tracker),
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             )
         )["messages"][0]["id"]
 
@@ -1124,7 +1105,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         footer: str | None = None,
         thumbnail_product_sku: str | None = None,
         reply_to_message_id: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -1155,10 +1136,10 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         """
         return (
             await self.api.send_message(
-                sender=_resolve_phone_id_param(self, sender, "sender"),
+                sender=helpers.resolve_phone_id_param(self, sender, "sender"),
                 to=str(to),
                 typ=MessageType.INTERACTIVE,
-                msg=_get_interactive_msg(
+                msg=helpers.get_interactive_msg(
                     typ=InteractiveType.CATALOG_MESSAGE,
                     action={
                         "name": "catalog_message",
@@ -1176,7 +1157,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                     footer=footer,
                 ),
                 reply_to_message_id=reply_to_message_id,
-                biz_opaque_callback_data=_resolve_tracker_param(tracker),
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             )
         )["messages"][0]["id"]
 
@@ -1188,7 +1169,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         body: str | None = None,
         footer: str | None = None,
         reply_to_message_id: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -1223,10 +1204,10 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         """
         return (
             await self.api.send_message(
-                sender=_resolve_phone_id_param(self, sender, "sender"),
+                sender=helpers.resolve_phone_id_param(self, sender, "sender"),
                 to=str(to),
                 typ=MessageType.INTERACTIVE,
-                msg=_get_interactive_msg(
+                msg=helpers.get_interactive_msg(
                     typ=InteractiveType.PRODUCT,
                     action={
                         "catalog_id": catalog_id,
@@ -1236,7 +1217,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                     footer=footer,
                 ),
                 reply_to_message_id=reply_to_message_id,
-                biz_opaque_callback_data=_resolve_tracker_param(tracker),
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             )
         )["messages"][0]["id"]
 
@@ -1249,7 +1230,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         body: str,
         footer: str | None = None,
         reply_to_message_id: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -1296,10 +1277,10 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         """
         return (
             await self.api.send_message(
-                sender=_resolve_phone_id_param(self, sender, "sender"),
+                sender=helpers.resolve_phone_id_param(self, sender, "sender"),
                 to=str(to),
                 typ=MessageType.INTERACTIVE,
-                msg=_get_interactive_msg(
+                msg=helpers.get_interactive_msg(
                     typ=InteractiveType.PRODUCT_LIST,
                     action={
                         "catalog_id": catalog_id,
@@ -1313,7 +1294,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                     footer=footer,
                 ),
                 reply_to_message_id=reply_to_message_id,
-                biz_opaque_callback_data=_resolve_tracker_param(tracker),
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             )
         )["messages"][0]["id"]
 
@@ -1340,7 +1321,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         """
         return (
             await self.api.mark_message_as_read(
-                phone_id=_resolve_phone_id_param(self, sender, "sender"),
+                phone_id=helpers.resolve_phone_id_param(self, sender, "sender"),
                 message_id=message_id,
             )
         )["success"]
@@ -1381,7 +1362,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                 - If provided ``media`` is URL and the URL is invalid or media cannot be downloaded.
                 - If provided ``media`` is bytes and ``filename`` or ``mime_type`` is not provided.
         """
-        phone_id = _resolve_phone_id_param(self, phone_id, "phone_id")
+        phone_id = helpers.resolve_phone_id_param(self, phone_id, "phone_id")
 
         if isinstance(media, (str, pathlib.Path)):
             if (path := pathlib.Path(media)).is_file():
@@ -1514,7 +1495,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         """
         return BusinessPhoneNumber.from_dict(
             data=await self.api.get_business_phone_number(
-                phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 fields=tuple(
                     field.name for field in dataclasses.fields(BusinessPhoneNumber)
                 ),
@@ -1549,7 +1530,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         """
         return (
             await self.api.update_conversational_automation(
-                phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 enable_welcome_message=enable_chat_opened,
                 prompts=tuple(ice_breakers) if ice_breakers else None,
                 commands=json.dumps([c.to_dict() for c in commands])
@@ -1579,7 +1560,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         return BusinessProfile.from_dict(
             data=(
                 await self.api.get_business_profile(
-                    phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+                    phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                     fields=(
                         "about",
                         "address",
@@ -1618,7 +1599,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         """
         return (
             await self.api.set_business_public_key(
-                phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 public_key=public_key,
             )
         )["success"]
@@ -1686,7 +1667,8 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         }
         return (
             await self.api.update_business_profile(
-                phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"), data=data
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                data=data,
             )
         )["success"]
 
@@ -1708,7 +1690,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         return CommerceSettings.from_dict(
             data=(
                 await self.api.get_commerce_settings(
-                    phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+                    phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 )
             )["data"][0]
         )
@@ -1753,7 +1735,8 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             raise ValueError("At least one argument must be provided")
         return (
             await self.api.update_commerce_settings(
-                phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"), data=data
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                data=data,
             )
         )["success"]
 
@@ -1836,7 +1819,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         return TemplateResponse(
             **(
                 await self.api.create_template(
-                    waba_id=_resolve_waba_id_param(self, waba_id),
+                    waba_id=helpers.resolve_waba_id_param(self, waba_id),
                     template=template.to_dict(placeholder=placeholder),
                 )
             )
@@ -1847,7 +1830,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         to: str | int,
         template: Template,
         reply_to_message_id: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> str:
         """
@@ -1904,7 +1887,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         Raises:
 
         """
-        sender = _resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_phone_id_param(self, sender, "sender")
         is_url = None
         match type(template.header):
             case Template.Image:
@@ -1941,7 +1924,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                 typ="template",
                 msg=template.to_dict(is_header_url=is_url),
                 reply_to_message_id=reply_to_message_id,
-                biz_opaque_callback_data=_resolve_tracker_param(tracker),
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             )
         )["messages"][0]["id"]
 
@@ -1990,7 +1973,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                 categories=tuple(map(str, categories)),
                 clone_flow_id=clone_flow_id,
                 endpoint_uri=endpoint_uri,
-                waba_id=_resolve_waba_id_param(self, waba_id),
+                waba_id=helpers.resolve_waba_id_param(self, waba_id),
             )
         )["id"]
 
@@ -2089,7 +2072,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         Raises:
             FlowUpdatingError: If the flow json is invalid or the flow is already published.
         """
-        json_str = _resolve_flow_json_param(flow_json)
+        json_str = helpers.resolve_flow_json_param(flow_json)
         res = await self.api.update_flow_json(flow_id=str(flow_id), flow_json=json_str)
         return res["success"], tuple(
             FlowValidationError.from_dict(data) for data in res["validation_errors"]
@@ -2180,7 +2163,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             data=(
                 await self.api.get_flow(
                     flow_id=str(flow_id),
-                    fields=_get_flow_fields(
+                    fields=helpers.get_flow_fields(
                         invalidate_preview=invalidate_preview,
                         phone_number_id=phone_number_id,
                     ),
@@ -2212,8 +2195,8 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             FlowDetails.from_dict(data=data, client=self)
             for data in (
                 await self.api.get_flows(
-                    waba_id=_resolve_waba_id_param(self, waba_id),
-                    fields=_get_flow_fields(
+                    waba_id=helpers.resolve_waba_id_param(self, waba_id),
+                    fields=helpers.get_flow_fields(
                         invalidate_preview=invalidate_preview,
                         phone_number_id=phone_number_id,
                     ),
@@ -2248,7 +2231,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             await self.api.get_flow(
                 flow_id=str(flow_id),
                 fields=(
-                    _get_flow_metric_field(
+                    helpers.get_flow_metric_field(
                         metric_name=metric_name,
                         granularity=granularity,
                         since=since,
@@ -2313,7 +2296,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         """
         return (
             await self.api.register_phone_number(
-                phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 pin=str(pin),
                 data_localization_region=data_localization_region,
             )
@@ -2340,7 +2323,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         """
         return QRCode.from_dict(
             await self.api.create_qr_code(
-                phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 prefilled_message=prefilled_message,
                 generate_qr_image=image_type,
             )
@@ -2363,7 +2346,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         """
         qrs = (
             await self.api.get_qr_code(
-                phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 code=code,
             )
         )["data"]
@@ -2386,7 +2369,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             QRCode.from_dict(qr)
             for qr in (
                 await self.api.get_qr_codes(
-                    phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+                    phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 )
             )["data"]
         )
@@ -2410,7 +2393,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         """
         return QRCode.from_dict(
             await self.api.update_qr_code(
-                phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 code=code,
                 prefilled_message=prefilled_message,
             )
@@ -2433,7 +2416,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         """
         return (
             await self.api.delete_qr_code(
-                phone_id=_resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 code=code,
             )
         )["success"]
@@ -2463,5 +2446,5 @@ async def _resolve_media_param(
         phone_id=phone_id,
         media=media,
         mime_type=mime_type,
-        filename=_media_types_default_filenames.get(media_type, filename),
+        filename=helpers._media_types_default_filenames.get(media_type, filename),
     )

@@ -23,7 +23,6 @@ if TYPE_CHECKING:
         SectionList,
         FlowButton,
         CallbackData,
-        CallbackDataT,
     )
     from .template import Template
 
@@ -42,7 +41,7 @@ class BaseUserUpdateAsync:
         quote: bool = False,
         preview_url: bool = False,
         keyboard: None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
     ) -> str:
         """
         Reply to the message with text.
@@ -148,7 +147,7 @@ class BaseUserUpdateAsync:
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         quote: bool = False,
         mime_type: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
     ) -> str:
         """
         Reply to the message with an image.
@@ -202,7 +201,7 @@ class BaseUserUpdateAsync:
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         quote: bool = False,
         mime_type: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
     ) -> str:
         """
         Reply to the message with a video.
@@ -258,7 +257,7 @@ class BaseUserUpdateAsync:
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         quote: bool = False,
         mime_type: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
     ) -> str:
         """
         Reply to the message with a document.
@@ -312,7 +311,7 @@ class BaseUserUpdateAsync:
         audio: str | pathlib.Path | bytes | BinaryIO,
         quote: bool = False,
         mime_type: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
     ) -> str:
         """
         Reply to the message with an audio.
@@ -348,7 +347,7 @@ class BaseUserUpdateAsync:
         sticker: str | pathlib.Path | bytes | BinaryIO,
         quote: bool = False,
         mime_type: str | None = None,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
     ) -> str:
         """
         Reply to the message with a sticker.
@@ -388,7 +387,7 @@ class BaseUserUpdateAsync:
         name: str | None = None,
         address: str | None = None,
         quote: bool = False,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
     ) -> str:
         """
         Reply to the message with a location.
@@ -430,7 +429,7 @@ class BaseUserUpdateAsync:
         self,
         text: str,
         quote: bool = False,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
     ) -> str:
         """
         Reply to the message with a request for the user's location.
@@ -463,7 +462,7 @@ class BaseUserUpdateAsync:
         self,
         contact: Contact | Iterable[Contact],
         quote: bool = False,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
     ) -> str:
         """
         Reply to the message with a contact/s.
@@ -499,7 +498,7 @@ class BaseUserUpdateAsync:
             tracker=tracker,
         )
 
-    async def react(self, emoji: str, tracker: CallbackDataT | None = None) -> str:
+    async def react(self, emoji: str, tracker: str | CallbackData | None = None) -> str:
         """
         React to the message with an emoji.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.send_reaction` with ``to`` and ``message_id``.
@@ -523,7 +522,7 @@ class BaseUserUpdateAsync:
             tracker=tracker,
         )
 
-    async def unreact(self, tracker: CallbackDataT | None = None) -> str:
+    async def unreact(self, tracker: str | CallbackData | None = None) -> str:
         """
         Remove the reaction from the message.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.remove_reaction` with ``to`` and ``message_id``.
@@ -551,7 +550,7 @@ class BaseUserUpdateAsync:
         footer: str | None = None,
         thumbnail_product_sku: str | None = None,
         quote: bool = False,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
     ) -> str:
         """
         Reply to the message with a catalog.
@@ -593,7 +592,7 @@ class BaseUserUpdateAsync:
         body: str | None = None,
         footer: str | None = None,
         quote: bool = False,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
     ) -> str:
         """
         Reply to the message with a product.
@@ -632,7 +631,7 @@ class BaseUserUpdateAsync:
         body: str,
         footer: str | None = None,
         quote: bool = False,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
     ) -> str:
         """
         Reply to the message with a product.
@@ -690,7 +689,7 @@ class BaseUserUpdateAsync:
         self,
         template: Template,
         quote: bool = False,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
     ) -> str:
         """
         Reply to the message with a template.
