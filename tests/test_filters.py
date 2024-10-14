@@ -33,24 +33,14 @@ FILTERS: dict[
         "text": [
             (same, fil.text),
             (lambda m: modify_text(m, "hello"), fil.matches("hello")),
-            (lambda m: modify_text(m, "hello"), fil.text.matches("hello")),
             (
                 lambda m: modify_text(m, "hello"),
                 fil.matches("hello", ignore_case=True),
             ),
-            (
-                lambda m: modify_text(m, "hello"),
-                fil.text.matches("hello", ignore_case=True),
-            ),
             (lambda m: modify_text(m, "hi hello"), fil.contains("hello")),
-            (lambda m: modify_text(m, "hi hello"), fil.text.contains("hello")),
             (
                 lambda m: modify_text(m, "hi Hello"),
                 fil.contains("hello", "Hi", ignore_case=True),
-            ),
-            (
-                lambda m: modify_text(m, "hi Hello"),
-                fil.text.contains("hello", "Hi", ignore_case=True),
             ),
             (
                 lambda m: modify_text(m, "hi bye"),
@@ -58,15 +48,7 @@ FILTERS: dict[
             ),
             (
                 lambda m: modify_text(m, "hi bye"),
-                fil.text.startswith("hi"),
-            ),
-            (
-                lambda m: modify_text(m, "hi bye"),
                 fil.startswith("Hi", ignore_case=True),
-            ),
-            (
-                lambda m: modify_text(m, "hi bye"),
-                fil.text.startswith("Hi", ignore_case=True),
             ),
             (
                 lambda m: modify_text(m, "hi bye"),
@@ -74,23 +56,11 @@ FILTERS: dict[
             ),
             (
                 lambda m: modify_text(m, "hi bye"),
-                fil.text.endswith("bye"),
-            ),
-            (
-                lambda m: modify_text(m, "hi bye"),
                 fil.endswith("Bye", ignore_case=True),
             ),
             (
                 lambda m: modify_text(m, "hi bye"),
-                fil.text.endswith("Bye", ignore_case=True),
-            ),
-            (
-                lambda m: modify_text(m, "hi bye"),
                 fil.regex(r"^hi", r"bye$"),
-            ),
-            (
-                lambda m: modify_text(m, "hi bye"),
-                fil.text.regex(r"^hi", r"bye$"),
             ),
             (
                 lambda m: modify_text(m, "abcdefg"),
@@ -119,6 +89,10 @@ FILTERS: dict[
             (
                 lambda m: modify_img_mime_type(m, "image/jpeg"),
                 fil.image.mimetypes("image/jpeg"),
+            ),
+            (
+                lambda m: modify_img_mime_type(m, "application/pdf"),
+                fil.image.mimetypes("application/pdf"),
             ),
         ],
         "video": [
@@ -159,7 +133,6 @@ FILTERS: dict[
                 fil.location.in_radius(37.47, -122.25, 10),
             ),
         ],
-        "chosen_location": [(same, fil.not_(fil.location.current_location))],
         "contacts": [
             (same, fil.contacts),
             (
@@ -217,16 +190,8 @@ FILTERS: dict[
                 fil.matches("hi"),
             ),
             (
-                lambda m: modify_callback_data(m, "hi"),
-                fil.callback.data_matches("hi"),
-            ),
-            (
                 lambda m: modify_callback_data(m, "Hi"),
                 fil.matches("hi", ignore_case=True),
-            ),
-            (
-                lambda m: modify_callback_data(m, "Hi"),
-                fil.callback.data_matches("hi", ignore_case=True),
             ),
             (
                 lambda m: modify_callback_data(m, "hi bye"),
@@ -234,15 +199,7 @@ FILTERS: dict[
             ),
             (
                 lambda m: modify_callback_data(m, "hi bye"),
-                fil.callback.data_contains("hi"),
-            ),
-            (
-                lambda m: modify_callback_data(m, "hi bye"),
                 fil.contains("Hi", ignore_case=True),
-            ),
-            (
-                lambda m: modify_callback_data(m, "hi bye"),
-                fil.callback.data_contains("Hi", ignore_case=True),
             ),
             (
                 lambda m: modify_callback_data(m, "hi bye"),
@@ -250,15 +207,7 @@ FILTERS: dict[
             ),
             (
                 lambda m: modify_callback_data(m, "hi bye"),
-                fil.callback.data_startswith("hi"),
-            ),
-            (
-                lambda m: modify_callback_data(m, "hi bye"),
                 fil.startswith("Hi", ignore_case=True),
-            ),
-            (
-                lambda m: modify_callback_data(m, "hi bye"),
-                fil.callback.data_startswith("Hi", ignore_case=True),
             ),
             (
                 lambda m: modify_callback_data(m, "hi bye"),
@@ -266,23 +215,11 @@ FILTERS: dict[
             ),
             (
                 lambda m: modify_callback_data(m, "hi bye"),
-                fil.callback.data_endswith("bye"),
-            ),
-            (
-                lambda m: modify_callback_data(m, "hi bye"),
                 fil.endswith("Bye", ignore_case=True),
-            ),
-            (
-                lambda m: modify_callback_data(m, "hi bye"),
-                fil.callback.data_endswith("Bye", ignore_case=True),
             ),
             (
                 lambda m: modify_callback_data(m, "data:123"),
                 fil.regex("^data:", r"\d{3}$"),
-            ),
-            (
-                lambda m: modify_callback_data(m, "data:123"),
-                fil.callback.data_regex("^data:", r"\d{3}$"),
             ),
         ],
         "quick_reply": [],
@@ -324,9 +261,13 @@ RANDOM_API_VER = random.choice(API_VERSIONS)
 
 
 def test_combinations():
-    assert fil.all_(lambda _, __: True, lambda _, __: True)
-    assert fil.any_(lambda _, __: True, lambda _, __: False)
-    assert fil.not_(lambda _, __: False)
+    true, false = fil.new(lambda _, __: True), fil.new(lambda _, __: False)
+    assert true(None, None)
+    assert not false(None, None)
+    assert true(None, None) & true(None, None)
+    assert not (true(None, None) & false(None, None))
+    assert true(None, None) | false(None, None)
+    assert not (false(None, None) | false(None, None))
 
 
 def test_filters():
