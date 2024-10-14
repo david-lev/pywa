@@ -1,0 +1,202 @@
+import datetime
+import json
+import pathlib
+from typing import Any, BinaryIO, Literal, Iterable
+
+from pywa import WhatsApp
+from pywa.types import (
+    FlowMetricName,
+    FlowMetricGranularity,
+    FlowJSON,
+    CallbackData,
+    MessageType,
+    ButtonUrl,
+    SectionList,
+    FlowButton,
+    Button,
+)
+from pywa.types.others import InteractiveType
+from pywa.types.callback import CallbackDataT
+
+
+def _resolve_buttons_param(
+    buttons: Iterable[Button] | ButtonUrl | FlowButton | SectionList,
+) -> tuple[InteractiveType, dict]:
+    """
+    Internal method to resolve ``buttons`` parameter. Returns a tuple of (``type``, ``buttons``).
+    """
+    if isinstance(buttons, SectionList):
+        return InteractiveType.LIST, buttons.to_dict()
+    elif isinstance(buttons, ButtonUrl):
+        return InteractiveType.CTA_URL, buttons.to_dict()
+    elif isinstance(buttons, FlowButton):
+        return InteractiveType.FLOW, buttons.to_dict()
+    else:  # assume its list of buttons
+        return InteractiveType.BUTTON, {"buttons": tuple(b.to_dict() for b in buttons)}
+
+
+_media_types_default_filenames = {
+    MessageType.IMAGE: "image.jpg",
+    MessageType.VIDEO: "video.mp4",
+    MessageType.AUDIO: "audio.mp3",
+    MessageType.STICKER: "sticker.webp",
+}
+
+
+def _resolve_media_param(
+    wa: WhatsApp,
+    media: str | pathlib.Path | bytes | BinaryIO,
+    mime_type: str | None,
+    filename: str | None,
+    media_type: Literal[
+        MessageType.IMAGE, MessageType.VIDEO, MessageType.AUDIO, MessageType.STICKER
+    ]
+    | None,
+    phone_id: str,
+) -> tuple[bool, str]:
+    """
+    Internal method to resolve the ``media`` parameter. Returns a tuple of (``is_url``, ``media_id_or_url``).
+    """
+    if isinstance(media, (str, pathlib.Path)):
+        if str(media).startswith(("https://", "http://")):
+            return True, media
+        elif str(media).isdigit() and not pathlib.Path(media).is_file():
+            return False, media  # assume it's a media ID
+    # assume its bytes or a file path
+    return False, wa.upload_media(
+        phone_id=phone_id,
+        media=media,
+        mime_type=mime_type,
+        filename=_media_types_default_filenames.get(media_type, filename),
+    )
+
+
+def _resolve_tracker_param(tracker: CallbackDataT | None) -> str | None:
+    """Internal method to resolve the `tracker` parameter."""
+    return tracker.to_str() if isinstance(tracker, CallbackData) else tracker
+
+
+def _resolve_phone_id_param(wa: WhatsApp, phone_id: str | None, arg_name: str) -> str:
+    """Internal method to resolve the `phone_id` parameter."""
+    if phone_id is not None:
+        return phone_id
+    if wa.phone_id is not None:
+        return wa.phone_id
+    raise ValueError(
+        f"When initializing WhatsApp without phone_id, {arg_name} must be provided."
+    )
+
+
+def _resolve_waba_id_param(wa: WhatsApp, waba_id: str | None) -> str:
+    """Internal method to resolve the `waba_id` parameter."""
+    if waba_id is not None:
+        return waba_id
+    if wa.business_account_id is not None:
+        return wa.business_account_id
+    raise ValueError(
+        "When initializing WhatsApp without business_account_id, waba_id must be provided."
+    )
+
+
+def _resolve_flow_json_param(
+    flow_json: FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO,
+) -> str:
+    """Internal method to solve the `flow_json` parameter"""
+    json_str, to_dump = None, None
+    if isinstance(flow_json, (str, pathlib.Path)):  # json str or path to json file
+        as_path = pathlib.Path(flow_json)
+        try:
+            if as_path.is_file():
+                with open(as_path, "r", encoding="utf-8") as f:
+                    json_str = f.read()
+        except OSError:
+            json_str = flow_json
+    elif isinstance(flow_json, bytes):
+        json_str = flow_json.decode()
+    elif isinstance(flow_json, FlowJSON):
+        to_dump = flow_json.to_dict()
+    elif isinstance(flow_json, dict):
+        to_dump = flow_json
+    else:
+        raise TypeError(
+            "`flow_json` must be a FlowJSON object, dict, json string, json file path or json bytes"
+        )
+
+    if to_dump is not None:
+        json_str = json.dumps(to_dump, indent=4, ensure_ascii=False)
+
+    return json_str
+
+
+def _get_interactive_msg(
+    typ: InteractiveType,
+    action: dict[str, Any],
+    header: dict | None = None,
+    body: str | None = None,
+    footer: str | None = None,
+):
+    return {
+        "type": typ,
+        "action": action,
+        **({"header": header} if header else {}),
+        **({"body": {"text": body}} if body else {}),
+        **({"footer": {"text": footer}} if footer else {}),
+    }
+
+
+def _get_media_msg(
+    media_id_or_url: str,
+    is_url: bool,
+    caption: str | None = None,
+    filename: str | None = None,
+):
+    return {
+        ("link" if is_url else "id"): media_id_or_url,
+        **({"caption": caption} if caption else {}),
+        **({"filename": filename} if filename else {}),
+    }
+
+
+def _get_flow_fields(
+    invalidate_preview: bool, phone_number_id: str | None
+) -> tuple[str, ...]:
+    """Internal method to get the fields of a flow."""
+    return (
+        "id",
+        "name",
+        "status",
+        "updated_at",
+        "categories",
+        "validation_errors",
+        "json_version",
+        "data_api_version",
+        "endpoint_uri",
+        f"preview.invalidate({'true' if invalidate_preview else 'false'})",
+        "whatsapp_business_account",
+        "application",
+        "health_status"
+        if not phone_number_id
+        else f"health_status.phone_number({phone_number_id})",
+    )
+
+
+def _get_flow_metric_field(
+    metric_name: FlowMetricName,
+    granularity: FlowMetricGranularity,
+    since: datetime.date | str | None,
+    until: datetime.date | str | None,
+) -> str:
+    date_fmt = "%Y-%m-%d"
+    return (
+        f"metric.name({metric_name}).granularity({granularity})"
+        + (
+            f".since({since.strftime(date_fmt) if isinstance(since, datetime.date) else since})"
+            if since
+            else ""
+        )
+        + (
+            f".until({until.strftime(date_fmt) if isinstance(until, datetime.date) else until})"
+            if until
+            else ""
+        )
+    )
