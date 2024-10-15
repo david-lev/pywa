@@ -4,6 +4,7 @@ from __future__ import annotations
 
 __all__ = ["WhatsApp"]
 
+import asyncio
 import bisect
 import collections
 import dataclasses
@@ -69,6 +70,8 @@ from .server import Server
 _logger = logging.getLogger(__name__)
 
 _DEFAULT_VERIFY_DELAY_SEC = 3
+
+FuncT: TypeVar = TypeVar("FuncT", bound=Callable[..., Any])
 
 
 class WhatsApp(Server, HandlerDecorators, Listeners):
@@ -211,6 +214,15 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             validate_updates=validate_updates,
         )
 
+    @staticmethod
+    def _check_for_async_func(func: FuncT) -> FuncT:
+        """Prevent async functions from being used in the sync version of pywa."""
+        if asyncio.iscoroutine(func):
+            raise ValueError(
+                "Async functions are not supported in the sync version of pywa. import `WhatsApp` from `pywa_async` instead"
+            )
+        return func
+
     def _setup_api(
         self,
         session: httpx.Client | None,
@@ -310,15 +322,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                 " (Flask or FastAPI or custom server by setting `server` to None) in order to handle incoming updates."
             )
         for handler in handlers:
-            if isinstance(handler, FlowRequestHandler):
-                warnings.simplefilter("always", DeprecationWarning)
-                warnings.warn(
-                    message="The `add_handlers` method does not support `FlowRequestHandler`. Use `add_flow_request_handler` instead.",
-                    category=DeprecationWarning,
-                    stacklevel=2,
-                )
-                self.add_flow_request_handler(handler)
-                continue
+            self._check_for_async_func(handler.callback)
             bisect.insort(
                 self._handlers[handler.__class__], handler, key=lambda x: -x.priority
             )
