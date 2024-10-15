@@ -38,7 +38,7 @@ def resolve_buttons_param(
             InteractiveType.LIST,
             data,
             {
-                "_options": {
+                "_callback_options": {
                     row["id"] for section in data["sections"] for row in section["rows"]
                 }
             },
@@ -55,8 +55,8 @@ def resolve_buttons_param(
         data = tuple(b.to_dict() for b in buttons)
         return (
             InteractiveType.BUTTON,
-            {"buttons": buttons},
-            {"_options": {b["reply"]["id"] for b in data}},
+            {"buttons": data},
+            {"_callback_options": {b["reply"]["id"] for b in data}},
         )
 
 

@@ -100,12 +100,12 @@ class SentMessage(_ClientShortcuts):
             timeout: The time to wait for a reply.
         """
         if force_quote:
-            reply_filter = filters.replays_to(self.id)
+            reply_filter = pywa_filters.replays_to(self.id)
             filters = (reply_filter & filters) if filters else reply_filter
         return self._client.listen(
             to=self.recipient,
             sent_to_phone_id=self.sender,
-            filters=filters.message & filters,
+            filters=pywa_filters.message & filters,
             cancelers=cancelers,
             timeout=timeout,
         )

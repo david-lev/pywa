@@ -1,10 +1,9 @@
 """This module contains the Server class, which is used to set up a webhook for receiving incoming updates."""
 
-__all__ = ["Server"]
-
+import json
 import logging
 import threading
-from typing import TYPE_CHECKING, Callable, TypedDict
+from typing import TYPE_CHECKING, Callable
 
 from . import utils, handlers, errors
 from .handlers import (
@@ -23,8 +22,6 @@ from .handlers import (
 )
 from .types import (
     MessageType,
-    FlowRequest,
-    FlowResponse,
     Message,
     TemplateStatus,
     MessageStatus,
@@ -39,12 +36,7 @@ from .types.base_update import (
     ContinueHandling,
     BaseUserUpdate,
 )  # noqa
-from .types.flows import (
-    FlowRequestCannotBeDecrypted,
-    FlowResponseError,  # noqa
-    FlowTokenNoLongerValid,
-    FlowRequestActionType,
-)
+
 from .utils import FastAPI, Flask
 
 if TYPE_CHECKING:
@@ -135,7 +127,7 @@ class Server:
         if validate_updates and not app_secret:
             _logger.warning(
                 "No `app_secret` provided. Signature validation will be disabled "
-                "(not recommended. disable `validate_updates` to suppress this warning)"
+                "(not recommended. set `validate_updates=False` to suppress this warning)"
             )
             self._validate_updates = False
 
@@ -148,7 +140,7 @@ class Server:
                     "to get them: "
                     "https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings/"
                 )
-            # noinspection PyProtectedMember
+
             self._delayed_register_callback_url(
                 callback_url=f"{callback_url.rstrip('/')}/{self._webhook_endpoint.lstrip('/')}",
                 app_id=app_id,
@@ -158,35 +150,11 @@ class Server:
                 delay=webhook_challenge_delay,
             )
 
-    async def webhook_challenge_handler(self, vt: str, ch: str) -> tuple[str, int]:
+    def webhook_challenge_handler(self, vt: str, ch: str) -> tuple[str, int]:
         """
         Handle the verification challenge from the webhook manually.
 
-        - Use this function only if you are using a custom server (e.g. Django, aiohttp, etc.).
-
-        Example:
-
-            .. code-block:: python
-                :emphasize-lines: 4, 7, 8, 9, 10
-                :linenos:
-
-                from aiohttp import web
-                from pywa import WhatsApp, utils
-
-                wa = WhatsApp(..., server=None)
-
-                async def my_challenge_handler(req: web.Request) -> web.Response:
-                    challenge, status_code = await wa.webhook_challenge_handler(
-                        vt=req.query[utils.HUB_VT],
-                        ch=req.query[utils.HUB_CH],
-                    )
-                    return web.Response(text=challenge, status=status_code)
-
-                app = web.Application()
-                app.add_routes([web.get("/my_webhook", my_challenge_handler)])
-
-                if __name__ == "__main__":
-                    web.run_app(app, port=...)
+        - Use this function only if you are using a custom server (e.g. Django etc.).
 
         Args:
             vt: The verify token param (utils.HUB_VT).
@@ -209,78 +177,73 @@ class Server:
         )
         return "Error, invalid verification token", 403
 
-    async def webhook_update_handler(
-        self, update: dict, raw_body: bytes | None = None, hmac_header: str = None
+    def webhook_update_handler(
+        self, update: bytes, hmac_header: str = None
     ) -> tuple[str, int]:
         """
         Handle the incoming update from the webhook manually.
 
-        - Use this function only if you are using a custom server (e.g. Django, aiohttp, etc.).
-
-        Example:
-
-                .. code-block:: python
-                    :emphasize-lines: 4, 7, 8, 9, 10, 11
-                    :linenos:
-
-                    from aiohttp import web
-                    from pywa import WhatsApp, utils
-
-                    wa = WhatsApp(..., server=None)
-
-                    async def my_webhook_handler(req: web.Request) -> web.Response:
-                        res, status_code = await wa.webhook_update_handler(
-                            update=await req.json(),
-                            raw_body=await req.read(),
-                            hmac_header=req.headers.get(utils.HUB_SIG)
-                        )
-                        return web.Response(text=res, status=status_code)
-
-                    app = web.Application()
-                    app.add_routes([web.post("/my_webhook", my_webhook_handler)])
-
-                    if __name__ == "__main__":
-                        web.run_app(app, port=...)
+        - Use this function only if you are using a custom server (e.g. Django etc.).
 
         Args:
-            update: The incoming update from the webhook (dict).
-            raw_body: The raw body of the request (to calculate the signature, optional).
+            update: The incoming raw update from the webhook (bytes)
             hmac_header: The ``X-Hub-Signature-256`` header (to validate the signature, use ``utils.HUB_SIG`` for the key).
 
         Returns:
             A tuple containing the response and the status code.
         """
+        res, status, update_dict, update_id = self._check_and_prepare_update(
+            update=update, hmac_header=hmac_header
+        )
+        self._call_handlers(update_dict)
+        return self._after_calling_update(update_id)
+
+    def _check_and_prepare_update(
+        self, update: bytes, hmac_header: str = None
+    ) -> tuple[str | None, int | None, dict | None, str | None]:
         if self._validate_updates:
             if not hmac_header:
                 _logger.debug(
                     "Webhook ('%s') received an update without a signature",
                     self._webhook_endpoint,
                 )
-                return "Error, missing signature", 401
+                return "Error, missing signature", 401, None, None
             if not utils.webhook_updates_validator(
                 app_secret=self._app_secret,
-                request_body=raw_body,
+                request_body=update,
                 x_hub_signature=hmac_header,
             ):
                 _logger.debug(
                     "Webhook ('%s') received an update with an invalid signature",
                     self._webhook_endpoint,
                 )
-                return "Error, invalid signature", 401
+                return "Error, invalid signature", 401, None, None
+        try:
+            update_dict: dict = json.loads(update)
+        except (TypeError, ValueError):
+            _logger.exception(
+                "Webhook ('%s') received an invalid update: %s",
+                self._webhook_endpoint,
+                update,
+            )
+            return "Error, invalid update", 400, None, None
 
         update_id: str | None = None
         _logger.debug(
             "Webhook ('%s') received an update: %s",
             self._webhook_endpoint,
-            update,
+            update_dict,
         )
         if self._skip_duplicate_updates and (
-            update_id := _extract_id_from_update(update)
+            update_id := _extract_id_from_update(update_dict)
         ):
             if update_id in self._updates_ids_in_process:
-                return "ok", 200
+                return "ok", 200, None, None
             self._updates_ids_in_process.add(update_id)
-        await self._call_handlers(update)
+
+        return None, None, update_dict, update_id
+
+    def _after_calling_update(self, update_id: str | None) -> tuple[str, int]:
         if self._skip_duplicate_updates:
             try:
                 self._updates_ids_in_process.remove(update_id)
@@ -291,31 +254,24 @@ class Server:
     def _register_routes(self: "WhatsApp") -> None:
         match self._server_type:
             case utils.ServerType.FLASK:
-                if not utils.is_installed("asgiref"):  # flask[async]
-                    raise ValueError(
-                        "Flask with ASGI is required to handle incoming updates asynchronously. Please install "
-                        """the `asgiref` package (`pip install "flask[async]"` / `pip install "asgiref"`)"""
-                    )
-
                 _logger.info("Using Flask with ASGI")
                 import flask
 
                 @self._server.route(self._webhook_endpoint, methods=["GET"])
                 @utils.rename_func(f"('{self._webhook_endpoint}')")
-                async def pywa_challenge() -> tuple[str, int]:
+                def pywa_challenge() -> tuple[str, int]:
                     """Automatically generated by pywa to handle the verification challenge."""
-                    return await self.webhook_challenge_handler(
+                    return self.webhook_challenge_handler(
                         vt=flask.request.args.get(utils.HUB_VT),
                         ch=flask.request.args.get(utils.HUB_CH),
                     )
 
                 @self._server.route(self._webhook_endpoint, methods=["POST"])
                 @utils.rename_func(f"('{self._webhook_endpoint}')")
-                async def pywa_webhook() -> tuple[str, int]:
+                def pywa_webhook() -> tuple[str, int]:
                     """Automatically generated by pywa to handle incoming updates."""
-                    return await self.webhook_update_handler(
-                        update=flask.request.json,
-                        raw_body=flask.request.data,
+                    return self.webhook_update_handler(
+                        update=flask.request.data,
                         hmac_header=flask.request.headers.get(utils.HUB_SIG),
                     )
 
@@ -325,12 +281,12 @@ class Server:
 
                 @self._server.get(self._webhook_endpoint)
                 @utils.rename_func(f"('{self._webhook_endpoint}')")
-                async def pywa_challenge(
+                def pywa_challenge(
                     vt: str = fastapi.Query(alias=utils.HUB_VT, example="xyzxyz"),
                     ch: str = fastapi.Query(alias=utils.HUB_CH, example="1858252904"),
                 ) -> fastapi.Response:
                     """Automatically generated by pywa to handle the verification challenge."""
-                    content, status_code = await self.webhook_challenge_handler(
+                    content, status_code = self.webhook_challenge_handler(
                         vt=vt,
                         ch=ch,
                     )
@@ -340,19 +296,20 @@ class Server:
                         media_type="text/plain",
                     )
 
+                async def _get_body(request: fastapi.Request):
+                    return await request.body()
+
                 @self._server.post(self._webhook_endpoint)
                 @utils.rename_func(f"('{self._webhook_endpoint}')")
-                async def pywa_webhook(
-                    update: dict,
-                    req: fastapi.Request,
+                def pywa_webhook(
+                    update: bytes = fastapi.Depends(_get_body),
                     hmac_header: str = fastapi.Header(
                         alias=utils.HUB_SIG, example="sha256=..."
                     ),
                 ) -> fastapi.Response:
                     """Automatically generated by pywa to handle incoming updates."""
-                    content, status_code = await self.webhook_update_handler(
+                    content, status_code = self.webhook_update_handler(
                         update=update,
-                        raw_body=await req.body(),
                         hmac_header=hmac_header,
                     )
                     return fastapi.Response(
@@ -368,10 +325,10 @@ class Server:
                     f"The `server` must be one of {utils.ServerType.protocols_names()} or None for a custom server"
                 )
 
-    async def _call_handlers(self: "WhatsApp", update: dict) -> None:
+    def _call_handlers(self: "WhatsApp", update: dict) -> None:
         """Call the handlers for the given update."""
         try:
-            handler_type = self._get_handler(update=update)
+            handler_type, is_usr_update = self._get_handler(update=update)
             if handler_type is None:
                 _logger.debug(
                     "Webhook ('%s') received an update but no handler was found.",
@@ -383,14 +340,13 @@ class Server:
             TypeError,
             IndexError,
         ):  # this endpoint got non-expected data
-            _logger.exception(
-                "Webhook ('%s') received an invalid update%s: %s",
+            _logger.error(
+                "Webhook ('%s') received an invalid update %s: %s",
                 self._webhook_endpoint,
                 " (Enable `validate_updates` to ignore updates with invalid data)"
                 if not self._validate_updates
                 else "",
                 update,
-                exc_info=None,
             )
             return
 
@@ -399,39 +355,57 @@ class Server:
                 constructed_update = self._handlers_to_update_constractor[handler_type](
                     self, update
                 )
-                await self._call_callbacks(handler_type, constructed_update)
+                self._call_callbacks(
+                    handler_type=handler_type,
+                    constructed_update=constructed_update,
+                    is_user_update=is_usr_update,
+                )
             except Exception:
                 _logger.exception("Failed to construct update: %s", update)
 
-        await self._call_callbacks(RawUpdateHandler, update)
+        self._cal_raw_updates_handler(update)
 
-    async def _call_callbacks(
+    def _cal_raw_updates_handler(self, update: dict) -> None:
+        self._call_callbacks(
+            handler_type=RawUpdateHandler,
+            constructed_update=update,
+            is_user_update=False,
+        )
+
+    def _call_callbacks(
         self: "WhatsApp",
         handler_type: type[Handler],
-        constructed_update: BaseUpdate | dict,
+        constructed_update: BaseUpdate | BaseUserUpdate | dict,
+        is_user_update: bool,
     ) -> None:
         """Call the handler type callbacks for the given update."""
-        if isinstance(constructed_update, BaseUserUpdate):
-            if await self._answer_listener(constructed_update):
+        if is_user_update:
+            try:
+                listener_found = self._answer_listener(constructed_update)
+                if listener_found and not self._continue_handling:
+                    raise StopHandling
+            except StopHandling:
                 return
+            except ContinueHandling:
+                pass
 
         handled = False
         for handler in self._handlers[handler_type]:
             try:
-                handled = await handler.handle(self, constructed_update)
+                handled = handler.handle(self, constructed_update)
             except StopHandling:
                 break
             except ContinueHandling:
                 continue
             except Exception:
                 _logger.exception(
-                    "An error occurred while %s was handling an update",
+                    "An error occurred while '%s' was handling an update",
                     handler.callback.__name__,
                 )
             if handled and not self._continue_handling:
                 break
 
-    async def _answer_listener(self: "WhatsApp", update: BaseUserUpdate) -> bool:
+    def _answer_listener(self: "WhatsApp", update: BaseUserUpdate) -> bool:
         """
         Answer a listener with an update
 
@@ -439,17 +413,17 @@ class Server:
             update (BaseUpdate): The update to answer the listener with
 
         Returns:
-            bool: True if the listener was answered or canceled, False otherwise
+            bool: True if listener was found. False otherwise
         """
         listener = self._listeners.get(update.listener_identifier)
         if listener is None:
             return False
         try:
-            if await listener.apply_filters(self, update):
+            if listener.apply_filters(self, update):
                 listener.set_result(update)
                 return True
 
-            if await listener.apply_cancelers(self, update):
+            if listener.apply_cancelers(self, update):
                 listener.cancel(update)
 
         except Exception as e:
@@ -457,21 +431,21 @@ class Server:
 
         return True
 
-    def _get_handler(self: "WhatsApp", update: dict) -> type[Handler] | None:
+    def _get_handler(
+        self: "WhatsApp", update: dict
+    ) -> tuple[type[Handler] | None, bool]:
         """Get the handler for the given update."""
-        try:
-            field = update["entry"][0]["changes"][0]["field"]
-            value = update["entry"][0]["changes"][0]["value"]
-        except (KeyError, IndexError, TypeError):  # this endpoint got non-expected data
-            raise ValueError(f"Invalid update: {update}")
+        field = update["entry"][0]["changes"][0]["field"]
+        value = update["entry"][0]["changes"][0]["value"]
 
         # The `messages` field needs to be handled differently because it can be a message, button, selection, or status
         # This check must return handler or None *BEFORE* getting the handler from the dict!!
         if field == "messages":
+            is_usr_update = True
             if self.filter_updates and (
                 value["metadata"]["phone_number_id"] != self.phone_id
             ):
-                return None
+                return None, is_usr_update
 
             if "messages" in value:
                 msg_type = value["messages"][0]["type"]
@@ -479,30 +453,30 @@ class Server:
                     try:
                         interactive_type = value["messages"][0]["interactive"]["type"]
                     except KeyError:  # value with errors, when a user tries to send the interactive msg again
-                        return MessageHandler
+                        return MessageHandler, is_usr_update
                     if (
                         handler := _INTERACTIVE_TYPES.get(interactive_type)
                     ) is not None:
-                        return handler
+                        return handler, is_usr_update
                     _logger.warning(
                         "Webhook ('%s'): Unknown interactive message type: %s. Falling back to MessageHandler.",
                         self._webhook_endpoint,
                         interactive_type,
                     )
-                return _MESSAGE_TYPES.get(msg_type, MessageHandler)
+                return _MESSAGE_TYPES.get(msg_type, MessageHandler), is_usr_update
 
             elif "statuses" in value:  # status
-                return MessageStatusHandler
+                return MessageStatusHandler, is_usr_update
 
             _logger.warning(
                 "Webhook ('%s'): Unknown message type: %s",
                 self._webhook_endpoint,
                 value,
             )
-            return None
+            return None, is_usr_update
 
         # noinspection PyProtectedMember
-        return Handler._fields_to_subclasses().get(field)
+        return Handler._fields_to_subclasses().get(field), False
 
     def _delayed_register_callback_url(
         self: "WhatsApp",
@@ -553,7 +527,7 @@ class Server:
         except errors.WhatsAppError as e:
             raise RuntimeError(
                 f"Failed to register callback URL '{callback_url}'. if you are using a slow/custom server, you can "
-                "increase the delay using the `verify_timeout` parameter when initializing the WhatsApp client."
+                "increase the delay using the `webhook_challenge_delay` parameter when initializing the WhatsApp client."
             ) from e
 
     def get_flow_request_handler(
@@ -570,39 +544,8 @@ class Server:
         """
         Get a function that handles the incoming flow requests.
 
-        - Use this function only if you are using a custom server (e.g. Django, aiohttp, etc.), else use the
+        - Use this function only if you are using a custom server (e.g. Django etc.), else use the
           :meth:`WhatsApp.on_flow_request` decorator.
-
-
-        Example:
-
-            .. code-block:: python
-                :emphasize-lines: 4, 15
-                :linenos:
-
-                from aiohttp import web
-                from pywa import WhatsApp, flows
-
-                wa = WhatsApp(..., server=None, business_private_key="...", business_private_key_password="...")
-
-                async def my_flow_callback(wa: WhatsApp, request: flows.FlowRequest) -> flows.FlowResponse:
-                    ...
-
-                flow_handler = wa.get_flow_request_handler(
-                    endpoint="/flow",
-                    callback=my_flow_callback,
-                )
-
-                async def my_flow_endpoint(req: web.Request) -> web.Response:
-                    response, status_code = await flow_handler.handle(await req.json())
-                    return web.Response(text=response, status=status_code)
-
-                app = web.Application()
-                app.add_routes([web.post("/flow", my_flow_endpoint)])
-
-                if __name__ == "__main__":
-                    web.run_app(app, port=...)
-
 
         Args:
             endpoint: The endpoint to listen to (The endpoint uri you set to the flow. e.g ``/feedback_flow``).
@@ -666,28 +609,22 @@ class Server:
 
         match self._server_type:
             case utils.ServerType.FLASK:
-                if not utils.is_installed("asgiref"):
-                    raise ValueError(
-                        "Flask with ASGI is required to handle incoming updates asynchronously. Please install "
-                        """the `asgiref` package (`pip install "flask[async]"` / `pip install "asgiref"`)"""
-                    )
-
                 import flask
 
                 @self._server.route(endpoint, methods=["POST"])
                 @utils.rename_func(f"({endpoint})")
-                async def pywa_flow() -> tuple[str, int]:
-                    return await callback_wrapper(flask.request.json)
+                def pywa_flow() -> tuple[str, int]:
+                    return callback_wrapper(flask.request.json)
 
             case utils.ServerType.FASTAPI:
                 import fastapi
 
                 @self._server.post(endpoint)
                 @utils.rename_func(f"({endpoint})")
-                async def pywa_flow(
+                def pywa_flow(
                     flow_req: _EncryptedFlowRequestType,
                 ) -> fastapi.Response:
-                    response, status_code = await callback_wrapper(flow_req)
+                    response, status_code = callback_wrapper(flow_req)
                     return fastapi.Response(
                         content=response,
                         status_code=status_code,
