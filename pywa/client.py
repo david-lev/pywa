@@ -76,16 +76,15 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         self,
         phone_id: str | int | None = None,
         token: str = None,
-        base_url: str = "https://graph.facebook.com",
-        api_version: str
-        | int
-        | float
-        | Literal[utils.Version.GRAPH_API] = utils.Version.GRAPH_API,
+        *,
         session: httpx.Client | None = None,
         server: Flask | FastAPI | None = utils.MISSING,
         webhook_endpoint: str = "/",
         verify_token: str | None = None,
         filter_updates: bool = True,
+        continue_handling: bool = False,
+        skip_duplicate_updates: bool = True,
+        validate_updates: bool = True,
         business_account_id: str | int | None = None,
         callback_url: str | None = None,
         webhook_fields: Iterable[str] | None = None,
@@ -98,10 +97,10 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         | None = utils.default_flow_request_decryptor,
         flows_response_encryptor: utils.FlowResponseEncryptor
         | None = utils.default_flow_response_encryptor,
-        continue_handling: bool = True,
-        skip_duplicate_updates: bool = True,
-        validate_updates: bool = True,
-        **kwargs: Any,
+        api_version: str
+        | int
+        | float
+        | Literal[utils.Version.GRAPH_API] = utils.Version.GRAPH_API,
     ) -> None:
         """
         The WhatsApp client.
@@ -110,42 +109,42 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         Example without webhook:
 
             >>> from pywa import WhatsApp
-            >>> wa = WhatsApp(phone_id="100944",token="EAADKQl9oJxx")
+            >>> wa = WhatsApp(phone_id="1234567890",token="EAADKQl9oJxx")
 
-        Example with webhook (using Flask):
+        Example with webhook (using FastAPI):
 
-            >>> from pywa import WhatsApp
-            >>> from flask import Flask
-            >>> flask_app = Flask(__name__)
-            >>> wa = WhatsApp(
-            ...     phone_id="100944",
+            >>> import pywa, fastapi, uvicorn
+            >>> fastapi_app = fastapi.FastAPI()
+            >>> wa = pywa.WhatsApp(
+            ...     phone_id="1234567890",
             ...     token="EAADKQl9oJxx",
-            ...     server=flask_app,
-            ...     callback_url='https://6b3e.ngrok.io',
+            ...     server=fastapi_app,
+            ...     callback_url='https://pywa.ngrok.io',
             ...     verify_token="XYZ123",
             ...     app_id=1234567890,
             ...     app_secret="my_app_secret",
             ... )
+
             >>> @wa.on_message()
-            ... def message_handler(_: WhatsApp, msg: Message): print(msg)
-            >>> flask_app.run(port=8000)
+            ... def message_handler(_: WhatsApp, msg: Message):
+            ...     print(msg)
+
+            >>> uvicorn.run(fastapi_app, host=..., port=...)
 
         Args:
             phone_id: The Phone number ID to send messages from (if you manage multiple WhatsApp business accounts
              (e.g. partner solutions), you can specify the phone ID when sending messages, optional).
-            token: The token of the WhatsApp business account (In production, you should
+            token: The token to use for WhatsApp Cloud API (In production, you should
              `use permanent token <https://developers.facebook.com/docs/whatsapp/business-management-api/get-started>`_).
-            base_url: The base URL of the WhatsApp API (Do not change unless you know what you're doing).
             api_version: The API version of the WhatsApp Cloud API (default to the latest version).
             session: The session to use for requests (default: new ``httpx.Client()``, For cases where you want to
              use a custom session, e.g. for proxy support. Do not use the same session across multiple WhatsApp clients!).
             server: The Flask or FastAPI app instance to use for the webhook. required when you want to handle incoming
-             updates.
+             updates. pass `None` to insert the updates with the :meth:`webhook_update_handler`.
             callback_url: The server URL to register (without endpoint. optional).
-            verify_token: The verify token of the registered ``callback_url`` (Required when ``server`` is provided.
-             The verify token can be any string. It is used to challenge the webhook endpoint to verify that the
-             endpoint is valid).
-            webhook_challenge_delay: The delay (in seconds, default to 3) to wait for the verify token to be sent to the server (optional,
+            verify_token: A challenge string (Required when ``server`` is provided. The verify token can be any string.
+             It is used to challenge the webhook endpoint to verify that the endpoint is valid).
+            webhook_challenge_delay: The delay (in seconds, default to ``3``) to wait for the verify token to be sent to the server (optional,
              for cases where the server/network is slow or the server is taking a long time to start).
             webhook_fields: The fields to register for the callback URL (optional, if not provided, all supported fields will be
              registered. modify this if you want to reduce the number of unused requests to your server).
@@ -156,23 +155,19 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
              `App Basic Settings <https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings>`_
              (optional, recomended for validating updates, required when registering a ``callback_url``).
             webhook_endpoint: The endpoint to listen for incoming messages (if you're using the server for another purpose,
-             or for multiple WhatsApp clients, you can change this to avoid conflicts).
+             you can change this to avoid conflicts).
             filter_updates: Whether to filter out user updates that are not sent to this phone_id (default: ``True``, does
              not apply to raw updates or updates that are not user-related).
-            business_account_id: The WhatsApp business account ID (waba id) that owns the phone ID (optional, required for some API
+            business_account_id: The WhatsApp business account ID (WABA ID) that owns the phone ID (optional, required for some API
              methods).
             business_private_key: The global private key to use in the ``flows_request_decryptor``
             business_private_key_password: The global private key password (if needed) to use in the ``flows_request_decryptor``
             flows_request_decryptor: The global flows requests decryptor implementation to use to decrypt Flows requests.
             flows_response_encryptor: The global flows response encryptor implementation to use to encrypt Flows responses.
-            continue_handling: Whether to continue handling updates after a handler has been found (default: ``True``).
+            continue_handling: Whether to continue handling updates after a handler or listener has been found (default: ``False``).
             skip_duplicate_updates: Whether to skip duplicate updates (default: ``True``).
             validate_updates: Whether to validate updates payloads (default: ``True``, ``app_secret`` required).
         """
-        if not token:
-            raise ValueError(
-                "`token` must be provided in order to use the WhatsApp client."
-            )
         try:
             utils.Version.GRAPH_API.validate_min_version(str(api_version))
         except ValueError:
@@ -183,26 +178,8 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                 stacklevel=2,
             )
 
-        deprecated_fields = {}
-        if "fields" in kwargs:
-            deprecated_fields["fields"] = "webhook_fields"
-            webhook_fields = kwargs.pop("fields")
-        if "verify_timeout" in kwargs:
-            deprecated_fields["verify_timeout"] = "webhook_challenge_delay"
-            webhook_challenge_delay = kwargs.pop("verify_timeout")
-        for old, new in deprecated_fields.items():
-            warnings.simplefilter("always", DeprecationWarning)
-            warnings.warn(
-                message=f"`{old}` is deprecated and will be removed in a future version, use `{new}` instead.",
-                category=DeprecationWarning,
-                stacklevel=2,
-            )
-
         self.phone_id = str(phone_id) if phone_id is not None else None
-        if phone_id is None:
-            self.filter_updates = False
-        else:
-            self.filter_updates = filter_updates
+        self.filter_updates = filter_updates if phone_id is not None else False
         self.business_account_id = (
             str(business_account_id) if business_account_id is not None else None
         )
@@ -213,7 +190,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         ] = collections.defaultdict(list)
         self._listeners = dict[tuple[str, str], Listener]()
 
-        self._setup_api(session, token, base_url, float(str(api_version)))
+        self._setup_api(session, token, float(str(api_version)))
 
         super().__init__(
             server=server,
@@ -237,16 +214,25 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
     def _setup_api(
         self,
         session: httpx.Client | None,
-        token: str,
-        base_url: str,
+        token: str | None,
         api_version: float,
     ) -> None:
-        self.api = WhatsAppCloudApi(
+        if token is None:
+            self._api = None
+            return
+        self._api = WhatsAppCloudApi(
             token=token,
             session=session or httpx.Client(),
-            base_url=base_url,
             api_version=api_version,
         )
+
+    @property
+    def api(self) -> WhatsAppCloudApi:
+        if self._api is None:
+            raise ValueError(
+                "To access the WhatsApp Cloud API, you must provide a `token` when initializing the WhatsApp client."
+            )
+        return self._api
 
     def __str__(self) -> str:
         return f"WhatsApp(phone_id={self.phone_id!r})"
