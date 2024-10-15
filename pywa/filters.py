@@ -28,6 +28,7 @@ __all__ = [
     "startswith",
     "endswith",
     "regex",
+    "message",
     "text",
     "media",
     "image",
@@ -40,9 +41,10 @@ __all__ = [
     "location",
     "contacts",
     "order",
-    "callback",
+    "callback_button",
+    "callback_selection",
     "message_status",
-    "template_status",
+    "flow_completion",
 ]
 
 import abc
@@ -51,9 +53,13 @@ from typing import TYPE_CHECKING, Callable, Iterable, TypeVar
 
 from .errors import ReEngagementMessage, WhatsAppError
 from .types import Message as _Msg
+from .types import CallbackButton as _Clb
+from .types import CallbackSelection as _Cls
 from .types import MessageStatusType as _Mst
 from .types import MessageType as _Mt
 from .types import TemplateStatus as _Ts
+from .types import FlowCompletion as _Fc
+from .types import ChatOpened as _Co
 from .types.base_update import (
     BaseUpdate as _BaseUpdate,
 )  # noqa
@@ -402,6 +408,10 @@ class _BaseUpdateFilters(Filter):  # inherit from Filter only for auto-completio
         return m.type in cls.__message_types__
 
 
+message: Filter = new(lambda _, m: isinstance(m, _Msg), name="message")
+"""Filter for all messages."""
+
+
 class _MediaFilters(_BaseUpdateFilters):
     """
     Useful filters for media messages. Alias: ``filters.media``.
@@ -455,6 +465,7 @@ class _MediaFilters(_BaseUpdateFilters):
 
 
 media: Filter | _MediaFilters = _MediaFilters()
+"""Filters for media messages."""
 
 
 class _TextFilters(_BaseUpdateFilters):
@@ -525,6 +536,7 @@ class _TextFilters(_BaseUpdateFilters):
 
 
 text: Filter | _TextFilters = _TextFilters()
+"""Filters for text messages."""
 
 
 class _ImageFilters(_MediaFilters):
@@ -552,6 +564,7 @@ class _ImageFilters(_MediaFilters):
 
 
 image: Filter | _ImageFilters = _ImageFilters()
+"""Filters for image messages."""
 
 
 class _VideoFilters(_MediaFilters):
@@ -579,6 +592,7 @@ class _VideoFilters(_MediaFilters):
 
 
 video: Filter | _VideoFilters = _VideoFilters()
+"""Filters for video messages."""
 
 
 class _DocumentFilters(_MediaFilters):
@@ -606,6 +620,7 @@ class _DocumentFilters(_MediaFilters):
 
 
 document: Filter | _DocumentFilters = _DocumentFilters()
+"""Filters for document messages."""
 
 
 class _AudioFilters(_MediaFilters):
@@ -642,6 +657,7 @@ class _AudioFilters(_MediaFilters):
 
 
 audio: Filter | _AudioFilters = _AudioFilters()
+"""Filters for audio messages."""
 
 
 class _StickerFilters(_MediaFilters):
@@ -679,6 +695,7 @@ class _StickerFilters(_MediaFilters):
 
 
 sticker: Filter | _StickerFilters = _StickerFilters()
+"""Filters for sticker messages."""
 
 
 class _LocationFilters(_BaseUpdateFilters):
@@ -726,6 +743,7 @@ class _LocationFilters(_BaseUpdateFilters):
 
 
 location: Filter | _LocationFilters = _LocationFilters()
+"""Filters for location messages."""
 
 
 class _ReactionFilters(_BaseUpdateFilters):
@@ -775,6 +793,7 @@ class _ReactionFilters(_BaseUpdateFilters):
 
 
 reaction: Filter | _ReactionFilters = _ReactionFilters()
+"""Filters for reaction messages."""
 
 
 class _ContactsFilters(_BaseUpdateFilters):
@@ -847,6 +866,7 @@ class _ContactsFilters(_BaseUpdateFilters):
 
 
 contacts: Filter | _ContactsFilters = _ContactsFilters()
+"""Filters for contacts messages."""
 
 
 class _OrderFilters(_BaseUpdateFilters):
@@ -914,6 +934,7 @@ class _OrderFilters(_BaseUpdateFilters):
 
 
 order: Filter | _OrderFilters = _OrderFilters()
+"""Filters for order messages."""
 
 
 class _UnsupportedMsgFilters(_BaseUpdateFilters):
@@ -931,23 +952,16 @@ class _UnsupportedMsgFilters(_BaseUpdateFilters):
 
 
 unsupported: Filter | _UnsupportedMsgFilters = _UnsupportedMsgFilters()
+"""Filter for all unsupported messages."""
 
 
-class _CallbackFilters(_BaseUpdateFilters):
-    """Useful filters for callback queries. Alias: ``filters.callback``."""
+callback_button: Filter = new(lambda _, c: isinstance(c, _Clb), name="callback_button")
+"""Filter for callback buttons."""
 
-    __message_types__ = (_Mt.INTERACTIVE,)
-
-    any: Filter = new(lambda _, __: True, name="callback")
-    """
-    Filter for all callback queries (the default).
-        - Same as ``filters.callback``.
-
-    >>> filters.callback.any
-    """
-
-
-callback: Filter | _CallbackFilters = _CallbackFilters()
+callback_selection: Filter = new(
+    lambda _, c: isinstance(c, _Cls), name="callback_selection"
+)
+"""Filter for callback selections."""
 
 
 class _MessageStatusFilters(_BaseUpdateFilters):
@@ -955,7 +969,7 @@ class _MessageStatusFilters(_BaseUpdateFilters):
 
     __message_types__ = ()
 
-    any: Filter = new(lambda _, __: True, name="message_status")
+    any: Filter = new(lambda _, s: isinstance(s, _Mst), name="message_status")
     """
     Filter for all message status updates (the default).
         - Same as ``filters.message_status``.
@@ -1028,6 +1042,7 @@ class _MessageStatusFilters(_BaseUpdateFilters):
 
 
 message_status: Filter | _MessageStatusFilters = _MessageStatusFilters()
+"""Filters for message status updates."""
 
 
 class _TemplateStatusFilters(_BaseUpdateFilters):
@@ -1035,7 +1050,7 @@ class _TemplateStatusFilters(_BaseUpdateFilters):
 
     __message_types__ = ()
 
-    any: Filter = new(lambda _, __: True, name="template_status")
+    any: Filter = new(lambda _, t: isinstance(t, _Ts), name="template_status")
     """
     Filter for all template status updates (the default).
         - Same as ``filters.template_status``.
@@ -1080,3 +1095,10 @@ class _TemplateStatusFilters(_BaseUpdateFilters):
 
 
 template_status: Filter | _TemplateStatusFilters = _TemplateStatusFilters()
+"""Filters for template status updates."""
+
+flow_completion: Filter = new(lambda _, f: isinstance(f, _Fc), name="flow_completion")
+"""Filter for flow completion updates."""
+
+chat_opened: Filter = new(lambda _, c: isinstance(c, _Co), name="chat_opened")
+"""Filter for chat opened updates."""

@@ -5,12 +5,10 @@ __all__ = [
     "ListenerCanceled",
 ]
 
-import asyncio
 import threading
-from collections.abc import Iterable
-from typing import Callable, TYPE_CHECKING, TypeAlias, Awaitable
+from typing import TYPE_CHECKING, TypeAlias
 
-from pywa import utils
+from pywa import utils, _helpers as helpers
 from .types import (
     Message,
     CallbackButton,
@@ -19,6 +17,7 @@ from .types import (
     ChatOpened,
     FlowCompletion,
 )
+from .filters import Filter
 from .types.base_update import BaseUserUpdate
 
 if TYPE_CHECKING:
@@ -31,24 +30,6 @@ _SuppoertedUserUpdate: TypeAlias = (
     | MessageStatus
     | ChatOpened
     | FlowCompletion
-)
-
-
-_CancelersT: TypeAlias = (
-    Iterable[
-        Callable[
-            [
-                "WhatsApp",
-                _SuppoertedUserUpdate,
-            ],
-            bool | Awaitable[bool],
-        ]
-    ]
-    | None
-)
-_FiltersT: TypeAlias = (
-    Iterable[Callable[["WhatsApp", _SuppoertedUserUpdate], bool | Awaitable[bool]]]
-    | None
 )
 
 
@@ -65,13 +46,13 @@ class ListenerCanceled(Exception):
 class Listener:
     def __init__(
         self,
-        filters: _FiltersT,
-        cancelers: _CancelersT,
+        filters: Filter | None,
+        cancelers: Filter | None,
     ):
-        self.filters = filters or ()
-        self.cancelers = cancelers or ()
+        self.filters = filters
+        self.cancelers = cancelers
         self.event = threading.Event()
-        self.result: BaseUserUpdate | None = None
+        self.result: _SuppoertedUserUpdate | None = None
         self.cancelled_update: BaseUserUpdate | None = None
         self.exception = None
 
@@ -90,35 +71,25 @@ class Listener:
     def is_set(self) -> bool:
         return self.event.is_set()
 
-    async def apply_filters(self, wa: WhatsApp, update: _SuppoertedUserUpdate) -> bool:
-        for f in self.filters:
-            if not (
-                await f(wa, update) if asyncio.iscoroutinefunction(f) else f(wa, update)
-            ):
-                return False
-        return True
+    def apply_filters(self, wa: WhatsApp, update: _SuppoertedUserUpdate) -> bool:
+        return self.filters is None or self.filters(wa, update)
 
-    async def apply_cancelers(
-        self, wa: WhatsApp, update: _SuppoertedUserUpdate
-    ) -> bool:
-        for c in self.cancelers:
-            if await c(wa, update) if asyncio.iscoroutinefunction(c) else c(wa, update):
-                return True
-        return False
+    def apply_cancelers(self, wa: WhatsApp, update: _SuppoertedUserUpdate) -> bool:
+        return self.cancelers is None or self.cancelers(wa, update)
 
 
 class Listeners:
     def listen(
         self: WhatsApp,
         to: str | int,
-        filters: _FiltersT = None,
-        cancelers: _CancelersT = None,
+        filters: Filter | None = None,
+        cancelers: Filter | None = None,
         timeout: int | None = None,
         sent_to_phone_id: str | int | None = None,
     ) -> _SuppoertedUserUpdate:
-        from .client import _resolve_phone_id_param
-
-        recipient = _resolve_phone_id_param(self, sent_to_phone_id, "sent_to_phone_id")
+        recipient = helpers.resolve_phone_id_param(
+            self, sent_to_phone_id, "sent_to_phone_id"
+        )
         listener = Listener(
             filters=filters,
             cancelers=cancelers,
@@ -150,9 +121,8 @@ class Listeners:
         Raises:
             ValueError: If the listener does not exist
         """
-        from .client import _resolve_phone_id_param
 
-        recipient = _resolve_phone_id_param(self, phone_id, "phone_id")
+        recipient = helpers.resolve_phone_id_param(self, phone_id, "phone_id")
         listener_identifier = utils.listener_identifier(
             sender=from_user, recipient=recipient
         )

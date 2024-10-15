@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 import datetime
 import json
 import pathlib
-from typing import Any, BinaryIO, Literal, Iterable
+from typing import Any, BinaryIO, Literal, Iterable, TYPE_CHECKING
 
-from pywa import WhatsApp
-from pywa.types import (
+from .types import (
     FlowMetricName,
     FlowMetricGranularity,
     FlowJSON,
@@ -17,21 +18,46 @@ from pywa.types import (
 )
 from pywa.types.others import InteractiveType
 
+if TYPE_CHECKING:
+    from pywa import WhatsApp
+
 
 def resolve_buttons_param(
     buttons: Iterable[Button] | ButtonUrl | FlowButton | SectionList,
-) -> tuple[InteractiveType, dict]:
+) -> tuple[
+    InteractiveType,
+    dict,
+    dict[str, set[str] | str] | None,
+]:
     """
     Internal method to resolve ``buttons`` parameter. Returns a tuple of (``type``, ``buttons``).
     """
     if isinstance(buttons, SectionList):
-        return InteractiveType.LIST, buttons.to_dict()
+        data = buttons.to_dict()
+        return (
+            InteractiveType.LIST,
+            data,
+            {
+                "_options": {
+                    row["id"] for section in data["sections"] for row in section["rows"]
+                }
+            },
+        )
     elif isinstance(buttons, ButtonUrl):
-        return InteractiveType.CTA_URL, buttons.to_dict()
+        return InteractiveType.CTA_URL, buttons.to_dict(), None
     elif isinstance(buttons, FlowButton):
-        return InteractiveType.FLOW, buttons.to_dict()
+        return (
+            InteractiveType.FLOW,
+            buttons.to_dict(),
+            {"_flow_token": buttons.flow_token},
+        )
     else:  # assume its list of buttons
-        return InteractiveType.BUTTON, {"buttons": tuple(b.to_dict() for b in buttons)}
+        data = tuple(b.to_dict() for b in buttons)
+        return (
+            InteractiveType.BUTTON,
+            {"buttons": buttons},
+            {"_options": {b["reply"]["id"] for b in data}},
+        )
 
 
 _media_types_default_filenames = {
