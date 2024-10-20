@@ -18,17 +18,13 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         self,
         token: str,
         session: httpx.AsyncClient,
-        session_sync: httpx.Client,
-        base_url: str,
         api_version: float,
     ):
         super().__init__(
             token=token,
             session=session,  # noqa
-            base_url=base_url,
             api_version=api_version,
         )
-        self._session_sync = self._setup_session(session_sync, token)
 
     def __str__(self):
         return f"WhatsAppCloudApiAsync(session={self._session!r})"
@@ -55,15 +51,9 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             raise WhatsAppError.from_dict(error=res.json()["error"], response=res)
         return res.json()
 
-    def _make_request_sync(self, method: str, endpoint: str, **kwargs) -> dict | list:
-        res = self._session_sync.request(
-            method=method, url=f"{self._base_url}{endpoint}", **kwargs
-        )
-        if res.status_code >= 400:
-            raise WhatsAppError.from_dict(error=res.json()["error"], response=res)
-        return res.json()
-
-    def get_app_access_token(self, app_id: int, app_secret: str) -> dict[str, str]:
+    async def get_app_access_token(
+        self, app_id: int, app_secret: str
+    ) -> dict[str, str]:
         """
         Get an access token for an app.
 
@@ -85,7 +75,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             The access token and its type.
 
         """
-        return self._make_request_sync(
+        return await self._make_request(
             method="GET",
             endpoint="/oauth/access_token",
             params={
@@ -95,7 +85,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             },
         )
 
-    def set_app_callback_url(
+    async def set_app_callback_url(
         self,
         app_id: int,
         app_access_token: str,
@@ -124,7 +114,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         Returns:
             The success of the operation.
         """
-        return self._make_request_sync(
+        return await self._make_request(
             method="POST",
             endpoint=f"/{app_id}/subscriptions",
             params={
