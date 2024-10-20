@@ -195,6 +195,8 @@ class Server:
         res, status, update_dict, update_id = self._check_and_prepare_update(
             update=update, hmac_header=hmac_header
         )
+        if res:
+            return res, status
         self._call_handlers(update_dict)
         return self._after_calling_update(update_id)
 
@@ -341,7 +343,7 @@ class Server:
             IndexError,
         ):  # this endpoint got non-expected data
             _logger.error(
-                "Webhook ('%s') received an invalid update %s: %s",
+                "Webhook ('%s') received an invalid update%s: %s",
                 self._webhook_endpoint,
                 " (Enable `validate_updates` to ignore updates with invalid data)"
                 if not self._validate_updates
