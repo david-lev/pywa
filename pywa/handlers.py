@@ -44,6 +44,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Callable, cast, TypeAlias, Awaitable, TypedDict
 
 from . import utils
+from . import _helpers as helpers
 from .filters import Filter
 from .types import (
     CallbackButton,
@@ -155,14 +156,34 @@ class Handler(abc.ABC):
         """
         Initialize a new callback.
         """
-        self.callback = callback
-        self.filters = filters
-        self.priority = priority
+        self._callback = callback
+        self._filters = filters
+        self._priority = priority
+        self._is_async_callback = helpers.is_async_callable(callback)
+        self._is_async_filters = helpers.is_async_callable(filters)
+
+    def check(self, wa: WhatsApp, update: BaseUpdate | dict) -> bool:
+        return self._filters is None or self._filters(wa, update)
 
     def handle(self, wa: WhatsApp, update: BaseUpdate | dict) -> bool:
-        if self.filters and not self.filters(wa, update):
+        if not self.check(wa, update):
             return False
-        self.callback(wa, update)
+        self._callback(wa, update)
+        return True
+
+    async def acheck(self, wa: WhatsApp, update: BaseUpdate | dict) -> bool:
+        return self._filters is None or (
+            await self._filters(wa, update)
+            if self._is_async_filters
+            else self._filters(wa, update)
+        )
+
+    async def ahandle(self, wa: WhatsApp, update: BaseUpdate | dict) -> bool:
+        if not await self.acheck(wa, update):
+            return False
+        await self._callback(wa, update) if self._is_async_callback else self._callback(
+            wa, update
+        )
         return True
 
     @staticmethod
@@ -186,12 +207,6 @@ class Handler(abc.ABC):
                 if h._field_name is not None
             },
         )
-
-    def __str__(self) -> str:
-        return f"{self.__class__.__name__}({self.callback=!r}, {self.filters=!r}, {self.priority=})"
-
-    def __repr__(self) -> str:
-        return self.__str__()
 
 
 class MessageHandler(Handler):
@@ -239,25 +254,35 @@ class _FactoryHandler(Handler):
         priority: int,
     ):
         (
-            self.factory,
-            self.factory_filter,
+            self._factory,
+            self._factory_filter,
         ) = _resolve_factory(factory, self._data_field)
         super().__init__(callback=callback, filters=filters, priority=priority)
 
-    def handle(self, wa: WhatsApp, update: _FactorySupported) -> bool:
-        if self.factory:
-            if not self.factory_filter(wa, update):
-                return False
+    def _process_update(
+        self, wa: WhatsApp, update: _FactorySupported
+    ) -> _FactorySupported | None:
+        if self._factory:
+            if not self._factory_filter(wa, update):
+                return None
             if data := getattr(update, self._data_field) is None:
-                return False
+                return None
             update = dataclasses.replace(
-                update, **{self._data_field: self.factory(data)}
+                update, **{self._data_field: self._factory(data)}
             )
+        return update
 
+    def handle(self, wa: WhatsApp, update: _FactorySupported) -> bool:
+        update = self._process_update(wa, update)
+        if update is None:
+            return False
         return super().handle(wa, update)
 
-    def __str__(self) -> str:
-        return f"{self.__class__.__name__}({self.callback=!r}, {self.filters=!r}, {self.factory=!r}, {self.priority=!r})"
+    async def ahandle(self, wa: WhatsApp, update: _FactorySupported) -> bool:
+        update = self._process_update(wa, update)
+        if update is None:
+            return False
+        return await super().ahandle(wa, update)
 
 
 class CallbackButtonHandler(_FactoryHandler):

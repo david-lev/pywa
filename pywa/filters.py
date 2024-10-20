@@ -111,7 +111,7 @@ class NotFilter(Filter):
         return not self.filter(wa, update)
 
 
-def new(func: Callable[[_Wa, _T], bool], name: str | None = None) -> Filter[_T]:
+def new(func: Callable[[_Wa, _T], bool], name: str | None = None) -> Filter:
     return type(
         name or func.__name__ or "filter",
         (Filter,),

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import datetime
+import functools
 import json
 import pathlib
 from typing import Any, BinaryIO, Literal, Iterable, TYPE_CHECKING
@@ -234,3 +236,13 @@ def resolve_callback_data(data: str | CallbackData) -> str:
     elif isinstance(data, str):
         return data
     raise TypeError(f"Invalid callback data type {type(data)}")
+
+
+def is_async_callable(obj: Any) -> bool:
+    """Check if an object is an async callable."""
+    while isinstance(obj, functools.partial):
+        obj = obj.func
+
+    return asyncio.iscoroutinefunction(obj) or (
+        callable(obj) and asyncio.iscoroutinefunction(obj.__call__)
+    )

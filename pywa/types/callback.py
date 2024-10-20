@@ -43,7 +43,7 @@ class CallbackData:
     """
     Base class for all callback data classes. Subclass this class to create a type-safe callback data class.
 
-        If you use ``dataclasses``, which is the recommended way (You get free ordered ``__init__`` and extra features),
+        If you use :func:`dataclasses.dataclass`, which is the recommended way (You get free ordered ``__init__`` and extra features),
         you should not use ``kw_only=True``.
         This is because we are limited to 200 characters in the callback data, so we need to use positional arguments.
         So object like ``User(id=123, name='John')`` will be converted to ``123:John``.
@@ -59,7 +59,7 @@ class CallbackData:
         ``CallbackData.__callback_sep__`` (``¶`` in the base class level, affects all child classes).
 
         When providing subclassed ``CallbackData`` as a ``factory`` parameter in callback handlers, a basic matching
-        filter (``startswith(callback_id)``) will be added automatically. So no need to create one yourself.
+        filter will be added automatically. So no need to create one yourself.
 
 
     Example:

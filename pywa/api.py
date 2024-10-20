@@ -24,11 +24,7 @@ class WhatsAppCloudApi:
         session: httpx.Client,
         api_version: float,
     ):
-        self._session = self._setup_session(session, token)
         self._base_url = f"https://graph.facebook.com/v{api_version}"
-
-    @staticmethod
-    def _setup_session(session, token: str) -> httpx.Client:
         if session.headers.get("Authorization") is not None:
             raise ValueError(
                 "You can't use the same httpx.Client for multiple WhatsApp instances!"
@@ -39,7 +35,7 @@ class WhatsAppCloudApi:
                 "User-Agent": f"PyWa/{pywa.__version__}",
             }
         )
-        return session
+        self._session = session
 
     def __str__(self) -> str:
         return f"WhatsAppCloudApi(session={self._session})"

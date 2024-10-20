@@ -140,7 +140,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             token: The token to use for WhatsApp Cloud API (In production, you should
              `use permanent token <https://developers.facebook.com/docs/whatsapp/business-management-api/get-started>`_).
             api_version: The API version of the WhatsApp Cloud API (default to the latest version).
-            session: The session to use for requests (default: new ``httpx.Client()``, For cases where you want to
+            session: The session to use for api requests (default: new ``httpx.Client()``, For cases where you want to
              use a custom session, e.g. for proxy support. Do not use the same session across multiple WhatsApp clients!).
             server: The Flask or FastAPI app instance to use for the webhook. required when you want to handle incoming
              updates. pass `None` to insert the updates with the :meth:`webhook_update_handler`.
@@ -247,10 +247,10 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         return self._api
 
     def __str__(self) -> str:
-        return f"WhatsApp(phone_id={self.phone_id!r})"
+        return super().__repr__()
 
     def __repr__(self) -> str:
-        return self.__str__()
+        return f"WhatsApp(phone_id={self.phone_id!r})"
 
     @property
     def token(self) -> str:
@@ -322,9 +322,9 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                 " (Flask or FastAPI or custom server by setting `server` to None) in order to handle incoming updates."
             )
         for handler in handlers:
-            self._check_for_async_func(handler.callback)
+            self._check_for_async_func(handler._callback)
             bisect.insort(
-                self._handlers[handler.__class__], handler, key=lambda x: -x.priority
+                self._handlers[handler.__class__], handler, key=lambda x: -x._priority
             )
 
     def remove_handlers(self, *handlers: Handler, silent: bool = False) -> None:
@@ -375,7 +375,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         """
         for handlers in self._handlers.values():
             for handler in handlers:
-                if handler.callback in callbacks:
+                if handler._callback in callbacks:
                     handlers.remove(handler)
 
     def send_message(
@@ -504,7 +504,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent message.
+            The sent message.
         """
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
         if keyboard is not None:
@@ -600,7 +600,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent image message.
+            The sent image message.
         """
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
         if body is not None:
@@ -708,7 +708,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent video.
+            The sent video.
         """
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
         if body is not None:
@@ -819,7 +819,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent document.
+            The sent document.
         """
 
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
@@ -918,7 +918,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent audio file.
+            The sent audio file.
         """
 
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
@@ -975,7 +975,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent message.
+            The sent message.
         """
 
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
@@ -1135,7 +1135,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent location.
+            The sent location.
         """
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
         return SentMessage.from_sent_update(
@@ -1183,7 +1183,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent message.
+            The sent message.
         """
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
         return SentMessage.from_sent_update(
@@ -1236,7 +1236,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent message.
+            The sent message.
         """
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
         return SentMessage.from_sent_update(
@@ -1288,7 +1288,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent message.
+            The sent message.
         """
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
         return SentMessage.from_sent_update(
@@ -1359,7 +1359,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent message.
+            The sent message.
         """
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
         return SentMessage.from_sent_update(
@@ -1435,7 +1435,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent message.
+            The sent message.
         """
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
         return SentMessage.from_sent_update(
@@ -2031,7 +2031,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent template.
+            The sent template.
 
         Raises:
 
