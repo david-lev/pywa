@@ -41,17 +41,25 @@ class SentMessage(_ClientShortcuts):
     def recipient(self) -> str:
         """
         The WhatsApp ID which the message was sent to.
-            - Shortcut for ``.metadata.phone_number_id``.
+            - Shortcut for ``.to_user.wa_id``.
         """
         return self.to_user.wa_id
+
+    @property
+    def _internal_recipient(self) -> str:
+        return self.sender
 
     @property
     def sender(self) -> str:
         """
         The WhatsApp ID of the sender who sent the message.
-            - Shortcut for ``.from_user.wa_id``.
+            - Same as ``.from_phone_id``.
         """
         return self.from_phone_id
+
+    @property
+    def _internal_sender(self) -> str:
+        return self.recipient
 
     @classmethod
     def from_sent_update(

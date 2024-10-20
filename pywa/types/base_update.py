@@ -169,8 +169,8 @@ class _ClientShortcuts(abc.ABC):
 
     id: str
     _client: WhatsApp
-    sender: str
-    recipient: str
+    _internal_sender: str
+    _internal_recipient: str
 
     @property
     def message_id_to_reply(self) -> str:
@@ -274,8 +274,8 @@ class _ClientShortcuts(abc.ABC):
             The ID of the sent reply.
         """
         return self._client.send_message(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             text=text,
             header=header,
             footer=footer,
@@ -330,8 +330,8 @@ class _ClientShortcuts(abc.ABC):
             The ID of the sent reply.
         """
         return self._client.send_image(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             image=image,
             caption=caption,
             body=body,
@@ -385,8 +385,8 @@ class _ClientShortcuts(abc.ABC):
             The ID of the sent reply.
         """
         return self._client.send_video(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             video=video,
             caption=caption,
             reply_to_message_id=self.message_id_to_reply if quote else None,
@@ -443,8 +443,8 @@ class _ClientShortcuts(abc.ABC):
             The ID of the sent reply.
         """
         return self._client.send_document(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             document=document,
             filename=filename,
             caption=caption,
@@ -484,8 +484,8 @@ class _ClientShortcuts(abc.ABC):
             The ID of the sent message.
         """
         return self._client.send_audio(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             audio=audio,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             mime_type=mime_type,
@@ -522,8 +522,8 @@ class _ClientShortcuts(abc.ABC):
             The ID of the sent reply.
         """
         return self._client.send_sticker(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             sticker=sticker,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             mime_type=mime_type,
@@ -565,8 +565,8 @@ class _ClientShortcuts(abc.ABC):
             The ID of the sent reply.
         """
         return self._client.send_location(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             latitude=latitude,
             longitude=longitude,
             name=name,
@@ -601,8 +601,8 @@ class _ClientShortcuts(abc.ABC):
             The ID of the sent reply.
         """
         return self._client.request_location(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             text=text,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             tracker=tracker,
@@ -641,8 +641,8 @@ class _ClientShortcuts(abc.ABC):
             The ID of the sent reply.
         """
         return self._client.send_contact(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             contact=contact,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             tracker=tracker,
@@ -667,8 +667,8 @@ class _ClientShortcuts(abc.ABC):
             The ID of the sent reaction.
         """
         return self._client.send_reaction(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             emoji=emoji,
             message_id=self.message_id_to_reply.id,
             tracker=tracker,
@@ -690,8 +690,8 @@ class _ClientShortcuts(abc.ABC):
             The ID of the sent unreaction.
         """
         return self._client.remove_reaction(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             message_id=self.message_id_to_reply,
             tracker=tracker,
         )
@@ -728,8 +728,8 @@ class _ClientShortcuts(abc.ABC):
             The ID of the sent reply.
         """
         return self._client.send_catalog(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             body=body,
             footer=footer,
             thumbnail_product_sku=thumbnail_product_sku,
@@ -765,8 +765,8 @@ class _ClientShortcuts(abc.ABC):
             The ID of the sent reply.
         """
         return self._client.send_product(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             catalog_id=catalog_id,
             sku=sku,
             body=body,
@@ -826,8 +826,8 @@ class _ClientShortcuts(abc.ABC):
             The ID of the sent reply.
         """
         return self._client.send_products(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             catalog_id=catalog_id,
             product_sections=product_sections,
             title=title,
@@ -895,8 +895,8 @@ class _ClientShortcuts(abc.ABC):
 
         """
         return self._client.send_template(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             template=template,
             reply_to_message_id=quote if quote else None,
             tracker=tracker,
@@ -911,7 +911,7 @@ class _ClientShortcuts(abc.ABC):
             Whether it was successful.
         """
         return self._client.mark_message_as_read(
-            sender=self.recipient, message_id=self.message_id_to_reply
+            sender=self._internal_recipient, message_id=self.message_id_to_reply
         )
 
 
@@ -939,12 +939,20 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
         return self.from_user.wa_id
 
     @property
+    def _internal_sender(self) -> str:
+        return self.sender
+
+    @property
     def recipient(self) -> str:
         """
         The WhatsApp ID which the message was sent to.
             - Shortcut for ``.metadata.phone_number_id``.
         """
         return self.metadata.phone_number_id
+
+    @property
+    def _internal_recipient(self) -> str:
+        return self.recipient
 
     @property
     def listener_identifier(self) -> tuple[str, str]:
