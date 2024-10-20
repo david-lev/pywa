@@ -12,6 +12,7 @@ from typing import Iterable, TYPE_CHECKING, Any, BinaryIO, Literal, TypeAlias
 
 import httpx
 
+from .media import BaseMedia
 from .. import utils
 from .base_update import BaseUserUpdate  # noqa
 from .others import (
@@ -138,6 +139,30 @@ class FlowCompletion(BaseUserUpdate):
             token=flow_token,
             response=response,
         )
+
+    def get_media(self, media_cls: type[BaseMedia], key: str) -> BaseMedia:
+        """
+        Get the media object from the response.
+
+        Example:
+            >>> from pywa import WhatsApp, types
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_flow_completion()
+            ... def on_flow_completion(_: WhatsApp, flow: types.FlowCompletion):
+            ...     img = flow.get_media(types.Image,key="image")
+            ...     img.download()
+
+        Args:
+            media_cls: The media class to create the media object (e.g. ``types.Image``).
+            key: The key of the media in the response.
+
+        Returns:
+            The media object.
+
+        Raises:
+            KeyError: If the key is not found in the response.
+        """
+        return media_cls.from_flow_completion(self._client, self.response[key])
 
 
 class FlowRequestActionType(utils.StrEnum):
