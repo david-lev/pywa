@@ -9,7 +9,7 @@ from pywa.client import (
     WhatsApp as _WhatsApp,
     _DEFAULT_VERIFY_DELAY_SEC,
 )  # noqa MUST BE IMPORTED FIRST
-from pywa import _helpers as helpers
+from pywa_async import _helpers as helpers
 from .handlers import (
     MessageHandler,
     MessageStatusHandler,
@@ -79,6 +79,7 @@ from .types.flows import (
     FlowValidationError,
     FlowAsset,
 )
+from .types.sent_message import SentMessage
 from .types.others import InteractiveType
 from .utils import FastAPI, Flask
 
@@ -86,18 +87,19 @@ _logger = logging.getLogger(__name__)
 
 
 class WhatsApp(AsyncListeners, _WhatsApp):
+    api: WhatsAppCloudApiAsync
+
     def __init__(
         self,
         phone_id: str | int | None = None,
         token: str = None,
         *,
         session: httpx.AsyncClient | None = None,
-        session_sync: httpx.Client | None = None,
         server: Flask | FastAPI | None = utils.MISSING,
         webhook_endpoint: str = "/",
         verify_token: str | None = None,
         filter_updates: bool = True,
-        continue_handling: bool = True,
+        continue_handling: bool = False,
         skip_duplicate_updates: bool = True,
         validate_updates: bool = True,
         business_account_id: str | int | None = None,
@@ -112,62 +114,54 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         | None = utils.default_flow_request_decryptor,
         flows_response_encryptor: utils.FlowResponseEncryptor
         | None = utils.default_flow_response_encryptor,
-        base_url: str = "https://graph.facebook.com",
         api_version: str
         | int
         | float
         | Literal[utils.Version.GRAPH_API] = utils.Version.GRAPH_API,
-        **kwargs,
     ) -> None:
         """
-        The Async WhatsApp client.
+        The WhatsApp client.
             - Full documentation on `pywa.readthedocs.io <https://pywa.readthedocs.io>`_.
 
         Example without webhook:
 
-            >>> import asyncio
             >>> from pywa_async import WhatsApp
-            >>> wa = WhatsApp(phone_id="100944",token="EAADKQl9oJxx")
-            >>> async def main():
-            ...     await wa.send_message(to="1234567890", text="Hello from PyWa!")
-            >>> asyncio.run(main())
+            >>> wa = WhatsApp(phone_id="1234567890",token="EAADKQl9oJxx")
 
         Example with webhook (using FastAPI):
 
-            >>> import fastapi, uvicorn
-            >>> from pywa_async import WhatsApp
+            >>> import pywa_async, fastapi, uvicorn
             >>> fastapi_app = fastapi.FastAPI()
-            >>> wa = WhatsApp(
-            ...     phone_id="100944",
+            >>> wa = pywa_async.WhatsApp(
+            ...     phone_id="1234567890",
             ...     token="EAADKQl9oJxx",
             ...     server=fastapi_app,
-            ...     callback_url='https://6b3e.ngrok.io',
+            ...     callback_url='https://pywa.ngrok.io',
             ...     verify_token="XYZ123",
             ...     app_id=1234567890,
             ...     app_secret="my_app_secret",
             ... )
-            >>> @wa.on_message()
-            ... async def message_handler(_: WhatsApp, msg: Message):
-            ...     await msg.reply("Hello!")
 
-            uvicorn main:fastapi_app --reload
+            >>> @wa.on_message
+            ... async def message_handler(_: WhatsApp, msg: Message):
+            ...     print(msg)
+
+            >>> uvicorn.run(fastapi_app, host=..., port=...)
 
         Args:
             phone_id: The Phone number ID to send messages from (if you manage multiple WhatsApp business accounts
              (e.g. partner solutions), you can specify the phone ID when sending messages, optional).
-            token: The token of the WhatsApp business account (In production, you should
+            token: The token to use for WhatsApp Cloud API (In production, you should
              `use permanent token <https://developers.facebook.com/docs/whatsapp/business-management-api/get-started>`_).
-            base_url: The base URL of the WhatsApp API (Do not change unless you know what you're doing).
             api_version: The API version of the WhatsApp Cloud API (default to the latest version).
-            session: The session to use for httpx (default: new ``httpx.AsyncClient``, For cases where you want to
+            session: The session to use for api requests (default: new ``httpx.AsyncClient``, For cases where you want to
              use a custom session, e.g. for proxy support. Do not use the same session across multiple WhatsApp clients!).
             server: The Flask or FastAPI app instance to use for the webhook. required when you want to handle incoming
-             updates.
+             updates. pass `None` to insert the updates with the :meth:`webhook_update_handler`.
             callback_url: The server URL to register (without endpoint. optional).
-            verify_token: The verify token of the registered ``callback_url`` (Required when ``server`` is provided.
-             The verify token can be any string. It is used to challenge the webhook endpoint to verify that the
-             endpoint is valid).
-            webhook_challenge_delay: The delay (in seconds, default to 3) to wait for the verify token to be sent to the server (optional,
+            verify_token: A challenge string (Required when ``server`` is provided. The verify token can be any string.
+             It is used to challenge the webhook endpoint to verify that the endpoint is valid).
+            webhook_challenge_delay: The delay (in seconds, default to ``3``) to wait for the verify token to be sent to the server (optional,
              for cases where the server/network is slow or the server is taking a long time to start).
             webhook_fields: The fields to register for the callback URL (optional, if not provided, all supported fields will be
              registered. modify this if you want to reduce the number of unused requests to your server).
@@ -181,22 +175,19 @@ class WhatsApp(AsyncListeners, _WhatsApp):
              you can change this to avoid conflicts).
             filter_updates: Whether to filter out user updates that are not sent to this phone_id (default: ``True``, does
              not apply to raw updates or updates that are not user-related).
-            validate_updates: Whether to validate updates payloads (default: ``True``, ``app_secret`` required).
-            business_account_id: The WhatsApp business account ID (waba id) that owns the phone ID (optional, required for some API
+            business_account_id: The WhatsApp business account ID (WABA ID) that owns the phone ID (optional, required for some API
              methods).
             business_private_key: The global private key to use in the ``flows_request_decryptor``
             business_private_key_password: The global private key password (if needed) to use in the ``flows_request_decryptor``
             flows_request_decryptor: The global flows requests decryptor implementation to use to decrypt Flows requests.
             flows_response_encryptor: The global flows response encryptor implementation to use to encrypt Flows responses.
-            continue_handling: Whether to continue handling updates after a handler has been found (default: ``True``).
+            continue_handling: Whether to continue handling updates after a handler or listener has been found (default: ``False``).
             skip_duplicate_updates: Whether to skip duplicate updates (default: ``True``).
+            validate_updates: Whether to validate updates payloads (default: ``True``, ``app_secret`` required).
         """
-        self._session_sync = session_sync
-        self._listeners = dict[tuple[str, str], Listener]()
         super().__init__(
             phone_id=phone_id,
             token=token,
-            base_url=base_url,
             api_version=api_version,
             session=session,
             server=server,
@@ -216,10 +207,9 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             continue_handling=continue_handling,
             skip_duplicate_updates=skip_duplicate_updates,
             validate_updates=validate_updates,
-            **kwargs,
         )
 
-    def __str__(self):
+    def __repr__(self):
         return f"WhatsAppAsync(phone_id={self.phone_id!r})"
 
     _handlers_to_update_constractor: dict[
@@ -240,26 +230,16 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         self,
         session: httpx.AsyncClient | None,
         token: str,
-        base_url: str,
         api_version: float,
     ) -> None:
-        self.api = WhatsAppCloudApiAsync(
+        if token is None:
+            self._api = None
+            return
+        self._api = WhatsAppCloudApiAsync(
             token=token,
             session=session or httpx.AsyncClient(),
-            session_sync=self._session_sync or httpx.Client(),
-            base_url=base_url,
             api_version=api_version,
         )
-        delattr(self, "_session_sync")
-
-    @property
-    def token(self) -> str:
-        return super().token
-
-    @token.setter
-    def token(self, value: str) -> None:
-        super().token = value
-        self.api._session_sync.headers["Authorization"] = f"Bearer {value}"
 
     async def send_message(
         self,
@@ -273,7 +253,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         keyboard: None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
-    ) -> str:
+    ) -> SentMessage:
         """
         Send a message to a WhatsApp user.
 
@@ -387,7 +367,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent message.
+            The sent message.
         """
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
         if keyboard is not None:
@@ -400,19 +380,22 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                 stacklevel=2,
             )
         if not buttons:
-            return (
-                await self.api.send_message(
+            return SentMessage.from_sent_update(
+                client=self,
+                update=await self.api.send_message(
                     sender=sender,
                     to=str(to),
                     typ=MessageType.TEXT,
                     msg={"body": text, "preview_url": preview_url},
                     reply_to_message_id=reply_to_message_id,
                     biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-                )
-            )["messages"][0]["id"]
-        typ, kb = helpers.resolve_buttons_param(buttons)
-        return (
-            await self.api.send_message(
+                ),
+                from_phone_id=sender,
+            )
+        typ, kb, sent_kw = helpers.resolve_buttons_param(buttons)
+        return SentMessage.from_sent_update(
+            client=self,
+            update=await self.api.send_message(
                 sender=sender,
                 to=str(to),
                 typ=MessageType.INTERACTIVE,
@@ -430,8 +413,10 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                 ),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-            )
-        )["messages"][0]["id"]
+            ),
+            from_phone_id=sender,
+            **sent_kw,
+        )
 
     send_text = send_message  # alias
 
@@ -447,7 +432,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
-    ) -> str:
+    ) -> SentMessage:
         """
         Send an image to a WhatsApp user.
             - Images must be 8-bit, RGB or RGBA.
@@ -478,7 +463,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent image message.
+            The sent image message.
         """
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
         if body is not None:
@@ -490,17 +475,19 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                 category=DeprecationWarning,
                 stacklevel=2,
             )
-        is_url, image = await _resolve_media_param(
+        is_url, image = await helpers.resolve_media_param(
             wa=self,
-            phone_id=sender,
             media=image,
             mime_type=mime_type,
-            media_type=MessageType.IMAGE,
             filename=None,
+            media_type=MessageType.IMAGE,
+            phone_id=sender,
         )
+
         if not buttons:
-            return (
-                await self.api.send_message(
+            return SentMessage.from_sent_update(
+                client=self,
+                update=await self.api.send_message(
                     sender=sender,
                     to=str(to),
                     typ=MessageType.IMAGE,
@@ -508,15 +495,17 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                         media_id_or_url=image, is_url=is_url, caption=caption
                     ),
                     biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-                )
-            )["messages"][0]["id"]
+                ),
+                from_phone_id=sender,
+            )
         if not caption:
             raise ValueError(
                 "A caption must be provided when sending an image with buttons."
             )
-        typ, kb = helpers.resolve_buttons_param(buttons)
-        return (
-            await self.api.send_message(
+        typ, kb, sent_kw = helpers.resolve_buttons_param(buttons)
+        return SentMessage.from_sent_update(
+            client=self,
+            update=await self.api.send_message(
                 sender=sender,
                 to=str(to),
                 typ=MessageType.INTERACTIVE,
@@ -534,8 +523,10 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                 ),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-            )
-        )["messages"][0]["id"]
+            ),
+            from_phone_id=sender,
+            **sent_kw,
+        )
 
     async def send_video(
         self,
@@ -549,7 +540,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
-    ) -> str:
+    ) -> SentMessage:
         """
         Send a video to a WhatsApp user.
             - Only H.264 video codec and AAC audio codec is supported.
@@ -581,7 +572,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent video.
+            The sent video.
         """
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
         if body is not None:
@@ -593,17 +584,18 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                 category=DeprecationWarning,
                 stacklevel=2,
             )
-        is_url, video = await _resolve_media_param(
+        is_url, video = await helpers.resolve_media_param(
             wa=self,
             media=video,
             mime_type=mime_type,
-            media_type=MessageType.VIDEO,
             filename=None,
+            media_type=MessageType.VIDEO,
             phone_id=sender,
         )
         if not buttons:
-            return (
-                await self.api.send_message(
+            return SentMessage.from_sent_update(
+                client=self,
+                update=await self.api.send_message(
                     sender=sender,
                     to=str(to),
                     typ=MessageType.VIDEO,
@@ -611,15 +603,17 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                         media_id_or_url=video, is_url=is_url, caption=caption
                     ),
                     biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-                )
-            )["messages"][0]["id"]
+                ),
+                from_phone_id=sender,
+            )
         if not caption:
             raise ValueError(
                 "A caption must be provided when sending a video with buttons."
             )
-        typ, kb = helpers.resolve_buttons_param(buttons)
-        return (
-            await self.api.send_message(
+        typ, kb, sent_kw = helpers.resolve_buttons_param(buttons)
+        return SentMessage.from_sent_update(
+            client=self,
+            update=await self.api.send_message(
                 sender=sender,
                 to=str(to),
                 typ=MessageType.INTERACTIVE,
@@ -637,8 +631,10 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                 ),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-            )
-        )["messages"][0]["id"]
+            ),
+            from_phone_id=sender,
+            **sent_kw,
+        )
 
     async def send_document(
         self,
@@ -653,7 +649,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
-    ) -> str:
+    ) -> SentMessage:
         """
         Send a document to a WhatsApp user.
 
@@ -687,7 +683,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent document.
+            The sent document.
         """
 
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
@@ -700,7 +696,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                 category=DeprecationWarning,
                 stacklevel=2,
             )
-        is_url, document = await _resolve_media_param(
+        is_url, document = await helpers.resolve_media_param(
             wa=self,
             media=document,
             mime_type=mime_type,
@@ -709,8 +705,9 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             phone_id=sender,
         )
         if not buttons:
-            return (
-                await self.api.send_message(
+            return SentMessage.from_sent_update(
+                client=self,
+                update=await self.api.send_message(
                     sender=sender,
                     to=str(to),
                     typ=MessageType.DOCUMENT,
@@ -721,15 +718,17 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                         filename=filename,
                     ),
                     biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-                )
-            )["messages"][0]["id"]
+                ),
+                from_phone_id=sender,
+            )
         if not caption:
             raise ValueError(
                 "A caption must be provided when sending a document with buttons."
             )
-        typ, kb = helpers.resolve_buttons_param(buttons)
-        return (
-            await self.api.send_message(
+        typ, kb, sent_kw = helpers.resolve_buttons_param(buttons)
+        return SentMessage.from_sent_update(
+            client=self,
+            update=await self.api.send_message(
                 sender=sender,
                 to=str(to),
                 typ=MessageType.INTERACTIVE,
@@ -748,8 +747,10 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                 ),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-            )
-        )["messages"][0]["id"]
+            ),
+            from_phone_id=sender,
+            **sent_kw,
+        )
 
     async def send_audio(
         self,
@@ -759,7 +760,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
-    ) -> str:
+    ) -> SentMessage:
         """
         Send an audio file to a WhatsApp user.
 
@@ -781,28 +782,30 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent audio file.
+            The sent audio file.
         """
 
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
-        is_url, audio = await _resolve_media_param(
+        is_url, audio = await helpers.resolve_media_param(
             wa=self,
             media=audio,
             mime_type=mime_type,
-            media_type=MessageType.AUDIO,
             filename=None,
+            media_type=MessageType.AUDIO,
             phone_id=sender,
         )
-        return (
-            await self.api.send_message(
+        return SentMessage.from_sent_update(
+            client=self,
+            update=await self.api.send_message(
                 sender=sender,
                 to=str(to),
                 typ=MessageType.AUDIO,
                 msg=helpers.get_media_msg(media_id_or_url=audio, is_url=is_url),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-            )
-        )["messages"][0]["id"]
+            ),
+            from_phone_id=sender,
+        )
 
     async def send_sticker(
         self,
@@ -812,7 +815,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
-    ) -> str:
+    ) -> SentMessage:
         """
         Send a sticker to a WhatsApp user.
             - A static sticker needs to be 512x512 pixels and cannot exceed 100 KB.
@@ -836,11 +839,11 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent message.
+            The sent message.
         """
 
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
-        is_url, sticker = await _resolve_media_param(
+        is_url, sticker = await helpers.resolve_media_param(
             wa=self,
             media=sticker,
             mime_type=mime_type,
@@ -848,16 +851,18 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             media_type=MessageType.STICKER,
             phone_id=sender,
         )
-        return (
-            await self.api.send_message(
+        return SentMessage.from_sent_update(
+            client=self,
+            update=await self.api.send_message(
                 sender=sender,
                 to=str(to),
                 typ=MessageType.STICKER,
                 msg=helpers.get_media_msg(media_id_or_url=sticker, is_url=is_url),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-            )
-        )["messages"][0]["id"]
+            ),
+            from_phone_id=sender,
+        )
 
     async def send_reaction(
         self,
@@ -866,7 +871,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         message_id: str,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
-    ) -> str:
+    ) -> SentMessage:
         """
         React to a message with an emoji.
             - You can react to incoming messages by using the
@@ -897,15 +902,18 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             The message ID of the reaction (You can't use this message id to remove the reaction or perform any other
             action on it. instead, use the message ID of the message you reacted to).
         """
-        return (
-            await self.api.send_message(
-                sender=helpers.resolve_phone_id_param(self, sender, "sender"),
+        sender = helpers.resolve_phone_id_param(self, sender, "sender")
+        return SentMessage.from_sent_update(
+            client=self,
+            update=await self.api.send_message(
+                sender=sender,
                 to=str(to),
                 typ=MessageType.REACTION,
                 msg={"emoji": emoji, "message_id": message_id},
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-            )
-        )["messages"][0]["id"]
+            ),
+            from_phone_id=sender,
+        )
 
     async def remove_reaction(
         self,
@@ -913,7 +921,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         message_id: str,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
-    ) -> str:
+    ) -> SentMessage:
         """
         Remove reaction from a message.
             - You can remove reactions from incoming messages by using the
@@ -942,15 +950,18 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             The message ID of the reaction (You can't use this message id to re-react or perform any other action on it.
             instead, use the message ID of the message you unreacted to).
         """
-        return (
-            await self.api.send_message(
-                sender=helpers.resolve_phone_id_param(self, sender, "sender"),
+        sender = helpers.resolve_phone_id_param(self, sender, "sender")
+        return SentMessage.from_sent_update(
+            client=self,
+            update=await self.api.send_message(
+                sender=sender,
                 to=str(to),
                 typ=MessageType.REACTION,
                 msg={"emoji": "", "message_id": message_id},
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-            )
-        )["messages"][0]["id"]
+            ),
+            from_phone_id=sender,
+        )
 
     async def send_location(
         self,
@@ -962,7 +973,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
-    ) -> str:
+    ) -> SentMessage:
         """
         Send a location to a WhatsApp user.
 
@@ -988,11 +999,13 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent location.
+            The sent location.
         """
-        return (
-            await self.api.send_message(
-                sender=helpers.resolve_phone_id_param(self, sender, "sender"),
+        sender = helpers.resolve_phone_id_param(self, sender, "sender")
+        return SentMessage.from_sent_update(
+            client=self,
+            update=await self.api.send_message(
+                sender=sender,
                 to=str(to),
                 typ=MessageType.LOCATION,
                 msg={
@@ -1003,8 +1016,9 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                 },
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-            )
-        )["messages"][0]["id"]
+            ),
+            from_phone_id=sender,
+        )
 
     async def request_location(
         self,
@@ -1013,17 +1027,17 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
-    ) -> str:
+    ) -> SentMessage:
         """
         Send a text message with button to request the user's location.
 
         Example:
 
-                >>> wa = WhatsApp(...)
-                >>> wa.request_location(
-                ...     to='1234567890',
-                ...     text='Please share your location with us!',
-                ... )
+            >>> wa = WhatsApp(...)
+            >>> wa.request_location(
+            ...     to='1234567890',
+            ...     text='Please share your location with us.',
+            ... )
 
         Args:
             to: The phone ID of the WhatsApp user.
@@ -1033,11 +1047,13 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent message.
+            The sent message.
         """
-        return (
-            await self.api.send_message(
-                sender=helpers.resolve_phone_id_param(self, sender, "sender"),
+        sender = helpers.resolve_phone_id_param(self, sender, "sender")
+        return SentMessage.from_sent_update(
+            client=self,
+            update=await self.api.send_message(
+                sender=sender,
                 to=str(to),
                 typ=MessageType.INTERACTIVE,
                 msg=helpers.get_interactive_msg(
@@ -1047,8 +1063,9 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                 ),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-            )
-        )["messages"][0]["id"]
+            ),
+            from_phone_id=sender,
+        )
 
     async def send_contact(
         self,
@@ -1057,7 +1074,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
-    ) -> str:
+    ) -> SentMessage:
         """
         Send a contact/s to a WhatsApp user.
 
@@ -1083,11 +1100,13 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent message.
+            The sent message.
         """
-        return (
-            await self.api.send_message(
-                sender=helpers.resolve_phone_id_param(self, sender, "sender"),
+        sender = helpers.resolve_phone_id_param(self, sender, "sender")
+        return SentMessage.from_sent_update(
+            client=self,
+            update=await self.api.send_message(
+                sender=sender,
                 to=str(to),
                 typ=MessageType.CONTACTS,
                 msg=tuple(c.to_dict() for c in contact)
@@ -1095,8 +1114,9 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                 else (contact.to_dict(),),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-            )
-        )["messages"][0]["id"]
+            ),
+            from_phone_id=sender,
+        )
 
     async def send_catalog(
         self,
@@ -1107,7 +1127,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
-    ) -> str:
+    ) -> SentMessage:
         """
         Send the business catalog to a WhatsApp user.
 
@@ -1132,11 +1152,13 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent message.
+            The sent message.
         """
-        return (
-            await self.api.send_message(
-                sender=helpers.resolve_phone_id_param(self, sender, "sender"),
+        sender = helpers.resolve_phone_id_param(self, sender, "sender")
+        return SentMessage.from_sent_update(
+            client=self,
+            update=await self.api.send_message(
+                sender=sender,
                 to=str(to),
                 typ=MessageType.INTERACTIVE,
                 msg=helpers.get_interactive_msg(
@@ -1158,8 +1180,9 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                 ),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-            )
-        )["messages"][0]["id"]
+            ),
+            from_phone_id=sender,
+        )
 
     async def send_product(
         self,
@@ -1171,7 +1194,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
-    ) -> str:
+    ) -> SentMessage:
         """
         Send a product from a business catalog to a WhatsApp user.
             - To send multiple products, use :py:func:`~pywa.client.WhatsApp.send_products`.
@@ -1200,11 +1223,13 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent message.
+            The sent message.
         """
-        return (
-            await self.api.send_message(
-                sender=helpers.resolve_phone_id_param(self, sender, "sender"),
+        sender = helpers.resolve_phone_id_param(self, sender, "sender")
+        return SentMessage.from_sent_update(
+            client=self,
+            update=await self.api.send_message(
+                sender=sender,
                 to=str(to),
                 typ=MessageType.INTERACTIVE,
                 msg=helpers.get_interactive_msg(
@@ -1218,8 +1243,9 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                 ),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-            )
-        )["messages"][0]["id"]
+            ),
+            from_phone_id=sender,
+        )
 
     async def send_products(
         self,
@@ -1232,7 +1258,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
-    ) -> str:
+    ) -> SentMessage:
         """
         Send products from a business catalog to a WhatsApp user.
             - To send a single product, use :py:func:`~pywa.client.WhatsApp.send_product`.
@@ -1273,11 +1299,13 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent message.
+            The sent message.
         """
-        return (
-            await self.api.send_message(
-                sender=helpers.resolve_phone_id_param(self, sender, "sender"),
+        sender = helpers.resolve_phone_id_param(self, sender, "sender")
+        return SentMessage.from_sent_update(
+            client=self,
+            update=await self.api.send_message(
+                sender=sender,
                 to=str(to),
                 typ=MessageType.INTERACTIVE,
                 msg=helpers.get_interactive_msg(
@@ -1295,8 +1323,9 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                 ),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-            )
-        )["messages"][0]["id"]
+            ),
+            from_phone_id=sender,
+        )
 
     async def mark_message_as_read(
         self,
@@ -1882,16 +1911,13 @@ class WhatsApp(AsyncListeners, _WhatsApp):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the sent template.
-
-        Raises:
-
+            The sent template.
         """
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
         is_url = None
         match type(template.header):
             case Template.Image:
-                is_url, template.header.image = await _resolve_media_param(
+                is_url, template.header.image = await helpers.resolve_media_param(
                     wa=self,
                     media=template.header.image,
                     mime_type=template.header.mime_type,
@@ -1900,7 +1926,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                     phone_id=sender,
                 )
             case Template.Document:
-                is_url, template.header.document = await _resolve_media_param(
+                is_url, template.header.document = await helpers.resolve_media_param(
                     wa=self,
                     media=template.header.document,
                     mime_type="application/pdf",  # the only supported mime type in template's document header
@@ -1909,7 +1935,7 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                     phone_id=sender,
                 )
             case Template.Video:
-                is_url, template.header.video = await _resolve_media_param(
+                is_url, template.header.video = await helpers.resolve_media_param(
                     wa=self,
                     media=template.header.video,
                     mime_type=template.header.mime_type,
@@ -2420,31 +2446,3 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                 code=code,
             )
         )["success"]
-
-
-async def _resolve_media_param(
-    wa: WhatsApp,
-    media: str | pathlib.Path | bytes | BinaryIO,
-    mime_type: str | None,
-    filename: str | None,
-    media_type: Literal[
-        MessageType.IMAGE, MessageType.VIDEO, MessageType.AUDIO, MessageType.STICKER
-    ]
-    | None,
-    phone_id: str,
-) -> tuple[bool, str]:
-    """
-    Internal method to resolve the ``media`` parameter. Returns a tuple of (``is_url``, ``media_id_or_url``).
-    """
-    if isinstance(media, (str, pathlib.Path)):
-        if str(media).startswith(("https://", "http://")):
-            return True, media
-        elif str(media).isdigit() and not pathlib.Path(media).is_file():
-            return False, media  # assume it's a media ID
-    # assume its bytes or a file path
-    return False, await wa.upload_media(
-        phone_id=phone_id,
-        media=media,
-        mime_type=mime_type,
-        filename=helpers._media_types_default_filenames.get(media_type, filename),
-    )
