@@ -3,6 +3,7 @@ from __future__ import annotations
 __all__ = [
     "ListenerTimeout",
     "ListenerCanceled",
+    "ListenerStopped",
 ]
 
 import threading
@@ -34,13 +35,72 @@ _SuppoertedUserUpdate: TypeAlias = (
 
 
 class ListenerTimeout(Exception):
+    """
+    The listener timed out
+
+    Example:
+
+        .. code-block:: python
+
+                try:
+                    wa.listen(to="123456", timeout=10)
+                except ListenerTimeout as e:
+                    wa.send_message("123456", "Timeout")
+
+    Attributes:
+        timeout: The timeout that was set for the listener
+    """
+
     def __init__(self, timeout: int):
         self.timeout = timeout
 
 
 class ListenerCanceled(Exception):
+    """
+    The listener was canceled by a filter
+
+    Example:
+
+        .. code-block:: python
+
+            try:
+                wa.listen(
+                    to="123456",
+                    filters=filters.message & filters.text,
+                    cancelers=filters.callback_button & filters.matches("cancel")
+                )
+            except ListenerCanceled as e:
+                print(e.update) # print the update that caused the listener to be canceled
+                wa.send_message("123456", "You cancelled the listener by clicking the cancel button")
+
+    Attributes:
+        update: The update that caused the listener to be canceled
+    """
+
     def __init__(self, update: BaseUserUpdate | None = None):
         self.update = update
+
+
+class ListenerStopped(Exception):
+    """
+    The listener was stopped manually by wa.stop_listening(...)
+
+    Example:
+
+        .. code-block:: python
+
+            try:
+                wa.listen("123456")
+            except ListenerStopped as e:
+                print(e.reason) # print the reason the listener was stopped
+                wa.send_message("123456", "The listener was stopped")
+
+    Attributes:
+        reason: The reason the listener was stopped (set by wa.stop_listening(reason="..."))
+    """
+
+    def __init__(self, reason: str | None = None):
+        self.reason = reason
 
 
 class Listener:
@@ -51,10 +111,9 @@ class Listener:
     ):
         self.filters = filters
         self.cancelers = cancelers
-        self.event = threading.Event()
+        self.event: threading.Event = threading.Event()
         self.result: _SuppoertedUserUpdate | None = None
-        self.cancelled_update: BaseUserUpdate | None = None
-        self.exception = None
+        self.exception: Exception | None = None
 
     def set_result(self, result: BaseUserUpdate) -> None:
         self.result = result
@@ -65,8 +124,10 @@ class Listener:
         self.event.set()
 
     def cancel(self, update: BaseUserUpdate | None = None) -> None:
-        self.cancelled_update = update
-        self.event.set()
+        self.set_exception(ListenerCanceled(update))
+
+    def stop(self, reason: str | None = None) -> None:
+        self.set_exception(ListenerStopped(reason))
 
     def is_set(self) -> bool:
         return self.event.is_set()
@@ -87,35 +148,80 @@ class Listeners:
         timeout: int | None = None,
         sent_to_phone_id: str | int | None = None,
     ) -> _SuppoertedUserUpdate:
+        """
+        Listen to a user update
+
+        Example:
+
+            .. code-block:: python
+
+                    try:
+                        wa.send_message(
+                            to="123456",
+                            text="Send me a message",
+                            buttons=[Button(title="Cancel", callback_data="cancel")]
+                        )
+                        update: Message = wa.listen(
+                            to="123456",
+                            filters=filters.message & filters.text,
+                            cancelers=filters.callback_button & filters.matches("cancel"),
+                            timeout=10
+                        )
+                        print(update)
+                    except ListenerTimeout:
+                        print("Listener timed out")
+                    except ListenerCanceled:
+                        print("Listener was canceled")
+                    except ListenerStopped:
+                        print("Listener was stopped")
+
+        Args:
+            to: The user to listen to
+            filters: The filters to apply to the update, return the update if the filters pass
+            cancelers: The filters to cancel the listening, raise ListenerCanceled if the update matches
+            timeout: The time to wait for the update, raise ListenerTimeout if the time passes
+            sent_to_phone_id: The phone id to listen for
+
+        Returns:
+            The update that passed the filters
+
+        Raises:
+            ListenerTimeout: If the listener timed out
+            ListenerCanceled: If the listener was canceled by a filter
+            ListenerStopped: If the listener was stopped manually
+        """
         recipient = helpers.resolve_phone_id_param(
             self, sent_to_phone_id, "sent_to_phone_id"
         )
+        identifier = utils.listener_identifier(sender=to, recipient=recipient)
         listener = Listener(
             filters=filters,
             cancelers=cancelers,
         )
-        self._listeners[utils.listener_identifier(sender=to, recipient=recipient)] = (
-            listener
-        )
+        self._listeners[identifier] = listener
         try:
             if not listener.event.wait(timeout):
                 raise ListenerTimeout(timeout)
-            if listener.cancelled_update:
-                raise ListenerCanceled(listener.cancelled_update)
+            if listener.result:
+                return listener.result
             if listener.exception:
                 raise listener.exception
-            return listener.result
         finally:
-            self.remove_listener(from_user=to, phone_id=recipient)
+            self._remove_listener(from_user=to, phone_id=recipient)
 
-    def remove_listener(
-        self: WhatsApp, from_user: str | int, phone_id: str | int | None = None
+    def stop_listening(
+        self: WhatsApp,
+        to: str | int,
+        reason: str | None = None,
+        phone_id: str | int | None = None,
     ) -> None:
         """
-        Remove and cancel a listener
+        Stop listening to a user.
+            - Raising :class:`ListenerStopped` to the listener
 
         Args:
-            from_user: The user that the listener is listening to
+            to: The user that the listener is listening to
+            reason: The reason to stop listening
             phone_id: The phone id that the listener is listening for
 
         Raises:
@@ -123,13 +229,22 @@ class Listeners:
         """
 
         recipient = helpers.resolve_phone_id_param(self, phone_id, "phone_id")
-        listener_identifier = utils.listener_identifier(
-            sender=from_user, recipient=recipient
-        )
         try:
-            listener = self._listeners[listener_identifier]
+            listener = self._listeners[
+                utils.listener_identifier(sender=to, recipient=recipient)
+            ]
         except KeyError:
             raise ValueError("Listener does not exist")
-        if not listener.is_set():
-            listener.cancel()
-        del self._listeners[listener_identifier]
+        listener.stop(reason)
+        self._remove_listener(from_user=to, phone_id=recipient)
+
+    def _remove_listener(
+        self: WhatsApp, from_user: str | int, phone_id: str | int | None = None
+    ) -> None:
+        recipient = helpers.resolve_phone_id_param(self, phone_id, "phone_id")
+        try:
+            del self._listeners[
+                utils.listener_identifier(sender=from_user, recipient=recipient)
+            ]
+        except KeyError:
+            pass
