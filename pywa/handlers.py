@@ -159,11 +159,10 @@ class Handler(abc.ABC):
         self._callback = callback
         self._filters = filters
         self._priority = priority
-        self._is_async_callback = helpers.is_async_callable(callback)
-        self._is_async_filters = helpers.is_async_callable(filters)
+        self._is_async_callback = utils.is_async_callable(callback)
 
     def check(self, wa: WhatsApp, update: BaseUpdate | dict) -> bool:
-        return self._filters is None or self._filters(wa, update)
+        return self._filters is None or self._filters.check_sync(wa, update)
 
     def handle(self, wa: WhatsApp, update: BaseUpdate | dict) -> bool:
         if not self.check(wa, update):
@@ -172,11 +171,7 @@ class Handler(abc.ABC):
         return True
 
     async def acheck(self, wa: WhatsApp, update: BaseUpdate | dict) -> bool:
-        return self._filters is None or (
-            await self._filters(wa, update)
-            if self._is_async_filters
-            else self._filters(wa, update)
-        )
+        return self._filters is None or await self._filters.check_async(wa, update)
 
     async def ahandle(self, wa: WhatsApp, update: BaseUpdate | dict) -> bool:
         if not await self.acheck(wa, update):
@@ -234,7 +229,7 @@ class MessageHandler(Handler):
     def __init__(
         self,
         callback: _MessageCallback,
-        filters: Filter | None = None,
+        filters: Filter = None,
         priority: int = 0,
     ):
         super().__init__(callback=callback, filters=filters, priority=priority)
@@ -312,7 +307,7 @@ class CallbackButtonHandler(_FactoryHandler):
     def __init__(
         self,
         callback: _CallbackButtonCallback,
-        filters: Filter | None = None,
+        filters: Filter = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ):
@@ -351,7 +346,7 @@ class CallbackSelectionHandler(_FactoryHandler):
     def __init__(
         self,
         callback: _CallbackSelectionCallback,
-        filters: Filter | None = None,
+        filters: Filter = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ):
@@ -392,7 +387,7 @@ class MessageStatusHandler(_FactoryHandler):
     def __init__(
         self,
         callback: _MessageStatusCallback,
-        filters: Filter | None = None,
+        filters: Filter = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ):
@@ -430,7 +425,7 @@ class ChatOpenedHandler(Handler):
     def __init__(
         self,
         callback: _ChatOpenedCallback,
-        filters: Filter | None = None,
+        filters: Filter = None,
         priority: int = 0,
     ):
         super().__init__(callback=callback, filters=filters, priority=priority)
@@ -465,7 +460,7 @@ class TemplateStatusHandler(Handler):
     def __init__(
         self,
         callback: _TemplateStatusCallback,
-        filters: Filter | None = None,
+        filters: Filter = None,
         priority: int = 0,
     ):
         super().__init__(callback=callback, filters=filters, priority=priority)
@@ -497,7 +492,7 @@ class FlowCompletionHandler(Handler):
     def __init__(
         self,
         callback: _FlowCompletionCallback,
-        filters: Filter | None = None,
+        filters: Filter = None,
         priority: int = 0,
     ):
         super().__init__(callback=callback, filters=filters, priority=priority)
@@ -528,7 +523,7 @@ class RawUpdateHandler(Handler):
     def __init__(
         self,
         callback: _RawUpdateCallback,
-        filters: Filter | None = None,
+        filters: Filter = None,
         priority: int = 0,
     ):
         super().__init__(callback=callback, filters=filters, priority=priority)
@@ -581,7 +576,7 @@ class HandlerDecorators:
 
     def on_raw_update(
         self: WhatsApp = None,
-        filters: Filter | None = None,
+        filters: Filter = None,
         priority: int = 0,
     ) -> Callable[[_RawUpdateCallback], _RawUpdateCallback] | _RawUpdateCallback:
         """
@@ -618,7 +613,7 @@ class HandlerDecorators:
 
     def on_message(
         self: WhatsApp = None,
-        filters: Filter | None = None,
+        filters: Filter = None,
         priority: int = 0,
     ) -> Callable[[_MessageCallback], _MessageCallback] | _MessageCallback:
         """
@@ -658,7 +653,7 @@ class HandlerDecorators:
 
     def on_callback_button(
         self: WhatsApp = None,
-        filters: Filter | None = None,
+        filters: Filter = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ) -> (
@@ -708,7 +703,7 @@ class HandlerDecorators:
 
     def on_callback_selection(
         self: WhatsApp = None,
-        filters: Filter | None = None,
+        filters: Filter = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ) -> (
@@ -758,7 +753,7 @@ class HandlerDecorators:
 
     def on_message_status(
         self: WhatsApp = None,
-        filters: Filter | None = None,
+        filters: Filter = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ) -> (
@@ -812,7 +807,7 @@ class HandlerDecorators:
 
     def on_chat_opened(
         self: WhatsApp = None,
-        filters: Filter | None = None,
+        filters: Filter = None,
         priority: int = 0,
     ) -> Callable[[_ChatOpenedCallback], _ChatOpenedCallback] | _ChatOpenedCallback:
         """
@@ -851,7 +846,7 @@ class HandlerDecorators:
 
     def on_template_status(
         self: WhatsApp = None,
-        filters: Filter | None = None,
+        filters: Filter = None,
         priority: int = 0,
     ) -> (
         Callable[[_TemplateStatusCallback], _TemplateStatusCallback]
@@ -896,7 +891,7 @@ class HandlerDecorators:
 
     def on_flow_completion(
         self: WhatsApp = None,
-        filters: Filter | None = None,
+        filters: Filter = None,
         priority: int = 0,
     ) -> (
         Callable[[_FlowCompletionCallback], _FlowCompletionCallback]
@@ -1021,7 +1016,8 @@ class FlowRequestCallbackWrapper:
     ):
         self._wa = wa
         self._endpoint = endpoint
-        self._main_callback = wa._check_for_async_func(callback)
+        wa._check_for_async_callback(callback)
+        self._main_callback = callback
         self._error_callback: _FlowRequestHandlerT | None = None
         self._on_callbacks: dict[
             tuple[FlowRequestActionType | str, str | None],
@@ -1068,7 +1064,7 @@ class FlowRequestCallbackWrapper:
         *,
         action: FlowRequestActionType,
         screen: Screen | str | None = None,
-        filters: Filter | None = None,
+        filters: Filter = None,
     ) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT]:
         """
         Decorator to help you add more handlers to the same endpoint and split the logic into multiple functions.
@@ -1138,7 +1134,7 @@ class FlowRequestCallbackWrapper:
         callback: _FlowRequestHandlerT,
         action: FlowRequestActionType,
         screen: Screen | str | None = None,
-        filters: Filter | None = None,
+        filters: Filter = None,
     ) -> FlowRequestCallbackWrapper:
         """
         Add a handler to the current endpoint.
@@ -1167,9 +1163,11 @@ class FlowRequestCallbackWrapper:
         Returns:
             The current instance.
         """
+        self._wa._check_for_async_callback(callback)
+        self._wa._check_for_async_filters(filters)
         self._on_callbacks[
             (action, screen.id if isinstance(screen, Screen) else screen)
-        ].append((filters, self._wa._check_for_async_func(callback)))
+        ].append((filters, callback))
         return self
 
     def set_errors_handler(
@@ -1201,7 +1199,8 @@ class FlowRequestCallbackWrapper:
         """
         if self._error_callback:
             raise ValueError("An error handler is already set for this endpoint.")
-        self._error_callback = self._wa._check_for_async_func(callback)
+        self._wa._check_for_async_callback(callback)
+        self._error_callback = callback
         return self
 
     def _get_callback(self, req: FlowRequest) -> _FlowRequestHandlerT:

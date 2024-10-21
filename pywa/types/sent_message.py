@@ -80,8 +80,8 @@ class SentMessage(_ClientShortcuts):
     def wait_for_reply(
         self,
         force_quote: bool = False,
-        filters: pywa_filters.Filter | None = None,
-        cancelers: pywa_filters.Filter | None = None,
+        filters: pywa_filters.Filter = None,
+        cancelers: pywa_filters.Filter = None,
         timeout: int | None = None,
     ) -> Message:
         """
@@ -121,7 +121,7 @@ class SentMessage(_ClientShortcuts):
     def wait_to_read(
         self,
         cancel_when_delivered: bool = False,
-        cancelers: pywa_filters.Filter | None = None,
+        cancelers: pywa_filters.Filter = None,
         timeout: int | None = None,
     ) -> MessageStatus:
         if cancel_when_delivered:
@@ -142,7 +142,7 @@ class SentMessage(_ClientShortcuts):
     def wait_to_delivered(
         self,
         cancel_when_read: bool = True,
-        cancelers: pywa_filters.Filter | None = None,
+        cancelers: pywa_filters.Filter = None,
         timeout: int | None = None,
     ) -> MessageStatus:
         if cancel_when_read:

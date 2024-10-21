@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import functools
 import json
 import base64
@@ -425,3 +426,13 @@ def deprecated_func(use_instead: str | None) -> Callable:
 def listener_identifier(sender: str | int, recipient: str | int) -> tuple[str, str]:
     """Create a unique identifier for a listener."""
     return str(sender), str(recipient)
+
+
+def is_async_callable(obj: Any) -> bool:
+    """Check if an object is an async callable."""
+    while isinstance(obj, functools.partial):
+        obj = obj.func
+
+    return asyncio.iscoroutinefunction(obj) or (
+        callable(obj) and asyncio.iscoroutinefunction(obj.__call__)
+    )

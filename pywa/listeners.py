@@ -143,8 +143,8 @@ class Listeners:
     def listen(
         self: WhatsApp,
         to: str | int,
-        filters: Filter | None = None,
-        cancelers: Filter | None = None,
+        filters: Filter = None,
+        cancelers: Filter = None,
         timeout: int | None = None,
         sent_to_phone_id: str | int | None = None,
     ) -> _SuppoertedUserUpdate:

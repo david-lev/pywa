@@ -17,12 +17,13 @@ import os
 import pathlib
 import warnings
 from types import NoneType
-from typing import BinaryIO, Iterable, Literal, Any, Callable, TypeVar
+from typing import BinaryIO, Iterable, Literal, Any, Callable
 
 import httpx
 
 from . import utils, _helpers as helpers
 from .api import WhatsAppCloudApi
+from .filters import Filter
 from .handlers import (
     Handler,
     HandlerDecorators,
@@ -70,8 +71,6 @@ from .server import Server
 _logger = logging.getLogger(__name__)
 
 _DEFAULT_VERIFY_DELAY_SEC = 3
-
-FuncT: TypeVar = TypeVar("FuncT", bound=Callable[..., Any])
 
 
 class WhatsApp(Server, HandlerDecorators, Listeners):
@@ -214,14 +213,24 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             validate_updates=validate_updates,
         )
 
-    @staticmethod
-    def _check_for_async_func(func: FuncT) -> FuncT:
+    _async_allowed = False
+
+    def _check_for_async_callback(self, func: Callable[..., Any]) -> None:
         """Prevent async functions from being used in the sync version of pywa."""
-        if asyncio.iscoroutine(func):
+        if self._async_allowed:
+            return
+        if utils.is_async_callable(func):
             raise ValueError(
                 "Async functions are not supported in the sync version of pywa. import `WhatsApp` from `pywa_async` instead"
             )
-        return func
+
+    def _check_for_async_filters(self, filters: Filter) -> None:
+        if self._async_allowed:
+            return
+        if filters.has_async():
+            raise ValueError(
+                "Async functions are not supported in the sync version of pywa. import `WhatsApp` from `pywa_async` instead"
+            )
 
     def _setup_api(
         self,
@@ -322,7 +331,8 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                 " (Flask or FastAPI or custom server by setting `server` to None) in order to handle incoming updates."
             )
         for handler in handlers:
-            self._check_for_async_func(handler._callback)
+            self._check_for_async_callback(handler._callback)
+            self._check_for_async_filters(handler._filters)
             bisect.insort(
                 self._handlers[handler.__class__], handler, key=lambda x: -x._priority
             )
@@ -1535,16 +1545,10 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                     mime_type or mimetypes.guess_type(path)[0],
                 )
             elif (url := str(media)).startswith(("https://", "http://")):
-                is_requests, err_cls = utils.is_requests_and_err(dl_session)
-                if is_requests:
-                    _logger.warning(
-                        "Using `requests.Session` is deprecated and will be removed in future versions. "
-                        "Please use `httpx.Client` instead."
-                    )
-                res = (dl_session or httpx).get(url)
+                res = (dl_session or httpx.Client(follow_redirects=True)).get(url)
                 try:
                     res.raise_for_status()
-                except err_cls as e:
+                except httpx.HTTPError as e:
                     raise ValueError(
                         f"An error occurred while downloading from {url}"
                     ) from e

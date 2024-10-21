@@ -10,7 +10,6 @@ from pywa._helpers import (
     get_flow_fields,
     get_flow_metric_field,
     resolve_callback_data,
-    is_async_callable,
 )
 
 import pathlib

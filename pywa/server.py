@@ -402,7 +402,7 @@ class Server:
             except Exception:
                 _logger.exception(
                     "An error occurred while '%s' was handling an update",
-                    handler.callback.__name__,
+                    handler._callback.__name__,
                 )
             if handled and not self._continue_handling:
                 break

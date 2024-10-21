@@ -47,11 +47,11 @@ __all__ = [
     "flow_completion",
 ]
 
-import abc
 import re
-from typing import TYPE_CHECKING, Callable, Iterable, TypeVar
+from typing import TYPE_CHECKING, Callable, Iterable, TypeVar, Awaitable
 
 from .errors import ReEngagementMessage, WhatsAppError
+from . import utils
 from .types import Message as _Msg
 from .types import CallbackButton as _Clb
 from .types import CallbackSelection as _Cls
@@ -71,17 +71,25 @@ if TYPE_CHECKING:
 _T = TypeVar("_T", bound=_BaseUpdate)
 
 
-class Filter(abc.ABC):
-    @abc.abstractmethod
-    def __call__(self, wa: _Wa, update: _T) -> bool: ...
+class Filter:
+    """Base filter class handling both sync and async."""
 
-    def __and__(self, other: Filter) -> Filter:
+    def check_sync(self, wa: "_Wa", update: _T) -> bool:
+        raise NotImplementedError
+
+    async def check_async(self, wa: "_Wa", update: _T) -> bool:
+        raise NotImplementedError
+
+    def has_async(self) -> bool:
+        raise NotImplementedError
+
+    def __and__(self, other: "Filter") -> "Filter":
         return AndFilter(self, other)
 
-    def __or__(self, other: Filter) -> Filter:
+    def __or__(self, other: "Filter") -> "Filter":
         return OrFilter(self, other)
 
-    def __invert__(self) -> Filter:
+    def __invert__(self) -> "Filter":
         return NotFilter(self)
 
 
@@ -90,8 +98,16 @@ class AndFilter(Filter):
         self.left = left
         self.right = right
 
-    def __call__(self, wa: _Wa, update: _T) -> bool:
-        return self.left(wa, update) and self.right(wa, update)
+    def check_sync(self, wa: "_Wa", update: _T) -> bool:
+        return self.left.check_sync(wa, update) and self.right.check_sync(wa, update)
+
+    async def check_async(self, wa: "_Wa", update: _T) -> bool:
+        return await self.left.check_async(wa, update) and await self.right.check_async(
+            wa, update
+        )
+
+    def has_async(self) -> bool:
+        return self.left.has_async() or self.right.has_async()
 
 
 class OrFilter(Filter):
@@ -99,28 +115,64 @@ class OrFilter(Filter):
         self.left = left
         self.right = right
 
-    def __call__(self, wa: _Wa, update: _T) -> bool:
-        return self.left(wa, update) or self.right(wa, update)
+    def check_sync(self, wa: "_Wa", update: _T) -> bool:
+        return self.left.check_sync(wa, update) or self.right.check_sync(wa, update)
+
+    async def check_async(self, wa: "_Wa", update: _T) -> bool:
+        return await self.left.check_async(wa, update) or await self.right.check_async(
+            wa, update
+        )
+
+    def has_async(self) -> bool:
+        return self.left.has_async() or self.right.has_async()
 
 
 class NotFilter(Filter):
     def __init__(self, fil: Filter):
         self.filter = fil
 
-    def __call__(self, wa: _Wa, update: _T) -> bool:
-        return not self.filter(wa, update)
+    def check_sync(self, wa: "_Wa", update: _T) -> bool:
+        return not self.filter.check_sync(wa, update)
+
+    async def check_async(self, wa: "_Wa", update: _T) -> bool:
+        return not await self.filter.check_async(wa, update)
+
+    def has_async(self) -> bool:
+        return self.filter.has_async()
 
 
-def new(func: Callable[[_Wa, _T], bool], name: str | None = None) -> Filter:
+def new(
+    func: Callable[["_Wa", _T], bool | Awaitable[bool]], name: str | None = None
+) -> Filter:
+    """Factory function to create a filter from a function (sync or async)."""
+
+    is_async = utils.is_async_callable(func)
+
+    def check_sync(self, wa: "_Wa", update: _T) -> bool:
+        return func(wa, update)
+
+    async def check_async(self, wa: "_Wa", update: _T) -> bool:
+        if is_async:
+            return await func(wa, update)
+        return func(wa, update)
+
+    def has_async(self) -> bool:
+        return is_async
+
     return type(
         name or func.__name__ or "filter",
         (Filter,),
-        {"__call__": lambda self, wa, update: func(wa, update)},
+        {
+            "check_sync": check_sync,
+            "check_async": check_async,
+            "has_async": has_async,
+        },
     )()
 
 
 forwarded: Filter = new(
-    new(lambda _, m: m.forwarded, name="forwarded"), name="forwarded"
+    lambda _, m: m.forwarded,
+    name="forwarded",
 )
 """
 Filter for forwarded messages.
@@ -196,7 +248,8 @@ def sent_to(*, display_phone_number: str = None, phone_number_id: str = None) ->
 
 
 sent_to_me: Filter = new(
-    lambda wa, m: sent_to(phone_number_id=wa.phone_id)(wa, m), name="sent_to_me"
+    lambda wa, m: sent_to(phone_number_id=wa.phone_id).check_sync(wa, m),
+    name="sent_to_me",
 )
 """
 Filter for updates that are sent to the client phone number.
@@ -394,12 +447,12 @@ class _BaseUpdateFilters(Filter):  # inherit from Filter only for auto-completio
     __message_types__: tuple[_Mt, ...]
     """The message types that the filter is for."""
 
-    def __call__(self, wa: _Wa, m: _T) -> Filter[_T]:
+    def __call__(self, wa: _Wa, m: _T) -> Filter:
         """When instantiated, call the ``any`` method."""
         return self.any(wa, m)
 
     @staticmethod
-    def any(wa: _Wa, m: _T) -> Filter[_T]:
+    def any(wa: _Wa, m: _T) -> Filter:
         """Filter for all updates of this type."""
         ...
 

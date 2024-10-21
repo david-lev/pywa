@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from pywa.listeners import (
     ListenerTimeout,
+    ListenerStopped,
     ListenerCanceled as _ListenerCanceled,
     Listener as _Listener,
 )
@@ -20,8 +21,7 @@ from .types import (
     ChatOpened,
     FlowCompletion,
 )
-from pywa import utils
-from pywa.client import _resolve_phone_id_param
+from pywa import utils, _helpers as helpers
 from .types.base_update import BaseUserUpdateAsync
 
 if TYPE_CHECKING:
@@ -72,7 +72,7 @@ class Listener(_Listener):
         self.cancelers = cancelers or ()
         self.future: asyncio.Future[_SuppoertedUserUpdate] = asyncio.Future()
         self.future.add_done_callback(
-            lambda _: wa.remove_listener(from_user=to, phone_id=sent_to_phone_id)
+            lambda _: wa._remove_listener(from_user=to, phone_id=sent_to_phone_id)
         )
 
     def set_result(self, result: _SuppoertedUserUpdate) -> None:
@@ -101,7 +101,9 @@ class AsyncListeners:
         """
         Asynchronously listen for a specific type of update from a specific user
         """
-        recipient = _resolve_phone_id_param(self, sent_to_phone_id, "sent_to_phone_id")
+        recipient = helpers.resolve_phone_id_param(
+            self, sent_to_phone_id, "sent_to_phone_id"
+        )
         listener = Listener(
             wa=self,
             to=to,
