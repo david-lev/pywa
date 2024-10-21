@@ -30,21 +30,44 @@ __all__ = [
     "regex",
     "message",
     "text",
+    "is_command",
+    "command",
     "media",
+    "mimetypes",
+    "extensions",
+    "has_caption",
     "image",
     "video",
     "audio",
+    "audio_only",
+    "voice",
     "document",
     "sticker",
+    "animated_sticker",
+    "static_sticker",
     "reaction",
+    "reaction_added",
+    "reaction_removed",
+    "reaction_emojis",
     "unsupported",
     "location",
+    "current_location",
+    "location_in_radius",
     "contacts",
+    "contacts_has_wa",
     "order",
     "callback_button",
     "callback_selection",
     "message_status",
+    "sent",
+    "delivered",
+    "read",
+    "failed",
+    "failed_with",
+    "with_tracker",
     "flow_completion",
+    "template_status",
+    "chat_opened",
 ]
 
 import re
@@ -74,22 +97,22 @@ _T = TypeVar("_T", bound=_BaseUpdate)
 class Filter:
     """Base filter class handling both sync and async."""
 
-    def check_sync(self, wa: "_Wa", update: _T) -> bool:
+    def check_sync(self, wa: _Wa, update: _T) -> bool:
         raise NotImplementedError
 
-    async def check_async(self, wa: "_Wa", update: _T) -> bool:
+    async def check_async(self, wa: _Wa, update: _T) -> bool:
         raise NotImplementedError
 
     def has_async(self) -> bool:
         raise NotImplementedError
 
-    def __and__(self, other: "Filter") -> "Filter":
+    def __and__(self, other: Filter) -> Filter:
         return AndFilter(self, other)
 
-    def __or__(self, other: "Filter") -> "Filter":
+    def __or__(self, other: Filter) -> Filter:
         return OrFilter(self, other)
 
-    def __invert__(self) -> "Filter":
+    def __invert__(self) -> Filter:
         return NotFilter(self)
 
 
@@ -98,10 +121,10 @@ class AndFilter(Filter):
         self.left = left
         self.right = right
 
-    def check_sync(self, wa: "_Wa", update: _T) -> bool:
+    def check_sync(self, wa: _Wa, update: _T) -> bool:
         return self.left.check_sync(wa, update) and self.right.check_sync(wa, update)
 
-    async def check_async(self, wa: "_Wa", update: _T) -> bool:
+    async def check_async(self, wa: _Wa, update: _T) -> bool:
         return await self.left.check_async(wa, update) and await self.right.check_async(
             wa, update
         )
@@ -115,10 +138,10 @@ class OrFilter(Filter):
         self.left = left
         self.right = right
 
-    def check_sync(self, wa: "_Wa", update: _T) -> bool:
+    def check_sync(self, wa: _Wa, update: _T) -> bool:
         return self.left.check_sync(wa, update) or self.right.check_sync(wa, update)
 
-    async def check_async(self, wa: "_Wa", update: _T) -> bool:
+    async def check_async(self, wa: _Wa, update: _T) -> bool:
         return await self.left.check_async(wa, update) or await self.right.check_async(
             wa, update
         )
@@ -131,10 +154,10 @@ class NotFilter(Filter):
     def __init__(self, fil: Filter):
         self.filter = fil
 
-    def check_sync(self, wa: "_Wa", update: _T) -> bool:
+    def check_sync(self, wa: _Wa, update: _T) -> bool:
         return not self.filter.check_sync(wa, update)
 
-    async def check_async(self, wa: "_Wa", update: _T) -> bool:
+    async def check_async(self, wa: _Wa, update: _T) -> bool:
         return not await self.filter.check_async(wa, update)
 
     def has_async(self) -> bool:
@@ -142,16 +165,16 @@ class NotFilter(Filter):
 
 
 def new(
-    func: Callable[["_Wa", _T], bool | Awaitable[bool]], name: str | None = None
+    func: Callable[[_Wa, _T], bool | Awaitable[bool]], name: str | None = None
 ) -> Filter:
     """Factory function to create a filter from a function (sync or async)."""
 
     is_async = utils.is_async_callable(func)
 
-    def check_sync(self, wa: "_Wa", update: _T) -> bool:
+    def check_sync(self, wa: _Wa, update: _T) -> bool:
         return func(wa, update)
 
-    async def check_async(self, wa: "_Wa", update: _T) -> bool:
+    async def check_async(self, wa: _Wa, update: _T) -> bool:
         if is_async:
             return await func(wa, update)
         return func(wa, update)
@@ -160,7 +183,7 @@ def new(
         return is_async
 
     return type(
-        name or func.__name__ or "filter",
+        name or func.__name__ or Filter,
         (Filter,),
         {
             "check_sync": check_sync,
@@ -170,7 +193,7 @@ def new(
     )()
 
 
-forwarded: Filter = new(
+forwarded = new(
     lambda _, m: m.forwarded,
     name="forwarded",
 )
@@ -180,7 +203,7 @@ Filter for forwarded messages.
 >>> filters.forwarded
 """
 
-forwarded_many_times: Filter = new(
+forwarded_many_times = new(
     lambda _, m: m.forwarded_many_times, name="forwarded_many_times"
 )
 """
@@ -189,7 +212,7 @@ Filter for messages that have been forwarded many times.
 >>> filters.forwarded_many_times
 """
 
-reply: Filter = new(lambda _, m: m.reply_to_message is not None, name="reply")
+reply = new(lambda _, m: m.reply_to_message is not None, name="reply")
 """
 Filter for messages that reply to another message.
 
@@ -209,7 +232,7 @@ def replays_to(*msg_ids: str) -> Filter:
     )
 
 
-has_referred_product: Filter = new(
+has_referred_product = new(
     lambda _, m: (
         m.reply_to_message is not None
         and m.reply_to_message.referred_product is not None
@@ -247,7 +270,7 @@ def sent_to(*, display_phone_number: str = None, phone_number_id: str = None) ->
     )
 
 
-sent_to_me: Filter = new(
+sent_to_me = new(
     lambda wa, m: sent_to(phone_number_id=wa.phone_id).check_sync(wa, m),
     name="sent_to_me",
 )
@@ -439,719 +462,260 @@ def regex(*patterns: str | re.Pattern, flags: int = 0) -> Filter:
     )
 
 
-class _BaseUpdateFilters(Filter):  # inherit from Filter only for auto-completion
-    """
-    Base class for all filters.
-    """
-
-    __message_types__: tuple[_Mt, ...]
-    """The message types that the filter is for."""
-
-    def __call__(self, wa: _Wa, m: _T) -> Filter:
-        """When instantiated, call the ``any`` method."""
-        return self.any(wa, m)
-
-    @staticmethod
-    def any(wa: _Wa, m: _T) -> Filter:
-        """Filter for all updates of this type."""
-        ...
-
-    @classmethod
-    def _match_type(cls, m: _Msg) -> bool:
-        return m.type in cls.__message_types__
-
-
-message: Filter = new(lambda _, m: isinstance(m, _Msg), name="message")
+message = new(lambda _, m: isinstance(m, _Msg), name="message")
 """Filter for all messages."""
 
 
-class _MediaFilters(_BaseUpdateFilters):
+def mimetypes(*mmtps: str) -> Filter:
     """
-    Useful filters for media messages. Alias: ``filters.media``.
-    """
+    Filter for media messages that match any of the given mime types.
 
-    __message_types__ = (
-        _Mt.IMAGE,
-        _Mt.VIDEO,
-        _Mt.AUDIO,
-        _Mt.DOCUMENT,
-        _Mt.STICKER,
+    - `Supported Media Types on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#supported-media-types>`_.
+
+    >>> mimetypes("application/pdf", "image/png")
+    """
+    return new(
+        lambda _, m: m.media.mime_type in mmtps,
+        name="mimetypes",
     )
 
-    any: Filter = new(lambda _, m: m.has_media, name="any")
+
+def extensions(*exts: str) -> Filter:
     """
-    Filter for all media messages.
-        - Same as ``filters.media``.
+    Filter for media messages that match any of the given extensions.
 
-    >>> filters.media.any
+    >>> extensions(".pdf", ".png")
     """
-
-    @classmethod
-    def mimetypes(cls, *mimetypes: str) -> Filter:
-        """
-        Filter for media messages that match any of the given mime types.
-
-        - `Supported Media Types on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#supported-media-types>`_.
-
-        >>> media.mimetypes("application/pdf", "image/png")
-        >>> video.mimetypes("video/mp4")
-        >>> audio.mimetypes("audio/mpeg")
-        """
-        return new(
-            lambda _, m: cls._match_type(m) and m.media.mime_type in mimetypes,
-            name="mimetypes",
-        )
-
-    @classmethod
-    def extensions(cls, *extensions: str) -> Filter:
-        """
-        Filter for media messages that match any of the given extensions.
-
-        >>> media.extensions(".pdf", ".png")
-        >>> video.extensions(".mp4")
-        >>> document.extensions(".pdf")
-        """
-        return new(
-            lambda _, m: cls._match_type(m) and m.media.extension in extensions,
-            name="extensions",
-        )
-
-
-media: Filter | _MediaFilters = _MediaFilters()
-"""Filters for media messages."""
-
-
-class _TextFilters(_BaseUpdateFilters):
-    """Useful filters for text messages. Alias: ``filters.text``."""
-
-    __message_types__ = (_Mt.TEXT,)
-
-    any: Filter = new(lambda _, m: m.type == _Mt.TEXT, name="text")
-    """
-    Filter for all text messages.
-        - Same as ``filters.text``.
-
-    >>> filters.text.any
-    """
-
-    is_command: Filter = new(
-        lambda _, m: m.type == _Mt.TEXT and m.text.startswith(("/", "!", "#")),
-        name="is_command",
+    return new(
+        lambda _, m: m.media.extension in exts,
+        name="extensions",
     )
+
+
+media = new(lambda _, m: m.has_media, name="media")
+"""Filter for media messages (images, videos, documents, audio, stickers)."""
+
+is_command = new(
+    lambda _, m: m.type == _Mt.TEXT and m.text.startswith(("/", "!")),
+    name="is_command",
+)
+"""
+Filter for text messages that are commands (start with ``/`` or ``!``).
+
+>>> filters.is_command
+"""
+
+
+def command(
+    *cmds: str,
+    prefixes: str | Iterable[str] = "/!",
+    ignore_case: bool = False,
+) -> Filter:
     """
-    Filter for text messages that are commands (start with ``/``, ``!``, or ``#``).
-        - Use text.command(...) if you want to filter for specific commands or prefixes.
+    Filter for text messages that are commands.
 
-    >>> filters.text.is_command
+
+    >>> command("start", "hello", prefixes="/", ignore_case=True)
+
+    Args:
+        *cmds: The command/s to filter for (e.g. "start", "hello").
+        prefixes: The prefix/s to filter for (default: "/!", i.e. "/start").
+        ignore_case: Whether to ignore case when matching (default: ``False``).
     """
-
-    @staticmethod
-    def length(*lengths: tuple[int, int]) -> Filter:
-        """
-        Filter for text messages that have a length between any of the given ranges.
-
-        >>> text.length((1, 10), (50, 100))
-
-        Args:
-            *lengths: The length range/s to filter for (e.g. (1, 10), (50, 100)).
-        """
-        return new(
-            lambda _, m: _TextFilters._match_type(m)
-            and any(i[0] <= len(m.text) <= i[1] for i in lengths),
-            name="length",
-        )
-
-    @staticmethod
-    def command(
-        *cmds: str,
-        prefixes: str | Iterable[str] = "/!",
-        ignore_case: bool = False,
-    ) -> Filter:
-        """
-        Filter for text messages that are commands.
-
-        >>> text.command("start", "hello", prefixes="/", ignore_case=True)
-
-        Args:
-            *cmds: The command/s to filter for (e.g. "start", "hello").
-            prefixes: The prefix/s to filter for (default: "/!", i.e. "/start").
-            ignore_case: Whether to ignore case when matching (default: ``False``).
-        """
-        cmds = tuple(c.lower() for c in cmds) if ignore_case else cmds
-        return new(
-            lambda _, m: _TextFilters._match_type(m)
-            and (
-                m.text[0] in prefixes
-                and (m.text[1:].lower() if ignore_case else m.text[1:]).startswith(cmds)
-            ),
-            name="command",
-        )
-
-
-text: Filter | _TextFilters = _TextFilters()
-"""Filters for text messages."""
-
-
-class _ImageFilters(_MediaFilters):
-    """Useful filters for image messages. Alias: ``filters.image``."""
-
-    __message_types__ = (_Mt.IMAGE,)
-
-    any: Filter = new(lambda _, m: _ImageFilters._match_type(m), name="image")
-    """
-    Filter for all image messages.
-        - Same as ``filters.image``.
-
-    >>> filters.image.any
-    """
-
-    has_caption: Filter = new(
-        lambda _, m: _ImageFilters._match_type(m) and m.caption is not None,
-        name="image_has_caption",
-    )
-    """
-    Filter for image messages that have a caption.
-
-    >>> filters.image.has_caption
-    """
-
-
-image: Filter | _ImageFilters = _ImageFilters()
-"""Filters for image messages."""
-
-
-class _VideoFilters(_MediaFilters):
-    """Useful filters for video messages. Alias: ``filters.video``."""
-
-    __message_types__ = (_Mt.VIDEO,)
-
-    any: Filter = new(lambda _, m: _VideoFilters._match_type(m), name="video")
-    """
-    Filter for all video messages.
-        - Same as ``filters.video``.
-
-    >>> filters.video.any
-    """
-
-    has_caption: Filter = new(
-        lambda _, m: _VideoFilters._match_type(m) and m.caption is not None,
-        name="video_has_caption",
-    )
-    """
-    Filter for video messages that have a caption.
-
-    >>> filters.video.has_caption
-    """
-
-
-video: Filter | _VideoFilters = _VideoFilters()
-"""Filters for video messages."""
-
-
-class _DocumentFilters(_MediaFilters):
-    """Useful filters for document messages. Alias: ``filters.document``."""
-
-    __message_types__ = (_Mt.DOCUMENT,)
-
-    any: Filter = new(lambda _, m: _DocumentFilters._match_type(m), name="document")
-    """
-    Filter for all document messages.
-        - Same as ``filters.document``.
-
-    >>> filters.document.any
-    """
-
-    has_caption: Filter = new(
-        lambda _, m: _DocumentFilters._match_type(m) and m.caption is not None,
-        name="document_has_caption",
-    )
-    """
-    Filter for document messages that have a caption.
-
-    >>> filters.document.has_caption
-    """
-
-
-document: Filter | _DocumentFilters = _DocumentFilters()
-"""Filters for document messages."""
-
-
-class _AudioFilters(_MediaFilters):
-    """Useful filters for audio messages. Alias: ``filters.audio``."""
-
-    __message_types__ = (_Mt.AUDIO,)
-
-    any: Filter = new(lambda _, m: _AudioFilters._match_type(m), name="audio")
-    """
-    Filter for all audio messages (voice notes and audio files).
-        - Same as ``filters.audio``.
-
-    >>> filters.audio.any
-    """
-
-    voice: Filter = new(
-        lambda _, m: _AudioFilters._match_type(m) and m.audio.voice, name="voice"
-    )
-    """
-    Filter for audio messages that are voice notes.
-
-    >>> filters.audio.voice
-    """
-
-    audio: Filter = new(
-        lambda _, m: _AudioFilters._match_type(m) and not m.audio.voice,
-        name="audio_audio",
-    )
-    """
-    Filter for audio messages that are audio files.
-
-    >>> filters.audio.audio
-    """
-
-
-audio: Filter | _AudioFilters = _AudioFilters()
-"""Filters for audio messages."""
-
-
-class _StickerFilters(_MediaFilters):
-    """Useful filters for sticker messages. Alias: ``filters.sticker``."""
-
-    __message_types__ = (_Mt.STICKER,)
-
-    any: Filter = new(lambda _, m: _StickerFilters._match_type(m), name="sticker")
-    """
-    Filter for all sticker messages.
-        - Same as ``filters.sticker``.
-
-    >>> filters.sticker.any
-    """
-
-    animated: Filter = new(
-        lambda _, m: _StickerFilters._match_type(m) and m.sticker.animated,
-        name="sticker_animated",
-    )
-    """
-    Filter for animated sticker messages.
-
-    >>> filters.sticker.animated
-    """
-
-    static: Filter = new(
-        lambda _, m: _StickerFilters._match_type(m) and not m.sticker.animated,
-        name="sticker_static",
-    )
-    """
-    Filter for static sticker messages.
-
-    >>> filters.sticker.static
-    """
-
-
-sticker: Filter | _StickerFilters = _StickerFilters()
-"""Filters for sticker messages."""
-
-
-class _LocationFilters(_BaseUpdateFilters):
-    """Useful filters for location messages. Alias: ``filters.location``."""
-
-    __message_types__ = (_Mt.LOCATION,)
-
-    any: Filter = lambda _, m: _LocationFilters._match_type(m)
-    """
-    Filter for all location messages.
-        - Same as ``filters.location``.
-
-    >>> filters.location.any
-    """
-
-    current_location: Filter = new(
-        lambda _, m: _LocationFilters._match_type(m) and m.location.current_location,
-        name="current_location",
-    )
-    """
-    Filter for location messages that are the current location of the user and not just selected manually.
-
-    >>> filters.location.current_location
-    """
-
-    @staticmethod
-    def in_radius(lat: float, lon: float, radius: float | int) -> Filter:
-        """
-        Filter for location messages that are in a given radius.
-
-        >>> location.in_radius(lat=37.48508108998884, lon=-122.14744733542707, radius=1)
-
-        Args:
-            lat: Latitude of the center of the radius.
-            lon: Longitude of the center of the radius.
-            radius: Radius in kilometers.
-        """
-
-        def _in_radius(_: _Wa, msg: _Msg) -> bool:
-            return _LocationFilters._match_type(msg) and msg.location.in_radius(
-                lat=lat, lon=lon, radius=radius
-            )
-
-        return new(_in_radius, name="location_in_radius")
-
-
-location: Filter | _LocationFilters = _LocationFilters()
-"""Filters for location messages."""
-
-
-class _ReactionFilters(_BaseUpdateFilters):
-    """Useful filters for reaction messages. Alias: ``filters.reaction``."""
-
-    __message_types__ = (_Mt.REACTION,)
-
-    any: Filter = new(lambda _, m: _ReactionFilters._match_type(m), name="reaction")
-    """
-    Filter for all reaction updates (added or removed).
-        - Same as ``filters.reaction``.
-
-    >>> filters.reaction.any
-    """
-
-    added: Filter = new(
-        lambda _, m: _ReactionFilters._match_type(m) and m.reaction.emoji is not None,
-        name="reaction_added",
-    )
-    """
-    Filter for reaction messages that were added.
-
-    >>> filters.reaction.added
-    """
-
-    removed: Filter = new(
-        lambda _, m: _ReactionFilters._match_type(m) and m.reaction.emoji is None,
-        name="reaction_removed",
-    )
-    """
-    Filter for reaction messages that were removed.
-
-    >>> filters.reaction.removed
-    """
-
-    @staticmethod
-    def emojis(*emojis: str) -> Filter:
-        """
-        Filter for custom reaction messages. pass emojis as strings.
-
-        >>> reaction.emojis("👍","👎")
-        """
-        return new(
-            lambda _, m: _ReactionFilters._match_type(m) and m.reaction.emoji in emojis,
-            name="reaction_emojis",
-        )
-
-
-reaction: Filter | _ReactionFilters = _ReactionFilters()
-"""Filters for reaction messages."""
-
-
-class _ContactsFilters(_BaseUpdateFilters):
-    """Useful filters for contact messages. Alias: ``filters.contacts``."""
-
-    __message_types__ = (_Mt.CONTACTS,)
-
-    any: Filter = new(lambda _, m: _ContactsFilters._match_type(m), name="contacts")
-    """
-    Filter for all contacts messages.
-        - Same as ``filters.contacts``.
-
-    >>> filters.contacts.any
-    """
-
-    has_wa: Filter = new(
-        lambda _, m: _ContactsFilters._match_type(m)
+    cmds = tuple(c.lower() for c in cmds) if ignore_case else cmds
+    return new(
+        lambda _, m: m.type == _Mt.TEXT
         and (
-            any(
-                (
-                    p.wa_id
-                    for p in (
-                        phone for contact in m.contacts for phone in contact.phones
-                    )
-                )
-            )
+            m.text[0] in prefixes
+            and (m.text[1:].lower() if ignore_case else m.text[1:]).startswith(cmds)
         ),
-        name="contacts_any_has_wa",
+        name="command",
     )
+
+
+text = new(lambda _, m: m.type == _Mt.TEXT, name="text")
+"""Filter for text messages."""
+
+has_caption = new(
+    lambda _, m: m.caption is not None,
+    name="media_has_caption",
+)
+"""Filter for media messages that have a caption."""
+
+image = new(lambda _, m: m.type == _Mt.IMAGE, name="image")
+"""Filter for image messages."""
+
+video = new(lambda _, m: m.type == _Mt.VIDEO, name="video")
+"""Filter for video messages."""
+
+document = new(lambda _, m: m.type == _Mt.DOCUMENT, name="document")
+"""Filter for document messages."""
+
+audio = new(lambda _, m: m.type == _Mt.AUDIO, name="audio")
+"""Filter for audio messages (both voice notes and audio files)."""
+
+audio_only = new(
+    lambda _, m: m.type == _Mt.AUDIO and not m.audio.voice, name="audio_only"
+)
+"""Filter for audio messages that are not voice notes."""
+
+voice = new(lambda _, m: m.type == _Mt.AUDIO and m.audio.voice, name="voice")
+"""Filter for audio messages that are voice notes."""
+
+sticker = new(lambda _, m: m.type == _Mt.STICKER, name="sticker")
+"""Filter for sticker messages (both static and animated)."""
+
+animated_sticker = new(
+    lambda _, m: m.type == _Mt.STICKER and m.sticker.animated, name="animated_sticker"
+)
+"""Filter for animated sticker messages."""
+
+static_sticker = new(
+    lambda _, m: m.type == _Mt.STICKER and not m.sticker.animated, name="static_sticker"
+)
+"""Filter for static sticker messages."""
+
+location = new(lambda _, m: m.type == _Mt.LOCATION, name="location")
+"""Filter for location messages."""
+
+current_location = new(
+    lambda _, m: m.type == _Mt.LOCATION and m.location.current_location,
+    name="current_location",
+)
+"""Filter for location messages that are current locations."""
+
+
+def location_in_radius(lat: float, lon: float, radius: float | int) -> Filter:
     """
-    Filter for contacts messages that have a WhatsApp account.
+    Filter for location messages that are in a given radius.
 
-    >>> filters.contacts.has_wa
+    >>> location_in_radius(lat=37.48508108998884, lon=-122.14744733542707, radius=1)
+
+    Args:
+        lat: Latitude of the center of the radius.
+        lon: Longitude of the center of the radius.
+        radius: Radius in kilometers.
     """
 
-    @staticmethod
-    def count(min_count: int, max_count: int) -> Filter:
-        """
-        Filter for contacts messages that have a number of contacts between min_count and max_count.
+    return new(
+        lambda _, m: m.type == _Mt.LOCATION
+        and m.location.in_radius(lat=lat, lon=lon, radius=radius),
+        name="location_in_radius",
+    )
 
-        >>> contacts.count(1, 1) # ensure only 1 contact
-        >>> contacts.count(1, 5) # between 1 and 5 contacts
-        """
-        return new(
-            lambda _, m: _ContactsFilters._match_type(m)
-            and min_count <= len(m.contacts) <= max_count,
-            name="contacts_count",
+
+reaction = new(lambda _, m: m.type == _Mt.REACTION, name="reaction")
+"""Filter for reaction messages (both added and removed)."""
+
+
+reaction_added = new(
+    lambda _, m: m.type == _Mt.REACTION and m.reaction.emoji is not None,
+    name="reaction_added",
+)
+"""Filter for reaction messages that were added to a message."""
+
+
+reaction_removed = new(
+    lambda _, m: m.type == _Mt.REACTION and m.reaction.emoji is None,
+    name="reaction_removed",
+)
+"""Filter for reaction messages that were removed from a message."""
+
+
+def reaction_emojis(*emojis: str) -> Filter:
+    """
+    Filter for custom reaction messages. pass emojis as strings.
+
+    >>> reaction_emojis("👍","👎")
+    """
+    return new(
+        lambda _, m: m.type == _Mt.REACTION and m.reaction.emoji in emojis,
+        name="reaction_emojis",
+    )
+
+
+contacts = new(lambda _, m: m.type == _Mt.CONTACTS, name="contacts")
+"""Filter for contacts messages."""
+
+
+contacts_has_wa = new(
+    lambda _, m: m.type == _Mt.CONTACTS
+    and (
+        any(
+            (
+                p.wa_id
+                for p in (phone for contact in m.contacts for phone in contact.phones)
+            )
         )
-
-    @staticmethod
-    def phones(*phones: str) -> Filter:
-        """
-        Filter for contacts messages that have the given phone number/s.
-
-        >>> contacts.phones("+1 555-555-5555","972123456789")
-        """
-        only_nums_pattern = re.compile(r"\D")
-        phones = [re.sub(only_nums_pattern, "", p) for p in phones]
-        return new(
-            lambda _, m: _ContactsFilters._match_type(m)
-            and (
-                any(
-                    re.sub(only_nums_pattern, "", p.phone) in phones
-                    for contact in m.contacts
-                    for p in contact.phones
-                )
-            ),
-            name="contacts_phones",
-        )
+    ),
+    name="contacts_any_has_wa",
+)
+"""Filter for contacts messages that have a WhatsApp account."""
 
 
-contacts: Filter | _ContactsFilters = _ContactsFilters()
-"""Filters for contacts messages."""
+order = new(lambda _, m: m.type == _Mt.ORDER, name="order")
+"""Filter for order messages."""
 
 
-class _OrderFilters(_BaseUpdateFilters):
-    """Useful filters for order messages. Alias: ``filters.order``."""
-
-    __message_types__ = (_Mt.ORDER,)
-
-    any: Filter = new(lambda _, m: _OrderFilters._match_type(m), name="order")
-    """
-    Filter for all order messages.
-        - Same as ``filters.order``.
-
-    >>> filters.order.any
-    """
-
-    @staticmethod
-    def price(min_price: float, max_price: float) -> Filter:
-        """
-        Filter for order messages that have a total price between min_price and max_price.
-
-        Args:
-            min_price: Minimum price.
-            max_price: Maximum price.
-
-        >>> order.price(1, 100) # total price between 1 and 100
-        """
-        return new(
-            lambda _, m: _OrderFilters._match_type(m)
-            and min_price <= m.order.total_price <= max_price,
-            name="order_price",
-        )
-
-    @staticmethod
-    def count(min_count: int, max_count: int) -> Filter:
-        """
-        Filter for order messages that have a number of items between min_count and max_count.
-
-        Args:
-            min_count: Minimum number of items.
-            max_count: Maximum number of items.
-
-        >>> order.count(1, 5) # between 1 and 5 items
-        """
-        return new(
-            lambda _, m: _OrderFilters._match_type(m)
-            and min_count <= len(m.order.products) <= max_count,
-            name="order_items_count",
-        )
-
-    @staticmethod
-    def has_product(*skus: str) -> Filter:
-        """
-        Filter for order messages that have the given product/s.
-
-        Args:
-            *skus: The products SKUs.
-
-        >>> order.has_product("pizza_1","pizza_2")
-        """
-        return new(
-            lambda _, m: _OrderFilters._match_type(m)
-            and (any(p.sku in skus for p in m.order.products)),
-            name="order_has_product",
-        )
-
-
-order: Filter | _OrderFilters = _OrderFilters()
-"""Filters for order messages."""
-
-
-class _UnsupportedMsgFilters(_BaseUpdateFilters):
-    """Useful filters for unsupported messages. Alias: ``filters.unsupported``."""
-
-    __message_types__ = (_Mt.UNSUPPORTED,)
-
-    any: Filter = new(lambda _, m: m.type == _Mt.UNSUPPORTED, name="unsupported")
-    """
-    Filter for all unsupported messages.
-        - Same as ``filters.unsupported``.
-
-    >>> filters.unsupported.any
-    """
-
-
-unsupported: Filter | _UnsupportedMsgFilters = _UnsupportedMsgFilters()
+unsupported = new(lambda _, m: m.type == _Mt.UNSUPPORTED, name="unsupported")
 """Filter for all unsupported messages."""
 
 
-callback_button: Filter = new(lambda _, c: isinstance(c, _Clb), name="callback_button")
+callback_button = new(lambda _, c: isinstance(c, _Clb), name="callback_button")
 """Filter for callback buttons."""
 
-callback_selection: Filter = new(
-    lambda _, c: isinstance(c, _Cls), name="callback_selection"
-)
+callback_selection = new(lambda _, c: isinstance(c, _Cls), name="callback_selection")
 """Filter for callback selections."""
 
+message_status = new(lambda _, s: isinstance(s, _Mst), name="message_status")
 
-class _MessageStatusFilters(_BaseUpdateFilters):
-    """Useful filters for message status updates. Alias: ``filters.message_status``."""
+sent = new(lambda _, s: s.status == _Mst.SENT, name="status_sent")
+"""Filter for messages that have been sent."""
 
-    __message_types__ = ()
+delivered = new(lambda _, s: s.status == _Mst.DELIVERED, name="status_delivered")
+"""Filter for messages that have been delivered."""
 
-    any: Filter = new(lambda _, s: isinstance(s, _Mst), name="message_status")
+read = new(lambda _, s: s.status == _Mst.READ, name="status_read")
+"""Filter for messages that have been read."""
+
+failed = new(lambda _, s: s.status == _Mst.FAILED, name="status_failed")
+"""Filter for status updates of messages that have failed to send."""
+
+
+def failed_with(
+    *errors: type[WhatsAppError] | int,
+) -> Filter:
     """
-    Filter for all message status updates (the default).
-        - Same as ``filters.message_status``.
+    Filter for status updates of messages that have failed to send with the given error/s.
 
-    >>> filters.message_status.any
+    Args:
+        *errors: The exceptions from :mod:`pywa.errors` or error codes to match.
+
+    >>> failed_with(ReEngagementMessage)
+    >>> failed_with(131051)
     """
-
-    sent: Filter = new(lambda _, s: s.status == _Mst.SENT, name="status_sent")
-    """
-    Filter for messages that have been sent.
-
-    >>> filters.message_status.sent
-    """
-
-    delivered: Filter = new(
-        lambda _, s: s.status == _Mst.DELIVERED, name="status_delivered"
+    error_codes = tuple(c for c in errors if isinstance(c, int))
+    exceptions = tuple(
+        e for e in errors if e not in error_codes and issubclass(e, WhatsAppError)
     )
-    """
-    Filter for messages that have been delivered.
-
-    >>> filters.message_status.delivered
-    """
-
-    read: Filter = new(lambda _, s: s.status == _Mst.READ, name="status_read")
-    """
-    Filter for messages that have been read.
-
-    >>> filters.message_status.read
-    """
-
-    failed: Filter = new(lambda _, s: s.status == _Mst.FAILED, name="status_failed")
-    """
-    Filter for status updates of messages that have failed to send.
-
-    >>> filters.message_status.failed
-    """
-
-    @staticmethod
-    def failed_with(
-        *errors: type[WhatsAppError] | int,
-    ) -> Filter:
-        """
-        Filter for status updates of messages that have failed to send with the given error/s.
-
-        Args:
-            *errors: The exceptions from :mod:`pywa.errors` or error codes to match.
-
-        >>> message_status.failed_with(ReEngagementMessage)
-        >>> message_status.failed_with(131051)
-        """
-        error_codes = tuple(c for c in errors if isinstance(c, int))
-        exceptions = tuple(
-            e for e in errors if e not in error_codes and issubclass(e, WhatsAppError)
-        )
-        return new(
-            lambda _, s: s.status == _Mst.FAILED
-            and (
-                any((isinstance(s.error, e) for e in exceptions))
-                or s.error.error_code in error_codes
-            ),
-            name="status_failed_with",
-        )
-
-    with_tracker: Filter = new(lambda _, s: s.tracker is not None, name="with_tracker")
-    """
-    Filter for messages that sent with tracker
-
-    >>> filters.message_status.with_tracker
-    """
+    return new(
+        lambda _, s: s.status == _Mst.FAILED
+        and (
+            any((isinstance(s.error, e) for e in exceptions))
+            or s.error.error_code in error_codes
+        ),
+        name="status_failed_with",
+    )
 
 
-message_status: Filter | _MessageStatusFilters = _MessageStatusFilters()
-"""Filters for message status updates."""
+with_tracker = new(lambda _, s: s.tracker is not None, name="with_tracker")
+"""Filter for status updates that have a tracker."""
 
-
-class _TemplateStatusFilters(_BaseUpdateFilters):
-    """Useful filters for template status updates. Alias: ``filters.template_status``."""
-
-    __message_types__ = ()
-
-    any: Filter = new(lambda _, t: isinstance(t, _Ts), name="template_status")
-    """
-    Filter for all template status updates (the default).
-        - Same as ``filters.template_status``.
-
-    >>> filters.template_status.any
-    """
-
-    @staticmethod
-    def template_name(name: str) -> Filter:
-        """
-        Filter for template status updates that are for the given template name.
-
-        >>> template_status.template_name("my_template")
-        """
-        return new(lambda _, s: s.template_name == name, name="template_name")
-
-    @staticmethod
-    def on_event(*events: _Ts.TemplateEvent) -> Filter:
-        """
-        Filter for template status updates that are for the given event/s.
-
-        Args:
-            *events: The template events to filter for.
-
-        >>> template_status.on_event(_Ts.TemplateEvent.APPROVED)
-        """
-        return new(lambda _, s: s.event in events, name="on_event")
-
-    @staticmethod
-    def on_rejection_reason(
-        *reasons: _Ts.TemplateRejectionReason,
-    ) -> Filter:
-        """
-        Filter for template status updates that are for the given reason/s.
-
-        Args:
-            *reasons: The template reasons to filter for.
-
-        >>> template_status.on_rejection_reason(_Ts.TemplateRejectionReason.INCORRECT_CATEGORY)
-        """
-        return new(lambda _, s: s.reason in reasons, name="on_rejection_reason")
-
-
-template_status: Filter | _TemplateStatusFilters = _TemplateStatusFilters()
+template_status = new(lambda _, s: isinstance(s, _Ts), name="template_status")
 """Filters for template status updates."""
 
-flow_completion: Filter = new(lambda _, f: isinstance(f, _Fc), name="flow_completion")
+flow_completion = new(lambda _, f: isinstance(f, _Fc), name="flow_completion")
 """Filter for flow completion updates."""
 
-chat_opened: Filter = new(lambda _, c: isinstance(c, _Co), name="chat_opened")
+chat_opened = new(lambda _, c: isinstance(c, _Co), name="chat_opened")
 """Filter for chat opened updates."""
