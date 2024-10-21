@@ -1,9 +1,10 @@
 import dataclasses
 import random
-from typing import Callable, TypeVar
+from typing import Callable, TypeVar, cast
 
 from pywa import filters as fil, WhatsApp
 from pywa.errors import WhatsAppError, MediaUploadError
+from pywa.filters import Filter
 from pywa.types import (
     Message,
     CallbackSelection,
@@ -26,9 +27,7 @@ def same(x: _T) -> _T:
 
 # {filename: {test_name: [(update_modifier, filter_func)]}}
 
-FILTERS: dict[
-    str, dict[str, list[tuple[Callable[[_T], _T], Callable[[WhatsApp, _T], bool]]]]
-] = {
+FILTERS: dict[str, dict[str, list[tuple[Callable[[_T], _T], Filter]]]] = {
     "message": {
         "text": [
             (same, fil.text),
@@ -63,105 +62,83 @@ FILTERS: dict[
                 fil.regex(r"^hi", r"bye$"),
             ),
             (
-                lambda m: modify_text(m, "abcdefg"),
-                fil.text.length((5, 10)),
-            ),
-            (
                 lambda m: modify_text(m, "!start"),
-                fil.text.command("start"),
+                fil.command("start"),
             ),
             (
                 lambda m: modify_text(m, "/start"),
-                fil.text.command("start", prefixes="!/"),
+                fil.command("start", prefixes="!/"),
             ),
             (
                 lambda m: modify_text(m, "!Start"),
-                fil.text.command("staRt", ignore_case=True),
+                fil.command("staRt", ignore_case=True),
             ),
             (
                 lambda m: modify_text(m, "!start"),
-                fil.text.is_command,
+                fil.is_command,
             ),
         ],
         "image": [
             (same, fil.image),
-            (lambda m: add_caption(m, "caption"), fil.image.has_caption),
+            (lambda m: add_caption(m, "caption"), fil.has_caption),
             (
                 lambda m: modify_img_mime_type(m, "image/jpeg"),
-                fil.image.mimetypes("image/jpeg"),
+                fil.mimetypes("image/jpeg"),
             ),
             (
                 lambda m: modify_img_mime_type(m, "application/pdf"),
-                fil.image.mimetypes("application/pdf"),
+                fil.mimetypes("application/pdf"),
             ),
         ],
         "video": [
             (same, fil.video),
-            (lambda m: add_caption(m, "caption"), fil.video.has_caption),
         ],
         "document": [
             (same, fil.document),
-            (lambda m: add_caption(m, "caption"), fil.document.has_caption),
         ],
         "audio": [
-            (same, fil.audio.audio),
+            (same, fil.audio),
+            (same, fil.audio_only),
         ],
         "voice": [
-            (same, fil.audio.voice),
+            (same, fil.voice),
+        ],
+        "sticker": [
+            (same, fil.sticker),
         ],
         "static_sticker": [
-            (same, fil.sticker.static),
+            (same, fil.static_sticker),
         ],
         "animated_sticker": [
-            (same, fil.sticker.animated),
+            (same, fil.animated_sticker),
         ],
         "reaction": [
-            (same, fil.reaction.added),
+            (same, fil.reaction_added),
             (
                 lambda m: modify_reaction(m, "😀"),
-                fil.reaction.emojis("😀"),
+                fil.reaction_emojis("😀"),
             ),
         ],
         "unreaction_empty": [
-            (same, fil.reaction.removed),
+            (same, fil.reaction_removed),
         ],
-        "unreaction_no_emoji": [(same, fil.reaction.removed)],
+        "unreaction_no_emoji": [(same, fil.reaction_removed)],
         "current_location": [
-            (same, fil.location.current_location),
+            (same, fil.current_location),
             (
                 lambda m: modify_location(m, 37.4611794, -122.2531785),
-                fil.location.in_radius(37.47, -122.25, 10),
+                fil.location_in_radius(37.47, -122.25, 10),
             ),
         ],
         "contacts": [
             (same, fil.contacts),
             (
                 lambda m: add_wa_number_to_contact(m),
-                fil.contacts.has_wa,
-            ),
-            (
-                lambda m: keep_only_one_contact(m),
-                fil.contacts.count(min_count=1, max_count=1),
-            ),
-            (
-                lambda m: modify_contact_phone(m, "123456789"),
-                fil.contacts.phones("+123456789"),
+                fil.contacts_has_wa,
             ),
         ],
         "order": [
             (same, fil.order),
-            (
-                lambda m: modify_order_price(m, 100, 3),
-                fil.order.price(min_price=100, max_price=400),
-            ),
-            (
-                lambda m: modify_order_products_count(m, 3),
-                fil.order.count(min_count=2, max_count=5),
-            ),
-            (
-                lambda m: modify_order_product_sku(m, "SKU123"),
-                fil.order.has_product("SKU123"),
-            ),
         ],
         "unsupported": [(same, fil.unsupported)],
         "reply": [(same, fil.reply)],
@@ -229,32 +206,37 @@ FILTERS: dict[
         "description": [],
     },
     "message_status": {
-        "sent": [(same, fil.message_status.sent)],
+        "sent": [(same, fil.sent)],
+        "delivered": [(same, fil.delivered)],
+        "read": [(same, fil.read)],
         "failed": [
             (
                 lambda m: modify_status_err(
                     m, WhatsAppError.from_dict({"code": 131053, "message": "error"})
                 ),
-                fil.message_status.failed_with(MediaUploadError),
+                fil.failed_with(MediaUploadError),
             ),
             (
                 lambda m: modify_status_err(
                     m, WhatsAppError.from_dict({"code": 131053, "message": "error"})
                 ),
-                fil.message_status.failed_with(131053),
+                fil.failed_with(131053),
             ),
         ],
         "with_tracker": [
-            (same, fil.message_status.with_tracker),
+            (same, fil.with_tracker),
             (lambda s: modify_status_tracker(s, "tracker"), fil.matches("tracker")),
         ],
     },
     "template_status": {
-        "approved": [
-            (same, fil.template_status.on_event(TemplateStatus.TemplateEvent.APPROVED))
-        ],
+        "approved": [(same, fil.template_status)],
     },
-    "flow_completion": {"completion": []},
+    "flow_completion": {
+        "completion": [
+            (same, fil.flow_completion),
+        ]
+    },
+    "chat_opened": {"chat_opened": [(same, fil.chat_opened)]},
 }
 
 RANDOM_API_VER = random.choice(API_VERSIONS)
@@ -262,12 +244,12 @@ RANDOM_API_VER = random.choice(API_VERSIONS)
 
 def test_combinations():
     true, false = fil.new(lambda _, __: True), fil.new(lambda _, __: False)
-    assert true(None, None)
-    assert not false(None, None)
-    assert true(None, None) & true(None, None)
-    assert not (true(None, None) & false(None, None))
-    assert true(None, None) | false(None, None)
-    assert not (false(None, None) | false(None, None))
+    assert true.check_sync(None, None)
+    assert not false.check_sync(None, None)
+    assert (true & true).check_sync(None, None)
+    assert not (true & false).check_sync(None, None)
+    assert (true | false).check_sync(None, None)
+    assert not (false | false).check_sync(None, None)
 
 
 def test_filters():
@@ -275,12 +257,12 @@ def test_filters():
         for filename, tests in updates[RANDOM_API_VER].items():
             for test in tests:
                 for test_name, update in test.items():
-                    for update_modifier, filter_func in FILTERS.get(filename, {}).get(
+                    for update_modifier, filter_obj in FILTERS.get(filename, {}).get(
                         test_name, ()
                     ):
                         update = update_modifier(update)
                         try:
-                            assert filter_func(client, update)
+                            assert cast(Filter, filter_obj).check_sync(client, update)
                         except AssertionError as e:
                             raise AssertionError(
                                 f"Test {filename}/{test_name} failed on {update}"
@@ -313,18 +295,6 @@ def modify_location(msg: Message, lat: float, lon: float):
     )
 
 
-def modify_contact_phone(msg: Message, phone: str):
-    return dataclasses.replace(
-        msg,
-        contacts=(
-            dataclasses.replace(
-                msg.contacts[0],
-                phones=[dataclasses.replace(msg.contacts[0].phones[0], phone=phone)],
-            ),
-        ),
-    )
-
-
 def add_wa_number_to_contact(msg: Message):
     return dataclasses.replace(
         msg,
@@ -335,44 +305,6 @@ def add_wa_number_to_contact(msg: Message):
                     dataclasses.replace(msg.contacts[0].phones[0], wa_id="123456789")
                 ],
             ),
-        ),
-    )
-
-
-def keep_only_one_contact(msg: Message):
-    return dataclasses.replace(msg, contacts=msg.contacts[:1])
-
-
-def modify_order_price(msg: Message, price: int, quantity: int):
-    return dataclasses.replace(
-        msg,
-        order=dataclasses.replace(
-            msg.order,
-            products=[
-                dataclasses.replace(
-                    msg.order.products[0], price=price, quantity=quantity
-                )
-            ],
-        ),
-    )
-
-
-def modify_order_products_count(msg: Message, count: int):
-    return dataclasses.replace(
-        msg,
-        order=dataclasses.replace(
-            msg.order,
-            products=[msg.order.products[0] for _ in range(count)],
-        ),
-    )
-
-
-def modify_order_product_sku(msg: Message, sku: str):
-    return dataclasses.replace(
-        msg,
-        order=dataclasses.replace(
-            msg.order,
-            products=[dataclasses.replace(msg.order.products[0], sku=sku)],
         ),
     )
 
