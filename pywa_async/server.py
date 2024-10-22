@@ -50,7 +50,6 @@ class Server:
         ChatOpenedHandler: ChatOpened.from_update,
         FlowCompletionHandler: FlowCompletion.from_update,
         TemplateStatusHandler: TemplateStatus.from_update,
-        RawUpdateHandler: lambda _, data: data,
     }
     """A dictionary that maps handler types to their respective update constructors."""
 

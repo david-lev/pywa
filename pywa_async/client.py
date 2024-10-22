@@ -10,7 +10,6 @@ import logging
 import mimetypes
 import os
 import pathlib
-import warnings
 from typing import BinaryIO, Iterable, Literal
 
 import httpx
@@ -199,7 +198,6 @@ class WhatsApp(Server, AsyncListeners, _WhatsApp):
         buttons: Iterable[Button] | ButtonUrl | SectionList | FlowButton | None = None,
         preview_url: bool = False,
         reply_to_message_id: str | None = None,
-        keyboard: None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> SentMessage:
@@ -311,7 +309,6 @@ class WhatsApp(Server, AsyncListeners, _WhatsApp):
             buttons: The buttons to send with the message (optional).
             preview_url: Whether to show a preview of the URL in the message (if any).
             reply_to_message_id: The message ID to reply to (optional).
-            keyboard: Deprecated and will be removed in a future version, use ``buttons`` instead.
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
@@ -319,15 +316,6 @@ class WhatsApp(Server, AsyncListeners, _WhatsApp):
             The sent message.
         """
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
-        if keyboard is not None:
-            buttons = keyboard
-            warnings.simplefilter("always", DeprecationWarning)
-            warnings.warn(
-                message="send_message | reply_text: "
-                "`keyboard` is deprecated and will be removed in a future version, use `buttons` instead.",
-                category=DeprecationWarning,
-                stacklevel=2,
-            )
         if not buttons:
             return SentMessage.from_sent_update(
                 client=self,
@@ -374,7 +362,6 @@ class WhatsApp(Server, AsyncListeners, _WhatsApp):
         to: str | int,
         image: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
-        body: None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         reply_to_message_id: str | None = None,
@@ -407,7 +394,6 @@ class WhatsApp(Server, AsyncListeners, _WhatsApp):
             reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
             mime_type: The mime type of the image (optional, required when sending an image as bytes or a file object,
              or file path that does not have an extension).
-            body: Deprecated and will be removed in a future version, use ``caption`` instead.
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
@@ -415,15 +401,6 @@ class WhatsApp(Server, AsyncListeners, _WhatsApp):
             The sent image message.
         """
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
-        if body is not None:
-            caption = body
-            warnings.simplefilter("always", DeprecationWarning)
-            warnings.warn(
-                message="send_image | reply_image: "
-                "`body` is deprecated and will be removed in a future version, use `caption` instead.",
-                category=DeprecationWarning,
-                stacklevel=2,
-            )
         is_url, image = await helpers.resolve_media_param(
             wa=self,
             media=image,
@@ -482,7 +459,6 @@ class WhatsApp(Server, AsyncListeners, _WhatsApp):
         to: str | int,
         video: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
-        body: None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         reply_to_message_id: str | None = None,
@@ -516,7 +492,6 @@ class WhatsApp(Server, AsyncListeners, _WhatsApp):
             reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
             mime_type: The mime type of the video (optional, required when sending a video as bytes or a file object,
              or file path that does not have an extension).
-            body: Deprecated and will be removed in a future version, use ``caption`` instead.
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
@@ -524,15 +499,6 @@ class WhatsApp(Server, AsyncListeners, _WhatsApp):
             The sent video.
         """
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
-        if body is not None:
-            caption = body
-            warnings.simplefilter("always", DeprecationWarning)
-            warnings.warn(
-                message="send_video | reply_video: "
-                "`body` is deprecated and will be removed in a future version, use `caption` instead.",
-                category=DeprecationWarning,
-                stacklevel=2,
-            )
         is_url, video = await helpers.resolve_media_param(
             wa=self,
             media=video,
@@ -591,7 +557,6 @@ class WhatsApp(Server, AsyncListeners, _WhatsApp):
         document: str | pathlib.Path | bytes | BinaryIO,
         filename: str | None = None,
         caption: str | None = None,
-        body: None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         reply_to_message_id: str | None = None,
@@ -627,7 +592,6 @@ class WhatsApp(Server, AsyncListeners, _WhatsApp):
             reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
             mime_type: The mime type of the document (optional, required when sending a document as bytes or a file
              object, or file path that does not have an extension).
-            body: Deprecated and will be removed in a future version, use ``caption`` instead.
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
@@ -636,15 +600,6 @@ class WhatsApp(Server, AsyncListeners, _WhatsApp):
         """
 
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
-        if body is not None:
-            caption = body
-            warnings.simplefilter("always", DeprecationWarning)
-            warnings.warn(
-                message="send_document | reply_document: "
-                "`body` is deprecated and will be removed in a future version, use `caption` instead.",
-                category=DeprecationWarning,
-                stacklevel=2,
-            )
         is_url, document = await helpers.resolve_media_param(
             wa=self,
             media=document,

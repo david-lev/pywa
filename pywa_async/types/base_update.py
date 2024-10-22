@@ -45,7 +45,6 @@ class _ClientShortcuts:
         buttons: Iterable[Button] | ButtonUrl | FlowButton | SectionList | None = None,
         quote: bool = False,
         preview_url: bool = False,
-        keyboard: None = None,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
         """
@@ -122,7 +121,6 @@ class _ClientShortcuts:
             buttons: The buttons to send with the message (optional).
             quote: Whether to quote the replied message (default: False).
             preview_url: Whether to show a preview of the URL in the message (if any).
-            keyboard: Deprecated and will be removed in a future version, use ``buttons`` instead.
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
@@ -137,7 +135,6 @@ class _ClientShortcuts:
             buttons=buttons,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             preview_url=preview_url,
-            keyboard=keyboard,
             tracker=tracker,
         )
 
@@ -147,7 +144,6 @@ class _ClientShortcuts:
         self,
         image: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
-        body: None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         quote: bool = False,
@@ -178,7 +174,6 @@ class _ClientShortcuts:
             mime_type: The mime type of the image (optional, required when sending an image as bytes or a file object,
              or file path that does not have an extension).
             quote: Whether to quote the replied message (default: False).
-            body: Deprecated and will be removed in a future version, use ``caption`` instead.
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
@@ -189,7 +184,6 @@ class _ClientShortcuts:
             to=self._internal_sender,
             image=image,
             caption=caption,
-            body=body,
             footer=footer,
             buttons=buttons,
             reply_to_message_id=self.message_id_to_reply if quote else None,
@@ -201,7 +195,6 @@ class _ClientShortcuts:
         self,
         video: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
-        body: None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         quote: bool = False,
@@ -233,7 +226,6 @@ class _ClientShortcuts:
             mime_type: The mime type of the video (optional, required when sending a video as bytes or a file object,
              or file path that does not have an extension).
             quote: Whether to quote the replied message (default: False).
-            body: Deprecated and will be removed in a future version, use ``caption`` instead.
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
@@ -246,7 +238,6 @@ class _ClientShortcuts:
             caption=caption,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             buttons=buttons,
-            body=body,
             footer=footer,
             mime_type=mime_type,
             tracker=tracker,
@@ -257,7 +248,6 @@ class _ClientShortcuts:
         document: str | pathlib.Path | bytes | BinaryIO,
         filename: str | None = None,
         caption: str | None = None,
-        body: None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         quote: bool = False,
@@ -290,7 +280,6 @@ class _ClientShortcuts:
             buttons: The buttons to send with the document (optional).
             mime_type: The mime type of the document (optional, required when sending a document as bytes or a file
              object, or file path that does not have an extension).
-            body: Deprecated and will be removed in a future version, use ``caption`` instead.
             quote: Whether to quote the replied message (default: False).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
@@ -305,7 +294,6 @@ class _ClientShortcuts:
             caption=caption,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             buttons=buttons,
-            body=body,
             footer=footer,
             mime_type=mime_type,
             tracker=tracker,
