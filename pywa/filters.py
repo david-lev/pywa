@@ -72,7 +72,7 @@ __all__ = [
 ]
 
 import re
-from typing import TYPE_CHECKING, Callable, Iterable, TypeVar, Awaitable
+from typing import TYPE_CHECKING, Callable, Iterable, TypeVar, Awaitable, Any
 
 from .errors import ReEngagementMessage, WhatsAppError
 from . import utils
@@ -99,10 +99,10 @@ _T = TypeVar("_T", bound=_BaseUpdate)
 class Filter:
     """Base filter class handling both sync and async."""
 
-    def check_sync(self, wa: _Wa, update: _T) -> bool:
+    def check_sync(self, wa: _Wa, update: Any) -> bool:
         raise NotImplementedError
 
-    async def check_async(self, wa: _Wa, update: _T) -> bool:
+    async def check_async(self, wa: _Wa, update: Any) -> bool:
         raise NotImplementedError
 
     def has_async(self) -> bool:
