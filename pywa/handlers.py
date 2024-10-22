@@ -587,7 +587,7 @@ class HandlerDecorators:
         Example:
 
             >>> wa = WhatsApp(...)
-            >>> @wa.on_raw_update()
+            >>> @wa.on_raw_update
             ... def raw_update_handler(_: WhatsApp, update: dict):
             ...     print(update)
 
@@ -597,14 +597,14 @@ class HandlerDecorators:
         """
 
         if (
-            clb := _on_without_parentheses(
+            clb := _registered_without_parentheses(
                 self=self, handler=RawUpdateHandler, filters=filters, priority=priority
             )
         ) is not None:
             return clb
 
         def deco(callback: _RawUpdateCallback) -> _RawUpdateCallback:
-            return _on_with_parentheses(
+            return _registered_with_parentheses(
                 self=self,
                 handler=RawUpdateHandler,
                 callback=callback,
@@ -632,7 +632,7 @@ class HandlerDecorators:
             >>> @wa.on_message(fil.matches("Hello", "Hi", ignore_case=True))
             ... def hello_handler(_: WhatsApp, msg: Message):
             ...     msg.react("👋")
-            ...     msg.reply_text(text="Hello from PyWa!", quote=True, buttons=[Button("Help", data="help")
+            ...     msg.reply_text(text="Hello from PyWa!", quote=True)
 
         Args:
             filters: Filters to apply to the incoming messages.
@@ -640,14 +640,14 @@ class HandlerDecorators:
         """
 
         if (
-            clb := _on_without_parentheses(
+            clb := _registered_without_parentheses(
                 self=self, handler=MessageHandler, filters=filters, priority=priority
             )
         ) is not None:
             return clb
 
         def deco(callback: _MessageCallback) -> _MessageCallback:
-            return _on_with_parentheses(
+            return _registered_with_parentheses(
                 self=self,
                 handler=MessageHandler,
                 callback=callback,
@@ -688,24 +688,24 @@ class HandlerDecorators:
         """
 
         if (
-            clb := _on_without_parentheses(
+            clb := _registered_without_parentheses(
                 self=self,
                 handler=CallbackButtonHandler,
                 filters=filters,
-                factory=factory,
                 priority=priority,
+                factory=factory,
             )
         ) is not None:
             return clb
 
         def deco(callback: _CallbackButtonCallback) -> _CallbackButtonCallback:
-            return _on_with_parentheses(
+            return _registered_with_parentheses(
                 self=self,
                 handler=CallbackButtonHandler,
                 callback=callback,
                 filters=filters,
-                factory=factory,
                 priority=priority,
+                factory=factory,
             )
 
         return deco
@@ -741,24 +741,24 @@ class HandlerDecorators:
         """
 
         if (
-            clb := _on_without_parentheses(
+            clb := _registered_without_parentheses(
                 self=self,
                 handler=CallbackSelectionHandler,
                 filters=filters,
-                factory=factory,
                 priority=priority,
+                factory=factory,
             )
         ) is not None:
             return clb
 
         def deco(callback: _CallbackSelectionCallback) -> _CallbackSelectionCallback:
-            return _on_with_parentheses(
+            return _registered_with_parentheses(
                 self=self,
                 handler=CallbackSelectionHandler,
                 callback=callback,
                 filters=filters,
-                factory=factory,
                 priority=priority,
+                factory=factory,
             )
 
         return deco
@@ -785,7 +785,7 @@ class HandlerDecorators:
             >>> from pywa.types import MessageStatus
             >>> from pywa import filters as fil
             >>> wa = WhatsApp(...)
-            >>> @wa.on_message_status(fil.message_status.failed)
+            >>> @wa.on_message_status(fil.failed)
             ... def delivered_handler(client: WhatsApp, status: MessageStatus):
             ...     print(f"Message {status.id} failed to send to {status.from_user.wa_id}: {status.error.message})
 
@@ -798,24 +798,24 @@ class HandlerDecorators:
         """
 
         if (
-            clb := _on_without_parentheses(
+            clb := _registered_without_parentheses(
                 self=self,
                 handler=MessageStatusHandler,
                 filters=filters,
-                factory=factory,
                 priority=priority,
+                factory=factory,
             )
         ) is not None:
             return clb
 
         def deco(callback: _MessageStatusCallback) -> _MessageStatusCallback:
-            return _on_with_parentheses(
+            return _registered_with_parentheses(
                 self=self,
                 handler=MessageStatusHandler,
                 callback=callback,
                 filters=filters,
-                factory=factory,
                 priority=priority,
+                factory=factory,
             )
 
         return deco
@@ -835,7 +835,7 @@ class HandlerDecorators:
             >>> from pywa.types import ChatOpened
             >>> from pywa import filters as fil
             >>> wa = WhatsApp(...)
-            >>> @wa.on_chat_opened()
+            >>> @wa.on_chat_opened
             ... def chat_opened_handler(client: WhatsApp, chat_opened: ChatOpened):
             ...     print(f"The user {chat_opened.from_user.wa_id} just opened a chat with us!")
 
@@ -845,14 +845,14 @@ class HandlerDecorators:
         """
 
         if (
-            clb := _on_without_parentheses(
+            clb := _registered_without_parentheses(
                 self=self, handler=ChatOpenedHandler, filters=filters, priority=priority
             )
         ) is not None:
             return clb
 
         def deco(callback: _ChatOpenedCallback) -> _ChatOpenedCallback:
-            return _on_with_parentheses(
+            return _registered_with_parentheses(
                 self=self,
                 handler=ChatOpenedHandler,
                 callback=callback,
@@ -881,9 +881,9 @@ class HandlerDecorators:
             >>> from pywa.types import TemplateStatus
             >>> from pywa import filters as fil
             >>> wa = WhatsApp(...)
-            >>> @wa.on_template_status(fil.template_status.on_event(TemplateStatus.TemplateEvent.APPROVED))
+            >>> @wa.on_template_status
             ... def approved_handler(client: WhatsApp, status: TemplateStatus):
-            ...     print(f"Template {status.message_template_name} just got approved!")
+            ...     print(f"Template {status.message_template_name} just got {status.event}!")
 
         Args:
             filters: Filters to apply to the incoming template status changes.
@@ -891,7 +891,7 @@ class HandlerDecorators:
         """
 
         if (
-            clb := _on_without_parentheses(
+            clb := _registered_without_parentheses(
                 self=self,
                 handler=TemplateStatusHandler,
                 filters=filters,
@@ -901,7 +901,7 @@ class HandlerDecorators:
             return clb
 
         def deco(callback: _TemplateStatusCallback) -> _TemplateStatusCallback:
-            return _on_with_parentheses(
+            return _registered_with_parentheses(
                 self=self,
                 handler=TemplateStatusHandler,
                 callback=callback,
@@ -929,7 +929,7 @@ class HandlerDecorators:
             >>> from pywa.types import FlowCompletion
             >>> from pywa import filters as fil
             >>> wa = WhatsApp(...)
-            >>> @wa.on_flow_completion()
+            >>> @wa.on_flow_completion
             ... def flow_handler(client: WhatsApp, flow: FlowCompletion):
             ...     print(f"Flow {flow.token} just got completed!. Flow data: {flow.response}")
 
@@ -939,7 +939,7 @@ class HandlerDecorators:
         """
 
         if (
-            clb := _on_without_parentheses(
+            clb := _registered_without_parentheses(
                 self=self,
                 handler=FlowCompletionHandler,
                 filters=filters,
@@ -949,7 +949,7 @@ class HandlerDecorators:
             return clb
 
         def deco(callback: _FlowCompletionCallback) -> _FlowCompletionCallback:
-            return _on_with_parentheses(
+            return _registered_with_parentheses(
                 self=self,
                 handler=FlowCompletionHandler,
                 callback=callback,
@@ -982,8 +982,7 @@ class HandlerDecorators:
             >>> wa = WhatsApp(business_private_key='...', ...)
             >>> @wa.on_flow_request('/feedback_flow')
             ... def feedback_flow_handler(_: WhatsApp, flow: FlowRequest) -> FlowResponse:
-            ...     return FlowResponse(
-            ...         version=flow.version,
+            ...     return flow.respond(
             ...         screen="SURVEY",
             ...         data={
             ...             "default_text": "Please rate your experience with our service",
@@ -1023,7 +1022,7 @@ class HandlerDecorators:
 _handlers_attr = "__pywa_handlers"
 
 
-def _on_without_parentheses(
+def _registered_without_parentheses(
     *,
     self: WhatsApp,
     handler: type[Handler],
@@ -1047,7 +1046,7 @@ def _on_without_parentheses(
     return None
 
 
-def _on_with_parentheses(
+def _registered_with_parentheses(
     *,
     self: WhatsApp,
     handler: type[Handler],

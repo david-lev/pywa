@@ -1,8 +1,10 @@
 import dataclasses
 import datetime
 import functools
+from types import ModuleType
 
 from pywa import handlers, types, WhatsApp, filters
+from pywa.handlers import MessageHandler
 from pywa_async import WhatsApp as WhatsAppAsync
 
 FAKE_WA = WhatsApp(phone_id="1234567890", token="1234567890:1234567890")
@@ -56,3 +58,50 @@ def test_resolve_factory_callback_data_subclass():
 
     update = CallbackButtonOnlyDataIsNeeded(data=button_data)
     assert factory_filter(FAKE_WA, update)
+
+
+def test_decorators():
+    wa = WhatsApp(server=None, verify_token="1234567890")
+
+    @wa.on_message(filters=filters.text)
+    def instance_with_parentheses(_, __): ...
+
+    assert wa._handlers[MessageHandler][0]._callback == instance_with_parentheses
+
+    wa = WhatsApp(server=None, verify_token="1234567890")
+
+    @wa.on_message
+    def instance_without_parentheses(_, __): ...
+
+    assert wa._handlers[MessageHandler][0]._callback == instance_without_parentheses
+
+    module = ModuleType("module")
+
+    @WhatsApp.on_message(filters=filters.text)
+    def class_with_parentheses(_, __): ...
+
+    module.__dict__["on_message"] = class_with_parentheses
+    wa = WhatsApp(server=None, verify_token="1234567890", handlers_modules=[module])
+    assert wa._handlers[MessageHandler][0]._callback == class_with_parentheses
+
+    module = ModuleType("module")
+
+    @WhatsApp.on_message
+    def class_without_parentheses(_, __): ...
+
+    module.__dict__["on_message"] = class_without_parentheses
+    wa = WhatsApp(server=None, verify_token="1234567890", handlers_modules=[module])
+    assert wa._handlers[MessageHandler][0]._callback == class_without_parentheses
+
+    wa = WhatsApp(server=None, verify_token="1234567890")
+
+    @wa.on_message(filters=filters.text)
+    @wa.on_message
+    @WhatsApp.on_message(filters=filters.text)
+    @WhatsApp.on_message
+    def all_combinations(_, __): ...
+
+    module = ModuleType("module")
+    module.__dict__["on_message"] = all_combinations
+    wa.load_handlers_modules(module)
+    assert len(wa._handlers[MessageHandler]) == 4
