@@ -40,6 +40,7 @@ def test_all_methods_overwritten_in_async():
         "_register_routes",
         "_remove_listener",
         "get_flow_request_handler",
+        "load_handlers_modules",
     }
     for method in dir(WhatsAppSync):
         if method.startswith("__") or method in skip_methods:
