@@ -194,7 +194,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         ] = collections.defaultdict(list)
         self._listeners = dict[tuple[str, str], Listener]()
 
-        if token is None:
+        if not token:
             self._api = None
         else:
             self._api = self._api_class(
@@ -234,7 +234,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             )
 
     def _check_for_async_filters(self, filters: Filter) -> None:
-        if self._async_allowed:
+        if not filters or self._async_allowed:
             return
         if filters.has_async():
             raise ValueError(

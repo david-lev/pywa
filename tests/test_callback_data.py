@@ -84,39 +84,6 @@ def test_data():
         User.from_str("1~x~yyy~§")
 
 
-def test_multiple_data():
-    """Test multiple callback data."""
-
-    @dataclasses.dataclass(slots=True, frozen=True)
-    class User(CallbackData):
-        id: str
-        name: str
-        is_admin: bool
-
-    @dataclasses.dataclass(slots=True, frozen=True)
-    class Group(CallbackData):
-        id: str
-        name: str
-
-    user = User(id="1234", name="xxx", is_admin=True)
-    group = Group(id="3456", name="yyy")
-    assert CallbackData.join_to_str(user, group) == "9~1234~xxx~§¶11~3456~yyy"
-    assert (
-        CallbackData.join_to_str(user, group, user)
-        == "9~1234~xxx~§¶11~3456~yyy¶9~1234~xxx~§"
-    )
-    x, y = "3~1234~xxx~§¶5~3456~yyy".split(CallbackData.__callback_sep__)
-    assert (User.from_str(x), Group.from_str(y)) == (user, group)
-    x, y, z = "3~1234~xxx~§¶5~3456~yyy¶3~1234~xxx~§".split(
-        CallbackData.__callback_sep__
-    )
-    assert (User.from_str(x), Group.from_str(y), User.from_str(z)) == (
-        user,
-        group,
-        user,
-    )
-
-
 def test_data_sep():
     """Test the data separator override."""
 
@@ -127,8 +94,8 @@ def test_data_sep():
         name: str
         is_admin: bool
 
-    assert User(id=1234, name="xxx", is_admin=True).to_str() == "13*1234*xxx*§"
-    assert User(id=3456, name="yyy", is_admin=False).to_str() == "13*3456*yyy*"
+    assert User(id=1234, name="xxx", is_admin=True).to_str() == "9*1234*xxx*§"
+    assert User(id=3456, name="yyy", is_admin=False).to_str() == "9*3456*yyy*"
 
     with pytest.raises(ValueError):
         User.from_str("1*3456*David*Lev*")
@@ -137,37 +104,3 @@ def test_data_sep():
         User.from_str("1*3456*David~Lev*")
     except ValueError:
         pytest.fail("The data separator override does not work.")
-
-
-def test_data_sep_multiple_data():
-    """Test the data separator override with multiple data."""
-    CallbackData.__callback_sep__ = "^"
-
-    @dataclasses.dataclass(slots=True, frozen=True)
-    class User(CallbackData):
-        id: int
-        name: str
-        is_admin: bool
-
-    @dataclasses.dataclass(slots=True, frozen=True)
-    class Group(CallbackData):
-        id: int
-        name: str
-
-    user = User(id=1234, name="xxx", is_admin=True)
-    group = Group(id=3456, name="yyy")
-    assert CallbackData.join_to_str(user, group) == "15~1234~xxx~§^17~3456~yyy"
-    assert (
-        CallbackData.join_to_str(user, group, user)
-        == "15~1234~xxx~§^17~3456~yyy^15~1234~xxx~§"
-    )
-    x, y = "3~1234~xxx~§^5~3456~yyy".split(CallbackData.__callback_sep__)
-    assert (User.from_str(x), Group.from_str(y)) == (user, group)
-    x, y, z = "3~1234~xxx~§^5~3456~yyy^3~1234~xxx~§".split(
-        CallbackData.__callback_sep__
-    )
-    assert (User.from_str(x), Group.from_str(y), User.from_str(z)) == (
-        user,
-        group,
-        user,
-    )

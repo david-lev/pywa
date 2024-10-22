@@ -41,7 +41,7 @@ def resolve_buttons_param(
 ) -> tuple[
     InteractiveType,
     dict,
-    dict[str, set[str] | str] | None,
+    dict[str, set[str] | str],
 ]:
     """
     Internal method to resolve ``buttons`` parameter. Returns a tuple of (``type``, ``buttons``, ``callback_options``).
@@ -58,7 +58,7 @@ def resolve_buttons_param(
             },
         )
     elif isinstance(buttons, ButtonUrl):
-        return InteractiveType.CTA_URL, buttons.to_dict(), None
+        return InteractiveType.CTA_URL, buttons.to_dict(), {}
     elif isinstance(buttons, FlowButton):
         return (
             InteractiveType.FLOW,

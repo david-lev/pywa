@@ -2,7 +2,7 @@ import dataclasses
 import random
 from typing import Callable, TypeVar, cast
 
-from pywa import filters as fil, WhatsApp
+from pywa import filters as fil
 from pywa.errors import WhatsAppError, MediaUploadError
 from pywa.filters import Filter
 from pywa.types import (
@@ -10,7 +10,6 @@ from pywa.types import (
     CallbackSelection,
     CallbackButton,
     MessageStatus,
-    TemplateStatus,
     ReplyToMessage,
     ReferredProduct,
 )

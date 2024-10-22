@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from pywa import WhatsApp, handlers, utils
+from pywa import WhatsApp, handlers, utils, filters
 from pywa.types.flows import (
     FlowJSON,
     Screen,
@@ -35,7 +35,6 @@ from pywa.types.flows import (
     FlowRequestActionType,
 )
 from pywa.utils import Version
-from tests import common
 
 FLOWS_VERSION = "2.1"
 
@@ -1429,8 +1428,7 @@ def test_flow_response_with_data_sources():
     ).to_dict()["data"]["data_source"] == [{"id": "1", "title": "Example"}]
 
 
-@pytest.mark.asyncio
-async def test_flow_callback_wrapper():
+def test_flow_callback_wrapper():
     wa = WhatsApp(
         token="xxx", server=None, business_private_key="xxx", verify_token="fdfd"
     )
@@ -1452,7 +1450,7 @@ async def test_flow_callback_wrapper():
         request_decryptor=...,
         response_encryptor=...,
     )
-    assert await wrapper._get_callback(req) is main_handler
+    assert wrapper._get_callback(req) is main_handler
 
     def data_exchange_start_screen_callback(_, __): ...
 
@@ -1462,7 +1460,7 @@ async def test_flow_callback_wrapper():
         screen="START",
     )
     req = dataclasses.replace(req, screen="START")
-    assert await wrapper._get_callback(req) is data_exchange_start_screen_callback
+    assert wrapper._get_callback(req) is data_exchange_start_screen_callback
 
     def data_exchange_callback_without_screen(_, __): ...
 
@@ -1471,7 +1469,7 @@ async def test_flow_callback_wrapper():
         action=FlowRequestActionType.DATA_EXCHANGE,
         screen=None,
     )
-    assert await wrapper._get_callback(req) is data_exchange_callback_without_screen
+    assert wrapper._get_callback(req) is data_exchange_callback_without_screen
 
     def init_with_data_filter(_, __): ...
 
@@ -1480,10 +1478,10 @@ async def test_flow_callback_wrapper():
         callback=init_with_data_filter,
         action=FlowRequestActionType.INIT,
         screen=None,
-        data_filter=lambda _, data: data.get("age") >= 20,
+        filters=filters.new(lambda _, r: r.data.get("age") >= 20),
     )
     req = dataclasses.replace(req, action=FlowRequestActionType.INIT, data={"age": 20})
-    assert await wrapper._get_callback(req) is init_with_data_filter
+    assert wrapper._get_callback(req) is init_with_data_filter
 
 
 def test_flows_server():
