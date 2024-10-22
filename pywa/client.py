@@ -74,6 +74,9 @@ _DEFAULT_VERIFY_DELAY_SEC = 3
 
 
 class WhatsApp(Server, HandlerDecorators, Listeners):
+    _api_class = WhatsAppCloudApi
+    _httpx_client = httpx.Client
+
     def __init__(
         self,
         phone_id: str | int | None = None,
@@ -192,7 +195,14 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         ] = collections.defaultdict(list)
         self._listeners = dict[tuple[str, str], Listener]()
 
-        self._setup_api(session, token, float(str(api_version)))
+        if token is None:
+            self._api = None
+        else:
+            self._api = self._api_class(
+                token=token,
+                session=session or self._httpx_client(),
+                api_version=float(str(api_version)),
+            )
 
         super().__init__(
             server=server,
@@ -231,21 +241,6 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             raise ValueError(
                 "Async functions are not supported in the sync version of pywa. import `WhatsApp` from `pywa_async` instead"
             )
-
-    def _setup_api(
-        self,
-        session: httpx.Client | None,
-        token: str | None,
-        api_version: float,
-    ) -> None:
-        if token is None:
-            self._api = None
-            return
-        self._api = WhatsAppCloudApi(
-            token=token,
-            session=session or httpx.Client(),
-            api_version=api_version,
-        )
 
     @property
     def api(self) -> WhatsAppCloudApi:

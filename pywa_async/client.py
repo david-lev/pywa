@@ -2,12 +2,14 @@
 
 __all__ = ["WhatsApp"]
 
+import asyncio
+import copy
 
 from pywa.client import (
     WhatsApp as _WhatsApp,
     _DEFAULT_VERIFY_DELAY_SEC,
 )  # noqa MUST BE IMPORTED FIRST
-from pywa_async import _helpers as helpers
+from pywa_async import _helpers as helpers, errors
 from .handlers import (
     MessageHandler,
     MessageStatusHandler,
@@ -88,7 +90,9 @@ _logger = logging.getLogger(__name__)
 
 
 class WhatsApp(AsyncListeners, _WhatsApp):
-    api: WhatsAppCloudApiAsync
+    _api_class = WhatsAppCloudApiAsync
+    _httpx_client = httpx.AsyncClient
+    api: WhatsAppCloudApiAsync  # IDE type hinting
 
     def __init__(
         self,
@@ -387,20 +391,46 @@ class WhatsApp(AsyncListeners, _WhatsApp):
 
         return not self._continue_handling
 
-    def _setup_api(
-        self,
-        session: httpx.AsyncClient | None,
-        token: str,
-        api_version: float,
+    def _register_callback_url(
+        self: "WhatsApp",
+        callback_url: str,
+        app_id: int,
+        app_secret: str,
+        verify_token: str,
+        fields: tuple[str, ...] | None,
     ) -> None:
-        if token is None:
-            self._api = None
-            return
-        self._api = WhatsAppCloudApiAsync(
-            token=token,
-            session=session or httpx.AsyncClient(),
-            api_version=api_version,
+        """
+        This is a non-blocking function that registers the callback URL.
+        It must be called after the server is running so that the challenge can be verified.
+        """
+        loop = asyncio.new_event_loop()
+        api = copy.copy(self.api)
+        api._session = self._httpx_client(  # TODO: copy the session properly
+            timeout=api._session.timeout,
+            base_url=api._session.base_url,
+            headers=api._session.headers,
         )
+
+        try:
+            app_access_token = loop.run_until_complete(
+                api.get_app_access_token(app_id=app_id, app_secret=app_secret)
+            )
+            if not loop.run_until_complete(
+                api.set_app_callback_url(
+                    app_id=app_id,
+                    app_access_token=app_access_token["access_token"],
+                    callback_url=callback_url,
+                    verify_token=verify_token,
+                    fields=fields,
+                )
+            )["success"]:
+                raise RuntimeError("Failed to register callback URL.")
+            _logger.info("Callback URL '%s' registered successfully", callback_url)
+        except errors.WhatsAppError as e:
+            raise RuntimeError(
+                f"Failed to register callback URL '{callback_url}'. if you are using a slow/custom server, you can "
+                "increase the delay using the `webhook_challenge_delay` parameter when initializing the WhatsApp client."
+            ) from e
 
     async def send_message(
         self,

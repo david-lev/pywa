@@ -24,11 +24,11 @@ class WhatsAppCloudApi:
         session: httpx.Client,
         api_version: float,
     ):
-        self._base_url = f"https://graph.facebook.com/v{api_version}"
         if session.headers.get("Authorization") is not None:
             raise ValueError(
                 "You can't use the same httpx.Client for multiple WhatsApp instances!"
             )
+        session.base_url = f"https://graph.facebook.com/v{api_version}"
         session.headers.update(
             {
                 "Authorization": f"Bearer {token}",
@@ -58,9 +58,7 @@ class WhatsAppCloudApi:
         Raises:
             WhatsAppError: If the request failed.
         """
-        res = self._session.request(
-            method=method, url=f"{self._base_url}{endpoint}", **kwargs
-        )
+        res = self._session.request(method=method, url=endpoint, **kwargs)
         if res.status_code >= 400:
             raise WhatsAppError.from_dict(error=res.json()["error"], response=res)
         return res.json()

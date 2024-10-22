@@ -44,9 +44,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         Raises:
             WhatsAppError: If the request failed.
         """
-        res = await self._session.request(
-            method=method, url=f"{self._base_url}{endpoint}", **kwargs
-        )
+        res = await self._session.request(method=method, url=endpoint, **kwargs)
         if res.status_code >= 400:
             raise WhatsAppError.from_dict(error=res.json()["error"], response=res)
         return res.json()
