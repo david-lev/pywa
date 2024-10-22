@@ -595,20 +595,24 @@ class HandlerDecorators:
             filters: Filters to apply to the incoming updates.
             priority: The priority of the handler (default: ``0``).
         """
-        if not isinstance(filters, Filter | None):
-            clb = cast(_RawUpdateCallback, filters)
-            self.add_handlers(RawUpdateHandler(callback=clb, priority=priority))
+
+        if (
+            clb := _on_without_parentheses(
+                self=self, handler=RawUpdateHandler, filters=filters, priority=priority
+            )
+        ) is not None:
             return clb
 
-        def decorator(
-            callback: _RawUpdateCallback,
-        ) -> _RawUpdateCallback:
-            self.add_handlers(
-                RawUpdateHandler(callback=callback, filters=filters, priority=priority)
+        def deco(callback: _RawUpdateCallback) -> _RawUpdateCallback:
+            return _on_with_parentheses(
+                self=self,
+                handler=RawUpdateHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
             )
-            return callback
 
-        return decorator
+        return deco
 
     def on_message(
         self: WhatsApp = None,
@@ -635,20 +639,23 @@ class HandlerDecorators:
             priority: The priority of the handler (default: ``0``).
         """
 
-        if not isinstance(filters, Filter | None):
-            clb = cast(_MessageCallback, filters)
-            self.add_handlers(MessageHandler(callback=clb, priority=priority))
+        if (
+            clb := _on_without_parentheses(
+                self=self, handler=MessageHandler, filters=filters, priority=priority
+            )
+        ) is not None:
             return clb
 
-        def decorator(
-            callback: _MessageCallback,
-        ) -> _MessageCallback:
-            self.add_handlers(
-                MessageHandler(callback=callback, filters=filters, priority=priority)
+        def deco(callback: _MessageCallback) -> _MessageCallback:
+            return _on_with_parentheses(
+                self=self,
+                handler=MessageHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
             )
-            return callback
 
-        return decorator
+        return deco
 
     def on_callback_button(
         self: WhatsApp = None,
@@ -680,25 +687,28 @@ class HandlerDecorators:
             priority: The priority of the handler (default: ``0``).
         """
 
-        if not isinstance(filters, Filter | None):
-            clb = cast(_CallbackButtonCallback, filters)
-            self.add_handlers(CallbackButtonHandler(callback=clb, priority=priority))
+        if (
+            clb := _on_without_parentheses(
+                self=self,
+                handler=CallbackButtonHandler,
+                filters=filters,
+                factory=factory,
+                priority=priority,
+            )
+        ) is not None:
             return clb
 
-        def decorator(
-            callback: _CallbackButtonCallback,
-        ) -> _CallbackButtonCallback:
-            self.add_handlers(
-                CallbackButtonHandler(
-                    callback=callback,
-                    filters=filters,
-                    factory=factory,
-                    priority=priority,
-                )
+        def deco(callback: _CallbackButtonCallback) -> _CallbackButtonCallback:
+            return _on_with_parentheses(
+                self=self,
+                handler=CallbackButtonHandler,
+                callback=callback,
+                filters=filters,
+                factory=factory,
+                priority=priority,
             )
-            return callback
 
-        return decorator
+        return deco
 
     def on_callback_selection(
         self: WhatsApp = None,
@@ -730,25 +740,28 @@ class HandlerDecorators:
             priority: The priority of the handler (default: ``0``).
         """
 
-        if not isinstance(filters, Filter | None):
-            clb = cast(_CallbackSelectionCallback, filters)
-            self.add_handlers(CallbackSelectionHandler(callback=clb, priority=priority))
+        if (
+            clb := _on_without_parentheses(
+                self=self,
+                handler=CallbackSelectionHandler,
+                filters=filters,
+                factory=factory,
+                priority=priority,
+            )
+        ) is not None:
             return clb
 
-        def decorator(
-            callback: _CallbackSelectionCallback,
-        ) -> _CallbackSelectionCallback:
-            self.add_handlers(
-                CallbackSelectionHandler(
-                    callback=callback,
-                    filters=filters,
-                    factory=factory,
-                    priority=priority,
-                )
+        def deco(callback: _CallbackSelectionCallback) -> _CallbackSelectionCallback:
+            return _on_with_parentheses(
+                self=self,
+                handler=CallbackSelectionHandler,
+                callback=callback,
+                filters=filters,
+                factory=factory,
+                priority=priority,
             )
-            return callback
 
-        return decorator
+        return deco
 
     def on_message_status(
         self: WhatsApp = None,
@@ -784,25 +797,28 @@ class HandlerDecorators:
             priority: The priority of the handler (default: ``0``).
         """
 
-        if not isinstance(filters, Filter | None):
-            clb = cast(_MessageStatusCallback, filters)
-            self.add_handlers(MessageStatusHandler(callback=clb, priority=priority))
+        if (
+            clb := _on_without_parentheses(
+                self=self,
+                handler=MessageStatusHandler,
+                filters=filters,
+                factory=factory,
+                priority=priority,
+            )
+        ) is not None:
             return clb
 
-        def decorator(
-            callback: _MessageStatusCallback,
-        ) -> _MessageStatusCallback:
-            self.add_handlers(
-                MessageStatusHandler(
-                    callback=callback,
-                    filters=filters,
-                    factory=factory,
-                    priority=priority,
-                )
+        def deco(callback: _MessageStatusCallback) -> _MessageStatusCallback:
+            return _on_with_parentheses(
+                self=self,
+                handler=MessageStatusHandler,
+                callback=callback,
+                filters=filters,
+                factory=factory,
+                priority=priority,
             )
-            return callback
 
-        return decorator
+        return deco
 
     def on_chat_opened(
         self: WhatsApp = None,
@@ -828,20 +844,23 @@ class HandlerDecorators:
             priority: The priority of the handler (default: ``0``).
         """
 
-        if not isinstance(filters, Filter | None):
-            clb = cast(_ChatOpenedCallback, filters)
-            self.add_handlers(ChatOpenedHandler(callback=clb, priority=priority))
+        if (
+            clb := _on_without_parentheses(
+                self=self, handler=ChatOpenedHandler, filters=filters, priority=priority
+            )
+        ) is not None:
             return clb
 
-        def decorator(
-            callback: _ChatOpenedCallback,
-        ) -> _ChatOpenedCallback:
-            self.add_handlers(
-                ChatOpenedHandler(callback=callback, filters=filters, priority=priority)
+        def deco(callback: _ChatOpenedCallback) -> _ChatOpenedCallback:
+            return _on_with_parentheses(
+                self=self,
+                handler=ChatOpenedHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
             )
-            return callback
 
-        return decorator
+        return deco
 
     def on_template_status(
         self: WhatsApp = None,
@@ -871,22 +890,26 @@ class HandlerDecorators:
             priority: The priority of the handler (default: ``0``).
         """
 
-        if not isinstance(filters, Filter | None):
-            clb = cast(_TemplateStatusCallback, filters)
-            self.add_handlers(TemplateStatusHandler(callback=clb, priority=priority))
+        if (
+            clb := _on_without_parentheses(
+                self=self,
+                handler=TemplateStatusHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
             return clb
 
-        def decorator(
-            callback: _TemplateStatusCallback,
-        ) -> _TemplateStatusCallback:
-            self.add_handlers(
-                TemplateStatusHandler(
-                    callback=callback, filters=filters, priority=priority
-                )
+        def deco(callback: _TemplateStatusCallback) -> _TemplateStatusCallback:
+            return _on_with_parentheses(
+                self=self,
+                handler=TemplateStatusHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
             )
-            return callback
 
-        return decorator
+        return deco
 
     def on_flow_completion(
         self: WhatsApp = None,
@@ -915,22 +938,26 @@ class HandlerDecorators:
             priority: The priority of the handler (default: ``0``).
         """
 
-        if not isinstance(filters, Filter | None):
-            clb = cast(_FlowCompletionCallback, filters)
-            self.add_handlers(FlowCompletionHandler(callback=clb, priority=priority))
+        if (
+            clb := _on_without_parentheses(
+                self=self,
+                handler=FlowCompletionHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
             return clb
 
-        def decorator(
-            callback: Callable[[WhatsApp, FlowCompletion], Any | Awaitable[Any]],
-        ) -> Callable[[WhatsApp, FlowCompletion], Any | Awaitable[Any]]:
-            self.add_handlers(
-                FlowCompletionHandler(
-                    callback=callback, filters=filters, priority=priority
-                )
+        def deco(callback: _FlowCompletionCallback) -> _FlowCompletionCallback:
+            return _on_with_parentheses(
+                self=self,
+                handler=FlowCompletionHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
             )
-            return callback
 
-        return decorator
+        return deco
 
     def on_flow_request(
         self: WhatsApp,
@@ -991,6 +1018,53 @@ class HandlerDecorators:
             return callback_wrapper
 
         return decorator
+
+
+_handlers_attr = "__pywa_handlers"
+
+
+def _on_without_parentheses(
+    *,
+    self: WhatsApp,
+    handler: type[Handler],
+    filters: Filter,
+    priority: int,
+    **kwargs,
+) -> Callable | None:
+    """Should be called from the decorator function."""
+    if callable(self) and filters is None:  # @WhatsApp.on_x
+        if not hasattr(self, _handlers_attr):
+            setattr(self, _handlers_attr, [])
+        getattr(self, _handlers_attr).append(
+            handler(callback=self, filters=None, priority=priority, **kwargs)
+        )
+        return self
+    elif callable(filters):  # @wa.on_x
+        self.add_handlers(
+            handler(callback=filters, filters=None, priority=priority, **kwargs)
+        )
+        return filters
+    return None
+
+
+def _on_with_parentheses(
+    *,
+    self: WhatsApp,
+    handler: type[Handler],
+    callback: Callable,
+    filters: Filter,
+    priority: int,
+    **kwargs,
+) -> Callable:
+    """Should be called from the decorator function."""
+    handler = handler(callback=callback, filters=filters, priority=priority, **kwargs)
+    if self is None:  # @WhatsApp.on_x(filters=...)
+        if not hasattr(callback, _handlers_attr):
+            setattr(callback, _handlers_attr, [])
+        getattr(callback, _handlers_attr).append(handler)
+    else:  # @wa.on_x(filters=...)
+        self.add_handlers(handler)
+    return callback
 
 
 class FlowRequestCallbackWrapper:

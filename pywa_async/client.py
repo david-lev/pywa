@@ -10,6 +10,7 @@ import logging
 import mimetypes
 import os
 import pathlib
+from types import ModuleType
 from typing import BinaryIO, Iterable, Literal
 
 import httpx
@@ -95,6 +96,7 @@ class WhatsApp(Server, AsyncListeners, _WhatsApp):
         | int
         | float
         | Literal[utils.Version.GRAPH_API] = utils.Version.GRAPH_API,
+        handlers_modules: Iterable[ModuleType] | None = None,
     ) -> None:
         """
         The WhatsApp client.
@@ -161,6 +163,7 @@ class WhatsApp(Server, AsyncListeners, _WhatsApp):
             continue_handling: Whether to continue handling updates after a handler or listener has been found (default: ``False``).
             skip_duplicate_updates: Whether to skip duplicate updates (default: ``True``).
             validate_updates: Whether to validate updates payloads (default: ``True``, ``app_secret`` required).
+            handlers_modules: Modules to load handlers from.
         """
         super().__init__(
             phone_id=phone_id,
@@ -184,6 +187,7 @@ class WhatsApp(Server, AsyncListeners, _WhatsApp):
             continue_handling=continue_handling,
             skip_duplicate_updates=skip_duplicate_updates,
             validate_updates=validate_updates,
+            handlers_modules=handlers_modules,
         )
 
     def __repr__(self):

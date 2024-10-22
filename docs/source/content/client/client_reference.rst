@@ -51,3 +51,4 @@ Client Reference
 .. automethod:: WhatsApp.webhook_update_handler
 .. automethod:: WhatsApp.webhook_challenge_handler
 .. automethod:: WhatsApp.get_flow_request_handler
+.. automethod:: WhatsApp.load_handlers_modules

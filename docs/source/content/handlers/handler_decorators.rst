@@ -14,3 +14,4 @@ Handler Decorators
 .. automethod:: WhatsApp.on_raw_update
 
 .. automethod:: WhatsApp.remove_callbacks
+.. automethod:: WhatsApp.load_handlers_modules

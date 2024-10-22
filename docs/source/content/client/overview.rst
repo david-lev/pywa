@@ -106,7 +106,6 @@ The available methods are:
      - :meth:`~WhatsApp.webhook_update_handler`,
        :meth:`~WhatsApp.webhook_challenge_handler`,
        :meth:`~WhatsApp.get_flow_request_handler`
-
 .. toctree::
     client_reference
     api_reference

@@ -15,7 +15,7 @@ import mimetypes
 import os
 import pathlib
 import warnings
-from types import NoneType
+from types import NoneType, ModuleType
 from typing import BinaryIO, Iterable, Literal, Any, Callable
 
 import httpx
@@ -28,6 +28,7 @@ from .handlers import (
     HandlerDecorators,
     FlowRequestHandler,
     FlowRequestCallbackWrapper,
+    _handlers_attr,
 )  # noqa
 from .listeners import Listeners, Listener
 from .types import (
@@ -75,6 +76,7 @@ _DEFAULT_VERIFY_DELAY_SEC = 3
 class WhatsApp(Server, HandlerDecorators, Listeners):
     _api_class = WhatsAppCloudApi
     _httpx_client = httpx.Client
+    _async_allowed = False
 
     def __init__(
         self,
@@ -105,6 +107,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         | int
         | float
         | Literal[utils.Version.GRAPH_API] = utils.Version.GRAPH_API,
+        handlers_modules: Iterable[ModuleType] | None = None,
     ) -> None:
         """
         The WhatsApp client.
@@ -171,6 +174,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             continue_handling: Whether to continue handling updates after a handler or listener has been found (default: ``False``).
             skip_duplicate_updates: Whether to skip duplicate updates (default: ``True``).
             validate_updates: Whether to validate updates payloads (default: ``True``, ``app_secret`` required).
+            handlers_modules: Modules to load handlers from.
         """
         try:
             utils.Version.GRAPH_API.validate_min_version(str(api_version))
@@ -221,8 +225,8 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             skip_duplicate_updates=skip_duplicate_updates,
             validate_updates=validate_updates,
         )
-
-    _async_allowed = False
+        if handlers_modules:
+            self.load_handlers_modules(*handlers_modules)
 
     def _check_for_async_callback(self, func: Callable[..., Any]) -> None:
         """Prevent async functions from being used in the sync version of pywa."""
@@ -240,6 +244,46 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             raise ValueError(
                 "Async functions are not supported in the sync version of pywa. import `WhatsApp` from `pywa_async` instead"
             )
+
+    def load_handlers_modules(self, *modules: ModuleType) -> None:
+        """
+        Load handlers from modules.
+
+        Example:
+
+            .. code-block:: python
+                :caption: my_handlers.py
+                :linenos:
+                :emphasize-lines: 3, 7
+
+                from pywa import WhatsApp, types, filters as fil
+
+                @WhatsApp.on_message(fil.text)
+                def on_text_message(wa: WhatsApp, msg: types.Message):
+                    ...
+
+                @WhatsApp.on_callback_button
+                def on_callback_button(wa: WhatsApp, msg: types.CallbackButton):
+                    ...
+
+            .. code-block:: python
+                :caption: main.py
+                :linenos:
+                :emphasize-lines: 2, 4
+
+                from pywa import WhatsApp
+                from . import my_handlers
+
+                wa = WhatsApp(..., handlers_modules=[my_handlers])
+
+        """
+        for module in modules:
+            for name in dir(module):
+                obj = getattr(module, name)
+                if not hasattr(obj, _handlers_attr):
+                    continue
+                for handler in getattr(obj, _handlers_attr):
+                    self.add_handlers(handler)
 
     @property
     def api(self) -> WhatsAppCloudApi:
