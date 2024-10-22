@@ -2,6 +2,8 @@ import dataclasses
 import random
 from typing import Callable, TypeVar, cast
 
+import pytest
+
 from pywa import filters as fil
 from pywa.errors import WhatsAppError, MediaUploadError
 from pywa.filters import Filter
@@ -249,6 +251,31 @@ def test_combinations():
     assert not (true & false).check_sync(None, None)
     assert (true | false).check_sync(None, None)
     assert not (false | false).check_sync(None, None)
+
+
+@pytest.mark.asyncio
+async def test_combinations_async():
+    async def _async_true(_, __):
+        return True
+
+    async def _async_false(_, __):
+        return False
+
+    async_true, async_false = fil.new(_async_true), fil.new(_async_false)
+    sync_true, sync_false = fil.new(lambda _, __: True), fil.new(lambda _, __: False)
+
+    assert await async_true.check_async(None, None)
+    assert not await async_false.check_async(None, None)
+    assert await (async_true & async_true).check_async(None, None)
+    assert await (sync_true & async_true).check_async(None, None)
+    assert await (async_true & sync_true).check_async(None, None)
+    assert not await (async_true & async_false).check_async(None, None)
+    assert not await (sync_true & async_false).check_async(None, None)
+    assert await (async_true | async_false).check_async(None, None)
+    assert await (sync_true | async_false).check_async(None, None)
+    assert await (async_false | sync_true).check_async(None, None)
+    assert not await (async_false | async_false).check_async(None, None)
+    assert not await (sync_false | sync_false).check_async(None, None)
 
 
 def test_filters():
