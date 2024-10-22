@@ -19,9 +19,12 @@ SENT_MESSAGE = {
 wa = WhatsApp(phone_id=PHONE_ID, token=TOKEN)
 
 
-def test_wa_without_token():
+def test_api_usage_without_token():
     with pytest.raises(ValueError):
-        WhatsApp(phone_id="123", token="")
+        WhatsApp(phone_id="123", token="").api
+
+    with pytest.raises(ValueError):
+        WhatsApp(token=None).api
 
 
 def test_warning_when_version_lower_than_min():
@@ -35,7 +38,7 @@ def test_send_text_message(mocker: pytest_mock.MockFixture):
         wa.send_message(
             to="1234567890",
             text="Hello World",
-        )
+        ).id
         == MSG_ID
     )
 
@@ -47,7 +50,7 @@ def test_send_message_with_buttons(mocker: pytest_mock.MockFixture):
             to="1234567890",
             text="Hello World",
             buttons=[types.Button(title="Button 1", callback_data="button1")],
-        )
+        ).id
         == MSG_ID
     )
 
@@ -58,7 +61,7 @@ def test_send_message_with_buttons(mocker: pytest_mock.MockFixture):
             buttons=types.ButtonUrl(
                 title="PyWa Docs", url="https://pywa.readthedocs.io"
             ),
-        )
+        ).id
         == MSG_ID
     )
 
@@ -81,22 +84,9 @@ def test_send_message_with_buttons(mocker: pytest_mock.MockFixture):
                     )
                 ],
             ),
-        )
+        ).id
         == MSG_ID
     )
-
-
-def test_send_message_deprecated_keyboard_param(mocker: pytest_mock.MockFixture):
-    mocker.patch.object(wa.api, "send_message", return_value=SENT_MESSAGE)
-    with pytest.warns(DeprecationWarning):
-        assert (
-            wa.send_message(
-                to="1234567890",
-                text="Hello World",
-                keyboard=[types.Button(title="Button 1", callback_data="button1")],
-            )
-            == MSG_ID
-        )
 
 
 def test_send_media_message(mocker: pytest_mock.MockFixture):
@@ -107,7 +97,7 @@ def test_send_media_message(mocker: pytest_mock.MockFixture):
             to="1234567890",
             image="https://example.com/image.jpg",  # url
             caption="Hello World",
-        )
+        ).id
         == MSG_ID
     )
 
@@ -116,7 +106,7 @@ def test_send_media_message(mocker: pytest_mock.MockFixture):
             to="1234567890",
             video="1234567890",  # media_id
             caption="Hello World",
-        )
+        ).id
         == MSG_ID
     )
 
@@ -126,7 +116,7 @@ def test_send_media_message(mocker: pytest_mock.MockFixture):
                 to="1234567890",
                 video=f.name,  # local file
                 caption="Hello World",
-            )
+            ).id
             == MSG_ID
         )
 
@@ -135,33 +125,6 @@ def test_send_media_message(mocker: pytest_mock.MockFixture):
             to="1234567890",
             video="invalid/path.mp4",  # invalid path
             caption="Hello World",
-        )
-
-
-def test_send_media_deprecated_body_param(mocker: pytest_mock.MockFixture):
-    mocker.patch.object(wa.api, "send_message", return_value=SENT_MESSAGE)
-    with pytest.warns(DeprecationWarning):
-        wa.send_image(
-            to="1234567890",
-            image="https://example.com/image.jpg",  # url
-            caption="Hello World",
-            body="Hello World",
-        )
-
-    with pytest.warns(DeprecationWarning):
-        wa.send_video(
-            to="1234567890",
-            video="1234567890",  # media_id
-            caption="Hello World",
-            body="Hello World",
-        )
-
-    with pytest.warns(DeprecationWarning):
-        wa.send_document(
-            to="1234567890",
-            document="1234567890",  # media_id
-            caption="Hello World",
-            body="Hello World",
         )
 
 
@@ -177,9 +140,10 @@ def test_sending_interactive_media_without_caption():
 def test_send_reaction(mocker: pytest_mock.MockFixture):
     mocker.patch.object(wa.api, "send_message", return_value=SENT_MESSAGE)
     assert (
-        wa.send_reaction(to="1234567890", message_id="wamid.xx==", emoji="😊") == MSG_ID
+        wa.send_reaction(to="1234567890", message_id="wamid.xx==", emoji="😊").id
+        == MSG_ID
     )
-    assert wa.remove_reaction(to="1234567890", message_id="wamid.xx==") == MSG_ID
+    assert wa.remove_reaction(to="1234567890", message_id="wamid.xx==").id == MSG_ID
 
 
 def test_send_location(mocker: pytest_mock.MockFixture):
@@ -191,7 +155,7 @@ def test_send_location(mocker: pytest_mock.MockFixture):
             longitude=-122.1473373086664,
             name="WhatsApp HQ",
             address="Menlo Park, 1601 Willow Rd, United States",
-        )
+        ).id
         == MSG_ID
     )
 
@@ -202,7 +166,7 @@ def test_request_location(mocker: pytest_mock.MockFixture):
         wa.request_location(
             to="1234567890",
             text="Please share your location",
-        )
+        ).id
         == MSG_ID
     )
 
@@ -218,7 +182,7 @@ def test_send_contact(mocker: pytest_mock.MockFixture):
                 emails=[types.Contact.Email(email="john@doe.com", type="WORK")],
                 urls=[types.Contact.Url(url="https://example.com", type="WORK")],
             ),
-        )
+        ).id
         == MSG_ID
     )
 
@@ -231,7 +195,7 @@ def test_send_catalog(mocker: pytest_mock.MockFixture):
             body="Hello World",
             footer="Footer",
             thumbnail_product_sku="SKU123",
-        )
+        ).id
         == MSG_ID
     )
 
@@ -245,7 +209,7 @@ def test_send_product(mocker: pytest_mock.MockFixture):
             footer="Footer",
             catalog_id="1234567890",
             sku="SKU123",
-        )
+        ).id
         == MSG_ID
     )
 
@@ -265,7 +229,7 @@ def test_send_products(mocker: pytest_mock.MockFixture):
                     skus=["SKU123", "SKU456"],
                 )
             ],
-        )
+        ).id
         == MSG_ID
     )
 

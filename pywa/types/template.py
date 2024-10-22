@@ -19,10 +19,10 @@ import pathlib
 import datetime
 from typing import TYPE_CHECKING, Any, BinaryIO, Iterable, Literal
 
-from .. import utils
+from .. import utils, _helpers as helpers
 
-from .base_update import BaseUpdate  # noqa
-from .callback import CallbackDataT, _resolve_callback_data  # noqa
+from .base_update import BaseUpdate
+from .callback import CallbackData
 from .others import ProductsSection
 
 if TYPE_CHECKING:
@@ -1223,12 +1223,12 @@ class Template:
         sub_type: ButtonType = dataclasses.field(
             default=ButtonType.QUICK_REPLY, init=False, repr=False
         )
-        data: CallbackDataT
+        data: str | CallbackData
 
         def to_dict(self) -> dict[str, str]:
             return dict(
                 type="payload",
-                payload=_resolve_callback_data(self.data),
+                payload=helpers.resolve_callback_data(self.data),
             )
 
     @dataclasses.dataclass(slots=True)

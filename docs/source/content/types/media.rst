@@ -1,7 +1,7 @@
 Media
 ======
 
-.. currentmodule:: pywa.types.media
+.. currentmodule:: pywa.types
 
 .. autoclass:: Image()
 
@@ -17,6 +17,8 @@ Media
 
 **Every media type has the following properties and methods:**
 
+.. currentmodule:: pywa.types.media
+
 .. autoproperty:: BaseMedia.extension
 .. automethod:: BaseMedia.get_media_url
 .. automethod:: BaseMedia.download
@@ -24,4 +26,7 @@ Media
 
 ----------------
 
+.. currentmodule:: pywa.types
+
 .. autoclass:: MediaUrlResponse()
+    :members: download

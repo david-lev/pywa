@@ -57,10 +57,13 @@ __all__ = [
     "ActionNextType",
 ]
 
+import httpx
+
 from pywa.types.flows import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.flows import (
     FlowDetails as _FlowDetails,
     FlowCompletion as _FlowCompletion,
+    FlowRequest as _FlowRequest,
 )  # noqa MUST BE IMPORTED FIRST
 from .base_update import BaseUserUpdateAsync
 
@@ -68,8 +71,40 @@ import dataclasses
 import pathlib
 from typing import Iterable, TYPE_CHECKING, BinaryIO
 
+from .. import utils
+
 if TYPE_CHECKING:
     from ..client import WhatsApp
+
+
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+class FlowRequest(_FlowRequest):
+    async def decrypt_media(
+        self, key: str, index: int = 0, dl_session: httpx.AsyncClient | None = None
+    ) -> tuple[str, str, bytes]:
+        """
+        Decrypt the encrypted media file from the flow request.
+
+        Example:
+
+            >>> from pywa_async import WhatsApp, types
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_flow_request("/my-flow-endpoint")
+            ... async def my_flow_endpoint(_: WhatsApp, req: FlowRequest):
+            ...     media_id, filename, decrypted_data = req.decrypt_media(key="driver_license", index=0)
+            ...     with open(filename, "wb") as file:
+            ...         file.write(decrypted_data)
+            ...     return req.respond(...)
+
+        Args:
+            key: The key of the media in the data (e.g. ``"driver_license"``).
+            index: The index of the media in the data (default is ``0``).
+            dl_session: The HTTPX client session to download the media (optional, new session will be created if not provided).
+        """
+        return await utils.flow_request_media_decryptor(
+            encrypted_media=self.data[key][index],
+            dl_session=dl_session,
+        )
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)

@@ -10,6 +10,9 @@ import logging
 import pathlib
 from typing import Iterable, TYPE_CHECKING, Any, BinaryIO, Literal, TypeAlias
 
+import httpx
+
+from .media import BaseMedia
 from .. import utils
 from .base_update import BaseUserUpdate  # noqa
 from .others import (
@@ -111,6 +114,8 @@ class FlowCompletion(BaseUserUpdate):
     token: str | None
     response: dict[str, Any]
 
+    _txt_fields = ("token", "body")
+
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> FlowCompletion:
         msg = (value := update["entry"][0]["changes"][0]["value"])["messages"][0]
@@ -136,6 +141,30 @@ class FlowCompletion(BaseUserUpdate):
             token=flow_token,
             response=response,
         )
+
+    def get_media(self, media_cls: type[BaseMedia], key: str) -> BaseMedia:
+        """
+        Get the media object from the response.
+
+        Example:
+            >>> from pywa import WhatsApp, types
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_flow_completion()
+            ... def on_flow_completion(_: WhatsApp, flow: types.FlowCompletion):
+            ...     img = flow.get_media(types.Image,key="image")
+            ...     img.download()
+
+        Args:
+            media_cls: The media class to create the media object (e.g. ``types.Image``).
+            key: The key of the media in the response.
+
+        Returns:
+            The media object.
+
+        Raises:
+            KeyError: If the key is not found in the response.
+        """
+        return media_cls.from_flow_completion(self._client, self.response[key])
 
 
 class FlowRequestActionType(utils.StrEnum):
@@ -275,6 +304,33 @@ class FlowRequest:
         pywa will not call the callback and will return a health check response.
         """
         return self.action == FlowRequestActionType.PING
+
+    def decrypt_media(
+        self, key: str, index: int = 0, dl_session: httpx.Client | None = None
+    ) -> tuple[str, str, bytes]:
+        """
+        Decrypt the encrypted media file from the flow request.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_flow_request("/my-flow-endpoint")
+            ... def my_flow_endpoint(_: WhatsApp, req: types.FlowRequest):
+            ...     media_id, filename, decrypted_data = req.decrypt_media(key="driver_license", index=0)
+            ...     with open(filename, "wb") as file:
+            ...         file.write(decrypted_data)
+            ...     return req.respond(...)
+
+        Args:
+            key: The key of the media in the data (e.g. ``"driver_license"``).
+            index: The index of the media in the data (default to ``0``).
+            dl_session: The HTTPX client session to download the media (optional, new session will be created if not provided).
+        """
+        return utils.flow_request_media_decryptor(
+            encrypted_media=self.data[key][index],
+            dl_session=dl_session,
+        )
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)

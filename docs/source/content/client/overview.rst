@@ -66,6 +66,9 @@ The available methods are:
        :meth:`~WhatsApp.send_reaction`,
        :meth:`~WhatsApp.remove_reaction`,
        :meth:`~WhatsApp.mark_message_as_read`
+   * - Listening
+     - :meth:`~WhatsApp.listen`,
+       :meth:`~WhatsApp.stop_listening`
    * - Media
      - :meth:`~WhatsApp.upload_media`,
        :meth:`~WhatsApp.download_media`,
@@ -103,7 +106,6 @@ The available methods are:
      - :meth:`~WhatsApp.webhook_update_handler`,
        :meth:`~WhatsApp.webhook_challenge_handler`,
        :meth:`~WhatsApp.get_flow_request_handler`
-
 .. toctree::
     client_reference
     api_reference

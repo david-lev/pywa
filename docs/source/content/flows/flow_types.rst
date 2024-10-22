@@ -4,7 +4,7 @@ Flow Types
 .. currentmodule:: pywa.types.flows
 
 .. autoclass:: FlowRequest()
-    :members: has_error, is_health_check, respond
+    :members: has_error, is_health_check, respond, decrypt_media
 
 .. autoclass:: FlowRequestActionType()
 
@@ -46,10 +46,7 @@ Flow Types
 
 .. autofunction:: default_flow_response_encryptor
 
-.. autofunction:: flow_request_media_decryptor_sync
-
-.. autofunction:: flow_request_media_decryptor_async
-
+.. autofunction:: flow_request_media_decryptor
 
 .. currentmodule:: pywa.handlers
 

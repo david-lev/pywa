@@ -22,7 +22,7 @@ for client, updates in CLIENTS.items():
             update_filename.replace(".json", ""): [
                 {
                     test_name: client._handlers_to_update_constractor[
-                        client._get_handler(update_obj)
+                        client._get_handler(update_obj)[0]
                     ](client, update_obj)
                 }  # noqa
                 for test_name, update_obj in update_data.items()

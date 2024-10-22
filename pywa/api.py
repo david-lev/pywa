@@ -1,13 +1,11 @@
 """The internal API for the WhatsApp client."""
 
-import importlib
 import logging
 from typing import Any, TYPE_CHECKING
 
 import httpx
 
 import pywa
-from . import utils
 from .errors import WhatsAppError
 
 if TYPE_CHECKING:
@@ -24,33 +22,20 @@ class WhatsAppCloudApi:
         self,
         token: str,
         session: httpx.Client,
-        base_url: str,
         api_version: float,
     ):
-        self._session = self._setup_session(session, token)
-        self._base_url = f"{base_url}/v{api_version}"
-
-        # backward compatibility with requests.Session
-        self._is_requests_session, _ = utils.is_requests_and_err(session)
-        if self._is_requests_session:
-            _logger.warning(
-                "Using `requests.Session` is deprecated and will be removed in future versions. "
-                "Please use `httpx.Client` instead."
-            )
-
-    @staticmethod
-    def _setup_session(session, token: str) -> httpx.Client:
         if session.headers.get("Authorization") is not None:
             raise ValueError(
                 "You can't use the same httpx.Client for multiple WhatsApp instances!"
             )
+        session.base_url = f"https://graph.facebook.com/v{api_version}"
         session.headers.update(
             {
                 "Authorization": f"Bearer {token}",
                 "User-Agent": f"PyWa/{pywa.__version__}",
             }
         )
-        return session
+        self._session = session
 
     def __str__(self) -> str:
         return f"WhatsAppCloudApi(session={self._session})"
@@ -73,9 +58,7 @@ class WhatsAppCloudApi:
         Raises:
             WhatsAppError: If the request failed.
         """
-        res = self._session.request(
-            method=method, url=f"{self._base_url}{endpoint}", **kwargs
-        )
+        res = self._session.request(method=method, url=endpoint, **kwargs)
         if res.status_code >= 400:
             raise WhatsAppError.from_dict(error=res.json()["error"], response=res)
         return res.json()
@@ -275,20 +258,11 @@ class WhatsAppCloudApi:
         return self._make_request(
             method="POST",
             endpoint=f"/{phone_id}/media",
-            **(
-                dict(
-                    files=[("file", (filename, media, mime_type))],
-                    data={"messaging_product": "whatsapp"},
-                )
-                if self._is_requests_session
-                else dict(
-                    files={
-                        "file": (filename, media, mime_type),
-                        "messaging_product": (None, "whatsapp"),
-                        "type": (None, mime_type),
-                    }
-                )
-            ),
+            files={
+                "file": (filename, media, mime_type),
+                "messaging_product": (None, "whatsapp"),
+                "type": (None, mime_type),
+            },
         )
 
     def get_media_url(self, media_id: str) -> dict:
@@ -833,25 +807,12 @@ class WhatsAppCloudApi:
         return self._make_request(
             method="POST",
             endpoint=f"/{flow_id}/assets",
-            **(
-                dict(
-                    files=[("file", ("flow.json", flow_json, "application/json"))],
-                    data={
-                        "name": "flow.json",
-                        "asset_type": "FLOW_JSON",
-                        "messaging_product": "whatsapp",
-                    },
-                )
-                if self._is_requests_session
-                else dict(
-                    files={
-                        "file": ("flow.json", flow_json, "application/json"),
-                        "name": (None, "flow.json"),
-                        "asset_type": (None, "FLOW_JSON"),
-                        "messaging_product": (None, "whatsapp"),
-                    }
-                )
-            ),
+            files={
+                "file": ("flow.json", flow_json, "application/json"),
+                "name": (None, "flow.json"),
+                "asset_type": (None, "FLOW_JSON"),
+                "messaging_product": (None, "whatsapp"),
+            },
         )
 
     def publish_flow(

@@ -36,8 +36,6 @@ Combining Filters
 As default, all filters are combined with ``&`` (and) operator. So if you provide multiple filters, all of them must
 return ``True`` for the handler to handle the update.
 
-If you need to combine (``&``, ``|``) or negate (``not``) filters, you can use the
-:meth:`all_`, :meth:`any_` and :meth:`not_` functions.
 
 Here is some examples:
 
