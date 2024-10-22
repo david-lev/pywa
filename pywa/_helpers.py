@@ -44,7 +44,7 @@ def resolve_buttons_param(
     dict[str, set[str] | str] | None,
 ]:
     """
-    Internal method to resolve ``buttons`` parameter. Returns a tuple of (``type``, ``buttons``).
+    Internal method to resolve ``buttons`` parameter. Returns a tuple of (``type``, ``buttons``, ``callback_options``).
     """
     if isinstance(buttons, SectionList):
         data = buttons.to_dict()

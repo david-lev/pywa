@@ -3,9 +3,16 @@ Common filters
 
 .. currentmodule:: pywa.filters
 
-.. autofunction:: all_
-.. autofunction:: any_
-.. autofunction:: not_
+
+.. autofunction:: pywa.filters.message
+.. autofunction:: pywa.filters.callback_button
+.. autofunction:: pywa.filters.callback_selection
+.. autoattribute:: pywa.filters.message_status
+.. autofunction:: pywa.filters.flow_completion
+.. autofunction:: pywa.filters.template_status
+.. autofunction:: pywa.filters.chat_opened
+
+
 .. autofunction:: sent_to
 .. autoattribute:: pywa.filters.sent_to_me
 .. autofunction:: from_users

@@ -3,7 +3,7 @@
 import json
 import logging
 import threading
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, cast
 
 from . import utils, handlers, errors
 from .handlers import (
@@ -79,7 +79,6 @@ class Server:
         ChatOpenedHandler: ChatOpened.from_update,
         FlowCompletionHandler: FlowCompletion.from_update,
         TemplateStatusHandler: TemplateStatus.from_update,
-        RawUpdateHandler: lambda _, data: data,
     }
     """A dictionary that maps handler types to their respective update constructors."""
 
@@ -256,7 +255,7 @@ class Server:
     def _register_routes(self: "WhatsApp") -> None:
         match self._server_type:
             case utils.ServerType.FLASK:
-                _logger.info("Using Flask with ASGI")
+                _logger.info("Using Flask with WSGI")
                 import flask
 
                 @self._server.route(self._webhook_endpoint, methods=["GET"])
@@ -330,71 +329,42 @@ class Server:
     def _call_handlers(self: "WhatsApp", update: dict) -> None:
         """Call the handlers for the given update."""
         try:
-            handler_type, is_usr_update = self._get_handler(update=update)
-            if handler_type is None:
+            handler_type, is_usr_update = self._get_handler_from_update(update)
+            if not handler_type:
                 _logger.debug(
                     "Webhook ('%s') received an update but no handler was found.",
                     self._webhook_endpoint,
                 )
-        except (
-            ValueError,
-            KeyError,
-            TypeError,
-            IndexError,
-        ):  # this endpoint got non-expected data
-            _logger.error(
-                "Webhook ('%s') received an invalid update%s: %s",
-                self._webhook_endpoint,
-                " (Enable `validate_updates` to ignore updates with invalid data)"
-                if not self._validate_updates
-                else "",
-                update,
-            )
-            return
+                return
 
-        if handler_type is not None:
             try:
                 constructed_update = self._handlers_to_update_constractor[handler_type](
                     self, update
                 )
-                self._call_callbacks(
-                    handler_type=handler_type,
-                    constructed_update=constructed_update,
-                    is_user_update=is_usr_update,
-                )
+                if constructed_update:
+                    if is_usr_update and self._process_listener(
+                        cast(BaseUserUpdate, constructed_update)
+                    ):
+                        return
+                    self._invoke_callbacks(handler_type, constructed_update)
             except Exception:
                 _logger.exception("Failed to construct update: %s", update)
+        finally:
+            # Always call raw update handler last
+            self._call_raw_update_handler(update)
 
-        self._cal_raw_updates_handler(update)
+    def _call_raw_update_handler(self: "WhatsApp", update: dict) -> None:
+        """Invoke the raw update handler."""
+        self._invoke_callbacks(RawUpdateHandler, update)
 
-    def _cal_raw_updates_handler(self, update: dict) -> None:
-        self._call_callbacks(
-            handler_type=RawUpdateHandler,
-            constructed_update=update,
-            is_user_update=False,
-        )
-
-    def _call_callbacks(
-        self: "WhatsApp",
-        handler_type: type[Handler],
-        constructed_update: BaseUpdate | BaseUserUpdate | dict,
-        is_user_update: bool,
+    def _invoke_callbacks(
+        self: "WhatsApp", handler_type: type[Handler], update: BaseUpdate | dict
     ) -> None:
-        """Call the handler type callbacks for the given update."""
-        if is_user_update:
-            try:
-                listener_found = self._answer_listener(constructed_update)
-                if listener_found and not self._continue_handling:
-                    raise StopHandling
-            except StopHandling:
-                return
-            except ContinueHandling:
-                pass
-
+        """Process and call registered handlers for the update."""
         handled = False
         for handler in self._handlers[handler_type]:
             try:
-                handled = handler.handle(self, constructed_update)
+                handled = handler.handle(self, update)
             except StopHandling:
                 break
             except ContinueHandling:
@@ -407,31 +377,40 @@ class Server:
             if handled and not self._continue_handling:
                 break
 
-    def _answer_listener(self: "WhatsApp", update: BaseUserUpdate) -> bool:
-        """
-        Answer a listener with an update
-
-        Args:
-            update (BaseUpdate): The update to answer the listener with
-
-        Returns:
-            bool: True if listener was found. False otherwise
-        """
+    def _process_listener(self: "WhatsApp", update: BaseUserUpdate) -> bool:
+        """Process and answer a listener if present."""
         listener = self._listeners.get(update.listener_identifier)
-        if listener is None:
+        if not listener:
             return False
+
         try:
             if listener.apply_filters(self, update):
                 listener.set_result(update)
                 return True
-
-            if listener.apply_cancelers(self, update):
+            elif listener.apply_cancelers(self, update):
                 listener.cancel(update)
-
+                return True
         except Exception as e:
             listener.set_exception(e)
 
-        return True
+        return False
+
+    def _get_handler_from_update(
+        self: "WhatsApp", update: dict
+    ) -> tuple[type[Handler] | None, bool]:
+        """Determine the handler type and whether it's a user update."""
+        try:
+            return self._get_handler(update)
+        except (KeyError, ValueError, TypeError, IndexError):
+            _logger.error(
+                "Webhook ('%s') received an invalid update%s: %s",
+                self._webhook_endpoint,
+                " (Enable `validate_updates` to ignore updates with invalid data)"
+                if not self._validate_updates
+                else "",
+                update,
+            )
+            return None, False
 
     def _get_handler(
         self: "WhatsApp", update: dict
@@ -447,7 +426,7 @@ class Server:
             if self.filter_updates and (
                 value["metadata"]["phone_number_id"] != self.phone_id
             ):
-                return None, is_usr_update
+                return None, False
 
             if "messages" in value:
                 msg_type = value["messages"][0]["type"]

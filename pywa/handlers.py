@@ -44,7 +44,6 @@ import logging
 from typing import TYPE_CHECKING, Any, Callable, cast, TypeAlias, Awaitable, TypedDict
 
 from . import utils
-from . import _helpers as helpers
 from .filters import Filter
 from .types import (
     CallbackButton,

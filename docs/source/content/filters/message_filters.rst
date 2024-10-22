@@ -8,64 +8,30 @@ Message Filters
 .. autoattribute:: pywa.filters.reply
 .. autofunction:: pywa.filters.replays_to
 .. autoattribute:: pywa.filters.has_referred_product
-
-----------------
-
-.. autoclass:: text
-.. automethod:: text.length
-.. automethod:: text.is_command
-.. automethod:: text.command
-
-----------------
-
-.. autoclass:: media
-.. automethod:: media.mimetypes
-.. automethod:: media.extensions
-
-.. autoclass:: image
-.. autoattribute:: image.has_caption
-
-.. autoclass:: video
-.. autoattribute:: video.has_caption
-
-.. autoclass:: audio
-.. autoattribute:: audio.voice
-.. autoattribute:: audio.audio
-
-.. autoclass:: document
-.. autoattribute:: document.has_caption
-
-.. autoclass:: sticker
-.. autoattribute:: sticker.animated
-.. autoattribute:: sticker.static
-
-----------------
-
-.. autoclass:: reaction
-.. autoattribute:: reaction.added
-.. autoattribute:: reaction.removed
-.. automethod:: reaction.emojis
-
-----------------
-
-.. autoclass:: location
-.. autoattribute:: location.current_location
-.. automethod:: location.in_radius
-
-----------------
-
-.. autoclass:: contacts
-.. autoattribute:: contacts.has_wa
-.. automethod:: contacts.count
-.. automethod:: contacts.phones
-
-----------------
-
-.. autoclass:: order
-.. automethod:: order.price
-.. automethod:: order.count
-.. automethod:: order.has_product
-
-----------------
-
-.. autoclass:: unsupported
+.. autofunction:: pywa.filters.text
+.. autofunction:: pywa.filters.is_command
+.. autofunction:: pywa.filters.command
+.. autofunction:: pywa.filters.media
+.. autofunction:: pywa.filters.mimetypes
+.. autofunction:: pywa.filters.extensions
+.. autofunction:: pywa.filters.has_caption
+.. autofunction:: pywa.filters.image
+.. autofunction:: pywa.filters.video
+.. autofunction:: pywa.filters.audio
+.. autofunction:: pywa.filters.audio_only
+.. autofunction:: pywa.filters.voice
+.. autofunction:: pywa.filters.document
+.. autofunction:: pywa.filters.sticker
+.. autofunction:: pywa.filters.animated_sticker
+.. autofunction:: pywa.filters.static_sticker
+.. autofunction:: pywa.filters.reaction
+.. autofunction:: pywa.filters.reaction_added
+.. autofunction:: pywa.filters.reaction_removed
+.. autofunction:: pywa.filters.reaction_emojis
+.. autofunction:: pywa.filters.unsupported
+.. autofunction:: pywa.filters.location
+.. autofunction:: pywa.filters.current_location
+.. autofunction:: pywa.filters.location_in_radius
+.. autofunction:: pywa.filters.contacts
+.. autofunction:: pywa.filters.contacts_has_wa
+.. autofunction:: pywa.filters.order

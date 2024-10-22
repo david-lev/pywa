@@ -104,10 +104,12 @@ class ListenerStopped(Exception):
 
 
 class Listener:
+    _listener_canceled = ListenerCanceled
+
     def __init__(
         self,
-        filters: Filter | None,
-        cancelers: Filter | None,
+        filters: Filter,
+        cancelers: Filter,
     ):
         self.filters = filters
         self.cancelers = cancelers
@@ -124,7 +126,7 @@ class Listener:
         self.event.set()
 
     def cancel(self, update: BaseUserUpdate | None = None) -> None:
-        self.set_exception(ListenerCanceled(update))
+        self.set_exception(self._listener_canceled(update))
 
     def stop(self, reason: str | None = None) -> None:
         self.set_exception(ListenerStopped(reason))
@@ -133,10 +135,10 @@ class Listener:
         return self.event.is_set()
 
     def apply_filters(self, wa: WhatsApp, update: _SuppoertedUserUpdate) -> bool:
-        return self.filters is None or self.filters(wa, update)
+        return self.filters is None or self.filters.check_sync(wa, update)
 
     def apply_cancelers(self, wa: WhatsApp, update: _SuppoertedUserUpdate) -> bool:
-        return self.cancelers is None or self.cancelers(wa, update)
+        return self.cancelers and self.cancelers.check_sync(wa, update)
 
 
 class Listeners:

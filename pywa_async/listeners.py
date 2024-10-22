@@ -1,18 +1,13 @@
 from __future__ import annotations
 
-
-from pywa.listeners import (
-    ListenerTimeout,
-    ListenerStopped,
-    ListenerCanceled as _ListenerCanceled,
-    Listener as _Listener,
-)
+from pywa.listeners import *  # noqa MUST BE IMPORTED FIRST
+from pywa.listeners import Listener as _Listener, ListenerCanceled as _ListenerCanceled  # noqa MUST BE IMPORTED FIRST
 
 import asyncio
-from collections.abc import Iterable
-from typing import Callable, TYPE_CHECKING, TypeAlias, Awaitable
+from typing import TYPE_CHECKING, TypeAlias
 
-from pywa.types.base_update import BaseUserUpdate
+from pywa import utils, _helpers as helpers
+from .filters import Filter
 from .types import (
     Message,
     CallbackButton,
@@ -21,7 +16,6 @@ from .types import (
     ChatOpened,
     FlowCompletion,
 )
-from pywa import utils, _helpers as helpers
 from .types.base_update import BaseUserUpdateAsync
 
 if TYPE_CHECKING:
@@ -37,36 +31,21 @@ _SuppoertedUserUpdate: TypeAlias = (
 )
 
 
-_CancelersT: TypeAlias = (
-    Iterable[
-        Callable[
-            [
-                "WhatsApp",
-                _SuppoertedUserUpdate,
-            ],
-            bool | Awaitable[bool],
-        ]
-    ]
-    | None
-)
-_FiltersT: TypeAlias = (
-    Iterable[Callable[["WhatsApp", BaseUserUpdate], bool | Awaitable[bool]]] | None
-)
-
-
 class ListenerCanceled(_ListenerCanceled):
     def __init__(self, update: BaseUserUpdateAsync | None = None):
         self.update = update
 
 
 class Listener(_Listener):
+    _listener_canceled = ListenerCanceled
+
     def __init__(
         self,
         wa: WhatsApp,
         to: str | int,
         sent_to_phone_id: str | int,
-        filters: _FiltersT,
-        cancelers: _CancelersT,
+        filters: Filter,
+        cancelers: Filter,
     ):
         self.filters = filters or ()
         self.cancelers = cancelers or ()
@@ -81,20 +60,24 @@ class Listener(_Listener):
     def set_exception(self, exception: Exception) -> None:
         self.future.set_exception(exception)
 
-    def cancel(self, update: BaseUserUpdate | None = None) -> None:
-        self.cancelled_update = update
-        self.future.cancel()
-
     def is_set(self) -> bool:
         return self.future.done()
+
+    async def apply_filters(self, wa: WhatsApp, update: _SuppoertedUserUpdate) -> bool:
+        return self.filters is None or await self.filters.check_async(wa, update)
+
+    async def apply_cancelers(
+        self, wa: WhatsApp, update: _SuppoertedUserUpdate
+    ) -> bool:
+        return self.cancelers is None or await self.cancelers.check_async(wa, update)
 
 
 class AsyncListeners:
     async def listen(
         self: WhatsApp,
         to: str | int,
-        filters: _FiltersT = None,
-        cancelers: _CancelersT = None,
+        filters: Filter = None,
+        cancelers: Filter = None,
         timeout: int | None = None,
         sent_to_phone_id: str | int | None = None,
     ) -> _SuppoertedUserUpdate:
@@ -118,5 +101,3 @@ class AsyncListeners:
             return await asyncio.wait_for(listener.future, timeout=timeout)
         except asyncio.TimeoutError:
             raise ListenerTimeout(timeout)
-        except asyncio.CancelledError:
-            raise ListenerCanceled(listener.cancelled_update)

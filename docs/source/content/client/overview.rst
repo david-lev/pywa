@@ -66,6 +66,9 @@ The available methods are:
        :meth:`~WhatsApp.send_reaction`,
        :meth:`~WhatsApp.remove_reaction`,
        :meth:`~WhatsApp.mark_message_as_read`
+   * - Listening
+     - :meth:`~WhatsApp.listen`,
+       :meth:`~WhatsApp.stop_listening`
    * - Media
      - :meth:`~WhatsApp.upload_media`,
        :meth:`~WhatsApp.download_media`,

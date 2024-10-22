@@ -7,3 +7,4 @@ The :class:`FlowCompletion` class represents an update that arrives when user co
 
 
 .. autoclass:: FlowCompletion()
+    :members: get_media
