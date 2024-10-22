@@ -14,6 +14,7 @@ from __future__ import annotations
 
 __all__ = [
     "new",
+    "update_id",
     "forwarded",
     "forwarded_many_times",
     "reply",
@@ -78,6 +79,7 @@ from . import utils
 from .types import Message as _Msg
 from .types import CallbackButton as _Clb
 from .types import CallbackSelection as _Cls
+from .types import MessageStatus as _Ms
 from .types import MessageStatusType as _Mst
 from .types import MessageType as _Mt
 from .types import TemplateStatus as _Ts
@@ -220,6 +222,15 @@ Filter for messages that reply to another message.
 """
 
 
+def update_id(id_: str) -> Filter:
+    """
+    Filter for updates that have the given id.
+
+    >>> update_id("wamid.HBKHUIyNTM4NjAfiefhwojfMTNFQ0Q2MERGRjVDMUHUIGGA=")
+    """
+    return new(lambda _, u: u.id == id_, name="update_id")
+
+
 def replays_to(*msg_ids: str) -> Filter:
     """
     Filter for messages that reply to any of the given message ids.
@@ -322,6 +333,7 @@ def matches(*strings: str, ignore_case: bool = False) -> Filter:
         - :class:`CallbackButton`: ``data``
         - :class:`CallbackSelection`: ``data``
         - :class:`MessageStatus`: ``tracker``
+        - :class:`FlowCompletion`: ``token``, ``body``
 
     >>> matches("Hello", "Hi")
 
@@ -351,6 +363,7 @@ def startswith(*prefixes: str, ignore_case: bool = False) -> Filter:
         - :class:`CallbackButton`: ``data``
         - :class:`CallbackSelection`: ``data``
         - :class:`MessageStatus`: ``tracker``
+        - :class:`FlowCompletion`: ``token``, ``body``
 
     >>> startswith("Hello", "Hi", ignore_case=True)
 
@@ -380,6 +393,7 @@ def endswith(*suffixes: str, ignore_case: bool = False) -> Filter:
         - :class:`CallbackButton`: ``data``
         - :class:`CallbackSelection`: ``data``
         - :class:`MessageStatus`: ``tracker``
+        - :class:`FlowCompletion`: ``token``, ``body``
 
     >>> endswith("Hello", "Hi", ignore_case=True)
 
@@ -409,6 +423,7 @@ def contains(*words: str, ignore_case: bool = False) -> Filter:
         - :class:`CallbackButton`: ``data``
         - :class:`CallbackSelection`: ``data``
         - :class:`MessageStatus`: ``tracker``
+        - :class:`FlowCompletion`: ``token``, ``body``
 
     >>> contains("Hello", "Hi", ignore_case=True)
 
@@ -439,6 +454,7 @@ def regex(*patterns: str | re.Pattern, flags: int = 0) -> Filter:
         - :class:`CallbackButton`: ``data``
         - :class:`CallbackSelection`: ``data``
         - :class:`MessageStatus`: ``tracker``
+        - :class:`FlowCompletion`: ``token``, ``body``
 
     >>> regex(r"Hello|Hi")
 
@@ -667,7 +683,7 @@ callback_button = new(lambda _, c: isinstance(c, _Clb), name="callback_button")
 callback_selection = new(lambda _, c: isinstance(c, _Cls), name="callback_selection")
 """Filter for callback selections."""
 
-message_status = new(lambda _, s: isinstance(s, _Mst), name="message_status")
+message_status = new(lambda _, s: isinstance(s, _Ms), name="message_status")
 
 sent = new(lambda _, s: s.status == _Mst.SENT, name="status_sent")
 """Filter for messages that have been sent."""

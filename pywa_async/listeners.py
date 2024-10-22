@@ -47,8 +47,8 @@ class Listener(_Listener):
         filters: Filter,
         cancelers: Filter,
     ):
-        self.filters = filters or ()
-        self.cancelers = cancelers or ()
+        self.filters = filters
+        self.cancelers = cancelers
         self.future: asyncio.Future[_SuppoertedUserUpdate] = asyncio.Future()
         self.future.add_done_callback(
             lambda _: wa._remove_listener(from_user=to, phone_id=sent_to_phone_id)
@@ -69,7 +69,7 @@ class Listener(_Listener):
     async def apply_cancelers(
         self, wa: WhatsApp, update: _SuppoertedUserUpdate
     ) -> bool:
-        return self.cancelers is None or await self.cancelers.check_async(wa, update)
+        return self.cancelers and await self.cancelers.check_async(wa, update)
 
 
 class AsyncListeners:

@@ -114,6 +114,8 @@ class FlowCompletion(BaseUserUpdate):
     token: str | None
     response: dict[str, Any]
 
+    _txt_fields = ("token", "body")
+
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> FlowCompletion:
         msg = (value := update["entry"][0]["changes"][0]["value"])["messages"][0]

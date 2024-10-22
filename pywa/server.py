@@ -393,7 +393,7 @@ class Server:
         except Exception as e:
             listener.set_exception(e)
 
-        return False
+        return not self._continue_handling
 
     def _get_handler_from_update(
         self: "WhatsApp", update: dict

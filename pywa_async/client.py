@@ -381,10 +381,11 @@ class WhatsApp(AsyncListeners, _WhatsApp):
                 return True
             elif await listener.apply_cancelers(self, update):
                 listener.cancel(update)
+                return True
         except Exception as e:
             listener.set_exception(e)
 
-        return False
+        return not self._continue_handling
 
     def _setup_api(
         self,
