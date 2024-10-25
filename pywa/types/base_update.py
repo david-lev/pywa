@@ -203,60 +203,6 @@ class _ClientShortcuts(abc.ABC):
             ...     quote=True,
             ... )
 
-        Example with keyboard buttons:
-
-            >>> from pywa.types import Button
-            >>> msg.reply_text(
-            ...     header="Hello from PyWa!",
-            ...     text="What can I help you with?",
-            ...     footer="Powered by PyWa",
-            ...     buttons=[
-            ...         Button("Help", data="help"),
-            ...         Button("About", data="about"),
-            ...     ],
-            ...     quote=True
-            ... )
-
-        Example with a section list:
-
-            >>> from pywa.types import SectionList, Section, SectionRow
-            >>> msg.reply_text(
-            ...     header="Hello from PyWa!",
-            ...     text="What can I help you with?",
-            ...     footer="Powered by PyWa",
-            ...     buttons=SectionList(
-            ...         button_title="Choose an option",
-            ...         sections=[
-            ...             Section(
-            ...                 title="Help",
-            ...                 rows=[
-            ...                     SectionRow(
-            ...                         title="Help",
-            ...                         callback_data="help",
-            ...                         description="Get help with PyWa",
-            ...                     ),
-            ...                     SectionRow(
-            ...                         title="About",
-            ...                         callback_data="about",
-            ...                         description="Learn more about PyWa",
-            ...                     ),
-            ...                 ],
-            ...            ),
-            ...            Section(
-            ...                 title="Other",
-            ...                 rows=[
-            ...                     SectionRow(
-            ...                         title="GitHub",
-            ...                         callback_data="github",
-            ...                         description="View the PyWa GitHub repository",
-            ...                     ),
-            ...                 ],
-            ...             ),
-            ...         ],
-            ...     ),
-            ...     quote=True
-            ... )
-
         Args:
             text: The text to reply with (markdown allowed, max 4096 characters).
             header: The header of the reply (if buttons are provided, optional, up to 60 characters,

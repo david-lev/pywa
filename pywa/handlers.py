@@ -587,7 +587,7 @@ class HandlerDecorators:
         raise TypeError("This class cannot be instantiated.")
 
     def on_raw_update(
-        self: WhatsApp = None,
+        self: WhatsApp | Filter = None,
         filters: Filter = None,
         priority: int = 0,
     ) -> Callable[[_RawUpdateCallback], _RawUpdateCallback] | _RawUpdateCallback:
@@ -628,7 +628,7 @@ class HandlerDecorators:
         return deco
 
     def on_message(
-        self: WhatsApp = None,
+        self: WhatsApp | Filter = None,
         filters: Filter = None,
         priority: int = 0,
     ) -> Callable[[_MessageCallback], _MessageCallback] | _MessageCallback:
@@ -671,7 +671,7 @@ class HandlerDecorators:
         return deco
 
     def on_callback_button(
-        self: WhatsApp = None,
+        self: WhatsApp | Filter = None,
         filters: Filter = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
@@ -724,7 +724,7 @@ class HandlerDecorators:
         return deco
 
     def on_callback_selection(
-        self: WhatsApp = None,
+        self: WhatsApp | Filter = None,
         filters: Filter = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
@@ -777,7 +777,7 @@ class HandlerDecorators:
         return deco
 
     def on_message_status(
-        self: WhatsApp = None,
+        self: WhatsApp | Filter = None,
         filters: Filter = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
@@ -834,7 +834,7 @@ class HandlerDecorators:
         return deco
 
     def on_chat_opened(
-        self: WhatsApp = None,
+        self: WhatsApp | Filter = None,
         filters: Filter = None,
         priority: int = 0,
     ) -> Callable[[_ChatOpenedCallback], _ChatOpenedCallback] | _ChatOpenedCallback:
@@ -876,7 +876,7 @@ class HandlerDecorators:
         return deco
 
     def on_template_status(
-        self: WhatsApp = None,
+        self: WhatsApp | Filter = None,
         filters: Filter = None,
         priority: int = 0,
     ) -> (
@@ -925,7 +925,7 @@ class HandlerDecorators:
         return deco
 
     def on_flow_completion(
-        self: WhatsApp = None,
+        self: WhatsApp | Filter = None,
         filters: Filter = None,
         priority: int = 0,
     ) -> (
