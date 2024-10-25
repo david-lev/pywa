@@ -191,12 +191,7 @@ class Server:
         try:
             handler_type, is_usr_update = self._get_handler_from_update(update)
             if not handler_type:
-                _logger.debug(
-                    "Webhook ('%s') received an update but no handler was found.",
-                    self._webhook_endpoint,
-                )
                 return
-
             try:
                 constructed_update = self._handlers_to_update_constractor[handler_type](
                     self, update
