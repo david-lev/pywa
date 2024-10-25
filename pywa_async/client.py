@@ -1681,7 +1681,7 @@ class WhatsApp(Server, AsyncListeners, _WhatsApp):
         self,
         template: NewTemplate,
         placeholder: tuple[str, str] | None = None,
-        waba_id: str | None = None,
+        waba_id: str | int | None = None,
     ) -> TemplateResponse:
         """
         `'Create Templates' on developers.facebook.com
@@ -1868,7 +1868,7 @@ class WhatsApp(Server, AsyncListeners, _WhatsApp):
         categories: Iterable[FlowCategory | str],
         clone_flow_id: str | None = None,
         endpoint_uri: str | None = None,
-        waba_id: str | None = None,
+        waba_id: str | int | None = None,
     ) -> str:
         """
         Create a flow.
@@ -2109,7 +2109,7 @@ class WhatsApp(Server, AsyncListeners, _WhatsApp):
     async def get_flows(
         self,
         invalidate_preview: bool = True,
-        waba_id: str | None = None,
+        waba_id: str | int | None = None,
         phone_number_id: str | int | None = None,
     ) -> tuple[FlowDetails, ...]:
         """

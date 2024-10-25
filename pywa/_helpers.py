@@ -115,10 +115,12 @@ def resolve_tracker_param(tracker: str | CallbackData | None) -> str | None:
     return tracker.to_str() if isinstance(tracker, CallbackData) else tracker
 
 
-def resolve_phone_id_param(wa: WhatsApp, phone_id: str | None, arg_name: str) -> str:
+def resolve_phone_id_param(
+    wa: WhatsApp, phone_id: str | int | None, arg_name: str
+) -> str:
     """Internal method to resolve the `phone_id` parameter."""
     if phone_id is not None:
-        return phone_id
+        return str(phone_id)
     if wa.phone_id is not None:
         return wa.phone_id
     raise ValueError(
@@ -126,10 +128,10 @@ def resolve_phone_id_param(wa: WhatsApp, phone_id: str | None, arg_name: str) ->
     )
 
 
-def resolve_waba_id_param(wa: WhatsApp, waba_id: str | None) -> str:
+def resolve_waba_id_param(wa: WhatsApp, waba_id: str | int | None) -> str:
     """Internal method to resolve the `waba_id` parameter."""
     if waba_id is not None:
-        return waba_id
+        return str(waba_id)
     if wa.business_account_id is not None:
         return wa.business_account_id
     raise ValueError(
