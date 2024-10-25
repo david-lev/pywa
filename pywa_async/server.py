@@ -216,7 +216,6 @@ class Server:
         self: "WhatsApp", handler_type: type[Handler], update: BaseUpdate | dict
     ) -> None:
         """Process and call registered handlers for the update."""
-        handled = False
         for handler in self._handlers[handler_type]:
             try:
                 handled = await handler.ahandle(self, update)
@@ -225,6 +224,7 @@ class Server:
             except ContinueHandling:
                 continue
             except Exception:
+                handled = True
                 _logger.exception(
                     "An error occurred while '%s' was handling an update",
                     handler._callback.__name__,
