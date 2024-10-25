@@ -146,6 +146,13 @@ class Handler(abc.ABC):
         https://developers.facebook.com/docs/graph-api/webhooks/reference/whatsapp-business-account
         """
 
+    @property
+    @abc.abstractmethod
+    def _is_user_update(self) -> bool:
+        """
+        Whether the update is a user update or not.
+        """
+
     def __init__(
         self,
         callback: Callable[[WhatsApp, Any | dict], Any | Awaitable[Any]],
@@ -182,7 +189,7 @@ class Handler(abc.ABC):
 
     @staticmethod
     @functools.cache
-    def _fields_to_subclasses() -> dict[str, Handler]:
+    def _fields_to_subclasses() -> dict[str, type[Handler]]:
         """
         Return a dict of all the subclasses of `Handler` with their field name as the key.
         (e.g. ``{'messages': MessageHandler}``)
@@ -194,7 +201,7 @@ class Handler(abc.ABC):
         will not be included in the returned dict.
         """
         return cast(
-            dict[str, Handler],
+            dict[str, type[Handler]],
             {
                 h._field_name: h
                 for h in Handler.__subclasses__()
@@ -224,6 +231,7 @@ class MessageHandler(Handler):
     """
 
     _field_name = "messages"
+    _is_user_update = True
 
     def __init__(
         self,
@@ -239,6 +247,7 @@ class _FactoryHandler(Handler):
 
     _field_name = "messages"
     _data_field: str
+    _is_user_update = True
 
     def __init__(
         self,
@@ -420,6 +429,7 @@ class ChatOpenedHandler(Handler):
     """
 
     _field_name = "messages"
+    _is_user_update = True
 
     def __init__(
         self,
@@ -455,6 +465,7 @@ class TemplateStatusHandler(Handler):
     """
 
     _field_name = "message_template_status_update"
+    _is_user_update = False
 
     def __init__(
         self,
@@ -487,6 +498,7 @@ class FlowCompletionHandler(Handler):
     """
 
     _field_name = "messages"
+    _is_user_update = True
 
     def __init__(
         self,
@@ -518,6 +530,7 @@ class RawUpdateHandler(Handler):
     """
 
     _field_name = None
+    _is_user_update = False
 
     def __init__(
         self,
@@ -1030,7 +1043,7 @@ def _registered_without_parentheses(
     priority: int,
     **kwargs,
 ) -> Callable | None:
-    """Should be called from the decorator function."""
+    """When the decorator is called without parentheses."""
     if callable(self) and filters is None:  # @WhatsApp.on_x
         if not hasattr(self, _handlers_attr):
             setattr(self, _handlers_attr, [])
@@ -1055,7 +1068,7 @@ def _registered_with_parentheses(
     priority: int,
     **kwargs,
 ) -> Callable:
-    """Should be called from the decorator function."""
+    """When the decorator is called with parentheses."""
     handler = handler(callback=callback, filters=filters, priority=priority, **kwargs)
     if self is None:  # @WhatsApp.on_x(filters=...)
         if not hasattr(callback, _handlers_attr):

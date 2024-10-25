@@ -189,15 +189,27 @@ class Server:
     async def _call_handlers(self: "WhatsApp", update: dict) -> None:
         """Call the handlers for the given update."""
         try:
-            handler_type, is_usr_update = self._get_handler_from_update(update)
-            if not handler_type:
+            try:
+                handler_type = self._get_handler(update)
+            except (KeyError, ValueError, TypeError, IndexError):
+                (_logger.error if self._validate_updates else _logger.debug)(
+                    "Webhook ('%s') received an invalid update%s: %s",
+                    self._webhook_endpoint,
+                    " (Enable `validate_updates` to ignore updates with invalid data)"
+                    if not self._validate_updates
+                    else "",
+                    update,
+                )
+                handler_type = None
+
+            if handler_type is None:
                 return
             try:
                 constructed_update = self._handlers_to_update_constractor[handler_type](
                     self, update
                 )
                 if constructed_update:
-                    if is_usr_update and await self._process_listener(
+                    if handler_type._is_user_update and await self._process_listener(
                         cast(BaseUserUpdate, constructed_update)
                     ):
                         return

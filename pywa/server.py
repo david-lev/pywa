@@ -329,15 +329,27 @@ class Server:
     def _call_handlers(self: "WhatsApp", update: dict) -> None:
         """Call the handlers for the given update."""
         try:
-            handler_type, is_usr_update = self._get_handler_from_update(update)
-            if not handler_type:
+            try:
+                handler_type = self._get_handler(update)
+            except (KeyError, ValueError, TypeError, IndexError):
+                (_logger.error if self._validate_updates else _logger.debug)(
+                    "Webhook ('%s') received an invalid update%s: %s",
+                    self._webhook_endpoint,
+                    " (Enable `validate_updates` to ignore updates with invalid data)"
+                    if not self._validate_updates
+                    else "",
+                    update,
+                )
+                handler_type = None
+
+            if handler_type is None:
                 return
             try:
                 constructed_update = self._handlers_to_update_constractor[handler_type](
                     self, update
                 )
                 if constructed_update:
-                    if is_usr_update and self._process_listener(
+                    if handler_type._is_user_update and self._process_listener(
                         cast(BaseUserUpdate, constructed_update)
                     ):
                         return
@@ -390,26 +402,7 @@ class Server:
 
         return not self._continue_handling
 
-    def _get_handler_from_update(
-        self: "WhatsApp", update: dict
-    ) -> tuple[type[Handler] | None, bool]:
-        """Determine the handler type and whether it's a user update."""
-        try:
-            return self._get_handler(update)
-        except (KeyError, ValueError, TypeError, IndexError):
-            (_logger.error if self._validate_updates else _logger.debug)(
-                "Webhook ('%s') received an invalid update%s: %s",
-                self._webhook_endpoint,
-                " (Enable `validate_updates` to ignore updates with invalid data)"
-                if not self._validate_updates
-                else "",
-                update,
-            )
-            return None, False
-
-    def _get_handler(
-        self: "WhatsApp", update: dict
-    ) -> tuple[type[Handler] | None, bool]:
+    def _get_handler(self: "WhatsApp", update: dict) -> type[Handler] | None:
         """Get the handler for the given update."""
         field = update["entry"][0]["changes"][0]["field"]
         value = update["entry"][0]["changes"][0]["value"]
@@ -417,11 +410,10 @@ class Server:
         # The `messages` field needs to be handled differently because it can be a message, button, selection, or status
         # This check must return handler or None *BEFORE* getting the handler from the dict!!
         if field == "messages":
-            is_usr_update = True
             if self.filter_updates and (
                 value["metadata"]["phone_number_id"] != self.phone_id
             ):
-                return None, False
+                return None
 
             if "messages" in value:
                 msg_type = value["messages"][0]["type"]
@@ -429,30 +421,30 @@ class Server:
                     try:
                         interactive_type = value["messages"][0]["interactive"]["type"]
                     except KeyError:  # value with errors, when a user tries to send the interactive msg again
-                        return MessageHandler, is_usr_update
+                        return MessageHandler
                     if (
                         handler := _INTERACTIVE_TYPES.get(interactive_type)
                     ) is not None:
-                        return handler, is_usr_update
+                        return handler
                     _logger.warning(
                         "Webhook ('%s'): Unknown interactive message type: %s. Falling back to MessageHandler.",
                         self._webhook_endpoint,
                         interactive_type,
                     )
-                return _MESSAGE_TYPES.get(msg_type, MessageHandler), is_usr_update
+                return _MESSAGE_TYPES.get(msg_type, MessageHandler)
 
             elif "statuses" in value:  # status
-                return MessageStatusHandler, is_usr_update
+                return MessageStatusHandler
 
             _logger.warning(
                 "Webhook ('%s'): Unknown message type: %s",
                 self._webhook_endpoint,
                 value,
             )
-            return None, is_usr_update
+            return None
 
         # noinspection PyProtectedMember
-        return Handler._fields_to_subclasses().get(field), False
+        return Handler._fields_to_subclasses().get(field)
 
     def _delayed_register_callback_url(
         self: "WhatsApp",
