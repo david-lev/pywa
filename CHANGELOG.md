@@ -3,6 +3,18 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+
+#### 2.0.0-beta.1 (2024-10-25) **Beta**
+
+- [listeners]: Listeners are a new way to handle incoming user updates (messages, callbacks, etc.). They are more flexible, faster, and easier to use than handlers.
+- [filters]: Filters are now objects that can be combined using logical operators. They are more powerful and flexible than the previous filter system.
+- [handlers]: Now you can register handlers with decorators without the need to use the `add_handler` method.
+- [flows]: A new method `FlowCompletion.get_media(types.Image, key="img")` allows you to construct a media object and perform actions like `.download()` on it.
+- [flows]: Decrypt media directly from FlowRequest using `.decrypt_media(key, index)`.
+- [client]: The client can run without a token but won’t allow API operations (only webhook listening).
+- [sent_message]: The `SentMessage` object returned by `send_message`, `send_image`, etc., contains the message ID and allows to act on the sent message with methods like `reply_x`, `wait_for_x` etc.
+- [migration]: Make sure to read the migration guide before updating to this version!
+
 #### 1.26.0 (2024-09-22) **Latest**
 
 - [flows] adding support of `RichText`
