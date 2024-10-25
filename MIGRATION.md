@@ -43,8 +43,8 @@ wa = WhatsApp(...)
 @wa.on_message
 async def on_message(_: WhatsApp, msg: types.Message):
     msg.reply("Hello, World!")
-    
-    
+
+
 # New code
 from pywa_async import WhatsApp, types
 
@@ -137,7 +137,7 @@ from pywa import WhatsApp, types
 
 def on_start(_: WhatsApp, m: types.Message):
     m.reply("How old are you?")
-    
+
 def on_age(_: WhatsApp, m: types.Message):
     m.reply(f"You are {m.text} years old")
     m.reply("What is your name?")
@@ -213,4 +213,3 @@ def some_web_framework_handler(req):
     )
     return res, status
 ```
-
