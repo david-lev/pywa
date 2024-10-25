@@ -17,6 +17,15 @@ from pywa_async.types.base_update import _ClientShortcuts
 
 
 class SentMessage(_ClientShortcuts, _SentMessage):
+    """
+    Represents a message that was sent to WhatsApp user.
+
+    Attributes:
+        id: The ID of the message.
+        to_user: The user the message was sent to.
+        from_phone_id: The WhatsApp ID of the sender who sent the message.
+    """
+
     async def wait_for_reply(
         self,
         force_quote: bool = False,
@@ -105,7 +114,7 @@ class SentMessage(_ClientShortcuts, _SentMessage):
             ListenerStopped: If the listener was stopped manually.
         """
         if cancel_on_new_update:
-            new_update_canceler = ~pywa_filters.message_status
+            new_update_canceler = ~pywa_filters.update_id(self.id)
             cancelers = (
                 (new_update_canceler & cancelers) if cancelers else new_update_canceler
             )

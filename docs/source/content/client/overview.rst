@@ -7,11 +7,9 @@
 The :class:`~WhatsApp` client has 3 main responsibilities:
 
 1. Sending messages (text, media, location, contact, etc.)
-2. Creating and managing templates, flows, profile and other business-related resources
-3. Listening for incoming messages and events
+2. Listening for incoming messages and events
+3. Creating and managing templates, flows, profile and other business-related resources
 
-for sending messages and the other API calls, you will need to provide an phone number id that connects to the WhatsApp Cloud API.
-for listening to incoming messages and events, you will need to tell WhatsApp to send the events to a webhook that you provide.
 
 .. tip::
     :class: note
@@ -24,7 +22,7 @@ for listening to incoming messages and events, you will need to tell WhatsApp to
         from pywa import WhatsApp, types
         wa = WhatsApp(...)
 
-        @wa.on_message()
+        @wa.on_message
         def on_message(_: WhatsApp, msg: types.Message):
             msg.reply("Hello!")
 
@@ -34,7 +32,7 @@ for listening to incoming messages and events, you will need to tell WhatsApp to
         from pywa_async import WhatsApp, types
         wa = WhatsApp(...)
 
-        @wa.on_message()
+        @wa.on_message
         async def on_message(_: WhatsApp, msg: types.Message):
             await msg.reply("Hello!")
 

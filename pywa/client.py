@@ -117,10 +117,11 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
 
             >>> from pywa import WhatsApp
             >>> wa = WhatsApp(phone_id="1234567890",token="EAADKQl9oJxx")
+            >>> wa.send_message("1234567890", "Hello from PyWa!")
 
-        Example with webhook (using FastAPI):
+        Example with webhook (using ``FastAPI``):
 
-            >>> import pywa, fastapi, uvicorn
+            >>> import pywa, fastapi
             >>> fastapi_app = fastapi.FastAPI()
             >>> wa = pywa.WhatsApp(
             ...     phone_id="1234567890",
@@ -132,11 +133,11 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             ...     app_secret="my_app_secret",
             ... )
 
-            >>> @wa.on_message()
-            ... def message_handler(_: WhatsApp, msg: Message):
-            ...     print(msg)
+            >>> @wa.on_message(filters.text)
+            ... def new_message(_: WhatsApp, msg: Message):
+            ...     msg.reply("Hello from PyWa!")
 
-            >>> uvicorn.run(fastapi_app, host=..., port=...)
+            ``$ fastapi dev wa.py`` see uvicorn docs for more options (port, host, reload, etc.)
 
         Args:
             phone_id: The Phone number ID to send messages from (if you manage multiple WhatsApp business accounts
@@ -449,92 +450,6 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             ...     text="Hello from PyWa! (https://github.com/david-lev/pywa)",
             ...     preview_url=True,
             ... )
-
-        Example with keyboard buttons:
-
-            >>> from pywa.types import Button
-            >>> wa = WhatsApp(...)
-            >>> wa.send_message(
-            ...     to="1234567890",
-            ...     text="What can I help you with?",
-            ...     footer="Powered by PyWa",
-            ...     buttons=[
-            ...         Button("Help", data="help"),
-            ...         Button("About", data="about"),
-            ...     ],
-            ... )
-
-        Example with a button url:
-
-            >>> from pywa.types import ButtonUrl
-            >>> wa = WhatsApp(...)
-            >>> wa.send_message(
-            ...     to="1234567890",
-            ...     text="Hello from PyWa!",
-            ...     footer="Powered by PyWa",
-            ...     buttons=ButtonUrl(
-            ...         title="PyWa GitHub",
-            ...         url="https://github.com/david-lev/pywa",
-            ...     )
-            ... )
-
-        Example with a section list:
-
-            >>> from pywa.types import SectionList, Section, SectionRow
-            >>> wa = WhatsApp(...)
-            >>> wa.send_message(
-            ...     to="1234567890",
-            ...     text="What can I help you with?",
-            ...     footer="Powered by PyWa",
-            ...     buttons=SectionList(
-            ...         button_title="Choose an option",
-            ...         sections=[
-            ...             Section(
-            ...                 title="Help",
-            ...                 rows=[
-            ...                     SectionRow(
-            ...                         title="Help",
-            ...                         callback_data="help",
-            ...                         description="Get help with PyWa",
-            ...                     ),
-            ...                     SectionRow(
-            ...                         title="About",
-            ...                         callback_data="about",
-            ...                         description="Learn more about PyWa",
-            ...                     ),
-            ...                 ],
-            ...             ),
-            ...            Section(
-            ...                 title="Other",
-            ...                 rows=[
-            ...                     SectionRow(
-            ...                         title="GitHub",
-            ...                         callback_data="github",
-            ...                         description="View the PyWa GitHub repository",
-            ...                     ),
-            ...                 ],
-            ...             ),
-            ...         ],
-            ...     ),
-            ... )
-
-        Example with a flow button:
-
-            >>> from pywa.types import FlowButton, FlowActionType
-            >>> wa = WhatsApp(...)
-            >>> wa.send_message(
-            ...     to="1234567890",
-            ...     text="We love to get feedback!",
-            ...     footer="Powered by PyWa",
-            ...     buttons=FlowButton(
-            ...         title="Feedback",
-            ...         flow_id="1234567890",
-            ...         flow_token="AQAAAAACS5FpgQ_cAAAAAD0QI3s.",
-            ...         flow_action_type=FlowActionType.NAVIGATE,
-            ...         flow_action_screen="RECOMMENDED"
-            ...     ),
-            ... )
-
 
         Args:
             to: The phone ID of the WhatsApp user.

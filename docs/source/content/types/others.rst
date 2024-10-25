@@ -1,6 +1,10 @@
 Others
 ======
 
+.. currentmodule:: pywa.types.sent_message
+
+.. autoclass:: SentMessage()
+
 .. currentmodule:: pywa.types.others
 
 .. autoclass:: BusinessProfile()

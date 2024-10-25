@@ -193,7 +193,7 @@ class Server:
                 handler_type = self._get_handler(update)
             except (KeyError, ValueError, TypeError, IndexError):
                 (_logger.error if self._validate_updates else _logger.debug)(
-                    "Webhook ('%s') received an invalid update%s: %s",
+                    "Webhook ('%s') received unexpected update%s: %s",
                     self._webhook_endpoint,
                     " (Enable `validate_updates` to ignore updates with invalid data)"
                     if not self._validate_updates

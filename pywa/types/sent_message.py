@@ -26,6 +26,11 @@ if TYPE_CHECKING:
 class SentMessage(_ClientShortcuts):
     """
     Represents a message that was sent to WhatsApp user.
+
+    Attributes:
+        id: The ID of the message.
+        to_user: The user the message was sent to.
+        from_phone_id: The WhatsApp ID of the sender who sent the message.
     """
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
@@ -167,7 +172,7 @@ class SentMessage(_ClientShortcuts):
             ListenerStopped: If the listener was stopped manually.
         """
         if cancel_on_new_update:
-            new_update_canceler = ~pywa_filters.message_status
+            new_update_canceler = ~pywa_filters.update_id(self.id)
             cancelers = (
                 (new_update_canceler & cancelers) if cancelers else new_update_canceler
             )

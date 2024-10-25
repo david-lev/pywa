@@ -22,6 +22,7 @@ ____________________________________________________
     /content/getting-started
     /content/client/overview
     /content/handlers/overview
+    /content/listeners/overview
     /content/updates/overview
     /content/flows/overview
     /content/filters/overview
