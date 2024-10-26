@@ -42,24 +42,6 @@ def test_all_updates_are_overridden():
     )
 
 
-def test_resolve_factory_callback_data_subclass():
-    @dataclasses.dataclass
-    class User(types.CallbackData):
-        id: int
-        name: str
-
-    callback_data = User(id=1, name="John")
-    constructor, factory_filter = handlers._resolve_factory(User, "data")
-    button_data = types.Button(title="Click me", callback_data=callback_data).to_dict()[
-        "reply"
-    ]["id"]
-    constructed_data = constructor(button_data)
-    assert constructed_data == callback_data
-
-    update = CallbackButtonOnlyDataIsNeeded(data=button_data)
-    assert factory_filter(FAKE_WA, update)
-
-
 def test_instance_with_parentheses():
     wa = WhatsApp(server=None, verify_token="1234567890")
 

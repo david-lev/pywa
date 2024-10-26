@@ -113,28 +113,6 @@ _logger = logging.getLogger(__name__)
 _FactorySupported: TypeAlias = CallbackButton | CallbackSelection | MessageStatus
 
 
-def _resolve_factory(
-    factory: type[CallbackData] | None,
-    data_field: str,
-) -> tuple[
-    Callable[[str], CallbackData] | None,
-    Callable[["WhatsApp", _FactorySupported], bool] | None,
-]:
-    """Internal function to resolve the callback data factory into a constractor and a filter."""
-    if factory is None:
-        return None, None
-
-    def factory_filter(_: WhatsApp, update: _FactorySupported) -> bool:
-        raw_data = getattr(update, data_field)
-        if raw_data is None:
-            return False
-        return raw_data.startswith(
-            str(factory.__callback_id__) + factory.__callback_data_sep__
-        )
-
-    return factory.from_str, factory_filter
-
-
 class Handler(abc.ABC):
     """Base class for all handlers."""
 
@@ -218,10 +196,10 @@ class MessageHandler(Handler):
 
     Example:
 
-        >>> from pywa import WhatsApp, filters as fil
+        >>> from pywa import WhatsApp, filters
         >>> wa = WhatsApp(...)
         >>> print_text_messages = lambda _, msg: print(msg)
-        >>> wa.add_handlers(MessageHandler(print_text_messages, fil.text))
+        >>> wa.add_handlers(MessageHandler(print_text_messages, filters.text))
 
     Args:
         callback: The callback function (Takes the :class:`pywa.WhatsApp` instance and a :class:`pywa.types.Message` as
@@ -256,33 +234,31 @@ class _FactoryHandler(Handler):
         factory: type[CallbackData] | None,
         priority: int,
     ):
-        (
-            self._factory,
-            self._factory_filter,
-        ) = _resolve_factory(factory, self._data_field)
+        self._factory = factory
         super().__init__(callback=callback, filters=filters, priority=priority)
 
-    def _process_update(
-        self, wa: WhatsApp, update: _FactorySupported
-    ) -> _FactorySupported | None:
+    def _process_update(self, update: _FactorySupported) -> _FactorySupported | None:
         if self._factory:
-            if not self._factory_filter(wa, update):
+            raw_data = getattr(update, self._data_field)
+            if raw_data is None or not raw_data.startswith(
+                f"{self._factory.__callback_id__}{self._factory.__callback_data_sep__}"
+            ):
                 return None
             if (data := getattr(update, self._data_field)) is None:
                 return None
             update = dataclasses.replace(
-                update, **{self._data_field: self._factory(data)}
+                update, **{self._data_field: self._factory.from_str(data)}
             )
         return update
 
     def handle(self, wa: WhatsApp, update: _FactorySupported) -> bool:
-        update = self._process_update(wa, update)
+        update = self._process_update(update)
         if update is None:
             return False
         return super().handle(wa, update)
 
     async def ahandle(self, wa: WhatsApp, update: _FactorySupported) -> bool:
-        update = self._process_update(wa, update)
+        update = self._process_update(update)
         if update is None:
             return False
         return await super().ahandle(wa, update)
@@ -296,17 +272,16 @@ class CallbackButtonHandler(_FactoryHandler):
 
     Example:
 
-        >>> from pywa import WhatsApp, filters as fil
+        >>> from pywa import WhatsApp, filters
         >>> wa = WhatsApp(...)
         >>> print_btn = lambda _, btn: print(btn)
-        >>> wa.add_handlers(CallbackButtonHandler(print_btn, fil.startswith('id:')))
+        >>> wa.add_handlers(CallbackButtonHandler(print_btn, filters.startswith('id:')))
 
     Args:
         callback: The callback function (gets the WhatsApp instance and the callback as arguments)
         *filters: The filters to apply to the handler (Takes a :class:`pywa.WhatsApp` instance and a
          :class:`pywa.types.CallbackButton` and returns a :class:`bool`)
-        factory: The constructor/s to use to construct the callback data (default: :class:`str`. If the factory is a
-         subclass of :class:`CallbackData`, a matching filter is automatically added).
+        factory: The constructor to use to construct the callback data.
         priority: The priority of the handler (default: ``0``)
     """
 
@@ -335,17 +310,16 @@ class CallbackSelectionHandler(_FactoryHandler):
 
     Example:
 
-        >>> from pywa import WhatsApp, filters as fil
+        >>> from pywa import WhatsApp, filters
         >>> wa = WhatsApp(...)
         >>> print_selection = lambda _, sel: print(sel)
-        >>> wa.add_handlers(CallbackSelectionHandler(print_selection, fil.startswith('id:')))
+        >>> wa.add_handlers(CallbackSelectionHandler(print_selection, filters.startswith('id:')))
 
     Args:
         callback: The callback function. (Takes a :class:`pywa.WhatsApp` instance and a
          :class:`pywa.types.CallbackSelection` as arguments)
         filters: The filters to apply to the handler
-        factory: The constructor/s to use to construct the callback data (default: :class:`str`. If the factory is a
-         subclass of :class:`CallbackData`, a matching filter is automatically added).
+        factory: The constructor to use to construct the callback data.
         priority: The priority of the handler (default: ``0``)
     """
 
@@ -376,17 +350,16 @@ class MessageStatusHandler(_FactoryHandler):
 
     Example:
 
-        >>> from pywa import WhatsApp, filters as fil
+        >>> from pywa import WhatsApp, types, filters
         >>> wa = WhatsApp(...)
         >>> print_failed_messages = lambda _, msg: print(msg)
-        >>> wa.add_handlers(MessageStatusHandler(print_failed_messages, fil.message_status.failed))
+        >>> wa.add_handlers(MessageStatusHandler(print_failed_messages, filters.failed))
 
     Args:
         callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a :class:`pywa.types.MessageStatus` as
             arguments)
         filters: The filters to apply to the handler
-        factory: The constructor/s to use to construct the tracker data (default: :class:`str`. If the factory is a
-            subclass of :class:`CallbackData`, a matching filter is automatically added).
+        factory: The constructor to use to construct the callback data.
         priority: The priority of the handler (default: ``0``)
     """
 
@@ -449,13 +422,10 @@ class TemplateStatusHandler(Handler):
 
     Example:
 
-        >>> from pywa import WhatsApp, filters as fil
+        >>> from pywa import WhatsApp
         >>> wa = WhatsApp(...)
         >>> print_template_status = lambda _, msg: print(msg)
-        >>> wa.add_handlers(TemplateStatusHandler(
-        ...     print_template_status,
-        ...     fil.template_status.on_event(TemplateStatus.TemplateEvent.APPROVED)
-        ... ))
+        >>> wa.add_handlers(TemplateStatusHandler(print_template_status))
 
     Args:
         callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a
@@ -642,11 +612,10 @@ class HandlerDecorators:
 
         Example:
 
-            >>> from pywa.types import Button
-            >>> from pywa import filters as fil
+            >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
-            >>> @wa.on_message(fil.matches("Hello", "Hi", ignore_case=True))
-            ... def hello_handler(_: WhatsApp, msg: Message):
+            >>> @wa.on_message(filters.matches("Hello", "Hi", ignore_case=True))
+            ... def hello_handler(_: WhatsApp, msg: types.Message):
             ...     msg.react("👋")
             ...     msg.reply_text(text="Hello from PyWa!", quote=True)
 
@@ -692,17 +661,15 @@ class HandlerDecorators:
 
         Example:
 
-            >>> from pywa.types import CallbackButton
-            >>> from pywa import filters as fil
+            >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
-            >>> @wa.on_callback_button(fil.matches("help"))
-            ... def help_handler(_: WhatsApp, btn: CallbackButton):
+            >>> @wa.on_callback_button(filters.matches("help"))
+            ... def help_handler(_: WhatsApp, btn: types.CallbackButton):
             ...     btn.reply_text(text="What can I help you with?")
 
         Args:
             filters: Filters to apply to the incoming callback button presses.
-            factory: The constructor/s to use for the callback data (default: :class:`str`. If the factory is a
-             subclass of :class:`CallbackData`, a matching filter is automatically added).
+            factory: The constructor to use to construct the callback data.
             priority: The priority of the handler (default: ``0``).
         """
 
@@ -745,17 +712,15 @@ class HandlerDecorators:
 
         Example:
 
-            >>> from pywa.types import CallbackSelection
-            >>> from pywa import filters as fil
+            >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
-            >>> @wa.on_callback_selection(fil.startswith("id:"))
-            ... def id_handler(_: WhatsApp, sel: CallbackSelection):
+            >>> @wa.on_callback_selection(filters.startswith("id:"))
+            ... def id_handler(_: WhatsApp, sel: types.CallbackSelection):
             ...     sel.reply_text(text=f"Your ID is {sel.data.split(':', 1)[1]}")
 
         Args:
             filters: Filters to apply to the incoming callback selections.
-            factory: The constructor/s to use for the callback data (default: :class:`str`. If the factory is a
-             subclass of :class:`CallbackData`, a matching filter is automatically added).
+            factory: The constructor to use to construct the callback data.
             priority: The priority of the handler (default: ``0``).
         """
 
@@ -801,18 +766,16 @@ class HandlerDecorators:
 
         Example:
 
-            >>> from pywa.types import MessageStatus
-            >>> from pywa import filters as fil
+            >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
-            >>> @wa.on_message_status(fil.failed)
-            ... def delivered_handler(client: WhatsApp, status: MessageStatus):
+            >>> @wa.on_message_status(filters.failed)
+            ... def delivered_handler(client: WhatsApp, status: types.MessageStatus):
             ...     print(f"Message {status.id} failed to send to {status.from_user.wa_id}: {status.error.message})
 
 
         Args:
             filters: Filters to apply to the incoming message status changes.
-            factory: The constructor/s to use for the tracker data (default: :class:`str`. If the factory is a
-                subclass of :class:`CallbackData`, a matching filter is automatically added).
+            factory: The constructor to use to construct the callback data.
             priority: The priority of the handler (default: ``0``).
         """
 
@@ -851,11 +814,10 @@ class HandlerDecorators:
 
         Example:
 
-            >>> from pywa.types import ChatOpened
-            >>> from pywa import filters as fil
+            >>> from pywa import WhatsApp, types
             >>> wa = WhatsApp(...)
             >>> @wa.on_chat_opened
-            ... def chat_opened_handler(client: WhatsApp, chat_opened: ChatOpened):
+            ... def chat_opened_handler(client: WhatsApp, chat_opened: types.ChatOpened):
             ...     print(f"The user {chat_opened.from_user.wa_id} just opened a chat with us!")
 
         Args:
@@ -900,11 +862,10 @@ class HandlerDecorators:
 
         Example:
 
-            >>> from pywa.types import TemplateStatus
-            >>> from pywa import filters as fil
+            >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
             >>> @wa.on_template_status
-            ... def approved_handler(client: WhatsApp, status: TemplateStatus):
+            ... def approved_handler(client: WhatsApp, status: types.TemplateStatus):
             ...     print(f"Template {status.message_template_name} just got {status.event}!")
 
         Args:
@@ -948,11 +909,10 @@ class HandlerDecorators:
 
         Example:
 
-            >>> from pywa.types import FlowCompletion
-            >>> from pywa import filters as fil
+            >>> from pywa import WhatsApp, types
             >>> wa = WhatsApp(...)
             >>> @wa.on_flow_completion
-            ... def flow_handler(client: WhatsApp, flow: FlowCompletion):
+            ... def flow_handler(client: WhatsApp, flow: types.FlowCompletion):
             ...     print(f"Flow {flow.token} just got completed!. Flow data: {flow.response}")
 
         Args:
@@ -996,21 +956,19 @@ class HandlerDecorators:
         FlowRequestCallbackWrapper,
     ]:
         """
-        Decorator to register a function to handle and respond to incoming Flow Data Exchange requests.
+        Decorator to register a function to handle and respond to incoming flow requests.
 
         Example:
 
-            >>> from pywa import WhatsApp
+            >>> from pywa import WhatsApp, types
             >>> wa = WhatsApp(business_private_key='...', ...)
             >>> @wa.on_flow_request('/feedback_flow')
-            ... def feedback_flow_handler(_: WhatsApp, flow: FlowRequest) -> FlowResponse:
-            ...     return flow.respond(
-            ...         screen="SURVEY",
-            ...         data={
-            ...             "default_text": "Please rate your experience with our service",
-            ...             "text_required": True
-            ...         }
-            ...     )
+            ... def feedback_flow_handler(_: WhatsApp, req: FlowRequest) -> FlowResponse:
+            ...     ...
+
+            >>> @feedback_flow_handler.on(types.FlowRequestActionType.DATA_EXCHANGE, screen="SURVEY")
+            ... def survey_data_handler(_: WhatsApp, req: FlowRequest):
+            ...     ...
 
         Args:
             endpoint: The endpoint to listen to (The endpoint uri you set to the flow. e.g ``/feedback_flow``).
