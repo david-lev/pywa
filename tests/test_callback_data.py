@@ -24,6 +24,19 @@ def test_callback_class_uniqueness():
     ), "The callback id must be unique for each child class."
 
 
+def test_callback_id_override():
+    """Test the callback id override."""
+
+    @dataclasses.dataclass(slots=True, frozen=True)
+    class User(CallbackData):
+        __callback_id__ = "user"
+        id: str
+        name: str
+        is_admin: bool
+
+    assert User.__callback_id__ == "user"
+
+
 def test_callback_class_not_empty():
     """Test if the callback data is empty."""
     with pytest.raises(TypeError):
@@ -69,8 +82,8 @@ def test_data():
         name: str
         is_admin: bool
 
-    assert User(id=1234, name="xxx", is_admin=True).to_str() == "7~1234~xxx~§"
-    assert User(id=3456, name="yyy", is_admin=False).to_str() == "7~3456~yyy~"
+    assert User(id=1234, name="xxx", is_admin=True).to_str() == "3~1234~xxx~§"
+    assert User(id=3456, name="yyy", is_admin=False).to_str() == "3~3456~yyy~"
     assert User.from_str("1~1234~xxx~§") == User(id=1234, name="xxx", is_admin=True)
     assert User.from_str("1~3456~yyy~") == User(id=3456, name="yyy", is_admin=False)
 
@@ -94,8 +107,8 @@ def test_data_sep():
         name: str
         is_admin: bool
 
-    assert User(id=1234, name="xxx", is_admin=True).to_str() == "9*1234*xxx*§"
-    assert User(id=3456, name="yyy", is_admin=False).to_str() == "9*3456*yyy*"
+    assert User(id=1234, name="xxx", is_admin=True).to_str() == "4*1234*xxx*§"
+    assert User(id=3456, name="yyy", is_admin=False).to_str() == "4*3456*yyy*"
 
     with pytest.raises(ValueError):
         User.from_str("1*3456*David*Lev*")

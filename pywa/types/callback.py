@@ -157,8 +157,10 @@ class CallbackData:
             raise TypeError(
                 f"Unsupported types {unsupported_fields} in callback data. Use one of {cls.__allowed_types__}."
             )
-        cls.__callback_id__ = CallbackData.__callback_id__
-        CallbackData.__callback_id__ += 1
+
+        if cls.__callback_id__ == CallbackData.__callback_id__:
+            cls.__callback_id__ = CallbackData.__callback_id__
+            CallbackData.__callback_id__ += 1
 
     @classmethod
     def from_str(
