@@ -611,7 +611,10 @@ class HandlerDecorators:
 
         if (
             clb := _registered_without_parentheses(
-                self=self, handler=RawUpdateHandler, filters=filters, priority=priority
+                self=self,
+                handler_type=RawUpdateHandler,
+                filters=filters,
+                priority=priority,
             )
         ) is not None:
             return clb
@@ -619,7 +622,7 @@ class HandlerDecorators:
         def deco(callback: _RawUpdateCallback) -> _RawUpdateCallback:
             return _registered_with_parentheses(
                 self=self,
-                handler=RawUpdateHandler,
+                handler_type=RawUpdateHandler,
                 callback=callback,
                 filters=filters,
                 priority=priority,
@@ -654,7 +657,10 @@ class HandlerDecorators:
 
         if (
             clb := _registered_without_parentheses(
-                self=self, handler=MessageHandler, filters=filters, priority=priority
+                self=self,
+                handler_type=MessageHandler,
+                filters=filters,
+                priority=priority,
             )
         ) is not None:
             return clb
@@ -662,7 +668,7 @@ class HandlerDecorators:
         def deco(callback: _MessageCallback) -> _MessageCallback:
             return _registered_with_parentheses(
                 self=self,
-                handler=MessageHandler,
+                handler_type=MessageHandler,
                 callback=callback,
                 filters=filters,
                 priority=priority,
@@ -703,7 +709,7 @@ class HandlerDecorators:
         if (
             clb := _registered_without_parentheses(
                 self=self,
-                handler=CallbackButtonHandler,
+                handler_type=CallbackButtonHandler,
                 filters=filters,
                 priority=priority,
                 factory=factory,
@@ -714,7 +720,7 @@ class HandlerDecorators:
         def deco(callback: _CallbackButtonCallback) -> _CallbackButtonCallback:
             return _registered_with_parentheses(
                 self=self,
-                handler=CallbackButtonHandler,
+                handler_type=CallbackButtonHandler,
                 callback=callback,
                 filters=filters,
                 priority=priority,
@@ -756,7 +762,7 @@ class HandlerDecorators:
         if (
             clb := _registered_without_parentheses(
                 self=self,
-                handler=CallbackSelectionHandler,
+                handler_type=CallbackSelectionHandler,
                 filters=filters,
                 priority=priority,
                 factory=factory,
@@ -767,7 +773,7 @@ class HandlerDecorators:
         def deco(callback: _CallbackSelectionCallback) -> _CallbackSelectionCallback:
             return _registered_with_parentheses(
                 self=self,
-                handler=CallbackSelectionHandler,
+                handler_type=CallbackSelectionHandler,
                 callback=callback,
                 filters=filters,
                 priority=priority,
@@ -813,7 +819,7 @@ class HandlerDecorators:
         if (
             clb := _registered_without_parentheses(
                 self=self,
-                handler=MessageStatusHandler,
+                handler_type=MessageStatusHandler,
                 filters=filters,
                 priority=priority,
                 factory=factory,
@@ -824,7 +830,7 @@ class HandlerDecorators:
         def deco(callback: _MessageStatusCallback) -> _MessageStatusCallback:
             return _registered_with_parentheses(
                 self=self,
-                handler=MessageStatusHandler,
+                handler_type=MessageStatusHandler,
                 callback=callback,
                 filters=filters,
                 priority=priority,
@@ -859,7 +865,10 @@ class HandlerDecorators:
 
         if (
             clb := _registered_without_parentheses(
-                self=self, handler=ChatOpenedHandler, filters=filters, priority=priority
+                self=self,
+                handler_type=ChatOpenedHandler,
+                filters=filters,
+                priority=priority,
             )
         ) is not None:
             return clb
@@ -867,7 +876,7 @@ class HandlerDecorators:
         def deco(callback: _ChatOpenedCallback) -> _ChatOpenedCallback:
             return _registered_with_parentheses(
                 self=self,
-                handler=ChatOpenedHandler,
+                handler_type=ChatOpenedHandler,
                 callback=callback,
                 filters=filters,
                 priority=priority,
@@ -906,7 +915,7 @@ class HandlerDecorators:
         if (
             clb := _registered_without_parentheses(
                 self=self,
-                handler=TemplateStatusHandler,
+                handler_type=TemplateStatusHandler,
                 filters=filters,
                 priority=priority,
             )
@@ -916,7 +925,7 @@ class HandlerDecorators:
         def deco(callback: _TemplateStatusCallback) -> _TemplateStatusCallback:
             return _registered_with_parentheses(
                 self=self,
-                handler=TemplateStatusHandler,
+                handler_type=TemplateStatusHandler,
                 callback=callback,
                 filters=filters,
                 priority=priority,
@@ -954,7 +963,7 @@ class HandlerDecorators:
         if (
             clb := _registered_without_parentheses(
                 self=self,
-                handler=FlowCompletionHandler,
+                handler_type=FlowCompletionHandler,
                 filters=filters,
                 priority=priority,
             )
@@ -964,7 +973,7 @@ class HandlerDecorators:
         def deco(callback: _FlowCompletionCallback) -> _FlowCompletionCallback:
             return _registered_with_parentheses(
                 self=self,
-                handler=FlowCompletionHandler,
+                handler_type=FlowCompletionHandler,
                 callback=callback,
                 filters=filters,
                 priority=priority,
@@ -1038,7 +1047,7 @@ _handlers_attr = "__pywa_handlers"
 def _registered_without_parentheses(
     *,
     self: WhatsApp,
-    handler: type[Handler],
+    handler_type: type[Handler],
     filters: Filter,
     priority: int,
     **kwargs,
@@ -1048,12 +1057,12 @@ def _registered_without_parentheses(
         if not hasattr(self, _handlers_attr):
             setattr(self, _handlers_attr, [])
         getattr(self, _handlers_attr).append(
-            handler(callback=self, filters=None, priority=priority, **kwargs)
+            handler_type(callback=self, filters=None, priority=priority, **kwargs)
         )
         return self
     elif callable(filters):  # @wa.on_x
         self.add_handlers(
-            handler(callback=filters, filters=None, priority=priority, **kwargs)
+            handler_type(callback=filters, filters=None, priority=priority, **kwargs)
         )
         return filters
     return None
@@ -1062,21 +1071,52 @@ def _registered_without_parentheses(
 def _registered_with_parentheses(
     *,
     self: WhatsApp,
-    handler: type[Handler],
+    handler_type: type[Handler],
     callback: Callable,
     filters: Filter,
     priority: int,
     **kwargs,
 ) -> Callable:
     """When the decorator is called with parentheses."""
-    handler = handler(callback=callback, filters=filters, priority=priority, **kwargs)
-    if self is None:  # @WhatsApp.on_x(filters=...)
-        if not hasattr(callback, _handlers_attr):
-            setattr(callback, _handlers_attr, [])
-        getattr(callback, _handlers_attr).append(handler)
-    else:  # @wa.on_x(filters=...)
-        self.add_handlers(handler)
+    if self is None or isinstance(self, Filter):
+        if self is None:  # @WhatsApp.on_x(filters=...) with kw
+            _register_func_handler(
+                handler_type=handler_type,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+                **kwargs,
+            )
+        else:  # @WhatsApp.on_x(filters.text) without kw
+            _register_func_handler(
+                handler_type=handler_type,
+                callback=callback,
+                filters=self,
+                priority=priority,
+                **kwargs,
+            )
+
+    else:  # @wa.on_x(filters.text)
+        self.add_handlers(
+            handler_type(
+                callback=callback, filters=filters, priority=priority, **kwargs
+            )
+        )
     return callback
+
+
+def _register_func_handler(
+    handler_type: type[Handler],
+    callback: Callable,
+    filters: Filter,
+    priority: int,
+    **kwargs,
+):
+    if not hasattr(callback, _handlers_attr):
+        setattr(callback, _handlers_attr, [])
+    getattr(callback, _handlers_attr).append(
+        handler_type(callback=callback, filters=filters, priority=priority, **kwargs)
+    )
 
 
 class FlowRequestCallbackWrapper:
