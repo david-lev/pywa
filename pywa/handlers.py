@@ -268,7 +268,7 @@ class _FactoryHandler(Handler):
         if self._factory:
             if not self._factory_filter(wa, update):
                 return None
-            if data := getattr(update, self._data_field) is None:
+            if (data := getattr(update, self._data_field)) is None:
                 return None
             update = dataclasses.replace(
                 update, **{self._data_field: self._factory(data)}
