@@ -22,6 +22,7 @@ ________________________
 > [Get Started](https://pywa.readthedocs.io/en/latest/content/getting-started.html)
 • [WhatsApp Client](https://pywa.readthedocs.io/en/latest/content/client/overview.html)
 • [Handlers](https://pywa.readthedocs.io/en/latest/content/handlers/overview.html)
+• [Listeners](https://pywa.readthedocs.io/en/latest/content/listeners/overview.html)
 • [Filters](https://pywa.readthedocs.io/en/latest/content/filters/overview.html)
 • [Updates](https://pywa.readthedocs.io/en/latest/content/updates/overview.html)
 • [Flows](https://pywa.readthedocs.io/en/latest/content/flows/overview.html)
@@ -109,7 +110,7 @@ fastapi dev wa.py  # see uvicorn docs for more options (port, host, reload, etc.
 
 💫 **Async Usage**
 
-- PyWa has async support! To use the async version, replace all the imports from `pywa` to `pywa_async` and use `async`/`await`:
+- PyWa has async support! To use the async version, replace **all** the imports from `pywa` to `pywa_async` and use `async`/`await`:
 
 ```python
 # wa.py
