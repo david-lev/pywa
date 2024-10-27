@@ -1,5 +1,6 @@
 🎛️ Handlers
 ==================
+
 .. currentmodule:: pywa.handlers
 
 To handle the updates from WhatsApp, you need a way to receive them. This is done by starting a web server that

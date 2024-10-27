@@ -58,10 +58,12 @@ Now, listeners have a few options that you can use to customize the behavior. fo
 
 In the example above, we added a button to the message that the user can press to cancel the listener. The listener will be canceled if the user sends a message that matches the filter ``filters.callback_button & filters.matches("cancel")``.
 
-Now - we actually need to know what happend with the listener. The :meth:`~pywa.client.WhatsApp.listen` uses exceptions to notify you about the listener status. Let's see an example:
 
 Try-Except
 __________
+
+Now - we actually need to know what happend with the listener. The :meth:`~pywa.client.WhatsApp.listen` uses exceptions to notify you about the listener status. Let's see an example:
+
 
 .. code-block:: python
     :linenos:
