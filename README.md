@@ -69,8 +69,7 @@ wa.send_message(
 
 ```python
 # wa.py
-from pywa import WhatsApp, filters
-from pywa.types import Message, CallbackButton, Button
+from pywa import WhatsApp, filters, types
 from fastapi import FastAPI
 
 fastapi_app = FastAPI()
@@ -85,12 +84,12 @@ wa = WhatsApp(
 )
 
 @wa.on_message(filters.matches("Hello", "Hi"))
-def hello(client: WhatsApp, msg: Message):
+def hello(client: WhatsApp, msg: types.Message):
     msg.react("👋")
     msg.reply_text(
         text=f"Hello {msg.from_user.name}!",
         buttons=[
-            Button(
+            types.Button(
                 title="Click me!",
                 callback_data="id:123"
             )
@@ -98,7 +97,7 @@ def hello(client: WhatsApp, msg: Message):
     )
 
 @wa.on_callback_button(filters.startswith("id"))
-def click_me(client: WhatsApp, clb: CallbackButton):
+def click_me(client: WhatsApp, clb: types.CallbackButton):
     clb.reply_text("You clicked me!")
 ```
 

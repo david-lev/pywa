@@ -263,7 +263,7 @@ The easiest way to register a callback function is to use the ``on_message`` and
         # Or:
 
         wa = WhatsApp(...)
-        wa.add_handlers(my_handlers)
+        wa.load_handlers_modules(my_handlers)
 
 
 Using ``Handler`` objects
