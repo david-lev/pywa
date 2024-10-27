@@ -13,8 +13,6 @@ from pywa.types import (
     MessageStatus,
     CallbackSelection,
     FlowCompletion,
-    CallbackData,
-    MessageType,
 )
 from pywa.types.base_update import _ClientShortcuts
 
@@ -235,7 +233,6 @@ class SentMessage(_ClientShortcuts):
         filters: pywa_filters.Filter = None,
         cancelers: pywa_filters.Filter = None,
         timeout: int | None = None,
-        factory: type[CallbackData] | None = None,
     ) -> CallbackButton:
         """
         Wait for a button click.
@@ -261,7 +258,6 @@ class SentMessage(_ClientShortcuts):
             filters: The filters to apply to the button click.
             cancelers: The filters to cancel the listening.
             timeout: The time to wait for the button click.
-            factory: The factory to use to create the button data.
 
         Returns:
             The clicked button.
@@ -284,16 +280,13 @@ class SentMessage(_ClientShortcuts):
             else pywa_filters.callback_button
         )
 
-        clb = self._client.listen(
+        return self._client.listen(
             to=self.recipient,
             sent_to_phone_id=self.sender,
             filters=filters,
             cancelers=cancelers,
             timeout=timeout,
         )
-        if factory:
-            return dataclasses.replace(clb, data=factory.from_str(clb.data))
-        return clb
 
     def wait_for_selection(
         self,
@@ -301,7 +294,6 @@ class SentMessage(_ClientShortcuts):
         filters: pywa_filters.Filter = None,
         cancelers: pywa_filters.Filter = None,
         timeout: int | None = None,
-        factory: type[CallbackData] | None = None,
     ) -> CallbackSelection:
         """
         Wait for a callback selection.
@@ -311,7 +303,6 @@ class SentMessage(_ClientShortcuts):
             filters: The filters to apply to the selection.
             cancelers: The filters to cancel the listening.
             timeout: The time to wait for the selection.
-            factory: The factory to use to create the selection data.
 
         Returns:
             The callback selection.
@@ -333,16 +324,13 @@ class SentMessage(_ClientShortcuts):
             if filters
             else pywa_filters.callback_selection
         )
-        cls = self._client.listen(
+        return self._client.listen(
             to=self.recipient,
             sent_to_phone_id=self.sender,
             filters=filters,
             cancelers=cancelers,
             timeout=timeout,
         )
-        if factory:
-            return dataclasses.replace(cls, data=factory.from_str(cls.data))
-        return cls
 
     def wait_for_completion(
         self,
