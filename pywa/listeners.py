@@ -153,6 +153,13 @@ class Listeners:
         """
         Listen to a user update
 
+        - You can use one of the shortcuts to listen to a specific update type:
+            - :meth:`~pywa.types.sent_message.SentMessage.wait_for_reply`
+            - :meth:`~pywa.types.sent_message.SentMessage.wait_for_click`
+            - :meth:`~pywa.types.sent_message.SentMessage.wait_for_selection`
+            - :meth:`~pywa.types.sent_message.SentMessage.wait_until_read`
+            - :meth:`~pywa.types.sent_message.SentMessage.wait_until_delivered`
+
         Example:
 
             .. code-block:: python

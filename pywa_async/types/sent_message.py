@@ -1,3 +1,5 @@
+import dataclasses
+
 from pywa.types.sent_message import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.sent_message import SentMessage as _SentMessage
 from pywa_async.types import (
@@ -6,6 +8,7 @@ from pywa_async.types import (
     CallbackSelection,
     MessageStatus,
     FlowCompletion,
+    CallbackData,
 )
 
 
@@ -36,11 +39,13 @@ class SentMessage(_ClientShortcuts, _SentMessage):
         """
         Wait for a message reply to the sent message.
 
+        - Shortcut for :meth:`~pywa.client.WhatsApp.listen` with ``filters=filters.message``.
+
         Example:
 
             .. code-block:: python
 
-                @wa.on_message(filters.text.command("start"))
+                @wa.on_message(filters.command("start"))
                 async def start(w: WhatsApp, m: Message):
                     user_id: str = await m.reply(
                         text=f"Hi {m.from_user.name}! Please enter your ID",
@@ -67,15 +72,16 @@ class SentMessage(_ClientShortcuts, _SentMessage):
         if force_quote:
             reply_filter = pywa_filters.replays_to(self.id)
             filters = (reply_filter & filters) if filters else reply_filter
+        filters = (pywa_filters.message & filters) if filters else pywa_filters.message
         return await self._client.listen(
             to=self.recipient,
             sent_to_phone_id=self.sender,
-            filters=pywa_filters.message & filters,
+            filters=filters,
             cancelers=cancelers,
             timeout=timeout,
         )
 
-    async def wait_to_read(
+    async def wait_until_read(
         self,
         cancel_on_new_update: bool = False,
         cancelers: pywa_filters.Filter = None,
@@ -84,19 +90,22 @@ class SentMessage(_ClientShortcuts, _SentMessage):
         """
         Wait for the message to be read by the recipient.
 
+        - Shortcut for :meth:`~pywa.client.WhatsApp.listen` with ``filters=filters.message_status & filters.read``.
+
         **Note:** This method will not work if the recipient has disabled read receipts.
-        make sure to use ``cancel_on_update=True`` to cancel the listening if the message is probably read, or use a timeout / cancelers.
+        make sure to use ``cancel_on_new_update=True`` to cancel the listening if the message is probably read, or use a timeout / cancelers.
 
         Example:
 
             .. code-block:: python
 
-                @wa.on_message(filters.text.command("start"))
+                @wa.on_message(filters.command("start"))
                 async def start(w: WhatsApp, m: Message):
                     r = await m.reply("This message waits for you to read it")
                     try:
-                        await r.wait_to_read(cancel_on_new_update=True)
-                    except ListenerCanceled:
+                        await r.wait_until_read(cancel_on_new_update=True)
+                    except ListenerCanceled as e:
+                        print(e.update) # The update that canceled the listener
                         await r.reply("You turned off read receipts")
                     await r.reply("You read this message", quote=True)
 
@@ -126,7 +135,7 @@ class SentMessage(_ClientShortcuts, _SentMessage):
             timeout=timeout,
         )
 
-    async def wait_to_delivered(
+    async def wait_until_delivered(
         self,
         cancelers: pywa_filters.Filter = None,
         timeout: int | None = None,
@@ -138,10 +147,10 @@ class SentMessage(_ClientShortcuts, _SentMessage):
 
             .. code-block:: python
 
-                @wa.on_message(filters.text.command("start"))
+                @wa.on_message(filters.command("start"))
                 async def start(w: WhatsApp, m: Message):
                     r = await m.reply("This message waits for you to receive it")
-                    await r.wait_to_delivered()
+                    await r.wait_until_delivered()
                     await r.reply("You received the message", quote=True)
 
         Args:
@@ -171,6 +180,7 @@ class SentMessage(_ClientShortcuts, _SentMessage):
         filters: pywa_filters.Filter = None,
         cancelers: pywa_filters.Filter = None,
         timeout: int | None = None,
+        factory: type[CallbackData] | None = None,
     ) -> CallbackButton:
         """
         Wait for a button click.
@@ -179,7 +189,7 @@ class SentMessage(_ClientShortcuts, _SentMessage):
 
             .. code-block:: python
 
-                @wa.on_message(filters.text.command("start"))
+                @wa.on_message(filters.command("start"))
                 async def start(w: WhatsApp, m: Message):
                     r = await m.reply(
                         text="Click a button",
@@ -196,6 +206,7 @@ class SentMessage(_ClientShortcuts, _SentMessage):
             filters: The filters to apply to the button click.
             cancelers: The filters to cancel the listening.
             timeout: The time to wait for the button click.
+            factory: The factory to use to create the button data.
 
         Returns:
             The clicked button.
@@ -212,13 +223,21 @@ class SentMessage(_ClientShortcuts, _SentMessage):
                 lambda _, c: c.data in self._callback_options
             )
             filters = (contains_filter & filters) if filters else contains_filter
-        return await self._client.listen(
+        filters = (
+            (pywa_filters.callback_button & filters)
+            if filters
+            else pywa_filters.callback_button
+        )
+        clb = await self._client.listen(
             to=self.recipient,
             sent_to_phone_id=self.sender,
             filters=pywa_filters.callback_button & filters,
             cancelers=cancelers,
             timeout=timeout,
         )
+        if factory:
+            return dataclasses.replace(clb, data=factory.from_str(clb.data))
+        return clb
 
     async def wait_for_selection(
         self,
@@ -226,6 +245,7 @@ class SentMessage(_ClientShortcuts, _SentMessage):
         filters: pywa_filters.Filter = None,
         cancelers: pywa_filters.Filter = None,
         timeout: int | None = None,
+        factory: type[CallbackData] | None = None,
     ) -> CallbackSelection:
         """
         Wait for a callback selection.
@@ -235,6 +255,7 @@ class SentMessage(_ClientShortcuts, _SentMessage):
             filters: The filters to apply to the selection.
             cancelers: The filters to cancel the listening.
             timeout: The time to wait for the selection.
+            factory: The factory to use to create the selection data.
 
         Returns:
             The callback selection.
@@ -251,13 +272,21 @@ class SentMessage(_ClientShortcuts, _SentMessage):
                 lambda _, c: c.data in self._callback_options
             )
             filters = (contains_filter & filters) if filters else contains_filter
-        return await self._client.listen(
+        filters = (
+            (pywa_filters.callback_selection & filters)
+            if filters
+            else pywa_filters.callback_selection
+        )
+        cls = await self._client.listen(
             to=self.recipient,
             sent_to_phone_id=self.sender,
-            filters=pywa_filters.callback_selection & filters,
+            filters=filters,
             cancelers=cancelers,
             timeout=timeout,
         )
+        if factory:
+            return dataclasses.replace(cls, data=factory.from_str(cls.data))
+        return cls
 
     async def wait_for_completion(
         self,
@@ -273,7 +302,7 @@ class SentMessage(_ClientShortcuts, _SentMessage):
 
             .. code-block:: python
 
-                @wa.on_message(filters.text.command("start"))
+                @wa.on_message(filters.command("start"))
                 async def start(w: WhatsApp, m: Message):
                     flow_completion = await (await m.reply(
                         text="Answer the questions",
@@ -299,10 +328,15 @@ class SentMessage(_ClientShortcuts, _SentMessage):
                 raise ValueError("No flow token available to wait for")
             token_filter = pywa_filters.new(lambda _, c: c.token == self._flow_token)
             filters = (token_filter & filters) if filters else token_filter
+        filters = (
+            (pywa_filters.flow_completion & filters)
+            if filters
+            else pywa_filters.flow_completion
+        )
         return await self._client.listen(
             to=self.recipient,
             sent_to_phone_id=self.sender,
-            filters=pywa_filters.flow_completion & filters,
+            filters=filters,
             cancelers=cancelers,
             timeout=timeout,
         )

@@ -1,7 +1,5 @@
 📥 Listeners
 ==================
-.. currentmodule:: pywa.listeners
-
 
 When handling updates, most of the time you ask the user for input (e.g. a reply, text, button press, etc.). This is where listeners come in.
 With listeners, you can create an `inline` handler that waits for a specific user input and returns the result.
@@ -93,15 +91,19 @@ PyWa also provides a few shortcuts to create listeners when sending messages. Le
 
 In the example above, we used the `.wait_for_reply` method to create a listener that waits for a reply from the user.
 
-Other shortcuts are available, such as `wait_for_click`, `wait_for_selection`, `wait_to_read`, `wait_to_delivered` and more.
+Other shortcuts are available, such as `wait_for_click`, `wait_for_selection`, `wait_until_read`, `wait_until_delivered` and more.
+
+.. currentmodule:: pywa.client
 
 .. automethod:: WhatsApp.listen
+    :noindex:
 .. automethod:: WhatsApp.stop_listening
+    :noindex:
 
 .. currentmodule:: pywa.types.sent_message
 
 .. automethod:: SentMessage.wait_for_reply
 .. automethod:: SentMessage.wait_for_click
 .. automethod:: SentMessage.wait_for_selection
-.. automethod:: SentMessage.wait_to_read
-.. automethod:: SentMessage.wait_to_delivered
+.. automethod:: SentMessage.wait_until_read
+.. automethod:: SentMessage.wait_until_delivered

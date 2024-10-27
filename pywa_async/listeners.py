@@ -82,7 +82,53 @@ class AsyncListeners:
         sent_to_phone_id: str | int | None = None,
     ) -> _SuppoertedUserUpdate:
         """
-        Asynchronously listen for a specific type of update from a specific user
+        Listen to a user update
+
+        - You can use one of the shortcuts to listen to a specific update type:
+            - :meth:`~pywa_async.types.sent_message.SentMessage.wait_for_reply`
+            - :meth:`~pywa_async.types.sent_message.SentMessage.wait_for_click`
+            - :meth:`~pywa_async.types.sent_message.SentMessage.wait_for_selection`
+            - :meth:`~pywa_async.types.sent_message.SentMessage.wait_until_read`
+            - :meth:`~pywa_async.types.sent_message.SentMessage.wait_until_delivered`
+
+        Example:
+
+            .. code-block:: python
+
+                    try:
+                        await wa.send_message(
+                            to="123456",
+                            text="Send me a message",
+                            buttons=[Button(title="Cancel", callback_data="cancel")]
+                        )
+                        update: Message = wa.listen(
+                            to="123456",
+                            filters=filters.message & filters.text,
+                            cancelers=filters.callback_button & filters.matches("cancel"),
+                            timeout=10
+                        )
+                        print(update)
+                    except ListenerTimeout:
+                        print("Listener timed out")
+                    except ListenerCanceled:
+                        print("Listener was canceled")
+                    except ListenerStopped:
+                        print("Listener was stopped")
+
+        Args:
+            to: The user to listen to
+            filters: The filters to apply to the update, return the update if the filters pass
+            cancelers: The filters to cancel the listening, raise ListenerCanceled if the update matches
+            timeout: The time to wait for the update, raise ListenerTimeout if the time passes
+            sent_to_phone_id: The phone id to listen for
+
+        Returns:
+            The update that passed the filters
+
+        Raises:
+            ListenerTimeout: If the listener timed out
+            ListenerCanceled: If the listener was canceled by a filter
+            ListenerStopped: If the listener was stopped manually
         """
         recipient = helpers.resolve_phone_id_param(
             self, sent_to_phone_id, "sent_to_phone_id"
