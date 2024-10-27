@@ -604,7 +604,7 @@ class _ClientShortcuts(abc.ABC):
             sender=self._internal_recipient,
             to=self._internal_sender,
             emoji=emoji,
-            message_id=self.message_id_to_reply.id,
+            message_id=self.message_id_to_reply,
             tracker=tracker,
         )
 
