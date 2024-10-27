@@ -44,20 +44,10 @@ In order to use the WhatsApp Cloud API, you need to create a Facebook App.
 To do that you need a Facebook Developer account. If you don't have one, `you can register here <https://developers.facebook.com/>`_.
 
 1. Go to `Meta for Developers > My Apps <https://developers.facebook.com/apps/>`_ and create a new app
-    - Click `here <https://developers.facebook.com/apps/creation/>`_ to go directly to the app creation page
+    - Click `here <https://developers.facebook.com/apps/create/?show_additional_prod_app_info=false>`_ to go directly to the app creation page
 
-2. Select **Other** as the use case and hit **Next**
 
-.. toggle::
-
-    .. image:: ../../_static/guides/create-new-app.webp
-       :width: 600
-       :alt: Create a new app
-       :align: center
-
---------------------
-
-3. Select **Business** as the app type and click on **Next**
+2. Select **Business** as the app type and click on **Next**
 
 .. toggle::
 
@@ -192,6 +182,8 @@ Now you can continue to the next section and learn how to use the ``pywa`` packa
 - The `WhatsApp <client/overview.html>`_ Client: is the core of the package. It is used to send and receive messages and media, register callbacks, manage profile and business settings and more.
 
 - The `Handlers <handlers/overview.html>`_: Learn how to register callbacks and handle incoming updates (messages, callbacks and more).
+
+- The `Listeners <listeners/overview.html>`_: Learn how to listen to incoming user updates.
 
 - The `Filters <filters/overview.html>`_: Learn how to handle specific updates by applying filters and conditions (for example, handle only text messages that contains the word "Hello").
 
