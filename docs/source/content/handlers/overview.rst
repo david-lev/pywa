@@ -174,23 +174,6 @@ Registering a callback function
 To handle the incoming updates, you need to register a callback function. This function will be called whenever an update
 is received from WhatsApp.
 
-.. tip::
-    :class: note
-
-    A callback function can be both a synchronous or an asynchronous function.
-
-    .. code-block:: python
-        :emphasize-lines: 6
-
-        from pywa import WhatsApp
-
-        wa = WhatsApp(...)
-
-        @wa.on_message()
-        async def handle_message(client: WhatsApp, message: Message):
-            print(message)
-
-
 
 A callback function is a function that takes two (positional) arguments:
     - The WhatsApp client object (:class:`~pywa.client.WhatsApp`)
@@ -199,12 +182,14 @@ A callback function is a function that takes two (positional) arguments:
 Here is an example of a callback functions
 
 .. code-block:: python
-    :emphasize-lines: 1, 4
+    :emphasize-lines: 3, 6
 
-    def print_message(client: WhatsApp, msg: Message):
-        print(msg)
+    from pywa import WhatsApp, types
 
-    def react_to_button(client: WhatsApp, clb: CallbackButton):
+    def echo_ok(client: WhatsApp, msg: types.Message):
+        msg.reply('Ok')
+
+    def react_to_button(client: WhatsApp, clb: types.CallbackButton):
         clb.react('❤️')
 
 Once you define the callback function, you have two ways to register it:
@@ -217,22 +202,21 @@ The easiest way to register a callback function is to use the ``on_message`` and
 .. code-block:: python
     :caption: main.py
     :linenos:
-    :emphasize-lines: 8, 13
+    :emphasize-lines: 7, 12
 
-    from pywa import WhatsApp
-    from pywa.types import Message, CallbackButton
+    from pywa import WhatsApp, types
     from fastapi import FastAPI
 
     fastapi_app = FastAPI()
     wa = WhatsApp(..., server=fastapi_app)
 
-    @wa.on_message()
-    def handle_message(client: WhatsApp, message: Message):
-        print(message)
+    @wa.on_message
+    def handle_message(client: WhatsApp, msg: types.Message):
+        print(msg)
 
 
-    @wa.on_callback_button()
-    def handle_callback_button(client: WhatsApp, clb: CallbackButton):
+    @wa.on_callback_button
+    def handle_callback_button(client: WhatsApp, clb: types.CallbackButton):
         print(clb.data)
 
 
@@ -240,6 +224,45 @@ The easiest way to register a callback function is to use the ``on_message`` and
     :caption: Terminal
 
     fastapi dev main.py
+
+.. tip::
+
+    If you don't have accees to the client instance, you can register the callback functions with the WhatsApp class:
+
+    Create module for the handlers:
+
+    .. code-block:: python
+        :caption: my_handlers.py
+        :linenos:
+        :emphasize-lines: 7, 12
+
+        from pywa import WhatsApp, types
+        from fastapi import FastAPI
+
+        fastapi_app = FastAPI()
+        wa = WhatsApp(..., server=fastapi_app)
+
+        @WhatsApp.on_message  # Register the handler with the WhatsApp class
+        def handle_message(client: WhatsApp, msg: types.Message):
+            print(msg)
+
+
+    And then load it in the main file:
+
+    .. code-block:: python
+        :caption: main.py
+        :linenos:
+        :emphasize-lines: 4, 9
+
+        from pywa import WhatsApp
+        from . import my_handlers  # Import the module that contains the handlers
+
+        wa = WhatsApp(..., handlers_modules=[my_handlers])
+
+        # Or:
+
+        wa = WhatsApp(...)
+        wa.add_handlers(my_handlers)
 
 
 Using ``Handler`` objects
@@ -253,32 +276,30 @@ main code, or when you want to dynamically register handlers programmatically.
     :caption: my_handlers.py
     :linenos:
 
-    from pywa import WhatsApp
-    from pywa.types import Message, CallbackButton
+    from pywa import WhatsApp, types
 
-    def handle_message(client: WhatsApp, message: Message):
+    def handle_message(wa: WhatsApp, msg: types.Message):
         print(message)
 
-    def handle_callback_button(client: WhatsApp, clb: CallbackButton):
+    def handle_callback_button(wa: WhatsApp, clb: types.CallbackButton):
         print(clb.data)
 
 
 .. code-block:: python
     :caption: main.py
     :linenos:
-    :emphasize-lines: 9, 10, 11, 12
+    :emphasize-lines: 2, 9-10
 
-    from pywa import WhatsApp
-    from pywa.handlers import MessageHandler, CallbackButtonHandler
-    from my_handlers import handle_message, handle_callback_button
+    from pywa import WhatsApp, handlers
+    from . import my_handlers
     from fastapi import FastAPI
 
     fastapi_app = FastAPI()
     wa = WhatsApp(..., server=fastapi_app)
 
     wa.add_handlers(
-        MessageHandler(handle_message),
-        CallbackButtonHandler(handle_callback_button)
+        handlers.MessageHandler(callback=my_handlers.handle_message),
+        handlers.CallbackButtonHandler(callback=my_handlers.handle_callback_button),
     )
 
 
@@ -286,103 +307,6 @@ main code, or when you want to dynamically register handlers programmatically.
     :caption: Terminal
 
     fastapi dev main.py
-
-.. seealso::
-
-    See how to filter updates in `Filters <filters/overview.html>`_.
-
-
-Stop or continue handling updates
-_________________________________
-
-When a handler is called, when it finishes, in default, the next handler will be called.
-
-.. code-block:: python
-    :caption: main.py
-    :linenos:
-
-    from pywa import WhatsApp
-    from pywa.types import Message
-
-    wa = WhatsApp(...)
-
-    @wa.on_message()
-    def handle_message(client: WhatsApp, message: Message):
-        print(message)
-        # The next handler will be called
-
-    @wa.on_message()
-    def handle_message2(client: WhatsApp, message: Message):
-        print(message)
-        # The next handler will be called
-
-    ...
-
-
-You can change this behavior by setting the ``continue_handling`` to ``False`` when initializing :class:`~pywa.client.WhatsApp`.
-
-.. code-block:: python
-    :caption: main.py
-    :linenos:
-    :emphasize-lines: 1
-
-    wa = WhatsApp(..., continue_handling=False)
-
-    @wa.on_message()
-    def handle_message(client: WhatsApp, message: Message):
-        print(message)
-        # The next handler will NOT be called
-    ...
-
-You can also change this behavior inside the callback function by calling the :meth:`~pywa.types.base_update.BaseUpdate.stop_handling`
-or :meth:`~pywa.types.base_update.BaseUpdate.continue_handling` methods on the update object.
-
-.. code-block:: python
-    :caption: main.py
-    :linenos:
-    :emphasize-lines: 10, 12
-
-    from pywa import WhatsApp, filters
-    from pywa.types import Message
-
-    wa = WhatsApp(...)
-
-    @wa.on_message(filters.text)
-    def handle_message(client: WhatsApp, message: Message):
-        print(message)
-        if message.text == 'stop':
-            message.stop_handling() # The next handler will NOT be called
-        else:
-            message.continue_handling() # The next handler will be called
-
-    ...
-
-Validating the updates
-______________________
-
-WhatsApp `recommends <https://developers.facebook.com/docs/graph-api/webhooks/getting-started#event-notifications>`_
-validating the updates by checking the signature of the update. This is done by comparing the
-signature of the update with the signature that WhatsApp sends in the ``X-Hub-Signature-256`` header of the request.
-
-To enable this feature, you need to pass the ``app_secret`` when initializing the WhatsApp client.
-
-.. code-block:: python
-    :caption: main.py
-    :linenos:
-    :emphasize-lines: 4
-
-    from pywa import WhatsApp
-
-    wa = WhatsApp(
-        validate_updates=True, # Default is True
-        app_secret='xxxx',
-        ...
-    )
-
-If the signature is invalid, pywa will return an ``HTTP 401 Unauthorized`` response.
-
-The validation is done by default. You can disable this feature by setting the ``validate_updates`` to ``False`` when initializing :class:`~pywa.client.WhatsApp`.
-
 
 
 Available handlers
@@ -422,6 +346,169 @@ __________________
    * - :meth:`~pywa.client.WhatsApp.on_raw_update`
      - :class:`RawUpdateHandler`
      - :class:`dict`
+
+
+Filtering updates
+__________________
+
+You can filter the updates by passing filters to the decorators. This is useful when you want to handle only specific updates.
+
+.. code-block:: python
+    :caption: main.py
+    :linenos:
+    :emphasize-lines: 5
+
+    from pywa import WhatsApp, types, filters
+
+    wa = WhatsApp(...)
+
+    @wa.on_message(filters.text)  # Handle only text messages
+    def echo(client: WhatsApp, msg: types.Message):
+        # we know this handler will get only text messages, so:
+        msg.reply(text=msg.text)
+
+.. tip::
+
+    You can find useful filters in the :mod:`~pywa.filters` module or create your own filters. read more about filters `here <../filters/overview.html>`_.
+
+
+Listen instead of registering
+______________________________
+
+The handlers can be registered and removed dynamicly when the server is running. but most of the time you can use listeners instead of registering new handler.
+This is because handler should be a start point of the application, like handling command, or menu click, but when you want to collect data from the user
+(e.g. ask for his age or address) you can use listeners:
+
+.. code-block:: python
+    :caption: main.py
+    :linenos:
+    :emphasize-lines: 7, 12
+
+    from pywa import WhatsApp, types, filters
+
+    wa = WhatsApp(...)
+
+    @wa.on_message(filters.command("start")
+    def start(_: WhatsApp, msg: types.Message):
+        age = msg.reply("Hello! What's your age?").wait_for_reply(filters.text).text
+        ...
+
+.. note::
+
+    Read more about listeners `here <../listeners/overview.html>`_.
+
+
+Stop or continue handling updates
+_________________________________
+
+When a handler is called, when it finishes, in default, the next handler will not be called.
+
+.. code-block:: python
+    :caption: main.py
+    :linenos:
+    :emphasize-lines: 8
+
+    from pywa import WhatsApp, types
+
+    wa = WhatsApp(...)
+
+    @wa.on_message
+    def handle_message(client: WhatsApp, msg: types.Message):
+        print(msg)
+        # The next handler will not be called
+
+    @wa.on_message
+    def handle_message2(client: WhatsApp, msg: types.Message):
+        print(msg)
+
+
+.. toggle::
+
+    .. tip::
+
+        The order of the handlers is the order they are registered. You can override this by providing `priority` argument to the handler.
+
+        .. code-block:: python
+            :caption: main.py
+            :linenos:
+
+            from pywa import WhatsApp, types
+
+            wa = WhatsApp(...)
+
+            @wa.on_message(priority=1)
+            def handle_message(client: WhatsApp, msg: types.Message):
+                print(msg)
+
+            @wa.on_message(priority=2) # this handler will be called before the previous one
+            def handle_message2(client: WhatsApp, msg: types.Message):
+                print(msg)
+
+            ...
+
+You can change this behavior by setting the ``continue_handling`` to ``True`` when initializing :class:`~pywa.client.WhatsApp`.
+
+.. code-block:: python
+    :caption: main.py
+    :linenos:
+    :emphasize-lines: 1
+
+    wa = WhatsApp(..., continue_handling=True)
+
+    @wa.on_message
+    def handle_message(client: WhatsApp, msg: types.Message):
+        print(msg)
+        # The next handler WILL be called
+    ...
+
+You can also change this behavior inside the callback function by calling the :meth:`~pywa.types.base_update.BaseUpdate.stop_handling`
+or :meth:`~pywa.types.base_update.BaseUpdate.continue_handling` methods on the update object.
+
+.. code-block:: python
+    :caption: main.py
+    :linenos:
+    :emphasize-lines: 9, 11
+
+    from pywa import WhatsApp, types, filters
+
+    wa = WhatsApp(...)
+
+    @wa.on_message(filters.text)
+    def handle_message(client: WhatsApp, msg: types.Message):
+        print(msg)
+        if msg.text == 'stop':
+            msg.stop_handling() # The next handler will not be called
+        else:
+            msg.continue_handling() # The next handler will be called
+
+    ...
+
+Validating the updates
+______________________
+
+WhatsApp `recommends <https://developers.facebook.com/docs/graph-api/webhooks/getting-started#event-notifications>`_
+validating the updates by checking the signature of the update. This is done by comparing the
+signature of the update with the signature that WhatsApp sends in the ``X-Hub-Signature-256`` header of the request.
+
+To enable this feature, you need to pass the ``app_secret`` when initializing the WhatsApp client.
+
+.. code-block:: python
+    :caption: main.py
+    :linenos:
+    :emphasize-lines: 4
+
+    from pywa import WhatsApp
+
+    wa = WhatsApp(
+        validate_updates=True, # Default is True
+        app_secret='xxxx',
+        ...
+    )
+
+If the signature is invalid, pywa will return an ``HTTP 401 Unauthorized`` response.
+
+The validation is done by default. You can disable this feature by setting the ``validate_updates`` to ``False`` when initializing :class:`~pywa.client.WhatsApp`.
+
 
 .. toctree::
     handler_decorators
