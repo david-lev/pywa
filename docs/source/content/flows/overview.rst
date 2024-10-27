@@ -670,10 +670,18 @@ what screen to open next or complete the flow.
 .. note::
 
     If you using :class:`PhotoPicker` or :class:`DocumentPicker` components, and handling requests containing their data, you need
-    to decrypt the files. ``pywa`` provides a helper function to decrypt the files:
+    to decrypt the files using :meth:`~pywa.types.flows.FlowRequest.decrypt_media`:
 
-    - Syncronous: :func:`~pywa.utils.flow_request_media_decryptor_sync`
-    - Asyncronous: :func:`~pywa.utils.flow_request_media_decryptor_async`
+    .. code-block:: python
+        :linenos:
+        :emphasize-lines: 3
+
+        @wa.on_flow_request(endpoint="/flow")
+        def on_support_request(_: WhatsApp, req: FlowRequest) -> FlowResponse:
+            media_id, filename, decrypted_data = req.decrypt_media(key="driver_license", index=0)
+            with open(f"media/{filename}", "wb") as f:
+                f.write(decrypted_data)
+            ...
 
 Getting Flow Completion message
 -------------------------------
@@ -702,16 +710,19 @@ The .response attribute is the payload you sent when you completed the flow.
 .. note::
 
     if you using :class:`PhotoPicker` or :class:`DocumentPicker` components, you will receive the files inside the flow completion .response.
-    You can constract them into pywa media objects using one of :class:`Image`, :class:`Video`, :class:`Audio`, :class:`Document` classes:
+    You can constract them into pywa media objects by using :meth:`~pywa.types.FlowCompletion.get_media`:
 
     .. code-block:: python
         :linenos:
 
-        from pywa.types import Image
+        from pywa import WhatsApp, types
 
-        image = Image.from_flow_completion(flow.response["image"])
-        image.download("path/to/save")
+        wa = WhatsApp(...)
 
+        @wa.on_flow_completion
+        def on_flow_completion(_: WhatsApp, flow: FlowCompletion):
+            img = flow.get_media(types.Image, key="profile_pic")
+            img.download()
 
 .. toctree::
     flow_json
