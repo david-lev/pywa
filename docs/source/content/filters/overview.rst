@@ -58,7 +58,6 @@ Here is some examples:
    :language: python
 
 .. tip::
-    :class: dropdown
 
     Keep in mind that all match-filters (:meth:`matches`, :meth:`contains`, etc) will return ``True`` if
     **ANY** of the given matches are found. so there is no need to do something like

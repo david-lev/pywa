@@ -4,9 +4,14 @@
 When handling updates, most of the time you ask the user for input (e.g. a reply, text, button press, etc.). This is where listeners come in.
 With listeners, you can create an `inline` handler that waits for a specific user input and returns the result.
 
+Listen
+______
+
 Let's see an example of how to use a listener:
 
 .. code-block:: python
+    :linenos:
+    :emphasize-lines: 8-11
 
     from pywa import WhatsApp, types, filters
 
@@ -15,18 +20,22 @@ Let's see an example of how to use a listener:
     @wa.on_message(filters.command("start"))
     def start(client: WhatsApp, msg: types.Message):
         msg.reply("Hello! How old are you?")
-        # Now we want to wait for the user to send their age
-        age = client.listen(
+        age: types.Message = client.listen( # Now we want to wait for the user to send their age
             to=msg.sender,
             filters=filters.text
         )
         msg.reply(f"Your age is {age.text}.")
 
-In the example above, we are waiting for the user to send their age. The `client.listen` method will wait for the user to send a message that matches the filter `filters.text`.
+In the example above, we are waiting for the user to send their age. The `client.listen` method will wait for the user to send a message that matches the filter :attr:`pywa.filters.text`.
+
+Cancel
+______
 
 Now, listeners have a few options that you can use to customize the behavior. for example, you can set a timeout for the listener, or cancel the listener if the user sends a specific message. let's see an example:
 
 .. code-block:: python
+    :linenos:
+    :emphasize-lines: 9, 16
 
     from pywa import WhatsApp, types, filters
 
@@ -47,11 +56,16 @@ Now, listeners have a few options that you can use to customize the behavior. fo
         )
         msg.reply(f"Your age is {age.text}.")
 
-In the example above, we added a button to the message that the user can press to cancel the listener. The listener will be canceled if the user sends a message that matches the filter `filters.callback_button & filters.matches("cancel")`.
+In the example above, we added a button to the message that the user can press to cancel the listener. The listener will be canceled if the user sends a message that matches the filter ``filters.callback_button & filters.matches("cancel")``.
 
-Now - we actually need to know what happend with the listener. The `client.listen` uses exceptions to notify you about the listener status. Let's see an example:
+Now - we actually need to know what happend with the listener. The :meth:`~pywa.client.WhatsApp.listen` uses exceptions to notify you about the listener status. Let's see an example:
+
+Try-Except
+__________
 
 .. code-block:: python
+    :linenos:
+    :emphasize-lines: 9, 17, 19
 
     from pywa import WhatsApp, types, filters, listeners
 
@@ -74,11 +88,16 @@ Now - we actually need to know what happend with the listener. The `client.liste
         except ListenerCanceled:
             msg.reply("You canceled the operation.")
 
-In the example above, we added a try-except block to handle the listener exceptions. If the listener times out, the `ListenerTimeout` exception will be raised. If the listener is canceled, the `ListenerCanceled` exception will be raised.
+In the example above, we added a try-except block to handle the listener exceptions. If the listener times out, the :class:`~pywa.listeners.ListenerTimeout` exception will be raised. If the listener is canceled, the :class:`~pywa.listeners.ListenerCanceled` exception will be raised.
+
+Shortcuts
+_________
 
 PyWa also provides a few shortcuts to create listeners when sending messages. Let's see an example:
 
 .. code-block:: python
+    :linenos:
+    :emphasize-lines: 7
 
     from pywa import WhatsApp, types, filters
 
@@ -86,12 +105,27 @@ PyWa also provides a few shortcuts to create listeners when sending messages. Le
 
     @wa.on_message(filters.command("start"))
     def start(client: WhatsApp, msg: types.Message):
-        age = m.reply("Hello! How old are you?").wait_for_reply(filters.text)
+        age: types.Message = m.reply("Hello! How old are you?").wait_for_reply(filters.text)
         m.reply(f"You are {age.text} years old")
 
-In the example above, we used the `.wait_for_reply` method to create a listener that waits for a reply from the user.
+In the example above, we used the :meth:`~pywa.types.sent_message.SentMessage.wait_for_reply` method to create a listener that waits for a text reply from the user.
 
-Other shortcuts are available, such as `wait_for_click`, `wait_for_selection`, `wait_until_read`, `wait_until_delivered` and more.
+.. code-block:: python
+    :linenos:
+    :emphasize-lines: 7
+
+    from pywa import WhatsApp, types, filters
+
+    wa = WhatsApp(...)
+
+    @wa.on_message(filters.command("start"))
+    def start(client: WhatsApp, msg: types.Message):
+        msg.reply(f"Hello {msg.from_user.name}!").wait_until_delivered()
+        msg.reply("How can I help you?")
+
+In the example above, we used the :meth:`~pywa.types.sent_message.SentMessage.wait_until_delivered` method to create a listener that waits until the message is delivered to the user.
+
+Other shortcuts are available, such as :meth:`~pywa.types.sent_message.SentMessage.wait_for_click`, :meth:`~pywa.types.sent_message.SentMessage.wait_for_selection`, :meth:`~pywa.types.sent_message.SentMessage.wait_until_read`, and more.
 
 .. currentmodule:: pywa.client
 

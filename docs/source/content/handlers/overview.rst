@@ -422,29 +422,27 @@ When a handler is called, when it finishes, in default, the next handler will no
         print(msg)
 
 
-.. toggle::
+.. tip::
+    :class: dropdown
 
-    .. tip::
+    The order of the handlers is the order they are registered. You can override this by providing ``priority`` argument to the handler.
 
-        The order of the handlers is the order they are registered. You can override this by providing `priority` argument to the handler.
+    .. code-block:: python
+        :caption: main.py
+        :linenos:
 
-        .. code-block:: python
-            :caption: main.py
-            :linenos:
+        from pywa import WhatsApp, types
 
-            from pywa import WhatsApp, types
+        wa = WhatsApp(...)
 
-            wa = WhatsApp(...)
+        @wa.on_message(priority=1)
+        def handle_message(client: WhatsApp, msg: types.Message):
+            print(msg)
 
-            @wa.on_message(priority=1)
-            def handle_message(client: WhatsApp, msg: types.Message):
-                print(msg)
+        @wa.on_message(priority=2) # this handler will be called before the previous one
+        def handle_message2(client: WhatsApp, msg: types.Message):
+            print(msg)
 
-            @wa.on_message(priority=2) # this handler will be called before the previous one
-            def handle_message2(client: WhatsApp, msg: types.Message):
-                print(msg)
-
-            ...
 
 You can change this behavior by setting the ``continue_handling`` to ``True`` when initializing :class:`~pywa.client.WhatsApp`.
 
