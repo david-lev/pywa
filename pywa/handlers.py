@@ -540,14 +540,93 @@ class FlowRequestHandler:
         request_decryptor: utils.FlowRequestDecryptor | None = None,
         response_encryptor: utils.FlowResponseEncryptor | None = None,
     ):
-        self.callback = callback
-        self.endpoint = endpoint
-        self.acknowledge_errors = acknowledge_errors
-        self.handle_health_check = handle_health_check
-        self.private_key = private_key
-        self.private_key_password = private_key_password
-        self.request_decryptor = request_decryptor
-        self.response_encryptor = response_encryptor
+        self._callback = callback
+        self._on_callbacks: dict[
+            tuple[FlowRequestActionType | str, str | None],
+            list[tuple[Filter | None, _FlowRequestHandlerT]],
+        ] = collections.defaultdict(list)  # {(action, screen?): [(filters?, callback)]}
+        self._error_callback = None
+        self._endpoint = endpoint
+        self._acknowledge_errors = acknowledge_errors
+        self._handle_health_check = handle_health_check
+        self._private_key = private_key
+        self._private_key_password = private_key_password
+        self._request_decryptor = request_decryptor
+        self._response_encryptor = response_encryptor
+
+    def on(
+        self,
+        *,
+        action: FlowRequestActionType,
+        screen: Screen | str | None = None,
+        filters: Filter = None,
+    ) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT]:
+        """
+        Decorator to help you add more handlers to the same endpoint and split the logic into multiple functions.
+
+        Example:
+
+            >>> @WhatsApp.on_flow_request("/feedback_flow")
+            >>> def feedback_flow_handler(_: WhatsApp, req: FlowRequest):
+            ...    if req.has_error: print(req.data)
+            >>> @feedback_flow_handler.on(action=FlowRequestActionType.INIT)
+            >>> def on_init(_: WhatsApp, req: FlowRequest):
+            ...     ...
+            >>> @feedback_flow_handler.on(action=FlowRequestActionType.DATA_EXCHANGE, screen="SURVEY")
+            >>> def on_survey_data_exchange(_: WhatsApp, req: FlowRequest):
+            ...     ...
+            >>> @feedback_flow_handler.on(..., data_filter=filters.new(lambda _, data: data.get("rating") == 5))
+            >>> def on_rating_5(_: WhatsApp, req: FlowRequest):
+            ...     ...
+
+        Args:
+            action: The action type to listen to.
+            screen: The screen ID to listen to (if screen is not provided, the handler will be called for all screens for this action!).
+            filters: A filter function to apply to the incoming request.
+
+        Returns:
+            The function itself.
+        """
+
+        def decorator(callback: _FlowRequestHandlerT):
+            self._on_callbacks[(action, screen)].append((filters, callback))
+            return callback
+
+        return decorator
+
+    def on_errors(
+        self=None, clb=_FlowRequestHandlerT
+    ) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT]:
+        """
+        Decorator to add an error handler to the current endpoint.
+
+        - Shortcut for :func:`~pywa.client.FlowRequestCallbackWrapper.set_errors_handler`.
+
+        Example:
+
+            >>> @WhatsApp.on_flow_request("/feedback_flow")
+            >>> def feedback_flow_handler(_: WhatsApp, req: FlowRequest):
+            ...    ...
+            >>> @feedback_flow_handler.on_errors
+            >>> def on_error(_: WhatsApp, req: FlowRequest):
+            ...     logging.error("An error occurred: %s", req.data)
+
+        Returns:
+            The function itself.
+        """
+        if clb:  # @main_callback.on_errors
+            self._error_callback = clb
+            return clb
+
+        def decorator(callback: _FlowRequestHandlerT):  # @main_callback.on_errors()
+            self._error_callback = callback
+            return callback
+
+        return decorator
+
+
+_flow_request_handler_attr = "__pywa_flow_request_handler"
+setattr(FlowRequestHandler, _flow_request_handler_attr, None)
 
 
 class HandlerDecorators:
@@ -942,8 +1021,8 @@ class HandlerDecorators:
         return deco
 
     def on_flow_request(
-        self: WhatsApp,
-        endpoint: str,
+        self: WhatsApp | str = None,
+        endpoint: str = None,
         *,
         acknowledge_errors: bool = True,
         handle_health_check: bool = True,
@@ -953,7 +1032,7 @@ class HandlerDecorators:
         response_encryptor: utils.FlowResponseEncryptor | None = None,
     ) -> Callable[
         [_FlowRequestHandlerT],
-        FlowRequestCallbackWrapper,
+        FlowRequestCallbackWrapper | FlowRequestHandler,
     ]:
         """
         Decorator to register a function to handle and respond to incoming flow requests.
@@ -983,7 +1062,22 @@ class HandlerDecorators:
 
         def decorator(
             callback: _FlowRequestHandlerT,
-        ) -> FlowRequestCallbackWrapper:
+        ) -> FlowRequestCallbackWrapper | FlowRequestHandler:
+            if self is None or isinstance(self, str):
+                ep = self or endpoint
+                if not ep:
+                    raise ValueError("The endpoint must be provided.")
+                return FlowRequestHandler(
+                    callback=callback,
+                    endpoint=ep,
+                    acknowledge_errors=acknowledge_errors,
+                    handle_health_check=handle_health_check,
+                    private_key=private_key,
+                    private_key_password=private_key_password,
+                    request_decryptor=request_decryptor,
+                    response_encryptor=response_encryptor,
+                )
+
             callback_wrapper = self._register_flow_endpoint_callback(
                 endpoint=endpoint,
                 callback=callback,
@@ -1012,10 +1106,12 @@ def _registered_without_parentheses(
 ) -> Callable | None:
     """When the decorator is called without parentheses."""
     if callable(self) and filters is None:  # @WhatsApp.on_x
-        if not hasattr(self, _handlers_attr):
-            setattr(self, _handlers_attr, [])
-        getattr(self, _handlers_attr).append(
-            handler_type(callback=self, filters=None, priority=priority, **kwargs)
+        _register_func_handler(
+            handler_type=handler_type,
+            callback=self,
+            filters=None,
+            priority=priority,
+            **kwargs,
         )
         return self
     elif callable(filters):  # @wa.on_x
@@ -1036,24 +1132,16 @@ def _registered_with_parentheses(
     **kwargs,
 ) -> Callable:
     """When the decorator is called with parentheses."""
-    if self is None or isinstance(self, Filter):
-        if self is None:  # @WhatsApp.on_x(filters=...) with kw
-            _register_func_handler(
-                handler_type=handler_type,
-                callback=callback,
-                filters=filters,
-                priority=priority,
-                **kwargs,
-            )
-        else:  # @WhatsApp.on_x(filters.text) without kw
-            _register_func_handler(
-                handler_type=handler_type,
-                callback=callback,
-                filters=self,
-                priority=priority,
-                **kwargs,
-            )
-
+    if self is None or isinstance(
+        self, Filter
+    ):  # @WhatsApp.on_x(filters=...) | @WhatsApp.on_x(filters.text)
+        _register_func_handler(
+            handler_type=handler_type,
+            callback=callback,
+            filters=self or filters,
+            priority=priority,
+            **kwargs,
+        )
     else:  # @wa.on_x(filters.text)
         self.add_handlers(
             handler_type(
@@ -1066,7 +1154,7 @@ def _registered_with_parentheses(
 def _register_func_handler(
     handler_type: type[Handler],
     callback: Callable,
-    filters: Filter,
+    filters: Filter | None,
     priority: int,
     **kwargs,
 ):
@@ -1185,7 +1273,9 @@ class FlowRequestCallbackWrapper:
 
         return decorator
 
-    def on_errors(self) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT]:
+    def on_errors(
+        self=None, clb=_FlowRequestHandlerT
+    ) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT]:
         """
         Decorator to add an error handler to the current endpoint.
 
@@ -1197,15 +1287,18 @@ class FlowRequestCallbackWrapper:
             >>> @wa.on_flow_request("/feedback_flow")
             >>> def feedback_flow_handler(_: WhatsApp, req: FlowRequest):
             ...    ...
-            >>> @feedback_flow_handler.on_errors()
+            >>> @feedback_flow_handler.on_errors
             >>> def on_error(_: WhatsApp, req: FlowRequest):
             ...     logging.error("An error occurred: %s", req.data)
 
         Returns:
             The function itself.
         """
+        if clb:  # @main_callback.on_errors
+            self.set_errors_handler(callback=clb)
+            return clb
 
-        def decorator(callback: _FlowRequestHandlerT):
+        def decorator(callback: _FlowRequestHandlerT):  # @main_callback.on_errors()
             self.set_errors_handler(callback)
             return callback
 

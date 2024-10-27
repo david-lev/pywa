@@ -4,7 +4,7 @@ import functools
 from types import ModuleType
 
 from pywa import handlers, types, WhatsApp, filters
-from pywa.handlers import MessageHandler
+from pywa.handlers import MessageHandler, FlowRequestHandler, FlowRequestCallbackWrapper
 from pywa_async import WhatsApp as WhatsAppAsync
 
 FAKE_WA = WhatsApp(phone_id="1234567890", token="1234567890:1234567890")
@@ -107,3 +107,10 @@ def test_all_combinations():
     module.__dict__["on_message"] = all_combinations
     wa.load_handlers_modules(module)
     assert len(wa._handlers[MessageHandler]) == 5
+
+
+def test_flow_request_decorator():
+    @WhatsApp.on_flow_request("/flow")
+    def on_flow_class(_, __): ...
+
+    assert isinstance(on_flow_class, FlowRequestHandler)

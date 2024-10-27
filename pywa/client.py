@@ -29,6 +29,7 @@ from .handlers import (
     FlowRequestHandler,
     FlowRequestCallbackWrapper,
     _handlers_attr,
+    _flow_request_handler_attr,
 )  # noqa
 from .listeners import Listeners, Listener
 from .types import (
@@ -235,7 +236,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             return
         if utils.is_async_callable(func):
             raise ValueError(
-                "Async functions are not supported in the sync version of pywa. import `WhatsApp` from `pywa_async` instead"
+                f"Async callbacks ({func}) are not supported in the sync version of pywa. import `WhatsApp` from `pywa_async` instead"
             )
 
     def _check_for_async_filters(self, filters: Filter) -> None:
@@ -243,7 +244,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             return
         if filters.has_async():
             raise ValueError(
-                "Async functions are not supported in the sync version of pywa. import `WhatsApp` from `pywa_async` instead"
+                "Async filters are not supported in the sync version of pywa. import `WhatsApp` from `pywa_async` instead"
             )
 
     def load_handlers_modules(self, *modules: ModuleType) -> None:
@@ -281,10 +282,11 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         for module in modules:
             for name in dir(module):
                 obj = getattr(module, name)
-                if not hasattr(obj, _handlers_attr):
-                    continue
-                for handler in getattr(obj, _handlers_attr):
-                    self.add_handlers(handler)
+                if hasattr(obj, _handlers_attr):
+                    for handler in getattr(obj, _handlers_attr):
+                        self.add_handlers(handler)
+                elif hasattr(obj, _flow_request_handler_attr):
+                    self.add_flow_request_handler(obj)
 
     @property
     def api(self) -> WhatsAppCloudApi:
@@ -335,16 +337,27 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         Returns:
             A wrapper to help split the logic of the handler.
         """
-        return self._register_flow_endpoint_callback(
-            endpoint=handler.endpoint,
-            callback=handler.callback,
-            acknowledge_errors=handler.acknowledge_errors,
-            handle_health_check=handler.handle_health_check,
-            private_key=handler.private_key,
-            private_key_password=handler.private_key_password,
-            request_decryptor=handler.request_decryptor,
-            response_encryptor=handler.response_encryptor,
+        wrapper = self._register_flow_endpoint_callback(
+            endpoint=handler._endpoint,
+            callback=handler._callback,
+            acknowledge_errors=handler._acknowledge_errors,
+            handle_health_check=handler._handle_health_check,
+            private_key=handler._private_key,
+            private_key_password=handler._private_key_password,
+            request_decryptor=handler._request_decryptor,
+            response_encryptor=handler._response_encryptor,
         )
+        for (action, screen), callbacks in handler._on_callbacks.items():
+            for filters, callback in callbacks:
+                wrapper.add_handler(
+                    callback=callback,
+                    action=action,
+                    screen=screen,
+                    filters=filters,
+                )
+        if handler._error_callback:
+            wrapper.set_errors_handler(handler._error_callback)
+        return wrapper
 
     def add_handlers(self, *handlers: Handler) -> None:
         """
