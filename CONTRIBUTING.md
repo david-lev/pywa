@@ -20,17 +20,17 @@ Thank you for considering contributing to pywa! We appreciate your time and effo
    source .venv/bin/activate
    pip install -r requirements-dev.txt
    ```
-   
+
 3. Activate the pre-commit hooks:
    ```bash
    pre-commit install
    ```
-   
+
 4. Run the tests to make sure everything is working:
    ```bash
    pytest
    ```
-   
+
 Now you are ready to start contributing!
 
 ## Code Standards
@@ -58,7 +58,7 @@ Now you are ready to start contributing!
    ```bash
    git push origin my-new-feature
    ```
-   
+
 
 ## Communication
 
