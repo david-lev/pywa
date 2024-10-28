@@ -3,6 +3,7 @@ This package contains all the types used in the library.
 """
 
 from .base_update import StopHandling, ContinueHandling
+from .sent_message import SentMessage
 from .callback import (
     Button,
     ButtonUrl,
