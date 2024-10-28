@@ -191,4 +191,4 @@ This project is licensed under the MIT License - see the
 🔱 **Contributing**
 --------------------
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please see the [Contributing Guide](https://github.com/david-lev/pywa/blob/master/CONTRIBUTING.md) for more information.

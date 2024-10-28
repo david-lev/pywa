@@ -30,3 +30,4 @@ ____________________________________________________
     /content/types/overview
     /content/examples/overview
     /content/changelog
+    /content/contributing

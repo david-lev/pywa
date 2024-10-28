@@ -117,7 +117,8 @@ message with type of :class:`~pywa.types.MessageType.UNSUPPORTED` and with error
 All the exceptions are inherited from :class:`~WhatsAppError`, so you can catch all of them with one exception:
 
 .. code-block:: python
-    :lineno:
+    :linenos:
+    :emphasize-lines: 7
 
     from pywa import WhatsApp, errors
 

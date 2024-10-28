@@ -59,11 +59,10 @@ Now, listeners have a few options that you can use to customize the behavior. fo
 In the example above, we added a button to the message that the user can press to cancel the listener. The listener will be canceled if the user sends a message that matches the filter ``filters.callback_button & filters.matches("cancel")``.
 
 
-Try-Except
-__________
+Handle cancel and timeout
+_________________________
 
-Now - we actually need to know what happend with the listener. The :meth:`~pywa.client.WhatsApp.listen` uses exceptions to notify you about the listener status. Let's see an example:
-
+You can also handle listener exceptions. For example, you can handle the case when the listener times out or when the listener is canceled. Let's see an example:
 
 .. code-block:: python
     :linenos:
@@ -129,17 +128,6 @@ In the example above, we used the :meth:`~pywa.types.sent_message.SentMessage.wa
 
 Other shortcuts are available, such as :meth:`~pywa.types.sent_message.SentMessage.wait_for_click`, :meth:`~pywa.types.sent_message.SentMessage.wait_for_selection`, :meth:`~pywa.types.sent_message.SentMessage.wait_until_read`, and more.
 
-.. currentmodule:: pywa.client
+.. toctree::
 
-.. automethod:: WhatsApp.listen
-    :noindex:
-.. automethod:: WhatsApp.stop_listening
-    :noindex:
-
-.. currentmodule:: pywa.types.sent_message
-
-.. automethod:: SentMessage.wait_for_reply
-.. automethod:: SentMessage.wait_for_click
-.. automethod:: SentMessage.wait_for_selection
-.. automethod:: SentMessage.wait_until_read
-.. automethod:: SentMessage.wait_until_delivered
+    ./reference
