@@ -243,25 +243,15 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         Returns:
             A dict with the ID of the uploaded media file.
         """
-        async with httpx.AsyncClient() as session:
-            session.headers["Authorization"] = self._session.headers["Authorization"]
-            try:
-                res = await session.request(
-                    method="POST",
-                    url=f"{self._base_url}/{phone_id}/media",
-                    files={
-                        "file": (filename, media, mime_type),
-                        "messaging_product": (None, "whatsapp"),
-                        "type": (None, mime_type),
-                    },
-                )
-                res.raise_for_status()
-                return res.json()
-            except httpx.HTTPStatusError as e:
-                print(e.response.json())
-                raise WhatsAppError.from_dict(
-                    error=e.response.json()["error"], response=e.response
-                )
+        return await self._make_request(
+            method="POST",
+            endpoint=f"/{phone_id}/media",
+            files={
+                "file": (filename, media, mime_type),
+                "messaging_product": (None, "whatsapp"),
+                "type": (None, mime_type),
+            },
+        )
 
     async def get_media_url(self, media_id: str) -> dict:
         """
