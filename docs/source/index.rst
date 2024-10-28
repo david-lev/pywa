@@ -1,7 +1,9 @@
 
-.. mdinclude:: ../../README.md
+.. include:: ../../README.md
+    :parser: myst_parser.sphinx_
 
-.. mdinclude:: ../../CHANGELOG.md
+.. include:: ../../CHANGELOG.md
+    :parser: myst_parser.sphinx_
     :start-line: 0
     :end-line: 30
 

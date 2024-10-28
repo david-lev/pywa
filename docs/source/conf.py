@@ -44,11 +44,11 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx_togglebutton",
     "sphinx.ext.autosectionlabel",
-    "m2r",
+    "myst_parser",
 ]
 
 # The suffix of source filenames.
-source_suffix = ".rst"
+source_suffix = [".rst", ".md"]
 
 # The master toctree document.
 master_doc = "index"
