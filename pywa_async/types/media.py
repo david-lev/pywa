@@ -76,10 +76,12 @@ class BaseMediaAsync:
         """
         Create a media object from the media dict returned by the flow completion.
 
+        - You can use the shortcut :meth:`~pywa_async.types.FlowCompletion.get_media`
+
         Example:
             >>> from pywa_async import WhatsApp, types
-            >>> wa = WhatsApp()
-            >>> @wa.on_flow_completion()
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_flow_completion
             ... async def on_flow_completion(_: WhatsApp, flow: types.FlowCompletion):
             ...     img = types.Image.from_flow_completion(client=wa, media=flow.response['media'])
             ...     await img.download()
