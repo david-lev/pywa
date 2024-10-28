@@ -1,5 +1,5 @@
-🤝 **Contributing to pywa**
----------------------------
+🤝 **Contributing**
+--------------------
 
 Thank you for considering contributing to pywa! We appreciate your time and effort in helping improve this project. This guide will walk you through the steps and standards to follow for contributing.
 

@@ -33,3 +33,4 @@ ____________________________________________________
     /content/examples/overview
     /content/changelog
     /content/contributing
+    /content/migration

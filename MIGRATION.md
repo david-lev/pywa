@@ -1,4 +1,5 @@
-Migration
+🔀 **Migration**
+----------------
 
 - [Migration](#migration)
   - [Migration from 1.x to 2.x](#migration-from-1x-to-2x)
