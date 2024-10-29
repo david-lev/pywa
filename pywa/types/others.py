@@ -3,7 +3,7 @@ from __future__ import annotations
 """Types for other objects."""
 
 import dataclasses
-import importlib
+import math
 import logging
 from typing import TYPE_CHECKING, Any, Iterable
 
@@ -172,7 +172,6 @@ class Location(utils.FromDict):
             lon: The longitude of the other location.
             radius: The radius in kilometers.
         """
-        math = importlib.import_module("math")
         lon1, lat1, lon2, lat2 = map(
             math.radians, [self.longitude, self.latitude, lon, lat]
         )
