@@ -902,7 +902,7 @@ class FlowJSONEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, (Ref, Condition)):
             return o.to_str()
-        if isinstance(o, _ScreenDatas):
+        if isinstance(o, _ScreenDataContainer):
             data = {}
             for item in o:
                 try:
@@ -1156,12 +1156,17 @@ class ScreenData:
         return f"{self.__class__.__name__}(key={self.key!r}, example={self.example!r})"
 
 
-class _ScreenDatas:
-    def __init__(self, *datas: ScreenData):
+class _ScreenDataContainer:
+    """A wrapper for the ``Screen.data`` iterable. This is to prevent ``dataclasses.asdict()`` from converting ScreenData objects."""
+
+    def __init__(self, datas: Iterable[ScreenData]):
         self._datas = datas
 
     def __iter__(self):
         return iter(self._datas)
+
+    def __repr__(self):
+        return f"ScreenDatasContainer({self._datas})"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1210,7 +1215,7 @@ class Screen:
 
     def __post_init__(self):
         self.data = (
-            _ScreenDatas(*self.data)
+            _ScreenDataContainer(self.data)
             if isinstance(self.data, Iterable) and not isinstance(self.data, dict)
             else self.data
         )
