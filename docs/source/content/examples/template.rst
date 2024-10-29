@@ -71,7 +71,7 @@ Sending Template Messages
     wa = WhatsApp(...)
     wa.send_template(
         to='1234567890',
-            template=Temp(
+        template=Temp(
             name='buy_new_iphone_x',
             language=Temp.Language.ENGLISH_US,
             header=Temp.TextValue(value='15'),

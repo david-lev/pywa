@@ -2451,13 +2451,13 @@ class If(Component):
     - If there is a :class:`Footer` within :class:`If` it cannot exist a footer outside, because the max count of :class:`Footer` is 1 per screen.
 
 
-    Supported Operators table:
+    Supported Operators:
 
         .. role:: python(code)
            :language: python
 
         .. list-table::
-            :widths: 20 20 20 40
+            :widths: 10 5 15 30
             :header-rows: 1
 
             * - Operator
@@ -2497,7 +2497,7 @@ class If(Component):
               - <Condition>
               - :python:`(age.ref > 20) | opt_in.ref`
             * - Not
-              - ``~``
+              - ``!``
               - <Condition>
               - :python:`~opt_in.ref`
 
