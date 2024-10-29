@@ -2,7 +2,6 @@ import dataclasses
 import json
 
 import pytest
-from docutils.nodes import version
 
 from pywa import WhatsApp, handlers, utils, filters
 from pywa.types.flows import (
