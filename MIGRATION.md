@@ -18,6 +18,7 @@
 - FlowRequest: Decrypt media directly from FlowRequest using `.decrypt_media(key, index)`.
 - Client: The client can run without a token but won’t allow API operations (only webhook listening).
 - SentMessage: The `SentMessage` object returned by `send_message`, `send_image`, etc., contains the message ID and allows to act on the sent message with methods like `reply_x`, `wait_for_x` etc.
+- Flows: Create conditionals for `If` by using python's operators like `==`, `!=`, `>`, `<`, `>=`, `<=` etc.
 
 ### Breaking changes
 
@@ -30,6 +31,7 @@
 - Server: The function signature `webhook_update_handler` that used to pass updates manually to the server has been changed.
 - Deprecated Argument Removal: Deprecated arguments such as `keyboard` and `body` have been removed.
 - Client: The `continue_handling` param is now set to `False` by default. so if update is handled, it will not be passed to the next handler unless you set it to `True` or call `update.continue_handling()` in the handler.
+- Flows: The `.data_key` and `.from_ref` of the flowjson components renamed to `.ref`.
 
 ### Migration steps
 

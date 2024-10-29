@@ -3,8 +3,14 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+#### 2.0.0-rc.2 (2024-10-29) **Release Candidate**
 
-#### 2.0.0-rc.1 (2024-10-27) **Release Candidate**
+- [flows] rename `.data_key` and `.from_ref` to `.ref`
+- [flows] allow pythonic conditionals in `If` component
+- [api] fix media upload
+- [utils] bump graph-api version to `21.0`
+
+#### 2.0.0-rc.1 (2024-10-27)
 
 - [handlers] fix `@WhatsApp.on_x(filters)` without kw
 - [handlers] fix factory data-is-null check
