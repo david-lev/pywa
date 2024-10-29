@@ -898,7 +898,7 @@ _PY_TO_JSON_TYPES = {
 }
 
 
-class FlowJSONEncoder(json.JSONEncoder):
+class _FlowJSONEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, (Ref, Condition)):
             return o.to_str()
@@ -1006,7 +1006,7 @@ class FlowJSON:
                     if k not in _SKIP_KEYS and v is not None
                 },
             ),
-            cls=FlowJSONEncoder,
+            cls=_FlowJSONEncoder,
             indent=4,
             ensure_ascii=False,
         )
@@ -1119,7 +1119,6 @@ class ScreenData:
             ...     ...
             ... )
         """
-        # noinspection PyTypeChecker
         return ScreenDataRef(key=self.key)
 
     def ref_in(self, screen: Screen | str) -> ScreenDataRef:
@@ -1149,7 +1148,6 @@ class ScreenData:
         Args:
             screen: The screen id to reference this data in its children.
         """
-        # noinspection PyTypeChecker
         return ScreenDataRef(key=self.key, screen=screen)
 
     def __repr__(self) -> str:
@@ -1474,6 +1472,7 @@ class Form(Component):
     def __post_init__(self):
         if not self.children:
             raise ValueError("At least one child is required")
+
         if not isinstance(self.init_values, Ref | str):
             init_values = self.init_values or {}
             for child in self.children:
@@ -1488,7 +1487,7 @@ class Form(Component):
                         )
                     init_values[child.name] = child.init_value
             self.init_values = init_values or None
-        #
+
         if not isinstance(self.error_messages, Ref | str):
             error_messages = self.error_messages or {}
             for child in self.children:
@@ -1552,7 +1551,6 @@ class FormComponent(Component, abc.ABC):
             ...     ]
             ... )
         """
-        # noinspection PyTypeChecker
         return ComponentRef(self.name)
 
     def ref_in(self, screen: Screen | str) -> ComponentRef:
@@ -1581,7 +1579,6 @@ class FormComponent(Component, abc.ABC):
         Args:
             screen: The screen that contains the component.
         """
-        # noinspection PyTypeChecker
         return ComponentRef(component_name=self.name, screen=screen)
 
 

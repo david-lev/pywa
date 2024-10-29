@@ -33,7 +33,7 @@ from pywa.types.flows import (
     FlowResponse,
     FlowRequest,
     FlowRequestActionType,
-    FlowJSONEncoder,
+    _FlowJSONEncoder,
     Switch,
     If,
     Ref,
@@ -1442,21 +1442,24 @@ def test_error_messages():
     )
 
 
-def test_screen_data():
-    encoder = FlowJSONEncoder()
+def test_encoder_py_to_json_types():
+    encoder = _FlowJSONEncoder()
     assert encoder._get_json_type("Example") == {"type": "string"}
     assert encoder._get_json_type(example=1) == {"type": "number"}
     assert encoder._get_json_type(1.0) == {"type": "number"}
     assert encoder._get_json_type(True) == {"type": "boolean"}
-    # ---
 
+
+def test_encoder_single_data_source():
+    encoder = _FlowJSONEncoder()
     assert encoder._get_json_type(DataSource(id="1", title="Example")) == {
         "type": "object",
         "properties": {"id": {"type": "string"}, "title": {"type": "string"}},
     }
 
-    # ---
 
+def test_encoder_multiple_data_sources():
+    encoder = _FlowJSONEncoder()
     assert encoder._get_json_type(
         [
             DataSource(id="1", title="Example"),
@@ -1473,8 +1476,8 @@ def test_screen_data():
         },
     }
 
-    # ---
 
+def test_screen_data_empty_example():
     with pytest.raises(ValueError):
         FlowJSON(
             screens=[
@@ -1488,6 +1491,8 @@ def test_screen_data():
             version="2.1",
         ).to_json()
 
+
+def test_screen_data_invalid_type():
     with pytest.raises(ValueError):
         FlowJSON(
             screens=[
