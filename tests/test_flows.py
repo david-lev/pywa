@@ -2,6 +2,7 @@ import dataclasses
 import json
 
 import pytest
+from docutils.nodes import version
 
 from pywa import WhatsApp, handlers, utils, filters
 from pywa.types.flows import (
@@ -27,12 +28,16 @@ from pywa.types.flows import (
     TextBody,
     OptIn,
     EmbeddedLink,
-    DataKey,
-    FormRef,
+    ScreenDataRef,
+    ComponentRef,
     ScreenData,
     FlowResponse,
     FlowRequest,
     FlowRequestActionType,
+    FlowJSONEncoder,
+    Switch,
+    If,
+    Ref,
 )
 from pywa.utils import Version
 
@@ -75,8 +80,8 @@ customer_satisfaction_survey = FlowJSON(
                                         type=ActionNextType.SCREEN, name="RATE"
                                     ),
                                     payload={
-                                        "recommend_radio": recommend_radio.form_ref,
-                                        "comment_text": comment_text.form_ref,
+                                        "recommend_radio": recommend_radio.ref,
+                                        "comment_text": comment_text.ref,
                                     },
                                 ),
                             ),
@@ -141,11 +146,11 @@ customer_satisfaction_survey = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.COMPLETE,
                                     payload={
-                                        "purchase_rating": purchase_rating.form_ref,
-                                        "delivery_rating": delivery_rating.form_ref,
-                                        "cs_rating": cs_rating.form_ref,
-                                        "recommend_radio": recommend_radio.data_key,
-                                        "comment_text": comment_text.data_key,
+                                        "purchase_rating": purchase_rating.ref,
+                                        "delivery_rating": delivery_rating.ref,
+                                        "cs_rating": cs_rating.ref,
+                                        "recommend_radio": recommend_radio.ref,
+                                        "comment_text": comment_text.ref,
                                     },
                                 ),
                             ),
@@ -198,9 +203,9 @@ load_re_engagement = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.COMPLETE,
                                     payload={
-                                        "firstName": first_name.form_ref,
-                                        "lastName": last_name.form_ref,
-                                        "email": email.form_ref,
+                                        "firstName": first_name.ref,
+                                        "lastName": last_name.ref,
+                                        "email": email.ref,
                                     },
                                 ),
                             ),
@@ -254,7 +259,7 @@ costumer_engagement = FlowJSON(
                                         type=ActionNextType.SCREEN, name="QUESTION_TWO"
                                     ),
                                     payload={
-                                        "question1Checkbox": question1_checkbox.form_ref
+                                        "question1Checkbox": question1_checkbox.ref
                                     },
                                 ),
                             ),
@@ -299,8 +304,8 @@ costumer_engagement = FlowJSON(
                                         name="QUESTION_THREE",
                                     ),
                                     payload={
-                                        "question2RadioButtons": question2_radio_buttons.form_ref,
-                                        "question1Checkbox": question1_checkbox.data_key,
+                                        "question2RadioButtons": question2_radio_buttons.ref,
+                                        "question1Checkbox": question1_checkbox.ref,
                                     },
                                 ),
                             ),
@@ -344,9 +349,9 @@ costumer_engagement = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.COMPLETE,
                                     payload={
-                                        "question1Checkbox": question1_checkbox.data_key,
-                                        "question2RadioButtons": question2_radio_buttons.data_key,
-                                        "question3Checkbox": question3_checkbox.form_ref,
+                                        "question1Checkbox": question1_checkbox.ref,
+                                        "question2RadioButtons": question2_radio_buttons.ref,
+                                        "question3Checkbox": question3_checkbox.ref,
                                     },
                                 ),
                             ),
@@ -407,10 +412,10 @@ support_request = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.COMPLETE,
                                     payload={
-                                        "name": name.form_ref,
-                                        "orderNumber": order_number.form_ref,
-                                        "topicRadio": topic_radio.form_ref,
-                                        "description": desc.form_ref,
+                                        "name": name.ref,
+                                        "orderNumber": order_number.ref,
+                                        "topicRadio": topic_radio.ref,
+                                        "description": desc.ref,
                                     },
                                 ),
                             ),
@@ -466,8 +471,8 @@ communication_preferences = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.COMPLETE,
                                     payload={
-                                        "communicationTypes": communication_types.form_ref,
-                                        "contactPrefs": contact_prefs.form_ref,
+                                        "communicationTypes": communication_types.ref,
+                                        "contactPrefs": contact_prefs.ref,
                                     },
                                 ),
                             ),
@@ -520,9 +525,9 @@ register_for_an_event = FlowJSON(
                                         type=ActionNextType.SCREEN, name="SURVEY"
                                     ),
                                     payload={
-                                        "firstName": first_name.form_ref,
-                                        "lastName": last_name.form_ref,
-                                        "email": email.form_ref,
+                                        "firstName": first_name.ref,
+                                        "lastName": last_name.ref,
+                                        "email": email.ref,
                                     },
                                 ),
                             ),
@@ -564,10 +569,10 @@ register_for_an_event = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.COMPLETE,
                                     payload={
-                                        "source": source.form_ref,
-                                        "firstName": first_name.data_key,
-                                        "lastName": last_name.data_key,
-                                        "email": email.data_key,
+                                        "source": source.ref,
+                                        "firstName": first_name.ref,
+                                        "lastName": last_name.ref,
+                                        "email": email.ref,
                                     },
                                 ),
                             ),
@@ -639,8 +644,8 @@ sign_in = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
                                     payload={
-                                        "email": email.form_ref,
-                                        "password": password.form_ref,
+                                        "email": email.ref,
+                                        "password": password.ref,
                                     },
                                 ),
                             ),
@@ -711,13 +716,13 @@ sign_in = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
                                     payload={
-                                        "first_name": first_name.form_ref,
-                                        "last_name": last_name.form_ref,
-                                        "email": email.form_ref,
-                                        "password": password.form_ref,
-                                        "confirm_password": confirm_password.form_ref,
-                                        "terms_agreement": terms_agreement.form_ref,
-                                        "offers_acceptance": offers_acceptance.form_ref,
+                                        "first_name": first_name.ref,
+                                        "last_name": last_name.ref,
+                                        "email": email.ref,
+                                        "password": password.ref,
+                                        "confirm_password": confirm_password.ref,
+                                        "terms_agreement": terms_agreement.ref,
+                                        "offers_acceptance": offers_acceptance.ref,
                                     },
                                 ),
                             ),
@@ -745,7 +750,7 @@ sign_in = FlowJSON(
                     Form(
                         name="forgot_password_form",
                         children=[
-                            TextBody(text=body.data_key),
+                            TextBody(text=body.ref),
                             email := TextInput(
                                 name="email",
                                 label="Email address",
@@ -756,7 +761,7 @@ sign_in = FlowJSON(
                                 label="Sign in",
                                 on_click_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
-                                    payload={"email": email.form_ref},
+                                    payload={"email": email.ref},
                                 ),
                             ),
                         ],
@@ -807,7 +812,7 @@ register = FlowJSON(
                 children=[
                     Form(
                         name="register_form",
-                        error_messages=error_messages.data_key,
+                        error_messages=error_messages.ref,
                         children=[
                             first_name := TextInput(
                                 name="first_name",
@@ -861,13 +866,13 @@ register = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
                                     payload={
-                                        "first_name": first_name.form_ref,
-                                        "last_name": last_name.form_ref,
-                                        "email": email.form_ref,
-                                        "password": password.form_ref,
-                                        "confirm_password": confirm_password.form_ref,
-                                        "terms_agreement": terms_agreement.form_ref,
-                                        "offers_acceptance": offers_acceptance.form_ref,
+                                        "first_name": first_name.ref,
+                                        "last_name": last_name.ref,
+                                        "email": email.ref,
+                                        "password": password.ref,
+                                        "confirm_password": confirm_password.ref,
+                                        "terms_agreement": terms_agreement.ref,
+                                        "offers_acceptance": offers_acceptance.ref,
                                     },
                                 ),
                             ),
@@ -939,7 +944,7 @@ get_a_quote = FlowJSON(
                             city := Dropdown(
                                 label="City, State",
                                 name="city",
-                                data_source=city.data_key,
+                                data_source=city.ref,
                                 required=True,
                             ),
                             zip_code := TextInput(
@@ -959,11 +964,11 @@ get_a_quote = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
                                     payload={
-                                        "name": name.form_ref,
-                                        "address": address.form_ref,
-                                        "city": city.form_ref,
-                                        "zip_code": zip_code.form_ref,
-                                        "country_region": country_region.form_ref,
+                                        "name": name.ref,
+                                        "address": address.ref,
+                                        "city": city.ref,
+                                        "zip_code": zip_code.ref,
+                                        "country_region": country_region.ref,
                                     },
                                 ),
                             ),
@@ -1005,7 +1010,7 @@ get_a_quote = FlowJSON(
                         children=[
                             options_form := CheckboxGroup(
                                 name="options",
-                                data_source=options.data_key,
+                                data_source=options.ref,
                                 label="Options",
                                 required=True,
                             ),
@@ -1013,7 +1018,7 @@ get_a_quote = FlowJSON(
                                 label="Continue",
                                 on_click_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
-                                    payload={"options": options_form.form_ref},
+                                    payload={"options": options_form.ref},
                                 ),
                             ),
                         ],
@@ -1040,10 +1045,10 @@ get_a_quote = FlowJSON(
                             Dropdown(
                                 label="Excess",
                                 name="excess",
-                                data_source=excess.data_key,
+                                data_source=excess.ref,
                                 on_select_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
-                                    payload={"excess": FormRef("excess")},
+                                    payload={"excess": ComponentRef("excess")},
                                 ),
                                 required=True,
                             ),
@@ -1057,13 +1062,15 @@ get_a_quote = FlowJSON(
                                 on_select_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
                                     payload={
-                                        "payment_options": FormRef("payment_options")
+                                        "payment_options": ComponentRef(
+                                            "payment_options"
+                                        )
                                     },
                                 ),
                                 required=True,
                                 init_value="1",
                             ),
-                            TextHeading(text=total.data_key),
+                            TextHeading(text=total.ref),
                             privacy_policy := OptIn(
                                 name="privacy_policy",
                                 label="Accept our Privacy Policy",
@@ -1082,7 +1089,7 @@ get_a_quote = FlowJSON(
                                 on_click_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
                                     payload={
-                                        "privacy_policy": privacy_policy.form_ref,
+                                        "privacy_policy": privacy_policy.ref,
                                     },
                                 ),
                             ),
@@ -1113,6 +1120,74 @@ get_a_quote = FlowJSON(
     ],
 )
 
+switch = FlowJSON(
+    version="5.0",
+    screens=[
+        Screen(
+            id="SCREEN",
+            title="Welcome",
+            terminal=True,
+            success=True,
+            data=[ScreenData(key="value", example="cat")],
+            layout=Layout(
+                children=[
+                    animal := TextInput(
+                        name="animal",
+                        label="Animal",
+                        helper_text="Type: cat, dog or anything else",
+                    ),
+                    Switch(
+                        value=animal.ref,
+                        cases={
+                            "cat": [TextHeading(text="It is a cat")],
+                            "dog": [TextHeading(text="It is a dog")],
+                            "default": [
+                                TextHeading(text="It is neither a cat nor a dog")
+                            ],
+                        },
+                    ),
+                    Footer(
+                        label="Complete",
+                        on_click_action=Action(name="complete", payload={}),
+                    ),
+                ]
+            ),
+        )
+    ],
+)
+
+if_ = FlowJSON(
+    version="5.0",
+    screens=[
+        Screen(
+            id="SCREEN",
+            title="Welcome",
+            terminal=True,
+            success=True,
+            data=[value := ScreenData(key="value", example=True)],
+            layout=Layout(
+                children=[
+                    animal := TextInput(
+                        name="animal",
+                        label="Animal",
+                        helper_text="Type: cat",
+                    ),
+                    If(
+                        condition=value.ref & (animal.ref == "cat"),
+                        then=[TextHeading(text="It is a cat")],
+                        else_=[TextHeading(text="It is not a cat")],
+                    ),
+                    Footer(
+                        label="Complete",
+                        on_click_action=Action(name="complete", payload={}),
+                    ),
+                ]
+            ),
+        )
+    ],
+)
+
+
 FLOWS = {
     "customer_satisfaction_survey": customer_satisfaction_survey,
     "load_re_engagement": load_re_engagement,
@@ -1123,6 +1198,8 @@ FLOWS = {
     "sign_in": sign_in,
     "register": register,
     "get_a_quote": get_a_quote,
+    "switch": switch,
+    "if": if_,
 }
 
 
@@ -1132,11 +1209,13 @@ def test_flows_to_json():
     ) as f:
         examples = json.load(f)
     for flow_name, flow in FLOWS.items():
+        obj_dict = json.loads(flow.to_json())
+        example_dict = examples[flow_name]
         try:
-            assert flow.to_dict() == examples[flow_name]
+            assert obj_dict == example_dict
         except AssertionError:
             raise AssertionError(
-                f"Flow {flow_name} does not match example\nFlow: {flow}\nJSON: {examples[flow_name]}"
+                f"Flow {flow_name} does not match example\nFlow: {obj_dict}\nJSON: {example_dict}"
             )
 
 
@@ -1158,24 +1237,143 @@ def test_action():
         Action(name=FlowActionType.COMPLETE)
 
 
-def test_form_ref():
-    assert FormRef("test") == "${form.test}"
-    assert FormRef("test", screen="START") == "${screen.START.form.test}"
-    assert TextInput(name="test", label="Test").form_ref == "${form.test}"
+def test_component_ref():
+    assert ComponentRef("test").to_str() == "${form.test}"
+    assert ComponentRef("test", screen="START").to_str() == "${screen.START.form.test}"
+    assert TextInput(name="test", label="Test").ref.to_str() == "${form.test}"
     assert (
-        TextInput(name="test", label="Test").form_ref_of(screen="START")
+        TextInput(name="test", label="Test").ref_in(screen="START").to_str()
         == "${screen.START.form.test}"
     )
 
 
-def test_data_key():
-    assert DataKey("test") == "${data.test}"
-    assert DataKey("test", screen="START") == "${screen.START.data.test}"
-    assert ScreenData(key="test", example="Example").data_key == "${data.test}"
+def test_screen_data_key():
+    assert ScreenDataRef("test").to_str() == "${data.test}"
+    assert ScreenDataRef("test", screen="START").to_str() == "${screen.START.data.test}"
+    assert ScreenData(key="test", example="Example").ref.to_str() == "${data.test}"
     assert (
-        ScreenData(key="test", example="Example").data_key_of(screen="START")
+        ScreenData(key="test", example="Example").ref_in(screen="START").to_str()
         == "${screen.START.data.test}"
     )
+
+
+def test_ref_to_str_without_screen():
+    ref = Ref(prefix="data", field="age")
+    assert ref.to_str() == "${data.age}"
+
+
+def test_ref_to_str_with_screen_id():
+    ref = Ref(prefix="data", field="age", screen="START")
+    assert ref.to_str() == "${screen.START.data.age}"
+
+
+def test_ref_to_str_with_screen():
+    screen = Screen(id="START", layout=Layout(children=[]))
+    ref = Ref(prefix="data", field="age", screen=screen)
+    assert ref.to_str() == "${screen.START.data.age}"
+
+
+def test_ref_equality():
+    ref = Ref(prefix="data", field="age")
+    condition = ref == 21
+    assert condition.to_str() == "(${data.age} == 21)"
+
+
+def test_ref_inequality():
+    ref = Ref(prefix="data", field="age")
+    condition = ref != 18
+    assert condition.to_str() == "(${data.age} != 18)"
+
+
+def test_ref_greater_than():
+    ref = Ref(prefix="data", field="age")
+    condition = ref > 21
+    assert condition.to_str() == "(${data.age} > 21)"
+
+
+def test_ref_greater_than_or_equal():
+    ref = Ref(prefix="data", field="age")
+    condition = ref >= 21
+    assert condition.to_str() == "(${data.age} >= 21)"
+
+
+def test_ref_less_than():
+    ref = Ref(prefix="data", field="age")
+    condition = ref < 21
+    assert condition.to_str() == "(${data.age} < 21)"
+
+
+def test_ref_less_than_or_equal():
+    ref = Ref(prefix="data", field="age")
+    condition = ref <= 21
+    assert condition.to_str() == "(${data.age} <= 21)"
+
+
+def test_logical_and_with_ref():
+    ref1 = Ref(prefix="data", field="age")
+    ref2 = Ref(prefix="form", field="is_verified")
+    condition = ref1 & ref2
+    assert condition.to_str() == "(${data.age} && ${form.is_verified})"
+
+
+def test_logical_or_with_ref():
+    ref1 = Ref(prefix="data", field="age")
+    ref2 = Ref(prefix="form", field="is_verified")
+    condition = ref1 | ref2
+    assert condition.to_str() == "(${data.age} || ${form.is_verified})"
+
+
+def test_logical_and_with_condition():
+    ref1 = Ref(prefix="data", field="age")
+    ref2 = Ref(prefix="form", field="is_verified")
+    condition1 = ref1 > 21
+    condition2 = ref2 == True  # noqa: E712
+    combined_condition = condition1 & condition2
+    assert (
+        combined_condition.to_str()
+        == "((${data.age} > 21) && (${form.is_verified} == true))"
+    )
+
+
+def test_logical_or_with_condition():
+    ref1 = Ref(prefix="data", field="age")
+    ref2 = Ref(prefix="form", field="is_verified")
+    condition1 = ref1 < 18
+    condition2 = ref2 == False  # noqa:  E712
+    combined_condition = condition1 | condition2
+    assert (
+        combined_condition.to_str()
+        == "((${data.age} < 18) || (${form.is_verified} == false))"
+    )
+
+
+def test_invert_condition():
+    ref = Ref(prefix="data", field="age")
+    condition = ~ref
+    assert condition.to_str() == "!${data.age}"
+
+
+def test_combined_conditions_with_invert():
+    ref1 = Ref(prefix="data", field="age")
+    ref2 = Ref(prefix="form", field="is_verified")
+    condition = ~(ref1 > 18) & (ref2 == True)  # noqa: E712
+    assert (
+        condition.to_str() == "(!(${data.age} > 18) && (${form.is_verified} == true))"
+    )
+
+
+def test_combined_conditions_with_literal_before():
+    ref1 = Ref(prefix="data", field="age")
+    ref2 = Ref(prefix="form", field="is_verified")
+    condition = ref2 & (ref1 > 18)
+    assert condition.to_str() == "(${form.is_verified} && (${data.age} > 18))"
+
+
+def test_combined_conditions_with_literal_after():
+    ref1 = Ref(prefix="form", field="is_verified")
+    ref2 = Ref(prefix="data", field="age")
+    condition = (ref2 > 18) & ref1
+    assert condition.to_str() == "((${data.age} > 18) && ${form.is_verified})"
 
 
 def test_init_values():
@@ -1190,7 +1388,7 @@ def test_init_values():
         )
         Form(name="form", init_values={"test": "Example"}, children=[text_entry])
 
-    # test that if form has init_values referred to a data_key,
+    # test that if form has init_values referred to a ref,
     # the init_values does not fill up from the .children init_value's
     form_with_init_values_as_data_key = Screen(
         id="test",
@@ -1200,15 +1398,17 @@ def test_init_values():
         ],
         layout=Layout(
             children=[
-                Form(name="form", init_values=init_vals.data_key, children=[text_entry])
+                Form(name="form", init_values=init_vals.ref, children=[text_entry])
             ]
         ),
     )
     assert isinstance(
-        form_with_init_values_as_data_key.layout.children[0].init_values, str
+        form_with_init_values_as_data_key.layout.children[0].init_values, Ref
     )
 
 
+#
+#
 def test_error_messages():
     text_entry = TextInput(name="test", label="Test", error_message="Example")
     form = Form(name="form", children=[text_entry])
@@ -1219,7 +1419,7 @@ def test_error_messages():
         TextInput(name="test", label="Test", error_message="Example")
         Form(name="form", error_messages={"test": "Example"}, children=[text_entry])
 
-    # test that if form has error_messages referred to a data_key,
+    # test that if form has error_messages referred to a ref,
     # the error_messages does not fill up from the .children error_message's
     form_with_error_messages_as_data_key = Screen(
         id="test",
@@ -1231,139 +1431,76 @@ def test_error_messages():
             children=[
                 Form(
                     name="form",
-                    error_messages=error_msgs.data_key,
+                    error_messages=error_msgs.ref,
                     children=[text_entry],
                 )
             ]
         ),
     )
+
     assert isinstance(
-        form_with_error_messages_as_data_key.layout.children[0].error_messages, str
+        form_with_error_messages_as_data_key.layout.children[0].error_messages, Ref
     )
 
 
 def test_screen_data():
-    assert Screen(
-        id="test",
-        title="Test",
-        data=[
-            ScreenData(key="str", example="Example"),
-            ScreenData(key="int", example=1),
-            ScreenData(key="float", example=1.0),
-            ScreenData(key="bool", example=True),
-        ],
-        layout=Layout(children=[]),
-    ) == Screen(
-        id="test",
-        title="Test",
-        data={
-            "str": {"type": "string", "__example__": "Example"},
-            "int": {"type": "number", "__example__": 1},
-            "float": {"type": "number", "__example__": 1.0},
-            "bool": {"type": "boolean", "__example__": True},
-        },
-        layout=Layout(children=[]),
-    )
+    encoder = FlowJSONEncoder()
+    assert encoder._get_json_type("Example") == {"type": "string"}
+    assert encoder._get_json_type(example=1) == {"type": "number"}
+    assert encoder._get_json_type(1.0) == {"type": "number"}
+    assert encoder._get_json_type(True) == {"type": "boolean"}
+    # ---
+
+    assert encoder._get_json_type(DataSource(id="1", title="Example")) == {
+        "type": "object",
+        "properties": {"id": {"type": "string"}, "title": {"type": "string"}},
+    }
 
     # ---
 
-    screen_1 = Screen(
-        id="test",
-        title="Test",
-        data=[
-            ScreenData(
-                key="obj",
-                example=DataSource(id="1", title="Example"),
-            )
-        ],
-        layout=Layout(children=[]),
-    )
-    screen_2 = Screen(
-        id="test",
-        title="Test",
-        data={
-            "obj": {
-                "type": "object",
-                "properties": {
-                    "id": {"type": "string"},
-                    "title": {"type": "string"},
-                },
-                "__example__": {"id": "1", "title": "Example"},
-            }
-        },
-        layout=Layout(children=[]),
-    )
-
-    flow_json = FlowJSON(screens=[screen_1, screen_2], version=3.0).to_dict()
-    assert flow_json["screens"][0] == flow_json["screens"][1]
-
-    # ---
-
-    screen_1 = Screen(
-        id="test",
-        title="Test",
-        data=[
-            ScreenData(
-                key="obj_array",
-                example=[
-                    DataSource(id="1", title="Example"),
-                    DataSource(id="2", title="Example2"),
-                ],
-            ),
-            ScreenData(
-                key="str_array",
-                example=["Example", "Example2"],
-            ),
-        ],
-        layout=Layout(children=[]),
-    )
-    screen_2 = Screen(
-        id="test",
-        title="Test",
-        data={
-            "obj_array": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "id": {"type": "string"},
-                        "title": {"type": "string"},
-                    },
-                },
-                "__example__": [
-                    {"id": "1", "title": "Example"},
-                    {"id": "2", "title": "Example2"},
-                ],
-            },
-            "str_array": {
-                "type": "array",
-                "items": {"type": "string"},
-                "__example__": ["Example", "Example2"],
+    assert encoder._get_json_type(
+        [
+            DataSource(id="1", title="Example"),
+            DataSource(id="2", title="Example2"),
+        ]
+    ) == {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "string"},
+                "title": {"type": "string"},
             },
         },
-        layout=Layout(children=[]),
-    )
-
-    flow_json = FlowJSON(screens=[screen_1, screen_2], version=3.0).to_dict()
-    assert flow_json["screens"][0] == flow_json["screens"][1]
+    }
 
     # ---
 
     with pytest.raises(ValueError):
-        Screen(
-            id="test",
-            title="Test",
-            data=[ScreenData(key="test", example=[])],
-            layout=Layout(children=[]),
-        )
+        FlowJSON(
+            screens=[
+                Screen(
+                    id="test",
+                    title="Test",
+                    data=[ScreenData(key="test", example=[])],
+                    layout=Layout(children=[]),
+                )
+            ],
+            version="2.1",
+        ).to_json()
 
     with pytest.raises(ValueError):
-        Screen(
-            id="test",
-            title="Test",
-            data=[ScreenData(key="test", example=ValueError)],
-            layout=Layout(children=[]),
-        )
+        FlowJSON(
+            screens=[
+                Screen(
+                    id="test",
+                    title="Test",
+                    data=[ScreenData(key="test", example=ValueError)],
+                    layout=Layout(children=[]),
+                )
+            ],
+            version="2.1",
+        ).to_json()
 
 
 def test_flow_response_with_error_msg():

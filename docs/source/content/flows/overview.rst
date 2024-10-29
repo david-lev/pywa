@@ -142,9 +142,9 @@ here is an example of static flow:
                                         on_click_action=Action(
                                             name=FlowActionType.COMPLETE,
                                             payload={
-                                                "first_name": first_name.form_ref,
-                                                "last_name": last_name.form_ref,
-                                                "email": email.form_ref,
+                                                "first_name": first_name.ref,
+                                                "last_name": last_name.ref,
+                                                "email": email.ref,
                                             },
                                         ),
                                     ),
@@ -267,28 +267,28 @@ Here is example of dynamic flow:
                                         label="First Name",
                                         input_type=InputType.TEXT,
                                         required=True,
-                                        helper_text=first_name_helper_text.data_key,
+                                        helper_text=first_name_helper_text.ref,
                                     ),
                                     last_name := TextInput(
                                         name="last_name",
                                         label="Last Name",
                                         input_type=InputType.TEXT,
-                                        required=is_last_name_required.data_key,
+                                        required=is_last_name_required.ref,
                                     ),
                                     email := TextInput(
                                         name="email",
                                         label="Email Address",
                                         input_type=InputType.EMAIL,
-                                        enabled=is_email_enabled.data_key,
+                                        enabled=is_email_enabled.ref,
                                     ),
                                     Footer(
                                         label="Done",
                                         on_click_action=Action(
                                             name=FlowActionType.COMPLETE,
                                             payload={
-                                                "first_name": last_name.form_ref,
-                                                "last_name": last_name.form_ref,
-                                                "email": email.form_ref,
+                                                "first_name": last_name.ref,
+                                                "last_name": last_name.ref,
+                                                "email": email.ref,
                                             },
                                         ),
                                     ),

@@ -150,21 +150,21 @@ The ``SIGN_UP`` screen allows the user to sign up (create an account). Let's tak
                             label="First Name",
                             input_type=InputType.TEXT,
                             required=True,
-                            init_value=first_name_initial_value.data_key,
+                            init_value=first_name_initial_value.ref,
                         ),
                         last_name := TextInput(
                             name="last_name",
                             label="Last Name",
                             input_type=InputType.TEXT,
                             required=True,
-                            init_value=last_name_initial_value.data_key,
+                            init_value=last_name_initial_value.ref,
                         ),
                         email := TextInput(
                             name="email",
                             label="Email Address",
                             input_type=InputType.EMAIL,
                             required=True,
-                            init_value=email_initial_value.data_key,
+                            init_value=email_initial_value.ref,
                         ),
                         password := TextInput(
                             name="password",
@@ -174,7 +174,7 @@ The ``SIGN_UP`` screen allows the user to sign up (create an account). Let's tak
                             max_chars=16,
                             helper_text="Password must contain at least one number",
                             required=True,
-                            init_value=password_initial_value.data_key,
+                            init_value=password_initial_value.ref,
                         ),
                         confirm_password := TextInput(
                             name="confirm_password",
@@ -183,18 +183,18 @@ The ``SIGN_UP`` screen allows the user to sign up (create an account). Let's tak
                             min_chars=8,
                             max_chars=16,
                             required=True,
-                            init_value=confirm_password_initial_value.data_key,
+                            init_value=confirm_password_initial_value.ref,
                         ),
                         Footer(
                             label="Done",
                             on_click_action=Action(
                                 name=FlowActionType.DATA_EXCHANGE,
                                 payload={
-                                    "first_name": first_name.form_ref,
-                                    "last_name": last_name.form_ref,
-                                    "email": email.form_ref,
-                                    "password": password.form_ref,
-                                    "confirm_password": confirm_password.form_ref,
+                                    "first_name": first_name.ref,
+                                    "last_name": last_name.ref,
+                                    "email": email.ref,
+                                    "password": password.ref,
+                                    "confirm_password": confirm_password.ref,
                                 },
                             ),
                         ),
@@ -216,7 +216,7 @@ The data of the screen is represented by the ``.data`` property. The data is a l
 
 Every :class:`ScreenData` need to have a unique ``key`` and an ``example`` value. The example value is used to generate the appropriate
 JSON schema for the data. Also, we are assigning every :class:`ScreenData` to a variable (inlined with the walrus operator) so
-that we can use them later on in the code to reference the data and "use" it in the screen (e.g. ``first_name_initial_value.data_key``).
+that we can use them later on in the code to reference the data and "use" it in the screen (e.g. ``first_name_initial_value.ref``).
 
 The layout of the ``SIGN_UP`` screen contains the following elements:
 
@@ -237,7 +237,7 @@ The :class:`Form` fields are:
 - A :class:`TextInput` field for the confirm password (the input type is set to :class:`InputType.PASSWORD`, so that the user's password is hidden when they re-type it)
 
 Now, every form child get assigned to a variable (inlined with the walrus operator) so that we can use them later on in
-the code to reference the form fields and send their "values" to the server or to another screen (e.g. ``first_name.form_ref``).
+the code to reference the form fields and send their "values" to the server or to another screen (e.g. ``first_name.ref``).
 
 The :class:`Footer` contains a button that the user can click to submit the form. When the user clicks on the button, the :class:`Action`
 :class:`FlowActionType.DATA_EXCHANGE` is triggered. This action type allows us to send data to the server and then decide what to do next (for example,
@@ -245,14 +245,14 @@ if the user is already registered, we can navigate to the ``LOGIN`` screen, or i
 we can show an error message and ask the user to try again).
 
 The payload of the :class:`Action` of the :class:`Footer` contains the data that we want to send to the server. In this case, we are sending
-the values of the form fields. The values can be either a :class:`DataKey` or a :class:`FormRef`. A :class:`DataKey` is used to reference
-a screen's ``.data`` items and a :class:`FormRef` is used to reference :class:`Form` children.
+the values of the form fields. The values can be either a :class:`ScreenDataRef` or a :class:`ComponentRef`. A :class:`ScreenDataRef` is used to reference
+a screen's ``.data`` items and a :class:`ComponentRef` is used to reference :class:`Form` children.
 Because we are using the walrus operator to assign the form fields to variables, we can use the variables to reference the form fields
-by using the the ``.form_ref`` property of the form field (which is more type-safe than using the :class:`FormRef` with the form field's name).
+by using the the ``.ref`` property of the form field (which is more type-safe than using the :class:`ComponentRef` with the form field's name).
 
 
-The ``.form_ref`` and ``.data_key`` properties are equivalent to the :class:`FormRef` with the form field's name and the :class:`DataKey` with the
-screen's data key, respectively. Infact, the ``.form_ref`` and ``.data_key`` properties are just shortcuts for the :class:`FormRef` and :class:`DataKey` classes.
+The ``.ref`` property are equivalent to the :class:`ComponentRef` with the form component name and the :class:`ScreenDataRef` with the
+screen's reference, respectively. Infact, the ``.ref`` properties are just shortcuts for the :class:`ComponentRef` and :class:`ScreenDataRef` classes.
 
 
 Sign In Screen
@@ -304,22 +304,22 @@ Ok, now to the ``LOGIN`` screen. This screen allows the user to login to their e
                             label="Email Address",
                             input_type=InputType.EMAIL,
                             required=True,
-                            init_value=email_initial_value.data_key,
+                            init_value=email_initial_value.ref,
                         ),
                         password := TextInput(
                             name="password",
                             label="Password",
                             input_type=InputType.PASSWORD,
                             required=True,
-                            init_value=password_initial_value.data_key,
+                            init_value=password_initial_value.ref,
                         ),
                         Footer(
                             label="Done",
                             on_click_action=Action(
                                 name=FlowActionType.DATA_EXCHANGE,
                                 payload={
-                                    "email": email.form_ref,
-                                    "password": password.form_ref,
+                                    "email": email.ref,
+                                    "password": password.ref,
                                 },
                             ),
                         ),
@@ -375,7 +375,7 @@ Now, to the last screen, the ``LOGIN_SUCCESS`` screen. This screen is displayed 
                             on_click_action=Action(
                                 name=FlowActionType.COMPLETE,
                                 payload={
-                                    "stay_logged_in": stay_logged_in.form_ref,
+                                    "stay_logged_in": stay_logged_in.ref,
                                 },
                             ),
                         ),
@@ -454,7 +454,7 @@ Here is all the flow code in one place:
             ActionNext,
             ActionNextType,
             FlowActionType,
-            FormRef,
+            ComponentRef,
             InputType,
             TextHeading,
             TextSubheading,
@@ -552,21 +552,21 @@ Here is all the flow code in one place:
                                         label="First Name",
                                         input_type=InputType.TEXT,
                                         required=True,
-                                        init_value=first_name_initial_value.data_key,
+                                        init_value=first_name_initial_value.ref,
                                     ),
                                     last_name := TextInput(
                                         name="last_name",
                                         label="Last Name",
                                         input_type=InputType.TEXT,
                                         required=True,
-                                        init_value=last_name_initial_value.data_key,
+                                        init_value=last_name_initial_value.ref,
                                     ),
                                     email := TextInput(
                                         name="email",
                                         label="Email Address",
                                         input_type=InputType.EMAIL,
                                         required=True,
-                                        init_value=email_initial_value.data_key,
+                                        init_value=email_initial_value.ref,
                                     ),
                                     password := TextInput(
                                         name="password",
@@ -576,7 +576,7 @@ Here is all the flow code in one place:
                                         max_chars=16,
                                         helper_text="Password must contain at least one number",
                                         required=True,
-                                        init_value=password_initial_value.data_key,
+                                        init_value=password_initial_value.ref,
                                     ),
                                     confirm_password := TextInput(
                                         name="confirm_password",
@@ -585,18 +585,18 @@ Here is all the flow code in one place:
                                         min_chars=8,
                                         max_chars=16,
                                         required=True,
-                                        init_value=confirm_password_initial_value.data_key,
+                                        init_value=confirm_password_initial_value.ref,
                                     ),
                                     Footer(
                                         label="Done",
                                         on_click_action=Action(
                                             name=FlowActionType.DATA_EXCHANGE,
                                             payload={
-                                                "first_name": first_name.form_ref,
-                                                "last_name": last_name.form_ref,
-                                                "email": email.form_ref,
-                                                "password": password.form_ref,
-                                                "confirm_password": confirm_password.form_ref,
+                                                "first_name": first_name.ref,
+                                                "last_name": last_name.ref,
+                                                "email": email.ref,
+                                                "password": password.ref,
+                                                "confirm_password": confirm_password.ref,
                                             },
                                         ),
                                     ),
@@ -643,22 +643,22 @@ Here is all the flow code in one place:
                                         label="Email Address",
                                         input_type=InputType.EMAIL,
                                         required=True,
-                                        init_value=email_initial_value.data_key,
+                                        init_value=email_initial_value.ref,
                                     ),
                                     password := TextInput(
                                         name="password",
                                         label="Password",
                                         input_type=InputType.PASSWORD,
                                         required=True,
-                                        init_value=password_initial_value.data_key,
+                                        init_value=password_initial_value.ref,
                                     ),
                                     Footer(
                                         label="Done",
                                         on_click_action=Action(
                                             name=FlowActionType.DATA_EXCHANGE,
                                             payload={
-                                                "email": email.form_ref,
-                                                "password": password.form_ref,
+                                                "email": email.ref,
+                                                "password": password.ref,
                                             },
                                         ),
                                     ),
@@ -691,7 +691,7 @@ Here is all the flow code in one place:
                                         on_click_action=Action(
                                             name=FlowActionType.COMPLETE,
                                             payload={
-                                                "stay_logged_in": stay_logged_in.form_ref,
+                                                "stay_logged_in": stay_logged_in.ref,
                                             },
                                         ),
                                     ),

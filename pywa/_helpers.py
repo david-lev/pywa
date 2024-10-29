@@ -155,7 +155,7 @@ def resolve_flow_json_param(
     elif isinstance(flow_json, bytes):
         json_str = flow_json.decode()
     elif isinstance(flow_json, FlowJSON):
-        to_dump = flow_json.to_dict()
+        json_str = flow_json.to_json()
     elif isinstance(flow_json, dict):
         to_dump = flow_json
     else:
