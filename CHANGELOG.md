@@ -6,7 +6,7 @@
 
 ### 2.0.0 (2024-10-30) **Latest**
 
-BRAKING CHANGES!! READ THE [MIGRATION GUIDE](https://github.com/david-lev/pywa/blob/v2/MIGRATION.md)
+BREAKING CHANGES!! READ THE [MIGRATION GUIDE](https://github.com/david-lev/pywa/blob/v2/MIGRATION.md)
 
 - [listeners]: Listeners are a new way to handle incoming user updates (messages, callbacks, etc.). They are more flexible, faster, and easier to use than handlers.
 - [sent_message]: The `SentMessage` object returned by `send_message`, `send_image`, etc., contains the message ID and allows to act on the sent message with methods like `reply_x`, `wait_for_x` etc.
