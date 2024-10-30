@@ -45,7 +45,7 @@ wa = WhatsApp(...)
 
 @wa.on_message
 async def on_message(_: WhatsApp, msg: types.Message):
-    msg.reply("Hello, World!")
+  msg.reply("Hello, World!")
 
 
 # New code
@@ -80,7 +80,10 @@ wa = WhatsApp(...)
 
 @wa.on_message(filters.text, lambda _, m: m.text.isdigit())
 def on_message(_: WhatsApp, msg: types.Message):
-    msg.reply("Hello, World!")
+  msg.reply("Hello, World!")
+
+@wa.on_message(filters.any_(filters.text.is_command, filters.text.command("start")))
+def on_command(_, __): ...
 
 # New code
 from pywa import WhatsApp, filters, types
@@ -89,7 +92,10 @@ wa = WhatsApp(...)
 
 @wa.on_message(filters.text & filters.new(lambda _, m: m.text.isdigit()))
 def on_message(_: WhatsApp, msg: types.Message):
-    msg.reply("Hello, World!")
+  msg.reply("Hello, World!")
+
+@wa.on_message(filters.is_command | filters.command("start"))
+def on_command(_, __): ...
 ```
 
 4. If you are using lots of handlers, you may want to switch to listeners:
@@ -215,4 +221,72 @@ def some_web_framework_handler(req):
       hmac_header=req.headers.get(utils.HUB_SIG),
     )
     return res, status
+```
+
+8. If you are using the `.data_key` and `.from_ref` of the flowjson components, you need to update your code to use the `.ref` attribute:
+
+```python
+
+# Old code
+
+from pywa.types.flows import *
+
+FlowJSON(
+  screens=[
+    Screen(
+      data=[
+        name := ScreenData(key="name", example="David")
+      ],
+      layout=Layout(
+        children=[
+          date := DatePicker(
+            on_select_action=Action(
+              payload={"date": FormRef("date"), "name": DataKey("name")},
+            ),
+          ),
+          Footer(
+            ...,
+            on_click_action=Action(
+              payload={
+                "date": date.form_ref,
+                "name": name.data_key
+              },
+            ),
+          ),
+        ],
+      ),
+    )
+  ],
+)
+
+# New code
+
+FlowJSON(
+  screens=[
+    Screen(
+      data=[
+        name := ScreenData(key="name", example="David")
+      ],
+      layout=Layout(
+        children=[
+          date := DatePicker(
+            on_select_action=Action(
+              payload={"date": ComponentRef("date"), "name": ScreenDataRef("name")},
+            ),
+          ),
+          Footer(
+            ...,
+            on_click_action=Action(
+              payload={
+                "date": date.ref,
+                "name": name.ref
+              },
+            ),
+          ),
+        ],
+      ),
+    )
+  ],
+)
+
 ```
