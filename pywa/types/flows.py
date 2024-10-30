@@ -902,7 +902,7 @@ class _FlowJSONEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, (Ref, Condition)):
             return o.to_str()
-        if isinstance(o, _ScreenDataContainer):
+        if isinstance(o, _ScreenDatasContainer):
             data = {}
             for item in o:
                 try:
@@ -917,6 +917,8 @@ class _FlowJSONEncoder(json.JSONEncoder):
             return data
         if isinstance(o, DataSource):
             return o.to_dict()
+        if isinstance(o, datetime.date):
+            return o.strftime("%Y-%m-%d")
         return super().default(o)
 
     def _get_json_type(
@@ -1154,7 +1156,7 @@ class ScreenData:
         return f"{self.__class__.__name__}(key={self.key!r}, example={self.example!r})"
 
 
-class _ScreenDataContainer:
+class _ScreenDatasContainer:
     """A wrapper for the ``Screen.data`` iterable. This is to prevent ``dataclasses.asdict()`` from converting ScreenData objects."""
 
     def __init__(self, datas: Iterable[ScreenData]):
@@ -1212,8 +1214,10 @@ class Screen:
     sensitive: Iterable[str] | None = None
 
     def __post_init__(self):
+        # preventing `data` from being converted to a Iterable[dict] by `dataclasses.asdict()`
+        # this is because we need to extract the key attr from the ScreenData and use it as the key in the json data obj
         self.data = (
-            _ScreenDataContainer(self.data)
+            _ScreenDatasContainer(self.data)
             if isinstance(self.data, Iterable) and not isinstance(self.data, dict)
             else self.data
         )
@@ -1473,6 +1477,7 @@ class Form(Component):
         if not self.children:
             raise ValueError("At least one child is required")
 
+        # Extract init-value's from children
         if not isinstance(self.init_values, Ref | str):
             init_values = self.init_values or {}
             for child in self.children:
@@ -1488,6 +1493,7 @@ class Form(Component):
                     init_values[child.name] = child.init_value
             self.init_values = init_values or None
 
+        # Extract error-message's from children
         if not isinstance(self.error_messages, Ref | str):
             error_messages = self.error_messages or {}
             for child in self.children:
@@ -2245,18 +2251,6 @@ class DatePicker(FormComponent):
     init_value: datetime.date | str | ScreenDataRef | ComponentRef | None = None
     error_message: str | ScreenDataRef | ComponentRef | None = None
     on_select_action: Action | None = None
-
-    def __post_init__(self):
-        date_fmt = "%Y-%m-%d"
-        for attr in {"min_date", "max_date", "init_value"}:
-            value = getattr(self, attr)
-            if isinstance(value, datetime.date):
-                setattr(self, attr, value.strftime(date_fmt))
-        if self.unavailable_dates:
-            self.unavailable_dates = [
-                date.strftime(date_fmt) if isinstance(date, datetime.date) else date
-                for date in self.unavailable_dates
-            ]
 
 
 class ScaleType(utils.StrEnum):
