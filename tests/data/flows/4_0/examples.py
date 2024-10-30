@@ -83,7 +83,7 @@ photo_picker = FlowJSON(
                     Form(
                         name="flow_path",
                         children=[
-                            PhotoPicker(
+                            photo_picker := PhotoPicker(
                                 name="photo_picker",
                                 label="Upload photos",
                                 description="Please attach images about the received items",
@@ -96,7 +96,7 @@ photo_picker = FlowJSON(
                                 label="Submit",
                                 on_click_action=Action(
                                     name=FlowActionType.DATA_EXCHANGE,
-                                    payload={"images": ComponentRef("photo_picker")},
+                                    payload={"images": photo_picker.ref},
                                 ),
                             ),
                         ],
@@ -123,7 +123,7 @@ doc_picker = FlowJSON(
                     Form(
                         name="flow_path",
                         children=[
-                            DocumentPicker(
+                            document_picker := DocumentPicker(
                                 name="document_picker",
                                 label="Contract",
                                 description="Attach the signed copy of the contract",
@@ -139,9 +139,7 @@ doc_picker = FlowJSON(
                                 label="Submit",
                                 on_click_action=Action(
                                     name="complete",
-                                    payload={
-                                        "documents": ComponentRef("document_picker")
-                                    },
+                                    payload={"documents": document_picker.ref},
                                 ),
                             ),
                         ],
