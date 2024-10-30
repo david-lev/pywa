@@ -54,14 +54,6 @@ _INTERACTIVE_TYPES: dict[str, type[Handler]] = {
 }
 
 
-def _extract_id_from_update(update: dict) -> str | None:
-    """Extract the ID from the given update."""
-    try:
-        return update["entry"][0]["changes"][0]["value"]["messages"][0]["id"]
-    except (KeyError, IndexError, TypeError):
-        return None
-
-
 _logger = logging.getLogger(__name__)
 
 
@@ -112,7 +104,9 @@ class Server:
         self._validate_updates = validate_updates
         self._continue_handling = continue_handling
         self._skip_duplicate_updates = skip_duplicate_updates
-        self._updates_ids_in_process = set[str]()
+        self._updates_ids_in_process = set[
+            str | int
+        ]()  # TODO use threading.Lock | asyncio.Lock
 
         if server is utils.MISSING:
             return
@@ -191,13 +185,13 @@ class Server:
         Returns:
             A tuple containing the response and the status code.
         """
-        res, status, update_dict, update_id = self._check_and_prepare_update(
+        res, status, update_dict, update_hash = self._check_and_prepare_update(
             update=update, hmac_header=hmac_header
         )
         if res:
             return res, status
         self._call_handlers(update_dict)
-        return self._after_calling_update(update_id)
+        return self._after_calling_update(update_hash)
 
     def _check_and_prepare_update(
         self, update: bytes, hmac_header: str = None
@@ -229,25 +223,25 @@ class Server:
             )
             return "Error, invalid update", 400, None, None
 
-        update_id: str | None = None
+        update_hash: str | int | None = None
         _logger.debug(
             "Webhook ('%s') received an update: %s",
             self._webhook_endpoint,
             update_dict,
         )
         if self._skip_duplicate_updates and (
-            update_id := _extract_id_from_update(update_dict)
+            update_hash := (hmac_header or hash(update))
         ):
-            if update_id in self._updates_ids_in_process:
+            if update_hash in self._updates_ids_in_process:
                 return "ok", 200, None, None
-            self._updates_ids_in_process.add(update_id)
+            self._updates_ids_in_process.add(update_hash)
 
-        return None, None, update_dict, update_id
+        return None, None, update_dict, update_hash
 
-    def _after_calling_update(self, update_id: str | None) -> tuple[str, int]:
+    def _after_calling_update(self, update_hash: str | None) -> tuple[str, int]:
         if self._skip_duplicate_updates:
             try:
-                self._updates_ids_in_process.remove(update_id)
+                self._updates_ids_in_process.remove(update_hash)
             except KeyError:
                 pass
         return "ok", 200

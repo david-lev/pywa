@@ -61,13 +61,13 @@ class Server:
     async def webhook_update_handler(
         self: "WhatsApp", update: bytes, hmac_header: str = None
     ) -> tuple[str, int]:
-        res, status, update_dict, update_id = self._check_and_prepare_update(
+        res, status, update_dict, update_hash = self._check_and_prepare_update(
             update=update, hmac_header=hmac_header
         )
         if res:
             return res, status
         await self._call_handlers(update_dict)
-        return self._after_calling_update(update_id)
+        return self._after_calling_update(update_hash)
 
     def _register_routes(self: "WhatsApp") -> None:
         match self._server_type:
