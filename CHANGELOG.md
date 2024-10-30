@@ -4,7 +4,17 @@
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
 
-### 2.0.1 (2024-10-30) **Latest**
+### 2.0.2 (2024-10-30) **Latest**
+
+- [server] rely on update hash instead of update id to avid duplicate updates
+
+
+### 2.0.1 (2024-10-30)
+
+- [server] fix skip update in process (async)
+
+
+### 2.0.0 (2024-10-30)
 
 BREAKING CHANGES!! READ THE [MIGRATION GUIDE](https://github.com/david-lev/pywa/blob/v2/MIGRATION.md)
 
