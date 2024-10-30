@@ -1,6 +1,10 @@
 Others
 ======
 
+.. currentmodule:: pywa.types.sent_message
+
+.. autoclass:: SentMessage()
+
 .. currentmodule:: pywa.types.others
 
 .. autoclass:: BusinessProfile()
@@ -21,12 +25,18 @@ Others
 
 .. autoclass:: FacebookApplication()
 
-.. currentmodule:: pywa.utils
+.. currentmodule:: pywa
 
 .. autoclass:: Version()
 
-.. currentmodule:: pywa.types.base_update
+.. currentmodule:: pywa.types
 
 .. autoclass:: StopHandling()
 
 .. autoclass:: ContinueHandling()
+
+.. autoclass:: ListenerTimeout()
+
+.. autoclass:: ListenerCanceled()
+
+.. autoclass:: ListenerStopped()

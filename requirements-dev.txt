@@ -4,3 +4,4 @@ pytest-asyncio==0.24.0
 pytest-mock==3.14.0
 ruff==0.6.3
 pre-commit==3.8.0
+cryptography==43.0.3

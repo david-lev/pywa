@@ -1,0 +1,257 @@
+{
+  "if_": {
+    "version": "4.0",
+    "screens": [
+      {
+        "data": {
+          "value": {
+            "type": "boolean",
+            "__example__": true
+          }
+        },
+        "id": "SCREEN",
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "TextInput",
+              "label": "Animal",
+              "name": "animal",
+              "helper-text": "Type: cat"
+            },
+            {
+              "type": "If",
+              "condition": "(${data.value} && (${form.animal} == 'cat'))",
+              "then": [
+                {
+                  "type": "TextHeading",
+                  "text": "It is a cat"
+                }
+              ],
+              "else": [
+                {
+                  "type": "TextHeading",
+                  "text": "It is not a cat"
+                }
+              ]
+            },
+            {
+              "type": "Footer",
+              "label": "Complete",
+              "on-click-action": {
+                "name": "complete",
+                "payload": {}
+              }
+            }
+          ]
+        },
+        "title": "Welcome",
+        "terminal": true,
+        "success": true
+      }
+    ]
+  },
+  "switch": {
+    "version": "4.0",
+    "screens": [
+      {
+        "data": {
+          "value": {
+            "type": "string",
+            "__example__": "cat"
+          }
+        },
+        "id": "SCREEN",
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "TextInput",
+              "label": "Animal",
+              "name": "animal",
+              "helper-text": "Type: cat, dog or anything else"
+            },
+            {
+              "type": "Switch",
+              "value": "${form.animal}",
+              "cases": {
+                "cat": [
+                  {
+                    "type": "TextHeading",
+                    "text": "It is a cat"
+                  }
+                ],
+                "dog": [
+                  {
+                    "type": "TextHeading",
+                    "text": "It is a dog"
+                  }
+                ],
+                "default": [
+                  {
+                    "type": "TextHeading",
+                    "text": "It is neither a cat nor a dog"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Footer",
+              "label": "Complete",
+              "on-click-action": {
+                "name": "complete",
+                "payload": {}
+              }
+            }
+          ]
+        },
+        "title": "Welcome",
+        "terminal": true,
+        "success": true
+      }
+    ]
+  },
+  "photo_picker": {
+    "version": "4.0",
+    "routing_model": {
+      "FIRST": []
+    },
+    "data_api_version": "3.0",
+    "screens": [
+      {
+        "id": "FIRST",
+        "title": "Photo Picker Example",
+        "terminal": true,
+        "data": {},
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "Form",
+              "name": "flow_path",
+              "children": [
+                {
+                  "type": "PhotoPicker",
+                  "name": "photo_picker",
+                  "label": "Upload photos",
+                  "description": "Please attach images about the received items",
+                  "photo-source": "camera_gallery",
+                  "min-uploaded-photos": 1,
+                  "max-uploaded-photos": 10,
+                  "max-file-size-kb": 10240
+                },
+                {
+                  "type": "Footer",
+                  "label": "Submit",
+                  "on-click-action": {
+                    "name": "data_exchange",
+                    "payload": {
+                      "images": "${form.photo_picker}"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "doc_picker": {
+    "version": "4.0",
+    "routing_model": {
+      "SECOND": []
+    },
+    "data_api_version": "3.0",
+    "screens": [
+      {
+        "id": "SECOND",
+        "terminal": true,
+        "title": "Document Picker Example",
+        "data": {},
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "Form",
+              "name": "flow_path",
+              "children": [
+                {
+                  "type": "DocumentPicker",
+                  "name": "document_picker",
+                  "label": "Contract",
+                  "description": "Attach the signed copy of the contract",
+                  "min-uploaded-documents": 1,
+                  "max-uploaded-documents": 1,
+                  "max-file-size-kb": 1024,
+                  "allowed-mime-types": [
+                    "image/jpeg",
+                    "application/pdf"
+                  ]
+                },
+                {
+                  "type": "Footer",
+                  "label": "Submit",
+                  "on-click-action": {
+                    "name": "complete",
+                    "payload": {
+                      "documents": "${form.document_picker}"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "date_picker_dates_str": {
+    "version": "4.0",
+    "data_api_version": "3.0",
+    "routing_model": {},
+    "screens": [
+      {
+        "id": "DEMO_SCREEN",
+        "terminal": true,
+        "title": "Demo screen",
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "Form",
+              "name": "form_name",
+              "children": [
+                {
+                  "type": "DatePicker",
+                  "name": "date",
+                  "label": "Date",
+                  "min-date": "1693569600000",
+                  "max-date": "1767182400000",
+                  "unavailable-dates": [
+                    "1694779200000",
+                    "1697371200000"
+                  ],
+                  "on-select-action": {
+                    "name": "data_exchange",
+                    "payload": {
+                      "date": "${form.date}"
+                    }
+                  }
+                },
+                {
+                  "type": "Footer",
+                  "label": "Continue",
+                  "on-click-action": {
+                    "name": "data_exchange",
+                    "payload": {}
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

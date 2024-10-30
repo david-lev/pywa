@@ -1,0 +1,101 @@
+{
+
+  "radio_buttons_with_pics": {
+    "version": "5.0",
+    "screens": [
+      {
+        "id": "TRAVEL_PACKAGES",
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "RadioButtonsGroup",
+              "name": "packages",
+              "required": true,
+              "data-source": [
+                {
+                  "id": "1",
+                  "title": "Tropical Beach Vacation",
+                  "description": "Enjoy 7 nights and 8 days at a luxury beach resort in Bali. Including flights and stays",
+                  "alt-text": "beach vacation",
+                  "image": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+                },
+                {
+                  "id": "2",
+                  "title": "Mountain Adventure",
+                  "description": "Embark on a 5-day guided trek in the Swiss Alps. Package includes flights and stays",
+                  "image": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+                },
+                {
+                  "id": "3",
+                  "title": "City Break",
+                  "description": "Explore the sights and sounds of New York City with our 4 nights and 5 days package",
+                  "image": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+                },
+                {
+                  "id": "4",
+                  "title": "Historical Tour",
+                  "description": "Take a 7-day historical tour of Rome, Italy. Package includes flights and stays",
+                  "image": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+                }
+              ],
+              "label": "Explore our exciting packages"
+            },
+            {
+              "type": "Footer",
+              "label": "Continue",
+              "on-click-action": {
+                "name": "complete",
+                "payload": {}
+              }
+            }
+          ]
+        },
+        "title": "Travel Packages",
+        "terminal": true
+      }
+    ]
+  },
+  "date_picker_dates_obj": {
+    "version": "5.0",
+    "data_api_version": "3.0",
+    "routing_model": {},
+    "screens": [
+      {
+        "id": "DEMO_SCREEN",
+        "terminal": true,
+        "title": "Demo screen",
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "DatePicker",
+              "name": "date",
+              "label": "Date",
+              "min-date": "2024-10-21",
+              "max-date": "2024-11-12",
+              "unavailable-dates": [
+                "2024-10-28",
+                "2024-11-01"
+              ],
+              "on-select-action": {
+                "name": "data_exchange",
+                "payload": {
+                  "date": "${form.date}"
+                }
+              }
+            },
+            {
+              "type": "Footer",
+              "label": "Continue",
+              "on-click-action": {
+                "name": "data_exchange",
+                "payload": {}
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

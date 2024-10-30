@@ -19,6 +19,8 @@ Client Reference
 .. automethod:: WhatsApp.send_reaction
 .. automethod:: WhatsApp.remove_reaction
 .. automethod:: WhatsApp.mark_message_as_read
+.. automethod:: WhatsApp.listen
+.. automethod:: WhatsApp.stop_listening
 .. automethod:: WhatsApp.upload_media
 .. automethod:: WhatsApp.download_media
 .. automethod:: WhatsApp.get_media_url
@@ -49,3 +51,4 @@ Client Reference
 .. automethod:: WhatsApp.webhook_update_handler
 .. automethod:: WhatsApp.webhook_challenge_handler
 .. automethod:: WhatsApp.get_flow_request_handler
+.. automethod:: WhatsApp.load_handlers_modules

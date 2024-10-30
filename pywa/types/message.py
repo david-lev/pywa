@@ -30,6 +30,7 @@ from .others import (
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
+    from .sent_message import SentMessage
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -223,10 +224,9 @@ class Message(BaseUserUpdate):
         buttons: Iterable[Button] | ButtonUrl | SectionList | None = None,
         preview_url: bool = False,
         reply_to_message_id: str = None,
-        keyboard: None = None,
         tracker: str | None = None,
         sender: str | int | None = None,
-    ) -> str:
+    ) -> SentMessage:
         """
         Send the message to another user.
 
@@ -237,13 +237,12 @@ class Message(BaseUserUpdate):
         Args:
             to: The phone ID of the WhatsApp user to copy the message to.
             header: The header of the message (if keyboard is provided, optional, up to 60 characters, no markdown allowed).
-            body: The body of the message (if keyboard are provided, optional, up to 1024 characters, markdown allowed).
-            footer: The footer of the message (if keyboard is provided, optional, markdown has no effect).
+            body: The body/caption of the message (if buttons are provided, optional, up to 1024 characters, markdown allowed).
+            footer: The footer of the message (if buttons is provided, optional, markdown has no effect).
             buttons: The buttons to send with the message (only in case of message from type ``text``, ``document``,
              ``video`` and ``image``. also, the ``SectionList`` is only available to ``text`` type)
             reply_to_message_id:  The message ID to reply to (optional).
             preview_url: Whether to show a preview of the URL in the message (if any).
-            keyboard: Deprecated and will be removed in a future version, use ``buttons`` instead.
             tracker: The track data of the message.
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
@@ -265,7 +264,6 @@ class Message(BaseUserUpdate):
                     footer=footer,
                     buttons=buttons,
                     reply_to_message_id=reply_to_message_id,
-                    keyboard=keyboard,
                     tracker=tracker,
                 )
             case MessageType.DOCUMENT:
@@ -274,10 +272,8 @@ class Message(BaseUserUpdate):
                     to=to,
                     document=self.document.id,
                     filename=self.document.filename,
-                    caption=self.caption,
-                    body=body,
+                    caption=body or self.caption,
                     footer=footer,
-                    buttons=keyboard or buttons,
                     reply_to_message_id=reply_to_message_id,
                     tracker=tracker,
                 )
@@ -286,10 +282,8 @@ class Message(BaseUserUpdate):
                     sender=sender,
                     to=to,
                     image=self.image.id,
-                    caption=self.caption,
-                    body=body,
+                    caption=body or self.caption,
                     footer=footer,
-                    buttons=keyboard or buttons,
                     reply_to_message_id=reply_to_message_id,
                     tracker=tracker,
                 )
@@ -298,9 +292,8 @@ class Message(BaseUserUpdate):
                     sender=sender,
                     to=to,
                     video=self.video.id,
-                    caption=self.caption,
-                    buttons=keyboard or buttons,
-                    body=body,
+                    caption=body or self.caption,
+                    buttons=buttons,
                     footer=footer,
                     reply_to_message_id=reply_to_message_id,
                     tracker=tracker,
@@ -375,7 +368,7 @@ class Message(BaseUserUpdate):
                     text=self.system.body,
                     header=header,
                     footer=footer,
-                    buttons=keyboard,
+                    buttons=buttons,
                     reply_to_message_id=reply_to_message_id,
                 )
             case _:

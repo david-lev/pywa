@@ -22,6 +22,7 @@ ________________________
 > [Get Started](https://pywa.readthedocs.io/en/latest/content/getting-started.html)
 • [WhatsApp Client](https://pywa.readthedocs.io/en/latest/content/client/overview.html)
 • [Handlers](https://pywa.readthedocs.io/en/latest/content/handlers/overview.html)
+• [Listeners](https://pywa.readthedocs.io/en/latest/content/listeners/overview.html)
 • [Filters](https://pywa.readthedocs.io/en/latest/content/filters/overview.html)
 • [Updates](https://pywa.readthedocs.io/en/latest/content/updates/overview.html)
 • [Flows](https://pywa.readthedocs.io/en/latest/content/flows/overview.html)
@@ -68,8 +69,7 @@ wa.send_message(
 
 ```python
 # wa.py
-from pywa import WhatsApp, filters
-from pywa.types import Message, CallbackButton, Button
+from pywa import WhatsApp, filters, types
 from fastapi import FastAPI
 
 fastapi_app = FastAPI()
@@ -84,12 +84,12 @@ wa = WhatsApp(
 )
 
 @wa.on_message(filters.matches("Hello", "Hi"))
-def hello(client: WhatsApp, msg: Message):
+def hello(client: WhatsApp, msg: types.Message):
     msg.react("👋")
     msg.reply_text(
         text=f"Hello {msg.from_user.name}!",
         buttons=[
-            Button(
+            types.Button(
                 title="Click me!",
                 callback_data="id:123"
             )
@@ -97,7 +97,7 @@ def hello(client: WhatsApp, msg: Message):
     )
 
 @wa.on_callback_button(filters.startswith("id"))
-def click_me(client: WhatsApp, clb: CallbackButton):
+def click_me(client: WhatsApp, clb: types.CallbackButton):
     clb.reply_text("You clicked me!")
 ```
 
@@ -109,7 +109,7 @@ fastapi dev wa.py  # see uvicorn docs for more options (port, host, reload, etc.
 
 💫 **Async Usage**
 
-- PyWa has async support! To use the async version, replace all the imports from `pywa` to `pywa_async` and use `async`/`await`:
+- PyWa has async support! To use the async version, replace **all** the imports from `pywa` to `pywa_async` and use `async`/`await`:
 
 ```python
 # wa.py
@@ -191,4 +191,4 @@ This project is licensed under the MIT License - see the
 🔱 **Contributing**
 --------------------
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please see the [Contributing Guide](https://github.com/david-lev/pywa/blob/master/CONTRIBUTING.md) for more information.

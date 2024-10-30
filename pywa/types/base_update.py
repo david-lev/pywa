@@ -14,17 +14,19 @@ import dataclasses
 import datetime
 from typing import TYPE_CHECKING, BinaryIO, Iterable
 
+from pywa import utils
+
 from .others import Contact, Metadata, ProductsSection, User
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
+    from .sent_message import SentMessage
 
     from .callback import (
         Button,
         ButtonUrl,
         SectionList,
         FlowButton,
-        CallbackDataT,
         CallbackData,
     )
     from .template import Template
@@ -160,36 +162,15 @@ class BaseUpdate(abc.ABC):
         raise ContinueHandling
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class BaseUserUpdate(BaseUpdate, abc.ABC):
-    """Base class for all user-related update types (message, callback, etc.)."""
+class _ClientShortcuts(abc.ABC):
+    """
+    Shortcuts for sending messages, media, and other types of content in response to an update.
+    """
 
-    _txt_fields = None
-    """Contains the text fields of the update to use when filtering."""
-
-    @property
-    @abc.abstractmethod
-    def metadata(self) -> Metadata: ...
-
-    @property
-    @abc.abstractmethod
-    def from_user(self) -> User: ...
-
-    @property
-    def sender(self) -> str:
-        """
-        The WhatsApp ID of the sender who sent the message.
-            - Shortcut for ``.from_user.wa_id``.
-        """
-        return self.from_user.wa_id
-
-    @property
-    def recipient(self) -> str:
-        """
-        The WhatsApp ID which the message was sent to.
-            - Shortcut for ``.metadata.phone_number_id``.
-        """
-        return self.metadata.phone_number_id
+    id: str
+    _client: WhatsApp
+    _internal_sender: str
+    _internal_recipient: str
 
     @property
     def message_id_to_reply(self) -> str:
@@ -209,9 +190,8 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         buttons: Iterable[Button] | ButtonUrl | FlowButton | SectionList | None = None,
         quote: bool = False,
         preview_url: bool = False,
-        keyboard: None = None,
-        tracker: CallbackDataT | None = None,
-    ) -> str:
+        tracker: str | CallbackData | None = None,
+    ) -> SentMessage:
         """
         Reply to the message with text.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.send_message` with ``to`` and ``reply_to_message_id``.
@@ -223,60 +203,6 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             ...     quote=True,
             ... )
 
-        Example with keyboard buttons:
-
-            >>> from pywa.types import Button
-            >>> msg.reply_text(
-            ...     header="Hello from PyWa!",
-            ...     text="What can I help you with?",
-            ...     footer="Powered by PyWa",
-            ...     buttons=[
-            ...         Button("Help", data="help"),
-            ...         Button("About", data="about"),
-            ...     ],
-            ...     quote=True
-            ... )
-
-        Example with a section list:
-
-            >>> from pywa.types import SectionList, Section, SectionRow
-            >>> msg.reply_text(
-            ...     header="Hello from PyWa!",
-            ...     text="What can I help you with?",
-            ...     footer="Powered by PyWa",
-            ...     buttons=SectionList(
-            ...         button_title="Choose an option",
-            ...         sections=[
-            ...             Section(
-            ...                 title="Help",
-            ...                 rows=[
-            ...                     SectionRow(
-            ...                         title="Help",
-            ...                         callback_data="help",
-            ...                         description="Get help with PyWa",
-            ...                     ),
-            ...                     SectionRow(
-            ...                         title="About",
-            ...                         callback_data="about",
-            ...                         description="Learn more about PyWa",
-            ...                     ),
-            ...                 ],
-            ...            ),
-            ...            Section(
-            ...                 title="Other",
-            ...                 rows=[
-            ...                     SectionRow(
-            ...                         title="GitHub",
-            ...                         callback_data="github",
-            ...                         description="View the PyWa GitHub repository",
-            ...                     ),
-            ...                 ],
-            ...             ),
-            ...         ],
-            ...     ),
-            ...     quote=True
-            ... )
-
         Args:
             text: The text to reply with (markdown allowed, max 4096 characters).
             header: The header of the reply (if buttons are provided, optional, up to 60 characters,
@@ -286,22 +212,20 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             buttons: The buttons to send with the message (optional).
             quote: Whether to quote the replied message (default: False).
             preview_url: Whether to show a preview of the URL in the message (if any).
-            keyboard: Deprecated and will be removed in a future version, use ``buttons`` instead.
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The ID of the sent reply.
         """
         return self._client.send_message(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             text=text,
             header=header,
             footer=footer,
             buttons=buttons,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             preview_url=preview_url,
-            keyboard=keyboard,
             tracker=tracker,
         )
 
@@ -311,13 +235,12 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         self,
         image: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
-        body: None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         quote: bool = False,
         mime_type: str | None = None,
-        tracker: CallbackDataT | None = None,
-    ) -> str:
+        tracker: str | CallbackData | None = None,
+    ) -> SentMessage:
         """
         Reply to the message with an image.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.send_image` with ``to`` and ``reply_to_message_id``.
@@ -342,18 +265,16 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             mime_type: The mime type of the image (optional, required when sending an image as bytes or a file object,
              or file path that does not have an extension).
             quote: Whether to quote the replied message (default: False).
-            body: Deprecated and will be removed in a future version, use ``caption`` instead.
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The ID of the sent reply.
         """
         return self._client.send_image(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             image=image,
             caption=caption,
-            body=body,
             footer=footer,
             buttons=buttons,
             reply_to_message_id=self.message_id_to_reply if quote else None,
@@ -365,13 +286,12 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         self,
         video: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
-        body: None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         quote: bool = False,
         mime_type: str | None = None,
-        tracker: CallbackDataT | None = None,
-    ) -> str:
+        tracker: str | CallbackData | None = None,
+    ) -> SentMessage:
         """
         Reply to the message with a video.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.send_video` with ``to`` and ``reply_to_message_id``.
@@ -397,20 +317,18 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             mime_type: The mime type of the video (optional, required when sending a video as bytes or a file object,
              or file path that does not have an extension).
             quote: Whether to quote the replied message (default: False).
-            body: Deprecated and will be removed in a future version, use ``caption`` instead.
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
             The ID of the sent reply.
         """
         return self._client.send_video(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             video=video,
             caption=caption,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             buttons=buttons,
-            body=body,
             footer=footer,
             mime_type=mime_type,
             tracker=tracker,
@@ -421,13 +339,12 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         document: str | pathlib.Path | bytes | BinaryIO,
         filename: str | None = None,
         caption: str | None = None,
-        body: None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
         quote: bool = False,
         mime_type: str | None = None,
-        tracker: CallbackDataT | None = None,
-    ) -> str:
+        tracker: str | CallbackData | None = None,
+    ) -> SentMessage:
         """
         Reply to the message with a document.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.send_document` with ``to`` and ``reply_to_message_id``.
@@ -454,7 +371,6 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             buttons: The buttons to send with the document (optional).
             mime_type: The mime type of the document (optional, required when sending a document as bytes or a file
              object, or file path that does not have an extension).
-            body: Deprecated and will be removed in a future version, use ``caption`` instead.
             quote: Whether to quote the replied message (default: False).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
@@ -462,14 +378,13 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             The ID of the sent reply.
         """
         return self._client.send_document(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             document=document,
             filename=filename,
             caption=caption,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             buttons=buttons,
-            body=body,
             footer=footer,
             mime_type=mime_type,
             tracker=tracker,
@@ -480,8 +395,8 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         audio: str | pathlib.Path | bytes | BinaryIO,
         quote: bool = False,
         mime_type: str | None = None,
-        tracker: CallbackDataT | None = None,
-    ) -> str:
+        tracker: str | CallbackData | None = None,
+    ) -> SentMessage:
         """
         Reply to the message with an audio.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.send_audio` with ``to`` and ``reply_to_message_id``.
@@ -503,8 +418,8 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             The ID of the sent message.
         """
         return self._client.send_audio(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             audio=audio,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             mime_type=mime_type,
@@ -516,8 +431,8 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         sticker: str | pathlib.Path | bytes | BinaryIO,
         quote: bool = False,
         mime_type: str | None = None,
-        tracker: CallbackDataT | None = None,
-    ) -> str:
+        tracker: str | CallbackData | None = None,
+    ) -> SentMessage:
         """
         Reply to the message with a sticker.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.send_sticker` with ``to`` and ``reply_to_message_id``.
@@ -541,8 +456,8 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             The ID of the sent reply.
         """
         return self._client.send_sticker(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             sticker=sticker,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             mime_type=mime_type,
@@ -556,8 +471,8 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         name: str | None = None,
         address: str | None = None,
         quote: bool = False,
-        tracker: CallbackDataT | None = None,
-    ) -> str:
+        tracker: str | CallbackData | None = None,
+    ) -> SentMessage:
         """
         Reply to the message with a location.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.send_location` with ``to`` and ``reply_to_message_id``.
@@ -584,8 +499,8 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             The ID of the sent reply.
         """
         return self._client.send_location(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             latitude=latitude,
             longitude=longitude,
             name=name,
@@ -598,8 +513,8 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         self,
         text: str,
         quote: bool = False,
-        tracker: CallbackDataT | None = None,
-    ) -> str:
+        tracker: str | CallbackData | None = None,
+    ) -> SentMessage:
         """
         Reply to the message with a request for the user's location.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.request_location` with ``to`` and ``reply_to_message_id``.
@@ -620,8 +535,8 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             The ID of the sent reply.
         """
         return self._client.request_location(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             text=text,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             tracker=tracker,
@@ -631,8 +546,8 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         self,
         contact: Contact | Iterable[Contact],
         quote: bool = False,
-        tracker: CallbackDataT | None = None,
-    ) -> str:
+        tracker: str | CallbackData | None = None,
+    ) -> SentMessage:
         """
         Reply to the message with a contact/s.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.send_contact` with ``to`` and ``reply_to_message_id``.
@@ -660,14 +575,16 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             The ID of the sent reply.
         """
         return self._client.send_contact(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             contact=contact,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             tracker=tracker,
         )
 
-    def react(self, emoji: str, tracker: CallbackDataT | None = None) -> str:
+    def react(
+        self, emoji: str, tracker: str | CallbackData | None = None
+    ) -> SentMessage:
         """
         React to the message with an emoji.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.send_reaction` with ``to`` and ``message_id``.
@@ -684,14 +601,14 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             The ID of the sent reaction.
         """
         return self._client.send_reaction(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             emoji=emoji,
             message_id=self.message_id_to_reply,
             tracker=tracker,
         )
 
-    def unreact(self, tracker: CallbackDataT | None = None) -> str:
+    def unreact(self, tracker: str | CallbackData | None = None) -> SentMessage:
         """
         Remove the reaction from the message.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.remove_reaction` with ``to`` and ``message_id``.
@@ -707,8 +624,8 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             The ID of the sent unreaction.
         """
         return self._client.remove_reaction(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             message_id=self.message_id_to_reply,
             tracker=tracker,
         )
@@ -719,8 +636,8 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         footer: str | None = None,
         thumbnail_product_sku: str | None = None,
         quote: bool = False,
-        tracker: CallbackDataT | None = None,
-    ) -> str:
+        tracker: str | CallbackData | None = None,
+    ) -> SentMessage:
         """
         Reply to the message with a catalog.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.send_catalog` with ``to`` and ``reply_to_message_id``.
@@ -745,8 +662,8 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             The ID of the sent reply.
         """
         return self._client.send_catalog(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             body=body,
             footer=footer,
             thumbnail_product_sku=thumbnail_product_sku,
@@ -761,8 +678,8 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         body: str | None = None,
         footer: str | None = None,
         quote: bool = False,
-        tracker: CallbackDataT | None = None,
-    ) -> str:
+        tracker: str | CallbackData | None = None,
+    ) -> SentMessage:
         """
         Reply to the message with a product.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.send_product` with ``to`` and ``reply_to_message_id``.
@@ -782,8 +699,8 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             The ID of the sent reply.
         """
         return self._client.send_product(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             catalog_id=catalog_id,
             sku=sku,
             body=body,
@@ -800,8 +717,8 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         body: str,
         footer: str | None = None,
         quote: bool = False,
-        tracker: CallbackDataT | None = None,
-    ) -> str:
+        tracker: str | CallbackData | None = None,
+    ) -> SentMessage:
         """
         Reply to the message with a product.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.send_products` with ``to`` and ``reply_to_message_id``.
@@ -843,8 +760,8 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             The ID of the sent reply.
         """
         return self._client.send_products(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             catalog_id=catalog_id,
             product_sections=product_sections,
             title=title,
@@ -858,7 +775,7 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
         self,
         template: Template,
         quote: bool = False,
-        tracker: CallbackDataT | None = None,
+        tracker: str | CallbackData | None = None,
     ) -> str:
         """
         Reply to the message with a template.
@@ -912,8 +829,8 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
 
         """
         return self._client.send_template(
-            sender=self.recipient,
-            to=self.sender,
+            sender=self._internal_recipient,
+            to=self._internal_sender,
             template=template,
             reply_to_message_id=quote if quote else None,
             tracker=tracker,
@@ -928,5 +845,62 @@ class BaseUserUpdate(BaseUpdate, abc.ABC):
             Whether it was successful.
         """
         return self._client.mark_message_as_read(
-            sender=self.recipient, message_id=self.message_id_to_reply
+            sender=self._internal_recipient, message_id=self.message_id_to_reply
         )
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
+    """Base class for all user-related update types (message, callback, etc.)."""
+
+    _txt_fields = None
+    """Contains the text fields of the update to use when filtering."""
+
+    @property
+    @abc.abstractmethod
+    def metadata(self) -> Metadata: ...
+
+    @property
+    @abc.abstractmethod
+    def from_user(self) -> User: ...
+
+    @property
+    def sender(self) -> str:
+        """
+        The WhatsApp ID of the sender who sent the message.
+            - Shortcut for ``.from_user.wa_id``.
+        """
+        return self.from_user.wa_id
+
+    @property
+    def _internal_sender(self) -> str:
+        return self.sender
+
+    @property
+    def recipient(self) -> str:
+        """
+        The WhatsApp ID which the message was sent to.
+            - Shortcut for ``.metadata.phone_number_id``.
+        """
+        return self.metadata.phone_number_id
+
+    @property
+    def _internal_recipient(self) -> str:
+        return self.recipient
+
+    @property
+    def listener_identifier(self) -> tuple[str, str]:
+        """
+        The listener identifier of the message.
+        """
+        return utils.listener_identifier(sender=self.sender, recipient=self.recipient)
+
+    @property
+    def message_id_to_reply(self) -> str:
+        """
+        The ID of the message to reply to.
+
+        If you want to ``wa.send_x`` with ``reply_to_message_id`` in order to reply to a message, use this property
+        instead of ``id`` to prevent errors.
+        """
+        return self.id

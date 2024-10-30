@@ -3,6 +3,36 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+#### 2.0.0-rc.2 (2024-10-29) **Release Candidate**
+
+- [flows] rename `.data_key` and `.from_ref` to `.ref`
+- [flows] allow pythonic conditionals in `If` component
+- [api] fix media upload
+- [utils] bump graph-api version to `21.0`
+
+#### 2.0.0-rc.1 (2024-10-27)
+
+- [handlers] fix `@WhatsApp.on_x(filters)` without kw
+- [handlers] fix factory data-is-null check
+- [callback] allow to override callback data id
+- [handlers] allow to register flow request without a client instance
+- [listeners] rename and fix wait_for_x methods
+- [base_update] fix `react`
+- [docs] update filters
+
+
+#### 2.0.0-beta.1 (2024-10-25)
+
+- [listeners]: Listeners are a new way to handle incoming user updates (messages, callbacks, etc.). They are more flexible, faster, and easier to use than handlers.
+- [filters]: Filters are now objects that can be combined using logical operators. They are more powerful and flexible than the previous filter system.
+- [handlers]: Now you can register handlers with decorators without the need to use the `add_handler` method.
+- [flows]: A new method `FlowCompletion.get_media(types.Image, key="img")` allows you to construct a media object and perform actions like `.download()` on it.
+- [flows]: Decrypt media directly from FlowRequest using `.decrypt_media(key, index)`.
+- [client]: The client can run without a token but won’t allow API operations (only webhook listening).
+- [sent_message]: The `SentMessage` object returned by `send_message`, `send_image`, etc., contains the message ID and allows to act on the sent message with methods like `reply_x`, `wait_for_x` etc.
+- [migration]: Make sure to read the migration guide before updating to this version!
+
+
 #### 1.26.0 (2024-09-22) **Latest**
 
 - [flows] adding support of `RichText`

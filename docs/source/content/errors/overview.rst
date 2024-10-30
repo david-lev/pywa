@@ -8,21 +8,19 @@ Exceptions are important part of the ``pywa`` library. They are used to tell you
 Most of the exceptions are raised when you try to do something like sending a message:
 
 .. code-block:: python
-    :emphasize-lines: 4, 10, 18
+    :emphasize-lines: 8-9, 11
 
     import logging
-    from pywa import WhatsApp
-    from pywa.types import Button
-    from pywa.errors import InvalidParameter
+    from pywa import WhatsApp, types, errors
 
     wa = WhatsApp(...)
 
     try:
         wa.send_message(..., buttons=[
-            Button(title="click 1", callback_data="click"),
-            Button(title="click 2", callback_data="click"),
+            types.Button(title="click 1", callback_data="click"),
+            types.Button(title="click 2", callback_data="click"),
         ])
-    except InvalidParameter as e:  # duplicate callback_data in buttons (`click`)
+    except errors.InvalidParameter as e:  # duplicate callback_data in buttons (`click`)
         logging.error(f"Duplicated callback_data in buttons: {e}")
 
 
@@ -40,17 +38,15 @@ You will not get the exception, when you try to send the message, but in the mes
 That's why it's important to always register a handler for failed status messages, so you can know when a message failed to send:
 
 .. code-block:: python
-    :emphasize-lines: 8
+    :emphasize-lines: 6
 
     import logging
-    from pywa import WhatsApp
-    from pywa.types import MessageStatus
-    from pywa import filters as fil
+    from pywa import WhatsApp, types, filters
 
     wa = WhatsApp(...)
 
-    @wa.on_message_status(fil.message_status.failed)  # filter for failed message statuses
-    def handle_failed_message(client: WhatsApp, msg: MessageStatus):
+    @wa.on_message_status(filters.failed)  # filter for failed message statuses
+    def handle_failed_message(client: WhatsApp, status: types.MessageStatus):
         logging.error("Message failed to sent to %s: %s. details: %s",
             status.from_user.wa_id, status.error.message, status.error.details
         )
@@ -59,13 +55,10 @@ That's why it's important to always register a handler for failed status message
 You can also handle specific errors, for example, if you want to handle only media errors:
 
 .. code-block:: python
-    :emphasize-lines: 3, 23, 29
+    :emphasize-lines: 20, 26, 33
 
     import logging
-    from pywa import WhatsApp
-    from pywa.errors import MediaUploadError, MediaDownloadError, ReEngagementMessage
-    from pywa.types import MessageStatus
-    from pywa import filters as fil
+    from pywa import WhatsApp, filters, errors
 
     wa = WhatsApp(...)
 
@@ -83,34 +76,39 @@ You can also handle specific errors, for example, if you want to handle only med
         filename="big.pdf"
     )
 
-    @wa.on_message_status(fil.message_status.failed_with(ReEngagementMessage))
-    def handle_failed_reengagement(client: WhatsApp, msg: MessageStatus):
+    @wa.on_message_status(filters.failed_with(errors.ReEngagementMessage))
+    def handle_failed_reengagement(client: WhatsApp, status: types.MessageStatus):
         logging.error("Message failed to sent to %s: %s. details: %s",
             status.from_user.wa_id, status.error.message, status.error.details
         )
 
-    @wa.on_message_status(fil.message_status.failed_with(MediaUploadError, MediaDownloadError))
-    def handle_failed_sent_media(client: WhatsApp, msg: MessageStatus):
-        if isinstance(msg.error, MediaUploadError):
-            msg.reply_text(f"Sorry, I can't upload this file: {msg.error.details}")
-        elif isinstance(msg.error, MediaDownloadError):
-            msg.reply_text(f"Sorry, I can't download this file: {msg.error.details}")
+    @wa.on_status_message(filters.failed_with(errors.MediaUploadError))
+    def handle_failed_sent_media(client: WhatsApp, status: types.MessageStatus):
+        logging.error("Message failed to sent to %s: %s. details: %s",
+            status.from_user.wa_id, status.error.message, status.error.details
+        )
+        status.reply_text("Sorry, I can't upload this file")
+
+    @wa.on_status_message(filters.failed_with(errors.MediaDownloadError))
+    def handle_failed_received_media(client: WhatsApp, status: types.MessageStatus):
+        logging.error("Got a media download error from %s: %s. details: %s",
+            status.from_user.wa_id, status.error.message, status.error.details
+        )
+        status.reply_text("Sorry, I can't download this file")
 
 
 Another example for "incoming" errors is for unsupported messages: if the user sends unsupported message type (like pool), you will get the
 message with type of :class:`~pywa.types.MessageType.UNSUPPORTED` and with error of :class:`~UnsupportedMessageType`.
 
 .. code-block:: python
-    :emphasize-lines: 7
+    :emphasize-lines: 5
 
-    from pywa import WhatsApp
-    from pywa.types import Message
-    from pywa import filters as fil
+    from pywa import WhatsApp, types, filters
 
     wa = WhatsApp(...)
 
-    @wa.on_message(fil.unsupported)
-    def handle_unsupported_message(client: WhatsApp, msg: Message):
+    @wa.on_message(filters.unsupported)
+    def handle_unsupported_message(client: WhatsApp, msg: types.Message):
         msg.reply_text("Sorry, I don't support this message type yet")
 
 
@@ -119,16 +117,16 @@ message with type of :class:`~pywa.types.MessageType.UNSUPPORTED` and with error
 All the exceptions are inherited from :class:`~WhatsAppError`, so you can catch all of them with one exception:
 
 .. code-block:: python
-    :emphasize-lines: 2, 8
+    :linenos:
+    :emphasize-lines: 7
 
-    from pywa import WhatsApp
-    from pywa.errors import WhatsAppError
+    from pywa import WhatsApp, errors
 
     wa = WhatsApp(...)
 
     try:
         wa.send_message(...)
-    except WhatsAppError as e:
+    except errors.WhatsAppError as e:
         print(f"Error: {e}")
 
 

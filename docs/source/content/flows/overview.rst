@@ -54,16 +54,8 @@ Now you can start building the flow structure.
 
 A flow is collection of screens containing components. screens can exchange data with each other and with your server.
 
-Flow can be static; all the components settings are predefined and no interaction is required from your server.
-Or it can be dynamic; your server can respond to screen actions and determine the next screen to display (or close the flow) and the data to provide to it.
-
-.. note::
-
-    WhatsApp just `announced <https://developers.facebook.com/docs/whatsapp/flows/changelogs#june-11th--2024-release>`_ on **Conditional Component Rendering**.
-    This feature allows you to conditionally render components based on the data that is available in the flow!
-
-    - See :class:`If` and :class:`Switch` components.
-
+Flow can be static: all the components settings are predefined and no interaction is required from your server.
+Or it can be dynamic: your server can respond to screen actions and determine the next screen to display (or close the flow) and the data to provide to it.
 
 Every component on the FlowJSON, has a corresponding class in :mod:`pywa.types.flows`:
 
@@ -74,7 +66,8 @@ Every component on the FlowJSON, has a corresponding class in :mod:`pywa.types.f
    * - Category
      - Types
    * - Static elements
-     - :class:`TextHeading`,
+     - :class:`RichText`,
+       :class:`TextHeading`,
        :class:`TextSubheading`,
        :class:`TextBody`,
        :class:`TextCaption`,
@@ -96,311 +89,338 @@ Every component on the FlowJSON, has a corresponding class in :mod:`pywa.types.f
      - :class:`If`,
        :class:`Switch`
 
-here is an example of static flow:
+==================
+
+**Here is an example of static flow:**
 
 .. toggle::
 
-    .. code-block:: python
-        :caption: simple_sign_up_flow.py
-        :linenos:
-        :emphasize-lines: 6, 13, 19, 25, 31, 36, 37, 38, 39, 40
+    Python code:
 
-        static_flow = FlowJSON(
-            version=utils.Version.FLOW_JSON,
-            screens=[
-                Screen(
-                    id="SIGN_UP",
-                    title="Finish Sign Up",
-                    terminal=True,
-                    layout=Layout(
-                        type=LayoutType.SINGLE_COLUMN,
-                        children=[
-                            Form(
-                                name="form",
-                                children=[
-                                    first_name := TextInput(
-                                        name="first_name",
-                                        label="First Name",
-                                        input_type=InputType.TEXT,
-                                        required=True,
-                                    ),
-                                    last_name := TextInput(
-                                        name="last_name",
-                                        label="Last Name",
-                                        input_type=InputType.TEXT,
-                                        required=True,
-                                    ),
-                                    email := TextInput(
-                                        name="email",
-                                        label="Email Address",
-                                        input_type=InputType.EMAIL,
-                                        required=True,
-                                    ),
-                                    Footer(
-                                        label="Done",
-                                        enabled=True,
-                                        on_click_action=Action(
-                                            name=FlowActionType.COMPLETE,
-                                            payload={
-                                                "first_name": first_name.form_ref,
-                                                "last_name": last_name.form_ref,
-                                                "email": email.form_ref,
-                                            },
+    .. toggle::
+
+        .. code-block:: python
+            :caption: simple_sign_up_flow.py
+            :linenos:
+            :emphasize-lines: 16, 22, 28, 40-42
+
+            from pywa.types.flows import *
+
+            static_flow = FlowJSON(
+                version=utils.Version.FLOW_JSON,
+                screens=[
+                    Screen(
+                        id="SIGN_UP",
+                        title="Finish Sign Up",
+                        terminal=True,
+                        layout=Layout(
+                            type=LayoutType.SINGLE_COLUMN,
+                            children=[
+                                Form(
+                                    name="form",
+                                    children=[
+                                        first_name := TextInput(
+                                            name="first_name",
+                                            label="First Name",
+                                            input_type=InputType.TEXT,
+                                            required=True,
                                         ),
-                                    ),
-                                ],
-                            )
-                        ],
-                    ),
-                )
-            ],
-        )
+                                        last_name := TextInput(
+                                            name="last_name",
+                                            label="Last Name",
+                                            input_type=InputType.TEXT,
+                                            required=True,
+                                        ),
+                                        email := TextInput(
+                                            name="email",
+                                            label="Email Address",
+                                            input_type=InputType.EMAIL,
+                                            required=True,
+                                        ),
+                                        Footer(
+                                            label="Done",
+                                            enabled=True,
+                                            on_click_action=Action(
+                                                name=FlowActionType.COMPLETE,
+                                                payload={
+                                                    "first_name": first_name.ref,
+                                                    "last_name": last_name.ref,
+                                                    "email": email.ref,
+                                                },
+                                            ),
+                                        ),
+                                    ],
+                                )
+                            ],
+                        ),
+                    )
+                ],
+            )
 
 
-Which is the equivalent of the following flow json:
+    Which is the equivalent of the following flow json:
 
-.. toggle::
+    .. toggle::
 
-    .. code-block:: json
-        :caption: simple_sign_up_flow.json
-        :linenos:
+        .. code-block:: json
+            :caption: simple_sign_up_flow.json
+            :linenos:
 
-        {
-          "version": "3.0",
-          "screens": [
             {
-              "id": "SIGN_UP",
-              "title": "Finish Sign Up",
-              "terminal": true,
-              "layout": {
-                "type": "SingleColumnLayout",
-                "children": [
-                  {
-                    "type": "Form",
-                    "name": "form",
+              "version": "3.0",
+              "screens": [
+                {
+                  "id": "SIGN_UP",
+                  "title": "Finish Sign Up",
+                  "terminal": true,
+                  "layout": {
+                    "type": "SingleColumnLayout",
                     "children": [
                       {
-                        "type": "TextInput",
-                        "name": "first_name",
-                        "label": "First Name",
-                        "input-type": "text",
-                        "required": true
-                      },
-                      {
-                        "type": "TextInput",
-                        "name": "last_name",
-                        "label": "Last Name",
-                        "input-type": "text",
-                        "required": true
-                      },
-                      {
-                        "type": "TextInput",
-                        "name": "email",
-                        "label": "Email Address",
-                        "input-type": "email",
-                        "required": true
-                      },
-                      {
-                        "type": "Footer",
-                        "label": "Done",
-                        "on-click-action": {
-                          "name": "complete",
-                          "payload": {
-                            "first_name": "${form.first_name}",
-                            "last_name": "${form.last_name}",
-                            "email": "${form.email}"
+                        "type": "Form",
+                        "name": "form",
+                        "children": [
+                          {
+                            "type": "TextInput",
+                            "name": "first_name",
+                            "label": "First Name",
+                            "input-type": "text",
+                            "required": true
+                          },
+                          {
+                            "type": "TextInput",
+                            "name": "last_name",
+                            "label": "Last Name",
+                            "input-type": "text",
+                            "required": true
+                          },
+                          {
+                            "type": "TextInput",
+                            "name": "email",
+                            "label": "Email Address",
+                            "input-type": "email",
+                            "required": true
+                          },
+                          {
+                            "type": "Footer",
+                            "label": "Done",
+                            "on-click-action": {
+                              "name": "complete",
+                              "payload": {
+                                "first_name": "${form.first_name}",
+                                "last_name": "${form.last_name}",
+                                "email": "${form.email}"
+                              }
+                            },
+                            "enabled": true
                           }
-                        },
-                        "enabled": true
+                        ]
                       }
                     ]
                   }
-                ]
-              }
+                }
+              ]
             }
-          ]
-        }
 
-And this is how it looks like on WhatsApp:
+    And this is how it looks like on WhatsApp:
 
-.. toggle::
+    .. toggle::
 
-    .. image:: ../../../../_static/guides/static-sign-up-screen.webp
-        :alt: Static Sign Up Screen
-        :width: 50%
+        .. image:: ../../../../_static/guides/static-sign-up-screen.webp
+            :alt: Static Sign Up Screen
+            :width: 50%
 
 ==================
 
 
-Here is example of dynamic flow:
+**Here is example of dynamic flow:**
 
 .. toggle::
 
-    .. code-block:: python
-        :caption: dynamic_sign_up_flow.py
-        :linenos:
-        :emphasize-lines: 2, 3, 9, 10, 11, 12, 13, 20, 25, 27, 31, 33, 37, 43, 44, 45, 46, 47
+    Python code:
+
+    .. toggle::
+
+        .. code-block:: python
+            :caption: dynamic_sign_up_flow.py
+            :linenos:
+            :emphasize-lines: 3, 11-13, 21, 26, 28, 32, 34, 38, 45-47
 
 
-        dynamic_flow = FlowJSON(
-            version=utils.Version.FLOW_JSON,
-            data_api_version=utils.Version.FLOW_DATA_API,
-            routing_model={},
-            screens=[
-                Screen(
-                    id="SIGN_UP",
-                    title="Finish Sign Up",
-                    terminal=True,
-                    data=[
-                        first_name_helper_text := ScreenData(key="first_name_helper_text", example="Enter your first name"),
-                        is_last_name_required := ScreenData(key="is_last_name_required", example=True),
-                        is_email_enabled := ScreenData(key="is_email_enabled", example=False),
-                    ],
-                    layout=Layout(
-                        type=LayoutType.SINGLE_COLUMN,
-                        children=[
-                            Form(
-                                name="form",
-                                children=[
-                                    first_name := TextInput(
-                                        name="first_name",
-                                        label="First Name",
-                                        input_type=InputType.TEXT,
-                                        required=True,
-                                        helper_text=first_name_helper_text.data_key,
-                                    ),
-                                    last_name := TextInput(
-                                        name="last_name",
-                                        label="Last Name",
-                                        input_type=InputType.TEXT,
-                                        required=is_last_name_required.data_key,
-                                    ),
-                                    email := TextInput(
-                                        name="email",
-                                        label="Email Address",
-                                        input_type=InputType.EMAIL,
-                                        enabled=is_email_enabled.data_key,
-                                    ),
-                                    Footer(
-                                        label="Done",
-                                        on_click_action=Action(
-                                            name=FlowActionType.COMPLETE,
-                                            payload={
-                                                "first_name": last_name.form_ref,
-                                                "last_name": last_name.form_ref,
-                                                "email": email.form_ref,
-                                            },
-                                        ),
-                                    ),
-                                ],
-                            )
+            dynamic_flow = FlowJSON(
+                version=utils.Version.FLOW_JSON,
+                data_api_version=utils.Version.FLOW_DATA_API,
+                routing_model={},
+                screens=[
+                    Screen(
+                        id="SIGN_UP",
+                        title="Finish Sign Up",
+                        terminal=True,
+                        data=[
+                            first_name_helper_text := ScreenData(key="first_name_helper_text", example="Enter your first name"),
+                            is_last_name_required := ScreenData(key="is_last_name_required", example=True),
+                            is_email_enabled := ScreenData(key="is_email_enabled", example=False),
                         ],
-                    ),
-                )
-            ],
-        )
+                        layout=Layout(
+                            type=LayoutType.SINGLE_COLUMN,
+                            children=[
+                                Form(
+                                    name="form",
+                                    children=[
+                                        first_name := TextInput(
+                                            name="first_name",
+                                            label="First Name",
+                                            input_type=InputType.TEXT,
+                                            required=True,
+                                            helper_text=first_name_helper_text.ref,
+                                        ),
+                                        last_name := TextInput(
+                                            name="last_name",
+                                            label="Last Name",
+                                            input_type=InputType.TEXT,
+                                            required=is_last_name_required.ref,
+                                        ),
+                                        email := TextInput(
+                                            name="email",
+                                            label="Email Address",
+                                            input_type=InputType.EMAIL,
+                                            enabled=is_email_enabled.ref,
+                                        ),
+                                        Footer(
+                                            label="Done",
+                                            on_click_action=Action(
+                                                name=FlowActionType.COMPLETE,
+                                                payload={
+                                                    "first_name": last_name.ref,
+                                                    "last_name": last_name.ref,
+                                                    "email": email.ref,
+                                                },
+                                            ),
+                                        ),
+                                    ],
+                                )
+                            ],
+                        ),
+                    )
+                ],
+            )
 
 
-Which is the equivalent of the following flow json:
+    Which is the equivalent of the following flow json:
 
-.. toggle::
+    .. toggle::
 
-    .. code-block:: json
-        :caption: dynamic_sign_up_flow.json
-        :linenos:
+        .. code-block:: json
+            :caption: dynamic_sign_up_flow.json
+            :linenos:
 
-        {
-            "version": "3.0",
-            "data_api_version": "3.0",
-            "routing_model": {},
-            "screens": [
-                {
-                    "id": "SIGN_UP",
-                    "title": "Finish Sign Up",
-                    "data": {
-                        "first_name_helper_text": {
-                            "type": "string",
-                            "__example__": "Enter your first name"
+            {
+                "version": "3.0",
+                "data_api_version": "3.0",
+                "routing_model": {},
+                "screens": [
+                    {
+                        "id": "SIGN_UP",
+                        "title": "Finish Sign Up",
+                        "data": {
+                            "first_name_helper_text": {
+                                "type": "string",
+                                "__example__": "Enter your first name"
+                            },
+                            "is_last_name_required": {
+                                "type": "boolean",
+                                "__example__": true
+                            },
+                            "is_email_enabled": {
+                                "type": "boolean",
+                                "__example__": false
+                            }
                         },
-                        "is_last_name_required": {
-                            "type": "boolean",
-                            "__example__": true
-                        },
-                        "is_email_enabled": {
-                            "type": "boolean",
-                            "__example__": false
-                        }
-                    },
-                    "terminal": true,
-                    "layout": {
-                        "type": "SingleColumnLayout",
-                        "children": [
-                            {
-                                "type": "Form",
-                                "name": "form",
-                                "children": [
-                                    {
-                                        "type": "TextInput",
-                                        "name": "first_name",
-                                        "label": "First Name",
-                                        "input-type": "text",
-                                        "required": true,
-                                        "helper-text": "${data.first_name_helper_text}"
-                                    },
-                                    {
-                                        "type": "TextInput",
-                                        "name": "last_name",
-                                        "label": "Last Name",
-                                        "input-type": "text",
-                                        "required": "${data.is_last_name_required}"
-                                    },
-                                    {
-                                        "type": "TextInput",
-                                        "name": "email",
-                                        "label": "Email Address",
-                                        "input-type": "email",
-                                        "enabled": "${data.is_email_enabled}"
-                                    },
-                                    {
-                                        "type": "Footer",
-                                        "label": "Done",
-                                        "on-click-action": {
-                                            "name": "complete",
-                                            "payload": {
-                                                "first_name": "${form.first_name}",
-                                                "last_name": "${form.last_name}",
-                                                "email": "${form.email}"
+                        "terminal": true,
+                        "layout": {
+                            "type": "SingleColumnLayout",
+                            "children": [
+                                {
+                                    "type": "Form",
+                                    "name": "form",
+                                    "children": [
+                                        {
+                                            "type": "TextInput",
+                                            "name": "first_name",
+                                            "label": "First Name",
+                                            "input-type": "text",
+                                            "required": true,
+                                            "helper-text": "${data.first_name_helper_text}"
+                                        },
+                                        {
+                                            "type": "TextInput",
+                                            "name": "last_name",
+                                            "label": "Last Name",
+                                            "input-type": "text",
+                                            "required": "${data.is_last_name_required}"
+                                        },
+                                        {
+                                            "type": "TextInput",
+                                            "name": "email",
+                                            "label": "Email Address",
+                                            "input-type": "email",
+                                            "enabled": "${data.is_email_enabled}"
+                                        },
+                                        {
+                                            "type": "Footer",
+                                            "label": "Done",
+                                            "on-click-action": {
+                                                "name": "complete",
+                                                "payload": {
+                                                    "first_name": "${form.first_name}",
+                                                    "last_name": "${form.last_name}",
+                                                    "email": "${form.email}"
+                                                }
                                             }
                                         }
-                                    }
-                                ]
-                            }
-                        ]
+                                    ]
+                                }
+                            ]
+                        }
                     }
-                }
-            ]
-        }
+                ]
+            }
 
-And this is how it looks like on WhatsApp:
+    And this is how it looks like on WhatsApp:
 
-.. toggle::
+    .. toggle::
 
-    .. image:: ../../../../_static/guides/dynamic-sign-up-screen.webp
-        :alt: Dynamic Sign Up Screen
-        :width: 50%
+        .. image:: ../../../../_static/guides/dynamic-sign-up-screen.webp
+            :alt: Dynamic Sign Up Screen
+            :width: 50%
+
+==================
+
 
 After you have the flow json, you can update the flow with :meth:`~pywa.client.WhatsApp.update_flow_json`:
 
 .. code-block:: python
+    :caption: update_flow.py
     :linenos:
+    :emphasize-lines: 10
 
     from pywa import WhatsApp
+    from pywa.types.flows import *
 
-    wa = WhatsApp(...)
+    your_flow_json = FlowJSON(...)  # keep edit your flow
 
-    wa.update_flow_json(flow_id, flow_json=flow_json)
+    if __name__ == "__main__":
+        wa = WhatsApp(..., business_account_id="1234567890123456")
+        flow_id = "123456789" # wa.create_flow(name="My New Flow") # run this only once
 
-The ``flow_json`` argument can be :class:`FlowJSON`, a :class:`dict`, json :class:`str`, json file path or open(json_file) obj.
+        success, validation_errors = wa.update_flow_json(flow_id, flow_json=your_flow_json)
+        if not success:
+            print("Validation errors:")
+            for error in validation_errors:
+                print(error)
+
+
+The ``flow_json`` argument can be :class:`FlowJSON`, a :class:`dict`, json :class:`str`, json file path or ``open(json_file)`` obj.
 
 You can get the :class:`FlowDetails` of the flow with :meth:`~pywa.client.WhatsApp.get_flow` to see if there is validation errors needed to be fixed:
 
@@ -415,28 +435,6 @@ You can get the :class:`FlowDetails` of the flow with :meth:`~pywa.client.WhatsA
 
     # FlowDetails(id='1234567890123456', name='My New Flow', validation_errors=(...))
 
-If you are working back and forth on the FlowJSON, you can do something like this:
-
-.. code-block:: python
-    :linenos:
-    :emphasize-lines: 7, 9, 11, 12, 13, 14, 15
-
-    from pywa import WhatsApp
-    from pywa.errors import FlowUpdatingError
-    from pywa.types.flows import *
-
-    wa = WhatsApp(..., business_account_id="1234567890123456")
-
-    flow_id = "123456789" # wa.create_flow(name="My New Flow") # run this only once
-
-    your_flow_json = FlowJSON(...)  # keep edit your flow
-
-    try:
-        wa.update_flow_json(flow_id, flow_json=your_flow_json)
-        print("Flow updated successfully!")
-    except FlowUpdatingError:
-        print("Error updating flow")
-        print(wa.get_flow(flow_id).validation_errors)
 
 This way you always know if there is validation errors that needed to be fixed.
 
@@ -628,7 +626,7 @@ Let's register a callback function to handle this request:
 
 .. code-block:: python
     :linenos:
-    :emphasize-lines: 6, 9, 10, 14, 15, 16, 17, 18, 19
+    :emphasize-lines: 6, 9, 13-18
 
     from pywa import WhatsApp
     from pywa.types import FlowRequest, FlowResponse
@@ -641,8 +639,7 @@ Let's register a callback function to handle this request:
     @wa.on_flow_request(endpoint="/flow")  # The endpoint we set above
     def on_support_request(_: WhatsApp, req: FlowRequest) -> FlowResponse:
         print(req.flow_token)  # use this to indentify the user who you sent the flow to
-        return FlowResponse(
-            version=req.version,
+        return req.respond(
             screen="SIGN_UP",  # The screen id to open
             data={
                 "first_name_helper_text": "Please enter your first name",
@@ -670,10 +667,18 @@ what screen to open next or complete the flow.
 .. note::
 
     If you using :class:`PhotoPicker` or :class:`DocumentPicker` components, and handling requests containing their data, you need
-    to decrypt the files. ``pywa`` provides a helper function to decrypt the files:
+    to decrypt the files using :meth:`~pywa.types.flows.FlowRequest.decrypt_media`:
 
-    - Syncronous: :func:`~pywa.utils.flow_request_media_decryptor_sync`
-    - Asyncronous: :func:`~pywa.utils.flow_request_media_decryptor_async`
+    .. code-block:: python
+        :linenos:
+        :emphasize-lines: 3
+
+        @wa.on_flow_request(endpoint="/flow")
+        def on_support_request(_: WhatsApp, req: FlowRequest) -> FlowResponse:
+            media_id, filename, decrypted_data = req.decrypt_media(key="driver_license", index=0)
+            with open(f"media/{filename}", "wb") as f:
+                f.write(decrypted_data)
+            ...
 
 Getting Flow Completion message
 -------------------------------
@@ -692,26 +697,29 @@ Here is how to listen to flow completion request:
 
     wa = WhatsApp(...)
 
-    @wa.on_flow_completion()
+    @wa.on_flow_completion
     def on_flow_completion(_: WhatsApp, flow: FlowCompletion):
         print(f"The user {flow.from_user.name} just completed the {flow.token} flow!")
         print(flow.response)
 
-The .response attribute is the payload you sent when you completed the flow.
+The ``.response`` attribute is the payload you sent when you completed the flow.
 
 .. note::
 
     if you using :class:`PhotoPicker` or :class:`DocumentPicker` components, you will receive the files inside the flow completion .response.
-    You can constract them into pywa media objects using one of :class:`Image`, :class:`Video`, :class:`Audio`, :class:`Document` classes:
+    You can constract them into pywa media objects by using :meth:`~pywa.types.FlowCompletion.get_media`:
 
     .. code-block:: python
         :linenos:
 
-        from pywa.types import Image
+        from pywa import WhatsApp, types
 
-        image = Image.from_flow_completion(flow.response["image"])
-        image.download("path/to/save")
+        wa = WhatsApp(...)
 
+        @wa.on_flow_completion
+        def on_flow_completion(_: WhatsApp, flow: FlowCompletion):
+            img = flow.get_media(types.Image, key="profile_pic")
+            img.download()
 
 .. toctree::
     flow_json

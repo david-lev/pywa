@@ -10,6 +10,9 @@ import logging
 import pathlib
 from typing import Iterable, TYPE_CHECKING, Any, BinaryIO, Literal, TypeAlias
 
+import httpx
+
+from .media import BaseMedia
 from .. import utils
 from .base_update import BaseUserUpdate  # noqa
 from .others import (
@@ -48,8 +51,8 @@ __all__ = [
     "Layout",
     "LayoutType",
     "Form",
-    "DataKey",
-    "FormRef",
+    "ScreenDataRef",
+    "ComponentRef",
     "TextHeading",
     "TextSubheading",
     "TextBody",
@@ -111,6 +114,8 @@ class FlowCompletion(BaseUserUpdate):
     token: str | None
     response: dict[str, Any]
 
+    _txt_fields = ("token", "body")
+
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> FlowCompletion:
         msg = (value := update["entry"][0]["changes"][0]["value"])["messages"][0]
@@ -136,6 +141,30 @@ class FlowCompletion(BaseUserUpdate):
             token=flow_token,
             response=response,
         )
+
+    def get_media(self, media_cls: type[BaseMedia], key: str) -> BaseMedia:
+        """
+        Get the media object from the response.
+
+        Example:
+            >>> from pywa import WhatsApp, types
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_flow_completion()
+            ... def on_flow_completion(_: WhatsApp, flow: types.FlowCompletion):
+            ...     img = flow.get_media(types.Image,key="image")
+            ...     img.download()
+
+        Args:
+            media_cls: The media class to create the media object (e.g. ``types.Image``).
+            key: The key of the media in the response.
+
+        Returns:
+            The media object.
+
+        Raises:
+            KeyError: If the key is not found in the response.
+        """
+        return media_cls.from_flow_completion(self._client, self.response[key])
 
 
 class FlowRequestActionType(utils.StrEnum):
@@ -275,6 +304,33 @@ class FlowRequest:
         pywa will not call the callback and will return a health check response.
         """
         return self.action == FlowRequestActionType.PING
+
+    def decrypt_media(
+        self, key: str, index: int = 0, dl_session: httpx.Client | None = None
+    ) -> tuple[str, str, bytes]:
+        """
+        Decrypt the encrypted media file from the flow request.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_flow_request("/my-flow-endpoint")
+            ... def my_flow_endpoint(_: WhatsApp, req: types.FlowRequest):
+            ...     media_id, filename, decrypted_data = req.decrypt_media(key="driver_license", index=0)
+            ...     with open(filename, "wb") as file:
+            ...         file.write(decrypted_data)
+            ...     return req.respond(...)
+
+        Args:
+            key: The key of the media in the data (e.g. ``"driver_license"``).
+            index: The index of the media in the data (default to ``0``).
+            dl_session: The HTTPX client session to download the media (optional, new session will be created if not provided).
+        """
+        return utils.flow_request_media_decryptor(
+            encrypted_media=self.data[key][index],
+            dl_session=dl_session,
+        )
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -834,6 +890,83 @@ _SKIP_KEYS = {
     "error_message",  # Error message copied to Form.error_messages
 }
 
+_PY_TO_JSON_TYPES = {
+    str: "string",
+    int: "number",
+    float: "number",
+    bool: "boolean",
+}
+
+
+class _FlowJSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, (Ref, Condition)):
+            return o.to_str()
+        if isinstance(o, _ScreenDatasContainer):
+            data = {}
+            for item in o:
+                try:
+                    data[item.key] = dict(
+                        **self._get_json_type(item.example), __example__=item.example
+                    )
+                except KeyError as e:
+                    raise ValueError(
+                        f"ScreenData: Invalid example type {type(item.example)!r} for {item.key!r}."
+                        f"{e}"
+                    )
+            return data
+        if isinstance(o, DataSource):
+            return o.to_dict()
+        if isinstance(o, datetime.date):
+            return o.strftime("%Y-%m-%d")
+        return super().default(o)
+
+    def _get_json_type(
+        self,
+        example: str
+        | int
+        | float
+        | bool
+        | DataSource
+        | Iterable[str | int | float | bool | DataSource],
+    ) -> dict[str, str | dict[str, str]]:
+        if isinstance(example, (str, int, float, bool)):
+            return {"type": _PY_TO_JSON_TYPES[type(example)]}
+        elif isinstance(example, (dict, DataSource)):
+            return {"type": "object", "properties": self._get_obj_props(example)}
+        elif isinstance(example, Iterable):
+            try:
+                first = next(iter(example))
+            except StopIteration:
+                raise ValueError("At least one example is required when using Iterable")
+            if isinstance(first, (str, int, float, bool)):
+                return {
+                    "type": "array",
+                    "items": {"type": _PY_TO_JSON_TYPES[type(first)]},
+                }
+            elif isinstance(first, (dict, DataSource)):
+                return {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": self._get_obj_props(first),
+                    },
+                }
+        else:
+            raise KeyError("Invalid example type")
+
+    @staticmethod
+    def _get_obj_props(item: dict | DataSource):
+        return {
+            k: dict(type=_PY_TO_JSON_TYPES[type(v)])
+            for k, v in (
+                dataclasses.asdict(item).items()
+                if isinstance(item, DataSource)
+                else item.items()
+            )
+            if v is not None
+        }
+
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class FlowJSON:
@@ -863,14 +996,21 @@ class FlowJSON:
             self.data_api_version = str(self.data_api_version)
             utils.Version.FLOW_DATA_API.validate_min_version(self.data_api_version)
 
-    def to_dict(self):
-        return dataclasses.asdict(
-            obj=self,
-            dict_factory=lambda d: {
-                k.replace("_", "-").rstrip("-") if k not in _UNDERSCORE_FIELDS else k: v
-                for (k, v) in d
-                if k not in _SKIP_KEYS and v is not None
-            },
+    def to_json(self):
+        return json.dumps(
+            dataclasses.asdict(
+                obj=self,
+                dict_factory=lambda d: {
+                    k.replace("_", "-").rstrip("-")
+                    if k not in _UNDERSCORE_FIELDS
+                    else k: v
+                    for (k, v) in d
+                    if k not in _SKIP_KEYS and v is not None
+                },
+            ),
+            cls=_FlowJSONEncoder,
+            indent=4,
+            ensure_ascii=False,
         )
 
 
@@ -917,12 +1057,11 @@ class DataSource:
         )
 
 
-@dataclasses.dataclass(slots=True, kw_only=True)
 class ScreenData:
     """
     Represents a screen data that a screen should get from the previous screen or from the data endpoint.
 
-    - You can use the ``.data_key`` property or the :class:`DataKey` to reference this data in the screen children or in the action payloads.
+    - You can use the ``.ref`` property or the :class:`ScreenDataRef` to reference this data in the screen children or in the action payloads.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#dynamic-properties>`_.
 
     Example:
@@ -934,33 +1073,40 @@ class ScreenData:
         ...         is_email_required := ScreenData(key='is_email_required', example=False)
         ...     ],
         ...     layout=Layout(children=[Form(children=[
-        ...         TextHeading(text=dynamic_welcome.data_key, ...),
-        ...         TextInput(required=is_email_required.data_key, input_type=InputType.EMAIL, ...)
+        ...         TextHeading(text=dynamic_welcome.ref, ...),
+        ...         TextInput(required=is_email_required.ref, input_type=InputType.EMAIL, ...)
         ...     ])])
         ... )
 
     Attributes:
-        key: The key of the data (To use later in the screen children with ``.data_key`` or with :class:`DataKey`).
+        key: The key of the data (To use later in the screen children with ``.ref`` or with :class:`ScreenDataRef`).
         example: The example of the data that the screen should get from the previous screen or from the data endpoint (or the previous screen).
     """
 
-    key: str
-    example: (
-        str
-        | int
-        | float
-        | bool
-        | dict
-        | DataSource
-        | Iterable[str | int | float | bool | dict | DataSource]
-    )
+    __slots__ = "key", "example"
+
+    def __init__(
+        self,
+        *,
+        key: str,
+        example: (
+            str
+            | int
+            | float
+            | bool
+            | dict
+            | DataSource
+            | Iterable[str | int | float | bool | dict | DataSource]
+        ),
+    ) -> None:
+        self.key = key
+        self.example = example
 
     @property
-    def data_key(self) -> DataKey:
+    def ref(self) -> ScreenDataRef:
         """
-        The key for this data to use in the same screen children.
-            - Use this property to reference this data in the screen children. Use the :meth:`data_key_of(screen)` to reference this data in ANOTHER screen children.
-            - A shortcut for :class:`DataKey` with this key.
+        The refernece for this data to use in the same screen children.
+            - Use this property to reference this data in the screen children. Use the :meth:`ref_in(screen)` to reference this data in ANOTHER screen children.
 
         Example:
 
@@ -969,20 +1115,19 @@ class ScreenData:
             ...         Screen(
             ...             id='START',
             ...             data=[dynamic_welcome := ScreenData(key='welcome', example='Welcome to my store!')],
-            ...             layout=Layout(children=[TextHeading(text=dynamic_welcome.data_key, ...)])  # Use the data key here
+            ...             layout=Layout(children=[TextHeading(text=dynamic_welcome.ref, ...)])  # Use the .ref here
             ...         )
             ...     ],
             ...     ...
             ... )
         """
-        # noinspection PyTypeChecker
-        return DataKey(key=self.key)
+        return ScreenDataRef(key=self.key)
 
-    def data_key_of(self, screen: Screen | str) -> DataKey:
+    def ref_in(self, screen: Screen | str) -> ScreenDataRef:
         """
         The key for this data to use in ANOTHER screen children.
-            - If you want to reference this data in the same screen children, use the :meth:`data_key` property.
-            - A shortcut for :class:`DataKey` with this key and screen.
+            - If you want to reference this data in the same screen children, use the :meth:`ref` property.
+            - A shortcut for :class:`ScreenDataRef` with this key and screen.
             - Added in v4.0.
 
         Example:
@@ -996,7 +1141,7 @@ class ScreenData:
             ...         ),
             ...         Screen(
             ...             id='END',
-            ...             layout=Layout(children=[TextHeading(text=dynamic_welcome.data_key_of(start), ...)]) # Use the data key with the screen here
+            ...             layout=Layout(children=[TextHeading(text=dynamic_welcome.ref_in(start), ...)]) # Use the .ref_in with the screen here
             ...         )
             ...     ],
             ...     ...
@@ -1005,16 +1150,23 @@ class ScreenData:
         Args:
             screen: The screen id to reference this data in its children.
         """
-        # noinspection PyTypeChecker
-        return DataKey(key=self.key, screen=screen)
+        return ScreenDataRef(key=self.key, screen=screen)
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(key={self.key!r}, example={self.example!r})"
 
 
-_PY_TO_JSON_TYPES = {
-    str: "string",
-    int: "number",
-    float: "number",
-    bool: "boolean",
-}
+class _ScreenDatasContainer:
+    """A wrapper for the ``Screen.data`` iterable. This is to prevent ``dataclasses.asdict()`` from converting ScreenData objects."""
+
+    def __init__(self, datas: Iterable[ScreenData]):
+        self._datas = datas
+
+    def __iter__(self):
+        return iter(self._datas)
+
+    def __repr__(self):
+        return f"ScreenDatasContainer({self._datas})"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1041,7 +1193,7 @@ class Screen:
          used as a screen id.
         title: Screen level attribute that is rendered in the top navigation bar.
         data: Declaration of dynamic data that this screen should get from the previous screen or from the data endpoint.
-         In the screen children and in :class:`Action` ``.payload``, you can use the ``.data_key`` or :class:`DataKey`
+         In the screen children and in :class:`Action` ``.payload``, you can use the ``.ref`` or :class:`ScreenDataRef`
          to reference this data.
         terminal: Each Flow should have a terminal state where we terminate the experience and have the Flow completed.
          Multiple screens can be marked as terminal. It's mandatory to have a :class:`Footer` on the terminal screen.
@@ -1062,62 +1214,13 @@ class Screen:
     sensitive: Iterable[str] | None = None
 
     def __post_init__(self):
-        if not self.data or isinstance(self.data, dict):
-            return
-
-        data = {}
-        for item in self.data:
-            try:
-                data[item.key] = dict(
-                    **_get_json_type(item.example), __example__=item.example
-                )
-            except KeyError as e:
-                raise ValueError(
-                    f"Invalid example type {type(item.example)!r} for {item.key!r}. "
-                    f"{e}"
-                )
-
-        self.data = data or None
-
-
-def _get_json_type(
-    example: str
-    | int
-    | float
-    | bool
-    | DataSource
-    | Iterable[str | int | float | bool | DataSource],
-) -> dict[str, str | dict[str, str]]:
-    if isinstance(example, (str, int, float, bool)):
-        return {"type": _PY_TO_JSON_TYPES[type(example)]}
-    elif isinstance(example, (dict, DataSource)):
-        return {"type": "object", "properties": _get_obj_props(example)}
-    elif isinstance(example, Iterable):
-        try:
-            first = next(iter(example))
-        except StopIteration:
-            raise ValueError("At least one example is required when using Iterable")
-        if isinstance(first, (str, int, float, bool)):
-            return {"type": "array", "items": {"type": _PY_TO_JSON_TYPES[type(first)]}}
-        elif isinstance(first, (dict, DataSource)):
-            return {
-                "type": "array",
-                "items": {"type": "object", "properties": _get_obj_props(first)},
-            }
-    else:
-        raise KeyError("Invalid example type")
-
-
-def _get_obj_props(item: dict | DataSource):
-    return {
-        k: dict(type=_PY_TO_JSON_TYPES[type(v)])
-        for k, v in (
-            dataclasses.asdict(item).items()
-            if isinstance(item, DataSource)
-            else item.items()
+        # preventing `data` from being converted to a Iterable[dict] by `dataclasses.asdict()`
+        # this is because we need to extract the key attr from the ScreenData and use it as the key in the json data obj
+        self.data = (
+            _ScreenDatasContainer(self.data)
+            if isinstance(self.data, Iterable) and not isinstance(self.data, dict)
+            else self.data
         )
-        if v is not None
-    }
 
 
 class LayoutType(utils.StrEnum):
@@ -1146,7 +1249,7 @@ class Layout:
     """
 
     type: LayoutType = LayoutType.SINGLE_COLUMN
-    children: Iterable[Form | _SUPPOERTED_COMPONENTS]
+    children: Iterable[Form | Component | dict[str, Any]]
 
 
 class Component(abc.ABC):
@@ -1186,29 +1289,102 @@ class ComponentType(utils.StrEnum):
     SWITCH = "Switch"
 
 
-class _Ref:
+class Ref:
     """Base class for all references"""
 
-    def __new__(
-        cls, prefix: str, field: str, screen: Screen | str | None = None
-    ) -> str:
-        return "${%s%s.%s}" % (
+    def __init__(self, prefix: str, field: str, screen: Screen | str | None = None):
+        self.prefix = prefix
+        self.field = field
+        self.screen = (
             f"screen.{screen.id if isinstance(screen, Screen) else screen}."
             if screen
-            else "",
-            prefix,
-            field,
+            else ""
         )
 
+    def to_str(self) -> str:
+        return "${%s%s.%s}" % (
+            self.screen,
+            self.prefix,
+            self.field,
+        )
 
-class DataKey(_Ref):
+    @staticmethod
+    def _format_value(val: Ref | bool | int | float | str) -> str:
+        if isinstance(val, Ref):
+            return val.to_str()
+        elif isinstance(val, str):
+            return f"'{val}'"
+        elif isinstance(val, bool):
+            return str(val).lower()
+        return str(val)
+
+    def __eq__(self, other: Ref | bool | int | float | str) -> Condition:
+        return Condition(f"({self.to_str()} == {self._format_value(other)})")
+
+    def __ne__(self, other: Ref | bool | int | float | str) -> Condition:
+        return Condition(f"({self.to_str()} != {self._format_value(other)})")
+
+    def __gt__(self, other: Ref | int | float) -> Condition:
+        return Condition(f"({self.to_str()} > {self._format_value(other)})")
+
+    def __ge__(self, other: Ref | int | float) -> Condition:
+        return Condition(f"({self.to_str()} >= {self._format_value(other)})")
+
+    def __lt__(self, other: Ref | int | float) -> Condition:
+        return Condition(f"({self.to_str()} < {self._format_value(other)})")
+
+    def __le__(self, other: Ref | int | float) -> Condition:
+        return Condition(f"({self.to_str()} <= {self._format_value(other)})")
+
+    def __and__(self, other: Ref | Condition) -> Condition:
+        if isinstance(other, Ref):
+            return Condition(f"({self.to_str()} && {other.to_str()})")
+        return Condition(f"({self.to_str()} && {other._expression})")
+
+    def __or__(self, other: Ref | Condition) -> Condition:
+        if isinstance(other, Ref):
+            return Condition(f"({self.to_str()} || {other.to_str()})")
+        return Condition(f"({self.to_str()} || {other._expression})")
+
+    def __invert__(self) -> Condition:
+        return Condition(f"!{self.to_str()}")
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self.to_str()})"
+
+
+class Condition:
+    def __init__(self, expression: str):
+        self._expression = expression
+
+    def __and__(self, other: Condition | Ref) -> Condition:
+        if isinstance(other, Condition):
+            return Condition(f"({self._expression} && {other._expression})")
+        return Condition(f"({self._expression} && {other.to_str()})")
+
+    def __or__(self, other: Condition | Ref) -> Condition:
+        if isinstance(other, Condition):
+            return Condition(f"({self._expression} || {other._expression})")
+        return Condition(f"({self._expression} || {other.to_str()})")
+
+    def __invert__(self) -> Condition:
+        return Condition(f"!{self._expression}")
+
+    def to_str(self) -> str:
+        return self._expression
+
+    def __repr__(self) -> str:
+        return f"Condition({self._expression})"
+
+
+class ScreenDataRef(Ref):
     """
-    Represents a data key (converts to ``${data.<key>}`` | ``${screen.<screen>.data.<key>}``).
+    Represents a ScreenData reference (converts to ``${data.<key>}`` | ``${screen.<screen>.data.<key>}``).
 
     Example:
 
-            - Hint: use the ``.data_key`` property of :class:`ScreenData` to get the data key of a screen data.
-            - Hint: use the ``.data_key_of(screen)`` method of :class:`ScreenData` to get the data key from another screen.
+            - Hint: use the ``.ref`` property of :class:`ScreenData` to get reference to a ScreenData.
+            - Hint: use the ``.ref_in(screen)`` method of :class:`ScreenData` to get the data ref from another screen.
 
             >>> FlowJSON(
             ...     screens=[
@@ -1218,20 +1394,11 @@ class DataKey(_Ref):
             ...             data=[welcome := ScreenData(key='welcome', example='Welcome to my store!')],
             ...             layout=Layout(children=[
             ...                 TextHeading(
-            ...                     text=welcome.data_key, # data in the same screen
-            ...                     visible=is_visible.data_key_of(other) # data from other screen
+            ...                     text=welcome.ref, # data in the same screen
+            ...                     visible=is_visible.ref_in(other) # data from other screen
             ...                 )
             ...             ])
             ...         )
-            ...     ]
-            ... )
-
-            - Or if you want to use DataKey directly:
-
-            >>> FlowJSON(
-            ...     screens=[
-            ...         Screen(id='OTHER', data=[ScreenData(key='welcome', example='Welcome to my store!')])
-            ...         Screen(id='START', layout=Layout(children=[TextHeading(text=DataKey(key='welcome', screen='OTHER'))]))
             ...     ]
             ... )
 
@@ -1240,18 +1407,18 @@ class DataKey(_Ref):
         screen: The screen that contains the data (needed if the data is from another screen). Added in v4.0.
     """
 
-    def __new__(cls, key: str, screen: Screen | str | None = None):
-        return super().__new__(cls, prefix="data", field=key, screen=screen)
+    def __init__(self, key: str, screen: Screen | str | None = None):
+        super().__init__(prefix="data", field=key, screen=screen)
 
 
-class FormRef(_Ref):
+class ComponentRef(Ref):
     """
-    Represents a form reference variable (converts to ``${form.<child>}`` | ``${screen.<screen>.form.<child>}``).
+    Represents a componenent reference variable (converts to ``${form.<child>}`` | ``${screen.<screen>.form.<child>}``).
 
     Example:
 
-        - Hint: use the ``.form_ref`` property of each component to get the form reference variable of that component.
-        - Hint: use the ``.form_ref_of(screen)`` method of each component to get the form reference variable of that component with the given screen name.
+        - Hint: use the ``.ref`` property of each component to get a reference to this component.
+        - Hint: use the ``.ref_in(screen)`` method of each component to get the component reference variable of that component with the given screen name.
 
         >>> FlowJSON(
         ...     screens=[
@@ -1263,40 +1430,20 @@ class FormRef(_Ref):
         ...             id='START',
         ...             layout=Layout(children=[
         ...                 phone := TextInput(name='phone', ...),
-        ...                 TextBody(text=phone.form_ref, ...),  # form reference from the same screen
-        ...                 TextCaption(text=email.form_ref_of(other), ...)  # form reference from another screen
+        ...                 TextBody(text=phone.ref, ...),  # component reference from the same screen
+        ...                 TextCaption(text=email.ref_in(other), ...)  # component reference from another screen
         ...             ])
         ...         )
         ...     ]
         ... )
-
-        - Or if you want to use FormRef directly:
-
-        >>> FlowJSON(
-        ...     screens=[
-        ...         Screen(
-        ...             id='OTHER',
-        ...             layout=Layout(children=[Form(children=[email := TextInput(name='email', ...), ...])])
-        ...         ),
-        ...         Screen(
-        ...             id='START',
-        ...             layout=Layout(children=[
-        ...                 phone := TextInput(name='phone', ...),
-        ...                 TextBody(text=FormRef('phone')),
-        ...                 TextCaption(text=FormRef('email', screen='OTHER'))
-        ...             ])
-        ...         )
-        ...     ]
-        ... )
-
 
     Args:
-        child_name: The name of the :class:`Form` child to get the value from.
+        component_name: The name of the component to get the value from.
         screen: The name of the screen that contains the form. Added in v4.0.
     """
 
-    def __new__(cls, child_name: str, screen: Screen | str | None = None):
-        return super().__new__(cls, prefix="form", field=child_name, screen=screen)
+    def __init__(self, component_name: str, screen: Screen | str | None = None):
+        super().__init__(prefix="form", field=component_name, screen=screen)
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1322,14 +1469,16 @@ class Form(Component):
     )
     visible: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
-    children: Iterable[_SUPPOERTED_COMPONENTS]
-    init_values: dict[str, Any] | str | DataKey | FormRef | None = None
-    error_messages: dict[str, str] | str | DataKey | FormRef | None = None
+    children: Iterable[Component | FormComponent | dict[str, Any]]
+    init_values: dict[str, Any] | str | ScreenDataRef | ComponentRef | None = None
+    error_messages: dict[str, str] | str | ScreenDataRef | ComponentRef | None = None
 
     def __post_init__(self):
         if not self.children:
             raise ValueError("At least one child is required")
-        if not isinstance(self.init_values, str):
+
+        # Extract init-value's from children
+        if not isinstance(self.init_values, Ref | str):
             init_values = self.init_values or {}
             for child in self.children:
                 if getattr(child, "init_value", None) is not None:
@@ -1339,12 +1488,13 @@ class Form(Component):
                         )
                     if isinstance(self.init_values, str):
                         raise ValueError(
-                            f"No need to set init value for {child.name!r} if form init values is a dynamic DataKey"
+                            f"No need to set init value for {child.name!r} if form init values is a dynamic ScreenDataRef"
                         )
                     init_values[child.name] = child.init_value
             self.init_values = init_values or None
 
-        if not isinstance(self.error_messages, str):
+        # Extract error-message's from children
+        if not isinstance(self.error_messages, Ref | str):
             error_messages = self.error_messages or {}
             for child in self.children:
                 if getattr(child, "error_message", None) is not None:
@@ -1354,7 +1504,7 @@ class Form(Component):
                         )
                     if isinstance(self.error_messages, str):
                         raise ValueError(
-                            f"No need to set error msg for {child.name!r} if form error messages is a dynamic DataKey"
+                            f"No need to set error msg for {child.name!r} if form error messages is a dynamic ScreenDataRef"
                         )
                     error_messages[child.name] = child.error_message
             self.error_messages = error_messages or None
@@ -1369,26 +1519,26 @@ class FormComponent(Component, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def label(self) -> str | DataKey | FormRef: ...
+    def label(self) -> str | ScreenDataRef | ComponentRef: ...
 
     @property
     @abc.abstractmethod
-    def required(self) -> bool | str | DataKey | None: ...
+    def required(self) -> bool | str | ScreenDataRef | None: ...
 
     @property
     @abc.abstractmethod
-    def enabled(self) -> bool | str | DataKey | None: ...
+    def enabled(self) -> bool | str | ScreenDataRef | None: ...
 
     @property
     @abc.abstractmethod
-    def init_value(self) -> bool | str | DataKey | FormRef | None: ...
+    def init_value(self) -> bool | str | ScreenDataRef | ComponentRef | None: ...
 
     @property
-    def form_ref(self) -> FormRef:
+    def ref(self) -> ComponentRef:
         """
-        The form reference variable for this component.
-            - Use this when the reference is in the same screen. Use ``.form_ref_of(screen)`` when the reference is in another screen.
-            - A shortcut for :class:`FormRef` with this component name.
+        The reference variable for this component.
+            - Use this when the reference is in the same screen. Use ``.ref_in(screen)`` when the reference is in another screen.
+            - A shortcut for :class:`ComponentRef` with this component name.
 
         Example:
 
@@ -1400,21 +1550,19 @@ class FormComponent(Component, abc.ABC):
             ...                 Form(children=[
             ...                     text_input := TextInput(name='email', ...),
             ...                     TextHeading(text="Your email is:", ...)
-            ...                     TextCaption(text=text_input.form_ref, ...)
+            ...                     TextCaption(text=text_input.ref, ...)
             ...                 ]),
-            ...                 Footer(label='Submit', action=Action(payload={'email': text_input.form_ref}))
+            ...                 Footer(label='Submit', action=Action(payload={'email': text_input.ref}))
             ...         ])
             ...     ]
             ... )
         """
-        # noinspection PyTypeChecker
-        return FormRef(self.name)
+        return ComponentRef(self.name)
 
-    def form_ref_of(self, screen: Screen | str) -> FormRef:
+    def ref_in(self, screen: Screen | str) -> ComponentRef:
         """
-        The form reference variable for this component with the given form name.
-            - A shortcut for :class:`FormRef` with the given screen name and this component name.
-            - Use ``.form_ref`` property when the reference is in the same screen.
+        The component reference variable for this component in another screen.
+            - Use ``.ref`` property when the reference is in the same screen.
             - Added in v4.0.
 
         Example:
@@ -1428,17 +1576,16 @@ class FormComponent(Component, abc.ABC):
             ...         Screen(
             ...             id='START',
             ...             layout=Layout(children=[
-            ...                 TextCaption(text=email.form_ref_of(other), ...)  # form reference from another screen
+            ...                 TextCaption(text=email.ref_in(other), ...)  # component reference from another screen
             ...             ])
             ...         )
             ...     ]
             ... )
 
         Args:
-            screen: The screen that contains the form.
+            screen: The screen that contains the component.
         """
-        # noinspection PyTypeChecker
-        return FormRef(child_name=self.name, screen=screen)
+        return ComponentRef(component_name=self.name, screen=screen)
 
 
 class TextComponent(Component, abc.ABC):
@@ -1450,7 +1597,7 @@ class TextComponent(Component, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def text(self) -> str | DataKey | FormRef: ...
+    def text(self) -> str | ScreenDataRef | ComponentRef: ...
 
 
 class FontWeight(utils.StrEnum):
@@ -1489,8 +1636,8 @@ class TextHeading(TextComponent):
     type: ComponentType = dataclasses.field(
         default=ComponentType.TEXT_HEADING, init=False, repr=False
     )
-    text: str | DataKey | FormRef
-    visible: bool | str | DataKey | FormRef | None = None
+    text: str | ScreenDataRef | ComponentRef
+    visible: bool | str | ScreenDataRef | ComponentRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1512,8 +1659,8 @@ class TextSubheading(TextComponent):
     type: ComponentType = dataclasses.field(
         default=ComponentType.TEXT_SUBHEADING, init=False, repr=False
     )
-    text: str | DataKey | FormRef
-    visible: bool | str | DataKey | FormRef | None = None
+    text: str | ScreenDataRef | ComponentRef
+    visible: bool | str | ScreenDataRef | ComponentRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1543,11 +1690,11 @@ class TextBody(TextComponent):
     type: ComponentType = dataclasses.field(
         default=ComponentType.TEXT_BODY, init=False, repr=False
     )
-    text: str | Iterable[str] | DataKey | FormRef
+    text: str | Iterable[str] | ScreenDataRef | ComponentRef
     markdown: bool | None = None
-    font_weight: FontWeight | str | DataKey | FormRef | None = None
-    strikethrough: bool | str | DataKey | FormRef | None = None
-    visible: bool | str | DataKey | FormRef | None = None
+    font_weight: FontWeight | str | ScreenDataRef | ComponentRef | None = None
+    strikethrough: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | ScreenDataRef | ComponentRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1577,11 +1724,11 @@ class TextCaption(TextComponent):
     type: ComponentType = dataclasses.field(
         default=ComponentType.TEXT_CAPTION, init=False, repr=False
     )
-    text: str | Iterable[str] | DataKey | FormRef
+    text: str | Iterable[str] | ScreenDataRef | ComponentRef
     markdown: bool | None = None
-    font_weight: FontWeight | str | DataKey | FormRef | None = None
-    strikethrough: bool | str | DataKey | FormRef | None = None
-    visible: bool | str | DataKey | FormRef | None = None
+    font_weight: FontWeight | str | ScreenDataRef | ComponentRef | None = None
+    strikethrough: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | ScreenDataRef | ComponentRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1628,8 +1775,8 @@ class RichText(TextComponent):
     type: ComponentType = dataclasses.field(
         default=ComponentType.RICH_TEXT, init=False, repr=False
     )
-    text: str | Iterable[str] | DataKey | FormRef
-    visible: bool | str | DataKey | FormRef | None = None
+    text: str | Iterable[str] | ScreenDataRef | ComponentRef
+    visible: bool | str | ScreenDataRef | ComponentRef | None = None
 
 
 class TextEntryComponent(FormComponent, abc.ABC):
@@ -1641,11 +1788,11 @@ class TextEntryComponent(FormComponent, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def helper_text(self) -> str | DataKey | FormRef | None: ...
+    def helper_text(self) -> str | ScreenDataRef | ComponentRef | None: ...
 
     @property
     @abc.abstractmethod
-    def error_message(self) -> str | DataKey | FormRef | None: ...
+    def error_message(self) -> str | ScreenDataRef | ComponentRef | None: ...
 
 
 class InputType(utils.StrEnum):
@@ -1709,16 +1856,16 @@ class TextInput(TextEntryComponent):
         default=ComponentType.TEXT_INPUT, init=False, repr=False
     )
     name: str
-    label: str | DataKey | FormRef
-    input_type: InputType | str | DataKey | FormRef | None = None
-    required: bool | str | DataKey | FormRef | None = None
-    min_chars: int | str | DataKey | FormRef | None = None
-    max_chars: int | str | DataKey | FormRef | None = None
-    helper_text: str | DataKey | FormRef | None = None
-    enabled: bool | str | DataKey | FormRef | None = None
-    visible: bool | str | DataKey | FormRef | None = None
-    init_value: str | DataKey | FormRef | None = None
-    error_message: str | DataKey | FormRef | None = None
+    label: str | ScreenDataRef | ComponentRef
+    input_type: InputType | str | ScreenDataRef | ComponentRef | None = None
+    required: bool | str | ScreenDataRef | ComponentRef | None = None
+    min_chars: int | str | ScreenDataRef | ComponentRef | None = None
+    max_chars: int | str | ScreenDataRef | ComponentRef | None = None
+    helper_text: str | ScreenDataRef | ComponentRef | None = None
+    enabled: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    init_value: str | ScreenDataRef | ComponentRef | None = None
+    error_message: str | ScreenDataRef | ComponentRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1755,14 +1902,14 @@ class TextArea(TextEntryComponent):
         default=ComponentType.TEXT_AREA, init=False, repr=False
     )
     name: str
-    label: str | DataKey | FormRef
-    required: bool | str | DataKey | FormRef | None = None
-    max_length: int | str | DataKey | FormRef | None = None
-    helper_text: str | DataKey | FormRef | None = None
-    enabled: bool | str | DataKey | FormRef | None = None
-    visible: bool | str | DataKey | FormRef | None = None
-    init_value: str | DataKey | FormRef | None = None
-    error_message: str | DataKey | FormRef | None = None
+    label: str | ScreenDataRef | ComponentRef
+    required: bool | str | ScreenDataRef | ComponentRef | None = None
+    max_length: int | str | ScreenDataRef | ComponentRef | None = None
+    helper_text: str | ScreenDataRef | ComponentRef | None = None
+    enabled: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    init_value: str | ScreenDataRef | ComponentRef | None = None
+    error_message: str | ScreenDataRef | ComponentRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1807,15 +1954,15 @@ class CheckboxGroup(FormComponent):
         default=ComponentType.CHECKBOX_GROUP, init=False, repr=False
     )
     name: str
-    data_source: Iterable[DataSource] | str | DataKey | FormRef
-    label: str | DataKey | FormRef | None = None
-    description: str | DataKey | FormRef | None = None
-    min_selected_items: int | str | DataKey | FormRef | None = None
-    max_selected_items: int | str | DataKey | FormRef | None = None
-    required: bool | str | DataKey | FormRef | None = None
-    visible: bool | str | DataKey | FormRef | None = None
-    enabled: bool | str | DataKey | FormRef | None = None
-    init_value: list[str] | str | DataKey | FormRef | None = None
+    data_source: Iterable[DataSource] | str | ScreenDataRef | ComponentRef
+    label: str | ScreenDataRef | ComponentRef | None = None
+    description: str | ScreenDataRef | ComponentRef | None = None
+    min_selected_items: int | str | ScreenDataRef | ComponentRef | None = None
+    max_selected_items: int | str | ScreenDataRef | ComponentRef | None = None
+    required: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    enabled: bool | str | ScreenDataRef | ComponentRef | None = None
+    init_value: list[str] | str | ScreenDataRef | ComponentRef | None = None
     on_select_action: Action | None = None
 
 
@@ -1857,13 +2004,13 @@ class RadioButtonsGroup(FormComponent):
         default=ComponentType.RADIO_BUTTONS_GROUP, init=False, repr=False
     )
     name: str
-    data_source: Iterable[DataSource] | str | DataKey | FormRef
-    label: str | DataKey | FormRef | None = None
-    description: str | DataKey | FormRef | None = None
-    required: bool | str | DataKey | FormRef | None = None
-    visible: bool | str | DataKey | FormRef | None = None
-    enabled: bool | str | DataKey | FormRef | None = None
-    init_value: str | DataKey | FormRef | None = None
+    data_source: Iterable[DataSource] | str | ScreenDataRef | ComponentRef
+    label: str | ScreenDataRef | ComponentRef | None = None
+    description: str | ScreenDataRef | ComponentRef | None = None
+    required: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    enabled: bool | str | ScreenDataRef | ComponentRef | None = None
+    init_value: str | ScreenDataRef | ComponentRef | None = None
     on_select_action: Action | None = None
 
 
@@ -1904,12 +2051,12 @@ class Dropdown(FormComponent):
         default=ComponentType.DROPDOWN, init=False, repr=False
     )
     name: str
-    label: str | DataKey | FormRef
-    data_source: Iterable[DataSource] | str | DataKey | FormRef
-    enabled: bool | str | DataKey | FormRef | None = None
-    required: bool | str | DataKey | FormRef | None = None
-    visible: bool | str | DataKey | FormRef | None = None
-    init_value: str | DataKey | FormRef | None = None
+    label: str | ScreenDataRef | ComponentRef
+    data_source: Iterable[DataSource] | str | ScreenDataRef | ComponentRef
+    enabled: bool | str | ScreenDataRef | ComponentRef | None = None
+    required: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    init_value: str | ScreenDataRef | ComponentRef | None = None
     on_select_action: Action | None = None
 
 
@@ -1966,12 +2113,12 @@ class Footer(Component):
         default=ComponentType.FOOTER, init=False, repr=False
     )
     visible: None = dataclasses.field(default=None, init=False, repr=False)
-    label: str | DataKey | FormRef
+    label: str | ScreenDataRef | ComponentRef
     on_click_action: Action
-    left_caption: str | DataKey | FormRef | None = None
-    center_caption: str | DataKey | FormRef | None = None
-    right_caption: str | DataKey | FormRef | None = None
-    enabled: bool | str | DataKey | FormRef | None = None
+    left_caption: str | ScreenDataRef | ComponentRef | None = None
+    center_caption: str | ScreenDataRef | ComponentRef | None = None
+    right_caption: str | ScreenDataRef | ComponentRef | None = None
+    enabled: bool | str | ScreenDataRef | ComponentRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -2006,10 +2153,10 @@ class OptIn(FormComponent):
     )
     enabled: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
-    label: str | DataKey | FormRef
-    required: bool | str | DataKey | FormRef | None = None
-    visible: bool | str | DataKey | FormRef | None = None
-    init_value: bool | str | DataKey | FormRef | None = None
+    label: str | ScreenDataRef | ComponentRef
+    required: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    init_value: bool | str | ScreenDataRef | ComponentRef | None = None
     on_click_action: Action | None = None
 
 
@@ -2042,9 +2189,9 @@ class EmbeddedLink(Component):
     type: ComponentType = dataclasses.field(
         default=ComponentType.EMBEDDED_LINK, init=False, repr=False
     )
-    text: str | DataKey | FormRef
+    text: str | ScreenDataRef | ComponentRef
     on_click_action: Action
-    visible: bool | str | DataKey | FormRef | None = None
+    visible: bool | str | ScreenDataRef | ComponentRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -2091,31 +2238,19 @@ class DatePicker(FormComponent):
         default=ComponentType.DATE_PICKER, init=False, repr=False
     )
     name: str
-    label: str | DataKey | FormRef
-    min_date: datetime.date | str | DataKey | FormRef | None = None
-    max_date: datetime.date | str | DataKey | FormRef | None = None
+    label: str | ScreenDataRef | ComponentRef
+    min_date: datetime.date | str | ScreenDataRef | ComponentRef | None = None
+    max_date: datetime.date | str | ScreenDataRef | ComponentRef | None = None
     unavailable_dates: (
-        Iterable[datetime.date | str] | str | DataKey | FormRef | None
+        Iterable[datetime.date | str] | str | ScreenDataRef | ComponentRef | None
     ) = None
-    helper_text: str | DataKey | FormRef | None = None
-    enabled: bool | str | DataKey | FormRef | None = None
-    required: bool | str | DataKey | FormRef | None = None
-    visible: bool | str | DataKey | FormRef | None = None
-    init_value: datetime.date | str | DataKey | FormRef | None = None
-    error_message: str | DataKey | FormRef | None = None
+    helper_text: str | ScreenDataRef | ComponentRef | None = None
+    enabled: bool | str | ScreenDataRef | ComponentRef | None = None
+    required: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    init_value: datetime.date | str | ScreenDataRef | ComponentRef | None = None
+    error_message: str | ScreenDataRef | ComponentRef | None = None
     on_select_action: Action | None = None
-
-    def __post_init__(self):
-        date_fmt = "%Y-%m-%d"
-        for attr in {"min_date", "max_date", "init_value"}:
-            value = getattr(self, attr)
-            if isinstance(value, datetime.date):
-                setattr(self, attr, value.strftime(date_fmt))
-        if self.unavailable_dates:
-            self.unavailable_dates = [
-                date.strftime(date_fmt) if isinstance(date, datetime.date) else date
-                for date in self.unavailable_dates
-            ]
 
 
 class ScaleType(utils.StrEnum):
@@ -2166,13 +2301,13 @@ class Image(Component):
     type: ComponentType = dataclasses.field(
         default=ComponentType.IMAGE, init=False, repr=False
     )
-    src: str | DataKey | FormRef
-    width: int | str | DataKey | FormRef | None = None
-    height: int | str | DataKey | FormRef | None = None
-    scale_type: ScaleType | str | DataKey | FormRef | None = None
-    aspect_ratio: int | str | DataKey | FormRef
-    alt_text: str | DataKey | FormRef | None = None
-    visible: bool | str | DataKey | FormRef | None = None
+    src: str | ScreenDataRef | ComponentRef
+    width: int | str | ScreenDataRef | ComponentRef | None = None
+    height: int | str | ScreenDataRef | ComponentRef | None = None
+    scale_type: ScaleType | str | ScreenDataRef | ComponentRef | None = None
+    aspect_ratio: int | str | ScreenDataRef | ComponentRef
+    alt_text: str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | ScreenDataRef | ComponentRef | None = None
 
 
 class PhotoSource(utils.StrEnum):
@@ -2233,15 +2368,15 @@ class PhotoPicker(FormComponent):
     required: None = dataclasses.field(default=None, init=False, repr=False)
     init_value: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
-    label: str | DataKey | FormRef
-    description: str | DataKey | FormRef | None = None
-    photo_source: PhotoSource | str | DataKey | FormRef | None = None
-    max_file_size_kb: int | str | DataKey | FormRef | None = None
-    min_uploaded_photos: int | str | DataKey | FormRef | None = None
-    max_uploaded_photos: int | str | DataKey | FormRef | None = None
-    enabled: bool | str | DataKey | FormRef | None = None
-    visible: bool | str | DataKey | FormRef | None = None
-    error_message: str | DataKey | FormRef | None = None
+    label: str | ScreenDataRef | ComponentRef
+    description: str | ScreenDataRef | ComponentRef | None = None
+    photo_source: PhotoSource | str | ScreenDataRef | ComponentRef | None = None
+    max_file_size_kb: int | str | ScreenDataRef | ComponentRef | None = None
+    min_uploaded_photos: int | str | ScreenDataRef | ComponentRef | None = None
+    max_uploaded_photos: int | str | ScreenDataRef | ComponentRef | None = None
+    enabled: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    error_message: str | ScreenDataRef | ComponentRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -2286,15 +2421,15 @@ class DocumentPicker(FormComponent):
     required: None = dataclasses.field(default=None, init=False, repr=False)
     init_value: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
-    label: str | DataKey | FormRef
-    description: str | DataKey | FormRef | None = None
-    max_file_size_kb: int | str | DataKey | FormRef | None = None
-    min_uploaded_documents: int | str | DataKey | FormRef | None = None
-    max_uploaded_documents: int | str | DataKey | FormRef | None = None
-    allowed_mime_types: Iterable[str] | str | DataKey | FormRef | None = None
-    enabled: bool | str | DataKey | FormRef | None = None
-    visible: bool | str | DataKey | FormRef | None = None
-    error_message: str | DataKey | FormRef | None = None
+    label: str | ScreenDataRef | ComponentRef
+    description: str | ScreenDataRef | ComponentRef | None = None
+    max_file_size_kb: int | str | ScreenDataRef | ComponentRef | None = None
+    min_uploaded_documents: int | str | ScreenDataRef | ComponentRef | None = None
+    max_uploaded_documents: int | str | ScreenDataRef | ComponentRef | None = None
+    allowed_mime_types: Iterable[str] | str | ScreenDataRef | ComponentRef | None = None
+    enabled: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    error_message: str | ScreenDataRef | ComponentRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -2304,19 +2439,70 @@ class If(Component):
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#if>`_.
     - It is allowed to nest up to 3 :class:`If` components.
-    - Should have at least one dynamic value (e.g. screen_data.data_key / form_comp.form_ref) in the condition.
+    - Should have at least one dynamic value (e.g. screen_data.ref / form_comp.ref) in the condition.
     - Should always be resolved into a boolean (i.e. no strings or number values).
     - Can be used with literals but should not only contain literals.
     - :class:`Footer` can be added within :class:`If` only in the first level, not inside a nested :class:`If`.
     - If there is a :class:`Footer` within :class:`If`, it should exist in both branches (i.e. ``then`` and ``else``). This means that ``else`` becomes mandatory.
     - If there is a :class:`Footer` within :class:`If` it cannot exist a footer outside, because the max count of :class:`Footer` is 1 per screen.
 
+
+    Supported Operators:
+
+        .. role:: python(code)
+           :language: python
+
+        .. list-table::
+            :widths: 10 5 15 30
+            :header-rows: 1
+
+            * - Operator
+              - Symbol
+              - Types allowed
+              - Example
+            * - Equal
+              - ``==``
+              - :class:`str`, :class:`int`, :class:`float`
+              - :python:`age.ref == 20`
+            * - Not Equal
+              - ``!=``
+              - :class:`str`, :class:`int`, :class:`float`
+              - :python:`age.ref != 20`
+            * - Greater
+              - ``>``
+              - :class:`int`, :class:`float`
+              - :python:`age.ref > 20`
+            * - Greater Equal
+              - ``>=``
+              - :class:`int`, :class:`float`
+              - :python:`age.ref >= 20`
+            * - Less
+              - ``<``
+              - :class:`int`, :class:`float`
+              - :python:`age.ref < 20`
+            * - Less Equal
+              - ``<=``
+              - :class:`int`, :class:`float`
+              - :python:`age.ref <= 20`
+            * - And
+              - ``&&``
+              - <Condition>
+              - :python:`(age.ref > 20) & opt_in.ref`
+            * - Or
+              - ``||``
+              - <Condition>
+              - :python:`(age.ref > 20) | opt_in.ref`
+            * - Not
+              - ``!``
+              - <Condition>
+              - :python:`~opt_in.ref`
+
     Example:
 
             >>> age = ScreenData(key="age", example=20)
             >>> opt_in = OptIn(name="opt_in", ...)
             >>> If(
-            ...     condition=f"{age.data_key} > 21 && {opt_in.form_ref}",
+            ...     condition=(age.ref > 21) && opt_in.ref,
             ...     then=[
             ...         TextHeading(text="Welcome to the club!"),
             ...         TextInput(
@@ -2340,15 +2526,15 @@ class If(Component):
         default=ComponentType.IF, init=False, repr=False
     )
     visible: None = dataclasses.field(default=None, init=False, repr=False)
-    condition: str
-    then: Iterable[_SUPPOERTED_COMPONENTS]
-    else_: Iterable[_SUPPOERTED_COMPONENTS] | None = None
+    condition: Condition | str
+    then: Iterable[Component | dict[str, Any]]
+    else_: Iterable[Component | dict[str, Any]] | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class Switch(Component):
     """
-    Switch component allows users to add components based on a value of a data key / form ref.
+    Switch component allows users to add components based on a value of a screen data ref or form component ref.
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#switch>`_.
 
@@ -2356,7 +2542,7 @@ class Switch(Component):
 
             >>> age = TextInput(name='age', label='Age')
             >>> switch = Switch(
-            ...     value=age.form_ref,
+            ...     value=age.ref,
             ...     cases={
             ...         '10': [TextHeading(text='Under 18')],
             ...         ...
@@ -2372,8 +2558,8 @@ class Switch(Component):
         default=ComponentType.SWITCH, init=False, repr=False
     )
     visible: None = dataclasses.field(default=None, init=False, repr=False)
-    value: DataKey | FormRef | str
-    cases: dict[str, Iterable[_SUPPOERTED_COMPONENTS]]
+    value: ScreenDataRef | ComponentRef | str
+    cases: dict[str, Iterable[Component | dict[str, Any]]]
 
 
 class FlowActionType(utils.StrEnum):
@@ -2456,7 +2642,7 @@ class Action:
 
     name: FlowActionType | str
     next: ActionNext | None = None
-    payload: dict[str, str | DataKey | FormRef] | None = None
+    payload: dict[str, str | ScreenDataRef | ComponentRef] | None = None
 
     def __post_init__(self):
         if self.name == FlowActionType.NAVIGATE.value:
@@ -2467,26 +2653,3 @@ class Action:
                 raise ValueError(
                     "payload is required for FlowActionType.COMPLETE (use {} for empty payload)"
                 )
-
-
-_SUPPOERTED_COMPONENTS: TypeAlias = (
-    TextHeading
-    | TextSubheading
-    | TextBody
-    | TextCaption
-    | TextInput
-    | TextArea
-    | CheckboxGroup
-    | RadioButtonsGroup
-    | OptIn
-    | Dropdown
-    | DatePicker
-    | EmbeddedLink
-    | Image
-    | PhotoPicker
-    | DocumentPicker
-    | If
-    | Switch
-    | Footer
-    | dict[str, Any]
-)
