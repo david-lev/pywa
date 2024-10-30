@@ -4,7 +4,7 @@
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
 
-### 2.0.0 (2024-10-30) **Latest**
+### 2.0.1 (2024-10-30) **Latest**
 
 BREAKING CHANGES!! READ THE [MIGRATION GUIDE](https://github.com/david-lev/pywa/blob/v2/MIGRATION.md)
 
