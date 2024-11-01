@@ -114,8 +114,9 @@ def test_send_media_message(mocker: pytest_mock.MockFixture):
         assert (
             wa.send_video(
                 to="1234567890",
-                video=f.name,  # local file
+                video=f.read(),  # bytes
                 caption="Hello World",
+                mime_type="video/mp4",
             ).id
             == MSG_ID
         )
