@@ -6,17 +6,15 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  build:
     runs-on: ${{ matrix.os }}
-
     strategy:
       matrix:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
-        python-version: [ 3.10.0, 3.11.0, 3.12.0, 3.13.0]
+        python-version: [ '3.10', '3.11', '3.12', '3.13' ]
 
     steps:
       - uses: actions/checkout@v4
-
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
