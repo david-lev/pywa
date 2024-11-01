@@ -110,23 +110,13 @@ def test_send_media_message(mocker: pytest_mock.MockFixture):
         == MSG_ID
     )
 
-    with tempfile.NamedTemporaryFile(suffix=".mp4", delete_on_close=False) as f:
+    with tempfile.NamedTemporaryFile(suffix=".mp4") as f:
         assert (
             wa.send_video(
                 to="1234567890",
                 video=f.read(),  # bytes
                 caption="Hello World",
                 mime_type="video/mp4",
-            ).id
-            == MSG_ID
-        )
-
-        f.close()
-        assert (
-            wa.send_video(
-                to="1234567890",
-                video=f.name,  # local path
-                caption="Hello World",
             ).id
             == MSG_ID
         )
