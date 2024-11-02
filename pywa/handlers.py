@@ -11,6 +11,19 @@ Handlers for incoming updates.
 ... def print_text(wa, m):
 ...     print(m.text)
 
+# Or when you don't have access yet to the WhatsApp instance
+
+# my_handlers.py
+>>> @WhatsApp.on_callback_button(filters.text)
+... def print_text(wa, m):
+...     print(m.text)
+# main.py
+>>> from . import my_handlers
+>>> wa = WhatsApp(handlers_modules=[my_handlers])
+# Or
+>>> wa.load_handlers_modules(my_handlers)
+
+# Remove a callback
 >>> wa.remove_callbacks(print_text)
 
 # Register a callback programmatically
@@ -187,6 +200,12 @@ class Handler(abc.ABC):
             },
         )
 
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(callback={self._callback}, filters={self._filters}, priority={self._priority})"
+
+    def __str__(self) -> str:
+        return self.__repr__()
+
 
 class MessageHandler(Handler):
     """
@@ -262,6 +281,9 @@ class _FactoryHandler(Handler):
         if update is None:
             return False
         return await super().ahandle(wa, update)
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(callback={self._callback}, filters={self._filters}, factory={self._factory}, priority={self._priority})"
 
 
 class CallbackButtonHandler(_FactoryHandler):
