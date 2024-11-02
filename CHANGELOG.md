@@ -3,8 +3,13 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 2.0.3 (2024-11-02) **Latest**
 
-### 2.0.2 (2024-10-30) **Latest**
+- [client] override `_flow_req_cls`
+- [handlers] descriptive repr for `Handler`
+
+
+### 2.0.2 (2024-10-30)
 
 - [server] rely on update hash instead of update id to avid duplicate updates
 
