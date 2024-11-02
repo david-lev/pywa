@@ -57,6 +57,7 @@ from .types import (
     FlowMetricGranularity,
     QRCode,
     CallbackData,
+    FlowRequest,
 )
 from .types.flows import (
     FlowJSON,
@@ -75,7 +76,8 @@ _DEFAULT_VERIFY_DELAY_SEC = 3
 
 
 class WhatsApp(Server, HandlerDecorators, Listeners):
-    _api_class = WhatsAppCloudApi
+    _api_cls = WhatsAppCloudApi
+    _flow_req_cls = FlowRequest
     _httpx_client = httpx.Client
     _async_allowed = False
 
@@ -203,7 +205,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         if not token:
             self._api = None
         else:
-            self._api = self._api_class(
+            self._api = self._api_cls(
                 token=token,
                 session=session or self._httpx_client(),
                 api_version=float(str(api_version)),

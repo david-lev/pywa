@@ -1429,7 +1429,9 @@ class FlowRequestCallbackWrapper:
             ), 200
 
         try:
-            req = FlowRequest.from_dict(data=decrypted_request, raw_encrypted=payload)
+            req = self._wa._flow_req_cls.from_dict(
+                data=decrypted_request, raw_encrypted=payload
+            )
         except Exception:
             _logger.exception(
                 "Flow Endpoint ('%s'): Failed to construct FlowRequest from decrypted data: %s",

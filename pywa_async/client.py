@@ -46,6 +46,7 @@ from .types import (
     QRCode,
     FlowMetricName,
     FlowMetricGranularity,
+    FlowRequest,
 )
 from .types.flows import (
     FlowCategory,
@@ -62,7 +63,8 @@ _logger = logging.getLogger(__name__)
 
 
 class WhatsApp(Server, AsyncListeners, _WhatsApp):
-    _api_class = WhatsAppCloudApiAsync
+    _api_cls = WhatsAppCloudApiAsync
+    _flow_req_cls = FlowRequest
     _httpx_client = httpx.AsyncClient
     _async_allowed = True
     api: WhatsAppCloudApiAsync  # IDE type hinting
