@@ -3,7 +3,11 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-### 2.0.3 (2024-11-02) **Latest**
+### 2.0.4 (2024-11-08) **Latest**
+
+- [client] fix `reply_to_message`
+
+### 2.0.3 (2024-11-02)
 
 - [client] override `_flow_req_cls`
 - [handlers] descriptive repr for `Handler`
