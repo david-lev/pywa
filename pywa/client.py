@@ -586,6 +586,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                     msg=helpers.get_media_msg(
                         media_id_or_url=image, is_url=is_url, caption=caption
                     ),
+                    reply_to_message_id=reply_to_message_id,
                     biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
                 ),
                 from_phone_id=sender,
@@ -683,6 +684,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                     msg=helpers.get_media_msg(
                         media_id_or_url=video, is_url=is_url, caption=caption
                     ),
+                    reply_to_message_id=reply_to_message_id,
                     biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
                 ),
                 from_phone_id=sender,
@@ -787,6 +789,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                         caption=caption,
                         filename=filename,
                     ),
+                    reply_to_message_id=reply_to_message_id,
                     biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
                 ),
                 from_phone_id=sender,
