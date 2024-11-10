@@ -1689,7 +1689,7 @@ class WhatsApp(Server, AsyncListeners, _WhatsApp):
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
-    ) -> str:
+    ) -> SentMessage:
         """
         Send a template to a WhatsApp user.
 
@@ -1701,7 +1701,7 @@ class WhatsApp(Server, AsyncListeners, _WhatsApp):
             >>> wa = WhatsApp(...)
             >>> wa.send_template(
             ...     to='1234567890',
-            ...         template=Temp(
+            ...     template=Temp(
             ...         name='buy_new_iphone_x',
             ...         language=Temp.Language.ENGLISH_US,
             ...         header=Temp.TextValue(value='15'),
@@ -1724,7 +1724,7 @@ class WhatsApp(Server, AsyncListeners, _WhatsApp):
             >>> wa = WhatsApp(...)
             >>> wa.send_template(
             ...     to='1234567890',
-            ...         template=Temp(
+            ...     template=Temp(
             ...         name='auth_with_otp',
             ...         language=Temp.Language.ENGLISH_US,
             ...         buttons=Temp.OTPButtonCode(code='123456'),
@@ -1771,16 +1771,18 @@ class WhatsApp(Server, AsyncListeners, _WhatsApp):
                     filename=None,
                     phone_id=sender,
                 )
-        return (
-            await self.api.send_message(
+        return SentMessage.from_sent_update(
+            client=self,
+            update=await self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ="template",
+                typ="template",  # TODO use MessageType.TEMPLATE when implemented
                 msg=template.to_dict(is_header_url=is_url),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-            )
-        )["messages"][0]["id"]
+            ),
+            from_phone_id=sender,
+        )
 
     async def create_flow(
         self,

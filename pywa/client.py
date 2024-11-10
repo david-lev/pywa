@@ -1912,7 +1912,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
-    ) -> str:
+    ) -> SentMessage:
         """
         Send a template to a WhatsApp user.
 
@@ -1924,7 +1924,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             >>> wa = WhatsApp(...)
             >>> wa.send_template(
             ...     to='1234567890',
-            ...         template=Temp(
+            ...     template=Temp(
             ...         name='buy_new_iphone_x',
             ...         language=Temp.Language.ENGLISH_US,
             ...         header=Temp.TextValue(value='15'),
@@ -1947,7 +1947,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             >>> wa = WhatsApp(...)
             >>> wa.send_template(
             ...     to='1234567890',
-            ...         template=Temp(
+            ...     template=Temp(
             ...         name='auth_with_otp',
             ...         language=Temp.Language.ENGLISH_US,
             ...         buttons=Temp.OTPButtonCode(code='123456'),
@@ -1997,14 +1997,18 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                     media_type=MessageType.VIDEO,
                     phone_id=sender,
                 )
-        return self.api.send_message(
-            sender=sender,
-            to=str(to),
-            typ="template",
-            msg=template.to_dict(is_header_url=is_url),
-            reply_to_message_id=reply_to_message_id,
-            biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-        )["messages"][0]["id"]
+        return SentMessage.from_sent_update(
+            client=self,
+            update=self.api.send_message(
+                sender=sender,
+                to=str(to),
+                typ="template",  # TODO: Use MessageType.TEMPLATE when implemented
+                msg=template.to_dict(is_header_url=is_url),
+                reply_to_message_id=reply_to_message_id,
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+            ),
+            from_phone_id=sender,
+        )
 
     def create_flow(
         self,
