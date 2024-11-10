@@ -3,7 +3,11 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-### 2.0.4 (2024-11-08) **Latest**
+### 2.0.5 (2024-11-10) **Latest**
+
+- [client] fix `send_template` return type `SentMessage`
+
+### 2.0.4 (2024-11-08)
 
 - [client] fix `reply_to_message`
 
