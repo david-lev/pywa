@@ -88,6 +88,11 @@ def test_screen_data_key():
         ScreenData(key="test", example="Example").ref_in(screen="START").to_str()
         == "${screen.START.data.test}"
     )
+    assert (
+        Screen(id="START", layout=Layout(children=[]))
+        / ScreenData(key="test", example="Example").ref
+        == "${screen.START.data.test}"
+    )
 
 
 def test_ref_to_str_without_screen():

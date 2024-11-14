@@ -194,3 +194,138 @@ date_picker_dates_str = FlowJSON(
         )
     ],
 )
+
+global_fields = FlowJSON(
+    version="4.0",
+    screens=[
+        screen_one := Screen(
+            data=[
+                field2 := ScreenData(key="field2", example="data"),
+            ],
+            id="SCREEN_ONE",
+            layout=Layout(
+                type=LayoutType.SINGLE_COLUMN,
+                children=[
+                    field1 := TextInput(name="field1", label="Enter your name"),
+                    Footer(
+                        label="CTA",
+                        on_click_action=Action(
+                            name=FlowActionType.NAVIGATE,
+                            next=ActionNext(
+                                type=ActionNextType.SCREEN, name="SCREEN_TWO"
+                            ),
+                            payload={},
+                        ),
+                    ),
+                ],
+            ),
+            title="Screen 1",
+        ),
+        Screen(
+            id="SCREEN_TWO",
+            terminal=True,
+            layout=Layout(
+                type=LayoutType.SINGLE_COLUMN,
+                children=[
+                    Footer(
+                        label="Complete",
+                        on_click_action=Action(
+                            name=FlowActionType.COMPLETE,
+                            payload={
+                                "field1": screen_one / field1.ref,
+                                "field2": screen_one / field2.ref,
+                            },
+                        ),
+                    ),
+                ],
+            ),
+            title="Screen 2",
+            data={},
+        ),
+    ],
+)
+
+
+forward_refs = FlowJSON(
+    version="4.0",
+    routing_model={"SELECT_SERVICES": ["SELECT_INSURANCE"]},
+    screens=[
+        select_insurance_screen := Screen(
+            id="SELECT_INSURANCE",
+            title="Select insurance",
+            layout=Layout(
+                type=LayoutType.SINGLE_COLUMN,
+                children=[
+                    insurance := RadioButtonsGroup(
+                        name="insurance",
+                        label="Please select your coverage",
+                        data_source=[
+                            basic := DataSource(id="basic", title="Basic"),
+                            standard := DataSource(id="standard", title="Standard"),
+                            full := DataSource(id="full", title="Premium"),
+                        ],
+                    )
+                ],
+            ),
+        ),
+        Screen(
+            terminal=True,
+            id="SELECT_SERVICES",
+            title="Select services",
+            layout=Layout(
+                type=LayoutType.SINGLE_COLUMN,
+                children=[
+                    TextSubheading(text="Select insurance type"),
+                    If(
+                        condition=select_insurance_screen / insurance.ref != "",
+                        then=[
+                            Switch(
+                                value=select_insurance_screen / insurance.ref,
+                                cases={
+                                    basic.id: [
+                                        TextBody(
+                                            text="You've selected a basic insurance"
+                                        )
+                                    ],
+                                    standard.id: [
+                                        TextBody(
+                                            text="You've selected a standard insurance"
+                                        )
+                                    ],
+                                    full.id: [
+                                        TextBody(
+                                            text="You've selected a comprehensive insurance"
+                                        )
+                                    ],
+                                },
+                            )
+                        ],
+                        else_=[
+                            TextBody(text="You haven't selected any insurance type")
+                        ],
+                    ),
+                    EmbeddedLink(
+                        text="Choose insurance type",
+                        on_click_action=Action(
+                            name=FlowActionType.NAVIGATE,
+                            next=ActionNext(
+                                type=ActionNextType.SCREEN, name="SELECT_INSURANCE"
+                            ),
+                            payload={},
+                        ),
+                    ),
+                    Footer(
+                        label="Complete",
+                        on_click_action=Action(
+                            name=FlowActionType.COMPLETE,
+                            payload={
+                                "selected_insurance_type": select_insurance_screen
+                                / insurance.ref
+                            },
+                        ),
+                    ),
+                ],
+            ),
+        ),
+    ],
+)

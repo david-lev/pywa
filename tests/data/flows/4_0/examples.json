@@ -253,5 +253,174 @@
         }
       }
     ]
+  },
+  "global_fields": {
+    "version": "4.0",
+    "screens": [
+      {
+        "data": {
+          "field2": {
+            "type": "string",
+            "__example__": "data"
+          }
+        },
+        "id": "SCREEN_ONE",
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "TextInput",
+              "name": "field1",
+              "label": "Enter your name"
+            },
+            {
+              "type": "Footer",
+              "label": "CTA",
+              "on-click-action": {
+                "name": "navigate",
+                "next": {
+                  "type": "screen",
+                  "name": "SCREEN_TWO"
+                },
+                "payload": {}
+              }
+            }
+          ]
+        },
+        "title": "Screen 1"
+      },
+      {
+        "id": "SCREEN_TWO",
+        "terminal": true,
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "Footer",
+              "label": "Complete",
+              "on-click-action": {
+                "name": "complete",
+                "payload": {
+                  "field1": "${screen.SCREEN_ONE.form.field1}",
+                  "field2": "${screen.SCREEN_ONE.data.field2}"
+                }
+              }
+            }
+          ]
+        },
+        "title": "Screen 2",
+        "data": {}
+      }
+    ]
+  },
+  "forward_refs": {
+    "version": "4.0",
+    "routing_model": {
+      "SELECT_SERVICES": [
+        "SELECT_INSURANCE"
+      ]
+    },
+    "screens": [
+      {
+        "id": "SELECT_INSURANCE",
+        "title": "Select insurance",
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "RadioButtonsGroup",
+              "name": "insurance",
+              "label": "Please select your coverage",
+              "data-source": [
+                {
+                  "id": "basic",
+                  "title": "Basic"
+                },
+                {
+                  "id": "standard",
+                  "title": "Standard"
+                },
+                {
+                  "id": "full",
+                  "title": "Premium"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "terminal": true,
+        "id": "SELECT_SERVICES",
+        "title": "Select services",
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "TextSubheading",
+              "text": "Select insurance type"
+            },
+            {
+              "type": "If",
+              "condition": "(${screen.SELECT_INSURANCE.form.insurance} != '')",
+              "then": [
+                {
+                  "type": "Switch",
+                  "value": "${screen.SELECT_INSURANCE.form.insurance}",
+                  "cases": {
+                    "basic": [
+                      {
+                        "type": "TextBody",
+                        "text": "You've selected a basic insurance"
+                      }
+                    ],
+                    "standard": [
+                      {
+                        "type": "TextBody",
+                        "text": "You've selected a standard insurance"
+                      }
+                    ],
+                    "full": [
+                      {
+                        "type": "TextBody",
+                        "text": "You've selected a comprehensive insurance"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "type": "TextBody",
+                  "text": "You haven't selected any insurance type"
+                }
+              ]
+            },
+            {
+              "type": "EmbeddedLink",
+              "text": "Choose insurance type",
+              "on-click-action": {
+                "name": "navigate",
+                "next": {
+                  "type": "screen",
+                  "name": "SELECT_INSURANCE"
+                },
+                "payload": {}
+              }
+            },
+            {
+              "type": "Footer",
+              "label": "Complete",
+              "on-click-action": {
+                "name": "complete",
+                "payload": {
+                  "selected_insurance_type": "${screen.SELECT_INSURANCE.form.insurance}"
+                }
+              }
+            }
+          ]
+        }
+      }
+    ]
   }
 }

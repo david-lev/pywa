@@ -8,7 +8,7 @@ import datetime
 import json
 import logging
 import pathlib
-from typing import Iterable, TYPE_CHECKING, Any, BinaryIO, Literal, TypeAlias
+from typing import Iterable, TYPE_CHECKING, Any, BinaryIO, Literal, TypeAlias, TypeVar
 
 import httpx
 
@@ -1222,6 +1222,10 @@ class Screen:
             else self.data
         )
 
+    def __truediv__(self, ref: _RefT) -> _RefT:
+        """A shortcut to reference screen data / form components in this screen."""
+        return Ref(prefix=ref.prefix, field=ref.field, screen=self.id)
+
 
 class LayoutType(utils.StrEnum):
     """
@@ -1351,6 +1355,9 @@ class Ref:
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.to_str()})"
+
+
+_RefT = TypeVar("_RefT", bound=Ref)
 
 
 class Condition:
@@ -1563,6 +1570,7 @@ class FormComponent(Component, abc.ABC):
         """
         The component reference variable for this component in another screen.
             - Use ``.ref`` property when the reference is in the same screen.
+            - You can also use ``screen/component.ref`` to get the reference variable in another screen.
             - Added in v4.0.
 
         Example:
@@ -1576,7 +1584,8 @@ class FormComponent(Component, abc.ABC):
             ...         Screen(
             ...             id='START',
             ...             layout=Layout(children=[
-            ...                 TextCaption(text=email.ref_in(other), ...)  # component reference from another screen
+            ...                 TextCaption(text=email.ref_in('OTHER'), ...)  # component reference from another screen
+            ...                 TextCaption(text=other/email.ref, ...)  # using the `/` operator
             ...             ])
             ...         )
             ...     ]
