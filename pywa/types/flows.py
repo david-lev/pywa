@@ -69,6 +69,9 @@ __all__ = [
     "Dropdown",
     "EmbeddedLink",
     "DatePicker",
+    "CalendarPicker",
+    "CalendarPickerMode",
+    "CalendarDay",
     "Image",
     "PhotoPicker",
     "PhotoSource",
@@ -1005,7 +1008,8 @@ class FlowJSON:
                     if k not in _UNDERSCORE_FIELDS
                     else k: v
                     for (k, v) in d
-                    if k not in _SKIP_KEYS and v is not None
+                    # if k not in _SKIP_KEYS and v is not None
+                    if v is not None
                 },
             ),
             cls=_FlowJSONEncoder,
@@ -1286,6 +1290,7 @@ class ComponentType(utils.StrEnum):
     DROPDOWN = "Dropdown"
     EMBEDDED_LINK = "EmbeddedLink"
     DATE_PICKER = "DatePicker"
+    CALENDAR_PICKER = "CalendarPicker"
     IMAGE = "Image"
     PHOTO_PICKER = "PhotoPicker"
     DOCUMENT_PICKER = "DocumentPicker"
@@ -1484,37 +1489,40 @@ class Form(Component):
         if not self.children:
             raise ValueError("At least one child is required")
 
+        if isinstance(self, CalendarPicker):
+            return  # CalendarPicker has `real` init_value and error_message attrs
+
         # Extract init-value's from children
-        if not isinstance(self.init_values, Ref | str):
-            init_values = self.init_values or {}
-            for child in self.children:
-                if getattr(child, "init_value", None) is not None:
-                    if child.name in init_values:
-                        raise ValueError(
-                            f"Duplicate init value for {child.name!r} in form {self.name!r}"
-                        )
-                    if isinstance(self.init_values, str):
-                        raise ValueError(
-                            f"No need to set init value for {child.name!r} if form init values is a dynamic ScreenDataRef"
-                        )
-                    init_values[child.name] = child.init_value
-            self.init_values = init_values or None
+        init_values = self.init_values or {}
+        for child in self.children:
+            if getattr(child, "init_value", None) is not None:
+                if isinstance(self.init_values, Ref | str):
+                    raise ValueError(
+                        f"No need to set init value for {child.name!r} if form init values is a dynamic ScreenDataRef"
+                    )
+                if child.name in init_values:
+                    raise ValueError(
+                        f"Duplicate init value for {child.name!r} in form {self.name!r}"
+                    )
+                init_values[child.name] = child.init_value
+                child.init_value = None
+        self.init_values = init_values or None
 
         # Extract error-message's from children
-        if not isinstance(self.error_messages, Ref | str):
-            error_messages = self.error_messages or {}
-            for child in self.children:
-                if getattr(child, "error_message", None) is not None:
-                    if child.name in error_messages:
-                        raise ValueError(
-                            f"Duplicate error msg for {child.name!r} in form {self.name!r}"
-                        )
-                    if isinstance(self.error_messages, str):
-                        raise ValueError(
-                            f"No need to set error msg for {child.name!r} if form error messages is a dynamic ScreenDataRef"
-                        )
-                    error_messages[child.name] = child.error_message
-            self.error_messages = error_messages or None
+        error_messages = self.error_messages or {}
+        for child in self.children:
+            if getattr(child, "error_message", None) is not None:
+                if isinstance(self.error_messages, Ref | str):
+                    raise ValueError(
+                        f"No need to set error msg for {child.name!r} if form error messages is a dynamic ScreenDataRef"
+                    )
+                if child.name in error_messages:
+                    raise ValueError(
+                        f"Duplicate error msg for {child.name!r} in form {self.name!r}"
+                    )
+                error_messages[child.name] = child.error_message
+                child.error_message = None
+        self.error_messages = error_messages or None
 
 
 class FormComponent(Component, abc.ABC):
@@ -2260,6 +2268,148 @@ class DatePicker(FormComponent):
     init_value: datetime.date | str | ScreenDataRef | ComponentRef | None = None
     error_message: str | ScreenDataRef | ComponentRef | None = None
     on_select_action: Action | None = None
+
+
+class CalendarPickerMode(utils.StrEnum):
+    """
+    The mode of the calendar picker.
+
+    Attributes:
+        SINGLE: Allows to select one date.
+        RANGE: Allows to select start and end dates.
+    """
+
+    SINGLE = "single"
+    RANGE = "range"
+
+
+class CalendarDay(utils.StrEnum):
+    """
+    The days of the week.
+
+    Attributes:
+        MON: Monday
+        TUE: Tuesday
+        WED: Wednesday
+        THU: Thursday
+        FRI: Friday
+        SAT: Saturday
+        SUN: Sunday
+    """
+
+    MON = "Mon"
+    TUE = "Tue"
+    WED = "Wed"
+    THU = "Thu"
+    FRI = "Fri"
+    SAT = "Sat"
+    SUN = "Sun"
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class CalendarPicker(FormComponent):
+    """
+    CalendarPicker component allows users to select a single date or a range of dates from a full calendar interface.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/components/#calendarpicker>`_.
+    - Added in v6.1
+
+    Example:
+
+        >>> CalendarPicker(
+        ...     name='date',
+        ...     label='Appointment Date',
+        ...     mode=CalendarPickerMode.SINGLE,
+        ...     min_date=datetime.date(2024, 7, 21),
+        ...     max_date=datetime.date(2024, 10, 21),
+        ...     unavailable_dates=[
+        ...         datetime.date(2024, 7, 25),
+        ...         datetime.date(2024, 7, 26),
+        ...     ],
+        ...     helper_text='Select a date',
+        ...     required=True
+        ... )
+
+
+    Attributes:
+        name: The unique name (id) for this component (to be used dynamically or in action payloads).
+        label: The label of the calendar picker. Limited to 40 characters. Can be dynamic.
+        title: The title of the calendar picker. Only available when mode is ``CalendarMode.RANGE``. Can be dynamic.
+        description: The description of the calendar picker. Limited to 300 characters. Only available when mode is ``CalendarMode.RANGE``. Can be dynamic.
+        mode: The mode of the calendar picker. Default to ``CalendarMode.SINGLE``. Can be dynamic.
+        min_date: The minimum date (date/datetime) that can be selected. Can be dynamic.
+        max_date: The maximum date (date/datetime) that can be selected. Can be dynamic.
+        unavailable_dates: The dates (dates/datetimes) that cannot be selected. Can be dynamic.
+        include_days: The days of the week to include in the calendar picker. Default to all days. Can be dynamic.
+        min_days: The minimum number of days that can be selected in the range mode. Can be dynamic.
+        max_days: The maximum number of days that can be selected in the range mode. Can be dynamic.
+        helper_text: The helper text of the calendar picker. Limited to 80 characters. Can be dynamic.
+        enabled: Whether the calendar picker is enabled or not. Default to ``True``. Can be dynamic.
+        required: Whether the calendar picker is required or not. Can be dynamic.
+        visible: Whether the calendar picker is visible or not. Default to ``True``. Can be dynamic.
+        init_value: The default value. Only available when component is outside Form component. Can be dynamic.
+        error_message: The error message of the calendar picker. Only available when component is outside Form component. Can be dynamic.
+        on_select_action: The action to perform when a date is selected.
+    """
+
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.CALENDAR_PICKER, init=False, repr=False
+    )
+    name: str
+    title: str | ScreenDataRef | ComponentRef | None = None
+    description: str | ScreenDataRef | ComponentRef | None = None
+    label: (
+        dict[Literal["start-date", "end-date"], str]
+        | str
+        | ScreenDataRef
+        | ComponentRef
+    )
+    mode: CalendarPickerMode | str | ScreenDataRef | ComponentRef | None = None
+    min_date: datetime.date | str | ScreenDataRef | ComponentRef | None = None
+    max_date: datetime.date | str | ScreenDataRef | ComponentRef | None = None
+    unavailable_dates: (
+        Iterable[datetime.date | str] | str | ScreenDataRef | ComponentRef | None
+    ) = None
+    min_days: int | str | ScreenDataRef | ComponentRef | None = None
+    max_days: int | str | ScreenDataRef | ComponentRef | None = None
+    include_days: (
+        Iterable[CalendarDay | str] | str | ScreenDataRef | ComponentRef | None
+    ) = None
+    helper_text: (
+        dict[Literal["start-date", "end-date"], str]
+        | str
+        | ScreenDataRef
+        | ComponentRef
+        | None
+    ) = None
+    enabled: bool | str | ScreenDataRef | ComponentRef | None = None
+    required: (
+        dict[Literal["start-date", "end-date"], bool]
+        | bool
+        | str
+        | ScreenDataRef
+        | ComponentRef
+        | None
+    ) = None
+    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    init_value: (
+        dict[Literal["start-date", "end-date"], datetime.date | str]
+        | datetime.date
+        | str
+        | ScreenDataRef
+        | ComponentRef
+        | None
+    ) = None
+    error_message: (
+        dict[Literal["start-date", "end-date"], str]
+        | str
+        | ScreenDataRef
+        | ComponentRef
+        | None
+    ) = None
+    on_select_action: (
+        dict[Literal["start-date", "end-date"], Action] | Action | None
+    ) = None
 
 
 class ScaleType(utils.StrEnum):

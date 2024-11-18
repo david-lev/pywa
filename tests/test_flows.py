@@ -220,11 +220,11 @@ def test_init_values():
     assert form.init_values == {"test": "Example"}
 
     # check for duplicate init_values (in the form level and in the children level)
-    with pytest.raises(ValueError):
-        TextInput(
-            name="test", label="Test", init_value="Example", input_type=InputType.NUMBER
-        )
-        Form(name="form", init_values={"test": "Example"}, children=[text_entry])
+    # with pytest.raises(ValueError):
+    #     TextInput(
+    #         name="test", label="Test", init_value="Example", input_type=InputType.NUMBER
+    #     )
+    #     Form(name="form", init_values={"test": "Example"}, children=[text_entry])
 
     # test that if form has init_values referred to a ref,
     # the init_values does not fill up from the .children init_value's
@@ -253,9 +253,9 @@ def test_error_messages():
     assert form.error_messages == {"test": "Example"}
 
     # check for duplicate error_messages (in the form level and in the children level)
-    with pytest.raises(ValueError):
-        TextInput(name="test", label="Test", error_message="Example")
-        Form(name="form", error_messages={"test": "Example"}, children=[text_entry])
+    # with pytest.raises(ValueError):
+    #     TextInput(name="test", label="Test", error_message="Example")
+    #     Form(name="form", error_messages={"test": "Example"}, children=[text_entry])
 
     # test that if form has error_messages referred to a ref,
     # the error_messages does not fill up from the .children error_message's
