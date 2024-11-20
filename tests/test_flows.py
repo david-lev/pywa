@@ -78,9 +78,15 @@ def test_component_ref():
         TextInput(name="test", label="Test").ref_in(screen="START").to_str()
         == "${screen.START.form.test}"
     )
+    in_ref = (
+        Screen(id="START", layout=Layout(children=[]))
+        / TextInput(name="test", label="Test").ref
+    )
+    assert in_ref == "${screen.START.form.test}"
+    assert isinstance(in_ref, ComponentRef)
 
 
-def test_screen_data_key():
+def test_screen_data_ref():
     assert ScreenDataRef("test").to_str() == "${data.test}"
     assert ScreenDataRef("test", screen="START").to_str() == "${screen.START.data.test}"
     assert ScreenData(key="test", example="Example").ref.to_str() == "${data.test}"
@@ -88,11 +94,12 @@ def test_screen_data_key():
         ScreenData(key="test", example="Example").ref_in(screen="START").to_str()
         == "${screen.START.data.test}"
     )
-    assert (
+    in_ref = (
         Screen(id="START", layout=Layout(children=[]))
         / ScreenData(key="test", example="Example").ref
-        == "${screen.START.data.test}"
     )
+    assert in_ref == "${screen.START.data.test}"
+    assert isinstance(in_ref, ScreenDataRef)
 
 
 def test_ref_to_str_without_screen():

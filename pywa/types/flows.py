@@ -1228,7 +1228,7 @@ class Screen:
 
     def __truediv__(self, ref: _RefT) -> _RefT:
         """A shortcut to reference screen data / form components in this screen."""
-        return Ref(prefix=ref.prefix, field=ref.field, screen=self.id)
+        return ref.__class__(ref.field, screen=self.id)
 
 
 class LayoutType(utils.StrEnum):
