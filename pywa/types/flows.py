@@ -2739,11 +2739,14 @@ class FlowActionType(utils.StrEnum):
         NAVIGATE: Triggers the next screen with the payload as its input. The CTA button will be disabled until the
          payload with data required for the next screen is supplied.
          (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#navigate-action>`_).
+        OPEN_URL: Opens a URL in the browser
+         (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#open-url-action
     """
 
     COMPLETE = "complete"
     DATA_EXCHANGE = "data_exchange"
     NAVIGATE = "navigate"
+    OPEN_URL = "open_url"
 
 
 class ActionNextType(utils.StrEnum):
@@ -2799,19 +2802,24 @@ class Action:
     Attributes:
         name: The type of the action
         next: The next action to perform (only for ``FlowActionType.NAVIGATE``)
+        url: The URL to open (only for ``FlowActionType.OPEN_URL``)
         payload: The payload of the action (Pass data to the next screen or to the WhatsApp Flows Data Endpoint).
          This payload can take data from form components or from the data of the screen.
     """
 
     name: FlowActionType | str
     next: ActionNext | None = None
+    url: str | None = None
     payload: dict[str, str | ScreenDataRef | ComponentRef] | None = None
 
     def __post_init__(self):
         if self.name == FlowActionType.NAVIGATE.value:
             if self.next is None:
                 raise ValueError("next is required for FlowActionType.NAVIGATE")
-        if self.name == FlowActionType.COMPLETE.value:
+        elif self.name == FlowActionType.OPEN_URL.value:
+            if self.url is None:
+                raise ValueError("url is required for FlowActionType.OPEN_URL")
+        elif self.name == FlowActionType.COMPLETE.value:
             if self.payload is None:
                 raise ValueError(
                     "payload is required for FlowActionType.COMPLETE (use {} for empty payload)"

@@ -43,5 +43,45 @@
         }
       }
     ]
+  },
+  "open_url": {
+    "version": "6.0",
+    "screens": [
+      {
+        "id": "DEMO_SCREEN",
+        "terminal": true,
+        "title": "Demo screen",
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "EmbeddedLink",
+              "text": "This is an external link.",
+              "on-click-action": {
+                "name": "open_url",
+                "url": "https://pywa.readthedocs.io/"
+              }
+            },
+            {
+              "type": "OptIn",
+              "label": "I agree to the terms.",
+              "name": "T&Cs",
+              "on-click-action": {
+                "name": "open_url",
+                "url": "https://pywa.readthedocs.io/"
+              }
+            },
+            {
+              "type": "Footer",
+              "label": "Footer",
+              "on-click-action": {
+                "name": "complete",
+                "payload": {}
+              }
+            }
+          ]
+        }
+      }
+    ]
   }
 }
