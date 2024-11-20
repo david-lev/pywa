@@ -1317,6 +1317,10 @@ class Ref:
             self.field,
         )
 
+    def __str__(self) -> str:
+        """Allowing to use in string concatenation. Added in v6.0."""
+        return self.to_str()
+
     @staticmethod
     def _format_value(val: Ref | bool | int | float | str) -> str:
         if isinstance(val, Ref):

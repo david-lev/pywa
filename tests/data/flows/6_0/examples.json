@@ -1,0 +1,47 @@
+{
+  "string_concatenation": {
+    "version": "6.0",
+    "screens": [
+      {
+        "id": "DEMO_SCREEN",
+        "terminal": true,
+        "title": "Demo screen",
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "TextInput",
+              "label": "First name",
+              "input-type": "text",
+              "name": "first_name",
+              "required": true
+            },
+            {
+              "type": "TextInput",
+              "label": "Age",
+              "input-type": "number",
+              "name": "age",
+              "required": true
+            },
+            {
+              "type": "TextBody",
+              "text": "`'Hello ' ${form.first_name}`"
+            },
+            {
+              "type": "TextBody",
+              "text": "`${form.first_name} ' you are ' ${form.age} ' years old.'`"
+            },
+            {
+              "type": "Footer",
+              "label": "Footer",
+              "on-click-action": {
+                "name": "complete",
+                "payload": {}
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
