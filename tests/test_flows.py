@@ -157,6 +157,97 @@ def test_ref_less_than_or_equal():
     assert condition.to_str() == "(${data.age} <= 21)"
 
 
+def test_ref_addition():
+    ref = Ref(prefix="data", field="age")
+    math_op = ref + 21
+    assert math_op.to_str() == "(${data.age} + 21)"
+
+
+def test_ref_right_addition():
+    ref = Ref(prefix="data", field="age")
+    math_op = 21 + ref
+    assert math_op.to_str() == "(21 + ${data.age})"
+
+
+def test_ref_subtraction():
+    ref = Ref(prefix="data", field="age")
+    math_op = ref - 21
+    assert math_op.to_str() == "(${data.age} - 21)"
+
+
+def test_ref_right_subtraction():
+    ref = Ref(prefix="data", field="age")
+    math_op = 21 - ref
+    assert math_op.to_str() == "(21 - ${data.age})"
+
+
+def test_ref_multiplication():
+    ref = Ref(prefix="data", field="age")
+    math_op = ref * 21
+    assert math_op.to_str() == "(${data.age} * 21)"
+
+
+def test_ref_right_multiplication():
+    ref = Ref(prefix="data", field="age")
+    math_op = 21 * ref
+    assert math_op.to_str() == "(21 * ${data.age})"
+
+
+def test_ref_division():
+    ref = Ref(prefix="data", field="age")
+    math_op = ref / 21
+    assert math_op.to_str() == "(${data.age} / 21)"
+
+
+def test_ref_right_division():
+    ref = Ref(prefix="data", field="age")
+    math_op = 21 / ref
+    assert math_op.to_str() == "(21 / ${data.age})"
+
+
+def test_ref_modulus():
+    ref = Ref(prefix="data", field="age")
+    math_op = ref % 21
+    assert math_op.to_str() == "(${data.age} % 21)"
+
+
+def test_ref_right_modulus():
+    ref = Ref(prefix="data", field="age")
+    math_op = 21 % ref
+    assert math_op.to_str() == "(21 % ${data.age})"
+
+
+def test_math_ref_with_ref():
+    ref_one = Ref(prefix="data", field="age")
+    ref_two = Ref(prefix="data", field="height")
+    math_op = ref_one + ref_two
+    assert math_op.to_str() == "(${data.age} + ${data.height})"
+
+
+def test_ref_with_math_op():
+    ref = Ref(prefix="data", field="age")
+    math_op = 21 + ref
+    ref_with_math_op = ref + math_op
+    assert ref_with_math_op.to_str() == "(${data.age} + (21 + ${data.age}))"
+
+
+def test_math_op_with_ref():
+    ref = Ref(prefix="data", field="age")
+    math_op = 21 + ref
+    math_op_with_ref = math_op + ref
+    assert math_op_with_ref.to_str() == "((21 + ${data.age}) + ${data.age})"
+
+
+def test_ref_with_math_op_and_ref():
+    ref = Ref(prefix="data", field="age")
+    math_op = 21 + ref
+    math_op_with_ref = ref + math_op + ref
+    assert (
+        math_op_with_ref.to_str()
+        == "((${data.age} + (21 + ${data.age})) + ${data.age})"
+    )
+
+
 def test_logical_and_with_ref():
     ref1 = Ref(prefix="data", field="age")
     ref2 = Ref(prefix="form", field="is_verified")

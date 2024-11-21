@@ -1325,7 +1325,7 @@ class Ref:
 
     @staticmethod
     def _format_value(val: Ref | bool | int | float | str) -> str:
-        if isinstance(val, Ref):
+        if isinstance(val, (Ref, MathExpression)):
             return val.to_str()
         elif isinstance(val, str):
             return f"'{val}'"
@@ -1351,6 +1351,36 @@ class Ref:
     def __le__(self, other: Ref | int | float) -> Condition:
         return Condition(f"({self.to_str()} <= {self._format_value(other)})")
 
+    def __add__(self, other: Ref | int | float) -> MathExpression:
+        return MathExpression(f"({self.to_str()} + {self._format_value(other)})")
+
+    def __radd__(self, other: Ref | int | float) -> MathExpression:
+        return MathExpression(f"({self._format_value(other)} + {self.to_str()})")
+
+    def __sub__(self, other: Ref | int | float) -> MathExpression:
+        return MathExpression(f"({self.to_str()} - {self._format_value(other)})")
+
+    def __rsub__(self, other: Ref | int | float) -> MathExpression:
+        return MathExpression(f"({self._format_value(other)} - {self.to_str()})")
+
+    def __mul__(self, other: Ref | int | float) -> MathExpression:
+        return MathExpression(f"({self.to_str()} * {self._format_value(other)})")
+
+    def __rmul__(self, other: Ref | int | float) -> MathExpression:
+        return MathExpression(f"({self._format_value(other)} * {self.to_str()})")
+
+    def __truediv__(self, other: Ref | int | float) -> MathExpression:
+        return MathExpression(f"({self.to_str()} / {self._format_value(other)})")
+
+    def __rtruediv__(self, other: Ref | int | float) -> MathExpression:
+        return MathExpression(f"({self._format_value(other)} / {self.to_str()})")
+
+    def __mod__(self, other: Ref | int | float) -> MathExpression:
+        return MathExpression(f"({self.to_str()} % {self._format_value(other)})")
+
+    def __rmod__(self, other: Ref | int | float) -> MathExpression:
+        return MathExpression(f"({self._format_value(other)} % {self.to_str()})")
+
     def __and__(self, other: Ref | Condition) -> Condition:
         if isinstance(other, Ref):
             return Condition(f"({self.to_str()} && {other.to_str()})")
@@ -1371,6 +1401,20 @@ class Ref:
 _RefT = TypeVar("_RefT", bound=Ref)
 
 
+class MathExpression:
+    def __init__(self, expression: str):
+        self._expression = expression
+
+    def __str__(self) -> str:
+        return self.to_str()
+
+    def __repr__(self) -> str:
+        return f"MathExpression({self._expression})"
+
+    def to_str(self) -> str:
+        return self._expression
+
+
 class Condition:
     def __init__(self, expression: str):
         self._expression = expression
@@ -1388,11 +1432,14 @@ class Condition:
     def __invert__(self) -> Condition:
         return Condition(f"!{self._expression}")
 
-    def to_str(self) -> str:
-        return self._expression
+    def __str__(self) -> str:
+        return self.to_str()
 
     def __repr__(self) -> str:
         return f"Condition({self._expression})"
+
+    def to_str(self) -> str:
+        return self._expression
 
 
 class ScreenDataRef(Ref):
