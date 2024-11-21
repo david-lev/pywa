@@ -335,5 +335,48 @@
         }
       }
     ]
+  },
+  "math_operators": {
+    "version": "6.0",
+    "screens": [
+      {
+        "id": "DEMO_SCREEN",
+        "title": "Demo Screen",
+        "terminal": true,
+        "success": true,
+        "data": {
+          "number_1": {
+            "type": "number",
+            "__example__": 10
+          },
+          "number_2": {
+            "type": "number",
+            "__example__": 20
+          }
+        },
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "TextBody",
+              "text": [
+                "`'The sum of ' ${data.number_1} ' and ' ${data.number_2} ' is ' (${data.number_1} + ${data.number_2})`",
+                "`'The difference of ' ${data.number_1} ' and ' ${data.number_2} ' is ' (${data.number_1} - ${data.number_2})`",
+                "`'The product of ' ${data.number_1} ' and ' ${data.number_2} ' is ' (${data.number_1} * ${data.number_2})`",
+                "`'The division of ' ${data.number_1} ' by ' ${data.number_2} ' is ' (${data.number_1} / ${data.number_2})`"
+              ]
+            },
+            {
+              "type": "Footer",
+              "label": "Static footer label",
+              "on-click-action": {
+                "name": "complete",
+                "payload": {}
+              }
+            }
+          ]
+        }
+      }
+    ]
   }
 }

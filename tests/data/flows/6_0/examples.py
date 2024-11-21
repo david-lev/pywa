@@ -266,3 +266,46 @@ update_data = FlowJSON(
         )
     ],
 )
+
+
+math_operators = FlowJSON(
+    version="6.0",
+    screens=[
+        Screen(
+            id="DEMO_SCREEN",
+            title="Demo Screen",
+            terminal=True,
+            success=True,
+            data=[
+                number_1 := ScreenData(
+                    key="number_1",
+                    example=10,
+                ),
+                number_2 := ScreenData(
+                    key="number_2",
+                    example=20,
+                ),
+            ],
+            layout=Layout(
+                type=LayoutType.SINGLE_COLUMN,
+                children=[
+                    TextBody(
+                        text=[
+                            f"`'The sum of ' {number_1.ref} ' and ' {number_2.ref} ' is ' {number_1.ref + number_2.ref}`",
+                            f"`'The difference of ' {number_1.ref} ' and ' {number_2.ref} ' is ' {number_1.ref - number_2.ref}`",
+                            f"`'The product of ' {number_1.ref} ' and ' {number_2.ref} ' is ' {number_1.ref * number_2.ref}`",
+                            f"`'The division of ' {number_1.ref} ' by ' {number_2.ref} ' is ' {number_1.ref / number_2.ref}`",
+                        ],
+                    ),
+                    Footer(
+                        label="Static footer label",
+                        on_click_action=Action(
+                            name=FlowActionType.COMPLETE,
+                            payload={},
+                        ),
+                    ),
+                ],
+            ),
+        ),
+    ],
+)
