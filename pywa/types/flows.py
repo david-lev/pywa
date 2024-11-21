@@ -888,11 +888,6 @@ _UNDERSCORE_FIELDS = {
     "refresh_on_back",
 }
 
-_SKIP_KEYS = {
-    "init_value",  # Default value copied to Form.init_values
-    "error_message",  # Error message copied to Form.error_messages
-}
-
 _PY_TO_JSON_TYPES = {
     str: "string",
     int: "number",
@@ -1008,7 +1003,6 @@ class FlowJSON:
                     if k not in _UNDERSCORE_FIELDS
                     else k: v
                     for (k, v) in d
-                    # if k not in _SKIP_KEYS and v is not None
                     if v is not None
                 },
             ),
@@ -1493,9 +1487,6 @@ class Form(Component):
         if not self.children:
             raise ValueError("At least one child is required")
 
-        if isinstance(self, CalendarPicker):
-            return  # CalendarPicker has `real` init_value and error_message attrs
-
         # Extract init-value's from children
         init_values = self.init_values or {}
         for child in self.children:
@@ -1869,7 +1860,7 @@ class TextInput(TextEntryComponent):
         helper_text: The helper text of the text input. Limited to 80 characters. Can be dynamic.
         enabled: Whether the text input is enabled or not. Default to ``True``. Can be dynamic.
         visible: Whether the text input is visible or not. Default to ``True``. Can be dynamic.
-        init_value: The default value of the text input. Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic.
+        init_value: The default value of the text input. Can be dynamic.
         error_message: The error message of the text input. Shortcuts for ``error_messages`` of the parent :class:`Form`. Can be dynamic.
     """
 
@@ -1915,7 +1906,7 @@ class TextArea(TextEntryComponent):
         helper_text: The helper text of the text area. Limited to 80 characters. Can be dynamic.
         enabled: Whether the text area is enabled or not. Default to ``True``. Can be dynamic.
         visible: Whether the text area is visible or not. Default to ``True``. Can be dynamic.
-        init_value: The default value of the text area. Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic.
+        init_value: The default value of the text area. Can be dynamic.
         error_message: The error message of the text area. Shortcuts for ``error_messages`` of the parent :class:`Form`. Can be dynamic.
     """
 
@@ -1967,7 +1958,7 @@ class CheckboxGroup(FormComponent):
         required: Whether the checkbox group is required or not. Can be dynamic.
         visible: Whether the checkbox group is visible or not. Default to ``True``. Can be dynamic.
         enabled: Whether the checkbox group is enabled or not. Default to ``True``. Can be dynamic.
-        init_value: The default values (IDs of the data sources). Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic.
+        init_value: The default values (IDs of the data sources). Can be dynamic.
         on_select_action: The action to perform when an item is selected.
     """
 
@@ -2017,7 +2008,7 @@ class RadioButtonsGroup(FormComponent):
         required: Whether the radio buttons group is required or not. Can be dynamic.
         visible: Whether the radio buttons group is visible or not. Default to ``True``. Can be dynamic.
         enabled: Whether the radio buttons group is enabled or not. Default to ``True``. Can be dynamic.
-        init_value: The default value (ID of the data source). Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic.
+        init_value: The default value (ID of the data source). Can be dynamic.
         on_select_action: The action to perform when an item is selected.
     """
 
@@ -2064,7 +2055,7 @@ class Dropdown(FormComponent):
         enabled: Whether the dropdown is enabled or not. Default to ``True``. Can be dynamic.
         required: Whether the dropdown is required or not. Can be dynamic.
         visible: Whether the dropdown is visible or not. Default to ``True``. Can be dynamic.
-        init_value: The default value (ID of the data source). Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic.
+        init_value: The default value (ID of the data source). Can be dynamic.
         on_select_action: The action to perform when an item is selected.
     """
 
@@ -2165,7 +2156,7 @@ class OptIn(FormComponent):
         label: The label of the opt in. Limited to 30 characters. Can be dynamic.
         required: Whether the opt in is required or not. Can be dynamic.
         visible: Whether the opt in is visible or not. Default to ``True``. Can be dynamic.
-        init_value: The default value of the opt in. Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic.
+        init_value: The default value of the opt in. Can be dynamic.
         on_click_action: The action to perform when the opt in is clicked.
     """
 
@@ -2250,7 +2241,7 @@ class DatePicker(FormComponent):
         enabled: Whether the date picker is enabled or not. Default to ``True``. Can be dynamic.
         required: Whether the date picker is required or not. Can be dynamic.
         visible: Whether the date picker is visible or not. Default to ``True``. Can be dynamic.
-        init_value: The default value. Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic.
+        init_value: The default value. Can be dynamic.
         error_message: The error message of the date picker. Shortcuts for ``error_messages`` of the parent :class:`Form`. Can be dynamic.
         on_select_action: The action to perform when a date is selected.
     """
@@ -2739,14 +2730,17 @@ class FlowActionType(utils.StrEnum):
         NAVIGATE: Triggers the next screen with the payload as its input. The CTA button will be disabled until the
          payload with data required for the next screen is supplied.
          (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#navigate-action>`_).
-        OPEN_URL: Opens a URL in the browser
+        OPEN_URL: Opens a URL in the browser. Added in v6.0
          (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#open-url-action
+        UPDATE_DATA: Update the data of the current screen. Added in v6.0
+         (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#update-data-action>`_).
     """
 
     COMPLETE = "complete"
     DATA_EXCHANGE = "data_exchange"
     NAVIGATE = "navigate"
     OPEN_URL = "open_url"
+    UPDATE_DATA = "update_data"
 
 
 class ActionNextType(utils.StrEnum):
@@ -2799,6 +2793,11 @@ class Action:
         ...     payload={'data': 'value'}
         ... )
 
+        >>> open_url_action = Action(
+        ...     name=FlowActionType.OPEN_URL,
+        ...     url='https://example.com'
+        ... )
+
     Attributes:
         name: The type of the action
         next: The next action to perform (only for ``FlowActionType.NAVIGATE``)
@@ -2810,7 +2809,10 @@ class Action:
     name: FlowActionType | str
     next: ActionNext | None = None
     url: str | None = None
-    payload: dict[str, str | ScreenDataRef | ComponentRef] | None = None
+    payload: (
+        dict[str, str | bool | Iterable[DataSource] | ScreenDataRef | ComponentRef]
+        | None
+    ) = None
 
     def __post_init__(self):
         if self.name == FlowActionType.NAVIGATE.value:
