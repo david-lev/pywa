@@ -895,6 +895,13 @@ _PY_TO_JSON_TYPES = {
     bool: "boolean",
 }
 
+_DATA_SOURCE_SKIP_FIELDS = {
+    "on_select_action",
+    "on-select-action",
+    "on_unselect_action",
+    "on-unselect-action",
+}
+
 
 class _FlowJSONEncoder(json.JSONEncoder):
     def default(self, o):
@@ -907,10 +914,9 @@ class _FlowJSONEncoder(json.JSONEncoder):
                     data[item.key] = dict(
                         **self._get_json_type(item.example), __example__=item.example
                     )
-                except KeyError as e:
+                except KeyError:
                     raise ValueError(
                         f"ScreenData: Invalid example type {type(item.example)!r} for {item.key!r}."
-                        f"{e}"
                     )
             return data
         if isinstance(o, DataSource):
@@ -962,7 +968,7 @@ class _FlowJSONEncoder(json.JSONEncoder):
                 if isinstance(item, DataSource)
                 else item.items()
             )
-            if v is not None
+            if v is not None and k not in _DATA_SOURCE_SKIP_FIELDS
         }
 
 
@@ -1038,6 +1044,8 @@ class DataSource:
 
     id: str
     title: str
+    on_select_action: Action | None = None
+    on_unselect_action: Action | None = None
     description: str | None = None
     metadata: str | None = None
     enabled: bool | None = None
