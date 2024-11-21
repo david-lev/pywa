@@ -1271,7 +1271,13 @@ class Component(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def visible(self) -> bool | str | None: ...
+    def visible(self) -> bool | str | Condition | None: ...
+
+    def __post_init__(self):
+        if isinstance(self.visible, Condition):
+            self.visible.wrap_with_backticks = (
+                True  # visible condition should be wrapped with backticks
+            )
 
 
 class ComponentType(utils.StrEnum):
@@ -1418,6 +1424,7 @@ class MathExpression:
 class Condition:
     def __init__(self, expression: str):
         self._expression = expression
+        self.wrap_with_backticks = False
 
     def __and__(self, other: Condition | Ref) -> Condition:
         if isinstance(other, Condition):
@@ -1439,7 +1446,11 @@ class Condition:
         return f"Condition({self._expression})"
 
     def to_str(self) -> str:
-        return self._expression
+        return (
+            self._expression
+            if not self.wrap_with_backticks
+            else f"`{self._expression}`"
+        )
 
 
 class ScreenDataRef(Ref):
@@ -1704,7 +1715,7 @@ class TextHeading(TextComponent):
         default=ComponentType.TEXT_HEADING, init=False, repr=False
     )
     text: str | ScreenDataRef | ComponentRef
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1727,7 +1738,7 @@ class TextSubheading(TextComponent):
         default=ComponentType.TEXT_SUBHEADING, init=False, repr=False
     )
     text: str | ScreenDataRef | ComponentRef
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1761,7 +1772,7 @@ class TextBody(TextComponent):
     markdown: bool | None = None
     font_weight: FontWeight | str | ScreenDataRef | ComponentRef | None = None
     strikethrough: bool | str | ScreenDataRef | ComponentRef | None = None
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1795,7 +1806,7 @@ class TextCaption(TextComponent):
     markdown: bool | None = None
     font_weight: FontWeight | str | ScreenDataRef | ComponentRef | None = None
     strikethrough: bool | str | ScreenDataRef | ComponentRef | None = None
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1843,7 +1854,7 @@ class RichText(TextComponent):
         default=ComponentType.RICH_TEXT, init=False, repr=False
     )
     text: str | Iterable[str] | ScreenDataRef | ComponentRef
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
 
 
 class TextEntryComponent(FormComponent, abc.ABC):
@@ -1930,7 +1941,7 @@ class TextInput(TextEntryComponent):
     max_chars: int | str | ScreenDataRef | ComponentRef | None = None
     helper_text: str | ScreenDataRef | ComponentRef | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     init_value: str | ScreenDataRef | ComponentRef | None = None
     error_message: str | ScreenDataRef | ComponentRef | None = None
 
@@ -1974,7 +1985,7 @@ class TextArea(TextEntryComponent):
     max_length: int | str | ScreenDataRef | ComponentRef | None = None
     helper_text: str | ScreenDataRef | ComponentRef | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     init_value: str | ScreenDataRef | ComponentRef | None = None
     error_message: str | ScreenDataRef | ComponentRef | None = None
 
@@ -2027,7 +2038,7 @@ class CheckboxGroup(FormComponent):
     min_selected_items: int | str | ScreenDataRef | ComponentRef | None = None
     max_selected_items: int | str | ScreenDataRef | ComponentRef | None = None
     required: bool | str | ScreenDataRef | ComponentRef | None = None
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
     init_value: list[str] | str | ScreenDataRef | ComponentRef | None = None
     on_select_action: Action | None = None
@@ -2075,7 +2086,7 @@ class RadioButtonsGroup(FormComponent):
     label: str | ScreenDataRef | ComponentRef | None = None
     description: str | ScreenDataRef | ComponentRef | None = None
     required: bool | str | ScreenDataRef | ComponentRef | None = None
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
     init_value: str | ScreenDataRef | ComponentRef | None = None
     on_select_action: Action | None = None
@@ -2122,7 +2133,7 @@ class Dropdown(FormComponent):
     data_source: Iterable[DataSource] | str | ScreenDataRef | ComponentRef
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
     required: bool | str | ScreenDataRef | ComponentRef | None = None
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     init_value: str | ScreenDataRef | ComponentRef | None = None
     on_select_action: Action | None = None
 
@@ -2222,7 +2233,7 @@ class OptIn(FormComponent):
     name: str
     label: str | ScreenDataRef | ComponentRef
     required: bool | str | ScreenDataRef | ComponentRef | None = None
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     init_value: bool | str | ScreenDataRef | ComponentRef | None = None
     on_click_action: Action | None = None
 
@@ -2258,7 +2269,7 @@ class EmbeddedLink(Component):
     )
     text: str | ScreenDataRef | ComponentRef
     on_click_action: Action
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -2314,7 +2325,7 @@ class DatePicker(FormComponent):
     helper_text: str | ScreenDataRef | ComponentRef | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
     required: bool | str | ScreenDataRef | ComponentRef | None = None
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     init_value: datetime.date | str | ScreenDataRef | ComponentRef | None = None
     error_message: str | ScreenDataRef | ComponentRef | None = None
     on_select_action: Action | None = None
@@ -2441,7 +2452,7 @@ class CalendarPicker(FormComponent):
         | ComponentRef
         | None
     ) = None
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     init_value: (
         dict[Literal["start-date", "end-date"], datetime.date | str]
         | datetime.date
@@ -2516,7 +2527,7 @@ class Image(Component):
     scale_type: ScaleType | str | ScreenDataRef | ComponentRef | None = None
     aspect_ratio: int | str | ScreenDataRef | ComponentRef
     alt_text: str | ScreenDataRef | ComponentRef | None = None
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
 
 
 class PhotoSource(utils.StrEnum):
@@ -2584,7 +2595,7 @@ class PhotoPicker(FormComponent):
     min_uploaded_photos: int | str | ScreenDataRef | ComponentRef | None = None
     max_uploaded_photos: int | str | ScreenDataRef | ComponentRef | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     error_message: str | ScreenDataRef | ComponentRef | None = None
 
 
@@ -2637,7 +2648,7 @@ class DocumentPicker(FormComponent):
     max_uploaded_documents: int | str | ScreenDataRef | ComponentRef | None = None
     allowed_mime_types: Iterable[str] | str | ScreenDataRef | ComponentRef | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     error_message: str | ScreenDataRef | ComponentRef | None = None
 
 

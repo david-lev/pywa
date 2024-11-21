@@ -309,3 +309,36 @@ math_operators = FlowJSON(
         ),
     ],
 )
+
+visible_condition = FlowJSON(
+    version="6.0",
+    screens=[
+        Screen(
+            id="DEMO_SCREEN",
+            title="Demo Screen",
+            terminal=True,
+            success=True,
+            layout=Layout(
+                type=LayoutType.SINGLE_COLUMN,
+                children=[
+                    number := TextInput(
+                        label="Enter a number",
+                        input_type=InputType.NUMBER,
+                        name="number",
+                    ),
+                    TextBody(
+                        text="You choose the right number!",
+                        visible=number.ref == 42,
+                    ),
+                    Footer(
+                        label="Static footer label",
+                        on_click_action=Action(
+                            name=FlowActionType.COMPLETE,
+                            payload={},
+                        ),
+                    ),
+                ],
+            ),
+        )
+    ],
+)

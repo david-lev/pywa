@@ -315,6 +315,19 @@ def test_combined_conditions_with_literal_after():
     assert condition.to_str() == "((${data.age} > 18) && ${form.is_verified})"
 
 
+def test_condition_with_backticks():
+    ref = Ref(prefix="data", field="age")
+    condition = ref > 18
+    assert condition.to_str() == "(${data.age} > 18)"
+    condition.wrap_with_backticks = True
+    assert condition.to_str() == "`(${data.age} > 18)`"
+
+
+def visible_conditions_wrapped_with_backticks():
+    text = TextInput(name="test", label="Test", visible=Ref("data", "age") > 18)
+    assert text.visible.to_str() == "`(${data.age} > 18)`"
+
+
 def test_init_values():
     text_entry = TextInput(name="test", label="Test", init_value="Example")
     form = Form(name="form", children=[text_entry])
