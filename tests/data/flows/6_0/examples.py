@@ -28,8 +28,7 @@ string_concatenation = FlowJSON(
                     ),
                     Footer(
                         label="Footer",
-                        on_click_action=Action(
-                            name=FlowActionType.COMPLETE,
+                        on_click_action=CompleteAction(
                             payload={},
                         ),
                     ),
@@ -51,23 +50,20 @@ open_url = FlowJSON(
                 children=[
                     EmbeddedLink(
                         text="This is an external link.",
-                        on_click_action=Action(
-                            name=FlowActionType.OPEN_URL,
+                        on_click_action=OpenUrlAction(
                             url="https://pywa.readthedocs.io/",
                         ),
                     ),
                     OptIn(
                         label="I agree to the terms.",
                         name="T&Cs",
-                        on_click_action=Action(
-                            name=FlowActionType.OPEN_URL,
+                        on_click_action=OpenUrlAction(
                             url="https://pywa.readthedocs.io/",
                         ),
                     ),
                     Footer(
                         label="Footer",
-                        on_click_action=Action(
-                            name=FlowActionType.COMPLETE,
+                        on_click_action=CompleteAction(
                             payload={},
                         ),
                     ),
@@ -108,19 +104,16 @@ update_data = FlowJSON(
                         DataSource(
                             id="1",
                             title="USA",
-                            on_select_action=Action(
-                                name=FlowActionType.UPDATE_DATA,
+                            on_select_action=UpdateDataAction(
                                 payload={
                                     states.key: [
                                         DataSource(
                                             id="new_york",
                                             title="New York",
-                                            on_unselect_action=Action(
-                                                name=FlowActionType.UPDATE_DATA,
+                                            on_unselect_action=UpdateDataAction(
                                                 payload={pincode_visibility.key: False},
                                             ),
-                                            on_select_action=Action(
-                                                name=FlowActionType.UPDATE_DATA,
+                                            on_select_action=UpdateDataAction(
                                                 payload={
                                                     pincode.key: [
                                                         DataSource(
@@ -137,12 +130,10 @@ update_data = FlowJSON(
                                         DataSource(
                                             id="california",
                                             title="California",
-                                            on_unselect_action=Action(
-                                                name=FlowActionType.UPDATE_DATA,
+                                            on_unselect_action=UpdateDataAction(
                                                 payload={pincode_visibility.key: False},
                                             ),
-                                            on_select_action=Action(
-                                                name=FlowActionType.UPDATE_DATA,
+                                            on_select_action=UpdateDataAction(
                                                 payload={
                                                     pincode.key: [
                                                         DataSource(
@@ -160,8 +151,7 @@ update_data = FlowJSON(
                                     state_visibility.key: True,
                                 },
                             ),
-                            on_unselect_action=Action(
-                                name=FlowActionType.UPDATE_DATA,
+                            on_unselect_action=UpdateDataAction(
                                 payload={
                                     state_visibility.key: False,
                                     pincode_visibility.key: False,
@@ -171,19 +161,16 @@ update_data = FlowJSON(
                         DataSource(
                             id="2",
                             title="Canada",
-                            on_select_action=Action(
-                                name=FlowActionType.UPDATE_DATA,
+                            on_select_action=UpdateDataAction(
                                 payload={
                                     states.key: [
                                         DataSource(
                                             id="ontario",
                                             title="Ontario",
-                                            on_unselect_action=Action(
-                                                name=FlowActionType.UPDATE_DATA,
+                                            on_unselect_action=UpdateDataAction(
                                                 payload={pincode_visibility.key: False},
                                             ),
-                                            on_select_action=Action(
-                                                name=FlowActionType.UPDATE_DATA,
+                                            on_select_action=UpdateDataAction(
                                                 payload={
                                                     pincode.key: [
                                                         DataSource(
@@ -200,12 +187,10 @@ update_data = FlowJSON(
                                         DataSource(
                                             id="quebec",
                                             title="Quebec",
-                                            on_unselect_action=Action(
-                                                name=FlowActionType.UPDATE_DATA,
+                                            on_unselect_action=UpdateDataAction(
                                                 payload={pincode_visibility.key: False},
                                             ),
-                                            on_select_action=Action(
-                                                name=FlowActionType.UPDATE_DATA,
+                                            on_select_action=UpdateDataAction(
                                                 payload={
                                                     pincode.key: [
                                                         DataSource(
@@ -223,8 +208,7 @@ update_data = FlowJSON(
                                     state_visibility.key: True,
                                 },
                             ),
-                            on_unselect_action=Action(
-                                name=FlowActionType.UPDATE_DATA,
+                            on_unselect_action=UpdateDataAction(
                                 payload={
                                     state_visibility.key: False,
                                     pincode_visibility.key: False,
@@ -256,8 +240,7 @@ update_data = FlowJSON(
                     ),
                     Footer(
                         label="Complete",
-                        on_click_action=Action(
-                            name=FlowActionType.COMPLETE,
+                        on_click_action=CompleteAction(
                             payload={},
                         ),
                     ),
@@ -299,8 +282,7 @@ math_operators = FlowJSON(
                     ),
                     Footer(
                         label="Static footer label",
-                        on_click_action=Action(
-                            name=FlowActionType.COMPLETE,
+                        on_click_action=CompleteAction(
                             payload={},
                         ),
                     ),
@@ -332,8 +314,7 @@ visible_condition = FlowJSON(
                     ),
                     Footer(
                         label="Static footer label",
-                        on_click_action=Action(
-                            name=FlowActionType.COMPLETE,
+                        on_click_action=CompleteAction(
                             payload={},
                         ),
                     ),

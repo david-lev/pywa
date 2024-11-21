@@ -63,14 +63,15 @@ def test_empty_form():
 
 
 def test_action():
-    with pytest.raises(ValueError):  # no next action
-        Action(name=FlowActionType.NAVIGATE)
+    with pytest.warns(DeprecationWarning):
+        with pytest.raises(ValueError):  # no next action
+            Action(name=FlowActionType.NAVIGATE)
 
-    with pytest.raises(ValueError):  # no payload
-        Action(name=FlowActionType.COMPLETE)
+        with pytest.raises(ValueError):  # no payload
+            Action(name=FlowActionType.COMPLETE)
 
-    with pytest.raises(ValueError):  # no url
-        Action(name=FlowActionType.OPEN_URL)
+        with pytest.raises(ValueError):  # no url
+            Action(name=FlowActionType.OPEN_URL)
 
 
 def test_component_ref():

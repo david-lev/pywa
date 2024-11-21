@@ -34,15 +34,13 @@ calendar_picker_single_mode = FlowJSON(
                             CalendarDay.FRI,
                         ],
                         init_value=datetime.date(2024, 10, 23),
-                        on_select_action=Action(
-                            name=FlowActionType.DATA_EXCHANGE,
+                        on_select_action=DataExchangeAction(
                             payload={"calendar": ComponentRef("calendar")},
                         ),
                     ),
                     Footer(
                         label="Continue",
-                        on_click_action=Action(
-                            name=FlowActionType.DATA_EXCHANGE,
+                        on_click_action=DataExchangeAction(
                             payload={},
                         ),
                     ),
@@ -101,15 +99,13 @@ calendar_picker_range_mode = FlowJSON(
                             "start-date": datetime.date(2024, 10, 22),
                             "end-date": datetime.date(2024, 10, 25),
                         },
-                        on_select_action=Action(
-                            name=FlowActionType.DATA_EXCHANGE,
+                        on_select_action=DataExchangeAction(
                             payload={"calendar_range": ComponentRef("calendar_range")},
                         ),
                     ),
                     Footer(
                         label="Continue",
-                        on_click_action=Action(
-                            name=FlowActionType.DATA_EXCHANGE,
+                        on_click_action=DataExchangeAction(
                             payload={},
                         ),
                     ),

@@ -31,17 +31,14 @@ rich_text = FlowJSON(
                         name="toc",
                         required=True,
                         label="RichText can be used to render large static or dynamic texts.",
-                        on_click_action=Action(
-                            name=FlowActionType.NAVIGATE,
+                        on_click_action=NavigateAction(
                             next=ActionNext(type=ActionNextType.SCREEN, name="TOC"),
                             payload={},
                         ),
                     ),
                     Footer(
                         label="Proceed",
-                        on_click_action=Action(
-                            name=FlowActionType.COMPLETE, payload={}
-                        ),
+                        on_click_action=CompleteAction(payload={}),
                     ),
                 ],
             ),

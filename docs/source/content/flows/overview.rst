@@ -80,6 +80,8 @@ Every component on the FlowJSON, has a corresponding class in :mod:`pywa.types.f
        :class:`CheckboxGroup`,
        :class:`Dropdown`,
        :class:`OptIn`,
+       :class:`DatePicker`,
+       :class:`CalendarPicker`,
        :class:`PhotoPicker`,
        :class:`DocumentPicker`
    * - Navigation
@@ -88,6 +90,12 @@ Every component on the FlowJSON, has a corresponding class in :mod:`pywa.types.f
    * - Conditional Component Rendering
      - :class:`If`,
        :class:`Switch`
+   * - Actions
+     - :class:`DataExchangeAction`,
+       :class:`NavigateAction`,
+       :class:`CompleteAction`,
+       :class:`UpdateDataAction`,
+       :class:`OpenUrlAction`
 
 ==================
 

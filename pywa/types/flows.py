@@ -8,7 +8,8 @@ import datetime
 import json
 import logging
 import pathlib
-from typing import Iterable, TYPE_CHECKING, Any, BinaryIO, Literal, TypeAlias, TypeVar
+import warnings
+from typing import Iterable, TYPE_CHECKING, Any, BinaryIO, Literal, TypeVar
 
 import httpx
 
@@ -81,6 +82,11 @@ __all__ = [
     "Switch",
     "DataSource",
     "Action",
+    "DataExchangeAction",
+    "NavigateAction",
+    "CompleteAction",
+    "UpdateDataAction",
+    "OpenUrlAction",
     "FlowActionType",
     "FlowRequestActionType",
     "ActionNext",
@@ -1040,12 +1046,14 @@ class DataSource:
         image: The base64 encoded image of the data source. Limited to 1MB (added in v5.0).
         alt_text: The alt text of the image. (added in v5.0).
         color: 6-digit hex color code. (added in v5.0).
+        on_select_action: The update data action to perform when the data source is selected. (added in v6.0).
+        on_unselect_action: The update data action to perform when the data source is unselected. (added in v6.0).
     """
 
     id: str
     title: str
-    on_select_action: Action | None = None
-    on_unselect_action: Action | None = None
+    on_select_action: UpdateDataAction | None = None
+    on_unselect_action: UpdateDataAction | None = None
     description: str | None = None
     metadata: str | None = None
     enabled: bool | None = None
@@ -1990,6 +1998,19 @@ class TextArea(TextEntryComponent):
     error_message: str | ScreenDataRef | ComponentRef | None = None
 
 
+class MediaSize(utils.StrEnum):
+    """
+    The media size of the image.
+
+    Attributes:
+        REGULAR: Regular size
+        LARGE: Large size
+    """
+
+    REGULAR = "regular"
+    LARGE = "large"
+
+
 @dataclasses.dataclass(slots=True, kw_only=True)
 class CheckboxGroup(FormComponent):
     """
@@ -2025,7 +2046,9 @@ class CheckboxGroup(FormComponent):
         visible: Whether the checkbox group is visible or not. Default to ``True``. Can be dynamic.
         enabled: Whether the checkbox group is enabled or not. Default to ``True``. Can be dynamic.
         init_value: The default values (IDs of the data sources). Can be dynamic.
+        media_size: The media size of the image. Can be dynamic. Added in v5.0.
         on_select_action: The action to perform when an item is selected.
+        on_unselect_action: The action to perform when an item is unselected. Added in v6.0.
     """
 
     type: ComponentType = dataclasses.field(
@@ -2041,7 +2064,9 @@ class CheckboxGroup(FormComponent):
     visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
     init_value: list[str] | str | ScreenDataRef | ComponentRef | None = None
-    on_select_action: Action | None = None
+    media_size: MediaSize | str | ScreenDataRef | ComponentRef | None = None
+    on_select_action: DataExchangeAction | UpdateDataAction | None = None
+    on_unselect_action: UpdateDataAction | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -2075,7 +2100,9 @@ class RadioButtonsGroup(FormComponent):
         visible: Whether the radio buttons group is visible or not. Default to ``True``. Can be dynamic.
         enabled: Whether the radio buttons group is enabled or not. Default to ``True``. Can be dynamic.
         init_value: The default value (ID of the data source). Can be dynamic.
+        media_size: The media size of the image. Can be dynamic. Added in v5.0.
         on_select_action: The action to perform when an item is selected.
+        on_unselect_action: The action to perform when an item is unselected. Added in v6.0.
     """
 
     type: ComponentType = dataclasses.field(
@@ -2089,7 +2116,9 @@ class RadioButtonsGroup(FormComponent):
     visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
     init_value: str | ScreenDataRef | ComponentRef | None = None
-    on_select_action: Action | None = None
+    media_size: MediaSize | str | ScreenDataRef | ComponentRef | None = None
+    on_select_action: DataExchangeAction | UpdateDataAction | None = None
+    on_unselect_action: UpdateDataAction | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -2123,6 +2152,7 @@ class Dropdown(FormComponent):
         visible: Whether the dropdown is visible or not. Default to ``True``. Can be dynamic.
         init_value: The default value (ID of the data source). Can be dynamic.
         on_select_action: The action to perform when an item is selected.
+        on_unselect_action: The action to perform when an item is unselected. Added in v6.0.
     """
 
     type: ComponentType = dataclasses.field(
@@ -2135,7 +2165,8 @@ class Dropdown(FormComponent):
     required: bool | str | ScreenDataRef | ComponentRef | None = None
     visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     init_value: str | ScreenDataRef | ComponentRef | None = None
-    on_select_action: Action | None = None
+    on_select_action: DataExchangeAction | UpdateDataAction | None = None
+    on_unselect_action: UpdateDataAction | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -2144,39 +2175,6 @@ class Footer(Component):
     Footer component allows users to navigate to other screens or submit the flow.
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#foot>`_.
-
-    Example:
-
-        - Exchange data with your server (@wa.on_flow_request(...))
-
-        >>> Footer(
-        ...     label='Sign up',
-        ...     on_click_action=Action(
-        ...         name=FlowActionType.DATA_EXCHANGE,
-        ...         payload={'email': '...', 'phone': '...'}
-        ...     )
-        ... )
-
-        - Go to the next screen:
-
-        >>> Footer(
-        ...     label='Next',
-        ...     on_click_action=Action(
-        ...         name=FlowActionType.NAVIGATE,
-        ...         next=ActionNext(name='NEXT_SCREEN')
-        ...     )
-        ... )
-
-        - Complete the flow when the user clicks the footer:
-
-        >>> Footer(
-        ...     label='Submit',
-        ...     on_click_action=Action(
-        ...         name=FlowActionType.COMPLETE,
-        ...         payload={'email': '...', 'phone': '...'}
-        ...     )
-        ... )
-
 
     Attributes:
         label: The label of the footer. Limited to 35 characters. Can be dynamic.
@@ -2192,7 +2190,7 @@ class Footer(Component):
     )
     visible: None = dataclasses.field(default=None, init=False, repr=False)
     label: str | ScreenDataRef | ComponentRef
-    on_click_action: Action
+    on_click_action: CompleteAction | DataExchangeAction | NavigateAction
     left_caption: str | ScreenDataRef | ComponentRef | None = None
     center_caption: str | ScreenDataRef | ComponentRef | None = None
     right_caption: str | ScreenDataRef | ComponentRef | None = None
@@ -2235,7 +2233,9 @@ class OptIn(FormComponent):
     required: bool | str | ScreenDataRef | ComponentRef | None = None
     visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     init_value: bool | str | ScreenDataRef | ComponentRef | None = None
-    on_click_action: Action | None = None
+    on_click_action: UpdateDataAction | OpenUrlAction | NavigateAction | None = None
+    on_select_action: UpdateDataAction | None = None
+    on_unselect_action: UpdateDataAction | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -2251,8 +2251,7 @@ class EmbeddedLink(Component):
 
         >>> EmbeddedLink(
         ...     text='Sign up',
-        ...     on_click_action=Action(
-        ...         name=FlowActionType.NAVIGATE,
+        ...     on_click_action=NavigateAction(
         ...         next=ActionNext(name='SIGNUP_SCREEN'),
         ...         payload={'data': 'value'}
         ...     )
@@ -2268,7 +2267,9 @@ class EmbeddedLink(Component):
         default=ComponentType.EMBEDDED_LINK, init=False, repr=False
     )
     text: str | ScreenDataRef | ComponentRef
-    on_click_action: Action
+    on_click_action: (
+        DataExchangeAction | UpdateDataAction | NavigateAction | OpenUrlAction
+    )
     visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
 
 
@@ -2328,7 +2329,7 @@ class DatePicker(FormComponent):
     visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     init_value: datetime.date | str | ScreenDataRef | ComponentRef | None = None
     error_message: str | ScreenDataRef | ComponentRef | None = None
-    on_select_action: Action | None = None
+    on_select_action: DataExchangeAction | None = None
 
 
 class CalendarPickerMode(utils.StrEnum):
@@ -2469,7 +2470,9 @@ class CalendarPicker(FormComponent):
         | None
     ) = None
     on_select_action: (
-        dict[Literal["start-date", "end-date"], Action] | Action | None
+        dict[Literal["start-date", "end-date"], DataExchangeAction]
+        | DataExchangeAction
+        | None
     ) = None
 
 
@@ -2836,59 +2839,190 @@ class ActionNext:
     type: ActionNextType | str = ActionNextType.SCREEN
 
 
+def _deprecate_action(action: FlowActionType, use_cls: type[BaseAction]) -> None:
+    warnings.warn(
+        message=f"Action(name='{action}', ...) is deprecated. Use {use_cls.__name__} instead",
+        category=DeprecationWarning,
+        stacklevel=3,
+    )
+
+
 @dataclasses.dataclass(slots=True, kw_only=True)
 class Action:
     """
-    Action component allows users to trigger asynchronous actions that are handled by a client through interactive UI elements.
+    This class is deprecated and will be removed in future versions. Use one of the following classes instead:
 
-    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#actions>`_.
+    - :class:`DataExchangeAction`
+    - :class:`NavigateAction`
+    - :class:`OpenUrlAction`
+    - :class:`UpdateDataAction`
+    - :class:`CompleteAction`
 
-    Example:
-
-        >>> complete_action = Action(
-        ...     name=FlowActionType.COMPLETE,
-        ...     payload={'data': 'value'}
-        ... )
-        >>> data_exchange_action = Action(
-        ...     name=FlowActionType.DATA_EXCHANGE,
-        ...     payload={'data': 'value'}
-        ... )
-        >>> navigate_action = Action(
-        ...     name=FlowActionType.NAVIGATE,
-        ...     next=ActionNext(name='NEXT_SCREEN'),
-        ...     payload={'data': 'value'}
-        ... )
-
-        >>> open_url_action = Action(
-        ...     name=FlowActionType.OPEN_URL,
-        ...     url='https://example.com'
-        ... )
-
-    Attributes:
-        name: The type of the action
-        next: The next action to perform (only for ``FlowActionType.NAVIGATE``)
-        url: The URL to open (only for ``FlowActionType.OPEN_URL``)
-        payload: The payload of the action (Pass data to the next screen or to the WhatsApp Flows Data Endpoint).
-         This payload can take data from form components or from the data of the screen.
     """
 
-    name: FlowActionType | str
-    next: ActionNext | None = None
-    url: str | None = None
-    payload: (
-        dict[str, str | bool | Iterable[DataSource] | ScreenDataRef | ComponentRef]
-        | None
-    ) = None
+    name: None
+    next: None = None
+    url: None = None
+    payload: None = None
 
     def __post_init__(self):
         if self.name == FlowActionType.NAVIGATE.value:
+            _deprecate_action(FlowActionType.NAVIGATE, NavigateAction)
             if self.next is None:
                 raise ValueError("next is required for FlowActionType.NAVIGATE")
         elif self.name == FlowActionType.OPEN_URL.value:
+            _deprecate_action(FlowActionType.OPEN_URL, OpenUrlAction)
             if self.url is None:
                 raise ValueError("url is required for FlowActionType.OPEN_URL")
         elif self.name == FlowActionType.COMPLETE.value:
+            _deprecate_action(FlowActionType.COMPLETE, CompleteAction)
             if self.payload is None:
                 raise ValueError(
                     "payload is required for FlowActionType.COMPLETE (use {} for empty payload)"
                 )
+        elif self.name == FlowActionType.UPDATE_DATA.value:
+            _deprecate_action(FlowActionType.UPDATE_DATA, UpdateDataAction)
+            if self.payload is None:
+                raise ValueError("payload is required for FlowActionType.UPDATE_DATA")
+        elif self.name == FlowActionType.DATA_EXCHANGE.value:
+            _deprecate_action(FlowActionType.DATA_EXCHANGE, DataExchangeAction)
+            if self.payload is None:
+                raise ValueError("payload is required for FlowActionType.DATA_EXCHANGE")
+
+
+class BaseAction(abc.ABC):
+    """The base class for all actions"""
+
+    @property
+    @abc.abstractmethod
+    def name(self) -> FlowActionType: ...
+
+    @property
+    @abc.abstractmethod
+    def payload(
+        self,
+    ) -> dict[
+        str, str | bool | Iterable[DataSource] | ScreenDataRef | ComponentRef
+    ]: ...
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class DataExchangeAction(BaseAction):
+    """
+    Data Exchange Action. Sending Data to WhatsApp Flows Data Endpoint
+
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#data-exchange-action>`_.
+
+    Example:
+
+        >>> DataExchangeAction(
+        ...     payload={'data': 'value'}
+        ... )
+
+    Attributes:
+        payload: The payload of the action (Pass data to the WhatsApp Flows Data Endpoint).
+         This payload can take data from form components or from the data of the screen.
+    """
+
+    name: FlowActionType = dataclasses.field(
+        default=FlowActionType.DATA_EXCHANGE, init=False, repr=False
+    )
+    payload: dict[str, str | bool | Iterable[DataSource] | ScreenDataRef | ComponentRef]
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class NavigateAction(BaseAction):
+    """
+    Navigate Action. Triggers the next screen with the payload as its input.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#navigate-action>`_.
+
+    Example:
+
+        >>> NavigateAction(
+        ...     next=ActionNext(name='NEXT_SCREEN'),
+        ...     payload={'data': 'value'}
+        ... )
+
+    Attributes:
+        next: The next action to perform
+        payload: The payload of the action (Pass data to the next screen).
+         This payload can take data from form components or from the data of the screen.
+    """
+
+    name: FlowActionType = dataclasses.field(
+        default=FlowActionType.NAVIGATE, init=False, repr=False
+    )
+    next: ActionNext
+    payload: dict[str, str | bool | Iterable[DataSource] | ScreenDataRef | ComponentRef]
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class OpenUrlAction(BaseAction):
+    """
+    Open URL Action. Triggers a link to open in the device’s default web browser.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#open-url-action>`_.
+
+    Example:
+
+        >>> OpenUrlAction(
+        ...     url='https://example.com'
+        ... )
+
+    Attributes:
+        url: The URL to open
+    """
+
+    name: FlowActionType = dataclasses.field(
+        default=FlowActionType.OPEN_URL, init=False, repr=False
+    )
+    payload: None = dataclasses.field(default=None, init=False, repr=False)
+    url: str
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class UpdateDataAction(BaseAction):
+    """
+    Update Data Action. Triggers an immediate update to the screen's state, reflecting user input changes.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#update-data-action>`_.
+
+    Example:
+
+        >>> UpdateDataAction(
+        ...     payload={'i_agree': True}
+        ... )
+
+    Attributes:
+        payload: The data to update for the current screen. The keys in the payload should match the component names.
+    """
+
+    name: FlowActionType = dataclasses.field(
+        default=FlowActionType.UPDATE_DATA, init=False, repr=False
+    )
+    payload: dict[str, str | bool | Iterable[DataSource] | ScreenDataRef | ComponentRef]
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class CompleteAction(BaseAction):
+    """
+    Complete Action. Triggers the termination of the Flow with the provided payload
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#complete-action>`_.
+
+    Example:
+
+        >>> CompleteAction(
+        ...     payload={'data': 'value'}
+        ... )
+
+    Attributes:
+        payload: The payload to include in the :class:`FlowCompletion` `.response` attribute.
+    """
+
+    name: FlowActionType = dataclasses.field(
+        default=FlowActionType.COMPLETE, init=False, repr=False
+    )
+    payload: dict[str, str | bool | ScreenDataRef | ComponentRef]

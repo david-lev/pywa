@@ -45,9 +45,7 @@ radio_buttons_with_pics = FlowJSON(
                     ),
                     Footer(
                         label="Continue",
-                        on_click_action=Action(
-                            name=FlowActionType.COMPLETE, payload={}
-                        ),
+                        on_click_action=CompleteAction(payload={}),
                     ),
                 ],
             ),
@@ -78,16 +76,13 @@ date_picker_dates_obj = FlowJSON(
                             datetime.date(2024, 10, 28),
                             datetime.date(2024, 11, 1),
                         ],
-                        on_select_action=Action(
-                            name=FlowActionType.DATA_EXCHANGE,
+                        on_select_action=DataExchangeAction(
                             payload={"date": ComponentRef("date")},
                         ),
                     ),
                     Footer(
                         label="Continue",
-                        on_click_action=Action(
-                            name=FlowActionType.DATA_EXCHANGE, payload={}
-                        ),
+                        on_click_action=DataExchangeAction(payload={}),
                     ),
                 ],
             ),

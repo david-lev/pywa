@@ -28,7 +28,7 @@ switch = FlowJSON(
                     ),
                     Footer(
                         label="Complete",
-                        on_click_action=Action(name="complete", payload={}),
+                        on_click_action=CompleteAction(payload={}),
                     ),
                 ]
             ),
@@ -59,7 +59,7 @@ if_ = FlowJSON(
                     ),
                     Footer(
                         label="Complete",
-                        on_click_action=Action(name="complete", payload={}),
+                        on_click_action=CompleteAction(payload={}),
                     ),
                 ]
             ),
@@ -94,8 +94,7 @@ photo_picker = FlowJSON(
                             ),
                             Footer(
                                 label="Submit",
-                                on_click_action=Action(
-                                    name=FlowActionType.DATA_EXCHANGE,
+                                on_click_action=DataExchangeAction(
                                     payload={"images": photo_picker.ref},
                                 ),
                             ),
@@ -137,8 +136,7 @@ doc_picker = FlowJSON(
                             ),
                             Footer(
                                 label="Submit",
-                                on_click_action=Action(
-                                    name="complete",
+                                on_click_action=CompleteAction(
                                     payload={"documents": document_picker.ref},
                                 ),
                             ),
@@ -175,15 +173,13 @@ date_picker_dates_str = FlowJSON(
                                     "1694779200000",
                                     "1697371200000",
                                 ],
-                                on_select_action=Action(
-                                    name=FlowActionType.DATA_EXCHANGE,
+                                on_select_action=DataExchangeAction(
                                     payload={"date": ComponentRef("date")},
                                 ),
                             ),
                             Footer(
                                 label="Continue",
-                                on_click_action=Action(
-                                    name=FlowActionType.DATA_EXCHANGE,
+                                on_click_action=DataExchangeAction(
                                     payload={},
                                 ),
                             ),
@@ -209,8 +205,7 @@ global_fields = FlowJSON(
                     field1 := TextInput(name="field1", label="Enter your name"),
                     Footer(
                         label="CTA",
-                        on_click_action=Action(
-                            name=FlowActionType.NAVIGATE,
+                        on_click_action=NavigateAction(
                             next=ActionNext(
                                 type=ActionNextType.SCREEN, name="SCREEN_TWO"
                             ),
@@ -229,8 +224,7 @@ global_fields = FlowJSON(
                 children=[
                     Footer(
                         label="Complete",
-                        on_click_action=Action(
-                            name=FlowActionType.COMPLETE,
+                        on_click_action=CompleteAction(
                             payload={
                                 "field1": screen_one / field1.ref,
                                 "field2": screen_one / field2.ref,
@@ -306,8 +300,7 @@ forward_refs = FlowJSON(
                     ),
                     EmbeddedLink(
                         text="Choose insurance type",
-                        on_click_action=Action(
-                            name=FlowActionType.NAVIGATE,
+                        on_click_action=NavigateAction(
                             next=ActionNext(
                                 type=ActionNextType.SCREEN, name="SELECT_INSURANCE"
                             ),
@@ -316,8 +309,7 @@ forward_refs = FlowJSON(
                     ),
                     Footer(
                         label="Complete",
-                        on_click_action=Action(
-                            name=FlowActionType.COMPLETE,
+                        on_click_action=CompleteAction(
                             payload={
                                 "selected_insurance_type": select_insurance_screen
                                 / insurance.ref

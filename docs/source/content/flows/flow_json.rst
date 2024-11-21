@@ -49,6 +49,12 @@ Here you will find all the components that make up a Flow JSON object.
 
 .. autoclass:: DatePicker()
 
+.. autoclass:: CalendarPicker()
+
+.. autoclass:: CalendarPickerMode()
+
+.. autoclass:: CalendarDay()
+
 .. autoclass:: Image()
 
 .. autoclass:: ScaleType()
@@ -65,9 +71,15 @@ Here you will find all the components that make up a Flow JSON object.
 
 .. autoclass:: DataSource()
 
-.. autoclass:: Action()
+.. autoclass:: DataExchangeAction()
 
-.. autoclass:: FlowActionType()
+.. autoclass:: NavigateAction()
+
+.. autoclass:: CompleteAction()
+
+.. autoclass:: UpdateDataAction()
+
+.. autoclass:: OpenUrlAction()
 
 .. autoclass:: ActionNext()
 
