@@ -3,7 +3,20 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-### 2.0.5 (2024-11-10) **Latest**
+### 2.1.0 (2024-11-24) **Latest**
+
+- [flows] adding `CalendarPicker` component
+- [flows] allow string concatenation with refs
+- [flows] adding support for math expressions
+- [flows] allowing to use condition in `visible`
+- [flows] new action: open url
+- [flows] new action: update data
+- [flows] `init_value` available outside form
+- [flows] allow to use `screen/ref` as shortcut for `.ref_in(screen)`
+- [flows] separating `Action` and adding `on_unselect_action`
+
+
+### 2.0.5 (2024-11-10)
 
 - [client] fix `send_template` return type `SentMessage`
 
