@@ -104,7 +104,7 @@ class Server:
         self._validate_updates = validate_updates
         self._continue_handling = continue_handling
         self._skip_duplicate_updates = skip_duplicate_updates
-        self._updates_ids_in_process = set[
+        self._updates_in_process = set[
             str | int
         ]()  # TODO use threading.Lock | asyncio.Lock
 
@@ -191,7 +191,7 @@ class Server:
         if res:
             return res, status
         self._call_handlers(update_dict)
-        return self._after_calling_update(update_hash)
+        return self._after_handling_update(update_hash)
 
     def _check_and_prepare_update(
         self, update: bytes, hmac_header: str = None
@@ -223,25 +223,23 @@ class Server:
             )
             return "Error, invalid update", 400, None, None
 
-        update_hash: str | int | None = None
+        update_hash = hmac_header or hash(update)
         _logger.debug(
             "Webhook ('%s') received an update: %s",
             self._webhook_endpoint,
             update_dict,
         )
-        if self._skip_duplicate_updates and (
-            update_hash := (hmac_header or hash(update))
-        ):
-            if update_hash in self._updates_ids_in_process:
+        if self._skip_duplicate_updates:
+            if update_hash in self._updates_in_process:
                 return "ok", 200, None, None
-            self._updates_ids_in_process.add(update_hash)
+            self._updates_in_process.add(update_hash)
 
         return None, None, update_dict, update_hash
 
-    def _after_calling_update(self, update_hash: str | None) -> tuple[str, int]:
+    def _after_handling_update(self, update_hash: str) -> tuple[str, int]:
         if self._skip_duplicate_updates:
             try:
-                self._updates_ids_in_process.remove(update_hash)
+                self._updates_in_process.remove(update_hash)
             except KeyError:
                 pass
         return "ok", 200

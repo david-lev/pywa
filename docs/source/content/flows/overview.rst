@@ -80,6 +80,8 @@ Every component on the FlowJSON, has a corresponding class in :mod:`pywa.types.f
        :class:`CheckboxGroup`,
        :class:`Dropdown`,
        :class:`OptIn`,
+       :class:`DatePicker`,
+       :class:`CalendarPicker`,
        :class:`PhotoPicker`,
        :class:`DocumentPicker`
    * - Navigation
@@ -88,6 +90,12 @@ Every component on the FlowJSON, has a corresponding class in :mod:`pywa.types.f
    * - Conditional Component Rendering
      - :class:`If`,
        :class:`Switch`
+   * - Actions
+     - :class:`DataExchangeAction`,
+       :class:`NavigateAction`,
+       :class:`CompleteAction`,
+       :class:`UpdateDataAction`,
+       :class:`OpenUrlAction`
 
 ==================
 
@@ -102,7 +110,7 @@ Every component on the FlowJSON, has a corresponding class in :mod:`pywa.types.f
         .. code-block:: python
             :caption: simple_sign_up_flow.py
             :linenos:
-            :emphasize-lines: 16, 22, 28, 40-42
+            :emphasize-lines: 16, 22, 28, 39-41
 
             from pywa.types.flows import *
 
@@ -140,8 +148,7 @@ Every component on the FlowJSON, has a corresponding class in :mod:`pywa.types.f
                                         Footer(
                                             label="Done",
                                             enabled=True,
-                                            on_click_action=Action(
-                                                name=FlowActionType.COMPLETE,
+                                            on_click_action=CompleteAction(
                                                 payload={
                                                     "first_name": first_name.ref,
                                                     "last_name": last_name.ref,
@@ -244,7 +251,7 @@ Every component on the FlowJSON, has a corresponding class in :mod:`pywa.types.f
         .. code-block:: python
             :caption: dynamic_sign_up_flow.py
             :linenos:
-            :emphasize-lines: 3, 11-13, 21, 26, 28, 32, 34, 38, 45-47
+            :emphasize-lines: 3, 11-13, 21, 26, 28, 32, 34, 38, 44-46
 
 
             dynamic_flow = FlowJSON(
@@ -288,8 +295,7 @@ Every component on the FlowJSON, has a corresponding class in :mod:`pywa.types.f
                                         ),
                                         Footer(
                                             label="Done",
-                                            on_click_action=Action(
-                                                name=FlowActionType.COMPLETE,
+                                            on_click_action=CompleteAction(
                                                 payload={
                                                     "first_name": last_name.ref,
                                                     "last_name": last_name.ref,

@@ -1,0 +1,417 @@
+{
+  "string_concatenation": {
+    "version": "6.0",
+    "screens": [
+      {
+        "id": "DEMO_SCREEN",
+        "terminal": true,
+        "title": "Demo screen",
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "TextInput",
+              "label": "First name",
+              "input-type": "text",
+              "name": "first_name",
+              "required": true
+            },
+            {
+              "type": "TextInput",
+              "label": "Age",
+              "input-type": "number",
+              "name": "age",
+              "required": true
+            },
+            {
+              "type": "TextBody",
+              "text": "`'Hello ' ${form.first_name}`"
+            },
+            {
+              "type": "TextBody",
+              "text": "`${form.first_name} ' you are ' ${form.age} ' years old.'`"
+            },
+            {
+              "type": "Footer",
+              "label": "Footer",
+              "on-click-action": {
+                "name": "complete",
+                "payload": {}
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "open_url": {
+    "version": "6.0",
+    "screens": [
+      {
+        "id": "DEMO_SCREEN",
+        "terminal": true,
+        "title": "Demo screen",
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "EmbeddedLink",
+              "text": "This is an external link.",
+              "on-click-action": {
+                "name": "open_url",
+                "url": "https://pywa.readthedocs.io/"
+              }
+            },
+            {
+              "type": "OptIn",
+              "label": "I agree to the terms.",
+              "name": "T&Cs",
+              "on-click-action": {
+                "name": "open_url",
+                "url": "https://pywa.readthedocs.io/"
+              }
+            },
+            {
+              "type": "Footer",
+              "label": "Footer",
+              "on-click-action": {
+                "name": "complete",
+                "payload": {}
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "update_data": {
+    "version": "6.0",
+    "screens": [
+      {
+        "id": "ADDRESS_SELECTION",
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "RadioButtonsGroup",
+              "name": "select_country",
+              "label": "Select country:",
+              "data-source": "${data.countries}"
+            },
+            {
+              "type": "RadioButtonsGroup",
+              "name": "select_states",
+              "label": "Select state:",
+              "visible": "${data.state_visibility}",
+              "data-source": "${data.states}"
+            },
+            {
+              "type": "RadioButtonsGroup",
+              "name": "pincode",
+              "label": "Select pincode:",
+              "visible": "${data.pincode_visibility}",
+              "data-source": "${data.pincode}"
+            },
+            {
+              "type": "Footer",
+              "label": "Complete",
+              "on-click-action": {
+                "name": "complete",
+                "payload": {}
+              }
+            }
+          ]
+        },
+        "title": "Address selection",
+        "terminal": true,
+        "success": true,
+        "data": {
+          "countries": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                }
+              }
+            },
+            "__example__": [
+              {
+                "id": "1",
+                "title": "USA",
+                "on-select-action": {
+                  "name": "update_data",
+                  "payload": {
+                    "states": [
+                      {
+                        "id": "new_york",
+                        "title": "New York",
+                        "on-unselect-action": {
+                          "name": "update_data",
+                          "payload": {
+                            "pincode_visibility": false
+                          }
+                        },
+                        "on-select-action": {
+                          "name": "update_data",
+                          "payload": {
+                            "pincode": [
+                              {
+                                "id": "10001",
+                                "title": "10001"
+                              },
+                              {
+                                "id": "10005",
+                                "title": "10005"
+                              }
+                            ],
+                            "pincode_visibility": true
+                          }
+                        }
+                      },
+                      {
+                        "id": "california",
+                        "title": "California",
+                        "on-unselect-action": {
+                          "name": "update_data",
+                          "payload": {
+                            "pincode_visibility": false
+                          }
+                        },
+                        "on-select-action": {
+                          "name": "update_data",
+                          "payload": {
+                            "pincode": [
+                              {
+                                "id": "90019",
+                                "title": "90019"
+                              },
+                              {
+                                "id": "93504",
+                                "title": "93504"
+                              }
+                            ],
+                            "pincode_visibility": true
+                          }
+                        }
+                      }
+                    ],
+                    "state_visibility": true
+                  }
+                },
+                "on-unselect-action": {
+                  "name": "update_data",
+                  "payload": {
+                    "state_visibility": false,
+                    "pincode_visibility": false
+                  }
+                }
+              },
+              {
+                "id": "2",
+                "title": "Canada",
+                "on-select-action": {
+                  "name": "update_data",
+                  "payload": {
+                    "states": [
+                      {
+                        "id": "ontario",
+                        "title": "Ontario",
+                        "on-unselect-action": {
+                          "name": "update_data",
+                          "payload": {
+                            "pincode_visibility": false
+                          }
+                        },
+                        "on-select-action": {
+                          "name": "update_data",
+                          "payload": {
+                            "pincode": [
+                              {
+                                "id": "L4K",
+                                "title": "L4K"
+                              },
+                              {
+                                "id": "M3C",
+                                "title": "M3C"
+                              }
+                            ],
+                            "pincode_visibility": true
+                          }
+                        }
+                      },
+                      {
+                        "id": "quebec",
+                        "title": "Quebec",
+                        "on-unselect-action": {
+                          "name": "update_data",
+                          "payload": {
+                            "pincode_visibility": false
+                          }
+                        },
+                        "on-select-action": {
+                          "name": "update_data",
+                          "payload": {
+                            "pincode": [
+                              {
+                                "id": "M6B2A9",
+                                "title": "M6B2A9"
+                              },
+                              {
+                                "id": "M5V",
+                                "title": "M5V"
+                              }
+                            ],
+                            "pincode_visibility": true
+                          }
+                        }
+                      }
+                    ],
+                    "state_visibility": true
+                  }
+                },
+                "on-unselect-action": {
+                  "name": "update_data",
+                  "payload": {
+                    "state_visibility": false,
+                    "pincode_visibility": false
+                  }
+                }
+              }
+            ]
+          },
+          "states": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                }
+              }
+            },
+            "__example__": [
+              {
+                "id": "1",
+                "title": "USA"
+              }
+            ]
+          },
+          "pincode": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                }
+              }
+            },
+            "__example__": [
+              {
+                "id": "M6B2A9",
+                "title": "M6B2A9"
+              }
+            ]
+          },
+          "state_visibility": {
+            "type": "boolean",
+            "__example__": false
+          },
+          "pincode_visibility": {
+            "type": "boolean",
+            "__example__": false
+          }
+        }
+      }
+    ]
+  },
+  "math_operators": {
+    "version": "6.0",
+    "screens": [
+      {
+        "id": "DEMO_SCREEN",
+        "title": "Demo Screen",
+        "terminal": true,
+        "success": true,
+        "data": {
+          "number_1": {
+            "type": "number",
+            "__example__": 10
+          },
+          "number_2": {
+            "type": "number",
+            "__example__": 20
+          }
+        },
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "TextBody",
+              "text": [
+                "`'The sum of ' ${data.number_1} ' and ' ${data.number_2} ' is ' (${data.number_1} + ${data.number_2})`",
+                "`'The difference of ' ${data.number_1} ' and ' ${data.number_2} ' is ' (${data.number_1} - ${data.number_2})`",
+                "`'The product of ' ${data.number_1} ' and ' ${data.number_2} ' is ' (${data.number_1} * ${data.number_2})`",
+                "`'The division of ' ${data.number_1} ' by ' ${data.number_2} ' is ' (${data.number_1} / ${data.number_2})`"
+              ]
+            },
+            {
+              "type": "Footer",
+              "label": "Static footer label",
+              "on-click-action": {
+                "name": "complete",
+                "payload": {}
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "visible_condition": {
+    "version": "6.0",
+    "screens": [
+      {
+        "id": "DEMO_SCREEN",
+        "title": "Demo Screen",
+        "terminal": true,
+        "success": true,
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "TextInput",
+              "label": "Enter a number",
+              "input-type": "number",
+              "name": "number"
+            },
+            {
+              "type": "TextBody",
+              "text": "You choose the right number!",
+              "visible": "`(${form.number} == 42)`"
+            },
+            {
+              "type": "Footer",
+              "label": "Static footer label",
+              "on-click-action": {
+                "name": "complete",
+                "payload": {}
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

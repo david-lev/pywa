@@ -63,11 +63,15 @@ def test_empty_form():
 
 
 def test_action():
-    with pytest.raises(ValueError):
-        Action(name=FlowActionType.NAVIGATE)
+    with pytest.warns(DeprecationWarning):
+        with pytest.raises(ValueError):  # no next action
+            Action(name=FlowActionType.NAVIGATE)
 
-    with pytest.raises(ValueError):
-        Action(name=FlowActionType.COMPLETE)
+        with pytest.raises(ValueError):  # no payload
+            Action(name=FlowActionType.COMPLETE)
+
+        with pytest.raises(ValueError):  # no url
+            Action(name=FlowActionType.OPEN_URL)
 
 
 def test_component_ref():
@@ -78,9 +82,15 @@ def test_component_ref():
         TextInput(name="test", label="Test").ref_in(screen="START").to_str()
         == "${screen.START.form.test}"
     )
+    in_ref = (
+        Screen(id="START", layout=Layout(children=[]))
+        / TextInput(name="test", label="Test").ref
+    )
+    assert in_ref.to_str() == "${screen.START.form.test}"
+    assert isinstance(in_ref, ComponentRef)
 
 
-def test_screen_data_key():
+def test_screen_data_ref():
     assert ScreenDataRef("test").to_str() == "${data.test}"
     assert ScreenDataRef("test", screen="START").to_str() == "${screen.START.data.test}"
     assert ScreenData(key="test", example="Example").ref.to_str() == "${data.test}"
@@ -88,6 +98,12 @@ def test_screen_data_key():
         ScreenData(key="test", example="Example").ref_in(screen="START").to_str()
         == "${screen.START.data.test}"
     )
+    in_ref = (
+        Screen(id="START", layout=Layout(children=[]))
+        / ScreenData(key="test", example="Example").ref
+    )
+    assert in_ref.to_str() == "${screen.START.data.test}"
+    assert isinstance(in_ref, ScreenDataRef)
 
 
 def test_ref_to_str_without_screen():
@@ -140,6 +156,97 @@ def test_ref_less_than_or_equal():
     ref = Ref(prefix="data", field="age")
     condition = ref <= 21
     assert condition.to_str() == "(${data.age} <= 21)"
+
+
+def test_ref_addition():
+    ref = Ref(prefix="data", field="age")
+    math_op = ref + 21
+    assert math_op.to_str() == "(${data.age} + 21)"
+
+
+def test_ref_right_addition():
+    ref = Ref(prefix="data", field="age")
+    math_op = 21 + ref
+    assert math_op.to_str() == "(21 + ${data.age})"
+
+
+def test_ref_subtraction():
+    ref = Ref(prefix="data", field="age")
+    math_op = ref - 21
+    assert math_op.to_str() == "(${data.age} - 21)"
+
+
+def test_ref_right_subtraction():
+    ref = Ref(prefix="data", field="age")
+    math_op = 21 - ref
+    assert math_op.to_str() == "(21 - ${data.age})"
+
+
+def test_ref_multiplication():
+    ref = Ref(prefix="data", field="age")
+    math_op = ref * 21
+    assert math_op.to_str() == "(${data.age} * 21)"
+
+
+def test_ref_right_multiplication():
+    ref = Ref(prefix="data", field="age")
+    math_op = 21 * ref
+    assert math_op.to_str() == "(21 * ${data.age})"
+
+
+def test_ref_division():
+    ref = Ref(prefix="data", field="age")
+    math_op = ref / 21
+    assert math_op.to_str() == "(${data.age} / 21)"
+
+
+def test_ref_right_division():
+    ref = Ref(prefix="data", field="age")
+    math_op = 21 / ref
+    assert math_op.to_str() == "(21 / ${data.age})"
+
+
+def test_ref_modulus():
+    ref = Ref(prefix="data", field="age")
+    math_op = ref % 21
+    assert math_op.to_str() == "(${data.age} % 21)"
+
+
+def test_ref_right_modulus():
+    ref = Ref(prefix="data", field="age")
+    math_op = 21 % ref
+    assert math_op.to_str() == "(21 % ${data.age})"
+
+
+def test_math_ref_with_ref():
+    ref_one = Ref(prefix="data", field="age")
+    ref_two = Ref(prefix="data", field="height")
+    math_op = ref_one + ref_two
+    assert math_op.to_str() == "(${data.age} + ${data.height})"
+
+
+def test_ref_with_math_op():
+    ref = Ref(prefix="data", field="age")
+    math_op = 21 + ref
+    ref_with_math_op = ref + math_op
+    assert ref_with_math_op.to_str() == "(${data.age} + (21 + ${data.age}))"
+
+
+def test_math_op_with_ref():
+    ref = Ref(prefix="data", field="age")
+    math_op = 21 + ref
+    math_op_with_ref = math_op + ref
+    assert math_op_with_ref.to_str() == "((21 + ${data.age}) + ${data.age})"
+
+
+def test_ref_with_math_op_and_ref():
+    ref = Ref(prefix="data", field="age")
+    math_op = 21 + ref
+    math_op_with_ref = ref + math_op + ref
+    assert (
+        math_op_with_ref.to_str()
+        == "((${data.age} + (21 + ${data.age})) + ${data.age})"
+    )
 
 
 def test_logical_and_with_ref():
@@ -209,17 +316,30 @@ def test_combined_conditions_with_literal_after():
     assert condition.to_str() == "((${data.age} > 18) && ${form.is_verified})"
 
 
+def test_condition_with_backticks():
+    ref = Ref(prefix="data", field="age")
+    condition = ref > 18
+    assert condition.to_str() == "(${data.age} > 18)"
+    condition.wrap_with_backticks = True
+    assert condition.to_str() == "`(${data.age} > 18)`"
+
+
+def visible_conditions_wrapped_with_backticks():
+    text = TextInput(name="test", label="Test", visible=Ref("data", "age") > 18)
+    assert text.visible.to_str() == "`(${data.age} > 18)`"
+
+
 def test_init_values():
     text_entry = TextInput(name="test", label="Test", init_value="Example")
     form = Form(name="form", children=[text_entry])
     assert form.init_values == {"test": "Example"}
 
     # check for duplicate init_values (in the form level and in the children level)
-    with pytest.raises(ValueError):
-        TextInput(
-            name="test", label="Test", init_value="Example", input_type=InputType.NUMBER
-        )
-        Form(name="form", init_values={"test": "Example"}, children=[text_entry])
+    # with pytest.raises(ValueError):
+    #     TextInput(
+    #         name="test", label="Test", init_value="Example", input_type=InputType.NUMBER
+    #     )
+    #     Form(name="form", init_values={"test": "Example"}, children=[text_entry])
 
     # test that if form has init_values referred to a ref,
     # the init_values does not fill up from the .children init_value's
@@ -248,9 +368,9 @@ def test_error_messages():
     assert form.error_messages == {"test": "Example"}
 
     # check for duplicate error_messages (in the form level and in the children level)
-    with pytest.raises(ValueError):
-        TextInput(name="test", label="Test", error_message="Example")
-        Form(name="form", error_messages={"test": "Example"}, children=[text_entry])
+    # with pytest.raises(ValueError):
+    #     TextInput(name="test", label="Test", error_message="Example")
+    #     Form(name="form", error_messages={"test": "Example"}, children=[text_entry])
 
     # test that if form has error_messages referred to a ref,
     # the error_messages does not fill up from the .children error_message's

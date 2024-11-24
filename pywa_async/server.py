@@ -67,7 +67,7 @@ class Server:
         if res:
             return res, status
         await self._call_handlers(update_dict)
-        return self._after_calling_update(update_hash)
+        return self._after_handling_update(update_hash)
 
     def _register_routes(self: "WhatsApp") -> None:
         match self._server_type:

@@ -31,8 +31,7 @@ customer_satisfaction_survey = FlowJSON(
                             ),
                             Footer(
                                 label="Continue",
-                                on_click_action=Action(
-                                    name=FlowActionType.NAVIGATE,
+                                on_click_action=NavigateAction(
                                     next=ActionNext(
                                         type=ActionNextType.SCREEN, name="RATE"
                                     ),
@@ -100,8 +99,7 @@ customer_satisfaction_survey = FlowJSON(
                             ),
                             Footer(
                                 label="Done",
-                                on_click_action=Action(
-                                    name=FlowActionType.COMPLETE,
+                                on_click_action=CompleteAction(
                                     payload={
                                         "purchase_rating": purchase_rating.ref,
                                         "delivery_rating": delivery_rating.ref,
@@ -157,8 +155,7 @@ load_re_engagement = FlowJSON(
                             Footer(
                                 label="Done",
                                 enabled=True,
-                                on_click_action=Action(
-                                    name=FlowActionType.COMPLETE,
+                                on_click_action=CompleteAction(
                                     payload={
                                         "firstName": first_name.ref,
                                         "lastName": last_name.ref,
@@ -210,8 +207,7 @@ costumer_engagement = FlowJSON(
                             ),
                             Footer(
                                 label="Continue",
-                                on_click_action=Action(
-                                    name=FlowActionType.NAVIGATE,
+                                on_click_action=NavigateAction(
                                     next=ActionNext(
                                         type=ActionNextType.SCREEN, name="QUESTION_TWO"
                                     ),
@@ -254,8 +250,7 @@ costumer_engagement = FlowJSON(
                             ),
                             Footer(
                                 label="Continue",
-                                on_click_action=Action(
-                                    name=FlowActionType.NAVIGATE,
+                                on_click_action=NavigateAction(
                                     next=ActionNext(
                                         type=ActionNextType.SCREEN,
                                         name="QUESTION_THREE",
@@ -303,8 +298,7 @@ costumer_engagement = FlowJSON(
                             ),
                             Footer(
                                 label="Done",
-                                on_click_action=Action(
-                                    name=FlowActionType.COMPLETE,
+                                on_click_action=CompleteAction(
                                     payload={
                                         "question1Checkbox": question1_checkbox.ref,
                                         "question2RadioButtons": question2_radio_buttons.ref,
@@ -366,8 +360,7 @@ support_request = FlowJSON(
                             ),
                             Footer(
                                 label="Done",
-                                on_click_action=Action(
-                                    name=FlowActionType.COMPLETE,
+                                on_click_action=CompleteAction(
                                     payload={
                                         "name": name.ref,
                                         "orderNumber": order_number.ref,
@@ -425,8 +418,7 @@ communication_preferences = FlowJSON(
                             ),
                             Footer(
                                 label="Done",
-                                on_click_action=Action(
-                                    name=FlowActionType.COMPLETE,
+                                on_click_action=CompleteAction(
                                     payload={
                                         "communicationTypes": communication_types.ref,
                                         "contactPrefs": contact_prefs.ref,
@@ -476,8 +468,7 @@ register_for_an_event = FlowJSON(
                             ),
                             Footer(
                                 label="Continue",
-                                on_click_action=Action(
-                                    name=FlowActionType.NAVIGATE,
+                                on_click_action=NavigateAction(
                                     next=ActionNext(
                                         type=ActionNextType.SCREEN, name="SURVEY"
                                     ),
@@ -523,8 +514,7 @@ register_for_an_event = FlowJSON(
                             ),
                             Footer(
                                 label="Done",
-                                on_click_action=Action(
-                                    name=FlowActionType.COMPLETE,
+                                on_click_action=CompleteAction(
                                     payload={
                                         "source": source.ref,
                                         "firstName": first_name.ref,
@@ -577,8 +567,7 @@ sign_in = FlowJSON(
                             ),
                             EmbeddedLink(
                                 text="Don't have an account? Sign up",
-                                on_click_action=Action(
-                                    name=FlowActionType.NAVIGATE,
+                                on_click_action=NavigateAction(
                                     next=ActionNext(
                                         type=ActionNextType.SCREEN, name="SIGN_UP"
                                     ),
@@ -587,8 +576,7 @@ sign_in = FlowJSON(
                             ),
                             EmbeddedLink(
                                 text="Forgot password",
-                                on_click_action=Action(
-                                    name=FlowActionType.NAVIGATE,
+                                on_click_action=NavigateAction(
                                     next=ActionNext(
                                         type=ActionNextType.SCREEN,
                                         name="FORGOT_PASSWORD",
@@ -598,8 +586,7 @@ sign_in = FlowJSON(
                             ),
                             Footer(
                                 label="Sign in",
-                                on_click_action=Action(
-                                    name=FlowActionType.DATA_EXCHANGE,
+                                on_click_action=DataExchangeAction(
                                     payload={
                                         "email": email.ref,
                                         "password": password.ref,
@@ -655,8 +642,7 @@ sign_in = FlowJSON(
                                 name="terms_agreement",
                                 label="I agree with the terms.",
                                 required=True,
-                                on_click_action=Action(
-                                    name=FlowActionType.NAVIGATE,
+                                on_click_action=NavigateAction(
                                     next=ActionNext(
                                         type=ActionNextType.SCREEN,
                                         name="TERMS_AND_CONDITIONS",
@@ -670,8 +656,7 @@ sign_in = FlowJSON(
                             ),
                             Footer(
                                 label="Continue",
-                                on_click_action=Action(
-                                    name=FlowActionType.DATA_EXCHANGE,
+                                on_click_action=DataExchangeAction(
                                     payload={
                                         "first_name": first_name.ref,
                                         "last_name": last_name.ref,
@@ -716,8 +701,7 @@ sign_in = FlowJSON(
                             ),
                             Footer(
                                 label="Sign in",
-                                on_click_action=Action(
-                                    name=FlowActionType.DATA_EXCHANGE,
+                                on_click_action=DataExchangeAction(
                                     payload={"email": email.ref},
                                 ),
                             ),
@@ -805,8 +789,7 @@ register = FlowJSON(
                                 name="terms_agreement",
                                 label="I agree with the terms.",
                                 required=True,
-                                on_click_action=Action(
-                                    name=FlowActionType.NAVIGATE,
+                                on_click_action=NavigateAction(
                                     next=ActionNext(
                                         type=ActionNextType.SCREEN,
                                         name="TERMS_AND_CONDITIONS",
@@ -820,8 +803,7 @@ register = FlowJSON(
                             ),
                             Footer(
                                 label="Continue",
-                                on_click_action=Action(
-                                    name=FlowActionType.DATA_EXCHANGE,
+                                on_click_action=DataExchangeAction(
                                     payload={
                                         "first_name": first_name.ref,
                                         "last_name": last_name.ref,
@@ -919,8 +901,7 @@ book_a_table = FlowJSON(
                                 name="location",
                                 data_source=location_data.ref,
                                 required=True,
-                                on_select_action=Action(
-                                    name=FlowActionType.DATA_EXCHANGE,
+                                on_select_action=DataExchangeAction(
                                     payload={"location": ComponentRef("location")},
                                 ),
                             ),
@@ -929,8 +910,7 @@ book_a_table = FlowJSON(
                                 name="people",
                                 data_source=people.ref,
                                 required=True,
-                                on_select_action=Action(
-                                    name=FlowActionType.DATA_EXCHANGE,
+                                on_select_action=DataExchangeAction(
                                     payload={"people": ComponentRef("people")},
                                 ),
                             ),
@@ -941,8 +921,7 @@ book_a_table = FlowJSON(
                                 max_date=max_date.ref,
                                 unavailable_dates=unavailable_dates.ref,
                                 required=True,
-                                on_select_action=Action(
-                                    name=FlowActionType.DATA_EXCHANGE,
+                                on_select_action=DataExchangeAction(
                                     payload={"date": ComponentRef("date")},
                                 ),
                             ),
@@ -954,8 +933,7 @@ book_a_table = FlowJSON(
                             ),
                             Footer(
                                 label="Continue",
-                                on_click_action=Action(
-                                    name=FlowActionType.NAVIGATE,
+                                on_click_action=NavigateAction(
                                     next=ActionNext(
                                         type=ActionNextType.SCREEN,
                                         name="BOOKING_DETAILS",
@@ -999,8 +977,7 @@ book_a_table = FlowJSON(
                             ),
                             Footer(
                                 label="Continue",
-                                on_click_action=Action(
-                                    name=FlowActionType.DATA_EXCHANGE,
+                                on_click_action=DataExchangeAction(
                                     payload={
                                         "name": name.ref,
                                         "special_occasion": special_occasion.ref,
@@ -1046,8 +1023,7 @@ book_a_table = FlowJSON(
                                 name="privacy_policy",
                                 label="Accept our Privacy Policy",
                                 required=True,
-                                on_click_action=Action(
-                                    name=FlowActionType.NAVIGATE,
+                                on_click_action=NavigateAction(
                                     next=ActionNext(
                                         type=ActionNextType.SCREEN,
                                         name="TERMS_AND_CONDITIONS",
@@ -1057,8 +1033,7 @@ book_a_table = FlowJSON(
                             ),
                             Footer(
                                 label="Confirm booking",
-                                on_click_action=Action(
-                                    name=FlowActionType.DATA_EXCHANGE,
+                                on_click_action=DataExchangeAction(
                                     payload={},
                                 ),
                             ),
@@ -1146,8 +1121,7 @@ get_a_quote = FlowJSON(
                             ),
                             Footer(
                                 label="Continue",
-                                on_click_action=Action(
-                                    name=FlowActionType.DATA_EXCHANGE,
+                                on_click_action=DataExchangeAction(
                                     payload={
                                         "name": name.ref,
                                         "address": address.ref,
@@ -1201,8 +1175,7 @@ get_a_quote = FlowJSON(
                             ),
                             Footer(
                                 label="Continue",
-                                on_click_action=Action(
-                                    name=FlowActionType.DATA_EXCHANGE,
+                                on_click_action=DataExchangeAction(
                                     payload={"options": options_form.ref},
                                 ),
                             ),
@@ -1231,8 +1204,7 @@ get_a_quote = FlowJSON(
                                 label="Excess",
                                 name="excess",
                                 data_source=excess.ref,
-                                on_select_action=Action(
-                                    name=FlowActionType.DATA_EXCHANGE,
+                                on_select_action=DataExchangeAction(
                                     payload={"excess": ComponentRef("excess")},
                                 ),
                                 required=True,
@@ -1244,8 +1216,7 @@ get_a_quote = FlowJSON(
                                     DataSource(id="1", title="Monthly"),
                                     DataSource(id="2", title="Annually (Save $115)"),
                                 ],
-                                on_select_action=Action(
-                                    name=FlowActionType.DATA_EXCHANGE,
+                                on_select_action=DataExchangeAction(
                                     payload={
                                         "payment_options": ComponentRef(
                                             "payment_options"
@@ -1260,8 +1231,7 @@ get_a_quote = FlowJSON(
                                 name="privacy_policy",
                                 label="Accept our Privacy Policy",
                                 required=True,
-                                on_click_action=Action(
-                                    name=FlowActionType.NAVIGATE,
+                                on_click_action=NavigateAction(
                                     next=ActionNext(
                                         type=ActionNextType.SCREEN,
                                         name="TERMS_AND_CONDITIONS",
@@ -1271,8 +1241,7 @@ get_a_quote = FlowJSON(
                             ),
                             Footer(
                                 label="Choose quote",
-                                on_click_action=Action(
-                                    name=FlowActionType.DATA_EXCHANGE,
+                                on_click_action=DataExchangeAction(
                                     payload={
                                         "privacy_policy": privacy_policy.ref,
                                     },

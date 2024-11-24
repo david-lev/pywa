@@ -24,7 +24,7 @@ def test_all_methods_overwritten_in_async():
         "stop_listening",
         "_async_allowed",
         "_check_for_async_callback",
-        "_after_calling_update",
+        "_after_handling_update",
         "_check_for_async_filters",
         "_check_and_prepare_update",
         "_check_for_async_func",

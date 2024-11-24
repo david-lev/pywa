@@ -8,7 +8,8 @@ import datetime
 import json
 import logging
 import pathlib
-from typing import Iterable, TYPE_CHECKING, Any, BinaryIO, Literal, TypeAlias
+import warnings
+from typing import Iterable, TYPE_CHECKING, Any, BinaryIO, Literal, TypeVar
 
 import httpx
 
@@ -69,6 +70,9 @@ __all__ = [
     "Dropdown",
     "EmbeddedLink",
     "DatePicker",
+    "CalendarPicker",
+    "CalendarPickerMode",
+    "CalendarDay",
     "Image",
     "PhotoPicker",
     "PhotoSource",
@@ -78,6 +82,11 @@ __all__ = [
     "Switch",
     "DataSource",
     "Action",
+    "DataExchangeAction",
+    "NavigateAction",
+    "CompleteAction",
+    "UpdateDataAction",
+    "OpenUrlAction",
     "FlowActionType",
     "FlowRequestActionType",
     "ActionNext",
@@ -885,16 +894,18 @@ _UNDERSCORE_FIELDS = {
     "refresh_on_back",
 }
 
-_SKIP_KEYS = {
-    "init_value",  # Default value copied to Form.init_values
-    "error_message",  # Error message copied to Form.error_messages
-}
-
 _PY_TO_JSON_TYPES = {
     str: "string",
     int: "number",
     float: "number",
     bool: "boolean",
+}
+
+_DATA_SOURCE_SKIP_FIELDS = {
+    "on_select_action",
+    "on-select-action",
+    "on_unselect_action",
+    "on-unselect-action",
 }
 
 
@@ -909,10 +920,9 @@ class _FlowJSONEncoder(json.JSONEncoder):
                     data[item.key] = dict(
                         **self._get_json_type(item.example), __example__=item.example
                     )
-                except KeyError as e:
+                except KeyError:
                     raise ValueError(
                         f"ScreenData: Invalid example type {type(item.example)!r} for {item.key!r}."
-                        f"{e}"
                     )
             return data
         if isinstance(o, DataSource):
@@ -964,7 +974,7 @@ class _FlowJSONEncoder(json.JSONEncoder):
                 if isinstance(item, DataSource)
                 else item.items()
             )
-            if v is not None
+            if v is not None and k not in _DATA_SOURCE_SKIP_FIELDS
         }
 
 
@@ -1005,7 +1015,7 @@ class FlowJSON:
                     if k not in _UNDERSCORE_FIELDS
                     else k: v
                     for (k, v) in d
-                    if k not in _SKIP_KEYS and v is not None
+                    if v is not None
                 },
             ),
             cls=_FlowJSONEncoder,
@@ -1036,10 +1046,14 @@ class DataSource:
         image: The base64 encoded image of the data source. Limited to 1MB (added in v5.0).
         alt_text: The alt text of the image. (added in v5.0).
         color: 6-digit hex color code. (added in v5.0).
+        on_select_action: The update data action to perform when the data source is selected. (added in v6.0).
+        on_unselect_action: The update data action to perform when the data source is unselected. (added in v6.0).
     """
 
     id: str
     title: str
+    on_select_action: UpdateDataAction | None = None
+    on_unselect_action: UpdateDataAction | None = None
     description: str | None = None
     metadata: str | None = None
     enabled: bool | None = None
@@ -1222,6 +1236,10 @@ class Screen:
             else self.data
         )
 
+    def __truediv__(self, ref: _RefT) -> _RefT:
+        """A shortcut to reference screen data / form components in this screen."""
+        return ref.__class__(ref.field, screen=self.id)
+
 
 class LayoutType(utils.StrEnum):
     """
@@ -1261,7 +1279,13 @@ class Component(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def visible(self) -> bool | str | None: ...
+    def visible(self) -> bool | str | Condition | None: ...
+
+    def __post_init__(self):
+        if isinstance(self.visible, Condition):
+            self.visible.wrap_with_backticks = (
+                True  # visible condition should be wrapped with backticks
+            )
 
 
 class ComponentType(utils.StrEnum):
@@ -1282,6 +1306,7 @@ class ComponentType(utils.StrEnum):
     DROPDOWN = "Dropdown"
     EMBEDDED_LINK = "EmbeddedLink"
     DATE_PICKER = "DatePicker"
+    CALENDAR_PICKER = "CalendarPicker"
     IMAGE = "Image"
     PHOTO_PICKER = "PhotoPicker"
     DOCUMENT_PICKER = "DocumentPicker"
@@ -1308,9 +1333,13 @@ class Ref:
             self.field,
         )
 
+    def __str__(self) -> str:
+        """Allowing to use in string concatenation. Added in v6.0."""
+        return self.to_str()
+
     @staticmethod
     def _format_value(val: Ref | bool | int | float | str) -> str:
-        if isinstance(val, Ref):
+        if isinstance(val, (Ref, MathExpression)):
             return val.to_str()
         elif isinstance(val, str):
             return f"'{val}'"
@@ -1336,6 +1365,36 @@ class Ref:
     def __le__(self, other: Ref | int | float) -> Condition:
         return Condition(f"({self.to_str()} <= {self._format_value(other)})")
 
+    def __add__(self, other: Ref | int | float) -> MathExpression:
+        return MathExpression(f"({self.to_str()} + {self._format_value(other)})")
+
+    def __radd__(self, other: Ref | int | float) -> MathExpression:
+        return MathExpression(f"({self._format_value(other)} + {self.to_str()})")
+
+    def __sub__(self, other: Ref | int | float) -> MathExpression:
+        return MathExpression(f"({self.to_str()} - {self._format_value(other)})")
+
+    def __rsub__(self, other: Ref | int | float) -> MathExpression:
+        return MathExpression(f"({self._format_value(other)} - {self.to_str()})")
+
+    def __mul__(self, other: Ref | int | float) -> MathExpression:
+        return MathExpression(f"({self.to_str()} * {self._format_value(other)})")
+
+    def __rmul__(self, other: Ref | int | float) -> MathExpression:
+        return MathExpression(f"({self._format_value(other)} * {self.to_str()})")
+
+    def __truediv__(self, other: Ref | int | float) -> MathExpression:
+        return MathExpression(f"({self.to_str()} / {self._format_value(other)})")
+
+    def __rtruediv__(self, other: Ref | int | float) -> MathExpression:
+        return MathExpression(f"({self._format_value(other)} / {self.to_str()})")
+
+    def __mod__(self, other: Ref | int | float) -> MathExpression:
+        return MathExpression(f"({self.to_str()} % {self._format_value(other)})")
+
+    def __rmod__(self, other: Ref | int | float) -> MathExpression:
+        return MathExpression(f"({self._format_value(other)} % {self.to_str()})")
+
     def __and__(self, other: Ref | Condition) -> Condition:
         if isinstance(other, Ref):
             return Condition(f"({self.to_str()} && {other.to_str()})")
@@ -1353,9 +1412,134 @@ class Ref:
         return f"{self.__class__.__name__}({self.to_str()})"
 
 
-class Condition:
+_RefT = TypeVar("_RefT", bound=Ref)
+
+
+class MathExpression:
+    """
+    This class automatically created when using the arithmetic operators on :class:`Ref` objects.
+
+    Example::
+
+        >>> age = TextInput(name="age", input_type=InputType.NUMBER)
+        >>> text = TextBody(text=f"`'Your age is ' {age.ref + 20}`")
+
+    Supported Operators:
+
+    .. role:: python(code)
+
+    .. list-table::
+        :widths: 10 5 15 30
+        :header-rows: 1
+
+        * - Operator
+          - Symbol
+          - Types allowed
+          - Example
+
+        * - Add
+          - ``+``
+          - :class:`int`, :class:`float`
+          - :python:`age.ref + 20`
+        * - Subtract
+          - ``-``
+          - :class:`int`, :class:`float`
+          - :python:`age.ref - 20`
+        * - Multiply
+          - ``*``
+          - :class:`int`, :class:`float`
+          - :python:`age.ref * 20`
+        * - Divide
+          - ``/``
+          - :class:`int`, :class:`float`
+          - :python:`age.ref / 20`
+        * - Modulus
+          - ``%``
+          - :class:`int`, :class:`float`
+          - :python:`age.ref % 20`
+
+
+    """
+
     def __init__(self, expression: str):
         self._expression = expression
+
+    def __str__(self) -> str:
+        return self.to_str()
+
+    def __repr__(self) -> str:
+        return f"MathExpression({self._expression})"
+
+    def to_str(self) -> str:
+        return self._expression
+
+
+class Condition:
+    """
+    This class automatically created when using the comparison operators on :class:`Ref` objects.
+
+    Example::
+
+
+        >>> age = TextInput(name="age", input_type=InputType.NUMBER)
+        >>> opt_in = OptIn(name="opt_in")
+        >>> text = TextBody(text=..., visible=(age.ref > 20) & opt_in.ref)
+
+
+    Supported Operators:
+
+    .. role:: python(code)
+       :language: python
+
+    .. list-table::
+        :widths: 10 5 15 30
+        :header-rows: 1
+
+        * - Operator
+          - Symbol
+          - Types allowed
+          - Example
+        * - Equal
+          - ``==``
+          - :class:`str`, :class:`int`, :class:`float`
+          - :python:`age.ref == 20`
+        * - Not Equal
+          - ``!=``
+          - :class:`str`, :class:`int`, :class:`float`
+          - :python:`age.ref != 20`
+        * - Greater
+          - ``>``
+          - :class:`int`, :class:`float`
+          - :python:`age.ref > 20`
+        * - Greater Equal
+          - ``>=``
+          - :class:`int`, :class:`float`
+          - :python:`age.ref >= 20`
+        * - Less
+          - ``<``
+          - :class:`int`, :class:`float`
+          - :python:`age.ref < 20`
+        * - Less Equal
+          - ``<=``
+          - :class:`int`, :class:`float`
+          - :python:`age.ref <= 20`
+        * - And
+          - ``&&``
+          - <Condition>
+          - :python:`(age.ref > 20) & opt_in.ref`
+        * - Or
+          - ``||``
+          - <Condition>
+          - :python:`(age.ref > 20) | opt_in.ref`
+        * - Not
+          - ``!``
+          - <Condition>
+          - :python:`~opt_in.ref`
+    """
+
+    def __init__(self, expression: str):
+        self._expression = expression
+        self.wrap_with_backticks = False
 
     def __and__(self, other: Condition | Ref) -> Condition:
         if isinstance(other, Condition):
@@ -1370,11 +1554,18 @@ class Condition:
     def __invert__(self) -> Condition:
         return Condition(f"!{self._expression}")
 
-    def to_str(self) -> str:
-        return self._expression
+    def __str__(self) -> str:
+        return self.to_str()
 
     def __repr__(self) -> str:
         return f"Condition({self._expression})"
+
+    def to_str(self) -> str:
+        return (
+            self._expression
+            if not self.wrap_with_backticks
+            else f"`{self._expression}`"
+        )
 
 
 class ScreenDataRef(Ref):
@@ -1478,36 +1669,36 @@ class Form(Component):
             raise ValueError("At least one child is required")
 
         # Extract init-value's from children
-        if not isinstance(self.init_values, Ref | str):
-            init_values = self.init_values or {}
-            for child in self.children:
-                if getattr(child, "init_value", None) is not None:
-                    if child.name in init_values:
-                        raise ValueError(
-                            f"Duplicate init value for {child.name!r} in form {self.name!r}"
-                        )
-                    if isinstance(self.init_values, str):
-                        raise ValueError(
-                            f"No need to set init value for {child.name!r} if form init values is a dynamic ScreenDataRef"
-                        )
-                    init_values[child.name] = child.init_value
-            self.init_values = init_values or None
+        init_values = self.init_values or {}
+        for child in self.children:
+            if getattr(child, "init_value", None) is not None:
+                if isinstance(self.init_values, Ref | str):
+                    raise ValueError(
+                        f"No need to set init value for {child.name!r} if form init values is a dynamic ScreenDataRef"
+                    )
+                if child.name in init_values:
+                    raise ValueError(
+                        f"Duplicate init value for {child.name!r} in form {self.name!r}"
+                    )
+                init_values[child.name] = child.init_value
+                child.init_value = None
+        self.init_values = init_values or None
 
         # Extract error-message's from children
-        if not isinstance(self.error_messages, Ref | str):
-            error_messages = self.error_messages or {}
-            for child in self.children:
-                if getattr(child, "error_message", None) is not None:
-                    if child.name in error_messages:
-                        raise ValueError(
-                            f"Duplicate error msg for {child.name!r} in form {self.name!r}"
-                        )
-                    if isinstance(self.error_messages, str):
-                        raise ValueError(
-                            f"No need to set error msg for {child.name!r} if form error messages is a dynamic ScreenDataRef"
-                        )
-                    error_messages[child.name] = child.error_message
-            self.error_messages = error_messages or None
+        error_messages = self.error_messages or {}
+        for child in self.children:
+            if getattr(child, "error_message", None) is not None:
+                if isinstance(self.error_messages, Ref | str):
+                    raise ValueError(
+                        f"No need to set error msg for {child.name!r} if form error messages is a dynamic ScreenDataRef"
+                    )
+                if child.name in error_messages:
+                    raise ValueError(
+                        f"Duplicate error msg for {child.name!r} in form {self.name!r}"
+                    )
+                error_messages[child.name] = child.error_message
+                child.error_message = None
+        self.error_messages = error_messages or None
 
 
 class FormComponent(Component, abc.ABC):
@@ -1563,6 +1754,7 @@ class FormComponent(Component, abc.ABC):
         """
         The component reference variable for this component in another screen.
             - Use ``.ref`` property when the reference is in the same screen.
+            - You can also use ``screen/component.ref`` to get the reference variable in another screen.
             - Added in v4.0.
 
         Example:
@@ -1576,7 +1768,8 @@ class FormComponent(Component, abc.ABC):
             ...         Screen(
             ...             id='START',
             ...             layout=Layout(children=[
-            ...                 TextCaption(text=email.ref_in(other), ...)  # component reference from another screen
+            ...                 TextCaption(text=email.ref_in('OTHER'), ...)  # component reference from another screen
+            ...                 TextCaption(text=other/email.ref, ...)  # using the `/` operator
             ...             ])
             ...         )
             ...     ]
@@ -1637,7 +1830,7 @@ class TextHeading(TextComponent):
         default=ComponentType.TEXT_HEADING, init=False, repr=False
     )
     text: str | ScreenDataRef | ComponentRef
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1660,7 +1853,7 @@ class TextSubheading(TextComponent):
         default=ComponentType.TEXT_SUBHEADING, init=False, repr=False
     )
     text: str | ScreenDataRef | ComponentRef
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1694,7 +1887,7 @@ class TextBody(TextComponent):
     markdown: bool | None = None
     font_weight: FontWeight | str | ScreenDataRef | ComponentRef | None = None
     strikethrough: bool | str | ScreenDataRef | ComponentRef | None = None
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1728,7 +1921,7 @@ class TextCaption(TextComponent):
     markdown: bool | None = None
     font_weight: FontWeight | str | ScreenDataRef | ComponentRef | None = None
     strikethrough: bool | str | ScreenDataRef | ComponentRef | None = None
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1768,7 +1961,7 @@ class RichText(TextComponent):
 
 
     Attributes:
-        text: The markdown text (array of strings supported). Limited to 4096 characters. Can be dynamic.
+        text: The markdown text (array of strings supported). Can be dynamic.
         visible: Whether the caption is visible or not. Default to ``True``, Can be dynamic.
     """
 
@@ -1776,7 +1969,7 @@ class RichText(TextComponent):
         default=ComponentType.RICH_TEXT, init=False, repr=False
     )
     text: str | Iterable[str] | ScreenDataRef | ComponentRef
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
 
 
 class TextEntryComponent(FormComponent, abc.ABC):
@@ -1848,7 +2041,7 @@ class TextInput(TextEntryComponent):
         helper_text: The helper text of the text input. Limited to 80 characters. Can be dynamic.
         enabled: Whether the text input is enabled or not. Default to ``True``. Can be dynamic.
         visible: Whether the text input is visible or not. Default to ``True``. Can be dynamic.
-        init_value: The default value of the text input. Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic.
+        init_value: The default value of the text input. Can be dynamic.
         error_message: The error message of the text input. Shortcuts for ``error_messages`` of the parent :class:`Form`. Can be dynamic.
     """
 
@@ -1863,7 +2056,7 @@ class TextInput(TextEntryComponent):
     max_chars: int | str | ScreenDataRef | ComponentRef | None = None
     helper_text: str | ScreenDataRef | ComponentRef | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     init_value: str | ScreenDataRef | ComponentRef | None = None
     error_message: str | ScreenDataRef | ComponentRef | None = None
 
@@ -1894,7 +2087,7 @@ class TextArea(TextEntryComponent):
         helper_text: The helper text of the text area. Limited to 80 characters. Can be dynamic.
         enabled: Whether the text area is enabled or not. Default to ``True``. Can be dynamic.
         visible: Whether the text area is visible or not. Default to ``True``. Can be dynamic.
-        init_value: The default value of the text area. Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic.
+        init_value: The default value of the text area. Can be dynamic.
         error_message: The error message of the text area. Shortcuts for ``error_messages`` of the parent :class:`Form`. Can be dynamic.
     """
 
@@ -1907,9 +2100,22 @@ class TextArea(TextEntryComponent):
     max_length: int | str | ScreenDataRef | ComponentRef | None = None
     helper_text: str | ScreenDataRef | ComponentRef | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     init_value: str | ScreenDataRef | ComponentRef | None = None
     error_message: str | ScreenDataRef | ComponentRef | None = None
+
+
+class MediaSize(utils.StrEnum):
+    """
+    The media size of the image.
+
+    Attributes:
+        REGULAR: Regular size
+        LARGE: Large size
+    """
+
+    REGULAR = "regular"
+    LARGE = "large"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1946,8 +2152,10 @@ class CheckboxGroup(FormComponent):
         required: Whether the checkbox group is required or not. Can be dynamic.
         visible: Whether the checkbox group is visible or not. Default to ``True``. Can be dynamic.
         enabled: Whether the checkbox group is enabled or not. Default to ``True``. Can be dynamic.
-        init_value: The default values (IDs of the data sources). Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic.
+        init_value: The default values (IDs of the data sources). Can be dynamic.
+        media_size: The media size of the image. Can be dynamic. Added in v5.0.
         on_select_action: The action to perform when an item is selected.
+        on_unselect_action: The action to perform when an item is unselected. Added in v6.0.
     """
 
     type: ComponentType = dataclasses.field(
@@ -1960,10 +2168,12 @@ class CheckboxGroup(FormComponent):
     min_selected_items: int | str | ScreenDataRef | ComponentRef | None = None
     max_selected_items: int | str | ScreenDataRef | ComponentRef | None = None
     required: bool | str | ScreenDataRef | ComponentRef | None = None
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
     init_value: list[str] | str | ScreenDataRef | ComponentRef | None = None
-    on_select_action: Action | None = None
+    media_size: MediaSize | str | ScreenDataRef | ComponentRef | None = None
+    on_select_action: DataExchangeAction | UpdateDataAction | None = None
+    on_unselect_action: UpdateDataAction | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1996,8 +2206,10 @@ class RadioButtonsGroup(FormComponent):
         required: Whether the radio buttons group is required or not. Can be dynamic.
         visible: Whether the radio buttons group is visible or not. Default to ``True``. Can be dynamic.
         enabled: Whether the radio buttons group is enabled or not. Default to ``True``. Can be dynamic.
-        init_value: The default value (ID of the data source). Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic.
+        init_value: The default value (ID of the data source). Can be dynamic.
+        media_size: The media size of the image. Can be dynamic. Added in v5.0.
         on_select_action: The action to perform when an item is selected.
+        on_unselect_action: The action to perform when an item is unselected. Added in v6.0.
     """
 
     type: ComponentType = dataclasses.field(
@@ -2008,10 +2220,12 @@ class RadioButtonsGroup(FormComponent):
     label: str | ScreenDataRef | ComponentRef | None = None
     description: str | ScreenDataRef | ComponentRef | None = None
     required: bool | str | ScreenDataRef | ComponentRef | None = None
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
     init_value: str | ScreenDataRef | ComponentRef | None = None
-    on_select_action: Action | None = None
+    media_size: MediaSize | str | ScreenDataRef | ComponentRef | None = None
+    on_select_action: DataExchangeAction | UpdateDataAction | None = None
+    on_unselect_action: UpdateDataAction | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -2043,8 +2257,9 @@ class Dropdown(FormComponent):
         enabled: Whether the dropdown is enabled or not. Default to ``True``. Can be dynamic.
         required: Whether the dropdown is required or not. Can be dynamic.
         visible: Whether the dropdown is visible or not. Default to ``True``. Can be dynamic.
-        init_value: The default value (ID of the data source). Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic.
+        init_value: The default value (ID of the data source). Can be dynamic.
         on_select_action: The action to perform when an item is selected.
+        on_unselect_action: The action to perform when an item is unselected. Added in v6.0.
     """
 
     type: ComponentType = dataclasses.field(
@@ -2055,9 +2270,10 @@ class Dropdown(FormComponent):
     data_source: Iterable[DataSource] | str | ScreenDataRef | ComponentRef
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
     required: bool | str | ScreenDataRef | ComponentRef | None = None
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     init_value: str | ScreenDataRef | ComponentRef | None = None
-    on_select_action: Action | None = None
+    on_select_action: DataExchangeAction | UpdateDataAction | None = None
+    on_unselect_action: UpdateDataAction | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -2066,39 +2282,6 @@ class Footer(Component):
     Footer component allows users to navigate to other screens or submit the flow.
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#foot>`_.
-
-    Example:
-
-        - Exchange data with your server (@wa.on_flow_request(...))
-
-        >>> Footer(
-        ...     label='Sign up',
-        ...     on_click_action=Action(
-        ...         name=FlowActionType.DATA_EXCHANGE,
-        ...         payload={'email': '...', 'phone': '...'}
-        ...     )
-        ... )
-
-        - Go to the next screen:
-
-        >>> Footer(
-        ...     label='Next',
-        ...     on_click_action=Action(
-        ...         name=FlowActionType.NAVIGATE,
-        ...         next=ActionNext(name='NEXT_SCREEN')
-        ...     )
-        ... )
-
-        - Complete the flow when the user clicks the footer:
-
-        >>> Footer(
-        ...     label='Submit',
-        ...     on_click_action=Action(
-        ...         name=FlowActionType.COMPLETE,
-        ...         payload={'email': '...', 'phone': '...'}
-        ...     )
-        ... )
-
 
     Attributes:
         label: The label of the footer. Limited to 35 characters. Can be dynamic.
@@ -2114,7 +2297,7 @@ class Footer(Component):
     )
     visible: None = dataclasses.field(default=None, init=False, repr=False)
     label: str | ScreenDataRef | ComponentRef
-    on_click_action: Action
+    on_click_action: CompleteAction | DataExchangeAction | NavigateAction
     left_caption: str | ScreenDataRef | ComponentRef | None = None
     center_caption: str | ScreenDataRef | ComponentRef | None = None
     right_caption: str | ScreenDataRef | ComponentRef | None = None
@@ -2144,7 +2327,7 @@ class OptIn(FormComponent):
         label: The label of the opt in. Limited to 30 characters. Can be dynamic.
         required: Whether the opt in is required or not. Can be dynamic.
         visible: Whether the opt in is visible or not. Default to ``True``. Can be dynamic.
-        init_value: The default value of the opt in. Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic.
+        init_value: The default value of the opt in. Can be dynamic.
         on_click_action: The action to perform when the opt in is clicked.
     """
 
@@ -2155,9 +2338,11 @@ class OptIn(FormComponent):
     name: str
     label: str | ScreenDataRef | ComponentRef
     required: bool | str | ScreenDataRef | ComponentRef | None = None
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     init_value: bool | str | ScreenDataRef | ComponentRef | None = None
-    on_click_action: Action | None = None
+    on_click_action: UpdateDataAction | OpenUrlAction | NavigateAction | None = None
+    on_select_action: UpdateDataAction | None = None
+    on_unselect_action: UpdateDataAction | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -2173,8 +2358,7 @@ class EmbeddedLink(Component):
 
         >>> EmbeddedLink(
         ...     text='Sign up',
-        ...     on_click_action=Action(
-        ...         name=FlowActionType.NAVIGATE,
+        ...     on_click_action=NavigateAction(
         ...         next=ActionNext(name='SIGNUP_SCREEN'),
         ...         payload={'data': 'value'}
         ...     )
@@ -2190,8 +2374,10 @@ class EmbeddedLink(Component):
         default=ComponentType.EMBEDDED_LINK, init=False, repr=False
     )
     text: str | ScreenDataRef | ComponentRef
-    on_click_action: Action
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    on_click_action: (
+        DataExchangeAction | UpdateDataAction | NavigateAction | OpenUrlAction
+    )
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -2229,7 +2415,7 @@ class DatePicker(FormComponent):
         enabled: Whether the date picker is enabled or not. Default to ``True``. Can be dynamic.
         required: Whether the date picker is required or not. Can be dynamic.
         visible: Whether the date picker is visible or not. Default to ``True``. Can be dynamic.
-        init_value: The default value. Shortcut for ``init_values`` of the parent :class:`Form`. Can be dynamic.
+        init_value: The default value. Can be dynamic.
         error_message: The error message of the date picker. Shortcuts for ``error_messages`` of the parent :class:`Form`. Can be dynamic.
         on_select_action: The action to perform when a date is selected.
     """
@@ -2247,10 +2433,154 @@ class DatePicker(FormComponent):
     helper_text: str | ScreenDataRef | ComponentRef | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
     required: bool | str | ScreenDataRef | ComponentRef | None = None
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     init_value: datetime.date | str | ScreenDataRef | ComponentRef | None = None
     error_message: str | ScreenDataRef | ComponentRef | None = None
-    on_select_action: Action | None = None
+    on_select_action: DataExchangeAction | None = None
+
+
+class CalendarPickerMode(utils.StrEnum):
+    """
+    The mode of the calendar picker.
+
+    Attributes:
+        SINGLE: Allows to select one date.
+        RANGE: Allows to select start and end dates.
+    """
+
+    SINGLE = "single"
+    RANGE = "range"
+
+
+class CalendarDay(utils.StrEnum):
+    """
+    The days of the week.
+
+    Attributes:
+        MON: Monday
+        TUE: Tuesday
+        WED: Wednesday
+        THU: Thursday
+        FRI: Friday
+        SAT: Saturday
+        SUN: Sunday
+    """
+
+    MON = "Mon"
+    TUE = "Tue"
+    WED = "Wed"
+    THU = "Thu"
+    FRI = "Fri"
+    SAT = "Sat"
+    SUN = "Sun"
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class CalendarPicker(FormComponent):
+    """
+    CalendarPicker component allows users to select a single date or a range of dates from a full calendar interface.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/components/#calendarpicker>`_.
+    - Added in v6.1
+
+    Example:
+
+        >>> CalendarPicker(
+        ...     name='date',
+        ...     label='Appointment Date',
+        ...     mode=CalendarPickerMode.SINGLE,
+        ...     min_date=datetime.date(2024, 7, 21),
+        ...     max_date=datetime.date(2024, 10, 21),
+        ...     unavailable_dates=[
+        ...         datetime.date(2024, 7, 25),
+        ...         datetime.date(2024, 7, 26),
+        ...     ],
+        ...     helper_text='Select a date',
+        ...     required=True
+        ... )
+
+
+    Attributes:
+        name: The unique name (id) for this component (to be used dynamically or in action payloads).
+        label: The label of the calendar picker. Limited to 40 characters. Can be dynamic.
+        title: The title of the calendar picker. Only available when mode is ``CalendarMode.RANGE``. Can be dynamic.
+        description: The description of the calendar picker. Limited to 300 characters. Only available when mode is ``CalendarMode.RANGE``. Can be dynamic.
+        mode: The mode of the calendar picker. Default to ``CalendarMode.SINGLE``. Can be dynamic.
+        min_date: The minimum date (date/datetime) that can be selected. Can be dynamic.
+        max_date: The maximum date (date/datetime) that can be selected. Can be dynamic.
+        unavailable_dates: The dates (dates/datetimes) that cannot be selected. Can be dynamic.
+        include_days: The days of the week to include in the calendar picker. Default to all days. Can be dynamic.
+        min_days: The minimum number of days that can be selected in the range mode. Can be dynamic.
+        max_days: The maximum number of days that can be selected in the range mode. Can be dynamic.
+        helper_text: The helper text of the calendar picker. Limited to 80 characters. Can be dynamic.
+        enabled: Whether the calendar picker is enabled or not. Default to ``True``. Can be dynamic.
+        required: Whether the calendar picker is required or not. Can be dynamic.
+        visible: Whether the calendar picker is visible or not. Default to ``True``. Can be dynamic.
+        init_value: The default value. Only available when component is outside Form component. Can be dynamic.
+        error_message: The error message of the calendar picker. Only available when component is outside Form component. Can be dynamic.
+        on_select_action: The action to perform when a date is selected.
+    """
+
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.CALENDAR_PICKER, init=False, repr=False
+    )
+    name: str
+    title: str | ScreenDataRef | ComponentRef | None = None
+    description: str | ScreenDataRef | ComponentRef | None = None
+    label: (
+        dict[Literal["start-date", "end-date"], str]
+        | str
+        | ScreenDataRef
+        | ComponentRef
+    )
+    mode: CalendarPickerMode | str | ScreenDataRef | ComponentRef | None = None
+    min_date: datetime.date | str | ScreenDataRef | ComponentRef | None = None
+    max_date: datetime.date | str | ScreenDataRef | ComponentRef | None = None
+    unavailable_dates: (
+        Iterable[datetime.date | str] | str | ScreenDataRef | ComponentRef | None
+    ) = None
+    min_days: int | str | ScreenDataRef | ComponentRef | None = None
+    max_days: int | str | ScreenDataRef | ComponentRef | None = None
+    include_days: (
+        Iterable[CalendarDay | str] | str | ScreenDataRef | ComponentRef | None
+    ) = None
+    helper_text: (
+        dict[Literal["start-date", "end-date"], str]
+        | str
+        | ScreenDataRef
+        | ComponentRef
+        | None
+    ) = None
+    enabled: bool | str | ScreenDataRef | ComponentRef | None = None
+    required: (
+        dict[Literal["start-date", "end-date"], bool]
+        | bool
+        | str
+        | ScreenDataRef
+        | ComponentRef
+        | None
+    ) = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
+    init_value: (
+        dict[Literal["start-date", "end-date"], datetime.date | str]
+        | datetime.date
+        | str
+        | ScreenDataRef
+        | ComponentRef
+        | None
+    ) = None
+    error_message: (
+        dict[Literal["start-date", "end-date"], str]
+        | str
+        | ScreenDataRef
+        | ComponentRef
+        | None
+    ) = None
+    on_select_action: (
+        dict[Literal["start-date", "end-date"], DataExchangeAction]
+        | DataExchangeAction
+        | None
+    ) = None
 
 
 class ScaleType(utils.StrEnum):
@@ -2307,7 +2637,7 @@ class Image(Component):
     scale_type: ScaleType | str | ScreenDataRef | ComponentRef | None = None
     aspect_ratio: int | str | ScreenDataRef | ComponentRef
     alt_text: str | ScreenDataRef | ComponentRef | None = None
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
 
 
 class PhotoSource(utils.StrEnum):
@@ -2375,7 +2705,7 @@ class PhotoPicker(FormComponent):
     min_uploaded_photos: int | str | ScreenDataRef | ComponentRef | None = None
     max_uploaded_photos: int | str | ScreenDataRef | ComponentRef | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     error_message: str | ScreenDataRef | ComponentRef | None = None
 
 
@@ -2428,7 +2758,7 @@ class DocumentPicker(FormComponent):
     max_uploaded_documents: int | str | ScreenDataRef | ComponentRef | None = None
     allowed_mime_types: Iterable[str] | str | ScreenDataRef | ComponentRef | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
-    visible: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     error_message: str | ScreenDataRef | ComponentRef | None = None
 
 
@@ -2446,56 +2776,6 @@ class If(Component):
     - If there is a :class:`Footer` within :class:`If`, it should exist in both branches (i.e. ``then`` and ``else``). This means that ``else`` becomes mandatory.
     - If there is a :class:`Footer` within :class:`If` it cannot exist a footer outside, because the max count of :class:`Footer` is 1 per screen.
 
-
-    Supported Operators:
-
-        .. role:: python(code)
-           :language: python
-
-        .. list-table::
-            :widths: 10 5 15 30
-            :header-rows: 1
-
-            * - Operator
-              - Symbol
-              - Types allowed
-              - Example
-            * - Equal
-              - ``==``
-              - :class:`str`, :class:`int`, :class:`float`
-              - :python:`age.ref == 20`
-            * - Not Equal
-              - ``!=``
-              - :class:`str`, :class:`int`, :class:`float`
-              - :python:`age.ref != 20`
-            * - Greater
-              - ``>``
-              - :class:`int`, :class:`float`
-              - :python:`age.ref > 20`
-            * - Greater Equal
-              - ``>=``
-              - :class:`int`, :class:`float`
-              - :python:`age.ref >= 20`
-            * - Less
-              - ``<``
-              - :class:`int`, :class:`float`
-              - :python:`age.ref < 20`
-            * - Less Equal
-              - ``<=``
-              - :class:`int`, :class:`float`
-              - :python:`age.ref <= 20`
-            * - And
-              - ``&&``
-              - <Condition>
-              - :python:`(age.ref > 20) & opt_in.ref`
-            * - Or
-              - ``||``
-              - <Condition>
-              - :python:`(age.ref > 20) | opt_in.ref`
-            * - Not
-              - ``!``
-              - <Condition>
-              - :python:`~opt_in.ref`
 
     Example:
 
@@ -2576,11 +2856,17 @@ class FlowActionType(utils.StrEnum):
         NAVIGATE: Triggers the next screen with the payload as its input. The CTA button will be disabled until the
          payload with data required for the next screen is supplied.
          (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#navigate-action>`_).
+        OPEN_URL: Opens a URL in the browser. Added in v6.0
+         (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#open-url-action
+        UPDATE_DATA: Update the data of the current screen. Added in v6.0
+         (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#update-data-action>`_).
     """
 
     COMPLETE = "complete"
     DATA_EXCHANGE = "data_exchange"
     NAVIGATE = "navigate"
+    OPEN_URL = "open_url"
+    UPDATE_DATA = "update_data"
 
 
 class ActionNextType(utils.StrEnum):
@@ -2610,46 +2896,190 @@ class ActionNext:
     type: ActionNextType | str = ActionNextType.SCREEN
 
 
+def _deprecate_action(action: FlowActionType, use_cls: type[BaseAction]) -> None:
+    warnings.warn(
+        message=f"Action(name='{action}', ...) is deprecated. Use {use_cls.__name__} instead",
+        category=DeprecationWarning,
+        stacklevel=3,
+    )
+
+
 @dataclasses.dataclass(slots=True, kw_only=True)
 class Action:
     """
-    Action component allows users to trigger asynchronous actions that are handled by a client through interactive UI elements.
+    This class is deprecated and will be removed in future versions. Use one of the following classes instead:
 
-    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#actions>`_.
+    - :class:`DataExchangeAction`
+    - :class:`NavigateAction`
+    - :class:`OpenUrlAction`
+    - :class:`UpdateDataAction`
+    - :class:`CompleteAction`
+
+    """
+
+    name: None
+    next: None = None
+    url: None = None
+    payload: None = None
+
+    def __post_init__(self):
+        if self.name == FlowActionType.NAVIGATE.value:
+            _deprecate_action(FlowActionType.NAVIGATE, NavigateAction)
+            if self.next is None:
+                raise ValueError("next is required for FlowActionType.NAVIGATE")
+        elif self.name == FlowActionType.OPEN_URL.value:
+            _deprecate_action(FlowActionType.OPEN_URL, OpenUrlAction)
+            if self.url is None:
+                raise ValueError("url is required for FlowActionType.OPEN_URL")
+        elif self.name == FlowActionType.COMPLETE.value:
+            _deprecate_action(FlowActionType.COMPLETE, CompleteAction)
+            if self.payload is None:
+                raise ValueError(
+                    "payload is required for FlowActionType.COMPLETE (use {} for empty payload)"
+                )
+        elif self.name == FlowActionType.UPDATE_DATA.value:
+            _deprecate_action(FlowActionType.UPDATE_DATA, UpdateDataAction)
+            if self.payload is None:
+                raise ValueError("payload is required for FlowActionType.UPDATE_DATA")
+        elif self.name == FlowActionType.DATA_EXCHANGE.value:
+            _deprecate_action(FlowActionType.DATA_EXCHANGE, DataExchangeAction)
+            if self.payload is None:
+                raise ValueError("payload is required for FlowActionType.DATA_EXCHANGE")
+
+
+class BaseAction(abc.ABC):
+    """The base class for all actions"""
+
+    @property
+    @abc.abstractmethod
+    def name(self) -> FlowActionType: ...
+
+    @property
+    @abc.abstractmethod
+    def payload(
+        self,
+    ) -> dict[
+        str, str | bool | Iterable[DataSource] | ScreenDataRef | ComponentRef
+    ]: ...
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class DataExchangeAction(BaseAction):
+    """
+    Data Exchange Action. Sending Data to WhatsApp Flows Data Endpoint
+
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#data-exchange-action>`_.
 
     Example:
 
-        >>> complete_action = Action(
-        ...     name=FlowActionType.COMPLETE,
+        >>> DataExchangeAction(
         ...     payload={'data': 'value'}
         ... )
-        >>> data_exchange_action = Action(
-        ...     name=FlowActionType.DATA_EXCHANGE,
-        ...     payload={'data': 'value'}
-        ... )
-        >>> navigate_action = Action(
-        ...     name=FlowActionType.NAVIGATE,
+
+    Attributes:
+        payload: The payload of the action (Pass data to the WhatsApp Flows Data Endpoint).
+         This payload can take data from form components or from the data of the screen.
+    """
+
+    name: FlowActionType = dataclasses.field(
+        default=FlowActionType.DATA_EXCHANGE, init=False, repr=False
+    )
+    payload: dict[str, str | bool | Iterable[DataSource] | ScreenDataRef | ComponentRef]
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class NavigateAction(BaseAction):
+    """
+    Navigate Action. Triggers the next screen with the payload as its input.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#navigate-action>`_.
+
+    Example:
+
+        >>> NavigateAction(
         ...     next=ActionNext(name='NEXT_SCREEN'),
         ...     payload={'data': 'value'}
         ... )
 
     Attributes:
-        name: The type of the action
-        next: The next action to perform (only for ``FlowActionType.NAVIGATE``)
-        payload: The payload of the action (Pass data to the next screen or to the WhatsApp Flows Data Endpoint).
+        next: The next action to perform
+        payload: The payload of the action (Pass data to the next screen).
          This payload can take data from form components or from the data of the screen.
     """
 
-    name: FlowActionType | str
-    next: ActionNext | None = None
-    payload: dict[str, str | ScreenDataRef | ComponentRef] | None = None
+    name: FlowActionType = dataclasses.field(
+        default=FlowActionType.NAVIGATE, init=False, repr=False
+    )
+    next: ActionNext
+    payload: dict[str, str | bool | Iterable[DataSource] | ScreenDataRef | ComponentRef]
 
-    def __post_init__(self):
-        if self.name == FlowActionType.NAVIGATE.value:
-            if self.next is None:
-                raise ValueError("next is required for FlowActionType.NAVIGATE")
-        if self.name == FlowActionType.COMPLETE.value:
-            if self.payload is None:
-                raise ValueError(
-                    "payload is required for FlowActionType.COMPLETE (use {} for empty payload)"
-                )
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class OpenUrlAction(BaseAction):
+    """
+    Open URL Action. Triggers a link to open in the device’s default web browser.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#open-url-action>`_.
+
+    Example:
+
+        >>> OpenUrlAction(
+        ...     url='https://example.com'
+        ... )
+
+    Attributes:
+        url: The URL to open
+    """
+
+    name: FlowActionType = dataclasses.field(
+        default=FlowActionType.OPEN_URL, init=False, repr=False
+    )
+    payload: None = dataclasses.field(default=None, init=False, repr=False)
+    url: str
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class UpdateDataAction(BaseAction):
+    """
+    Update Data Action. Triggers an immediate update to the screen's state, reflecting user input changes.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#update-data-action>`_.
+
+    Example:
+
+        >>> UpdateDataAction(
+        ...     payload={'i_agree': True}
+        ... )
+
+    Attributes:
+        payload: The data to update for the current screen. The keys in the payload should match the component names.
+    """
+
+    name: FlowActionType = dataclasses.field(
+        default=FlowActionType.UPDATE_DATA, init=False, repr=False
+    )
+    payload: dict[str, str | bool | Iterable[DataSource] | ScreenDataRef | ComponentRef]
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class CompleteAction(BaseAction):
+    """
+    Complete Action. Triggers the termination of the Flow with the provided payload
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#complete-action>`_.
+
+    Example:
+
+        >>> CompleteAction(
+        ...     payload={'data': 'value'}
+        ... )
+
+    Attributes:
+        payload: The payload to include in the :class:`FlowCompletion` `.response` attribute.
+    """
+
+    name: FlowActionType = dataclasses.field(
+        default=FlowActionType.COMPLETE, init=False, repr=False
+    )
+    payload: dict[str, str | bool | ScreenDataRef | ComponentRef]

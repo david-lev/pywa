@@ -1,0 +1,124 @@
+{
+  "calendar_picker_single_mode": {
+    "version": "6.1",
+    "data_api_version": "3.0",
+    "routing_model": {},
+    "screens": [
+      {
+        "id": "DEMO_SCREEN",
+        "terminal": true,
+        "title": "Demo screen",
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "CalendarPicker",
+              "name": "calendar",
+              "label": "Single date",
+              "helper-text": "Select a date",
+              "required": true,
+              "mode": "single",
+              "min-date": "2024-10-21",
+              "max-date": "2025-12-12",
+              "unavailable-dates": [
+                "2024-11-28",
+                "2024-11-01"
+              ],
+              "include-days": [
+                "Mon",
+                "Tue",
+                "Wed",
+                "Thu",
+                "Fri"
+              ],
+              "init-value": "2024-10-23",
+              "on-select-action": {
+                "name": "data_exchange",
+                "payload": {
+                  "calendar": "${form.calendar}"
+                }
+              }
+            },
+            {
+              "type": "Footer",
+              "label": "Continue",
+              "on-click-action": {
+                "name": "data_exchange",
+                "payload": {}
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "calendar_picker_range_mode": {
+    "version": "6.1",
+    "data_api_version": "3.0",
+    "routing_model": {},
+    "screens": [
+      {
+        "id": "DEMO_SCREEN",
+        "terminal": true,
+        "title": "Demo screen",
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "CalendarPicker",
+              "name": "calendar_range",
+              "title": "Range calendar",
+              "description": "Use this to select a date range",
+              "label": {
+                "start-date": "Start date",
+                "end-date": "End date"
+              },
+              "helper-text": {
+                "start-date": "Select from date",
+                "end-date": "Select to date"
+              },
+              "required": {
+                "start-date": true,
+                "end-date": false
+              },
+              "mode": "range",
+              "min-date": "2024-10-21",
+              "max-date": "2025-12-12",
+              "unavailable-dates": [
+                "2024-11-28",
+                "2024-11-01"
+              ],
+              "include-days": [
+                "Mon",
+                "Tue",
+                "Wed",
+                "Thu",
+                "Fri"
+              ],
+              "min-days": 3,
+              "max-days": 10,
+              "init-value": {
+                "start-date": "2024-10-22",
+                "end-date": "2024-10-25"
+              },
+              "on-select-action": {
+                "name": "data_exchange",
+                "payload": {
+                  "calendar_range": "${form.calendar_range}"
+                }
+              }
+            },
+            {
+              "type": "Footer",
+              "label": "Continue",
+              "on-click-action": {
+                "name": "data_exchange",
+                "payload": {}
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
