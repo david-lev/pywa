@@ -88,3 +88,7 @@ Here you will find all the components that make up a Flow JSON object.
 .. autoclass:: ScreenDataRef()
 
 .. autoclass:: ComponentRef()
+
+.. autoclass:: Condition()
+
+.. autoclass:: MathExpression()

@@ -1416,6 +1416,51 @@ _RefT = TypeVar("_RefT", bound=Ref)
 
 
 class MathExpression:
+    """
+    This class automatically created when using the arithmetic operators on :class:`Ref` objects.
+
+    Example::
+
+        >>> age = TextInput(name="age", input_type=InputType.NUMBER)
+        >>> text = TextBody(text=f"`'Your age is ' {age.ref + 20}`")
+
+    Supported Operators:
+
+    .. role:: python(code)
+
+    .. list-table::
+        :widths: 10 5 15 30
+        :header-rows: 1
+
+        * - Operator
+          - Symbol
+          - Types allowed
+          - Example
+
+        * - Add
+          - ``+``
+          - :class:`int`, :class:`float`
+          - :python:`age.ref + 20`
+        * - Subtract
+          - ``-``
+          - :class:`int`, :class:`float`
+          - :python:`age.ref - 20`
+        * - Multiply
+          - ``*``
+          - :class:`int`, :class:`float`
+          - :python:`age.ref * 20`
+        * - Divide
+          - ``/``
+          - :class:`int`, :class:`float`
+          - :python:`age.ref / 20`
+        * - Modulus
+          - ``%``
+          - :class:`int`, :class:`float`
+          - :python:`age.ref % 20`
+
+
+    """
+
     def __init__(self, expression: str):
         self._expression = expression
 
@@ -1430,6 +1475,68 @@ class MathExpression:
 
 
 class Condition:
+    """
+    This class automatically created when using the comparison operators on :class:`Ref` objects.
+
+    Example::
+
+
+        >>> age = TextInput(name="age", input_type=InputType.NUMBER)
+        >>> opt_in = OptIn(name="opt_in")
+        >>> text = TextBody(text=..., visible=(age.ref > 20) & opt_in.ref)
+
+
+    Supported Operators:
+
+    .. role:: python(code)
+       :language: python
+
+    .. list-table::
+        :widths: 10 5 15 30
+        :header-rows: 1
+
+        * - Operator
+          - Symbol
+          - Types allowed
+          - Example
+        * - Equal
+          - ``==``
+          - :class:`str`, :class:`int`, :class:`float`
+          - :python:`age.ref == 20`
+        * - Not Equal
+          - ``!=``
+          - :class:`str`, :class:`int`, :class:`float`
+          - :python:`age.ref != 20`
+        * - Greater
+          - ``>``
+          - :class:`int`, :class:`float`
+          - :python:`age.ref > 20`
+        * - Greater Equal
+          - ``>=``
+          - :class:`int`, :class:`float`
+          - :python:`age.ref >= 20`
+        * - Less
+          - ``<``
+          - :class:`int`, :class:`float`
+          - :python:`age.ref < 20`
+        * - Less Equal
+          - ``<=``
+          - :class:`int`, :class:`float`
+          - :python:`age.ref <= 20`
+        * - And
+          - ``&&``
+          - <Condition>
+          - :python:`(age.ref > 20) & opt_in.ref`
+        * - Or
+          - ``||``
+          - <Condition>
+          - :python:`(age.ref > 20) | opt_in.ref`
+        * - Not
+          - ``!``
+          - <Condition>
+          - :python:`~opt_in.ref`
+    """
+
     def __init__(self, expression: str):
         self._expression = expression
         self.wrap_with_backticks = False
@@ -1854,7 +1961,7 @@ class RichText(TextComponent):
 
 
     Attributes:
-        text: The markdown text (array of strings supported). Limited to 4096 characters. Can be dynamic.
+        text: The markdown text (array of strings supported). Can be dynamic.
         visible: Whether the caption is visible or not. Default to ``True``, Can be dynamic.
     """
 
@@ -2669,56 +2776,6 @@ class If(Component):
     - If there is a :class:`Footer` within :class:`If`, it should exist in both branches (i.e. ``then`` and ``else``). This means that ``else`` becomes mandatory.
     - If there is a :class:`Footer` within :class:`If` it cannot exist a footer outside, because the max count of :class:`Footer` is 1 per screen.
 
-
-    Supported Operators:
-
-        .. role:: python(code)
-           :language: python
-
-        .. list-table::
-            :widths: 10 5 15 30
-            :header-rows: 1
-
-            * - Operator
-              - Symbol
-              - Types allowed
-              - Example
-            * - Equal
-              - ``==``
-              - :class:`str`, :class:`int`, :class:`float`
-              - :python:`age.ref == 20`
-            * - Not Equal
-              - ``!=``
-              - :class:`str`, :class:`int`, :class:`float`
-              - :python:`age.ref != 20`
-            * - Greater
-              - ``>``
-              - :class:`int`, :class:`float`
-              - :python:`age.ref > 20`
-            * - Greater Equal
-              - ``>=``
-              - :class:`int`, :class:`float`
-              - :python:`age.ref >= 20`
-            * - Less
-              - ``<``
-              - :class:`int`, :class:`float`
-              - :python:`age.ref < 20`
-            * - Less Equal
-              - ``<=``
-              - :class:`int`, :class:`float`
-              - :python:`age.ref <= 20`
-            * - And
-              - ``&&``
-              - <Condition>
-              - :python:`(age.ref > 20) & opt_in.ref`
-            * - Or
-              - ``||``
-              - <Condition>
-              - :python:`(age.ref > 20) | opt_in.ref`
-            * - Not
-              - ``!``
-              - <Condition>
-              - :python:`~opt_in.ref`
 
     Example:
 
