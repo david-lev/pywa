@@ -1142,6 +1142,7 @@ class ScreenData:
         The key for this data to use in ANOTHER screen children.
             - If you want to reference this data in the same screen children, use the :meth:`ref` property.
             - A shortcut for :class:`ScreenDataRef` with this key and screen.
+            - You can also use ``screen / data.ref`` to reference this data in other screens.
             - Added in v4.0.
 
         Example:
@@ -1155,7 +1156,12 @@ class ScreenData:
             ...         ),
             ...         Screen(
             ...             id='END',
-            ...             layout=Layout(children=[TextHeading(text=dynamic_welcome.ref_in(start), ...)]) # Use the .ref_in with the screen here
+            ...             layout=Layout(
+            ...                 children=[
+            ...                     TextHeading(text=dynamic_welcome.ref_in("START"), ...),  # using the `.ref_in(screen)` method
+            ...                     TextHeading(text=start/dynamic_welcome.ref, ...)  # using the `screen / data.ref` syntax
+            ...                 ]
+            ...             )
             ...         )
             ...     ],
             ...     ...
@@ -1427,6 +1433,7 @@ class MathExpression:
     Supported Operators:
 
     .. role:: python(code)
+       :language: python
 
     .. list-table::
         :widths: 10 5 15 30
@@ -1435,7 +1442,7 @@ class MathExpression:
         * - Operator
           - Symbol
           - Types allowed
-          - Example
+          - Python
 
         * - Add
           - ``+``
@@ -1498,7 +1505,7 @@ class Condition:
         * - Operator
           - Symbol
           - Types allowed
-          - Example
+          - Python
         * - Equal
           - ``==``
           - :class:`str`, :class:`int`, :class:`float`
@@ -1768,8 +1775,8 @@ class FormComponent(Component, abc.ABC):
             ...         Screen(
             ...             id='START',
             ...             layout=Layout(children=[
-            ...                 TextCaption(text=email.ref_in('OTHER'), ...)  # component reference from another screen
-            ...                 TextCaption(text=other/email.ref, ...)  # using the `/` operator
+            ...                 TextCaption(text=email.ref_in('OTHER'), ...)  # using the `.ref_in(screen)` method
+            ...                 TextCaption(text=other/email.ref, ...)  # using the screen/component.ref syntax
             ...             ])
             ...         )
             ...     ]
