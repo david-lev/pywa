@@ -32,9 +32,7 @@ customer_satisfaction_survey = FlowJSON(
                             Footer(
                                 label="Continue",
                                 on_click_action=NavigateAction(
-                                    next=ActionNext(
-                                        type=ActionNextType.SCREEN, name="RATE"
-                                    ),
+                                    next=Next(name="RATE"),
                                     payload={
                                         "recommend_radio": recommend_radio.ref,
                                         "comment_text": comment_text.ref,
@@ -208,8 +206,8 @@ costumer_engagement = FlowJSON(
                             Footer(
                                 label="Continue",
                                 on_click_action=NavigateAction(
-                                    next=ActionNext(
-                                        type=ActionNextType.SCREEN, name="QUESTION_TWO"
+                                    next=Next(
+                                        type=NextType.SCREEN, name="QUESTION_TWO"
                                     ),
                                     payload={
                                         "question1Checkbox": question1_checkbox.ref
@@ -251,8 +249,8 @@ costumer_engagement = FlowJSON(
                             Footer(
                                 label="Continue",
                                 on_click_action=NavigateAction(
-                                    next=ActionNext(
-                                        type=ActionNextType.SCREEN,
+                                    next=Next(
+                                        type=NextType.SCREEN,
                                         name="QUESTION_THREE",
                                     ),
                                     payload={
@@ -469,9 +467,7 @@ register_for_an_event = FlowJSON(
                             Footer(
                                 label="Continue",
                                 on_click_action=NavigateAction(
-                                    next=ActionNext(
-                                        type=ActionNextType.SCREEN, name="SURVEY"
-                                    ),
+                                    next=Next(type=NextType.SCREEN, name="SURVEY"),
                                     payload={
                                         "firstName": first_name.ref,
                                         "lastName": last_name.ref,
@@ -568,17 +564,15 @@ sign_in = FlowJSON(
                             EmbeddedLink(
                                 text="Don't have an account? Sign up",
                                 on_click_action=NavigateAction(
-                                    next=ActionNext(
-                                        type=ActionNextType.SCREEN, name="SIGN_UP"
-                                    ),
+                                    next=Next(type=NextType.SCREEN, name="SIGN_UP"),
                                     payload={},
                                 ),
                             ),
                             EmbeddedLink(
                                 text="Forgot password",
                                 on_click_action=NavigateAction(
-                                    next=ActionNext(
-                                        type=ActionNextType.SCREEN,
+                                    next=Next(
+                                        type=NextType.SCREEN,
                                         name="FORGOT_PASSWORD",
                                     ),
                                     payload={"body": "Example"},
@@ -643,8 +637,8 @@ sign_in = FlowJSON(
                                 label="I agree with the terms.",
                                 required=True,
                                 on_click_action=NavigateAction(
-                                    next=ActionNext(
-                                        type=ActionNextType.SCREEN,
+                                    next=Next(
+                                        type=NextType.SCREEN,
                                         name="TERMS_AND_CONDITIONS",
                                     ),
                                     payload={},
@@ -790,8 +784,8 @@ register = FlowJSON(
                                 label="I agree with the terms.",
                                 required=True,
                                 on_click_action=NavigateAction(
-                                    next=ActionNext(
-                                        type=ActionNextType.SCREEN,
+                                    next=Next(
+                                        type=NextType.SCREEN,
                                         name="TERMS_AND_CONDITIONS",
                                     ),
                                     payload={},
@@ -934,8 +928,8 @@ book_a_table = FlowJSON(
                             Footer(
                                 label="Continue",
                                 on_click_action=NavigateAction(
-                                    next=ActionNext(
-                                        type=ActionNextType.SCREEN,
+                                    next=Next(
+                                        type=NextType.SCREEN,
                                         name="BOOKING_DETAILS",
                                     ),
                                     payload={},
@@ -1024,8 +1018,8 @@ book_a_table = FlowJSON(
                                 label="Accept our Privacy Policy",
                                 required=True,
                                 on_click_action=NavigateAction(
-                                    next=ActionNext(
-                                        type=ActionNextType.SCREEN,
+                                    next=Next(
+                                        type=NextType.SCREEN,
                                         name="TERMS_AND_CONDITIONS",
                                     ),
                                     payload={},
@@ -1232,8 +1226,8 @@ get_a_quote = FlowJSON(
                                 label="Accept our Privacy Policy",
                                 required=True,
                                 on_click_action=NavigateAction(
-                                    next=ActionNext(
-                                        type=ActionNextType.SCREEN,
+                                    next=Next(
+                                        type=NextType.SCREEN,
                                         name="TERMS_AND_CONDITIONS",
                                     ),
                                     payload={},

@@ -56,8 +56,8 @@ Let's start from the ``START`` screen. This screen welcomes the user and allows 
                     text="Click here to sign up",
                     on_click_action=Action(
                         name=FlowActionType.NAVIGATE,
-                        next=ActionNext(
-                            type=ActionNextType.SCREEN,
+                        next=Next(
+                            type=NextType.SCREEN,
                             name="SIGN_UP",
                         ),
                         payload={
@@ -73,8 +73,8 @@ Let's start from the ``START`` screen. This screen welcomes the user and allows 
                     text="Click here to login",
                     on_click_action=Action(
                         name=FlowActionType.NAVIGATE,
-                        next=ActionNext(
-                            type=ActionNextType.SCREEN,
+                        next=Next(
+                            type=NextType.SCREEN,
                             name="LOGIN",
                         ),
                         payload={
@@ -132,8 +132,8 @@ The ``SIGN_UP`` screen allows the user to sign up (create an account). Let's tak
                     text="Already have an account?",
                     on_click_action=Action(
                         name=FlowActionType.NAVIGATE,
-                        next=ActionNext(
-                            type=ActionNextType.SCREEN,
+                        next=Next(
+                            type=NextType.SCREEN,
                             name="LOGIN",
                         ),
                         payload={
@@ -283,8 +283,8 @@ Ok, now to the ``LOGIN`` screen. This screen allows the user to login to their e
                     text="Don't have an account?",
                     on_click_action=Action(
                         name=FlowActionType.NAVIGATE,
-                        next=ActionNext(
-                            type=ActionNextType.SCREEN,
+                        next=Next(
+                            type=NextType.SCREEN,
                             name="SIGN_UP",
                         ),
                         payload={
@@ -451,8 +451,8 @@ Here is all the flow code in one place:
             Footer,
             Layout,
             Action,
-            ActionNext,
-            ActionNextType,
+            Next,
+            NextType,
             FlowActionType,
             ComponentRef,
             InputType,
@@ -485,8 +485,8 @@ Here is all the flow code in one place:
                                 text="Click here to sign up",
                                 on_click_action=Action(
                                     name=FlowActionType.NAVIGATE,
-                                    next=ActionNext(
-                                        type=ActionNextType.SCREEN,
+                                    next=Next(
+                                        type=NextType.SCREEN,
                                         name="SIGN_UP",
                                     ),
                                     payload={
@@ -502,8 +502,8 @@ Here is all the flow code in one place:
                                 text="Click here to login",
                                 on_click_action=Action(
                                     name=FlowActionType.NAVIGATE,
-                                    next=ActionNext(
-                                        type=ActionNextType.SCREEN,
+                                    next=Next(
+                                        type=NextType.SCREEN,
                                         name="LOGIN",
                                     ),
                                     payload={
@@ -534,8 +534,8 @@ Here is all the flow code in one place:
                                 text="Already have an account?",
                                 on_click_action=Action(
                                     name=FlowActionType.NAVIGATE,
-                                    next=ActionNext(
-                                        type=ActionNextType.SCREEN,
+                                    next=Next(
+                                        type=NextType.SCREEN,
                                         name="LOGIN",
                                     ),
                                     payload={
@@ -622,8 +622,8 @@ Here is all the flow code in one place:
                                 text="Don't have an account?",
                                 on_click_action=Action(
                                     name=FlowActionType.NAVIGATE,
-                                    next=ActionNext(
-                                        type=ActionNextType.SCREEN,
+                                    next=Next(
+                                        type=NextType.SCREEN,
                                         name="SIGN_UP",
                                     ),
                                     payload={

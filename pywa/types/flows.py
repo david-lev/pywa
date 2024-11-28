@@ -9,7 +9,7 @@ import json
 import logging
 import pathlib
 import warnings
-from typing import Iterable, TYPE_CHECKING, Any, BinaryIO, Literal, TypeVar
+from typing import Iterable, TYPE_CHECKING, Any, BinaryIO, Literal, TypeVar, TypeAlias
 
 import httpx
 
@@ -49,6 +49,7 @@ __all__ = [
     "FlowJSON",
     "Screen",
     "ScreenData",
+    "ScreenDataUpdate",
     "Layout",
     "LayoutType",
     "Form",
@@ -89,8 +90,10 @@ __all__ = [
     "OpenUrlAction",
     "FlowActionType",
     "FlowRequestActionType",
-    "ActionNext",
-    "ActionNextType",
+    "Next",
+    "NextType",
+    "ActionNext",  # Deprecated
+    "ActionNextType",  # Deprecated
 ]
 
 
@@ -916,6 +919,10 @@ class _FlowJSONEncoder(json.JSONEncoder):
         if isinstance(o, _ScreenDatasContainer):
             data = {}
             for item in o:
+                if isinstance(item, ScreenDataUpdate):
+                    data[item.key] = item.new_value
+                    continue
+
                 try:
                     data[item.key] = dict(
                         **self._get_json_type(item.example), __example__=item.example
@@ -1071,6 +1078,18 @@ class DataSource:
         )
 
 
+_ScreenDataValType: TypeAlias = (
+    str
+    | int
+    | float
+    | bool
+    | dict
+    | datetime.date
+    | DataSource
+    | Iterable[str | int | float | bool | dict | datetime.date | DataSource]
+)
+
+
 class ScreenData:
     """
     Represents a screen data that a screen should get from the previous screen or from the data endpoint.
@@ -1091,10 +1110,6 @@ class ScreenData:
         ...         TextInput(required=is_email_required.ref, input_type=InputType.EMAIL, ...)
         ...     ])])
         ... )
-
-    Attributes:
-        key: The key of the data (To use later in the screen children with ``.ref`` or with :class:`ScreenDataRef`).
-        example: The example of the data that the screen should get from the previous screen or from the data endpoint (or the previous screen).
     """
 
     __slots__ = "key", "example"
@@ -1103,16 +1118,15 @@ class ScreenData:
         self,
         *,
         key: str,
-        example: (
-            str
-            | int
-            | float
-            | bool
-            | dict
-            | DataSource
-            | Iterable[str | int | float | bool | dict | DataSource]
-        ),
+        example: _ScreenDataValType,
     ) -> None:
+        """
+        Initialize the screen data.
+
+        Args:
+            key: The key of the data (if you using ``:=`` to assign this object, the convention is to use the same key as the variable name).
+            example: The example of the data that the screen should get from the previous screen or from the data endpoint.
+        """
         self.key = key
         self.example = example
 
@@ -1172,14 +1186,94 @@ class ScreenData:
         """
         return ScreenDataRef(key=self.key, screen=screen)
 
+    def update(self, new_value: _ScreenDataValType) -> ScreenDataUpdate:
+        """
+        Update the value of this data. Use this inside the :class:`UpdateDataAction` ``.payload``.
+
+        Example::
+
+            >>> is_visible = ScreenData(key='is_visible', example=True)
+            >>> UpdateDataAction(payload=[is_visible.update(False)])
+
+        Args:
+            new_value: The new value of the data.
+
+        Returns:
+            The update action for this data.
+        """
+        return ScreenDataUpdate(key=self.key, new_value=new_value)
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(key={self.key!r}, example={self.example!r})"
 
 
-class _ScreenDatasContainer:
-    """A wrapper for the ``Screen.data`` iterable. This is to prevent ``dataclasses.asdict()`` from converting ScreenData objects."""
+class ScreenDataUpdate:
+    """
+    Represents an update action for a screen data.
 
-    def __init__(self, datas: Iterable[ScreenData]):
+    - Use the :meth:`ScreenData.update` method to create an instance of this class from a :class:`ScreenData`.
+
+    .. code-block:: python
+        :emphasize-lines: 4, 14-19, 23
+        :linenos:
+
+        Screen(
+            id="DEMO_SCREEN",
+            data=[
+                is_txt_visible := ScreenData(
+                    key="is_txt_visible",
+                    example=False,
+                ),
+            ],
+            layout=Layout(
+                children=[
+                    OptIn(
+                        label="Show the text",
+                        name="show_txt",
+                        on_select_action=UpdateDataAction(
+                            payload=[is_txt_visible.update(True)]  # a much cleaner way
+                        ),
+                        on_unselect_action=UpdateDataAction(
+                            payload=[ScreenDataUpdate(key="is_txt_visible", new_value=False)]  # only when you don't have access to the `ScreenData` object
+                        ),
+                    ),
+                    TextBody(
+                        text="You clicked the button!",
+                        visible=is_txt_visible.ref,
+                    ),
+                ]
+            )
+        )
+    """
+
+    __slots__ = "key", "new_value"
+
+    def __init__(
+        self,
+        *,
+        key: str,
+        new_value: _ScreenDataValType,
+    ) -> None:
+        """
+        Initialize the screen data update
+
+        Args:
+            key: The key of the data to update (The same key as the :class:`ScreenData` object).
+            new_value: The new value of the data.
+        """
+        self.key = key
+        self.new_value = new_value
+
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}(key={self.key!r}, new_value={self.new_value!r})"
+        )
+
+
+class _ScreenDatasContainer:
+    """A wrapper to prevent ``dataclasses.asdict()`` from converting ScreenData|Update objects."""
+
+    def __init__(self, datas: Iterable[ScreenData | ScreenDataUpdate]):  # not mixed
         self._datas = datas
 
     def __iter__(self):
@@ -1244,7 +1338,7 @@ class Screen:
 
     def __truediv__(self, ref: _RefT) -> _RefT:
         """A shortcut to reference screen data / form components in this screen."""
-        return ref.__class__(ref.field, screen=self.id)
+        return ref.__class__(ref._field, screen=self.id)
 
 
 class LayoutType(utils.StrEnum):
@@ -1320,13 +1414,112 @@ class ComponentType(utils.StrEnum):
     SWITCH = "Switch"
 
 
-class Ref:
+class _Expr:
+    """Base for refs, conditions, and expressions"""
+
+    def to_str(self) -> str: ...
+
+    def __str__(self) -> str:
+        return self.to_str()
+
+    @staticmethod
+    def _format_value(val: _Expr | bool | int | float | str) -> str:
+        if isinstance(val, _Expr):
+            return val.to_str()
+        elif isinstance(val, str):
+            return f"'{val}'"
+        elif isinstance(val, bool):
+            return str(val).lower()
+        return str(val)
+
+
+class _Math(_Expr):
+    """Base for math expressions"""
+
+    def __add__(
+        self: Ref | MathExpression, other: Ref | MathExpression | int | float
+    ) -> MathExpression:
+        return MathExpression(f"({self.to_str()} + {self._format_value(other)})")
+
+    def __radd__(
+        self: Ref | MathExpression, other: Ref | MathExpression | int | float
+    ) -> MathExpression:
+        return MathExpression(f"({self._format_value(other)} + {self.to_str()})")
+
+    def __sub__(
+        self: Ref | MathExpression, other: Ref | MathExpression | int | float
+    ) -> MathExpression:
+        return MathExpression(f"({self.to_str()} - {self._format_value(other)})")
+
+    def __rsub__(
+        self: Ref | MathExpression, other: Ref | MathExpression | int | float
+    ) -> MathExpression:
+        return MathExpression(f"({self._format_value(other)} - {self.to_str()})")
+
+    def __mul__(
+        self: Ref | MathExpression, other: Ref | MathExpression | int | float
+    ) -> MathExpression:
+        return MathExpression(f"({self.to_str()} * {self._format_value(other)})")
+
+    def __rmul__(
+        self: Ref | MathExpression, other: Ref | MathExpression | int | float
+    ) -> MathExpression:
+        return MathExpression(f"({self._format_value(other)} * {self.to_str()})")
+
+    def __truediv__(
+        self: Ref | MathExpression, other: Ref | MathExpression | int | float
+    ) -> MathExpression:
+        return MathExpression(f"({self.to_str()} / {self._format_value(other)})")
+
+    def __rtruediv__(
+        self: Ref | MathExpression, other: Ref | MathExpression | int | float
+    ) -> MathExpression:
+        return MathExpression(f"({self._format_value(other)} / {self.to_str()})")
+
+    def __mod__(
+        self: Ref | MathExpression, other: Ref | MathExpression | int | float
+    ) -> MathExpression:
+        return MathExpression(f"({self.to_str()} % {self._format_value(other)})")
+
+    def __rmod__(
+        self: Ref | MathExpression, other: Ref | MathExpression | int | float
+    ) -> MathExpression:
+        return MathExpression(f"({self._format_value(other)} % {self.to_str()})")
+
+
+class _Combine(_Expr):
+    """ "Base for combining refs and conditions"""
+
+    def _get_left_right(
+        self: Ref | Condition, right: Ref | Condition
+    ) -> tuple[str, str]:
+        return self.to_str() if isinstance(
+            self, Ref
+        ) else self._expression, right.to_str() if isinstance(
+            right, Ref
+        ) else right._expression
+
+    def __and__(self: Ref | Condition, other: Ref | Condition) -> Condition:
+        left, right = self._get_left_right(other)
+        return Condition(f"({left} && {right})")
+
+    def __or__(self: Ref | Condition, other: Ref | Condition) -> Condition:
+        left, right = self._get_left_right(other)
+        return Condition(f"({left} || {right})")
+
+    def __invert__(self: Ref | Condition) -> Condition:
+        return Condition(
+            f"!{self.to_str() if isinstance(self, Ref) else self._expression}"
+        )
+
+
+class Ref(_Math, _Combine):
     """Base class for all references"""
 
     def __init__(self, prefix: str, field: str, screen: Screen | str | None = None):
-        self.prefix = prefix
-        self.field = field
-        self.screen = (
+        self._prefix = prefix
+        self._field = field
+        self._screen = (
             f"screen.{screen.id if isinstance(screen, Screen) else screen}."
             if screen
             else ""
@@ -1334,24 +1527,10 @@ class Ref:
 
     def to_str(self) -> str:
         return "${%s%s.%s}" % (
-            self.screen,
-            self.prefix,
-            self.field,
+            self._screen,
+            self._prefix,
+            self._field,
         )
-
-    def __str__(self) -> str:
-        """Allowing to use in string concatenation. Added in v6.0."""
-        return self.to_str()
-
-    @staticmethod
-    def _format_value(val: Ref | bool | int | float | str) -> str:
-        if isinstance(val, (Ref, MathExpression)):
-            return val.to_str()
-        elif isinstance(val, str):
-            return f"'{val}'"
-        elif isinstance(val, bool):
-            return str(val).lower()
-        return str(val)
 
     def __eq__(self, other: Ref | bool | int | float | str) -> Condition:
         return Condition(f"({self.to_str()} == {self._format_value(other)})")
@@ -1371,49 +1550,6 @@ class Ref:
     def __le__(self, other: Ref | int | float) -> Condition:
         return Condition(f"({self.to_str()} <= {self._format_value(other)})")
 
-    def __add__(self, other: Ref | int | float) -> MathExpression:
-        return MathExpression(f"({self.to_str()} + {self._format_value(other)})")
-
-    def __radd__(self, other: Ref | int | float) -> MathExpression:
-        return MathExpression(f"({self._format_value(other)} + {self.to_str()})")
-
-    def __sub__(self, other: Ref | int | float) -> MathExpression:
-        return MathExpression(f"({self.to_str()} - {self._format_value(other)})")
-
-    def __rsub__(self, other: Ref | int | float) -> MathExpression:
-        return MathExpression(f"({self._format_value(other)} - {self.to_str()})")
-
-    def __mul__(self, other: Ref | int | float) -> MathExpression:
-        return MathExpression(f"({self.to_str()} * {self._format_value(other)})")
-
-    def __rmul__(self, other: Ref | int | float) -> MathExpression:
-        return MathExpression(f"({self._format_value(other)} * {self.to_str()})")
-
-    def __truediv__(self, other: Ref | int | float) -> MathExpression:
-        return MathExpression(f"({self.to_str()} / {self._format_value(other)})")
-
-    def __rtruediv__(self, other: Ref | int | float) -> MathExpression:
-        return MathExpression(f"({self._format_value(other)} / {self.to_str()})")
-
-    def __mod__(self, other: Ref | int | float) -> MathExpression:
-        return MathExpression(f"({self.to_str()} % {self._format_value(other)})")
-
-    def __rmod__(self, other: Ref | int | float) -> MathExpression:
-        return MathExpression(f"({self._format_value(other)} % {self.to_str()})")
-
-    def __and__(self, other: Ref | Condition) -> Condition:
-        if isinstance(other, Ref):
-            return Condition(f"({self.to_str()} && {other.to_str()})")
-        return Condition(f"({self.to_str()} && {other._expression})")
-
-    def __or__(self, other: Ref | Condition) -> Condition:
-        if isinstance(other, Ref):
-            return Condition(f"({self.to_str()} || {other.to_str()})")
-        return Condition(f"({self.to_str()} || {other._expression})")
-
-    def __invert__(self) -> Condition:
-        return Condition(f"!{self.to_str()}")
-
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.to_str()})"
 
@@ -1421,7 +1557,7 @@ class Ref:
 _RefT = TypeVar("_RefT", bound=Ref)
 
 
-class MathExpression:
+class MathExpression(_Math):
     """
     This class automatically created when using the arithmetic operators on :class:`Ref` objects.
 
@@ -1471,9 +1607,6 @@ class MathExpression:
     def __init__(self, expression: str):
         self._expression = expression
 
-    def __str__(self) -> str:
-        return self.to_str()
-
     def __repr__(self) -> str:
         return f"MathExpression({self._expression})"
 
@@ -1481,7 +1614,7 @@ class MathExpression:
         return self._expression
 
 
-class Condition:
+class Condition(_Combine):
     """
     This class automatically created when using the comparison operators on :class:`Ref` objects.
 
@@ -1548,22 +1681,6 @@ class Condition:
         self._expression = expression
         self.wrap_with_backticks = False
 
-    def __and__(self, other: Condition | Ref) -> Condition:
-        if isinstance(other, Condition):
-            return Condition(f"({self._expression} && {other._expression})")
-        return Condition(f"({self._expression} && {other.to_str()})")
-
-    def __or__(self, other: Condition | Ref) -> Condition:
-        if isinstance(other, Condition):
-            return Condition(f"({self._expression} || {other._expression})")
-        return Condition(f"({self._expression} || {other.to_str()})")
-
-    def __invert__(self) -> Condition:
-        return Condition(f"!{self._expression}")
-
-    def __str__(self) -> str:
-        return self.to_str()
-
     def __repr__(self) -> str:
         return f"Condition({self._expression})"
 
@@ -1577,12 +1694,12 @@ class Condition:
 
 class ScreenDataRef(Ref):
     """
-    Represents a ScreenData reference (converts to ``${data.<key>}`` | ``${screen.<screen>.data.<key>}``).
+    Represents a :class:`ScreenData` reference (converts to ``${data.<key>}`` | ``${screen.<screen>.data.<key>}``).
 
     Example:
-
+            - Hint: use this class directly only if you don't have access to the :class:`ScreenData` object.
             - Hint: use the ``.ref`` property of :class:`ScreenData` to get reference to a ScreenData.
-            - Hint: use the ``.ref_in(screen)`` method of :class:`ScreenData` to get the data ref from another screen.
+            - Hint: use the ``.ref_in(screen)`` method of :class:`ScreenData` to get the data ref from another screen (or ``screen/ref``).
 
             >>> FlowJSON(
             ...     screens=[
@@ -1594,7 +1711,9 @@ class ScreenDataRef(Ref):
             ...                 TextHeading(
             ...                     text=welcome.ref, # data in the same screen
             ...                     visible=is_visible.ref_in(other) # data from other screen
-            ...                 )
+            ...                 ),
+            ...                 TextBody(
+            ...                     text=ScreenDataRef(key='welcome', screen='START'), # using the class directly
             ...             ])
             ...         )
             ...     ]
@@ -1615,6 +1734,7 @@ class ComponentRef(Ref):
 
     Example:
 
+        - Hint: use this class directly only if you don't have access to the component object.
         - Hint: use the ``.ref`` property of each component to get a reference to this component.
         - Hint: use the ``.ref_in(screen)`` method of each component to get the component reference variable of that component with the given screen name.
 
@@ -1630,6 +1750,7 @@ class ComponentRef(Ref):
         ...                 phone := TextInput(name='phone', ...),
         ...                 TextBody(text=phone.ref, ...),  # component reference from the same screen
         ...                 TextCaption(text=email.ref_in(other), ...)  # component reference from another screen
+        ...                 TextHeading(text=ComponentRef('phone', screen='START'), ...)  # using the class directly
         ...             ])
         ...         )
         ...     ]
@@ -2347,7 +2468,7 @@ class OptIn(FormComponent):
     required: bool | str | ScreenDataRef | ComponentRef | None = None
     visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     init_value: bool | str | ScreenDataRef | ComponentRef | None = None
-    on_click_action: UpdateDataAction | OpenUrlAction | NavigateAction | None = None
+    on_click_action: OpenUrlAction | DataExchangeAction | NavigateAction | None = None
     on_select_action: UpdateDataAction | None = None
     on_unselect_action: UpdateDataAction | None = None
 
@@ -2366,7 +2487,7 @@ class EmbeddedLink(Component):
         >>> EmbeddedLink(
         ...     text='Sign up',
         ...     on_click_action=NavigateAction(
-        ...         next=ActionNext(name='SIGNUP_SCREEN'),
+        ...         next=Next(name='SIGNUP_SCREEN'),
         ...         payload={'data': 'value'}
         ...     )
         ... )
@@ -2876,7 +2997,7 @@ class FlowActionType(utils.StrEnum):
     UPDATE_DATA = "update_data"
 
 
-class ActionNextType(utils.StrEnum):
+class NextType(utils.StrEnum):
     """
     The type of the next action
 
@@ -2889,18 +3010,24 @@ class ActionNextType(utils.StrEnum):
     PLUGIN = "plugin"
 
 
+ActionNextType = NextType  # Deprecated
+
+
 @dataclasses.dataclass(slots=True, kw_only=True)
-class ActionNext:
+class Next:
     """
     The next action
 
     Attributes:
         name: The name of the next screen or plugin
-        type: The type of the next action (Default: ``ActionNextType.SCREEN``)
+        type: The type of the next action (Default: ``NextType.SCREEN``)
     """
 
     name: str
-    type: ActionNextType | str = ActionNextType.SCREEN
+    type: NextType | str = NextType.SCREEN
+
+
+ActionNext = Next  # Deprecated
 
 
 def _deprecate_action(action: FlowActionType, use_cls: type[BaseAction]) -> None:
@@ -3005,7 +3132,7 @@ class NavigateAction(BaseAction):
     Example:
 
         >>> NavigateAction(
-        ...     next=ActionNext(name='NEXT_SCREEN'),
+        ...     next=Next(name='NEXT_SCREEN'),
         ...     payload={'data': 'value'}
         ... )
 
@@ -3018,7 +3145,7 @@ class NavigateAction(BaseAction):
     name: FlowActionType = dataclasses.field(
         default=FlowActionType.NAVIGATE, init=False, repr=False
     )
-    next: ActionNext
+    next: Next
     payload: dict[str, str | bool | Iterable[DataSource] | ScreenDataRef | ComponentRef]
 
 
@@ -3055,18 +3182,25 @@ class UpdateDataAction(BaseAction):
 
     Example:
 
+        >>> is_visible = ScreenData(key='is_visible', example=True)
         >>> UpdateDataAction(
-        ...     payload={'i_agree': True}
+        ...     payload=[
+        ...         is_visible.update(value=False)
+        ...     ]
         ... )
 
     Attributes:
-        payload: The data to update for the current screen. The keys in the payload should match the component names.
+        payload: The data to update for the current screen.
     """
 
     name: FlowActionType = dataclasses.field(
         default=FlowActionType.UPDATE_DATA, init=False, repr=False
     )
-    payload: dict[str, str | bool | Iterable[DataSource] | ScreenDataRef | ComponentRef]
+    payload: Iterable[ScreenDataUpdate] | dict[str, _ScreenDataValType]
+
+    def __post_init__(self):
+        if not isinstance(self.payload, dict):
+            self.payload = _ScreenDatasContainer(self.payload)
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
