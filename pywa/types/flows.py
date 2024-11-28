@@ -89,8 +89,10 @@ __all__ = [
     "OpenUrlAction",
     "FlowActionType",
     "FlowRequestActionType",
-    "ActionNext",
-    "ActionNextType",
+    "Next",
+    "NextType",
+    "ActionNext",  # Deprecated
+    "ActionNextType",  # Deprecated
 ]
 
 
@@ -2366,7 +2368,7 @@ class EmbeddedLink(Component):
         >>> EmbeddedLink(
         ...     text='Sign up',
         ...     on_click_action=NavigateAction(
-        ...         next=ActionNext(name='SIGNUP_SCREEN'),
+        ...         next=Next(name='SIGNUP_SCREEN'),
         ...         payload={'data': 'value'}
         ...     )
         ... )
@@ -2876,7 +2878,7 @@ class FlowActionType(utils.StrEnum):
     UPDATE_DATA = "update_data"
 
 
-class ActionNextType(utils.StrEnum):
+class NextType(utils.StrEnum):
     """
     The type of the next action
 
@@ -2889,18 +2891,24 @@ class ActionNextType(utils.StrEnum):
     PLUGIN = "plugin"
 
 
+ActionNextType = NextType  # Deprecated
+
+
 @dataclasses.dataclass(slots=True, kw_only=True)
-class ActionNext:
+class Next:
     """
     The next action
 
     Attributes:
         name: The name of the next screen or plugin
-        type: The type of the next action (Default: ``ActionNextType.SCREEN``)
+        type: The type of the next action (Default: ``NextType.SCREEN``)
     """
 
     name: str
-    type: ActionNextType | str = ActionNextType.SCREEN
+    type: NextType | str = NextType.SCREEN
+
+
+ActionNext = Next  # Deprecated
 
 
 def _deprecate_action(action: FlowActionType, use_cls: type[BaseAction]) -> None:
@@ -3005,7 +3013,7 @@ class NavigateAction(BaseAction):
     Example:
 
         >>> NavigateAction(
-        ...     next=ActionNext(name='NEXT_SCREEN'),
+        ...     next=Next(name='NEXT_SCREEN'),
         ...     payload={'data': 'value'}
         ... )
 
@@ -3018,7 +3026,7 @@ class NavigateAction(BaseAction):
     name: FlowActionType = dataclasses.field(
         default=FlowActionType.NAVIGATE, init=False, repr=False
     )
-    next: ActionNext
+    next: Next
     payload: dict[str, str | bool | Iterable[DataSource] | ScreenDataRef | ComponentRef]
 
 

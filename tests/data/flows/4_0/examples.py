@@ -206,9 +206,7 @@ global_fields = FlowJSON(
                     Footer(
                         label="CTA",
                         on_click_action=NavigateAction(
-                            next=ActionNext(
-                                type=ActionNextType.SCREEN, name="SCREEN_TWO"
-                            ),
+                            next=Next(name="SCREEN_TWO"),
                             payload={},
                         ),
                     ),
@@ -301,9 +299,7 @@ forward_refs = FlowJSON(
                     EmbeddedLink(
                         text="Choose insurance type",
                         on_click_action=NavigateAction(
-                            next=ActionNext(
-                                type=ActionNextType.SCREEN, name="SELECT_INSURANCE"
-                            ),
+                            next=Next(type=NextType.SCREEN, name="SELECT_INSURANCE"),
                             payload={},
                         ),
                     ),

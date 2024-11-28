@@ -61,8 +61,10 @@ __all__ = [
     "OpenUrlAction",
     "FlowActionType",
     "FlowRequestActionType",
-    "ActionNext",
-    "ActionNextType",
+    "Next",
+    "NextType",
+    "ActionNext",  # Deprecated
+    "ActionNextType",  # Deprecated
 ]
 
 import httpx

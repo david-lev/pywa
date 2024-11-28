@@ -86,9 +86,9 @@ Here you will find all the components that make up a Flow JSON object.
 
 .. autoclass:: OpenUrlAction()
 
-.. autoclass:: ActionNext()
+.. autoclass:: Next()
 
-.. autoclass:: ActionNextType()
+.. autoclass:: NextType()
 
 .. autoclass:: ScreenDataRef()
 
