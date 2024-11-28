@@ -1338,7 +1338,7 @@ class Screen:
 
     def __truediv__(self, ref: _RefT) -> _RefT:
         """A shortcut to reference screen data / form components in this screen."""
-        return ref.__class__(ref.field, screen=self.id)
+        return ref.__class__(ref._field, screen=self.id)
 
 
 class LayoutType(utils.StrEnum):
@@ -1414,13 +1414,112 @@ class ComponentType(utils.StrEnum):
     SWITCH = "Switch"
 
 
-class Ref:
+class _Expr:
+    """Base for refs, conditions, and expressions"""
+
+    def to_str(self) -> str: ...
+
+    def __str__(self) -> str:
+        return self.to_str()
+
+    @staticmethod
+    def _format_value(val: _Expr | bool | int | float | str) -> str:
+        if isinstance(val, _Expr):
+            return val.to_str()
+        elif isinstance(val, str):
+            return f"'{val}'"
+        elif isinstance(val, bool):
+            return str(val).lower()
+        return str(val)
+
+
+class _Math(_Expr):
+    """Base for math expressions"""
+
+    def __add__(
+        self: Ref | MathExpression, other: Ref | MathExpression | int | float
+    ) -> MathExpression:
+        return MathExpression(f"({self.to_str()} + {self._format_value(other)})")
+
+    def __radd__(
+        self: Ref | MathExpression, other: Ref | MathExpression | int | float
+    ) -> MathExpression:
+        return MathExpression(f"({self._format_value(other)} + {self.to_str()})")
+
+    def __sub__(
+        self: Ref | MathExpression, other: Ref | MathExpression | int | float
+    ) -> MathExpression:
+        return MathExpression(f"({self.to_str()} - {self._format_value(other)})")
+
+    def __rsub__(
+        self: Ref | MathExpression, other: Ref | MathExpression | int | float
+    ) -> MathExpression:
+        return MathExpression(f"({self._format_value(other)} - {self.to_str()})")
+
+    def __mul__(
+        self: Ref | MathExpression, other: Ref | MathExpression | int | float
+    ) -> MathExpression:
+        return MathExpression(f"({self.to_str()} * {self._format_value(other)})")
+
+    def __rmul__(
+        self: Ref | MathExpression, other: Ref | MathExpression | int | float
+    ) -> MathExpression:
+        return MathExpression(f"({self._format_value(other)} * {self.to_str()})")
+
+    def __truediv__(
+        self: Ref | MathExpression, other: Ref | MathExpression | int | float
+    ) -> MathExpression:
+        return MathExpression(f"({self.to_str()} / {self._format_value(other)})")
+
+    def __rtruediv__(
+        self: Ref | MathExpression, other: Ref | MathExpression | int | float
+    ) -> MathExpression:
+        return MathExpression(f"({self._format_value(other)} / {self.to_str()})")
+
+    def __mod__(
+        self: Ref | MathExpression, other: Ref | MathExpression | int | float
+    ) -> MathExpression:
+        return MathExpression(f"({self.to_str()} % {self._format_value(other)})")
+
+    def __rmod__(
+        self: Ref | MathExpression, other: Ref | MathExpression | int | float
+    ) -> MathExpression:
+        return MathExpression(f"({self._format_value(other)} % {self.to_str()})")
+
+
+class _Combine(_Expr):
+    """ "Base for combining refs and conditions"""
+
+    def _get_left_right(
+        self: Ref | Condition, right: Ref | Condition
+    ) -> tuple[str, str]:
+        return self.to_str() if isinstance(
+            self, Ref
+        ) else self._expression, right.to_str() if isinstance(
+            right, Ref
+        ) else right._expression
+
+    def __and__(self: Ref | Condition, other: Ref | Condition) -> Condition:
+        left, right = self._get_left_right(other)
+        return Condition(f"({left} && {right})")
+
+    def __or__(self: Ref | Condition, other: Ref | Condition) -> Condition:
+        left, right = self._get_left_right(other)
+        return Condition(f"({left} || {right})")
+
+    def __invert__(self: Ref | Condition) -> Condition:
+        return Condition(
+            f"!{self.to_str() if isinstance(self, Ref) else self._expression}"
+        )
+
+
+class Ref(_Math, _Combine):
     """Base class for all references"""
 
     def __init__(self, prefix: str, field: str, screen: Screen | str | None = None):
-        self.prefix = prefix
-        self.field = field
-        self.screen = (
+        self._prefix = prefix
+        self._field = field
+        self._screen = (
             f"screen.{screen.id if isinstance(screen, Screen) else screen}."
             if screen
             else ""
@@ -1428,24 +1527,10 @@ class Ref:
 
     def to_str(self) -> str:
         return "${%s%s.%s}" % (
-            self.screen,
-            self.prefix,
-            self.field,
+            self._screen,
+            self._prefix,
+            self._field,
         )
-
-    def __str__(self) -> str:
-        """Allowing to use in string concatenation. Added in v6.0."""
-        return self.to_str()
-
-    @staticmethod
-    def _format_value(val: Ref | bool | int | float | str) -> str:
-        if isinstance(val, (Ref, MathExpression)):
-            return val.to_str()
-        elif isinstance(val, str):
-            return f"'{val}'"
-        elif isinstance(val, bool):
-            return str(val).lower()
-        return str(val)
 
     def __eq__(self, other: Ref | bool | int | float | str) -> Condition:
         return Condition(f"({self.to_str()} == {self._format_value(other)})")
@@ -1465,49 +1550,6 @@ class Ref:
     def __le__(self, other: Ref | int | float) -> Condition:
         return Condition(f"({self.to_str()} <= {self._format_value(other)})")
 
-    def __add__(self, other: Ref | int | float) -> MathExpression:
-        return MathExpression(f"({self.to_str()} + {self._format_value(other)})")
-
-    def __radd__(self, other: Ref | int | float) -> MathExpression:
-        return MathExpression(f"({self._format_value(other)} + {self.to_str()})")
-
-    def __sub__(self, other: Ref | int | float) -> MathExpression:
-        return MathExpression(f"({self.to_str()} - {self._format_value(other)})")
-
-    def __rsub__(self, other: Ref | int | float) -> MathExpression:
-        return MathExpression(f"({self._format_value(other)} - {self.to_str()})")
-
-    def __mul__(self, other: Ref | int | float) -> MathExpression:
-        return MathExpression(f"({self.to_str()} * {self._format_value(other)})")
-
-    def __rmul__(self, other: Ref | int | float) -> MathExpression:
-        return MathExpression(f"({self._format_value(other)} * {self.to_str()})")
-
-    def __truediv__(self, other: Ref | int | float) -> MathExpression:
-        return MathExpression(f"({self.to_str()} / {self._format_value(other)})")
-
-    def __rtruediv__(self, other: Ref | int | float) -> MathExpression:
-        return MathExpression(f"({self._format_value(other)} / {self.to_str()})")
-
-    def __mod__(self, other: Ref | int | float) -> MathExpression:
-        return MathExpression(f"({self.to_str()} % {self._format_value(other)})")
-
-    def __rmod__(self, other: Ref | int | float) -> MathExpression:
-        return MathExpression(f"({self._format_value(other)} % {self.to_str()})")
-
-    def __and__(self, other: Ref | Condition) -> Condition:
-        if isinstance(other, Ref):
-            return Condition(f"({self.to_str()} && {other.to_str()})")
-        return Condition(f"({self.to_str()} && {other._expression})")
-
-    def __or__(self, other: Ref | Condition) -> Condition:
-        if isinstance(other, Ref):
-            return Condition(f"({self.to_str()} || {other.to_str()})")
-        return Condition(f"({self.to_str()} || {other._expression})")
-
-    def __invert__(self) -> Condition:
-        return Condition(f"!{self.to_str()}")
-
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.to_str()})"
 
@@ -1515,7 +1557,7 @@ class Ref:
 _RefT = TypeVar("_RefT", bound=Ref)
 
 
-class MathExpression:
+class MathExpression(_Math):
     """
     This class automatically created when using the arithmetic operators on :class:`Ref` objects.
 
@@ -1565,9 +1607,6 @@ class MathExpression:
     def __init__(self, expression: str):
         self._expression = expression
 
-    def __str__(self) -> str:
-        return self.to_str()
-
     def __repr__(self) -> str:
         return f"MathExpression({self._expression})"
 
@@ -1575,7 +1614,7 @@ class MathExpression:
         return self._expression
 
 
-class Condition:
+class Condition(_Combine):
     """
     This class automatically created when using the comparison operators on :class:`Ref` objects.
 
@@ -1642,22 +1681,6 @@ class Condition:
         self._expression = expression
         self.wrap_with_backticks = False
 
-    def __and__(self, other: Condition | Ref) -> Condition:
-        if isinstance(other, Condition):
-            return Condition(f"({self._expression} && {other._expression})")
-        return Condition(f"({self._expression} && {other.to_str()})")
-
-    def __or__(self, other: Condition | Ref) -> Condition:
-        if isinstance(other, Condition):
-            return Condition(f"({self._expression} || {other._expression})")
-        return Condition(f"({self._expression} || {other.to_str()})")
-
-    def __invert__(self) -> Condition:
-        return Condition(f"!{self._expression}")
-
-    def __str__(self) -> str:
-        return self.to_str()
-
     def __repr__(self) -> str:
         return f"Condition({self._expression})"
 
@@ -1671,12 +1694,12 @@ class Condition:
 
 class ScreenDataRef(Ref):
     """
-    Represents a ScreenData reference (converts to ``${data.<key>}`` | ``${screen.<screen>.data.<key>}``).
+    Represents a :class:`ScreenData` reference (converts to ``${data.<key>}`` | ``${screen.<screen>.data.<key>}``).
 
     Example:
-
+            - Hint: use this class directly only if you don't have access to the :class:`ScreenData` object.
             - Hint: use the ``.ref`` property of :class:`ScreenData` to get reference to a ScreenData.
-            - Hint: use the ``.ref_in(screen)`` method of :class:`ScreenData` to get the data ref from another screen.
+            - Hint: use the ``.ref_in(screen)`` method of :class:`ScreenData` to get the data ref from another screen (or ``screen/ref``).
 
             >>> FlowJSON(
             ...     screens=[
@@ -1688,7 +1711,9 @@ class ScreenDataRef(Ref):
             ...                 TextHeading(
             ...                     text=welcome.ref, # data in the same screen
             ...                     visible=is_visible.ref_in(other) # data from other screen
-            ...                 )
+            ...                 ),
+            ...                 TextBody(
+            ...                     text=ScreenDataRef(key='welcome', screen='START'), # using the class directly
             ...             ])
             ...         )
             ...     ]
@@ -1709,6 +1734,7 @@ class ComponentRef(Ref):
 
     Example:
 
+        - Hint: use this class directly only if you don't have access to the component object.
         - Hint: use the ``.ref`` property of each component to get a reference to this component.
         - Hint: use the ``.ref_in(screen)`` method of each component to get the component reference variable of that component with the given screen name.
 
@@ -1724,6 +1750,7 @@ class ComponentRef(Ref):
         ...                 phone := TextInput(name='phone', ...),
         ...                 TextBody(text=phone.ref, ...),  # component reference from the same screen
         ...                 TextCaption(text=email.ref_in(other), ...)  # component reference from another screen
+        ...                 TextHeading(text=ComponentRef('phone', screen='START'), ...)  # using the class directly
         ...             ])
         ...         )
         ...     ]

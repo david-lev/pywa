@@ -239,6 +239,22 @@ def test_math_op_with_ref():
     assert math_op_with_ref.to_str() == "((21 + ${data.age}) + ${data.age})"
 
 
+def test_math_op_with_math_op():
+    ref = Ref(prefix="data", field="age")
+    math_op_1 = 21 + ref
+    math_op_2 = 21 + ref
+    assert (
+        math_op_1 + math_op_2
+    ).to_str() == "((21 + ${data.age}) + (21 + ${data.age}))"
+
+
+def test_math_op_with_number():
+    ref = Ref(prefix="data", field="age")
+    math_op = 21 + ref
+    math_op_with_number = math_op + 21
+    assert math_op_with_number.to_str() == "((21 + ${data.age}) + 21)"
+
+
 def test_ref_with_math_op_and_ref():
     ref = Ref(prefix="data", field="age")
     math_op = 21 + ref
