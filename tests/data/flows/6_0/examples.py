@@ -105,114 +105,158 @@ update_data = FlowJSON(
                             id="1",
                             title="USA",
                             on_select_action=UpdateDataAction(
-                                payload={
-                                    states.key: [
-                                        DataSource(
-                                            id="new_york",
-                                            title="New York",
-                                            on_unselect_action=UpdateDataAction(
-                                                payload={pincode_visibility.key: False},
-                                            ),
-                                            on_select_action=UpdateDataAction(
-                                                payload={
-                                                    pincode.key: [
-                                                        DataSource(
-                                                            id="10001", title="10001"
+                                payload=[
+                                    states.update(
+                                        new_value=[
+                                            DataSource(
+                                                id="new_york",
+                                                title="New York",
+                                                on_unselect_action=UpdateDataAction(
+                                                    payload=[
+                                                        pincode_visibility.update(
+                                                            new_value=False
+                                                        )
+                                                    ],
+                                                ),
+                                                on_select_action=UpdateDataAction(
+                                                    payload=[
+                                                        pincode.update(
+                                                            new_value=[
+                                                                DataSource(
+                                                                    id="10001",
+                                                                    title="10001",
+                                                                ),
+                                                                DataSource(
+                                                                    id="10005",
+                                                                    title="10005",
+                                                                ),
+                                                            ]
                                                         ),
-                                                        DataSource(
-                                                            id="10005", title="10005"
+                                                        pincode_visibility.update(
+                                                            new_value=True
                                                         ),
                                                     ],
-                                                    pincode_visibility.key: True,
-                                                },
+                                                ),
                                             ),
-                                        ),
-                                        DataSource(
-                                            id="california",
-                                            title="California",
-                                            on_unselect_action=UpdateDataAction(
-                                                payload={pincode_visibility.key: False},
-                                            ),
-                                            on_select_action=UpdateDataAction(
-                                                payload={
-                                                    pincode.key: [
-                                                        DataSource(
-                                                            id="90019", title="90019"
+                                            DataSource(
+                                                id="california",
+                                                title="California",
+                                                on_unselect_action=UpdateDataAction(
+                                                    payload={
+                                                        pincode_visibility.update(
+                                                            new_value=False
+                                                        )
+                                                    },
+                                                ),
+                                                on_select_action=UpdateDataAction(
+                                                    payload=[
+                                                        pincode.update(
+                                                            new_value=[
+                                                                DataSource(
+                                                                    id="90019",
+                                                                    title="90019",
+                                                                ),
+                                                                DataSource(
+                                                                    id="93504",
+                                                                    title="93504",
+                                                                ),
+                                                            ]
                                                         ),
-                                                        DataSource(
-                                                            id="93504", title="93504"
+                                                        pincode_visibility.update(
+                                                            new_value=True
                                                         ),
                                                     ],
-                                                    pincode_visibility.key: True,
-                                                },
+                                                ),
                                             ),
-                                        ),
-                                    ],
-                                    state_visibility.key: True,
-                                },
+                                        ]
+                                    ),
+                                    state_visibility.update(new_value=True),
+                                ],
                             ),
                             on_unselect_action=UpdateDataAction(
-                                payload={
-                                    state_visibility.key: False,
-                                    pincode_visibility.key: False,
-                                },
+                                payload=[
+                                    state_visibility.update(new_value=False),
+                                    pincode_visibility.update(new_value=False),
+                                ],
                             ),
                         ),
                         DataSource(
                             id="2",
                             title="Canada",
                             on_select_action=UpdateDataAction(
-                                payload={
-                                    states.key: [
-                                        DataSource(
-                                            id="ontario",
-                                            title="Ontario",
-                                            on_unselect_action=UpdateDataAction(
-                                                payload={pincode_visibility.key: False},
-                                            ),
-                                            on_select_action=UpdateDataAction(
-                                                payload={
-                                                    pincode.key: [
-                                                        DataSource(
-                                                            id="L4K", title="L4K"
+                                payload=[
+                                    states.update(
+                                        new_value=[
+                                            DataSource(
+                                                id="ontario",
+                                                title="Ontario",
+                                                on_unselect_action=UpdateDataAction(
+                                                    payload=[
+                                                        pincode_visibility.update(
+                                                            new_value=False
+                                                        )
+                                                    ],
+                                                ),
+                                                on_select_action=UpdateDataAction(
+                                                    payload=[
+                                                        pincode.update(
+                                                            new_value=[
+                                                                DataSource(
+                                                                    id="L4K",
+                                                                    title="L4K",
+                                                                ),
+                                                                DataSource(
+                                                                    id="M3C",
+                                                                    title="M3C",
+                                                                ),
+                                                            ]
                                                         ),
-                                                        DataSource(
-                                                            id="M3C", title="M3C"
+                                                        pincode_visibility.update(
+                                                            new_value=True
                                                         ),
                                                     ],
-                                                    pincode_visibility.key: True,
-                                                },
+                                                ),
                                             ),
-                                        ),
-                                        DataSource(
-                                            id="quebec",
-                                            title="Quebec",
-                                            on_unselect_action=UpdateDataAction(
-                                                payload={pincode_visibility.key: False},
-                                            ),
-                                            on_select_action=UpdateDataAction(
-                                                payload={
-                                                    pincode.key: [
-                                                        DataSource(
-                                                            id="M6B2A9", title="M6B2A9"
+                                            DataSource(
+                                                id="quebec",
+                                                title="Quebec",
+                                                on_unselect_action=UpdateDataAction(
+                                                    payload=[
+                                                        pincode_visibility.update(
+                                                            new_value=False
+                                                        )
+                                                    ],
+                                                ),
+                                                on_select_action=UpdateDataAction(
+                                                    payload=[
+                                                        pincode.update(
+                                                            new_value=[
+                                                                DataSource(
+                                                                    id="M6B2A9",
+                                                                    title="M6B2A9",
+                                                                ),
+                                                                DataSource(
+                                                                    id="M5V",
+                                                                    title="M5V",
+                                                                ),
+                                                            ]
                                                         ),
-                                                        DataSource(
-                                                            id="M5V", title="M5V"
+                                                        pincode_visibility.update(
+                                                            new_value=True
                                                         ),
                                                     ],
-                                                    pincode_visibility.key: True,
-                                                },
+                                                ),
                                             ),
-                                        ),
-                                    ],
-                                    state_visibility.key: True,
-                                },
+                                        ]
+                                    ),
+                                    state_visibility.update(new_value=True),
+                                ],
                             ),
                             on_unselect_action=UpdateDataAction(
-                                payload={
-                                    state_visibility.key: False,
-                                    pincode_visibility.key: False,
-                                },
+                                payload=[
+                                    state_visibility.update(new_value=False),
+                                    pincode_visibility.update(new_value=False),
+                                ],
                             ),
                         ),
                     ],

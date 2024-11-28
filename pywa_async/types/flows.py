@@ -21,6 +21,7 @@ __all__ = [
     "FlowJSON",
     "Screen",
     "ScreenData",
+    "ScreenDataUpdate",
     "Layout",
     "LayoutType",
     "Form",

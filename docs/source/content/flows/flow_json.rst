@@ -10,7 +10,9 @@ Here you will find all the components that make up a Flow JSON object.
 .. autoclass:: Screen()
 
 .. autoclass:: ScreenData()
-    :members: ref, ref_in
+    :members: ref, ref_in, update
+
+.. autoclass:: ScreenDataUpdate()
 
 .. autoclass:: Layout()
 

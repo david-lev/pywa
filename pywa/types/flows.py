@@ -9,7 +9,7 @@ import json
 import logging
 import pathlib
 import warnings
-from typing import Iterable, TYPE_CHECKING, Any, BinaryIO, Literal, TypeVar
+from typing import Iterable, TYPE_CHECKING, Any, BinaryIO, Literal, TypeVar, TypeAlias
 
 import httpx
 
@@ -49,6 +49,7 @@ __all__ = [
     "FlowJSON",
     "Screen",
     "ScreenData",
+    "ScreenDataUpdate",
     "Layout",
     "LayoutType",
     "Form",
@@ -918,6 +919,10 @@ class _FlowJSONEncoder(json.JSONEncoder):
         if isinstance(o, _ScreenDatasContainer):
             data = {}
             for item in o:
+                if isinstance(item, ScreenDataUpdate):
+                    data[item.key] = item.new_value
+                    continue
+
                 try:
                     data[item.key] = dict(
                         **self._get_json_type(item.example), __example__=item.example
@@ -1073,6 +1078,18 @@ class DataSource:
         )
 
 
+_ScreenDataValType: TypeAlias = (
+    str
+    | int
+    | float
+    | bool
+    | dict
+    | datetime.date
+    | DataSource
+    | Iterable[str | int | float | bool | dict | datetime.date | DataSource]
+)
+
+
 class ScreenData:
     """
     Represents a screen data that a screen should get from the previous screen or from the data endpoint.
@@ -1093,10 +1110,6 @@ class ScreenData:
         ...         TextInput(required=is_email_required.ref, input_type=InputType.EMAIL, ...)
         ...     ])])
         ... )
-
-    Attributes:
-        key: The key of the data (To use later in the screen children with ``.ref`` or with :class:`ScreenDataRef`).
-        example: The example of the data that the screen should get from the previous screen or from the data endpoint (or the previous screen).
     """
 
     __slots__ = "key", "example"
@@ -1105,16 +1118,15 @@ class ScreenData:
         self,
         *,
         key: str,
-        example: (
-            str
-            | int
-            | float
-            | bool
-            | dict
-            | DataSource
-            | Iterable[str | int | float | bool | dict | DataSource]
-        ),
+        example: _ScreenDataValType,
     ) -> None:
+        """
+        Initialize the screen data.
+
+        Args:
+            key: The key of the data (if you using ``:=`` to assign this object, the convention is to use the same key as the variable name).
+            example: The example of the data that the screen should get from the previous screen or from the data endpoint.
+        """
         self.key = key
         self.example = example
 
@@ -1174,14 +1186,94 @@ class ScreenData:
         """
         return ScreenDataRef(key=self.key, screen=screen)
 
+    def update(self, new_value: _ScreenDataValType) -> ScreenDataUpdate:
+        """
+        Update the value of this data. Use this inside the :class:`UpdateDataAction` ``.payload``.
+
+        Example::
+
+            >>> is_visible = ScreenData(key='is_visible', example=True)
+            >>> UpdateDataAction(payload=[is_visible.update(False)])
+
+        Args:
+            new_value: The new value of the data.
+
+        Returns:
+            The update action for this data.
+        """
+        return ScreenDataUpdate(key=self.key, new_value=new_value)
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(key={self.key!r}, example={self.example!r})"
 
 
-class _ScreenDatasContainer:
-    """A wrapper for the ``Screen.data`` iterable. This is to prevent ``dataclasses.asdict()`` from converting ScreenData objects."""
+class ScreenDataUpdate:
+    """
+    Represents an update action for a screen data.
 
-    def __init__(self, datas: Iterable[ScreenData]):
+    - Use the :meth:`ScreenData.update` method to create an instance of this class from a :class:`ScreenData`.
+
+    .. code-block:: python
+        :emphasize-lines: 4, 14-19, 23
+        :linenos:
+
+        Screen(
+            id="DEMO_SCREEN",
+            data=[
+                is_txt_visible := ScreenData(
+                    key="is_txt_visible",
+                    example=False,
+                ),
+            ],
+            layout=Layout(
+                children=[
+                    OptIn(
+                        label="Show the text",
+                        name="show_txt",
+                        on_select_action=UpdateDataAction(
+                            payload=[is_txt_visible.update(True)]  # a much cleaner way
+                        ),
+                        on_unselect_action=UpdateDataAction(
+                            payload=[ScreenDataUpdate(key="is_txt_visible", new_value=False)]  # only when you don't have access to the `ScreenData` object
+                        ),
+                    ),
+                    TextBody(
+                        text="You clicked the button!",
+                        visible=is_txt_visible.ref,
+                    ),
+                ]
+            )
+        )
+    """
+
+    __slots__ = "key", "new_value"
+
+    def __init__(
+        self,
+        *,
+        key: str,
+        new_value: _ScreenDataValType,
+    ) -> None:
+        """
+        Initialize the screen data update
+
+        Args:
+            key: The key of the data to update (The same key as the :class:`ScreenData` object).
+            new_value: The new value of the data.
+        """
+        self.key = key
+        self.new_value = new_value
+
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}(key={self.key!r}, new_value={self.new_value!r})"
+        )
+
+
+class _ScreenDatasContainer:
+    """A wrapper to prevent ``dataclasses.asdict()`` from converting ScreenData|Update objects."""
+
+    def __init__(self, datas: Iterable[ScreenData | ScreenDataUpdate]):  # not mixed
         self._datas = datas
 
     def __iter__(self):
@@ -2349,7 +2441,7 @@ class OptIn(FormComponent):
     required: bool | str | ScreenDataRef | ComponentRef | None = None
     visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     init_value: bool | str | ScreenDataRef | ComponentRef | None = None
-    on_click_action: UpdateDataAction | OpenUrlAction | NavigateAction | None = None
+    on_click_action: OpenUrlAction | DataExchangeAction | NavigateAction | None = None
     on_select_action: UpdateDataAction | None = None
     on_unselect_action: UpdateDataAction | None = None
 
@@ -3063,18 +3155,25 @@ class UpdateDataAction(BaseAction):
 
     Example:
 
+        >>> is_visible = ScreenData(key='is_visible', example=True)
         >>> UpdateDataAction(
-        ...     payload={'i_agree': True}
+        ...     payload=[
+        ...         is_visible.update(value=False)
+        ...     ]
         ... )
 
     Attributes:
-        payload: The data to update for the current screen. The keys in the payload should match the component names.
+        payload: The data to update for the current screen.
     """
 
     name: FlowActionType = dataclasses.field(
         default=FlowActionType.UPDATE_DATA, init=False, repr=False
     )
-    payload: dict[str, str | bool | Iterable[DataSource] | ScreenDataRef | ComponentRef]
+    payload: Iterable[ScreenDataUpdate] | dict[str, _ScreenDataValType]
+
+    def __post_init__(self):
+        if not isinstance(self.payload, dict):
+            self.payload = _ScreenDatasContainer(self.payload)
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
