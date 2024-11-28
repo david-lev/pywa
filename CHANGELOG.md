@@ -3,7 +3,14 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-### 2.1.0 (2024-11-24) **Latest**
+### 2.2.0 (2024-11-29) **Latest**
+
+- [flows] adding `ScreenDataUpdate` to use in `UpdateDataAction`
+- [flows] using math operators between math objs
+- [flows] renaming `ActionNext` to `Next` and `ActionNextType` to `NextType`
+
+
+### 2.1.0 (2024-11-24)
 
 - [flows] adding `CalendarPicker` component
 - [flows] allow string concatenation with refs
