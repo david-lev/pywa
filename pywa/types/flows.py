@@ -9,7 +9,16 @@ import json
 import logging
 import pathlib
 import warnings
-from typing import Iterable, TYPE_CHECKING, Any, BinaryIO, Literal, TypeVar, TypeAlias
+from typing import (
+    Iterable,
+    TYPE_CHECKING,
+    Any,
+    BinaryIO,
+    Literal,
+    TypeVar,
+    TypeAlias,
+    Type,
+)
 
 import httpx
 
@@ -154,7 +163,7 @@ class FlowCompletion(BaseUserUpdate):
             response=response,
         )
 
-    def get_media(self, media_cls: type[BaseMedia], key: str) -> BaseMedia:
+    def get_media(self, media_cls: Type[BaseMedia], key: str) -> BaseMedia:
         """
         Get the media object from the response.
 
@@ -914,7 +923,7 @@ _DATA_SOURCE_SKIP_FIELDS = {
 
 class _FlowJSONEncoder(json.JSONEncoder):
     def default(self, o):
-        if isinstance(o, (Ref, Condition)):
+        if isinstance(o, _Expr):
             return o.to_str()
         if isinstance(o, _ScreenDatasContainer):
             data = {}
@@ -1057,16 +1066,16 @@ class DataSource:
         on_unselect_action: The update data action to perform when the data source is unselected. (added in v6.0).
     """
 
-    id: str
-    title: str
+    id: str | ScreenDataRef | ComponentRef
+    title: str | ScreenDataRef | ComponentRef
     on_select_action: UpdateDataAction | None = None
     on_unselect_action: UpdateDataAction | None = None
-    description: str | None = None
-    metadata: str | None = None
-    enabled: bool | None = None
-    image: str | None = None
-    alt_text: str | None = None
-    color: str | None = None
+    description: str | ScreenDataRef | ComponentRef | None = None
+    metadata: str | ScreenDataRef | ComponentRef | None = None
+    enabled: bool | ScreenDataRef | ComponentRef | None = None
+    image: str | ScreenDataRef | ComponentRef | None = None
+    alt_text: str | ScreenDataRef | ComponentRef | None = None
+    color: str | ScreenDataRef | ComponentRef | None = None
 
     def to_dict(self):
         """Called when used in :class:`FlowResponse`."""
@@ -1078,15 +1087,12 @@ class DataSource:
         )
 
 
+_SingleScreenDataValType: TypeAlias = (
+    str | int | float | bool | dict | datetime.date | DataSource
+)
+
 _ScreenDataValType: TypeAlias = (
-    str
-    | int
-    | float
-    | bool
-    | dict
-    | datetime.date
-    | DataSource
-    | Iterable[str | int | float | bool | dict | datetime.date | DataSource]
+    _SingleScreenDataValType | Iterable[_SingleScreenDataValType]
 )
 
 
@@ -2160,7 +2166,7 @@ class TextInput(TextEntryComponent):
         ... )
 
     Attributes:
-        name: The unique name (id) for this component (to be used dynamically or in action payloads).
+        name: The unique name (id) for this component.
         label: The label of the text input. Limited to 20 characters. Can be dynamic.
         input_type: The input type of the text input (for keyboard layout and validation rules). Can be dynamic.
         required: Whether the text input is required or not. Can be dynamic.
@@ -2170,7 +2176,7 @@ class TextInput(TextEntryComponent):
         enabled: Whether the text input is enabled or not. Default to ``True``. Can be dynamic.
         visible: Whether the text input is visible or not. Default to ``True``. Can be dynamic.
         init_value: The default value of the text input. Can be dynamic.
-        error_message: The error message of the text input. Shortcuts for ``error_messages`` of the parent :class:`Form`. Can be dynamic.
+        error_message: The error message of the text input. Can be dynamic.
     """
 
     type: ComponentType = dataclasses.field(
@@ -2208,7 +2214,7 @@ class TextArea(TextEntryComponent):
         ... )
 
     Attributes:
-        name: The unique name (id) for this component (to be used dynamically or in action payloads).
+        name: The unique name (id) for this component.
         label: The label of the text area. Limited to 20 characters. Can be dynamic.
         required: Whether the text area is required or not. Can be dynamic.
         max_length: The maximum number of characters allowed in the text area. Can be dynamic.
@@ -2216,7 +2222,7 @@ class TextArea(TextEntryComponent):
         enabled: Whether the text area is enabled or not. Default to ``True``. Can be dynamic.
         visible: Whether the text area is visible or not. Default to ``True``. Can be dynamic.
         init_value: The default value of the text area. Can be dynamic.
-        error_message: The error message of the text area. Shortcuts for ``error_messages`` of the parent :class:`Form`. Can be dynamic.
+        error_message: The error message of the text area. Can be dynamic.
     """
 
     type: ComponentType = dataclasses.field(
@@ -2271,7 +2277,7 @@ class CheckboxGroup(FormComponent):
         ... )
 
     Attributes:
-        name: The unique name (id) for this component (to be used dynamically or in action payloads).
+        name: The unique name (id) for this component.
         data_source: The data source of the checkbox group. Can be dynamic.
         label: The label of the checkbox group. Limited to 30 characters. Can be dynamic. Required starting from v4.0.
         description: The description of the checkbox group. Limited to 300 characters. Can be dynamic. Added in v4.0.
@@ -2327,7 +2333,7 @@ class RadioButtonsGroup(FormComponent):
         ... )
 
     Attributes:
-        name: The unique name (id) for this component (to be used dynamically or in action payloads).
+        name: The unique name (id) for this component.
         data_source: The data source of the radio buttons group. Can be dynamic.
         label: The label of the radio buttons group. Limited to 30 characters. Can be dynamic. Required starting from v4.0.
         description: The description of the radio buttons group. Limited to 300 characters. Can be dynamic. Added in v4.0.
@@ -2379,7 +2385,7 @@ class Dropdown(FormComponent):
         ... )
 
     Attributes:
-        name: The unique name (id) for this component (to be used dynamically or in action payloads).
+        name: The unique name (id) for this component.
         label: The label of the dropdown. Limited to 30 characters. Can be dynamic.
         data_source: The data source of the dropdown. minimum 1 and maximum 200 items. Can be dynamic.
         enabled: Whether the dropdown is enabled or not. Default to ``True``. Can be dynamic.
@@ -2451,7 +2457,7 @@ class OptIn(FormComponent):
         ... )
 
     Attributes:
-        name: The unique name (id) for this component (to be used dynamically or in action payloads).
+        name: The unique name (id) for this component.
         label: The label of the opt in. Limited to 30 characters. Can be dynamic.
         required: Whether the opt in is required or not. Can be dynamic.
         visible: Whether the opt in is visible or not. Default to ``True``. Can be dynamic.
@@ -2534,7 +2540,7 @@ class DatePicker(FormComponent):
 
 
     Attributes:
-        name: The unique name (id) for this component (to be used dynamically or in action payloads).
+        name: The unique name (id) for this component.
         label: The label of the date picker. Limited to 40 characters. Can be dynamic.
         min_date: The minimum date (date/datetime/timestamp) that can be selected. Can be dynamic.
         max_date: The maximum date (date/datetime/timestamp) that can be selected. Can be dynamic.
@@ -2544,7 +2550,7 @@ class DatePicker(FormComponent):
         required: Whether the date picker is required or not. Can be dynamic.
         visible: Whether the date picker is visible or not. Default to ``True``. Can be dynamic.
         init_value: The default value. Can be dynamic.
-        error_message: The error message of the date picker. Shortcuts for ``error_messages`` of the parent :class:`Form`. Can be dynamic.
+        error_message: The error message of the date picker. Can be dynamic.
         on_select_action: The action to perform when a date is selected.
     """
 
@@ -2629,7 +2635,7 @@ class CalendarPicker(FormComponent):
 
 
     Attributes:
-        name: The unique name (id) for this component (to be used dynamically or in action payloads).
+        name: The unique name (id) for this component.
         label: The label of the calendar picker. Limited to 40 characters. Can be dynamic.
         title: The title of the calendar picker. Only available when mode is ``CalendarMode.RANGE``. Can be dynamic.
         description: The description of the calendar picker. Limited to 300 characters. Only available when mode is ``CalendarMode.RANGE``. Can be dynamic.
@@ -2807,7 +2813,7 @@ class PhotoPicker(FormComponent):
         )
 
     Attributes:
-        name: The unique name (id) for this component (to be used dynamically or in action payloads).
+        name: The unique name (id) for this component.
         label: The label of the photo picker. Limited to 30 characters. Can be dynamic.
         description: The description of the photo picker. Limited to 300 characters. Can be dynamic.
         photo_source: The source where the image can be selected from. Default to ``PhotoSource.CAMERA_GALLERY``. Can be dynamic.
@@ -2861,7 +2867,7 @@ class DocumentPicker(FormComponent):
         )
 
     Attributes:
-        name: The unique name (id) for this component (to be used dynamically or in action payloads).
+        name: The unique name (id) for this component.
         label: The label of the document picker. Limited to 30 characters. Can be dynamic.
         description: The description of the document picker. Limited to 300 characters. Can be dynamic.
         max_file_size_kb: The maximum file size in KB. Can be dynamic. Default value: 25600 (25 MiB)
