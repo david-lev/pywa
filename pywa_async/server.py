@@ -266,6 +266,7 @@ class Server:
     def _register_callback_url(
         self: "WhatsApp",
         callback_url: str,
+        callback_url_scope: utils.CallbackURLScope,
         app_id: int,
         app_secret: str,
         verify_token: str,
@@ -284,18 +285,40 @@ class Server:
         )
 
         try:
-            app_access_token = loop.run_until_complete(
-                api.get_app_access_token(app_id=app_id, app_secret=app_secret)
-            )
-            if not loop.run_until_complete(
-                api.set_app_callback_url(
-                    app_id=app_id,
-                    app_access_token=app_access_token["access_token"],
-                    callback_url=callback_url,
-                    verify_token=verify_token,
-                    fields=fields,
-                )
-            )["success"]:
+            match callback_url_scope:
+                case utils.CallbackURLScope.APP:
+                    app_access_token = loop.run_until_complete(
+                        api.get_app_access_token(app_id=app_id, app_secret=app_secret)
+                    )
+                    res = loop.run_until_complete(
+                        api.set_app_callback_url(
+                            app_id=app_id,
+                            app_access_token=app_access_token["access_token"],
+                            callback_url=callback_url,
+                            verify_token=verify_token,
+                            fields=fields,
+                        )
+                    )
+                case utils.CallbackURLScope.WABA:
+                    res = loop.run_until_complete(
+                        api.set_waba_alternate_callback_url(
+                            waba_id=self.business_account_id,
+                            callback_url=callback_url,
+                            verify_token=verify_token,
+                        )
+                    )
+                case utils.CallbackURLScope.PHONE:
+                    res = loop.run_until_complete(
+                        api.set_phone_alternate_callback_url(
+                            callback_url=callback_url,
+                            verify_token=verify_token,
+                            phone_id=self.phone_id,
+                        )
+                    )
+                case _:
+                    raise ValueError("Invalid callback URL scope")
+
+            if not res["success"]:
                 raise RuntimeError("Failed to register callback URL.")
             _logger.info("Callback URL '%s' registered successfully", callback_url)
         except errors.WhatsAppError as e:

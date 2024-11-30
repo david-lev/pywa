@@ -116,6 +116,7 @@ def server_with_handlers(mock_handler):
         None,
         None,
         None,
+        None,
         "valid_token",
         None,
         None,

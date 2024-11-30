@@ -3,7 +3,7 @@ import tempfile
 import pytest
 import pytest_mock
 
-from pywa import WhatsApp, types
+from pywa import WhatsApp, types, utils
 
 PHONE_ID = "123456789"
 TOKEN = "xyz"
@@ -30,6 +30,36 @@ def test_api_usage_without_token():
 def test_warning_when_version_lower_than_min():
     with pytest.warns(RuntimeWarning):
         WhatsApp(phone_id="123", token="123", api_version="16.0")
+
+
+def test_wa_callback_scopes():
+    with pytest.raises(ValueError):
+        WhatsApp(
+            callback_url_scope=utils.CallbackURLScope.APP,
+            app_id=None,
+            app_secret=None,
+            server=None,
+            callback_url="https://exmaple.com",
+            verify_token="xyzxyz",
+        )
+
+    with pytest.raises(ValueError):
+        WhatsApp(
+            callback_url_scope=utils.CallbackURLScope.WABA,
+            business_account_id=None,
+            server=None,
+            callback_url="https://exmaple.com",
+            verify_token="xyzxyz",
+        )
+
+    with pytest.raises(ValueError):
+        WhatsApp(
+            callback_url_scope=utils.CallbackURLScope.PHONE,
+            phone_id=None,
+            server=None,
+            callback_url="https://exmaple.com",
+            verify_token="xyzxyz",
+        )
 
 
 def test_send_text_message(mocker: pytest_mock.MockFixture):

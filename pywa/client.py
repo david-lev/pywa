@@ -96,6 +96,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         validate_updates: bool = True,
         business_account_id: str | int | None = None,
         callback_url: str | None = None,
+        callback_url_scope: utils.CallbackURLScope = utils.CallbackURLScope.APP,
         webhook_fields: Iterable[str] | None = None,
         app_id: int | None = None,
         app_secret: str | None = None,
@@ -153,12 +154,14 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             server: The Flask or FastAPI app instance to use for the webhook. required when you want to handle incoming
              updates. pass `None` to insert the updates with the :meth:`webhook_update_handler`.
             callback_url: The server URL to register (without endpoint. optional).
+            callback_url_scope: The scope of the callback URL to register (default: ``APP``).
             verify_token: A challenge string (Required when ``server`` is provided. The verify token can be any string.
              It is used to challenge the webhook endpoint to verify that the endpoint is valid).
             webhook_challenge_delay: The delay (in seconds, default to ``3``) to wait for the verify token to be sent to the server (optional,
              for cases where the server/network is slow or the server is taking a long time to start).
             webhook_fields: The fields to register for the callback URL (optional, if not provided, all supported fields will be
              registered. modify this if you want to reduce the number of unused requests to your server).
+             See `Availble fields <https://developers.facebook.com/docs/graph-api/webhooks/getting-started/webhooks-for-whatsapp#available-subscription-fields>`_.
             app_id: The ID of the app in the
              `App Basic Settings <https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings>`_
              (optional, required when registering a ``callback_url``).
@@ -215,6 +218,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             server=server,
             webhook_endpoint=webhook_endpoint,
             callback_url=callback_url,
+            callback_url_scope=callback_url_scope,
             webhook_fields=tuple(webhook_fields) if webhook_fields else None,
             app_id=app_id,
             app_secret=app_secret,
@@ -1432,7 +1436,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         mime_type: str | None = None,
         filename: str | None = None,
         dl_session: httpx.Client | None = None,
-        phone_id: str | None = None,
+        phone_id: str | int | None = None,
     ) -> str:
         """
         Upload media to WhatsApp servers.
@@ -1573,7 +1577,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
 
     def get_business_phone_number(
         self,
-        phone_id: str | None = None,
+        phone_id: str | int | None = None,
     ) -> BusinessPhoneNumber:
         """
         Get the phone number of the WhatsApp Business account.
@@ -1603,7 +1607,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         enable_chat_opened: bool,
         ice_breakers: Iterable[str] | None = None,
         commands: Iterable[Command] | None = None,
-        phone_id: str | None = None,
+        phone_id: str | int | None = None,
     ) -> bool:
         """
         Update the conversational automation settings of the WhatsApp Business account.
@@ -1633,7 +1637,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
 
     def get_business_profile(
         self,
-        phone_id: str | None = None,
+        phone_id: str | int | None = None,
     ) -> BusinessProfile:
         """
         Get the business profile of the WhatsApp Business account.
@@ -1667,7 +1671,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
     def set_business_public_key(
         self,
         public_key: str,
-        phone_id: str | None = None,
+        phone_id: str | int | None = None,
     ) -> bool:
         """
         Set the business public key of the WhatsApp Business account (required for end-to-end encryption in flows)
@@ -1701,7 +1705,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         profile_picture_handle: str | None = utils.MISSING,
         industry: Industry | None = utils.MISSING,
         websites: Iterable[str] | None = utils.MISSING,
-        phone_id: str | None = None,
+        phone_id: str | int | None = None,
     ) -> bool:
         """
         Update the business profile of the WhatsApp Business account.
@@ -1760,7 +1764,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
 
     def get_commerce_settings(
         self,
-        phone_id: str | None = None,
+        phone_id: str | int | None = None,
     ) -> CommerceSettings:
         """
         Get the commerce settings of the WhatsApp Business account.
@@ -1783,7 +1787,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         self,
         is_catalog_visible: bool = None,
         is_cart_enabled: bool = None,
-        phone_id: str | None = None,
+        phone_id: str | int | None = None,
     ) -> bool:
         """
         Update the commerce settings of the WhatsApp Business account.
@@ -2337,7 +2341,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         self,
         pin: int | str,
         data_localization_region: str | None = None,
-        phone_id: str | None = None,
+        phone_id: str | int | None = None,
     ) -> bool:
         """
         Register a Business Phone Number
@@ -2374,7 +2378,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         self,
         prefilled_message: str,
         image_type: Literal["PNG", "SVG"] = "PNG",
-        phone_id: str | None = None,
+        phone_id: str | int | None = None,
     ) -> QRCode:
         """
         Create a QR code for a prefilled message.
@@ -2400,7 +2404,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
     def get_qr_code(
         self,
         code: str,
-        phone_id: str | None = None,
+        phone_id: str | int | None = None,
     ) -> QRCode | None:
         """
         Get a QR code.
@@ -2420,7 +2424,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
 
     def get_qr_codes(
         self,
-        phone_id: str | None = None,
+        phone_id: str | int | None = None,
     ) -> tuple[QRCode, ...]:
         """
         Get all QR codes associated with the WhatsApp Business account.
@@ -2442,7 +2446,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         self,
         code: str,
         prefilled_message: str,
-        phone_id: str | None = None,
+        phone_id: str | int | None = None,
     ) -> QRCode:
         """
         Update a QR code.
@@ -2466,7 +2470,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
     def delete_qr_code(
         self,
         code: str,
-        phone_id: str | None = None,
+        phone_id: str | int | None = None,
     ) -> bool:
         """
         Delete a QR code.

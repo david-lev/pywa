@@ -18,6 +18,7 @@ from pywa.types.media import (
     Sticker as _Sticker,
     Document as _Document,
     Audio as _Audio,
+    MediaUrlResponse as _MediaUrlResponse,
 )  # noqa MUST BE IMPORTED FIRST
 
 import dataclasses
@@ -161,7 +162,7 @@ class Audio(BaseMediaAsync, _Audio):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class MediaUrlResponse(MediaUrlResponse):
+class MediaUrlResponse(_MediaUrlResponse):
     """
     Represents a media response.
 

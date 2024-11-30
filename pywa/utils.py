@@ -130,6 +130,21 @@ class Version(enum.Enum):
             )
 
 
+class CallbackURLScope(enum.Enum):
+    """
+    Enum for the callback URL scopes.
+
+    Attributes:
+        APP: https://developers.facebook.com/docs/graph-api/reference/app/subscriptions
+        WABA: https://developers.facebook.com/docs/whatsapp/embedded-signup/webhooks/override#set-waba-alternate-callback
+        PHONE: https://developers.facebook.com/docs/whatsapp/embedded-signup/webhooks/override#set-phone-number-alternate-callback
+    """
+
+    APP = enum.auto()
+    WABA = enum.auto()
+    PHONE = enum.auto()
+
+
 class StrEnum(str, enum.Enum):
     """Enum where the values are also (and must be) strings."""
 

@@ -40,3 +40,7 @@ Others
 .. autoclass:: ListenerCanceled()
 
 .. autoclass:: ListenerStopped()
+
+.. currentmodule:: pywa.utils
+
+.. autoclass:: CallbackURLScope()

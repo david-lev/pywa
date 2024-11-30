@@ -136,7 +136,7 @@ class WhatsAppCloudApi:
             },
         )
 
-    def set_waba_callback_url(
+    def set_waba_alternate_callback_url(
         self,
         waba_id: str,
         callback_url: str,

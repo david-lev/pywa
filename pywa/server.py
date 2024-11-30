@@ -79,6 +79,7 @@ class Server:
         server: Flask | FastAPI | None,
         webhook_endpoint: str,
         callback_url: str | None,
+        callback_url_scope: utils.CallbackURLScope,
         webhook_fields: tuple[str, ...] | None,
         app_id: int | None,
         app_secret: str | None,
@@ -127,15 +128,31 @@ class Server:
         self._register_routes()
 
         if callback_url is not None:
-            if app_id is None or app_secret is None:
+            if callback_url_scope == utils.CallbackURLScope.APP and (
+                app_id is None or app_secret is None
+            ):
                 raise ValueError(
-                    "When registering a callback URL, the app ID and app secret must be provided.\n>> See here how "
+                    "When registering a callback URL in the app scope, the `app_id` and `app_secret` must be provided.\n>> See here how "
                     "to get them: "
                     "https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings/"
+                )
+            elif (
+                callback_url_scope == utils.CallbackURLScope.WABA
+                and not self.business_account_id
+            ):
+                raise ValueError(
+                    "When registering a callback URL in the WABA scope, the `business_account_id` must be provided."
+                )
+            elif (
+                callback_url_scope == utils.CallbackURLScope.PHONE and not self.phone_id
+            ):
+                raise ValueError(
+                    "When registering a callback URL in the PHONE scope, the `phone_id` must be provided."
                 )
 
             self._delayed_register_callback_url(
                 callback_url=f"{callback_url.rstrip('/')}/{self._webhook_endpoint.lstrip('/')}",
+                callback_url_scope=callback_url_scope,
                 app_id=app_id,
                 app_secret=app_secret,
                 verify_token=verify_token,
@@ -441,6 +458,7 @@ class Server:
     def _delayed_register_callback_url(
         self: "WhatsApp",
         callback_url: str,
+        callback_url_scope: utils.CallbackURLScope,
         app_id: int,
         app_secret: str,
         verify_token: str,
@@ -452,6 +470,7 @@ class Server:
             function=self._register_callback_url,
             kwargs=dict(
                 callback_url=callback_url,
+                callback_url_scope=callback_url_scope,
                 app_id=app_id,
                 app_secret=app_secret,
                 verify_token=verify_token,
@@ -462,6 +481,7 @@ class Server:
     def _register_callback_url(
         self: "WhatsApp",
         callback_url: str,
+        callback_url_scope: utils.CallbackURLScope,
         app_id: int,
         app_secret: str,
         verify_token: str,
@@ -472,16 +492,34 @@ class Server:
         It must be called after the server is running so that the challenge can be verified.
         """
         try:
-            app_access_token = self.api.get_app_access_token(
-                app_id=app_id, app_secret=app_secret
-            )
-            if not self.api.set_app_callback_url(
-                app_id=app_id,
-                app_access_token=app_access_token["access_token"],
-                callback_url=callback_url,
-                verify_token=verify_token,
-                fields=fields,
-            )["success"]:
+            match callback_url_scope:
+                case utils.CallbackURLScope.APP:
+                    app_access_token = self.api.get_app_access_token(
+                        app_id=app_id, app_secret=app_secret
+                    )
+                    res = self.api.set_app_callback_url(
+                        app_id=app_id,
+                        app_access_token=app_access_token["access_token"],
+                        callback_url=callback_url,
+                        verify_token=verify_token,
+                        fields=fields,
+                    )
+                case utils.CallbackURLScope.WABA:
+                    res = self.api.set_waba_alternate_callback_url(
+                        waba_id=self.business_account_id,
+                        callback_url=callback_url,
+                        verify_token=verify_token,
+                    )
+                case utils.CallbackURLScope.PHONE:
+                    res = self.api.set_phone_alternate_callback_url(
+                        callback_url=callback_url,
+                        verify_token=verify_token,
+                        phone_id=self.phone_id,
+                    )
+                case _:
+                    raise ValueError("Invalid callback URL scope")
+
+            if not res["success"]:
                 raise RuntimeError("Failed to register callback URL.")
             _logger.info("Callback URL '%s' registered successfully", callback_url)
         except errors.WhatsAppError as e:
