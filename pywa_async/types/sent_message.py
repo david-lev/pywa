@@ -1,4 +1,4 @@
-import dataclasses
+from __future__ import annotations
 
 from pywa.types.sent_message import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.sent_message import SentMessage as _SentMessage
