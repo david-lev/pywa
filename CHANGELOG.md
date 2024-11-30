@@ -3,12 +3,18 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-### 2.2.0 (2024-11-29) **Latest**
+
+### 2.3.0 (2024-11-30) **Latest**
+
+- [client] allowing to specify the callback url scope
+- [client] expose methods to override callback url in waba and phone scopes
+- [flows] typing `DataSource` to accept `Ref`s
+
+### 2.2.0 (2024-11-29)
 
 - [flows] adding `ScreenDataUpdate` to use in `UpdateDataAction`
 - [flows] using math operators between math objs
 - [flows] renaming `ActionNext` to `Next` and `ActionNextType` to `NextType`
-
 
 ### 2.1.0 (2024-11-24)
 

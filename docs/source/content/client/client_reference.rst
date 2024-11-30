@@ -48,6 +48,12 @@ Client Reference
 .. automethod:: WhatsApp.get_qr_codes
 .. automethod:: WhatsApp.update_qr_code
 .. automethod:: WhatsApp.delete_qr_code
+.. automethod:: WhatsApp.get_app_access_token
+.. automethod:: WhatsApp.set_app_callback_url
+.. automethod:: WhatsApp.override_waba_callback_url
+.. automethod:: WhatsApp.delete_waba_callback_url
+.. automethod:: WhatsApp.override_phone_callback_url
+.. automethod:: WhatsApp.delete_phone_callback_url
 .. automethod:: WhatsApp.webhook_update_handler
 .. automethod:: WhatsApp.webhook_challenge_handler
 .. automethod:: WhatsApp.get_flow_request_handler
