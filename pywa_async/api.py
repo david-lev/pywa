@@ -158,7 +158,67 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             },
         )
 
-    async def set_phone_callback_url(
+    async def get_waba_subscribed_apps(self, waba_id: str) -> dict[str, list[dict]]:
+        """
+        Get the subscribed apps of a WABA.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/embedded-signup/webhooks/override#get-waba-alternate-callback>`_.
+
+        Args:
+            waba_id: The ID of the WhatsApp Business Account.
+
+        Return example::
+
+            {
+                "data": [
+                    {
+                        "whatsapp_business_api_data": {
+                            "link": "https://www.facebook.com/games/?app_id=12345",
+                            "name": "My App",
+                            "id": "12345"
+                        },
+                        "override_callback_uri": "https://example.com/wa_webhook"
+                    },
+                    {
+                        "whatsapp_business_api_data": {
+                            "link": "https://www.facebook.com/games/?app_id=67890",
+                            "name": "My second app",
+                            "id": "67890"
+                        }
+                    }
+                ]
+            }
+
+        Returns:
+            The subscribed apps of the WABA.
+        """
+        return await self._make_request(
+            method="GET",
+            endpoint=f"/{waba_id}/subscribed_apps",
+        )
+
+    async def delete_waba_alternate_callback_url(self, waba_id: str) -> dict[str, bool]:
+        """
+        Delete the callback URL of a WABA.
+
+        Example:
+
+            {
+                'success': True
+            }
+
+        Args:
+            waba_id: The ID of the WhatsApp Business Account.
+
+        Returns:
+            The success of the operation.
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint=f"/{waba_id}/subscribed_apps",
+        )
+
+    async def set_phone_alternate_callback_url(
         self,
         callback_url: str,
         verify_token: str,
@@ -184,6 +244,36 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
                 "webhook_configuration": {
                     "override_callback_uri": callback_url,
                     "verify_token": verify_token,
+                }
+            },
+        )
+
+    async def delete_phone_alternate_callback_url(
+        self, phone_id: str
+    ) -> dict[str, bool]:
+        """
+        Delete the alternate callback URL of a phone number.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/embedded-signup/webhooks/override#delete-phone-number-alternate-callback>`_.
+
+        Return example::
+
+            {
+                'success': True
+            }
+
+        Args:
+            phone_id: The ID of the phone number to delete the callback URL from.
+
+        Returns:
+            The success of the operation.
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint=f"/{phone_id}/",
+            json={
+                "webhook_configuration": {
+                    "override_callback_uri": "",
                 }
             },
         )

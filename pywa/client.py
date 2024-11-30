@@ -2486,3 +2486,131 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
             phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
             code=code,
         )["success"]
+
+    def get_app_access_token(self, app_id: int, app_secret: str) -> str:
+        """
+        Get an access token for an app.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/facebook-login/guides/access-tokens/#apptokens>`_.
+
+        Args:
+            app_id: The ID of the app in the
+             `App Basic Settings <https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings>`_
+            app_secret: The app secret.
+
+        Returns:
+            The access token.
+        """
+        return self.api.get_app_access_token(
+            app_id=app_id,
+            app_secret=app_secret,
+        )["access_token"]
+
+    def set_app_callback_url(
+        self,
+        app_id: int,
+        app_access_token: str,
+        callback_url: str,
+        verify_token: str,
+        fields: Iterable[str],
+    ) -> bool:
+        """
+        Set the callback URL for the webhook.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/graph-api/reference/app/subscriptions>`_.
+
+        Args:
+            app_id: The ID of the app in the
+             `App Basic Settings <https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings>`_
+            app_access_token: The app access token from :meth:`~pywa.client.WhatsApp.get_app_access_token`.
+            callback_url: The URL to receive the webhook.
+            verify_token: The token to verify the webhook.
+            fields: The fields to subscribe to. See `Available Fields <https://developers.facebook.com/docs/graph-api/webhooks/getting-started/webhooks-for-whatsapp#available-subscription-fields>`_.
+
+        Returns:
+            Whether the callback URL was set.
+        """
+        return self.api.set_app_callback_url(
+            app_id=app_id,
+            app_access_token=app_access_token,
+            callback_url=callback_url,
+            verify_token=verify_token,
+            fields=tuple(fields),
+        )["success"]
+
+    def override_waba_callback_url(
+        self, callback_url: str, verify_token: str, waba_id: str | int | None = None
+    ) -> bool:
+        """
+        Override the callback URL for the WhatsApp Business account.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/embedded-signup/webhooks/override#set-waba-alternate-callback>`_.
+
+        Args:
+            callback_url: The URL to receive the webhook.
+            verify_token: The token to verify the webhook.
+            waba_id: The WhatsApp Business account ID (Overrides the client's business account ID).
+
+        Returns:
+            Whether the callback URL was overridden.
+        """
+        return self.api.set_waba_alternate_callback_url(
+            waba_id=helpers.resolve_waba_id_param(self, waba_id),
+            callback_url=callback_url,
+            verify_token=verify_token,
+        )["success"]
+
+    def delete_waba_callback_url(self, waba_id: str | int | None = None) -> bool:
+        """
+        Delete the callback URL for the WhatsApp Business account.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/embedded-signup/webhooks/override#delete-waba-alternate-callback>`_.
+
+        Args:
+            waba_id: The WhatsApp Business account ID (Overrides the client's business account ID).
+
+        Returns:
+            Whether the callback URL was deleted.
+        """
+        return self.api.delete_waba_alternate_callback_url(
+            waba_id=helpers.resolve_waba_id_param(self, waba_id),
+        )["success"]
+
+    def override_phone_callback_url(
+        self, callback_url: str, verify_token: str, phone_id: str | int | None = None
+    ) -> bool:
+        """
+        Override the callback URL for the phone.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/embedded-signup/webhooks/override#set-phone-number-alternate-callback>`_.
+        - To access to the current webhook configuration use :meth:`~pywa.client.WhatsApp.get_business_phone_number` and access the ``webhook_configuration`` attribute.
+
+        Args:
+            callback_url: The URL to receive the webhook.
+            verify_token: The token to verify the webhook.
+            phone_id: The phone ID to override the callback URL for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            Whether the callback URL was overridden.
+        """
+        return self.api.set_phone_alternate_callback_url(
+            callback_url=callback_url,
+            verify_token=verify_token,
+            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+        )["success"]
+
+    def delete_phone_callback_url(self, phone_id: str | int | None = None) -> bool:
+        """
+        Delete the callback URL for the phone.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/embedded-signup/webhooks/override#delete-phone-number-alternate-callback>`_.
+
+        Args:
+            phone_id: The phone ID to delete the callback URL for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            Whether the callback URL was deleted.
+        """
+        return self.api.delete_phone_alternate_callback_url(
+            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+        )["success"]
