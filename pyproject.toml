@@ -53,3 +53,14 @@ cryptography = ["cryptography"]
 
 [tool.ruff.lint]
 ignore = ["E731", "F401", "E402", "F405"]
+
+
+[tool.coverage.run]
+source = ["pywa"]
+omit = [
+    "pywa/__init__.py",
+    "pywa/api.py",
+    "pywa/listeners.py",
+    "pywa/server.py",
+    "pywa/handlers.py",
+]

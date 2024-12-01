@@ -1,10 +1,10 @@
-import dataclasses
 import datetime
 import functools
 from types import ModuleType
 
+import pytest
+
 from pywa import handlers, types, WhatsApp, filters
-from pywa.handlers import MessageHandler, FlowRequestHandler, FlowRequestCallbackWrapper
 from pywa_async import WhatsApp as WhatsAppAsync
 
 FAKE_WA = WhatsApp(phone_id="1234567890", token="1234567890:1234567890")
@@ -48,7 +48,9 @@ def test_instance_with_parentheses():
     @wa.on_message(filters=filters.text)  # @wa.on_x(filters=...)
     def instance_with_parentheses(_, __): ...
 
-    assert wa._handlers[MessageHandler][0]._callback == instance_with_parentheses
+    assert (
+        wa._handlers[handlers.MessageHandler][0]._callback == instance_with_parentheses
+    )
 
 
 def test_instance_without_parentheses():
@@ -57,7 +59,10 @@ def test_instance_without_parentheses():
     @wa.on_message  # @wa.on_x
     def instance_without_parentheses(_, __): ...
 
-    assert wa._handlers[MessageHandler][0]._callback == instance_without_parentheses
+    assert (
+        wa._handlers[handlers.MessageHandler][0]._callback
+        == instance_without_parentheses
+    )
 
 
 def test_class_with_parentheses_kw():
@@ -68,7 +73,9 @@ def test_class_with_parentheses_kw():
 
     module.__dict__["on_message"] = class_with_parentheses_kw
     wa = WhatsApp(server=None, verify_token="1234567890", handlers_modules=[module])
-    assert wa._handlers[MessageHandler][0]._callback == class_with_parentheses_kw
+    assert (
+        wa._handlers[handlers.MessageHandler][0]._callback == class_with_parentheses_kw
+    )
 
 
 def test_class_with_parentheses_args():
@@ -79,7 +86,10 @@ def test_class_with_parentheses_args():
 
     module.__dict__["on_message"] = class_with_parentheses_args
     wa = WhatsApp(server=None, verify_token="1234567890", handlers_modules=[module])
-    assert wa._handlers[MessageHandler][0]._callback == class_with_parentheses_args
+    assert (
+        wa._handlers[handlers.MessageHandler][0]._callback
+        == class_with_parentheses_args
+    )
 
 
 def test_class_without_parentheses():
@@ -90,7 +100,9 @@ def test_class_without_parentheses():
 
     module.__dict__["on_message"] = class_without_parentheses
     wa = WhatsApp(server=None, verify_token="1234567890", handlers_modules=[module])
-    assert wa._handlers[MessageHandler][0]._callback == class_without_parentheses
+    assert (
+        wa._handlers[handlers.MessageHandler][0]._callback == class_without_parentheses
+    )
 
 
 def test_all_combinations():
@@ -106,11 +118,63 @@ def test_all_combinations():
     module = ModuleType("module")
     module.__dict__["on_message"] = all_combinations
     wa.load_handlers_modules(module)
-    assert len(wa._handlers[MessageHandler]) == 5
+    assert len(wa._handlers[handlers.MessageHandler]) == 5
 
 
 def test_flow_request_decorator():
     @WhatsApp.on_flow_request("/flow")
     def on_flow_class(_, __): ...
 
-    assert isinstance(on_flow_class, FlowRequestHandler)
+    assert isinstance(on_flow_class, handlers.FlowRequestHandler)
+
+
+def test_add_handlers():
+    wa = WhatsApp(server=None, verify_token="xyzxyz")
+    h = handlers.MessageHandler(
+        callback=lambda _, __: None,
+        filters=filters.text,
+    )
+    wa.add_handlers(h)
+    assert wa._handlers[handlers.MessageHandler][0] is h
+
+
+def test_remove_handlers():
+    wa = WhatsApp(server=None, verify_token="xyzxyz")
+    h = handlers.MessageHandler(
+        callback=lambda _, __: None,
+        filters=filters.text,
+    )
+    wa.add_handlers(h)
+    wa.remove_handlers(h)
+    assert wa._handlers[handlers.MessageHandler] == []
+
+    with pytest.raises(ValueError):
+        wa.remove_handlers(h, silent=False)
+    wa.remove_handlers(h, silent=True)
+
+
+def test_remove_callbacks():
+    wa = WhatsApp(server=None, verify_token="xyzxyz")
+    c = lambda _, __: None
+    mh = handlers.MessageHandler(
+        callback=c,
+        filters=filters.text,
+    )
+    ch = handlers.CallbackButtonHandler(
+        callback=c,
+        filters=filters.text,
+    )
+    wa.add_handlers(mh, ch)
+    wa.remove_callbacks(c)
+    assert wa._handlers[handlers.MessageHandler] == []
+    assert wa._handlers[handlers.CallbackButtonHandler] == []
+
+
+def test_get_flow_request_handler():
+    wa = WhatsApp(server=None, verify_token="xyzxyz", business_private_key="diuwgcew")
+    c = lambda _, __: None
+    w = wa.get_flow_request_handler(
+        endpoint="/flow",
+        callback=c,
+    )
+    assert w._main_callback is c
