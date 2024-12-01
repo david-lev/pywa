@@ -759,7 +759,7 @@ class ConversationalAutomation:
     id: str
     chat_opened_enabled: bool
     ice_breakers: tuple[str] | None
-    commands: tuple[Command] | None
+    commands: tuple[Command, ...] | None
 
     @classmethod
     def from_dict(cls, data: dict):

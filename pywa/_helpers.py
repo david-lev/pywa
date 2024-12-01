@@ -150,6 +150,8 @@ def resolve_flow_json_param(
             if as_path.is_file():
                 with open(as_path, "r", encoding="utf-8") as f:
                     json_str = f.read()
+            else:
+                json_str = flow_json
         except OSError:
             json_str = flow_json
     elif isinstance(flow_json, bytes):
