@@ -2,13 +2,16 @@
 .. include:: ../../README.md
     :parser: myst_parser.sphinx_
 
+📝 **Changelog**
+^^^^^^^^^^^^^^^^
+
 .. include:: ../../CHANGELOG.md
     :parser: myst_parser.sphinx_
-    :start-line: 0
+    :start-line: 1
     :end-line: 30
 
-For full changelog, see `here <content/changelog.html>`_.
-____________________________________________________
+
+See the full changelog `here <content/changelog.html>`_.
 
 
 🔗 **Contents**

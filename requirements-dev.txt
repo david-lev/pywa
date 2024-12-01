@@ -1,7 +1,8 @@
 -r requirements.txt
-pytest==8.3.2
+pytest==8.3.4
+pytest-cov==6.0.0
 pytest-asyncio==0.24.0
 pytest-mock==3.14.0
-ruff==0.6.3
-pre-commit==3.8.0
-cryptography==43.0.3
+ruff==0.8.1
+pre-commit==4.0.1
+cryptography==44.0.0

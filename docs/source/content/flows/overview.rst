@@ -18,9 +18,7 @@ From `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flo
 
 When you reading the official docs it's looks very intimidating, but in fact it's quite simple (by PyWa 😉).
 
-    For a real world example, you can check out the `Sign up Flow Example <../examples/sign_up_flow.html>`_.
-
-The Flows are seperated to 4 parts:
+The Flows are separated into 4 parts:
 
 - Creating Flow
 - Sending Flow
@@ -57,7 +55,7 @@ A flow is collection of screens containing components. screens can exchange data
 Flow can be static: all the components settings are predefined and no interaction is required from your server.
 Or it can be dynamic: your server can respond to screen actions and determine the next screen to display (or close the flow) and the data to provide to it.
 
-Every component on the FlowJSON, has a corresponding class in :mod:`pywa.types.flows`:
+Every component on the FlowJSON has a corresponding class in :mod:`pywa.types.flows`:
 
 .. list-table::
    :widths: 10 60

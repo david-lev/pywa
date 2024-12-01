@@ -6,7 +6,8 @@ ________________________
 
 [![PyPi Downloads](https://img.shields.io/pypi/dm/pywa)](https://pypi.org/project/pywa/)
 [![PyPI Version](https://badge.fury.io/py/pywa.svg)](https://pypi.org/project/pywa/)
-![Tests](https://img.shields.io/github/actions/workflow/status/david-lev/pywa/tests.yml?label=Tests)
+[![Tests](https://img.shields.io/github/actions/workflow/status/david-lev/pywa/tests.yml?label=Tests)](https://github.com/david-lev/pywa/actions/workflows/tests.yml)
+[![Coverage](https://img.shields.io/codecov/c/github/david-lev/pywa)](https://codecov.io/gh/david-lev/pywa)
 [![Docs](https://readthedocs.org/projects/pywa/badge/?version=latest&)](https://pywa.readthedocs.io)
 [![License](https://img.shields.io/github/license/david-lev/pywa)](https://github.com/david-lev/pywa/blob/master/LICENSE)
 [![CodeFactor](https://www.codefactor.io/repository/github/david-lev/pywa/badge/master)](https://www.codefactor.io/repository/github/david-lev/pywa/overview/master)
