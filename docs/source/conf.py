@@ -45,6 +45,7 @@ extensions = [
     "sphinx_togglebutton",
     "sphinx.ext.autosectionlabel",
     "myst_parser",
+    "sphinxcontrib.googleanalytics",
 ]
 
 # The suffix of source filenames.
@@ -149,7 +150,10 @@ ogp_custom_meta_tags = [
     '<meta property="og:description" content="PyWa • Python wrapper for the WhatsApp Cloud API" /> '
 ]
 
-html_extra_path = ["google898e98a538257a96.html"]
+# html_extra_path = ["google898e98a538257a96.html"]
 
 # sphinx.ext.todo
 todo_include_todos = True
+
+# sphinxcontrib.googleanalytics
+googleanalytics_id = "G-N8G048V8GB"
