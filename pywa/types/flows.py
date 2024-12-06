@@ -1428,6 +1428,9 @@ class _Expr:
     def __str__(self) -> str:
         return self.to_str()
 
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self.to_str()})"
+
     @staticmethod
     def _format_value(val: _Expr | bool | int | float | str) -> str:
         if isinstance(val, _Expr):
@@ -1442,55 +1445,40 @@ class _Expr:
 class _Math(_Expr):
     """Base for math expressions"""
 
-    def __add__(
-        self: Ref | MathExpression, other: Ref | MathExpression | int | float
-    ) -> MathExpression:
-        return MathExpression(f"({self.to_str()} + {self._format_value(other)})")
+    def _to_math(self, left: _MathT, operator: str, right: _MathT) -> MathExpression:
+        return MathExpression(
+            f"({self._format_value(left)} {operator} {self._format_value(right)})"
+        )
 
-    def __radd__(
-        self: Ref | MathExpression, other: Ref | MathExpression | int | float
-    ) -> MathExpression:
-        return MathExpression(f"({self._format_value(other)} + {self.to_str()})")
+    def __add__(self: Ref | MathExpression, other: _MathT) -> MathExpression:
+        return self._to_math(self, "+", other)
 
-    def __sub__(
-        self: Ref | MathExpression, other: Ref | MathExpression | int | float
-    ) -> MathExpression:
-        return MathExpression(f"({self.to_str()} - {self._format_value(other)})")
+    def __radd__(self: Ref | MathExpression, other: _MathT) -> MathExpression:
+        return self._to_math(other, "+", self)
 
-    def __rsub__(
-        self: Ref | MathExpression, other: Ref | MathExpression | int | float
-    ) -> MathExpression:
-        return MathExpression(f"({self._format_value(other)} - {self.to_str()})")
+    def __sub__(self: Ref | MathExpression, other: _MathT) -> MathExpression:
+        return self._to_math(self, "-", other)
 
-    def __mul__(
-        self: Ref | MathExpression, other: Ref | MathExpression | int | float
-    ) -> MathExpression:
-        return MathExpression(f"({self.to_str()} * {self._format_value(other)})")
+    def __rsub__(self: Ref | MathExpression, other: _MathT) -> MathExpression:
+        return self._to_math(other, "-", self)
 
-    def __rmul__(
-        self: Ref | MathExpression, other: Ref | MathExpression | int | float
-    ) -> MathExpression:
-        return MathExpression(f"({self._format_value(other)} * {self.to_str()})")
+    def __mul__(self: Ref | MathExpression, other: _MathT) -> MathExpression:
+        return self._to_math(self, "*", other)
 
-    def __truediv__(
-        self: Ref | MathExpression, other: Ref | MathExpression | int | float
-    ) -> MathExpression:
-        return MathExpression(f"({self.to_str()} / {self._format_value(other)})")
+    def __rmul__(self: Ref | MathExpression, other: _MathT) -> MathExpression:
+        return self._to_math(other, "*", self)
 
-    def __rtruediv__(
-        self: Ref | MathExpression, other: Ref | MathExpression | int | float
-    ) -> MathExpression:
-        return MathExpression(f"({self._format_value(other)} / {self.to_str()})")
+    def __truediv__(self: Ref | MathExpression, other: _MathT) -> MathExpression:
+        return self._to_math(self, "/", other)
 
-    def __mod__(
-        self: Ref | MathExpression, other: Ref | MathExpression | int | float
-    ) -> MathExpression:
-        return MathExpression(f"({self.to_str()} % {self._format_value(other)})")
+    def __rtruediv__(self: Ref | MathExpression, other: _MathT) -> MathExpression:
+        return self._to_math(other, "/", self)
 
-    def __rmod__(
-        self: Ref | MathExpression, other: Ref | MathExpression | int | float
-    ) -> MathExpression:
-        return MathExpression(f"({self._format_value(other)} % {self.to_str()})")
+    def __mod__(self: Ref | MathExpression, other: _MathT) -> MathExpression:
+        return self._to_math(self, "%", other)
+
+    def __rmod__(self: Ref | MathExpression, other: _MathT) -> MathExpression:
+        return self._to_math(other, "%", self)
 
 
 class _Combine(_Expr):
@@ -1538,26 +1526,28 @@ class Ref(_Math, _Combine):
             self._field,
         )
 
+    def _to_condition(
+        self, right: Ref | bool | int | float | str, operator: str
+    ) -> Condition:
+        return Condition(f"({self.to_str()} {operator} {self._format_value(right)})")
+
     def __eq__(self, other: Ref | bool | int | float | str) -> Condition:
-        return Condition(f"({self.to_str()} == {self._format_value(other)})")
+        return self._to_condition(other, "==")
 
     def __ne__(self, other: Ref | bool | int | float | str) -> Condition:
-        return Condition(f"({self.to_str()} != {self._format_value(other)})")
+        return self._to_condition(other, "!=")
 
     def __gt__(self, other: Ref | int | float) -> Condition:
-        return Condition(f"({self.to_str()} > {self._format_value(other)})")
+        return self._to_condition(other, ">")
 
     def __ge__(self, other: Ref | int | float) -> Condition:
-        return Condition(f"({self.to_str()} >= {self._format_value(other)})")
+        return self._to_condition(other, ">=")
 
     def __lt__(self, other: Ref | int | float) -> Condition:
-        return Condition(f"({self.to_str()} < {self._format_value(other)})")
+        return self._to_condition(other, "<")
 
     def __le__(self, other: Ref | int | float) -> Condition:
-        return Condition(f"({self.to_str()} <= {self._format_value(other)})")
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.to_str()})"
+        return self._to_condition(other, "<=")
 
 
 _RefT = TypeVar("_RefT", bound=Ref)
@@ -1606,8 +1596,6 @@ class MathExpression(_Math):
           - ``%``
           - :class:`int`, :class:`float`
           - :python:`age.ref % 20`
-
-
     """
 
     def __init__(self, expression: str):
@@ -1618,6 +1606,9 @@ class MathExpression(_Math):
 
     def to_str(self) -> str:
         return self._expression
+
+
+_MathT: TypeAlias = Ref | MathExpression | int | float
 
 
 class Condition(_Combine):
