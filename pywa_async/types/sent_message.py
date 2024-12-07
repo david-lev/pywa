@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from pywa.types.sent_message import *  # noqa MUST BE IMPORTED FIRST
-from pywa.types.sent_message import SentMessage as _SentMessage
+from pywa.types.sent_message import (
+    SentMessage as _SentMessage,
+    SentTemplate as _SentTemplate,
+)
 from pywa_async.types import (
     Message,
     CallbackButton,
@@ -13,7 +16,7 @@ from pywa_async.types import (
 
 from .. import filters as pywa_filters
 
-__all__ = ["SentMessage"]
+__all__ = ["SentMessage", "SentTemplate", "SentTemplateStatus"]
 
 from pywa_async.types.base_update import _ClientShortcuts
 
@@ -329,3 +332,15 @@ class SentMessage(_ClientShortcuts, _SentMessage):
             cancelers=cancelers,
             timeout=timeout,
         )
+
+
+class SentTemplate(SentMessage, _SentTemplate):
+    """
+    Represents a template message that was sent to WhatsApp user.
+
+    Attributes:
+        id: The ID of the message.
+        to_user: The user the message was sent to.
+        from_phone_id: The WhatsApp ID of the sender who sent the message.
+        status: The status of the sent template.
+    """

@@ -65,7 +65,7 @@ from .types.flows import (
     FlowValidationError,
     FlowAsset,
 )
-from .types.sent_message import SentMessage
+from .types.sent_message import SentMessage, SentTemplate
 from .types.others import InteractiveType
 from .utils import FastAPI, Flask
 from .server import Server
@@ -1916,7 +1916,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
-    ) -> SentMessage:
+    ) -> SentTemplate:
         """
         Send a template to a WhatsApp user.
 
@@ -2001,12 +2001,12 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                     media_type=MessageType.VIDEO,
                     phone_id=sender,
                 )
-        return SentMessage.from_sent_update(
+        return SentTemplate.from_sent_update(
             client=self,
             update=self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ="template",  # TODO: Use MessageType.TEMPLATE when implemented
+                typ="template",
                 msg=template.to_dict(is_header_url=is_url),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),

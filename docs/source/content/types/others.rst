@@ -5,6 +5,11 @@ Others
 
 .. autoclass:: SentMessage()
 
+.. autoclass:: SentTemplate()
+    :show-inheritance:
+
+.. autoclass:: SentTemplateStatus()
+
 .. currentmodule:: pywa.types.others
 
 .. autoclass:: BusinessProfile()

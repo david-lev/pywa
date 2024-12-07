@@ -1,6 +1,7 @@
 import datetime
 from pywa import types, WhatsApp
 from pywa.types.flows import FlowDetails
+from pywa.types.sent_message import SentMessage, SentTemplate, SentTemplateStatus
 
 wa = WhatsApp(token="token")
 
@@ -217,4 +218,48 @@ def test_business_phone_number():
         certificate=None,
         new_certificate=None,
         last_onboarded_time=None,
+    )
+
+
+def test_sent_message():
+    assert SentMessage.from_sent_update(
+        client=wa,
+        update={
+            "messaging_product": "whatsapp",
+            "contacts": [{"input": "16505555555", "wa_id": "16505555555"}],
+            "messages": [
+                {"id": "wamid.HBgLMTY1MDUwNzY1MjAVAgARGBI5QTNDQTVCM0Q0Q0Q2RTY3RTcA"}
+            ],
+        },
+        from_phone_id=wa.phone_id,
+    ) == SentMessage(
+        _client=wa,
+        _callback_options=None,
+        _flow_token=None,
+        id="wamid.HBgLMTY1MDUwNzY1MjAVAgARGBI5QTNDQTVCM0Q0Q0Q2RTY3RTcA",
+        to_user=types.User(wa_id="16505555555", name=None),
+        from_phone_id=wa.phone_id,
+    )
+
+    assert SentTemplate.from_sent_update(
+        client=wa,
+        update={
+            "messaging_product": "whatsapp",
+            "contacts": [{"input": "16505555555", "wa_id": "16505555555"}],
+            "messages": [
+                {
+                    "id": "wamid.HBgLMTY1MDUwNzY1MjAVAgARGBI5QTNDQTVCM0Q0Q0Q2RTY3RTcA",
+                    "message_status": "accepted",
+                }
+            ],
+        },
+        from_phone_id=wa.phone_id,
+    ) == SentTemplate(
+        _client=wa,
+        _callback_options=None,
+        _flow_token=None,
+        id="wamid.HBgLMTY1MDUwNzY1MjAVAgARGBI5QTNDQTVCM0Q0Q0Q2RTY3RTcA",
+        to_user=types.User(wa_id="16505555555", name=None),
+        from_phone_id=wa.phone_id,
+        status=SentTemplateStatus.ACCEPTED,
     )

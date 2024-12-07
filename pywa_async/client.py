@@ -58,7 +58,7 @@ from .types.flows import (
     FlowAsset,
 )
 from .types.others import InteractiveType
-from .types.sent_message import SentMessage
+from .types.sent_message import SentMessage, SentTemplate
 from .utils import FastAPI, Flask
 
 _logger = logging.getLogger(__name__)
@@ -1695,7 +1695,7 @@ class WhatsApp(Server, AsyncListeners, _WhatsApp):
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
-    ) -> SentMessage:
+    ) -> SentTemplate:
         """
         Send a template to a WhatsApp user.
 
@@ -1777,7 +1777,7 @@ class WhatsApp(Server, AsyncListeners, _WhatsApp):
                     filename=None,
                     phone_id=sender,
                 )
-        return SentMessage.from_sent_update(
+        return SentTemplate.from_sent_update(
             client=self,
             update=await self.api.send_message(
                 sender=sender,
