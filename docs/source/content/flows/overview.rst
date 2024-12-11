@@ -84,6 +84,7 @@ Every component on the FlowJSON has a corresponding class in :mod:`pywa.types.fl
        :class:`DocumentPicker`
    * - Navigation
      - :class:`EmbeddedLink`,
+       :class:`NavigationList`,
        :class:`Footer`
    * - Conditional Component Rendering
      - :class:`If`,

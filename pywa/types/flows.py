@@ -80,6 +80,11 @@ __all__ = [
     "OptIn",
     "Dropdown",
     "EmbeddedLink",
+    "NavigationList",
+    "NavigationItem",
+    "NavigationItemStart",
+    "NavigationItemMainContent",
+    "NavigationItemEnd",
     "DatePicker",
     "CalendarPicker",
     "CalendarPickerMode",
@@ -909,9 +914,9 @@ _UNDERSCORE_FIELDS = {
 
 _PY_TO_JSON_TYPES = {
     str: "string",
+    bool: "boolean",  # MUST BE BEFORE int!!
     int: "number",
     float: "number",
-    bool: "boolean",
 }
 
 _DATA_SOURCE_SKIP_FIELDS = {
@@ -919,6 +924,14 @@ _DATA_SOURCE_SKIP_FIELDS = {
     "on-select-action",
     "on_unselect_action",
     "on-unselect-action",
+}
+
+_NAVIGATION_ITEM_SKIP_FIELDS = {
+    "start",
+    "end",
+    "badge",
+    "tags",
+    "on-click-action",
 }
 
 
@@ -937,12 +950,12 @@ class _FlowJSONEncoder(json.JSONEncoder):
                     data[item.key] = dict(
                         **self._get_json_type(item.example), __example__=item.example
                     )
-                except KeyError:
+                except KeyError as e:
                     raise ValueError(
                         f"ScreenData: Invalid example type {type(item.example)!r} for {item.key!r}."
-                    )
+                    ) from e
             return data
-        elif isinstance(o, DataSource):
+        elif isinstance(o, (DataSource, NavigationItem)):
             return o.to_dict()
         elif isinstance(o, datetime.date):
             return o.strftime("%Y-%m-%d")
@@ -957,11 +970,16 @@ class _FlowJSONEncoder(json.JSONEncoder):
         | float
         | bool
         | DataSource
-        | Iterable[str | int | float | bool | DataSource],
+        | Iterable[str | int | float | bool | DataSource | NavigationItem],
     ) -> dict[str, str | dict[str, str]]:
         if isinstance(example, (str, int, float, bool)):
-            return {"type": _PY_TO_JSON_TYPES[type(example)]}
-        elif isinstance(example, (dict, DataSource)):
+            for (
+                py_type,
+                json_type,
+            ) in _PY_TO_JSON_TYPES.items():  # check for subtypes - e.g. enum
+                if isinstance(example, py_type):
+                    return {"type": json_type}
+        elif isinstance(example, (dict, DataSource, NavigationItemMainContent)):
             return {"type": "object", "properties": self._get_obj_props(example)}
         elif isinstance(example, Iterable):
             try:
@@ -971,9 +989,9 @@ class _FlowJSONEncoder(json.JSONEncoder):
             if isinstance(first, (str, int, float, bool)):
                 return {
                     "type": "array",
-                    "items": {"type": _PY_TO_JSON_TYPES[type(first)]},
+                    "items": self._get_json_type(first),
                 }
-            elif isinstance(first, (dict, DataSource)):
+            elif isinstance(first, (dict, DataSource, NavigationItem)):
                 return {
                     "type": "array",
                     "items": {
@@ -984,16 +1002,20 @@ class _FlowJSONEncoder(json.JSONEncoder):
         else:
             raise KeyError("Invalid example type")
 
-    @staticmethod
-    def _get_obj_props(item: dict | DataSource):
+    def _get_obj_props(self, item: dict | DataSource | NavigationItem):
+        _skip_fields = (
+            _DATA_SOURCE_SKIP_FIELDS
+            if isinstance(item, DataSource)
+            else _NAVIGATION_ITEM_SKIP_FIELDS
+            if isinstance(item, NavigationItem)
+            else ()
+        )
         return {
-            k: dict(type=_PY_TO_JSON_TYPES[type(v)])
+            k: self._get_json_type(v)
             for k, v in (
-                dataclasses.asdict(item).items()
-                if isinstance(item, DataSource)
-                else item.items()
+                item.items() if isinstance(item, dict) else item.to_dict().items()
             )
-            if v is not None and k not in _DATA_SOURCE_SKIP_FIELDS
+            if v is not None and k not in _skip_fields
         }
 
 
@@ -1043,6 +1065,9 @@ class FlowJSON:
         )
 
 
+_TO_DICT_FACTORY = lambda d: {k.replace("_", "-"): v for (k, v) in d if v is not None}
+
+
 @dataclasses.dataclass(slots=True, kw_only=True)
 class DataSource:
     """
@@ -1084,19 +1109,8 @@ class DataSource:
         """Called when used in :class:`FlowResponse`."""
         return dataclasses.asdict(
             obj=self,
-            dict_factory=lambda d: {
-                k.replace("_", "-"): v for (k, v) in d if v is not None
-            },
+            dict_factory=_TO_DICT_FACTORY,
         )
-
-
-_SingleScreenDataValType: TypeAlias = (
-    str | int | float | bool | dict | datetime.date | DataSource
-)
-
-_ScreenDataValType: TypeAlias = (
-    _SingleScreenDataValType | Iterable[_SingleScreenDataValType]
-)
 
 
 class ScreenData:
@@ -1421,6 +1435,7 @@ class ComponentType(utils.StrEnum):
     DOCUMENT_PICKER = "DocumentPicker"
     IF = "If"
     SWITCH = "Switch"
+    NAVIGATION_LIST = "NavigationList"
 
 
 class _Expr:
@@ -2508,6 +2523,139 @@ class EmbeddedLink(Component):
         DataExchangeAction | UpdateDataAction | NavigateAction | OpenUrlAction
     )
     visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class NavigationList(Component):
+    """
+    The NavigationList component allows users to navigate effectively between different screens in a Flow,
+    by exploring and interacting with a list of options. Each list item can display rich content such as text, images and tags.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/components#navlist>`_.
+    - Added in v6.2
+    - The on_click_action is required for this component and can be defined either at the component level or in each :class:`NavigationItem`.
+    - There can be at most 2 :class:`NavigationList` components per screen.
+    - The :class:`NavigationList` components cannot be used in combination with any other components in the same screen.
+
+    Example:
+
+        >>> NavigationList(
+        ...     name='navigation_list',
+        ...     list_items=[
+        ...         NavigationItem(
+        ...             id='1',
+        ...             main_content=NavigationItemMainContent(title='Title 1', description='Description 1'),
+        ...             start=NavigationItemStart(image='base64image...'),
+        ...             end=NavigationItemEnd(title="$100", description="/ month"),
+        ...             badge='New',
+        ...             on_click_action=NavigateAction(next=Next(name='SCREEN_1'))
+        ...         ),
+        ...         ...
+        ...     ],
+        ... )
+
+
+    Attributes:
+        name: The unique name (id) for this component.
+        list_items: The list items of the navigation list. Minimum 1 and maximum 20 items. Content will not be rendered if the limit is reached.
+        label: The label of the navigation list. Limited to 80 characters.
+        description: The description of the navigation list. Limited to 300 characters.
+        media_size: The media size of the image. Default to ``REGULAR``.
+        on_click_action: The action to perform when an item is clicked (can be defined at the component level or in each :class:`NavigationItem`).
+    """
+
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.NAVIGATION_LIST, init=False, repr=False
+    )
+    visible: None = dataclasses.field(default=None, init=False, repr=False)
+    name: str
+    list_items: Iterable[NavigationItem] | ScreenDataRef | ComponentRef | str
+    label: str | ScreenDataRef | ComponentRef | None = None
+    description: str | ScreenDataRef | ComponentRef | None = None
+    media_size: MediaSize | str | ScreenDataRef | ComponentRef | None = None
+    on_click_action: NavigateAction | DataExchangeAction | None = None
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class NavigationItem:
+    """
+    The NavigationItem represents an item in the NavigationList component.
+
+    - There can be only one item with a ``badge`` per list.
+    - The ``end`` add-on cannot be used in combination with ``media_size`` set to ``LARGE``.
+    - The ``on_click_action`` cannot be defined simultaneously on component-level and on item-level.
+
+    Attributes:
+        main_content: The main content of the navigation item.
+        start: The start content of the navigation item (An image, limited to 100KB).
+        end: The end content of the navigation item.
+        badge: The badge of the navigation item. Limited to 15 characters.
+        tags: The tags of the navigation item. Maximum 3 tags, each limited to 15 characters.
+    """
+
+    id: str
+    main_content: NavigationItemMainContent
+    start: NavigationItemStart | None = None
+    end: NavigationItemEnd | None = None
+    badge: str | None = None
+    tags: Iterable[str] | None = None
+    on_click_action: NavigateAction | DataExchangeAction | None = None
+
+    def to_dict(self) -> dict:
+        return dataclasses.asdict(obj=self, dict_factory=_TO_DICT_FACTORY)
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class NavigationItemMainContent:
+    """
+    The main content of the NavigationItem component.
+
+    Attributes:
+        title: The title of the item content. Limited to 30 characters.
+        description: The description of the item content. Limited to 20 characters.
+        metadata: The metadata of the item content. Limited to 80 characters.
+    """
+
+    title: str
+    description: str | None = None
+    metadata: str | None = None
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class NavigationItemStart:
+    """
+    The start content of the NavigationItem component.
+
+    Attributes:
+        image: The image of the item content (base64 encoded, limited to 100KB).
+    """
+
+    image: str
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class NavigationItemEnd:
+    """
+    The end content of the NavigationItem component.
+
+    Attributes:
+        title: The title of the end content. Limited to 10 characters.
+        description: The description of the end content. Limited to 20 characters.
+        metadata: The metadata of the end content. Limited to 80 characters.
+    """
+
+    title: str | None = None
+    description: str | None = None
+    metadata: str | None = None
+
+
+_SingleScreenDataValType: TypeAlias = (
+    str | int | float | bool | dict | datetime.date | DataSource
+)
+
+_ScreenDataValType: TypeAlias = (
+    _SingleScreenDataValType | Iterable[_SingleScreenDataValType | NavigationItem]
+)
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
