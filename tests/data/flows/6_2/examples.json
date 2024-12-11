@@ -1,0 +1,43 @@
+{
+  "regex": {
+    "version": "6.2",
+    "screens": [
+      {
+        "id": "DEMO_SCREEN",
+        "title": "Demo Screen",
+        "terminal": true,
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "TextInput",
+              "required": true,
+              "label": "Regex Input",
+              "input-type": "text",
+              "pattern": "^(19|20)\\d\\d-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])$",
+              "helper-text": "E.g. 1993-08-04",
+              "name": "regex input"
+            },
+            {
+              "type": "TextInput",
+              "required": true,
+              "label": "Regex Passcode",
+              "pattern": "007",
+              "input-type": "passcode",
+              "name": "passcode_oo7",
+              "helper-text": "Contains: 007"
+            },
+            {
+              "type": "Footer",
+              "label": "Continue",
+              "on-click-action": {
+                "name": "complete",
+                "payload": {}
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

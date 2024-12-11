@@ -8,6 +8,7 @@ import datetime
 import json
 import logging
 import pathlib
+import re
 import warnings
 from typing import (
     Iterable,
@@ -925,7 +926,7 @@ class _FlowJSONEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, _Expr):
             return o.to_str()
-        if isinstance(o, _ScreenDatasContainer):
+        elif isinstance(o, _ScreenDatasContainer):
             data = {}
             for item in o:
                 if isinstance(item, ScreenDataUpdate):
@@ -941,10 +942,12 @@ class _FlowJSONEncoder(json.JSONEncoder):
                         f"ScreenData: Invalid example type {type(item.example)!r} for {item.key!r}."
                     )
             return data
-        if isinstance(o, DataSource):
+        elif isinstance(o, DataSource):
             return o.to_dict()
-        if isinstance(o, datetime.date):
+        elif isinstance(o, datetime.date):
             return o.strftime("%Y-%m-%d")
+        elif isinstance(o, re.Pattern):
+            return o.pattern
         return super().default(o)
 
     def _get_json_type(
@@ -1947,8 +1950,8 @@ class TextHeading(TextComponent):
         >>> TextHeading(text='Heading', visible=True)
 
     Attributes:
-        text: The text of the heading. Limited to 80 characters. Can be dynamic.
-        visible: Whether the heading is visible or not. Default to ``True``, Can be dynamic.
+        text: The text of the heading. Limited to 80 characters.
+        visible: Whether the heading is visible or not. Default to ``True``,
     """
 
     type: ComponentType = dataclasses.field(
@@ -1970,8 +1973,8 @@ class TextSubheading(TextComponent):
         >>> TextSubheading(text='Subheading', visible=True)
 
     Attributes:
-        text: The text of the subheading. Limited to 80 characters. Can be dynamic.
-        visible: Whether the subheading is visible or not. Default to ``True``, Can be dynamic.
+        text: The text of the subheading. Limited to 80 characters.
+        visible: Whether the subheading is visible or not. Default to ``True``,
     """
 
     type: ComponentType = dataclasses.field(
@@ -1998,11 +2001,11 @@ class TextBody(TextComponent):
         ... )
 
     Attributes:
-        text: The text of the body. Limited to 4096 characters. Can be dynamic.
+        text: The text of the body. Limited to 4096 characters.
         markdown: Whether the text is markdown or not (Added in v5.1).
-        font_weight: The weight of the text. Can be dynamic.
-        strikethrough: Whether the text is strikethrough or not. Can be dynamic.
-        visible: Whether the body is visible or not. Default to ``True``, Can be dynamic.
+        font_weight: The weight of the text.
+        strikethrough: Whether the text is strikethrough or not.
+        visible: Whether the body is visible or not. Default to ``True``,
     """
 
     type: ComponentType = dataclasses.field(
@@ -2032,11 +2035,11 @@ class TextCaption(TextComponent):
 
 
     Attributes:
-        text: The text of the caption (array of strings supported since v5.1). Limited to 4096 characters. Can be dynamic.
+        text: The text of the caption (array of strings supported since v5.1). Limited to 4096 characters.
         markdown: Whether the text is markdown or not (Added in v5.1).
-        font_weight: The weight of the text. Can be dynamic.
-        strikethrough: Whether to strike through the text or not. Can be dynamic.
-        visible: Whether the caption is visible or not. Default to ``True``, Can be dynamic.
+        font_weight: The weight of the text.
+        strikethrough: Whether to strike through the text or not.
+        visible: Whether the caption is visible or not. Default to ``True``,
     """
 
     type: ComponentType = dataclasses.field(
@@ -2086,8 +2089,8 @@ class RichText(TextComponent):
 
 
     Attributes:
-        text: The markdown text (array of strings supported). Can be dynamic.
-        visible: Whether the caption is visible or not. Default to ``True``, Can be dynamic.
+        text: The markdown text (array of strings supported).
+        visible: Whether the caption is visible or not. Default to ``True``,
     """
 
     type: ComponentType = dataclasses.field(
@@ -2158,16 +2161,17 @@ class TextInput(TextEntryComponent):
 
     Attributes:
         name: The unique name (id) for this component.
-        label: The label of the text input. Limited to 20 characters. Can be dynamic.
-        input_type: The input type of the text input (for keyboard layout and validation rules). Can be dynamic.
-        required: Whether the text input is required or not. Can be dynamic.
-        min_chars: The minimum number of characters allowed in the text input. Can be dynamic.
-        max_chars: The maximum number of characters allowed in the text input. Can be dynamic.
-        helper_text: The helper text of the text input. Limited to 80 characters. Can be dynamic.
-        enabled: Whether the text input is enabled or not. Default to ``True``. Can be dynamic.
-        visible: Whether the text input is visible or not. Default to ``True``. Can be dynamic.
-        init_value: The default value of the text input. Can be dynamic.
-        error_message: The error message of the text input. Can be dynamic.
+        label: The label of the text input. Limited to 20 characters.
+        input_type: The input type of the text input (for keyboard layout and validation rules).
+        pattern: The regex pattern to validate the text input. Added in v6.2.
+        required: Whether the text input is required or not.
+        min_chars: The minimum number of characters allowed in the text input.
+        max_chars: The maximum number of characters allowed in the text input.
+        helper_text: The helper text of the text input. Limited to 80 characters.
+        enabled: Whether the text input is enabled or not. Default to ``True``.
+        visible: Whether the text input is visible or not. Default to ``True``.
+        init_value: The default value of the text input.
+        error_message: The error message of the text input.
     """
 
     type: ComponentType = dataclasses.field(
@@ -2176,6 +2180,7 @@ class TextInput(TextEntryComponent):
     name: str
     label: str | ScreenDataRef | ComponentRef
     input_type: InputType | str | ScreenDataRef | ComponentRef | None = None
+    pattern: str | re.Pattern | ScreenDataRef | ComponentRef | None = None
     required: bool | str | ScreenDataRef | ComponentRef | None = None
     min_chars: int | str | ScreenDataRef | ComponentRef | None = None
     max_chars: int | str | ScreenDataRef | ComponentRef | None = None
@@ -2206,14 +2211,14 @@ class TextArea(TextEntryComponent):
 
     Attributes:
         name: The unique name (id) for this component.
-        label: The label of the text area. Limited to 20 characters. Can be dynamic.
-        required: Whether the text area is required or not. Can be dynamic.
-        max_length: The maximum number of characters allowed in the text area. Can be dynamic.
-        helper_text: The helper text of the text area. Limited to 80 characters. Can be dynamic.
-        enabled: Whether the text area is enabled or not. Default to ``True``. Can be dynamic.
-        visible: Whether the text area is visible or not. Default to ``True``. Can be dynamic.
-        init_value: The default value of the text area. Can be dynamic.
-        error_message: The error message of the text area. Can be dynamic.
+        label: The label of the text area. Limited to 20 characters.
+        required: Whether the text area is required or not.
+        max_length: The maximum number of characters allowed in the text area.
+        helper_text: The helper text of the text area. Limited to 80 characters.
+        enabled: Whether the text area is enabled or not. Default to ``True``.
+        visible: Whether the text area is visible or not. Default to ``True``.
+        init_value: The default value of the text area.
+        error_message: The error message of the text area.
     """
 
     type: ComponentType = dataclasses.field(
@@ -2269,16 +2274,16 @@ class CheckboxGroup(FormComponent):
 
     Attributes:
         name: The unique name (id) for this component.
-        data_source: The data source of the checkbox group. Can be dynamic.
-        label: The label of the checkbox group. Limited to 30 characters. Can be dynamic. Required starting from v4.0.
-        description: The description of the checkbox group. Limited to 300 characters. Can be dynamic. Added in v4.0.
-        min_selected_items: The minimum number of items that can be selected. Minimum value is 1. Can be dynamic.
-        max_selected_items: The maximum number of items that can be selected. Maximum value is 20. Can be dynamic.
-        required: Whether the checkbox group is required or not. Can be dynamic.
-        visible: Whether the checkbox group is visible or not. Default to ``True``. Can be dynamic.
-        enabled: Whether the checkbox group is enabled or not. Default to ``True``. Can be dynamic.
-        init_value: The default values (IDs of the data sources). Can be dynamic.
-        media_size: The media size of the image. Can be dynamic. Added in v5.0.
+        data_source: The data source of the checkbox group.
+        label: The label of the checkbox group. Limited to 30 characters. Required starting from v4.0.
+        description: The description of the checkbox group. Limited to 300 characters. Added in v4.0.
+        min_selected_items: The minimum number of items that can be selected. Minimum value is 1.
+        max_selected_items: The maximum number of items that can be selected. Maximum value is 20.
+        required: Whether the checkbox group is required or not.
+        visible: Whether the checkbox group is visible or not. Default to ``True``.
+        enabled: Whether the checkbox group is enabled or not. Default to ``True``.
+        init_value: The default values (IDs of the data sources).
+        media_size: The media size of the image. Added in v5.0.
         on_select_action: The action to perform when an item is selected.
         on_unselect_action: The action to perform when an item is unselected. Added in v6.0.
     """
@@ -2325,14 +2330,14 @@ class RadioButtonsGroup(FormComponent):
 
     Attributes:
         name: The unique name (id) for this component.
-        data_source: The data source of the radio buttons group. Can be dynamic.
-        label: The label of the radio buttons group. Limited to 30 characters. Can be dynamic. Required starting from v4.0.
-        description: The description of the radio buttons group. Limited to 300 characters. Can be dynamic. Added in v4.0.
-        required: Whether the radio buttons group is required or not. Can be dynamic.
-        visible: Whether the radio buttons group is visible or not. Default to ``True``. Can be dynamic.
-        enabled: Whether the radio buttons group is enabled or not. Default to ``True``. Can be dynamic.
-        init_value: The default value (ID of the data source). Can be dynamic.
-        media_size: The media size of the image. Can be dynamic. Added in v5.0.
+        data_source: The data source of the radio buttons group.
+        label: The label of the radio buttons group. Limited to 30 characters. Required starting from v4.0.
+        description: The description of the radio buttons group. Limited to 300 characters. Added in v4.0.
+        required: Whether the radio buttons group is required or not.
+        visible: Whether the radio buttons group is visible or not. Default to ``True``.
+        enabled: Whether the radio buttons group is enabled or not. Default to ``True``.
+        init_value: The default value (ID of the data source).
+        media_size: The media size of the image. Added in v5.0.
         on_select_action: The action to perform when an item is selected.
         on_unselect_action: The action to perform when an item is unselected. Added in v6.0.
     """
@@ -2377,12 +2382,12 @@ class Dropdown(FormComponent):
 
     Attributes:
         name: The unique name (id) for this component.
-        label: The label of the dropdown. Limited to 30 characters. Can be dynamic.
-        data_source: The data source of the dropdown. minimum 1 and maximum 200 items. Can be dynamic.
-        enabled: Whether the dropdown is enabled or not. Default to ``True``. Can be dynamic.
-        required: Whether the dropdown is required or not. Can be dynamic.
-        visible: Whether the dropdown is visible or not. Default to ``True``. Can be dynamic.
-        init_value: The default value (ID of the data source). Can be dynamic.
+        label: The label of the dropdown. Limited to 30 characters.
+        data_source: The data source of the dropdown. minimum 1 and maximum 200 items.
+        enabled: Whether the dropdown is enabled or not. Default to ``True``.
+        required: Whether the dropdown is required or not.
+        visible: Whether the dropdown is visible or not. Default to ``True``.
+        init_value: The default value (ID of the data source).
         on_select_action: The action to perform when an item is selected.
         on_unselect_action: The action to perform when an item is unselected. Added in v6.0.
     """
@@ -2409,12 +2414,12 @@ class Footer(Component):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#foot>`_.
 
     Attributes:
-        label: The label of the footer. Limited to 35 characters. Can be dynamic.
+        label: The label of the footer. Limited to 35 characters.
         on_click_action: The action to perform when the footer is clicked. Required.
-        left_caption: Can set left_caption and right_caption or only center_caption, but not all 3 at once. Limited to 15 characters. Can be dynamic.
-        center_caption: Can set center-caption or left-caption and right-caption, but not all 3 at once. Limited to 15 characters. Can be dynamic.
-        right_caption: Can set right-caption and left-caption or only center-caption, but not all 3 at once. Limited to 15 characters. Can be dynamic.
-        enabled: Whether the footer is enabled or not. Default to ``True``. Can be dynamic.
+        left_caption: Can set left_caption and right_caption or only center_caption, but not all 3 at once. Limited to 15 characters.
+        center_caption: Can set center-caption or left-caption and right-caption, but not all 3 at once. Limited to 15 characters.
+        right_caption: Can set right-caption and left-caption or only center-caption, but not all 3 at once. Limited to 15 characters.
+        enabled: Whether the footer is enabled or not. Default to ``True``.
     """
 
     type: ComponentType = dataclasses.field(
@@ -2449,10 +2454,10 @@ class OptIn(FormComponent):
 
     Attributes:
         name: The unique name (id) for this component.
-        label: The label of the opt in. Limited to 30 characters. Can be dynamic.
-        required: Whether the opt in is required or not. Can be dynamic.
-        visible: Whether the opt in is visible or not. Default to ``True``. Can be dynamic.
-        init_value: The default value of the opt in. Can be dynamic.
+        label: The label of the opt in. Limited to 30 characters.
+        required: Whether the opt in is required or not.
+        visible: Whether the opt in is visible or not. Default to ``True``.
+        init_value: The default value of the opt in.
         on_click_action: The action to perform when the opt in is clicked.
     """
 
@@ -2490,9 +2495,9 @@ class EmbeddedLink(Component):
         ... )
 
     Attributes:
-        text: The text of the embedded link. Limited to 35 characters. Can be dynamic.
+        text: The text of the embedded link. Limited to 35 characters.
         on_click_action: The action to perform when the embedded link is clicked.
-        visible: Whether the embedded link is visible or not. Default to ``True``. Can be dynamic.
+        visible: Whether the embedded link is visible or not. Default to ``True``.
     """
 
     type: ComponentType = dataclasses.field(
@@ -2532,16 +2537,16 @@ class DatePicker(FormComponent):
 
     Attributes:
         name: The unique name (id) for this component.
-        label: The label of the date picker. Limited to 40 characters. Can be dynamic.
-        min_date: The minimum date (date/datetime/timestamp) that can be selected. Can be dynamic.
-        max_date: The maximum date (date/datetime/timestamp) that can be selected. Can be dynamic.
-        unavailable_dates: The dates (dates/datetimes/timestamps) that cannot be selected. Can be dynamic.
-        helper_text: The helper text of the date picker. Limited to 80 characters. Can be dynamic.
-        enabled: Whether the date picker is enabled or not. Default to ``True``. Can be dynamic.
-        required: Whether the date picker is required or not. Can be dynamic.
-        visible: Whether the date picker is visible or not. Default to ``True``. Can be dynamic.
-        init_value: The default value. Can be dynamic.
-        error_message: The error message of the date picker. Can be dynamic.
+        label: The label of the date picker. Limited to 40 characters.
+        min_date: The minimum date (date/datetime/timestamp) that can be selected.
+        max_date: The maximum date (date/datetime/timestamp) that can be selected.
+        unavailable_dates: The dates (dates/datetimes/timestamps) that cannot be selected.
+        helper_text: The helper text of the date picker. Limited to 80 characters.
+        enabled: Whether the date picker is enabled or not. Default to ``True``.
+        required: Whether the date picker is required or not.
+        visible: Whether the date picker is visible or not. Default to ``True``.
+        init_value: The default value.
+        error_message: The error message of the date picker.
         on_select_action: The action to perform when a date is selected.
     """
 
@@ -2627,22 +2632,22 @@ class CalendarPicker(FormComponent):
 
     Attributes:
         name: The unique name (id) for this component.
-        label: The label of the calendar picker. Limited to 40 characters. Can be dynamic.
-        title: The title of the calendar picker. Only available when mode is ``CalendarMode.RANGE``. Can be dynamic.
-        description: The description of the calendar picker. Limited to 300 characters. Only available when mode is ``CalendarMode.RANGE``. Can be dynamic.
-        mode: The mode of the calendar picker. Default to ``CalendarMode.SINGLE``. Can be dynamic.
-        min_date: The minimum date (date/datetime) that can be selected. Can be dynamic.
-        max_date: The maximum date (date/datetime) that can be selected. Can be dynamic.
-        unavailable_dates: The dates (dates/datetimes) that cannot be selected. Can be dynamic.
-        include_days: The days of the week to include in the calendar picker. Default to all days. Can be dynamic.
-        min_days: The minimum number of days that can be selected in the range mode. Can be dynamic.
-        max_days: The maximum number of days that can be selected in the range mode. Can be dynamic.
-        helper_text: The helper text of the calendar picker. Limited to 80 characters. Can be dynamic.
-        enabled: Whether the calendar picker is enabled or not. Default to ``True``. Can be dynamic.
-        required: Whether the calendar picker is required or not. Can be dynamic.
-        visible: Whether the calendar picker is visible or not. Default to ``True``. Can be dynamic.
-        init_value: The default value. Only available when component is outside Form component. Can be dynamic.
-        error_message: The error message of the calendar picker. Only available when component is outside Form component. Can be dynamic.
+        label: The label of the calendar picker. Limited to 40 characters.
+        title: The title of the calendar picker. Only available when mode is ``CalendarMode.RANGE``.
+        description: The description of the calendar picker. Limited to 300 characters. Only available when mode is ``CalendarMode.RANGE``.
+        mode: The mode of the calendar picker. Default to ``CalendarMode.SINGLE``.
+        min_date: The minimum date (date/datetime) that can be selected.
+        max_date: The maximum date (date/datetime) that can be selected.
+        unavailable_dates: The dates (dates/datetimes) that cannot be selected.
+        include_days: The days of the week to include in the calendar picker. Default to all days.
+        min_days: The minimum number of days that can be selected in the range mode.
+        max_days: The maximum number of days that can be selected in the range mode.
+        helper_text: The helper text of the calendar picker. Limited to 80 characters.
+        enabled: Whether the calendar picker is enabled or not. Default to ``True``.
+        required: Whether the calendar picker is required or not.
+        visible: Whether the calendar picker is visible or not. Default to ``True``.
+        init_value: The default value. Only available when component is outside Form component.
+        error_message: The error message of the calendar picker. Only available when component is outside Form component.
         on_select_action: The action to perform when a date is selected.
     """
 
@@ -2745,12 +2750,12 @@ class Image(Component):
         ... )
 
     Attributes:
-        src: Base64 of an image. Can be dynamic.
-        width: The width of the image. Can be dynamic.
-        height: The height of the image. Can be dynamic.
-        scale_type: The scale type of the image. Defaule to ``ScaleType.CONTAIN`` Can be dynamic. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#image-scale-types>`_.
-        aspect_ratio: The aspect ratio of the image. Default to ``1``. Can be dynamic.
-        alt_text: Alternative Text is for the accessibility feature, eg. Talkback and Voice over. Can be dynamic.
+        src: Base64 of an image.
+        width: The width of the image.
+        height: The height of the image.
+        scale_type: The scale type of the image. Defaule to ``ScaleType.CONTAIN`` Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#image-scale-types>`_.
+        aspect_ratio: The aspect ratio of the image. Default to ``1``.
+        alt_text: Alternative Text is for the accessibility feature, eg. Talkback and Voice over.
     """
 
     type: ComponentType = dataclasses.field(
@@ -2805,15 +2810,15 @@ class PhotoPicker(FormComponent):
 
     Attributes:
         name: The unique name (id) for this component.
-        label: The label of the photo picker. Limited to 30 characters. Can be dynamic.
-        description: The description of the photo picker. Limited to 300 characters. Can be dynamic.
-        photo_source: The source where the image can be selected from. Default to ``PhotoSource.CAMERA_GALLERY``. Can be dynamic.
-        max_file_size_kb: The maximum file size in KB. Can be dynamic. Default value: 25600 (25 MiB)
-        min_uploaded_photos: The minimum number of photos that can be uploaded. Can be dynamic. This property determines whether the component is optional (set to 0) or required (set above 0).
-        max_uploaded_photos: The maximum number of photos that can be uploaded. Can be dynamic. Default value: 30
-        enabled: Whether the photo picker is enabled or not. Default to ``True``. Can be dynamic.
-        visible: Whether the photo picker is visible or not. Default to ``True``. Can be dynamic.
-        error_message: The error message of the photo picker. Can be dynamic.
+        label: The label of the photo picker. Limited to 30 characters.
+        description: The description of the photo picker. Limited to 300 characters.
+        photo_source: The source where the image can be selected from. Default to ``PhotoSource.CAMERA_GALLERY``.
+        max_file_size_kb: The maximum file size in KB. Default value: 25600 (25 MiB)
+        min_uploaded_photos: The minimum number of photos that can be uploaded. This property determines whether the component is optional (set to 0) or required (set above 0).
+        max_uploaded_photos: The maximum number of photos that can be uploaded. Default value: 30
+        enabled: Whether the photo picker is enabled or not. Default to ``True``.
+        visible: Whether the photo picker is visible or not. Default to ``True``.
+        error_message: The error message of the photo picker.
 
     """
 
@@ -2859,15 +2864,15 @@ class DocumentPicker(FormComponent):
 
     Attributes:
         name: The unique name (id) for this component.
-        label: The label of the document picker. Limited to 30 characters. Can be dynamic.
-        description: The description of the document picker. Limited to 300 characters. Can be dynamic.
-        max_file_size_kb: The maximum file size in KB. Can be dynamic. Default value: 25600 (25 MiB)
-        min_uploaded_documents: The minimum number of documents that can be uploaded. Can be dynamic. This property determines whether the component is optional (set to 0) or required (set above 0).
-        max_uploaded_documents: The maximum number of documents that can be uploaded. Can be dynamic. Default value: 30
-        allowed_mime_types: Specifies which document mime types can be selected. If it contains “image/jpeg”, picking photos from the gallery will be available as well. Can be dynamic. Default value: Any document from the supported mime types can be selected.
-        enabled: Whether the document picker is enabled or not. Default to ``True``. Can be dynamic.
-        visible: Whether the document picker is visible or not. Default to ``True``. Can be dynamic.
-        error_message: The error message of the document picker. Can be dynamic.
+        label: The label of the document picker. Limited to 30 characters.
+        description: The description of the document picker. Limited to 300 characters.
+        max_file_size_kb: The maximum file size in KB. Default value: 25600 (25 MiB)
+        min_uploaded_documents: The minimum number of documents that can be uploaded. This property determines whether the component is optional (set to 0) or required (set above 0).
+        max_uploaded_documents: The maximum number of documents that can be uploaded. Default value: 30
+        allowed_mime_types: Specifies which document mime types can be selected. If it contains “image/jpeg”, picking photos from the gallery will be available as well. Default value: Any document from the supported mime types can be selected.
+        enabled: Whether the document picker is enabled or not. Default to ``True``.
+        visible: Whether the document picker is visible or not. Default to ``True``.
+        error_message: The error message of the document picker.
     """
 
     type: ComponentType = dataclasses.field(
