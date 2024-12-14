@@ -33,12 +33,11 @@ rich_text = FlowJSON(
                         label="RichText can be used to render large static or dynamic texts.",
                         on_click_action=NavigateAction(
                             next=Next(name="TOC"),
-                            payload={},
                         ),
                     ),
                     Footer(
                         label="Proceed",
-                        on_click_action=CompleteAction(payload={}),
+                        on_click_action=CompleteAction(),
                     ),
                 ],
             ),

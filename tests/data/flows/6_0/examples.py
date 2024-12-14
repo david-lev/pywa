@@ -28,9 +28,7 @@ string_concatenation = FlowJSON(
                     ),
                     Footer(
                         label="Footer",
-                        on_click_action=CompleteAction(
-                            payload={},
-                        ),
+                        on_click_action=CompleteAction(),
                     ),
                 ],
             ),
@@ -63,9 +61,7 @@ open_url = FlowJSON(
                     ),
                     Footer(
                         label="Footer",
-                        on_click_action=CompleteAction(
-                            payload={},
-                        ),
+                        on_click_action=CompleteAction(),
                     ),
                 ],
             ),
@@ -284,9 +280,7 @@ update_data = FlowJSON(
                     ),
                     Footer(
                         label="Complete",
-                        on_click_action=CompleteAction(
-                            payload={},
-                        ),
+                        on_click_action=CompleteAction(),
                     ),
                 ],
             ),
@@ -326,9 +320,7 @@ math_operators = FlowJSON(
                     ),
                     Footer(
                         label="Static footer label",
-                        on_click_action=CompleteAction(
-                            payload={},
-                        ),
+                        on_click_action=CompleteAction(),
                     ),
                 ],
             ),
@@ -358,9 +350,7 @@ visible_condition = FlowJSON(
                     ),
                     Footer(
                         label="Static footer label",
-                        on_click_action=CompleteAction(
-                            payload={},
-                        ),
+                        on_click_action=CompleteAction(),
                     ),
                 ],
             ),

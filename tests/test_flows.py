@@ -24,6 +24,13 @@ from pywa.types.flows import (
     FlowRequestActionType,
     _FlowJSONEncoder,
     Ref,
+    NavigationItemEnd,
+    NavigationItemMainContent,
+    NavigationItem,
+    NavigateAction,
+    Next,
+    ActionNext,
+    ActionNextType,
 )
 from pywa.utils import Version
 
@@ -41,15 +48,11 @@ def test_flows_to_json():
                 for flow_name, flow_json in json_examples.items():
                     obj_dict = json.loads(getattr(obj_examples, flow_name).to_json())
                     example_dict = json_examples[flow_name]
-                    assert obj_dict["version"] == version.name.replace(
-                        "_", "."
-                    ) and example_dict["version"] == version.name.replace("_", ".")
-                    try:
-                        assert obj_dict == example_dict
-                    except AssertionError:
-                        raise AssertionError(
-                            f"Flow {version.name=} {flow_name=} does not match example\nFlow: {obj_dict}\nJSON: {example_dict}"
-                        )
+                    assert obj_dict["version"] == version.name.replace("_", ".")
+                    assert example_dict["version"] == version.name.replace("_", ".")
+                    assert (
+                        obj_dict == example_dict
+                    ), f"Flow {version.name=} {flow_name=} does not match example"
 
 
 def test_min_version():
@@ -72,6 +75,14 @@ def test_action():
 
         with pytest.raises(ValueError):  # no url
             Action(name=FlowActionType.OPEN_URL)
+
+
+def test_deprecations_warning():
+    with pytest.warns(DeprecationWarning):
+        ActionNext(name="NEXT_SCREEN")
+
+    with pytest.warns(DeprecationWarning):
+        _ = ActionNextType.SCREEN
 
 
 def test_component_ref():
@@ -425,6 +436,43 @@ def test_encoder_single_data_source():
     assert encoder._get_json_type(DataSource(id="1", title="Example")) == {
         "type": "object",
         "properties": {"id": {"type": "string"}, "title": {"type": "string"}},
+    }
+
+
+def test_encoder_navigation_item():
+    encoder = _FlowJSONEncoder()
+    assert encoder._get_json_type(
+        [
+            NavigationItem(
+                id="1",
+                main_content=NavigationItemMainContent(
+                    title="First item",
+                    description="first item",
+                    metadata="metadata",
+                ),
+                end=NavigationItemEnd(
+                    title="End",
+                    description="the end",
+                ),
+                on_click_action=NavigateAction(next=Next(name="SECOND_SCREEN")),
+            )
+        ]
+    ) == {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "string"},
+                "main-content": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string"},
+                        "description": {"type": "string"},
+                        "metadata": {"type": "string"},
+                    },
+                },
+            },
+        },
     }
 
 

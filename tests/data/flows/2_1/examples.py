@@ -565,7 +565,6 @@ sign_in = FlowJSON(
                                 text="Don't have an account? Sign up",
                                 on_click_action=NavigateAction(
                                     next=Next(type=NextType.SCREEN, name="SIGN_UP"),
-                                    payload={},
                                 ),
                             ),
                             EmbeddedLink(
@@ -641,7 +640,6 @@ sign_in = FlowJSON(
                                         type=NextType.SCREEN,
                                         name="TERMS_AND_CONDITIONS",
                                     ),
-                                    payload={},
                                 ),
                             ),
                             offers_acceptance := OptIn(
@@ -788,7 +786,6 @@ register = FlowJSON(
                                         type=NextType.SCREEN,
                                         name="TERMS_AND_CONDITIONS",
                                     ),
-                                    payload={},
                                 ),
                             ),
                             offers_acceptance := OptIn(
@@ -932,7 +929,6 @@ book_a_table = FlowJSON(
                                         type=NextType.SCREEN,
                                         name="BOOKING_DETAILS",
                                     ),
-                                    payload={},
                                 ),
                             ),
                         ],
@@ -1022,14 +1018,11 @@ book_a_table = FlowJSON(
                                         type=NextType.SCREEN,
                                         name="TERMS_AND_CONDITIONS",
                                     ),
-                                    payload={},
                                 ),
                             ),
                             Footer(
                                 label="Confirm booking",
-                                on_click_action=DataExchangeAction(
-                                    payload={},
-                                ),
+                                on_click_action=DataExchangeAction(),
                             ),
                         ],
                     )
@@ -1230,7 +1223,6 @@ get_a_quote = FlowJSON(
                                         type=NextType.SCREEN,
                                         name="TERMS_AND_CONDITIONS",
                                     ),
-                                    payload={},
                                 ),
                             ),
                             Footer(

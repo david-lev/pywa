@@ -56,6 +56,16 @@ Here you will find all the components that make up a Flow JSON object.
 
 .. autoclass:: EmbeddedLink()
 
+.. autoclass:: NavigationList()
+
+.. autoclass:: NavigationItem()
+
+.. autoclass:: NavigationItemStart()
+
+.. autoclass:: NavigationItemMainContent()
+
+.. autoclass:: NavigationItemEnd()
+
 .. autoclass:: DatePicker()
 
 .. autoclass:: CalendarPicker()
