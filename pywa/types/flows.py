@@ -261,7 +261,7 @@ class FlowRequest:
             | bool
             | dict
             | DataSource
-            | Iterable[str | int | float | bool | dict | DataSource],
+            | Iterable[str | int | float | bool | dict | DataSource | NavigationItem],
         ] = None,
         error_message: str | None = None,
         close_flow: bool = False,
@@ -400,7 +400,7 @@ class FlowResponse:
         | bool
         | dict
         | DataSource
-        | Iterable[str | int | float | bool | dict | DataSource],
+        | Iterable[str | int | float | bool | dict | DataSource | NavigationItem],
     ] = dataclasses.field(default_factory=dict)
     screen: str | None = None
     error_message: str | None = None
@@ -435,7 +435,8 @@ class FlowResponse:
                 data[key] = val.to_dict()
             elif isinstance(val, Iterable) and not isinstance(val, (str, bytes)):
                 data[key] = [
-                    v.to_dict() if isinstance(v, DataSource) else v for v in val
+                    v.to_dict() if isinstance(v, (DataSource, NavigationItem)) else v
+                    for v in val
                 ]
         return {
             "version": self.version,
@@ -979,7 +980,7 @@ class _FlowJSONEncoder(json.JSONEncoder):
             ) in _PY_TO_JSON_TYPES.items():  # check for subtypes - e.g. enum
                 if isinstance(example, py_type):
                     return {"type": json_type}
-        elif isinstance(example, (dict, DataSource, NavigationItemMainContent)):
+        elif isinstance(example, (dict, DataSource)):
             return {"type": "object", "properties": self._get_obj_props(example)}
         elif isinstance(example, Iterable):
             try:
