@@ -4,7 +4,16 @@
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
 
-### 2.3.0 (2024-11-30) **Latest**
+### 2.4.0 (2024-12-14) **Latest**
+
+- [sent_message] adding `SentTemplate` with `SentTemplateStatus`
+- [flows] adding `pattern` for `TextInput`
+- [flows] adding support for `NavigationList`
+- [flows] defaulting action's payload to empty dict
+- [flows] deprecating `ActionNext` and `ActionNextType`
+
+
+### 2.3.0 (2024-11-30)
 
 - [client] allowing to specify the callback url scope
 - [client] expose methods to override callback url in waba and phone scopes
