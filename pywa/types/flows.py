@@ -3161,7 +3161,23 @@ class NextType(utils.StrEnum):
     PLUGIN = "plugin"
 
 
-ActionNextType = NextType  # Deprecated
+class _DeprecatedNextType(type):
+    SCREEN = "screen"
+    PLUGIN = "plugin"
+
+    def __getattribute__(cls, item):
+        warnings.warn(
+            message="`ActionNextType` is deprecated. Use `NextType` instead",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        return getattr(NextType, item)
+
+
+class ActionNextType(metaclass=_DeprecatedNextType):
+    """
+    Deprecated. Use :class:`NextType` instead
+    """
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -3178,7 +3194,19 @@ class Next:
     type: NextType | str = NextType.SCREEN
 
 
-ActionNext = Next  # Deprecated
+@dataclasses.dataclass(slots=True, kw_only=True)
+class ActionNext:
+    """Deprecated. Use :class:`Next` instead"""
+
+    name: str
+    type: NextType | str = NextType.SCREEN
+
+    def __post_init__(self):
+        warnings.warn(
+            message="ActionNext is deprecated. Use Next instead",
+            category=DeprecationWarning,
+            stacklevel=3,
+        )
 
 
 def _deprecate_action(action: FlowActionType, use_cls: type[BaseAction]) -> None:

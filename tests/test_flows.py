@@ -29,6 +29,8 @@ from pywa.types.flows import (
     NavigationItem,
     NavigateAction,
     Next,
+    ActionNext,
+    ActionNextType,
 )
 from pywa.utils import Version
 
@@ -73,6 +75,14 @@ def test_action():
 
         with pytest.raises(ValueError):  # no url
             Action(name=FlowActionType.OPEN_URL)
+
+
+def test_deprecations_warning():
+    with pytest.warns(DeprecationWarning):
+        ActionNext(name="NEXT_SCREEN")
+
+    with pytest.warns(DeprecationWarning):
+        _ = ActionNextType.SCREEN
 
 
 def test_component_ref():
