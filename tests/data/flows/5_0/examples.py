@@ -45,7 +45,7 @@ radio_buttons_with_pics = FlowJSON(
                     ),
                     Footer(
                         label="Continue",
-                        on_click_action=CompleteAction(payload={}),
+                        on_click_action=CompleteAction(),
                     ),
                 ],
             ),
@@ -82,7 +82,7 @@ date_picker_dates_obj = FlowJSON(
                     ),
                     Footer(
                         label="Continue",
-                        on_click_action=DataExchangeAction(payload={}),
+                        on_click_action=DataExchangeAction(),
                     ),
                 ],
             ),

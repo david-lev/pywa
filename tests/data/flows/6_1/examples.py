@@ -40,9 +40,7 @@ calendar_picker_single_mode = FlowJSON(
                     ),
                     Footer(
                         label="Continue",
-                        on_click_action=DataExchangeAction(
-                            payload={},
-                        ),
+                        on_click_action=DataExchangeAction(),
                     ),
                 ],
             ),
@@ -105,9 +103,7 @@ calendar_picker_range_mode = FlowJSON(
                     ),
                     Footer(
                         label="Continue",
-                        on_click_action=DataExchangeAction(
-                            payload={},
-                        ),
+                        on_click_action=DataExchangeAction(),
                     ),
                 ],
             ),

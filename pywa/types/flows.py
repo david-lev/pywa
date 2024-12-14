@@ -3270,7 +3270,9 @@ class DataExchangeAction(BaseAction):
     name: FlowActionType = dataclasses.field(
         default=FlowActionType.DATA_EXCHANGE, init=False, repr=False
     )
-    payload: dict[str, str | bool | Iterable[DataSource] | ScreenDataRef | ComponentRef]
+    payload: dict[
+        str, str | bool | Iterable[DataSource] | ScreenDataRef | ComponentRef
+    ] = dataclasses.field(default_factory=dict)
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -3297,7 +3299,9 @@ class NavigateAction(BaseAction):
         default=FlowActionType.NAVIGATE, init=False, repr=False
     )
     next: Next
-    payload: dict[str, str | bool | Iterable[DataSource] | ScreenDataRef | ComponentRef]
+    payload: dict[
+        str, str | bool | Iterable[DataSource] | ScreenDataRef | ComponentRef
+    ] = dataclasses.field(default_factory=dict)
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -3374,4 +3378,6 @@ class CompleteAction(BaseAction):
     name: FlowActionType = dataclasses.field(
         default=FlowActionType.COMPLETE, init=False, repr=False
     )
-    payload: dict[str, str | bool | ScreenDataRef | ComponentRef]
+    payload: dict[str, str | bool | ScreenDataRef | ComponentRef] = dataclasses.field(
+        default_factory=dict
+    )

@@ -32,7 +32,7 @@ regex = FlowJSON(
                     ),
                     Footer(
                         label="Continue",
-                        on_click_action=CompleteAction(payload={}),
+                        on_click_action=CompleteAction(),
                     ),
                 ],
             ),
@@ -71,7 +71,6 @@ navigation_list = FlowJSON(
                                 ),
                                 on_click_action=NavigateAction(
                                     next=Next(name="SECOND_SCREEN"),
-                                    payload={},
                                 ),
                             ),
                             NavigationItem(
@@ -85,7 +84,6 @@ navigation_list = FlowJSON(
                                 ),
                                 on_click_action=NavigateAction(
                                     next=Next(name="SECOND_SCREEN"),
-                                    payload={},
                                 ),
                             ),
                             NavigationItem(
@@ -99,7 +97,6 @@ navigation_list = FlowJSON(
                                 ),
                                 on_click_action=NavigateAction(
                                     next=Next(name="FOURTH_SCREEN"),
-                                    payload={},
                                 ),
                             ),
                             NavigationItem(
@@ -113,7 +110,6 @@ navigation_list = FlowJSON(
                                 ),
                                 on_click_action=NavigateAction(
                                     next=Next(name="FIFTH_SCREEN"),
-                                    payload={},
                                 ),
                             ),
                             NavigationItem(
@@ -173,7 +169,6 @@ navigation_list = FlowJSON(
                                 label="Continue",
                                 on_click_action=NavigateAction(
                                     next=Next(name="CONTACT"),
-                                    payload={},
                                 ),
                             ),
                         ],
@@ -222,7 +217,6 @@ navigation_list = FlowJSON(
                                 label="Next",
                                 on_click_action=NavigateAction(
                                     next=Next(name="CONTACT"),
-                                    payload={},
                                 ),
                             ),
                         ],
@@ -274,7 +268,6 @@ navigation_list = FlowJSON(
                                 label="Next",
                                 on_click_action=NavigateAction(
                                     next=Next(name="CONTACT"),
-                                    payload={},
                                 ),
                             ),
                         ],
@@ -413,7 +406,6 @@ navigation_list_dynamic = FlowJSON(
                                 label="Continue",
                                 on_click_action=NavigateAction(
                                     next=Next(name="CONTACT"),
-                                    payload={},
                                 ),
                             ),
                         ],
@@ -462,7 +454,6 @@ navigation_list_dynamic = FlowJSON(
                                 label="Next",
                                 on_click_action=NavigateAction(
                                     next=Next(name="CONTACT"),
-                                    payload={},
                                 ),
                             ),
                         ],

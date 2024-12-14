@@ -28,7 +28,7 @@ switch = FlowJSON(
                     ),
                     Footer(
                         label="Complete",
-                        on_click_action=CompleteAction(payload={}),
+                        on_click_action=CompleteAction(),
                     ),
                 ]
             ),
@@ -59,7 +59,7 @@ if_ = FlowJSON(
                     ),
                     Footer(
                         label="Complete",
-                        on_click_action=CompleteAction(payload={}),
+                        on_click_action=CompleteAction(),
                     ),
                 ]
             ),
@@ -179,9 +179,7 @@ date_picker_dates_str = FlowJSON(
                             ),
                             Footer(
                                 label="Continue",
-                                on_click_action=DataExchangeAction(
-                                    payload={},
-                                ),
+                                on_click_action=DataExchangeAction(),
                             ),
                         ],
                     )
@@ -207,7 +205,6 @@ global_fields = FlowJSON(
                         label="CTA",
                         on_click_action=NavigateAction(
                             next=Next(name="SCREEN_TWO"),
-                            payload={},
                         ),
                     ),
                 ],
@@ -300,7 +297,6 @@ forward_refs = FlowJSON(
                         text="Choose insurance type",
                         on_click_action=NavigateAction(
                             next=Next(type=NextType.SCREEN, name="SELECT_INSURANCE"),
-                            payload={},
                         ),
                     ),
                     Footer(
