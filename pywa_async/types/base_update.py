@@ -17,7 +17,7 @@ from .others import Contact, ProductsSection
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
-    from .sent_message import SentMessage
+    from .sent_message import SentMessage, SentTemplate
     from .callback import (
         Button,
         ButtonUrl,
@@ -632,7 +632,7 @@ class _ClientShortcuts:
         template: Template,
         quote: bool = False,
         tracker: str | CallbackData | None = None,
-    ) -> SentMessage:
+    ) -> SentTemplate:
         """
         Reply to the message with a template.
 

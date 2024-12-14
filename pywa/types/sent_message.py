@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-__all__ = ["SentMessage"]
+__all__ = ["SentMessage", "SentTemplate", "SentTemplateStatus"]
 
 import dataclasses
 
 from typing import TYPE_CHECKING
-from pywa import filters as pywa_filters
+from pywa import filters as pywa_filters, utils
 from pywa.types import (
     CallbackButton,
     User,
@@ -383,4 +383,53 @@ class SentMessage(_ClientShortcuts):
             filters=filters,
             cancelers=cancelers,
             timeout=timeout,
+        )
+
+
+class SentTemplateStatus(utils.StrEnum):
+    """
+    Represents the status of a sent template.
+
+    - Read more about template pacing on `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/message-templates/guidelines#template-pacing>`_.
+
+    Attributes:
+        ACCEPTED: The template was accepted.
+        HELD_FOR_QUALITY_ASSESSMENT: The template was held for quality assessment.
+    """
+
+    ACCEPTED = "accepted"
+    HELD_FOR_QUALITY_ASSESSMENT = "held_for_quality_assessment"
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class SentTemplate(SentMessage):
+    """
+    Represents a template message that was sent to WhatsApp user.
+
+    Attributes:
+        id: The ID of the message.
+        to_user: The user the message was sent to.
+        from_phone_id: The WhatsApp ID of the sender who sent the message.
+        status: The status of the sent template.
+    """
+
+    status: SentTemplateStatus
+
+    @classmethod
+    def from_sent_update(
+        cls, *, client: WhatsApp, update: dict, from_phone_id: str, **kwargs
+    ) -> SentTemplate:
+        msg, user = (
+            update["messages"][0],
+            User(update["contacts"][0]["wa_id"], name=None),
+        )
+        return cls(
+            _client=client,
+            id=msg["id"],
+            status=SentTemplateStatus(msg["message_status"])
+            if "message_status" in msg
+            else None,
+            to_user=user,
+            from_phone_id=from_phone_id,
+            **kwargs,
         )
