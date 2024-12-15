@@ -1,5 +1,6 @@
-import asyncio
 import os
+import asyncio
+
 from telegram import Bot, LinkPreviewOptions
 
 
@@ -34,13 +35,16 @@ def format_release_message(tag_name: str, name: str, body: str) -> str:
         elif line.startswith("> Update with pip:"):
             pip_command = line.split("`")[1]
         elif line.startswith("-"):
-            line = line.replace("[", r"\[")
+            line = line.replace("[", "\\[").replace("]", "\\]")
             formatted_parts.append(f"• {line[1:]}")
 
     if pip_command:
         formatted_parts.append(f"\n>> Update with:\n```bash\n{pip_command}\n```")
 
     message_body = "\n".join(formatted_parts)
+
+    # Remove redundant escape characters
+    message_body = message_body.replace("\\[", "[").replace("\\]", "]")
 
     formatted_message = (
         f"🎉 **NEW VERSION • {name}**\n\n"
@@ -59,6 +63,7 @@ async def send_to_telegram():
     release_body = os.getenv("RELEASE_BODY")
 
     message = format_release_message(release_tag, release_name, release_body)
+    print(message)
 
     bot = Bot(token=bot_token)
     await bot.send_message(
