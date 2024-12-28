@@ -253,16 +253,7 @@ class FlowRequest:
     def respond(
         self,
         screen: str | None = None,
-        data: dict[
-            str,
-            str
-            | int
-            | float
-            | bool
-            | dict
-            | DataSource
-            | Iterable[str | int | float | bool | dict | DataSource | NavigationItem],
-        ] = None,
+        data: _FlowResponseDataType = None,
         error_message: str | None = None,
         close_flow: bool = False,
         flow_token: str | None = None,
@@ -288,7 +279,7 @@ class FlowRequest:
             data: The data to send to the screen or to add to flow completion message (default to empty dict).
             error_message: This will redirect the user to ``screen`` and will trigger a snackbar error with the error_message present (if ``close_flow`` is ``False``).
             close_flow: Whether to close the flow or just navigate to the screen.
-            flow_token: The flow token to close the flow (if ``close_flow`` is ``True``).
+            flow_token: The flow token to close the flow (if ``close_flow`` is ``True``, default to the request flow token).
             version: The version of the data exchange (Default to the request version).
         """
         return FlowResponse(
@@ -296,7 +287,7 @@ class FlowRequest:
             data=data or {},
             screen=screen,
             error_message=error_message,
-            flow_token=flow_token,
+            flow_token=(flow_token or self.flow_token) if close_flow else None,
             close_flow=close_flow,
         )
 
@@ -392,16 +383,7 @@ class FlowResponse:
     """
 
     version: str
-    data: dict[
-        str,
-        str
-        | int
-        | float
-        | bool
-        | dict
-        | DataSource
-        | Iterable[str | int | float | bool | dict | DataSource | NavigationItem],
-    ] = dataclasses.field(default_factory=dict)
+    data: _FlowResponseDataType = dataclasses.field(default_factory=dict)
     screen: str | None = None
     error_message: str | None = None
     flow_token: str | None = None
@@ -2657,6 +2639,17 @@ _SingleScreenDataValType: TypeAlias = (
 _ScreenDataValType: TypeAlias = (
     _SingleScreenDataValType | Iterable[_SingleScreenDataValType | NavigationItem]
 )
+
+_FlowResponseDataType: TypeAlias = dict[
+    str,
+    str
+    | int
+    | float
+    | bool
+    | dict
+    | DataSource
+    | Iterable[str | int | float | bool | dict | DataSource | NavigationItem],
+]
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
