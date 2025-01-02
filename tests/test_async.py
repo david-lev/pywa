@@ -99,6 +99,7 @@ def test_all_methods_are_overwritten_in_async():
             BaseMediaSync.from_flow_completion,
             SentMessageSync.from_sent_update,
             FlowRequestSync.decrypt_media,
+            FlowRequestSync.token_no_longer_valid,
             FlowRequestSync.respond,
             FlowRequestSync.from_dict,
             FlowCompletionSync.get_media,
