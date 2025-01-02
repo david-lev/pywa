@@ -8,7 +8,7 @@ readme = {file = "README.md", content-type = "text/markdown"}
 dependencies = {file = "requirements.txt"}
 
 [tool.setuptools.packages.find]
-include = ["pywa", "pywa_async"]
+include = ["pywa*"]
 
 [project]
 name = "pywa"

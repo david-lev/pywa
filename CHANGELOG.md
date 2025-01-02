@@ -3,7 +3,11 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-### 2.5.0 (2025-01-02) **Latest**
+### 2.5.1 (2025-01-02) **Latest**
+
+- [project] hot fix to include missing files in the package
+
+### 2.5.0 (2025-01-02)
 
 - [handlers] adding `on_init`, `on_data_exchange` and `on_back` decorators for flow request callback wrapper
 - [flows] `FlowRequest.respond` defaults to request flow token
