@@ -4,7 +4,7 @@ Flow Types
 .. currentmodule:: pywa.types.flows
 
 .. autoclass:: FlowRequest()
-    :members: has_error, is_health_check, respond, decrypt_media
+    :members: respond, decrypt_media, has_error, token_no_longer_valid
 
 .. autoclass:: FlowRequestActionType()
 

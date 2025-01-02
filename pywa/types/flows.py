@@ -291,6 +291,27 @@ class FlowRequest:
             close_flow=close_flow,
         )
 
+    def token_no_longer_valid(self, error_message: str):
+        """
+        Raise a :class:`FlowTokenNoLongerValid` exception with the provided error message.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_flow_request("/my-flow-endpoint")
+            ... def my_flow_endpoint(_: WhatsApp, req: FlowRequest) -> FlowResponse:
+            ...     if req.flow_token == "v1.0": # you see the token is no longer valid
+            ...         req.token_no_longer_valid("Open the flow again to continue.")
+            ...    ...
+
+        Args:
+            error_message: The error message to display to the user.
+
+        Raises:
+            FlowTokenNoLongerValid: Well, always.
+        """
+        raise FlowTokenNoLongerValid(error_message)
+
     @classmethod
     def from_dict(cls, data: dict, raw_encrypted: dict):
         return cls(
@@ -440,7 +461,7 @@ class FlowResponseError(Exception):
     """
     Base class for all flow response errors
 
-
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/error-codes#endpoint_error_codes>`_.
     - Subclass this exception to return or raise from the flow endpoint callback (@wa.on_flow_request).
     - Override the ``status_code`` attribute to set the status code of the response.
     - Override the ``body`` attribute to set the body of the response (optional).
@@ -484,8 +505,8 @@ class FlowTokenNoLongerValid(FlowResponseError):
         >>> from pywa.types.flows import FlowTokenNoLongerValid
         >>> wa = WhatsApp(...)
         >>> @wa.on_flow_request("/my-flow-endpoint")
-        ... def my_flow_endpoint(wa: WhatsApp, req: FlowRequest) -> FlowResponse:
-        ...     if req.flow_token == "123":  # you see the token is no longer valid
+        ... def my_flow_endpoint(_: WhatsApp, req: FlowRequest) -> FlowResponse:
+        ...     if req.flow_token == "v1.0":  # you see the token is no longer valid
         ...         # wa.send_message(..., buttons=FlowButton(...))  # resend the flow?
         ...         raise FlowTokenNoLongerValid(error_message='Open the flow again to continue.')
         ...    ...
