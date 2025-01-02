@@ -653,6 +653,37 @@ Let's register a callback function to handle this request:
             },
         )
 
+.. tip::
+
+    If you have multiple screens and lots of different requests, you can split the logic into multiple sub-handlers
+
+    - See :class:`~pywa.handlers.FlowRequestCallbackWrapper` for more information.
+
+    .. code-block:: python
+        :linenos:
+
+        from pywa import WhatsApp, filters
+        from pywa.types import FlowRequest, FlowResponse
+
+        wa = WhatsApp(...)
+
+        @wa.on_flow_request(endpoint="/flow")  # The endpoint we set above
+        def main_handler(_: WhatsApp, req: FlowRequest) -> FlowResponse:
+            ...
+
+        @main_handler.on_init
+        def on_flow_init(_: WhatsApp, req: FlowRequest) -> FlowResponse:
+            ...
+
+        @main_handler.on_data_exchange(screen="SIGN_UP")
+        def on_sign_up(_: WhatsApp, req: FlowRequest) -> FlowResponse:
+            ...
+
+        @main_handler.on_data_exchange(screen="OTHER_SCREEN", filters=filters.new(lambda _, req: req.data.get("some_key") == "value"))
+        def on_other_screen(_: WhatsApp, req: FlowRequest) -> FlowResponse:
+            ...
+
+
 We need to provide our business private key to decrypt the request and encrypt the response.
 
 After that. we are registering a callback function to handle the request.

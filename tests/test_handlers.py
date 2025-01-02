@@ -5,6 +5,7 @@ from types import ModuleType
 import pytest
 
 from pywa import handlers, types, WhatsApp, filters
+from pywa.handlers import FlowRequestHandler
 from pywa_async import WhatsApp as WhatsAppAsync
 
 FAKE_WA = WhatsApp(phone_id="1234567890", token="1234567890:1234567890")
@@ -171,10 +172,14 @@ def test_remove_callbacks():
 
 
 def test_get_flow_request_handler():
-    wa = WhatsApp(server=None, verify_token="xyzxyz", business_private_key="diuwgcew")
     c = lambda _, __: None
-    w = wa.get_flow_request_handler(
-        endpoint="/flow",
+    h = FlowRequestHandler(
         callback=c,
+        endpoint="/flow",
     )
-    assert w._main_callback is c
+    assert h._main_handler is c
+
+    def callback(_, __): ...
+
+    h.add_handler(callback=callback, action=types.FlowRequestActionType.INIT)
+    assert h._handlers[(types.FlowRequestActionType.INIT, None)][0][1] is callback

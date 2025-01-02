@@ -533,7 +533,7 @@ class Server:
         endpoint: str,
         callback: handlers._FlowRequestHandlerT,
         acknowledge_errors: bool = True,
-        handle_health_check: bool = True,
+        handle_health_check: None = None,
         private_key: str | None = None,
         private_key_password: str | None = None,
         request_decryptor: utils.FlowRequestDecryptor | None = None,
@@ -550,11 +550,11 @@ class Server:
             callback: The callback function to call when a flow request is received.
             acknowledge_errors: Whether to acknowledge errors (The return value of the callback will be ignored, and
              pywa will acknowledge the error automatically).
-            handle_health_check: Whether to handle health checks (The callback will not be called for health checks).
             private_key: The private key to use to decrypt the requests (Override the global ``business_private_key``).
             private_key_password: The password to use to decrypt the private key (Override the global ``business_private_key_password``).
             request_decryptor: The function to use to decrypt the requests (Override the global ``flows_request_decryptor``)
             response_encryptor: The function to use to encrypt the responses (Override the global ``flows_response_encryptor``)
+            handle_health_check: Deprecated. health checks will be handled automatically by pywa.
 
         Returns:
             A function that handles the incoming flow request and returns (response, status_code).
@@ -576,11 +576,11 @@ class Server:
         endpoint: str,
         callback: handlers._FlowRequestHandlerT,
         acknowledge_errors: bool,
-        handle_health_check: bool,
         private_key: str | None,
         private_key_password: str | None,
         request_decryptor: utils.FlowRequestDecryptor | None,
         response_encryptor: utils.FlowResponseEncryptor | None,
+        handle_health_check: None,
     ) -> handlers.FlowRequestCallbackWrapper:
         """Internal function to register a flow endpoint callback."""
         if self._server is None:

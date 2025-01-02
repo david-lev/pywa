@@ -2,6 +2,7 @@ import dataclasses
 import importlib
 import json
 import pathlib
+from typing import Callable
 
 import pytest
 
@@ -587,14 +588,9 @@ def test_flow_response_with_data_sources():
     ).to_dict()["data"]["data_source"] == [{"id": "1", "title": "Example"}]
 
 
-def test_flow_callback_wrapper():
-    wa = WhatsApp(
-        token="xxx", server=None, business_private_key="xxx", verify_token="fdfd"
-    )
-
-    def main_handler(_, __): ...
-
-    req = FlowRequest(
+@pytest.fixture
+def flow_request():
+    return FlowRequest(
         version=...,
         action=FlowRequestActionType.DATA_EXCHANGE,
         flow_token="xyz",
@@ -603,22 +599,38 @@ def test_flow_callback_wrapper():
         raw=...,
         raw_encrypted=...,
     )
+
+
+def get_flow_callback_wrapper(callback: Callable):
+    wa = WhatsApp(
+        token="xxx", server=None, business_private_key="xxx", verify_token="fdfd"
+    )
     wrapper = wa.get_flow_request_handler(
         endpoint="/flow",
-        callback=main_handler,
+        callback=callback,
         request_decryptor=...,
         response_encryptor=...,
     )
-    assert wrapper._get_callback(req) is main_handler
+    return wrapper
 
+
+def test_flow_callback_wrapper_main_handler(flow_request):
+    def main_handler(_, __): ...
+
+    wrapper = get_flow_callback_wrapper(main_handler)
+    assert wrapper._get_callback(flow_request) is main_handler
+
+
+def test_flow_callback_wrapper_screen(flow_request):
     def data_exchange_start_screen_callback(_, __): ...
 
+    wrapper = get_flow_callback_wrapper(lambda _, __: ...)
     wrapper.add_handler(
         callback=data_exchange_start_screen_callback,
         action=FlowRequestActionType.DATA_EXCHANGE,
         screen="START",
     )
-    req = dataclasses.replace(req, screen="START")
+    req = dataclasses.replace(flow_request, screen="START")
     assert wrapper._get_callback(req) is data_exchange_start_screen_callback
 
     def data_exchange_callback_without_screen(_, __): ...
@@ -630,17 +642,54 @@ def test_flow_callback_wrapper():
     )
     assert wrapper._get_callback(req) is data_exchange_callback_without_screen
 
+
+def test_flow_callback_wrapper_filters(flow_request):
     def init_with_data_filter(_, __): ...
 
-    wrapper._on_callbacks.clear()
+    wrapper = get_flow_callback_wrapper(lambda _, __: ...)
     wrapper.add_handler(
         callback=init_with_data_filter,
         action=FlowRequestActionType.INIT,
         screen=None,
         filters=filters.new(lambda _, r: r.data.get("age") >= 20),
     )
-    req = dataclasses.replace(req, action=FlowRequestActionType.INIT, data={"age": 20})
+    req = dataclasses.replace(
+        flow_request, action=FlowRequestActionType.INIT, data={"age": 20}
+    )
     assert wrapper._get_callback(req) is init_with_data_filter
+
+
+def test_flow_callback_wrapper_on_error(flow_request):
+    wrapper = get_flow_callback_wrapper(lambda _, __: ...)
+
+    @wrapper.on_data_exchange(call_on_error=True)
+    def on_error(_, __): ...
+
+    req = dataclasses.replace(
+        flow_request,
+        action=FlowRequestActionType.DATA_EXCHANGE,
+        data={"error_message": "Example"},
+    )
+    assert wrapper._get_callback(req) is on_error
+
+
+def test_on_errors_deprecated(flow_request):
+    wrapper = get_flow_callback_wrapper(lambda _, __: ...)
+
+    with pytest.warns(DeprecationWarning):
+
+        @wrapper.on_errors
+        def on_error(_, __): ...
+
+
+def test_flow_callback_wrapper_set_errors_handler_deprecated(flow_request):
+    wrapper = get_flow_callback_wrapper(lambda _, __: ...)
+
+    with pytest.warns(DeprecationWarning):
+
+        def on_error(_, __): ...
+
+        wrapper.set_errors_handler(on_error)
 
 
 def test_flows_server():

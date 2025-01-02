@@ -25,13 +25,13 @@ from .api import WhatsAppCloudApi
 from .filters import Filter
 from .handlers import (
     Handler,
-    HandlerDecorators,
+    _HandlerDecorators,
     FlowRequestHandler,
     FlowRequestCallbackWrapper,
     _handlers_attr,
     _flow_request_handler_attr,
 )  # noqa
-from .listeners import Listeners, Listener
+from .listeners import _Listeners, Listener
 from .types import (
     BusinessProfile,
     Button,
@@ -75,7 +75,7 @@ _logger = logging.getLogger(__name__)
 _DEFAULT_VERIFY_DELAY_SEC = 3
 
 
-class WhatsApp(Server, HandlerDecorators, Listeners):
+class WhatsApp(Server, _HandlerDecorators, _Listeners):
     _api_cls = WhatsAppCloudApi
     _flow_req_cls = FlowRequest
     _httpx_client = httpx.Client
@@ -334,8 +334,7 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                 ...         endpoint="/flow",
                 ...         callback=lambda _, flow: ...,
                 ...     )
-                ... ).set_errors_handler(lambda _, error: ...)
-                ... .add_handler(lambda _, flow: ..., screen="RECOMMENDED")
+                ... ).add_handler(lambda _, flow: ..., screen="RECOMMENDED")
 
         Args:
             handler: The flow request handler to add.
@@ -345,15 +344,15 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
         """
         wrapper = self._register_flow_endpoint_callback(
             endpoint=handler._endpoint,
-            callback=handler._callback,
+            callback=handler._main_handler,
             acknowledge_errors=handler._acknowledge_errors,
-            handle_health_check=handler._handle_health_check,
             private_key=handler._private_key,
             private_key_password=handler._private_key_password,
             request_decryptor=handler._request_decryptor,
             response_encryptor=handler._response_encryptor,
+            handle_health_check=None,
         )
-        for (action, screen), callbacks in handler._on_callbacks.items():
+        for (action, screen), callbacks in handler._handlers.items():
             for filters, callback in callbacks:
                 wrapper.add_handler(
                     callback=callback,
@@ -361,8 +360,6 @@ class WhatsApp(Server, HandlerDecorators, Listeners):
                     screen=screen,
                     filters=filters,
                 )
-        if handler._error_callback:
-            wrapper.set_errors_handler(handler._error_callback)
         return wrapper
 
     def add_handlers(self, *handlers: Handler) -> None:

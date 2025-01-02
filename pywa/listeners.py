@@ -141,7 +141,7 @@ class Listener:
         return self.cancelers and self.cancelers.check_sync(wa, update)
 
 
-class Listeners:
+class _Listeners:
     def listen(
         self: WhatsApp,
         to: str | int,

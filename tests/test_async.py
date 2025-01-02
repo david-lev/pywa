@@ -2,15 +2,15 @@ import asyncio
 import inspect
 
 from pywa import WhatsApp as WhatsAppSync
-from pywa.handlers import HandlerDecorators
+from pywa.handlers import _HandlerDecorators
 from pywa.types.base_update import BaseUpdate
 from pywa_async import WhatsApp as WhatsAppAsync
 from pywa.api import WhatsAppCloudApi as WhatsAppCloudApiSync
 from pywa_async.api import WhatsAppCloudApiAsync
 from pywa.server import Server as ServerSync
 from pywa_async.server import Server as ServerAsync
-from pywa.listeners import Listeners as ListenersSync
-from pywa_async.listeners import AsyncListeners as ListenersAsync
+from pywa.listeners import _Listeners as ListenersSync
+from pywa_async.listeners import _AsyncListeners as ListenersAsync
 from pywa.types import (
     Message as MessageSync,
     CallbackButton as CallbackButtonSync,
@@ -83,15 +83,15 @@ def test_all_methods_are_overwritten_in_async():
             ServerSync._register_callback_url,
             ServerSync._get_handler,
             ServerSync._register_flow_endpoint_callback,
-            HandlerDecorators.on_message,
-            HandlerDecorators.on_callback_button,
-            HandlerDecorators.on_callback_selection,
-            HandlerDecorators.on_message_status,
-            HandlerDecorators.on_chat_opened,
-            HandlerDecorators.on_flow_completion,
-            HandlerDecorators.on_flow_request,
-            HandlerDecorators.on_template_status,
-            HandlerDecorators.on_raw_update,
+            _HandlerDecorators.on_message,
+            _HandlerDecorators.on_callback_button,
+            _HandlerDecorators.on_callback_selection,
+            _HandlerDecorators.on_message_status,
+            _HandlerDecorators.on_chat_opened,
+            _HandlerDecorators.on_flow_completion,
+            _HandlerDecorators.on_flow_request,
+            _HandlerDecorators.on_template_status,
+            _HandlerDecorators.on_raw_update,
             ListenersSync._remove_listener,
             BaseUpdate.from_update,
             BaseUpdate.stop_handling,

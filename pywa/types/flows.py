@@ -358,7 +358,7 @@ class FlowResponse:
     to display or to close the flow. You should return this response from your flow endpoint callback.
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/guides/implementingyourflowendpoint#data_exchange_request>`_.
-    - Use the :meth:`FlowRequest.respond` method to create a response for a request with the same version.
+    - Use the :meth:`FlowRequest.respond` method to create a response for a request with the same version and flow token as the request.
 
     Example:
 

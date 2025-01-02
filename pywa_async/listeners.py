@@ -72,7 +72,7 @@ class Listener(_Listener):
         return self.cancelers and await self.cancelers.check_async(wa, update)
 
 
-class AsyncListeners:
+class _AsyncListeners:
     async def listen(
         self: WhatsApp,
         to: str | int,

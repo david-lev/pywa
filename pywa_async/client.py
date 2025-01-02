@@ -24,7 +24,7 @@ from pywa.client import (
 from pywa_async import _helpers as helpers
 from . import utils
 from .api import WhatsAppCloudApiAsync
-from .listeners import AsyncListeners
+from .listeners import _AsyncListeners
 from .server import Server
 from .types import (
     BusinessProfile,
@@ -64,7 +64,7 @@ from .utils import FastAPI, Flask
 _logger = logging.getLogger(__name__)
 
 
-class WhatsApp(Server, AsyncListeners, _WhatsApp):
+class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     _api_cls = WhatsAppCloudApiAsync
     _flow_req_cls = FlowRequest
     _httpx_client = httpx.AsyncClient

@@ -50,5 +50,5 @@ Flow Types
 
 .. currentmodule:: pywa.handlers
 
-.. autoclass:: FlowRequestCallbackWrapper
-    :members: on, on_errors, add_handler, set_errors_handler, handle
+.. autoclass:: FlowRequestCallbackWrapper()
+    :members: on_init, on_data_exchange, on_back, on
