@@ -604,7 +604,7 @@ class _CallbackWrapperDecorators(abc.ABC):
 
         Args:
             action: The action type to listen to.
-            screen: The screen ID to listen to (if screen is not provided, the handler will be called for all screens for this action!).
+            screen: The screen to listen to (if screen is not provided, the handler will be called for all screens for this action!).
             filters: A filter function to apply to the incoming request.
 
         Returns:
@@ -625,7 +625,7 @@ class _CallbackWrapperDecorators(abc.ABC):
         """
         Decorator to add a handler for the :class:`FlowRequestActionType.INIT` action.
 
-        - This request arrives when the flow **sent** with action type of :class:`FlowRequestActionType.DATA_EXCHANGE`.
+        - This request arrives when the :class:`~pywa.types.callback.FlowButton` sent with action_type of :class:`FlowRequestActionType.DATA_EXCHANGE`.
 
         Example:
 
@@ -691,11 +691,11 @@ class _CallbackWrapperDecorators(abc.ABC):
             ...    ...
 
             >>> @feedback_flow_handler.on_data_exchange(screen="SURVEY", filters=filters.new(lambda _, r: r.data["rating"] == "5"))
-            >>> def on_data_exchange(_: WhatsApp, req: FlowRequest) -> FlowResponse:
+            >>> def on_survey_with_rating_5(_: WhatsApp, req: FlowRequest) -> FlowResponse:
             ...     return req.respond(...)
 
         Args:
-            screen: The screen ID to listen to (if screen is not provided, the handler will be called for all screens for this action!).
+            screen: The screen to listen to (if screen is not provided, the handler will be called for all screens for this action!).
             filters: A filter function to apply to the incoming request.
             call_on_error: Whether to call the handler when the request has an error (The return value of the callback will be ignored).
 
@@ -731,7 +731,7 @@ class _CallbackWrapperDecorators(abc.ABC):
         """
         Decorator to add a handler for the :class:`FlowRequestActionType.BACK` action.
 
-        - This request arrives when the user clicks the back button in the WhatsApp client and the flows screen's ``refresh_on_back`` is set to ``True``.
+        - This request arrives when the user clicks the back button in the WhatsApp client and the flows screen ``refresh_on_back`` is set to ``True``.
         - This callback must return a :class:`~pywa.types.flows.FlowResponse` object, a :class:`dict` or to raise :class:`~pywa.types.flows.FlowResponseError` subclass.
 
         Example:
@@ -747,7 +747,7 @@ class _CallbackWrapperDecorators(abc.ABC):
             ...     return req.respond(...)
 
         Args:
-            screen: The screen ID to listen to (if screen is not provided, the handler will be called for all screens for this action!).
+            screen: The screen to listen to (if screen is not provided, the handler will be called for all screens for this action!).
             filters: A filter function to apply to the incoming request.
 
         Returns:

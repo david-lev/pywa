@@ -3,8 +3,15 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 2.5.0 (2025-01-02) **Latest**
 
-### 2.4.0 (2024-12-14) **Latest**
+- [handlers] adding `on_init`, `on_data_exchange` and `on_back` decorators for flow request callback wrapper
+- [flows] `FlowRequest.respond` defaults to request flow token
+- [flows] adding `FlowRequest.token_no_longer_valid` shortcut
+- [flows] deprecate `FlowRequest.is_health_check` and `FlowRequestActionType.PING`
+
+
+### 2.4.0 (2024-12-14)
 
 - [sent_message] adding `SentTemplate` with `SentTemplateStatus`
 - [flows] adding `pattern` for `TextInput`
