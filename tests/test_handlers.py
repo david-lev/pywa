@@ -5,7 +5,7 @@ from types import ModuleType
 import pytest
 
 from pywa import handlers, types, WhatsApp, filters
-from pywa.handlers import FlowRequestHandler
+from pywa.handlers import FlowRequestHandler, _flow_request_handler_attr
 from pywa_async import WhatsApp as WhatsAppAsync
 
 FAKE_WA = WhatsApp(phone_id="1234567890", token="1234567890:1234567890")
@@ -122,11 +122,21 @@ def test_all_combinations():
     assert len(wa._handlers[handlers.MessageHandler]) == 5
 
 
-def test_flow_request_decorator():
+def test_flow_request_handler():
     @WhatsApp.on_flow_request("/flow")
     def on_flow_class(_, __): ...
 
     assert isinstance(on_flow_class, handlers.FlowRequestHandler)
+    assert hasattr(on_flow_class, _flow_request_handler_attr)
+
+    wa = WhatsApp(server=None, verify_token="1234567890", business_private_key="...")
+    on_flow = lambda _, __: ...
+    on_flow_instance = wa.get_flow_request_handler(
+        endpoint="/flow",
+        callback=on_flow,
+    )
+    assert isinstance(on_flow_instance, handlers.FlowRequestCallbackWrapper)
+    assert not hasattr(on_flow_instance, _flow_request_handler_attr)
 
 
 def test_add_handlers():

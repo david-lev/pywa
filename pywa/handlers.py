@@ -833,7 +833,7 @@ class FlowRequestHandler(_CallbackWrapperDecorators):
 
 
 _flow_request_handler_attr = "__pywa_flow_request_handler"
-setattr(FlowRequestHandler, _flow_request_handler_attr, None)
+"""Indicates that the function is a flow request handler that should be registered."""
 
 
 class _HandlerDecorators:
@@ -1274,7 +1274,7 @@ class _HandlerDecorators:
                 ep = self or endpoint
                 if not ep:
                     raise ValueError("The endpoint must be provided.")
-                return FlowRequestHandler(
+                handler = FlowRequestHandler(
                     callback=callback,
                     endpoint=ep,
                     acknowledge_errors=acknowledge_errors,
@@ -1284,6 +1284,8 @@ class _HandlerDecorators:
                     response_encryptor=response_encryptor,
                     handle_health_check=handle_health_check,
                 )
+                setattr(handler, _flow_request_handler_attr, None)
+                return handler
 
             callback_wrapper = self._register_flow_endpoint_callback(
                 endpoint=endpoint,
