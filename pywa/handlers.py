@@ -532,17 +532,18 @@ class RawUpdateHandler(Handler):
         super().__init__(callback=callback, filters=filters, priority=priority)
 
 
-_error_filter = new_filter(
-    lambda _, r: r.has_error is not None, name="flow request has error"
+_flow_req_has_error_filter = new_filter(
+    lambda _, r: r.has_error, name="flow request has error"
 )
 
 
 def _get_filters_with_error_filter(
     filters: Filter | None, handle_errors: bool
 ) -> Filter | None:
-    if not handle_errors:
-        return filters
-    return (_error_filter & filters) if filters is not None else _error_filter
+    error_filter = (
+        _flow_req_has_error_filter if handle_errors else ~_flow_req_has_error_filter
+    )
+    return (error_filter & filters) if filters is not None else error_filter
 
 
 class _CallbackWrapperDecorators(abc.ABC):
@@ -568,7 +569,7 @@ class _CallbackWrapperDecorators(abc.ABC):
                 callback=callback,
                 action=action,
                 screen=None,
-                filters=_error_filter,
+                filters=_flow_req_has_error_filter,
             )
         return self
 

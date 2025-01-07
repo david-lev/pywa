@@ -662,6 +662,9 @@ def test_flow_callback_wrapper_filters(flow_request):
 def test_flow_callback_wrapper_on_error(flow_request):
     wrapper = get_flow_callback_wrapper(lambda _, __: ...)
 
+    @wrapper.on_data_exchange(call_on_error=False)
+    def not_on_error(_, __): ...
+
     @wrapper.on_data_exchange(call_on_error=True)
     def on_error(_, __): ...
 
