@@ -232,7 +232,7 @@ class CallbackData:
 
 _CallbackDataT = TypeVar(
     "_CallbackDataT",
-    bound=CallbackData,
+    bound=CallbackData | str,
 )
 
 
