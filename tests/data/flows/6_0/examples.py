@@ -1,4 +1,5 @@
 from pywa.types.flows import *  # noqa
+from pywa.types.flows import FlowStr
 
 string_concatenation = FlowJSON(
     version="6.0",
@@ -22,9 +23,13 @@ string_concatenation = FlowJSON(
                         name="age",
                         required=True,
                     ),
-                    TextBody(text=f"`'Hello ' {first_name.ref}`"),
+                    TextBody(text=FlowStr("Hello {name}", name=first_name.ref)),
                     TextBody(
-                        text=f"`{first_name.ref} ' you are ' {age.ref} ' years old.'`"
+                        text=FlowStr(
+                            "{name} you are {age} years old.",
+                            name=first_name.ref,
+                            age=age.ref,
+                        )
                     ),
                     Footer(
                         label="Footer",
@@ -312,11 +317,31 @@ math_operators = FlowJSON(
                 children=[
                     TextBody(
                         text=[
-                            f"`'The sum of ' {number_1.ref} ' and ' {number_2.ref} ' is ' {number_1.ref + number_2.ref}`",
-                            f"`'The difference of ' {number_1.ref} ' and ' {number_2.ref} ' is ' {number_1.ref - number_2.ref}`",
-                            f"`'The product of ' {number_1.ref} ' and ' {number_2.ref} ' is ' {number_1.ref * number_2.ref}`",
-                            f"`'The division of ' {number_1.ref} ' by ' {number_2.ref} ' is ' {number_1.ref / number_2.ref}`",
-                        ],
+                            FlowStr(
+                                "The sum of {num1} and {num2} is {sum}",
+                                num1=number_1.ref,
+                                num2=number_2.ref,
+                                sum=number_1.ref + number_2.ref,
+                            ),
+                            FlowStr(
+                                "The difference of {num1} and {num2} is {diff}",
+                                num1=number_1.ref,
+                                num2=number_2.ref,
+                                diff=number_1.ref - number_2.ref,
+                            ),
+                            FlowStr(
+                                "The product of {num1} and {num2} is {prod}",
+                                num1=number_1.ref,
+                                num2=number_2.ref,
+                                prod=number_1.ref * number_2.ref,
+                            ),
+                            FlowStr(
+                                "The division of {num1} by {num2} is {div}",
+                                num1=number_1.ref,
+                                num2=number_2.ref,
+                                div=number_1.ref / number_2.ref,
+                            ),
+                        ]
                     ),
                     Footer(
                         label="Static footer label",

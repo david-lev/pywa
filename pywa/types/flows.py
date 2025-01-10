@@ -65,6 +65,7 @@ __all__ = [
     "Form",
     "ScreenDataRef",
     "ComponentRef",
+    "FlowStr",
     "TextHeading",
     "TextSubheading",
     "TextBody",
@@ -1445,9 +1446,10 @@ class ComponentType(utils.StrEnum):
     NAVIGATION_LIST = "NavigationList"
 
 
-class _Expr:
+class _Expr(abc.ABC):
     """Base for refs, conditions, and expressions"""
 
+    @abc.abstractmethod
     def to_str(self) -> str: ...
 
     def __str__(self) -> str:
@@ -1467,7 +1469,7 @@ class _Expr:
         return str(val)
 
 
-class _Math(_Expr):
+class _Math(_Expr, abc.ABC):
     """Base for math expressions"""
 
     def _to_math(self, left: _MathT, operator: str, right: _MathT) -> MathExpression:
@@ -1506,7 +1508,7 @@ class _Math(_Expr):
         return self._to_math(other, "%", self)
 
 
-class _Combine(_Expr):
+class _Combine(_Expr, abc.ABC):
     """ "Base for combining refs and conditions"""
 
     def _get_left_right(
@@ -1787,6 +1789,60 @@ class ComponentRef(Ref):
         super().__init__(prefix="form", field=component_name, screen=screen)
 
 
+class FlowStr(_Expr):
+    """
+    Dynamic string that uses variables and math expressions. This is a helper class to avoid all the
+    escaping and wrapping with quotes when using string concatenation.
+
+    - Added in v6.0.
+
+    Example::
+
+            >>> FlowJSON(
+            ...     screens=[
+            ...         Screen(
+            ...             id='START',
+            ...             layout=Layout(children=[
+            ...                 age := TextInput(name='age', input_type=InputType.NUMBER),
+            ...                 email := TextInput(name='email', input_type=InputType.EMAIL),
+            ...                 TextHeading(text=FlowStr("Your age is {age} and your email is {email}", age=age.ref, email=email.ref), ...)
+            ...             ])
+            ...         )
+            ...     ]
+            ... )
+
+            >>> FlowJSON(
+            ...     screens=[
+            ...         Screen(
+            ...             id='START',
+            ...             layout=Layout(children=[
+            ...                 bill := TextInput(name='bill', input_type=InputType.NUMBER),
+            ...                 tip := TextInput(name='tip', input_type=InputType.NUMBER),
+            ...                 TextHeading(text=FlowStr("Your total bill is {bill}", bill=bill.ref + (bill.ref * tip.ref / 100)), ...)
+            ...             ])
+            ...         )
+            ...     ]
+            ... )
+
+    """
+
+    def __init__(self, string: str, **variables: Ref | MathExpression):
+        """
+        Initialize the dynamic string.
+
+        Args:
+            string: The string with placeholders for the variables.
+            **variables: The variables to replace in the string.
+        """
+        self.string = string
+        self.variables = variables
+
+    def to_str(self) -> str:
+        escaped = re.sub(r"(?<!\\)([`'])", r"\\\\\1", self.string)
+        wrapped = re.sub(r"([^{}]+)(?=\{|$)", r" '\1' ", escaped)
+        return f"`{wrapped.format(**self.variables)}`"
+
+
 @dataclasses.dataclass(slots=True, kw_only=True)
 class Form(Component):
     """
@@ -1860,7 +1916,7 @@ class FormComponent(Component, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def label(self) -> str | ScreenDataRef | ComponentRef: ...
+    def label(self) -> str | ScreenDataRef | ComponentRef | FlowStr: ...
 
     @property
     @abc.abstractmethod
@@ -1940,7 +1996,7 @@ class TextComponent(Component, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def text(self) -> str | ScreenDataRef | ComponentRef: ...
+    def text(self) -> str | ScreenDataRef | ComponentRef | FlowStr: ...
 
 
 class FontWeight(utils.StrEnum):
@@ -1979,7 +2035,7 @@ class TextHeading(TextComponent):
     type: ComponentType = dataclasses.field(
         default=ComponentType.TEXT_HEADING, init=False, repr=False
     )
-    text: str | ScreenDataRef | ComponentRef
+    text: str | ScreenDataRef | ComponentRef | FlowStr
     visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
 
 
@@ -2002,7 +2058,7 @@ class TextSubheading(TextComponent):
     type: ComponentType = dataclasses.field(
         default=ComponentType.TEXT_SUBHEADING, init=False, repr=False
     )
-    text: str | ScreenDataRef | ComponentRef
+    text: str | ScreenDataRef | ComponentRef | FlowStr
     visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
 
 
@@ -2033,7 +2089,7 @@ class TextBody(TextComponent):
     type: ComponentType = dataclasses.field(
         default=ComponentType.TEXT_BODY, init=False, repr=False
     )
-    text: str | Iterable[str] | ScreenDataRef | ComponentRef
+    text: str | Iterable[str | FlowStr] | ScreenDataRef | ComponentRef | FlowStr
     markdown: bool | None = None
     font_weight: FontWeight | str | ScreenDataRef | ComponentRef | None = None
     strikethrough: bool | str | ScreenDataRef | ComponentRef | None = None
@@ -2067,7 +2123,7 @@ class TextCaption(TextComponent):
     type: ComponentType = dataclasses.field(
         default=ComponentType.TEXT_CAPTION, init=False, repr=False
     )
-    text: str | Iterable[str] | ScreenDataRef | ComponentRef
+    text: str | Iterable[str | FlowStr] | ScreenDataRef | ComponentRef | FlowStr
     markdown: bool | None = None
     font_weight: FontWeight | str | ScreenDataRef | ComponentRef | None = None
     strikethrough: bool | str | ScreenDataRef | ComponentRef | None = None
@@ -2118,7 +2174,7 @@ class RichText(TextComponent):
     type: ComponentType = dataclasses.field(
         default=ComponentType.RICH_TEXT, init=False, repr=False
     )
-    text: str | Iterable[str] | ScreenDataRef | ComponentRef
+    text: str | Iterable[str | FlowStr] | ScreenDataRef | ComponentRef | FlowStr
     visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
 
 
@@ -2131,7 +2187,7 @@ class TextEntryComponent(FormComponent, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def helper_text(self) -> str | ScreenDataRef | ComponentRef | None: ...
+    def helper_text(self) -> str | ScreenDataRef | ComponentRef | FlowStr | None: ...
 
     @property
     @abc.abstractmethod
@@ -2200,13 +2256,13 @@ class TextInput(TextEntryComponent):
         default=ComponentType.TEXT_INPUT, init=False, repr=False
     )
     name: str
-    label: str | ScreenDataRef | ComponentRef
+    label: str | ScreenDataRef | ComponentRef | FlowStr
     input_type: InputType | str | ScreenDataRef | ComponentRef | None = None
     pattern: str | re.Pattern | ScreenDataRef | ComponentRef | None = None
     required: bool | str | ScreenDataRef | ComponentRef | None = None
     min_chars: int | str | ScreenDataRef | ComponentRef | None = None
     max_chars: int | str | ScreenDataRef | ComponentRef | None = None
-    helper_text: str | ScreenDataRef | ComponentRef | None = None
+    helper_text: str | ScreenDataRef | ComponentRef | FlowStr | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
     visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     init_value: str | ScreenDataRef | ComponentRef | None = None
@@ -2247,10 +2303,10 @@ class TextArea(TextEntryComponent):
         default=ComponentType.TEXT_AREA, init=False, repr=False
     )
     name: str
-    label: str | ScreenDataRef | ComponentRef
+    label: str | ScreenDataRef | ComponentRef | FlowStr
     required: bool | str | ScreenDataRef | ComponentRef | None = None
     max_length: int | str | ScreenDataRef | ComponentRef | None = None
-    helper_text: str | ScreenDataRef | ComponentRef | None = None
+    helper_text: str | ScreenDataRef | ComponentRef | FlowStr | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
     visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     init_value: str | ScreenDataRef | ComponentRef | None = None
@@ -2315,8 +2371,8 @@ class CheckboxGroup(FormComponent):
     )
     name: str
     data_source: Iterable[DataSource] | str | ScreenDataRef | ComponentRef
-    label: str | ScreenDataRef | ComponentRef | None = None
-    description: str | ScreenDataRef | ComponentRef | None = None
+    label: str | ScreenDataRef | ComponentRef | FlowStr | None = None
+    description: str | ScreenDataRef | ComponentRef | FlowStr | None = None
     min_selected_items: int | str | ScreenDataRef | ComponentRef | None = None
     max_selected_items: int | str | ScreenDataRef | ComponentRef | None = None
     required: bool | str | ScreenDataRef | ComponentRef | None = None
@@ -2369,8 +2425,8 @@ class RadioButtonsGroup(FormComponent):
     )
     name: str
     data_source: Iterable[DataSource] | str | ScreenDataRef | ComponentRef
-    label: str | ScreenDataRef | ComponentRef | None = None
-    description: str | ScreenDataRef | ComponentRef | None = None
+    label: str | ScreenDataRef | ComponentRef | FlowStr | None = None
+    description: str | ScreenDataRef | ComponentRef | FlowStr | None = None
     required: bool | str | ScreenDataRef | ComponentRef | None = None
     visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
@@ -2418,7 +2474,7 @@ class Dropdown(FormComponent):
         default=ComponentType.DROPDOWN, init=False, repr=False
     )
     name: str
-    label: str | ScreenDataRef | ComponentRef
+    label: str | ScreenDataRef | ComponentRef | FlowStr
     data_source: Iterable[DataSource] | str | ScreenDataRef | ComponentRef
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
     required: bool | str | ScreenDataRef | ComponentRef | None = None
@@ -2448,11 +2504,11 @@ class Footer(Component):
         default=ComponentType.FOOTER, init=False, repr=False
     )
     visible: None = dataclasses.field(default=None, init=False, repr=False)
-    label: str | ScreenDataRef | ComponentRef
+    label: str | ScreenDataRef | ComponentRef | FlowStr
     on_click_action: CompleteAction | DataExchangeAction | NavigateAction
-    left_caption: str | ScreenDataRef | ComponentRef | None = None
-    center_caption: str | ScreenDataRef | ComponentRef | None = None
-    right_caption: str | ScreenDataRef | ComponentRef | None = None
+    left_caption: str | ScreenDataRef | ComponentRef | FlowStr | None = None
+    center_caption: str | ScreenDataRef | ComponentRef | FlowStr | None = None
+    right_caption: str | ScreenDataRef | ComponentRef | FlowStr | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
 
 
@@ -2488,7 +2544,7 @@ class OptIn(FormComponent):
     )
     enabled: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
-    label: str | ScreenDataRef | ComponentRef
+    label: str | ScreenDataRef | ComponentRef | FlowStr
     required: bool | str | ScreenDataRef | ComponentRef | None = None
     visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     init_value: bool | str | ScreenDataRef | ComponentRef | None = None
@@ -2525,7 +2581,7 @@ class EmbeddedLink(Component):
     type: ComponentType = dataclasses.field(
         default=ComponentType.EMBEDDED_LINK, init=False, repr=False
     )
-    text: str | ScreenDataRef | ComponentRef
+    text: str | ScreenDataRef | ComponentRef | FlowStr
     on_click_action: (
         DataExchangeAction | UpdateDataAction | NavigateAction | OpenUrlAction
     )
@@ -2577,8 +2633,8 @@ class NavigationList(Component):
     visible: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
     list_items: Iterable[NavigationItem] | ScreenDataRef | ComponentRef | str
-    label: str | ScreenDataRef | ComponentRef | None = None
-    description: str | ScreenDataRef | ComponentRef | None = None
+    label: str | ScreenDataRef | ComponentRef | FlowStr | None = None
+    description: str | ScreenDataRef | ComponentRef | FlowStr | None = None
     media_size: MediaSize | str | ScreenDataRef | ComponentRef | None = None
     on_click_action: NavigateAction | DataExchangeAction | None = None
 
@@ -2720,13 +2776,13 @@ class DatePicker(FormComponent):
         default=ComponentType.DATE_PICKER, init=False, repr=False
     )
     name: str
-    label: str | ScreenDataRef | ComponentRef
+    label: str | ScreenDataRef | ComponentRef | FlowStr
     min_date: datetime.date | str | ScreenDataRef | ComponentRef | None = None
     max_date: datetime.date | str | ScreenDataRef | ComponentRef | None = None
     unavailable_dates: (
         Iterable[datetime.date | str] | str | ScreenDataRef | ComponentRef | None
     ) = None
-    helper_text: str | ScreenDataRef | ComponentRef | None = None
+    helper_text: str | ScreenDataRef | ComponentRef | FlowStr | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
     required: bool | str | ScreenDataRef | ComponentRef | None = None
     visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
@@ -2821,8 +2877,8 @@ class CalendarPicker(FormComponent):
         default=ComponentType.CALENDAR_PICKER, init=False, repr=False
     )
     name: str
-    title: str | ScreenDataRef | ComponentRef | None = None
-    description: str | ScreenDataRef | ComponentRef | None = None
+    title: str | ScreenDataRef | ComponentRef | FlowStr | None = None
+    description: str | ScreenDataRef | ComponentRef | FlowStr | None = None
     label: (
         dict[Literal["start-date", "end-date"], str]
         | str
@@ -2845,6 +2901,7 @@ class CalendarPicker(FormComponent):
         | str
         | ScreenDataRef
         | ComponentRef
+        | FlowStr
         | None
     ) = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
@@ -2994,8 +3051,8 @@ class PhotoPicker(FormComponent):
     required: None = dataclasses.field(default=None, init=False, repr=False)
     init_value: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
-    label: str | ScreenDataRef | ComponentRef
-    description: str | ScreenDataRef | ComponentRef | None = None
+    label: str | ScreenDataRef | ComponentRef | FlowStr
+    description: str | ScreenDataRef | ComponentRef | FlowStr | None = None
     photo_source: PhotoSource | str | ScreenDataRef | ComponentRef | None = None
     max_file_size_kb: int | str | ScreenDataRef | ComponentRef | None = None
     min_uploaded_photos: int | str | ScreenDataRef | ComponentRef | None = None
@@ -3047,8 +3104,8 @@ class DocumentPicker(FormComponent):
     required: None = dataclasses.field(default=None, init=False, repr=False)
     init_value: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
-    label: str | ScreenDataRef | ComponentRef
-    description: str | ScreenDataRef | ComponentRef | None = None
+    label: str | ScreenDataRef | ComponentRef | FlowStr
+    description: str | ScreenDataRef | ComponentRef | FlowStr | None = None
     max_file_size_kb: int | str | ScreenDataRef | ComponentRef | None = None
     min_uploaded_documents: int | str | ScreenDataRef | ComponentRef | None = None
     max_uploaded_documents: int | str | ScreenDataRef | ComponentRef | None = None

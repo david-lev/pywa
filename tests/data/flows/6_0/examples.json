@@ -25,11 +25,11 @@
             },
             {
               "type": "TextBody",
-              "text": "`'Hello ' ${form.first_name}`"
+              "text": "` 'Hello ' ${form.first_name}`"
             },
             {
               "type": "TextBody",
-              "text": "`${form.first_name} ' you are ' ${form.age} ' years old.'`"
+              "text": "`${form.first_name} ' you are ' ${form.age} ' years old.' `"
             },
             {
               "type": "Footer",
@@ -360,10 +360,10 @@
             {
               "type": "TextBody",
               "text": [
-                "`'The sum of ' ${data.number_1} ' and ' ${data.number_2} ' is ' (${data.number_1} + ${data.number_2})`",
-                "`'The difference of ' ${data.number_1} ' and ' ${data.number_2} ' is ' (${data.number_1} - ${data.number_2})`",
-                "`'The product of ' ${data.number_1} ' and ' ${data.number_2} ' is ' (${data.number_1} * ${data.number_2})`",
-                "`'The division of ' ${data.number_1} ' by ' ${data.number_2} ' is ' (${data.number_1} / ${data.number_2})`"
+                "` 'The sum of ' ${data.number_1} ' and ' ${data.number_2} ' is ' (${data.number_1} + ${data.number_2})`",
+                "` 'The difference of ' ${data.number_1} ' and ' ${data.number_2} ' is ' (${data.number_1} - ${data.number_2})`",
+                "` 'The product of ' ${data.number_1} ' and ' ${data.number_2} ' is ' (${data.number_1} * ${data.number_2})`",
+                "` 'The division of ' ${data.number_1} ' by ' ${data.number_2} ' is ' (${data.number_1} / ${data.number_2})`"
               ]
             },
             {
