@@ -29,6 +29,7 @@ class ChatOpened(BaseUserUpdate):
         type: The message type (Always ``MessageType.REQUEST_WELCOME``).
         from_user: The user who opened the chat.
         timestamp: The timestamp when this message was sent.
+        shared_data: Shared data between handlers.
     """
 
     id: str

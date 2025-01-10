@@ -281,6 +281,7 @@ class CallbackButton(BaseUserUpdate, Generic[_CallbackDataT]):
         data: The data of the button (the ``callback_data`` parameter you provided in :class:`Button` or
          :class:`Template.QuickReplyButtonData`).
         title: The title of the button.
+        shared_data: Shared data between handlers.
     """
 
     id: str

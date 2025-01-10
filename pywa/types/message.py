@@ -64,6 +64,7 @@ class Message(BaseUserUpdate):
         order: The order of the message (if the message type is :class:`MessageType.ORDER`).
         system: The system update (if the message type is :class:`MessageType.SYSTEM`).
         error: The error of the message (if the message type is :class:`MessageType.UNSUPPORTED`).
+        shared_data: Shared data between handlers.
     """
 
     id: str
