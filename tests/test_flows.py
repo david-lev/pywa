@@ -52,9 +52,9 @@ def test_flows_to_json():
                     example_dict = json_examples[flow_name]
                     assert obj_dict["version"] == version.name.replace("_", ".")
                     assert example_dict["version"] == version.name.replace("_", ".")
-                    assert (
-                        obj_dict == example_dict
-                    ), f"Flow {version.name=} {flow_name=} does not match example"
+                    assert obj_dict == example_dict, (
+                        f"Flow {version.name=} {flow_name=} does not match example"
+                    )
 
 
 def test_min_version():

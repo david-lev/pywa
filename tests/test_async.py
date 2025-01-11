@@ -125,9 +125,9 @@ def test_all_methods_are_overwritten_in_async():
             )
             if not asyncio.iscoroutinefunction(async_method):
                 if method_name in non_async:
-                    assert (
-                        sync_method != async_method
-                    ), f"Method/attr {method_name} is not overwritten in {async_obj.__name__}"
+                    assert sync_method != async_method, (
+                        f"Method/attr {method_name} is not overwritten in {async_obj.__name__}"
+                    )
                     continue
                 raise AssertionError(
                     f"Method {method_name} is not overwritten in {async_obj.__name__}"

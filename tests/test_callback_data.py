@@ -19,9 +19,9 @@ def test_callback_class_uniqueness():
         id: str
         name: str
 
-    assert (
-        User.__callback_id__ != Group.__callback_id__
-    ), "The callback id must be unique for each child class."
+    assert User.__callback_id__ != Group.__callback_id__, (
+        "The callback id must be unique for each child class."
+    )
 
 
 def test_callback_id_override():
