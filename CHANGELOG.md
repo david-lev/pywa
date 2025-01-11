@@ -3,7 +3,13 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-### 2.5.2 (2025-01-07) **Latest**
+### 2.6.0 (2025-01-11) **Latest**
+
+- [base_update] adding `shared_data` to help sharing context between handlers & filters
+- [flows] adding `FlowStr` - A helper class to create strings containing vars and math expressions without escaping and quoting them
+
+
+### 2.5.2 (2025-01-07)
 
 - [handlers] sub-handlers ignoring flow requests with errors when `call_on_error` set to False
 - [handlers] fix `WhatsApp.on_flow_request` on class level to mark the `FlowRequestHandler` instance
