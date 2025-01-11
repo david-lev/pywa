@@ -32,6 +32,7 @@ from pywa.types.flows import (
     Next,
     ActionNext,
     ActionNextType,
+    FlowStr,
 )
 from pywa.utils import Version
 
@@ -355,6 +356,52 @@ def test_condition_with_backticks():
 def visible_conditions_wrapped_with_backticks():
     text = TextInput(name="test", label="Test", visible=Ref("data", "age") > 18)
     assert text.visible.to_str() == "`(${data.age} > 18)`"
+
+
+def test_flow_str():
+    assert (
+        FlowStr(string="This is an example for Ana`s house.").to_str()
+        == r"` 'This is an example for Ana\\`s house.' `"
+    )
+
+    assert (
+        FlowStr(string="This is an example for Ana's house.").to_str()
+        == r"` 'This is an example for Ana\\'s house.' `"
+    )
+
+    assert (
+        FlowStr(
+            string=r"This is an example with already escaped backticks \\`."
+        ).to_str()
+        == r"` 'This is an example with already escaped backticks \\`.' `"
+    )
+
+    assert (
+        FlowStr(
+            string="This is an example with vars {var1} and {var2}.",
+            var1=ComponentRef("age"),
+            var2=ComponentRef("height"),
+        ).to_str()
+        == r"` 'This is an example with vars ' ${form.age} ' and ' ${form.height} '.' `"
+    )
+
+    assert (
+        FlowStr(
+            string="This is an example with `{var1}` wrapped in backticks and '{var2}' with single quotes.",
+            var1=ComponentRef("age"),
+            var2=ComponentRef("height"),
+        ).to_str()
+        == r"` 'This is an example with \\`' ${form.age} '\\` wrapped in backticks and \\'' ${form.height} '\\' with single quotes.' `"
+    )
+
+    assert (
+        FlowStr(
+            string="This is an example with math expression {var1_plus_var2} and {var1_minus_var2}.",
+            var1_plus_var2=ComponentRef("age") + ComponentRef("height"),
+            var1_minus_var2=ComponentRef("age") - ComponentRef("height"),
+        ).to_str()
+        == r"` 'This is an example with math expression ' (${form.age} + ${form.height}) ' and ' (${form.age} - ${form.height}) '.' `"
+    )
 
 
 def test_init_values():
