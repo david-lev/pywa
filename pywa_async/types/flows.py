@@ -96,6 +96,21 @@ if TYPE_CHECKING:
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
 class FlowRequest(_FlowRequest):
+    """
+    Represents a flow request. This request is sent to the flow endpoint when a user interacts with a flow.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/guides/implementingyourflowendpoint#data_exchange_request>`_.
+
+    Attributes:
+        version: The version of the ``data_api_version`` specified on the flow json.
+        flow_token: The flow token used to create the flow
+        action: The action that triggered the request.
+        screen: The screen that triggered the request. If action is ``FlowRequestActionType.INIT`` or ``FlowRequestActionType.BACK``, this field may be ``None``.
+        data: The data sent from the screen. If action is ``FlowRequestActionType.BACK`` or ``FlowRequestActionType.INIT``, this field may be ``None``.
+        raw: The raw data of the request.
+        raw_encrypted: The raw-encrypted data of the request.
+    """
+
     async def decrypt_media(
         self, key: str, index: int = 0, dl_session: httpx.AsyncClient | None = None
     ) -> tuple[str, str, bytes]:
@@ -109,8 +124,7 @@ class FlowRequest(_FlowRequest):
             >>> @wa.on_flow_request("/my-flow-endpoint")
             ... async def my_flow_endpoint(_: WhatsApp, req: FlowRequest):
             ...     media_id, filename, decrypted_data = req.decrypt_media(key="driver_license", index=0)
-            ...     with open(filename, "wb") as file:
-            ...         file.write(decrypted_data)
+            ...     # save the decrypted media to your storage
             ...     return req.respond(...)
 
         Args:

@@ -20,9 +20,8 @@ Here you will find all the components that make up a Flow JSON object.
 
 .. autoclass:: Form()
 
-.. automethod:: FormComponent.ref
-
-.. automethod:: FormComponent.ref_in
+.. autoclass:: FormComponent
+    :members: ref, ref_in
 
 .. autoclass:: TextHeading()
 
@@ -103,6 +102,8 @@ Here you will find all the components that make up a Flow JSON object.
 .. autoclass:: Next()
 
 .. autoclass:: NextType()
+
+.. autoclass:: FlowStr()
 
 .. autoclass:: ScreenDataRef()
 

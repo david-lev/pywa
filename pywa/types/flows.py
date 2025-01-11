@@ -201,11 +201,11 @@ class FlowRequestActionType(utils.StrEnum):
     The type the action that triggered the :class:`FlowRequest`.
 
     Attributes:
-        INIT: if the request is triggered when opening the flow (The :class:`FlowButton` was sent with flow_action_type set to ``FlowActionType.DATA_EXCHANGE``)
-        BACK: if the request is triggered when pressing back (The screen has ``refresh_on_back`` set to ``True``)
-        DATA_EXCHANGE: if the request is triggered when submitting the screen (And the :class:`Action` name is ``FlowActionType.DATA_EXCHANGE``)
+        INIT: if the request is triggered when opening the flow (The :class:`FlowButton` was sent with ``flow_action_type`` set to :class:`FlowActionType.DATA_EXCHANGE`)
+        BACK: if the request is triggered when pressing back (The screen's ``refresh_on_back`` attr set to ``True``)
+        DATA_EXCHANGE: if the request is triggered by :class:`DataExchangeAction`
+        NAVIGATE: if the :class:`FlowButton` sent with ``FlowActionType.NAVIGATE`` and the ``screen`` is not in the ``routing_model`` (the request will contain an error)
         PING: Deprecated. This request is handled automatically by pywa and not passed to the callback.
-        NAVIGATE: if the :class:`FlowButton` sent with ``FlowActionType.NAVIGATE`` and the screen is not in the routing model (the request will contain an error)
     """
 
     INIT = "INIT"
@@ -226,27 +226,25 @@ class FlowRequestActionType(utils.StrEnum):
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
 class FlowRequest:
     """
-    Represents a flow data exchange request. This request is sent to the flow endpoint when a user interacts with a
-    flow and perform an :class:`Action` that trigger a data exchange.
+    Represents a flow request. This request is sent to the flow endpoint when a user interacts with a flow.
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/guides/implementingyourflowendpoint#data_exchange_request>`_.
 
     Attributes:
-        version: The version of the data exchange.
-        flow_token: The flow token used to create the flow. ``None`` if action is ``FlowRequestActionType.PING``.
+        version: The version of the ``data_api_version`` specified on the flow json.
+        flow_token: The flow token used to create the flow
         action: The action that triggered the request.
-        screen: The screen that triggered the request. ``None`` if action is ``FlowRequestActionType.PING``.
-        data: The data sent from the screen. ``None`` if action is ``FlowRequestActionType.PING`` and optional if action is
-         ``FlowRequestActionType.BACK`` or ``FlowRequestActionType.INIT``.
+        screen: The screen that triggered the request. If action is ``FlowRequestActionType.INIT`` or ``FlowRequestActionType.BACK``, this field may be ``None``.
+        data: The data sent from the screen. If action is ``FlowRequestActionType.BACK`` or ``FlowRequestActionType.INIT``, this field may be ``None``.
         raw: The raw data of the request.
         raw_encrypted: The raw-encrypted data of the request.
     """
 
     version: str
     action: FlowRequestActionType
-    flow_token: str | None = None
-    screen: str | None = None
-    data: dict[str, Any] | None = None
+    flow_token: str
+    screen: str | None
+    data: dict[str, Any] | None
     raw: dict[str, Any] = dataclasses.field(repr=False, hash=False, compare=False)
     raw_encrypted: dict[str, str] = dataclasses.field(
         repr=False, hash=False, compare=False
@@ -264,7 +262,7 @@ class FlowRequest:
         """
         Create a response for this request.
 
-        - A shortcut for initializing a :class:`FlowResponse` with the same version as this request.
+        - A shortcut for initializing a :class:`FlowResponse` with the same version and flow token as this request.
 
         Example:
 
@@ -278,7 +276,7 @@ class FlowRequest:
 
         Args:
             screen: The screen to display (if ``close_flow`` is ``False``).
-            data: The data to send to the screen or to add to flow completion message (default to empty dict).
+            data: The data to send to the screen or to add to flow completion ``.response`` dict (default to empty dict).
             error_message: This will redirect the user to ``screen`` and will trigger a snackbar error with the error_message present (if ``close_flow`` is ``False``).
             close_flow: Whether to close the flow or just navigate to the screen.
             flow_token: The flow token to close the flow (if ``close_flow`` is ``True``, default to the request flow token).
@@ -319,7 +317,9 @@ class FlowRequest:
         return cls(
             version=data["version"],
             action=FlowRequestActionType(data["action"]),
-            flow_token=data.get("flow_token"),
+            flow_token=data.get(
+                "flow_token"
+            ),  # some ios devices may not send the flow token :|
             screen=data.get("screen") or None,  # can be empty string
             data=data.get("data") or None,  # can be empty dict
             raw=data,
@@ -334,7 +334,9 @@ class FlowRequest:
         pywa will acknowledge the error and ignore the response from the callback. The callback still be called.
         """
         return self.data and any(
-            key in self.data for key in ("error_message", "error_key")
+            # the docs and the examples are not clear about the error key :|
+            key in self.data
+            for key in ("error", "error_message", "error_key")
         )
 
     @property
@@ -380,7 +382,7 @@ class FlowRequest:
 @dataclasses.dataclass(slots=True, kw_only=True)
 class FlowResponse:
     """
-    Represents a flow data exchange response. This response is sent to the flow endpoint to determine the next screen
+    Represents a flow response. This response is sent to the flow endpoint to determine the next screen
     to display or to close the flow. You should return this response from your flow endpoint callback.
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/guides/implementingyourflowendpoint#data_exchange_request>`_.
@@ -394,18 +396,18 @@ class FlowResponse:
         >>> wa = WhatsApp(business_private_key="...", ...)
         >>> @wa.on_flow_request("/my-flow-endpoint")
         ... def my_flow_endpoint(_: WhatsApp, req: FlowRequest) -> FlowResponse:
-        ...     return req.respond(
+        ...     return req.respond(  # shortcut for return FlowResponse(version=req.version, flow_token=req.flow_token, ...)
         ...         screen="SCREEN_ID",
         ...         data={"key": "value"},
         ...     )
 
     Attributes:
-        version: The version of the data exchange (You can use the same version as the request (``request.version``)).
+        version: The same version as the request.
         screen: The screen to display (if the flow is not closed).
-        data: The data to send to the screen or to add to flow completion message (default to empty dict).
-        error_message: This will redirect the user to ``screen`` and will trigger a snackbar error with the error_message present (if the flow is not closed).
+        data: The data to send to the screen or to add to flow completion ``.response`` dict (default to empty dict).
+        error_message: This will redirect the user to ``screen`` and will trigger a snackbar error with the ``error_message`` present (if the flow is not closed).
         flow_token: The flow token to close the flow (if ``close_flow`` is ``True``).
-        close_flow: Whether to close the flow or just navigate to the screen.
+        close_flow: Whether to close the flow or just navigate to the screen (``flow_token`` must be provided if ``True``).
     """
 
     version: str
@@ -1335,18 +1337,18 @@ class Screen:
         ... )
 
     Attributes:
-        id: Unique identifier of the screen for navigation purposes. ``SUCCESS`` is a reserved keyword and should not be
-         used as a screen id.
+        id: Unique identifier of the screen which works as a page url. ``SUCCESS`` is a reserved keyword and should not be used as a screen id.
         title: Screen level attribute that is rendered in the top navigation bar.
-        data: Declaration of dynamic data that this screen should get from the previous screen or from the data endpoint.
-         In the screen children and in :class:`Action` ``.payload``, you can use the ``.ref`` or :class:`ScreenDataRef`
+        data: Declaration of dynamic data that this screen should get from the previous screen or from the flow endpoint.
+         In the screen children and in :class:`DataExchangeAction` ``.payload``, you can use the :attr:`~ScreenData.ref` or :class:`ScreenDataRef`
          to reference this data.
-        terminal: Each Flow should have a terminal state where we terminate the experience and have the Flow completed.
+        terminal: The business flow is the end state machine. It means that each Flow should have a terminal state where
+         we terminate the experience and have the Flow completed. Multiple screens can be marked as terminal. It's mandatory to have a :class:`Footer` component on the terminal screen.
          Multiple screens can be marked as terminal. It's mandatory to have a :class:`Footer` on the terminal screen.
-        refresh_on_back: Whether to trigger a data exchange request with the data endpoint when the user presses
-         the back button while on this screen (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#additional-information-on-refresh-on-back>`_).
+        refresh_on_back: Whether to trigger a :class:`FlowRequest` (``action`` will be :class:`FlowRequestActionType.BACK`) with the flow endpoint when the user presses
+         the back button while on this screen. The property is useful when you need to reevaluate the screen data when returning to the previous screen (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#additional-information-on-refresh-on-back>`_).
         layout: Associated screen UI Layout that is shown to the user (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#layout>`_).
-        success: To indicate whether terminating on that screen results in a successful flow completion.
+        success: Defaults to true. A Flow can have multiple terminal screens with different business outcomes. This property marks whether terminating on a terminal screen should be considered a successful business outcome.
         sensitive: This array contains the names of the fields in the screen that contain sensitive data, and should be hidden in the response summary displayed to the user. (added in v5.1)
     """
 
@@ -1379,7 +1381,7 @@ class LayoutType(utils.StrEnum):
         - Currently, only ``LayoutType.SINGLE_COLUMN`` is supported.
 
     Attributes:
-        SINGLE_COLUMN: A single column layout.
+        SINGLE_COLUMN: A vertical flexbox container that stacks the components in a single column.
     """
 
     SINGLE_COLUMN = "SingleColumnLayout"
@@ -1587,8 +1589,15 @@ class MathExpression(_Math):
 
     Example::
 
+        # Display the year you born in by subtracting the age from 2025:
         >>> age = TextInput(name="age", input_type=InputType.NUMBER)
-        >>> text = TextBody(text=f"`'Your age is ' {age.ref + 20}`")
+        >>> text = TextBody(text=FlowStr("You born in {year}", year=2025 - age.ref))
+
+        # Calculating tip:
+        >>> bill = TextInput(name="bill", input_type=InputType.NUMBER)
+        >>> tip_percent = TextInput(name="tip_percent", input_type=InputType.NUMBER)
+        >>> total = TextBody(text=FlowStr("Total: {total}", total=bill.ref + (bill.ref * tip_percent.ref / 100)))
+
 
     Supported Operators:
 
@@ -1917,7 +1926,7 @@ class FormComponent(Component, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def label(self) -> str | ScreenDataRef | ComponentRef | FlowStr: ...
+    def label(self) -> str | FlowStr | ScreenDataRef | ComponentRef: ...
 
     @property
     @abc.abstractmethod
@@ -1997,7 +2006,7 @@ class TextComponent(Component, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def text(self) -> str | ScreenDataRef | ComponentRef | FlowStr: ...
+    def text(self) -> str | FlowStr | ScreenDataRef | ComponentRef: ...
 
 
 class FontWeight(utils.StrEnum):
@@ -2036,7 +2045,7 @@ class TextHeading(TextComponent):
     type: ComponentType = dataclasses.field(
         default=ComponentType.TEXT_HEADING, init=False, repr=False
     )
-    text: str | ScreenDataRef | ComponentRef | FlowStr
+    text: str | FlowStr | ScreenDataRef | ComponentRef
     visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
 
 
@@ -2059,7 +2068,7 @@ class TextSubheading(TextComponent):
     type: ComponentType = dataclasses.field(
         default=ComponentType.TEXT_SUBHEADING, init=False, repr=False
     )
-    text: str | ScreenDataRef | ComponentRef | FlowStr
+    text: str | FlowStr | ScreenDataRef | ComponentRef
     visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
 
 
@@ -2188,7 +2197,7 @@ class TextEntryComponent(FormComponent, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def helper_text(self) -> str | ScreenDataRef | ComponentRef | FlowStr | None: ...
+    def helper_text(self) -> str | FlowStr | ScreenDataRef | ComponentRef | None: ...
 
     @property
     @abc.abstractmethod
@@ -2257,13 +2266,13 @@ class TextInput(TextEntryComponent):
         default=ComponentType.TEXT_INPUT, init=False, repr=False
     )
     name: str
-    label: str | ScreenDataRef | ComponentRef | FlowStr
+    label: str | FlowStr | ScreenDataRef | ComponentRef
     input_type: InputType | str | ScreenDataRef | ComponentRef | None = None
     pattern: str | re.Pattern | ScreenDataRef | ComponentRef | None = None
     required: bool | str | ScreenDataRef | ComponentRef | None = None
     min_chars: int | str | ScreenDataRef | ComponentRef | None = None
     max_chars: int | str | ScreenDataRef | ComponentRef | None = None
-    helper_text: str | ScreenDataRef | ComponentRef | FlowStr | None = None
+    helper_text: str | FlowStr | ScreenDataRef | ComponentRef | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
     visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     init_value: str | ScreenDataRef | ComponentRef | None = None
@@ -2304,10 +2313,10 @@ class TextArea(TextEntryComponent):
         default=ComponentType.TEXT_AREA, init=False, repr=False
     )
     name: str
-    label: str | ScreenDataRef | ComponentRef | FlowStr
+    label: str | FlowStr | ScreenDataRef | ComponentRef
     required: bool | str | ScreenDataRef | ComponentRef | None = None
     max_length: int | str | ScreenDataRef | ComponentRef | None = None
-    helper_text: str | ScreenDataRef | ComponentRef | FlowStr | None = None
+    helper_text: str | FlowStr | ScreenDataRef | ComponentRef | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
     visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     init_value: str | ScreenDataRef | ComponentRef | None = None
@@ -2372,8 +2381,8 @@ class CheckboxGroup(FormComponent):
     )
     name: str
     data_source: Iterable[DataSource] | str | ScreenDataRef | ComponentRef
-    label: str | ScreenDataRef | ComponentRef | FlowStr | None = None
-    description: str | ScreenDataRef | ComponentRef | FlowStr | None = None
+    label: str | FlowStr | ScreenDataRef | ComponentRef | None = None
+    description: str | FlowStr | ScreenDataRef | ComponentRef | None = None
     min_selected_items: int | str | ScreenDataRef | ComponentRef | None = None
     max_selected_items: int | str | ScreenDataRef | ComponentRef | None = None
     required: bool | str | ScreenDataRef | ComponentRef | None = None
@@ -2426,8 +2435,8 @@ class RadioButtonsGroup(FormComponent):
     )
     name: str
     data_source: Iterable[DataSource] | str | ScreenDataRef | ComponentRef
-    label: str | ScreenDataRef | ComponentRef | FlowStr | None = None
-    description: str | ScreenDataRef | ComponentRef | FlowStr | None = None
+    label: str | FlowStr | ScreenDataRef | ComponentRef | None = None
+    description: str | FlowStr | ScreenDataRef | ComponentRef | None = None
     required: bool | str | ScreenDataRef | ComponentRef | None = None
     visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
@@ -2475,7 +2484,7 @@ class Dropdown(FormComponent):
         default=ComponentType.DROPDOWN, init=False, repr=False
     )
     name: str
-    label: str | ScreenDataRef | ComponentRef | FlowStr
+    label: str | FlowStr | ScreenDataRef | ComponentRef
     data_source: Iterable[DataSource] | str | ScreenDataRef | ComponentRef
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
     required: bool | str | ScreenDataRef | ComponentRef | None = None
@@ -2505,11 +2514,11 @@ class Footer(Component):
         default=ComponentType.FOOTER, init=False, repr=False
     )
     visible: None = dataclasses.field(default=None, init=False, repr=False)
-    label: str | ScreenDataRef | ComponentRef | FlowStr
+    label: str | FlowStr | ScreenDataRef | ComponentRef
     on_click_action: CompleteAction | DataExchangeAction | NavigateAction
-    left_caption: str | ScreenDataRef | ComponentRef | FlowStr | None = None
-    center_caption: str | ScreenDataRef | ComponentRef | FlowStr | None = None
-    right_caption: str | ScreenDataRef | ComponentRef | FlowStr | None = None
+    left_caption: str | FlowStr | ScreenDataRef | ComponentRef | None = None
+    center_caption: str | FlowStr | ScreenDataRef | ComponentRef | None = None
+    right_caption: str | FlowStr | ScreenDataRef | ComponentRef | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
 
 
@@ -2545,7 +2554,7 @@ class OptIn(FormComponent):
     )
     enabled: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
-    label: str | ScreenDataRef | ComponentRef | FlowStr
+    label: str | FlowStr | ScreenDataRef | ComponentRef
     required: bool | str | ScreenDataRef | ComponentRef | None = None
     visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     init_value: bool | str | ScreenDataRef | ComponentRef | None = None
@@ -2582,7 +2591,7 @@ class EmbeddedLink(Component):
     type: ComponentType = dataclasses.field(
         default=ComponentType.EMBEDDED_LINK, init=False, repr=False
     )
-    text: str | ScreenDataRef | ComponentRef | FlowStr
+    text: str | FlowStr | ScreenDataRef | ComponentRef
     on_click_action: (
         DataExchangeAction | UpdateDataAction | NavigateAction | OpenUrlAction
     )
@@ -2634,8 +2643,8 @@ class NavigationList(Component):
     visible: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
     list_items: Iterable[NavigationItem] | ScreenDataRef | ComponentRef | str
-    label: str | ScreenDataRef | ComponentRef | FlowStr | None = None
-    description: str | ScreenDataRef | ComponentRef | FlowStr | None = None
+    label: str | FlowStr | ScreenDataRef | ComponentRef | None = None
+    description: str | FlowStr | ScreenDataRef | ComponentRef | None = None
     media_size: MediaSize | str | ScreenDataRef | ComponentRef | None = None
     on_click_action: NavigateAction | DataExchangeAction | None = None
 
@@ -2777,13 +2786,13 @@ class DatePicker(FormComponent):
         default=ComponentType.DATE_PICKER, init=False, repr=False
     )
     name: str
-    label: str | ScreenDataRef | ComponentRef | FlowStr
+    label: str | FlowStr | ScreenDataRef | ComponentRef
     min_date: datetime.date | str | ScreenDataRef | ComponentRef | None = None
     max_date: datetime.date | str | ScreenDataRef | ComponentRef | None = None
     unavailable_dates: (
         Iterable[datetime.date | str] | str | ScreenDataRef | ComponentRef | None
     ) = None
-    helper_text: str | ScreenDataRef | ComponentRef | FlowStr | None = None
+    helper_text: str | FlowStr | ScreenDataRef | ComponentRef | None = None
     enabled: bool | str | ScreenDataRef | ComponentRef | None = None
     required: bool | str | ScreenDataRef | ComponentRef | None = None
     visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
@@ -2878,8 +2887,8 @@ class CalendarPicker(FormComponent):
         default=ComponentType.CALENDAR_PICKER, init=False, repr=False
     )
     name: str
-    title: str | ScreenDataRef | ComponentRef | FlowStr | None = None
-    description: str | ScreenDataRef | ComponentRef | FlowStr | None = None
+    title: str | FlowStr | ScreenDataRef | ComponentRef | None = None
+    description: str | FlowStr | ScreenDataRef | ComponentRef | None = None
     label: (
         dict[Literal["start-date", "end-date"], str]
         | str
@@ -3052,8 +3061,8 @@ class PhotoPicker(FormComponent):
     required: None = dataclasses.field(default=None, init=False, repr=False)
     init_value: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
-    label: str | ScreenDataRef | ComponentRef | FlowStr
-    description: str | ScreenDataRef | ComponentRef | FlowStr | None = None
+    label: str | FlowStr | ScreenDataRef | ComponentRef
+    description: str | FlowStr | ScreenDataRef | ComponentRef | None = None
     photo_source: PhotoSource | str | ScreenDataRef | ComponentRef | None = None
     max_file_size_kb: int | str | ScreenDataRef | ComponentRef | None = None
     min_uploaded_photos: int | str | ScreenDataRef | ComponentRef | None = None
@@ -3105,8 +3114,8 @@ class DocumentPicker(FormComponent):
     required: None = dataclasses.field(default=None, init=False, repr=False)
     init_value: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
-    label: str | ScreenDataRef | ComponentRef | FlowStr
-    description: str | ScreenDataRef | ComponentRef | FlowStr | None = None
+    label: str | FlowStr | ScreenDataRef | ComponentRef
+    description: str | FlowStr | ScreenDataRef | ComponentRef | None = None
     max_file_size_kb: int | str | ScreenDataRef | ComponentRef | None = None
     min_uploaded_documents: int | str | ScreenDataRef | ComponentRef | None = None
     max_uploaded_documents: int | str | ScreenDataRef | ComponentRef | None = None

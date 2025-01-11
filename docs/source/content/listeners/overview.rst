@@ -22,11 +22,15 @@ Let's see an example of how to use a listener:
         msg.reply("Hello! How old are you?")
         age: types.Message = client.listen( # Now we want to wait for the user to send their age
             to=msg.sender,
-            filters=filters.text
+            filters=filters.message & filters.text # We only want to listen for `Message` updates that contain text
         )
         msg.reply(f"Your age is {age.text}.")
 
 In the example above, we are waiting for the user to send their age. The `client.listen` method will wait for the user to send a message that matches the filter :attr:`pywa.filters.text`.
+
+.. tip::
+
+    You can use one of the `shortcuts <#id1>`_ in order to create a listener when sending a message. For example, you can use the :meth:`~pywa.types.sent_message.SentMessage.wait_for_reply` method to create a listener that waits for a *Message* reply from the user.
 
 Cancel
 ______
@@ -49,7 +53,7 @@ Now, listeners have a few options that you can use to customize the behavior. fo
         )
         age = client.listen(
             to=msg.sender,
-            filters=filters.text,
+            filters=filters.message & filters.text,
             timeout=20, # 20 seconds
             # If the user presses "cancel" the listener will be canceled
             cancelers=filters.callback_button & filters.matches("cancel")
@@ -79,7 +83,7 @@ You can also handle listener exceptions. For example, you can handle the case wh
         try:
             age = client.listen(
                 to=msg.sender,
-                filters=filters.text,
+                filters=filters.message & filters.text,
                 cancelers=filters.callback_button & filters.matches("cancel"),
                 timeout=20
             )

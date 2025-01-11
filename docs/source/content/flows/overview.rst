@@ -95,6 +95,14 @@ Every component on the FlowJSON has a corresponding class in :mod:`pywa.types.fl
        :class:`CompleteAction`,
        :class:`UpdateDataAction`,
        :class:`OpenUrlAction`
+   * - Helpers
+     - :class:`ScreenData`,
+       :class:`ScreenDataUpdate`,
+       :class:`ScreenDataRef`,
+       :class:`ComponentRef`,
+       :class:`FlowStr`,
+       :class:`Condition`,
+       :class:`MathExpression`
 
 ==================
 
