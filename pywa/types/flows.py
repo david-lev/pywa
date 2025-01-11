@@ -129,6 +129,7 @@ class FlowCompletion(BaseUserUpdate):
         body: The body of the message.
         token: The token of the flow. can be ``None`` in some cases :|
         response: The response from the flow.
+        shared_data: Shared data between handlers.
     """
 
     id: str

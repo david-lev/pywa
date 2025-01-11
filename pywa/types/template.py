@@ -1434,6 +1434,7 @@ class TemplateStatus(BaseUpdate):
         reason: The reason the template was rejected (if applicable).
         disable_date: The date the template was disabled (if applicable).
         other_info: Additional information about the template (if applicable).
+        shared_data: Shared data between handlers.
     """
 
     id: str

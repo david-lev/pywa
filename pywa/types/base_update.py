@@ -87,19 +87,10 @@ class BaseUpdate(abc.ABC):
     """Base class for all update types."""
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
+    id: str
+    timestamp: datetime.datetime
     raw: dict = dataclasses.field(repr=False, hash=False, compare=False)
-
-    @property
-    @abc.abstractmethod
-    def id(self) -> str:
-        """The id of the update"""
-        ...
-
-    @property
-    @abc.abstractmethod
-    def timestamp(self) -> datetime.datetime:
-        """The timestamp the update was sent"""
-        ...
+    shared_data: dict = dataclasses.field(hash=False, default_factory=dict)
 
     @classmethod
     @abc.abstractmethod

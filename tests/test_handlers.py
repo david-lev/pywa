@@ -6,6 +6,7 @@ import pytest
 
 from pywa import handlers, types, WhatsApp, filters
 from pywa.handlers import FlowRequestHandler, _flow_request_handler_attr
+from pywa.types import Message
 from pywa_async import WhatsApp as WhatsAppAsync
 
 FAKE_WA = WhatsApp(phone_id="1234567890", token="1234567890:1234567890")
@@ -193,3 +194,41 @@ def test_get_flow_request_handler():
 
     h.add_handler(callback=callback, action=types.FlowRequestActionType.INIT)
     assert h._handlers[(types.FlowRequestActionType.INIT, None)][0][1] is callback
+
+
+def test_shared_data():
+    wa = WhatsApp(server=None, verify_token="xyzxyz")
+    msg = Message(
+        _client=wa,
+        raw={},
+        id="123",
+        type=types.MessageType.TEXT,
+        forwarded=False,
+        forwarded_many_times=False,
+        reply_to_message=None,
+        metadata=types.Metadata(
+            display_phone_number="1234567890",
+            phone_number_id="1234567890",
+        ),
+        from_user=types.User(
+            wa_id="1234567890",
+            name="John",
+        ),
+        timestamp=datetime.datetime.now(),
+    )
+
+    @wa.on_message
+    def shared_data_handler(_: WhatsApp, m: types.Message):
+        m.shared_data["key"] = None
+        m.continue_handling()
+
+    @wa.on_message
+    def shared_data_check(_: WhatsApp, m: types.Message):
+        m.shared_data["key"] = "value"
+
+    wa._invoke_callbacks(
+        handler_type=handlers.MessageHandler,
+        update=msg,
+    )
+
+    assert msg.shared_data["key"] == "value"

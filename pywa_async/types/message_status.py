@@ -67,4 +67,5 @@ class MessageStatus(BaseUserUpdateAsync, _MessageStatus[_CallbackDataT]):
         conversation: The conversation the given status notification belongs to (Optional).
         pricing_model: Type of pricing model used by the business. Current supported value is CBP.
         error: The error that occurred (if status is :class:`MessageStatusType.FAILED`).
+        shared_data: Shared data between handlers.
     """
