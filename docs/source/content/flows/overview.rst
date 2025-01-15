@@ -76,6 +76,7 @@ Every component on the FlowJSON has a corresponding class in :mod:`pywa.types.fl
        :class:`TextArea`,
        :class:`RadioButtonsGroup`,
        :class:`CheckboxGroup`,
+       :class:`ChipsSelector`,
        :class:`Dropdown`,
        :class:`OptIn`,
        :class:`DatePicker`,

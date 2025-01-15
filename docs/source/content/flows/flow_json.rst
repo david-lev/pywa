@@ -43,6 +43,8 @@ Here you will find all the components that make up a Flow JSON object.
 
 .. autoclass:: CheckboxGroup()
 
+.. autoclass:: ChipsSelector()
+
 .. autoclass:: RadioButtonsGroup()
 
 .. autoclass:: MediaSize()

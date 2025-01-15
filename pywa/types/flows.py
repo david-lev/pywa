@@ -76,6 +76,7 @@ __all__ = [
     "InputType",
     "TextArea",
     "CheckboxGroup",
+    "ChipsSelector",
     "RadioButtonsGroup",
     "Footer",
     "OptIn",
@@ -1447,6 +1448,7 @@ class ComponentType(utils.StrEnum):
     IF = "If"
     SWITCH = "Switch"
     NAVIGATION_LIST = "NavigationList"
+    CHIPS_SELECTOR = "ChipsSelector"
 
 
 class _Expr(abc.ABC):
@@ -2490,6 +2492,61 @@ class Dropdown(FormComponent):
     required: bool | str | ScreenDataRef | ComponentRef | None = None
     visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
     init_value: str | ScreenDataRef | ComponentRef | None = None
+    on_select_action: DataExchangeAction | UpdateDataAction | None = None
+    on_unselect_action: UpdateDataAction | None = None
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class ChipsSelector(FormComponent):
+    """
+    Chips Selector component allows users to pick multiple selections from a list of options.
+
+    - Added in v6.3
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/components#chips_selector>`_.
+
+    Example:
+
+        >>> ChipsSelector(
+        ...     name='options',
+        ...     data_source=[
+        ...         DataSource(id='1', title='Option 1'),
+        ...         DataSource(id='2', title='Option 2'),
+        ...         DataSource(id='3', title='Option 3'),
+        ...     ],
+        ...     label='Options',
+        ...     min_selected_items=1,
+        ...     max_selected_items=2,
+        ...     required=True,
+        ...     init_value=['1', '2']
+        ... )
+
+    Attributes:
+        name: The unique name (id) for this component.
+        data_source: The data source of the chips selector.
+        label: The label of the chips selector. Limited to 80 characters.
+        description: The description of the chips selector. Limited to 300 characters
+        min_selected_items: The minimum number of items that can be selected. Minimum value is 1.
+        max_selected_items: The maximum number of items that can be selected. Maximum value is 20.
+        required: Whether the chips selector is required or not.
+        visible: Whether the chips selector is visible or not. Default to ``True``.
+        enabled: Whether the chips selector is enabled or not. Default to ``True``.
+        init_value: The default values (IDs of the data sources).
+        on_select_action: The action to perform when an item is selected.
+    """
+
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.CHIPS_SELECTOR, init=False, repr=False
+    )
+    name: str
+    data_source: Iterable[DataSource] | str | ScreenDataRef | ComponentRef
+    label: str | FlowStr | ScreenDataRef | ComponentRef
+    description: str | FlowStr | ScreenDataRef | ComponentRef | None = None
+    min_selected_items: int | str | ScreenDataRef | ComponentRef | None = None
+    max_selected_items: int | str | ScreenDataRef | ComponentRef | None = None
+    required: bool | str | ScreenDataRef | ComponentRef | None = None
+    visible: bool | str | Condition | ScreenDataRef | ComponentRef | None = None
+    enabled: bool | str | ScreenDataRef | ComponentRef | None = None
+    init_value: list[str] | str | ScreenDataRef | ComponentRef | None = None
     on_select_action: DataExchangeAction | UpdateDataAction | None = None
     on_unselect_action: UpdateDataAction | None = None
 
