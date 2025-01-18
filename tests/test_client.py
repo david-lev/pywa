@@ -777,3 +777,8 @@ def test_mark_message_as_read(api, wa):
         phone_id=PHONE_ID,
         message_id=MSG_ID,
     )
+
+
+def test_created_flow(api, wa):
+    with pytest.warns(DeprecationWarning):
+        wa.create_flow(name="flow", categories=[], waba_id=123)

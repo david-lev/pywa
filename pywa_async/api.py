@@ -786,6 +786,8 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         categories: tuple[str, ...],
         clone_flow_id: str | None = None,
         endpoint_uri: str | None = None,
+        flow_json: str = None,
+        publish: bool = None,
     ) -> dict[str, str]:
         """
         Create or clone a flow.
@@ -798,18 +800,49 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             categories: The categories of the flow.
             clone_flow_id: The ID of the flow to clone.
             endpoint_uri: The endpoint URI of the flow.
+            flow_json: Flow's JSON encoded as string.
+            publish: Whether to publish the flow. Only works if ``flow_json`` is also provided with valid Flow JSON.
 
         Return example::
 
             {
-              "id": "<Flow-ID>"
+               "id": "<Flow-ID>"
+               "success": True,
+               "validation_errors": [
+                {
+                  "error": "INVALID_PROPERTY_VALUE" ,
+                  "error_type": "FLOW_JSON_ERROR",
+                  "message": "Invalid value found for property 'type'.",
+                  "line_start": 10,
+                  "line_end": 10,
+                  "column_start": 21,
+                  "column_end": 34,
+                  "pointers": [
+                   {
+                     "line_start": 10,
+                     "line_end": 10,
+                     "column_start": 21,
+                     "column_end": 34,
+                     "path": "screens [0].layout.children[0].type"
+                   }
+                  ]
+                }
+              ]
             }
         """
         data = {
             "name": name,
             "categories": categories,
-            **({"clone_flow_id": clone_flow_id} if clone_flow_id else {}),
-            **({"endpoint_uri": endpoint_uri} if endpoint_uri else {}),
+            **{
+                k: v
+                for k, v in {
+                    "clone_flow_id": clone_flow_id,
+                    "endpoint_uri": endpoint_uri,
+                    "flow_json": flow_json,
+                    "publish": publish,
+                }.items()
+                if v is not None
+            },
         }
         return await self._make_request(
             method="POST",

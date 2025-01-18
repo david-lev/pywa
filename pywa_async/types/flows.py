@@ -18,6 +18,7 @@ __all__ = [
     "FlowPreview",
     "FlowValidationError",
     "FlowAsset",
+    "CreatedFlow",
     "FlowJSON",
     "Screen",
     "ScreenData",

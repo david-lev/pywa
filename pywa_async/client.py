@@ -12,6 +12,7 @@ import logging
 import mimetypes
 import os
 import pathlib
+import warnings
 from types import ModuleType
 from typing import BinaryIO, Iterable, Literal
 
@@ -56,6 +57,7 @@ from .types.flows import (
     FlowDetails,
     FlowValidationError,
     FlowAsset,
+    CreatedFlow,
 )
 from .types.others import InteractiveType
 from .types.sent_message import SentMessage, SentTemplate
@@ -1790,6 +1792,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             from_phone_id=sender,
         )
 
+    # fmt: off
     async def create_flow(
         self,
         name: str,
@@ -1797,47 +1800,77 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         clone_flow_id: str | None = None,
         endpoint_uri: str | None = None,
         waba_id: str | int | None = None,
-    ) -> str:
+        flow_json: FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO | None = None,
+        publish: bool | None = None,
+        *,
+        return_only_id: bool = True,
+    ) -> CreatedFlow | str:
         """
         Create a flow.
 
+        For backward compatibility, when ``flow_json`` is not provided, the method will return the ID of the created flow.
+        Set ``return_only_id=False`` to return the created flow object instead.
+
         - This method requires the WhatsApp Business account ID to be provided when initializing the client.
-        - New Flows are created in :class:`FlowStatus.DRAFT` status.
+        - New Flows are created in :class:`FlowStatus.DRAFT` status unless ``flow_json`` is provided and ``publish`` is True.
         - To update the flow json, use :py:func:`~pywa.client.WhatsApp.update_flow`.
         - To send a flow, use :py:func:`~pywa.client.WhatsApp.send_flow`.
 
         Args:
-            name: The name of the flow.
+            name: The name of the flow (must be unique, can be used later to update and send the flow).
             categories: The categories of the flow.
+            flow_json: The JSON of the flow (optional, if provided, the flow will be created with the provided JSON).
+            publish: Whether to publish the flow after creating it, only works if ``flow_json`` is provided.
             clone_flow_id: The flow ID to clone (optional).
             endpoint_uri: The URL of the FlowJSON Endpoint. Starting from Flow 3.0 this property should be
              specified only gere. Do not provide this field if you are cloning a Flow with version below 3.0.
             waba_id: The WhatsApp Business account ID (Overrides the client's business account ID).
+            return_only_id: Only for backward compatibility. Switch to False to return the created flow object. ignored when flow_json provided.
 
         Example:
 
-            >>> from pywa.types.flows import FlowCategory
+            >>> from pywa.types.flows import *
             >>> wa = WhatsApp(...)
             >>> wa.create_flow(
             ...     name='Feedback',
-            ...     categories=[FlowCategory.SURVEY, FlowCategory.OTHER]
+            ...     categories=[FlowCategory.SURVEY, FlowCategory.OTHER],
+            ...     flow_json=FlowJSON(...),
+            ...     publish=True,
             ... )
 
         Returns:
-            The flow ID.
+            The created flow or the ID of the created flow (if ``return_only_id`` is True).
 
         Raises:
             FlowBlockedByIntegrity: If you can't create a flow because of integrity issues.
         """
-        return (
+        if return_only_id:
+            if flow_json:
+                return_only_id = False
+            else:
+                warnings.warn(
+                    "The `return_only_id` argument is for backward compatibility and will be removed in a future version.\n"
+                    ">>> Set `return_only_id=False` and access the `.id` attribute of the returned object instead.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+
+        created = CreatedFlow.from_dict(
             await self.api.create_flow(
                 name=name,
                 categories=tuple(map(str, categories)),
                 clone_flow_id=clone_flow_id,
                 endpoint_uri=endpoint_uri,
                 waba_id=helpers.resolve_waba_id_param(self, waba_id),
+                flow_json=helpers.resolve_flow_json_param(flow_json)
+                if flow_json
+                else None,
+                publish=publish,
             )
-        )["id"]
+        )
+        if return_only_id:
+            return created.id
+        return created
 
     async def update_flow_metadata(
         self,

@@ -56,6 +56,7 @@ __all__ = [
     "FlowPreview",
     "FlowValidationError",
     "FlowAsset",
+    "CreatedFlow",
     "FlowJSON",
     "Screen",
     "ScreenData",
@@ -913,6 +914,34 @@ class FlowAsset:
             name=data["name"],
             type=data["asset_type"],
             url=data["download_url"],
+        )
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class CreatedFlow:
+    """
+    Represents a created flow.
+
+    Attributes:
+        id: The ID of the created flow.
+        success: Whether the flow json is valid (Only if created with flow json).
+        validation_errors: The validation errors of the flow json. Only available if success is ``False``.
+    """
+
+    id: str
+    success: bool
+    validation_errors: tuple[FlowValidationError, ...] | None
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            id=data["id"],
+            success=data.get("success", True),
+            validation_errors=tuple(
+                FlowValidationError.from_dict(e)
+                for e in data.get("validation_errors", [])
+            )
+            or None,
         )
 
 
