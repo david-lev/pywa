@@ -1,0 +1,50 @@
+{
+  "chips_selector": {
+    "version": "6.3",
+    "screens": [
+      {
+        "id": "DEMO_SCREEN",
+        "terminal": true,
+        "title": "Demo screen",
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "ChipsSelector",
+              "name": "chips",
+              "label": "Personalize your experience",
+              "description": "Choose your interests to get personalized design ideas and solution",
+              "max-selected-items": 2,
+              "data-source": [
+                {
+                  "id": "room_layout",
+                  "title": "🏡 Room layouts"
+                },
+                {
+                  "id": "lighting",
+                  "title": "💡 Lighting"
+                },
+                {
+                  "id": "renovation",
+                  "title": "🛠️ Renovation"
+                },
+                {
+                  "id": "furnitures",
+                  "title": "📐 Room layouts"
+                }
+              ]
+            },
+            {
+              "type": "Footer",
+              "label": "Continue",
+              "on-click-action": {
+                "name": "complete",
+                "payload": {}
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

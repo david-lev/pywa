@@ -39,6 +39,7 @@ __all__ = [
     "InputType",
     "TextArea",
     "CheckboxGroup",
+    "ChipsSelector",
     "RadioButtonsGroup",
     "Footer",
     "OptIn",
