@@ -162,7 +162,7 @@ def resolve_flow_json_param(
         to_dump = flow_json
     else:
         raise TypeError(
-            "`flow_json` must be a FlowJSON object, dict, json string, json file path or json bytes"
+            f"`flow_json` must be a FlowJSON object, dict, json string, json file path or json bytes. not {type(flow_json)}"
         )
 
     if to_dump is not None:
