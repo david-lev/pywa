@@ -3,7 +3,16 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-### 2.6.0 (2025-01-11) **Latest**
+
+### 2.7.0 (2025-01-18) **Latest**
+
+- [flows] adding support for `ChipsSelector` component
+- [flows] `flow_name` instead of `flow_id` while sending. `flow_token` is now optional
+- [client] allowing to create flow with flow json and publish it with one request
+- [utils] update flow json latest version to 6.3
+
+
+### 2.6.0 (2025-01-11)
 
 - [base_update] adding `shared_data` to help sharing context between handlers & filters
 - [flows] adding `FlowStr` - A helper class to create strings containing vars and math expressions without escaping and quoting them
