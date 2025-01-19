@@ -14,7 +14,7 @@ import os
 import pathlib
 import warnings
 from types import ModuleType
-from typing import BinaryIO, Iterable, Literal
+from typing import BinaryIO, Iterable, Literal, Any
 
 import httpx
 
@@ -1190,6 +1190,51 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 message_id=message_id,
             )
         )["success"]
+
+    async def block_users(
+        self, users: Iterable[str | int], phone_id: str | int | None = None
+    ) -> dict[str, Any]:
+        """
+        Block users by phone ID.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.block_users(users=['1234567890', '0987654321'])
+
+        Args:
+            users: The phone IDs of the users to block.
+            phone_id: The phone ID to block the users from (optional, if not provided, the client's phone ID will be used).
+        Returns:
+            A dictionary with the status of the block operation.
+        """
+
+        return await self.api.block_users(
+            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+            users=[str(phone_id) for phone_id in users],
+        )
+
+    async def unblock_users(
+        self, users: Iterable[str | int], phone_id: str | int | None = None
+    ) -> dict[str, Any]:
+        """
+        Unblock users by phone ID.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.unblock_users(users=['1234567890', '0987654321'])
+
+        Args:
+            users: The phone IDs of the users to unblock.
+            phone_id: The phone ID to unblock the users from (optional, if not provided, the client's phone ID will be used).
+        Returns:
+            A dictionary with the status of the unblock operation.
+        """
+        return await self.api.unblock_users(
+            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+            users=[str(phone_id) for phone_id in users],
+        )
 
     async def upload_media(
         self,
