@@ -567,6 +567,60 @@ class WhatsAppCloudApi:
             },
         )
 
+    def block_users(
+        self,
+        phone_id: str,
+        users: list[str],
+    ) -> dict[str, Any]:
+        """
+        Block users from sending messages to the business.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/block-users>`_.
+
+
+        Args:
+            phone_id: The ID of the phone number to block users on.
+            users: The list of users to block.
+
+        Returns:
+            The response from the WhatsApp Cloud API.
+        """
+        return self._make_request(
+            method="POST",
+            endpoint=f"/{phone_id}/block_users",
+            json={
+                "messaging_product": "whatsapp",
+                "block_users": [{"user": user} for user in users],
+            },
+        )
+
+    def unblock_users(
+        self,
+        phone_id: str,
+        users: list[str],
+    ) -> dict[str, Any]:
+        """
+        Unblock users from sending messages to the business.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/block-users>`_.
+
+
+        Args:
+            phone_id: The ID of the phone number to unblock users on.
+            users: The list of users to unblock.
+
+        Returns:
+            The response from the WhatsApp Cloud API.
+        """
+        return self._make_request(
+            method="DELETE",
+            endpoint=f"/{phone_id}/block_users",
+            json={
+                "messaging_product": "whatsapp",
+                "block_users": [{"user": user} for user in users],
+            },
+        )
+
     def get_business_phone_number(
         self,
         phone_id: str,
