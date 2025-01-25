@@ -8,6 +8,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Iterable, TypeVar, Generic, Protocol
 
 from .. import utils
+from ..errors import WhatsAppError
 
 if TYPE_CHECKING:
     from .message_status import MessageStatus
@@ -910,6 +911,59 @@ class QRCode:
             prefilled_message=data.get("prefilled_message"),
             deep_link_url=data.get("deep_link_url"),
             qr_image_url=data.get("qr_image_url"),
+        )
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class BlockUserFailure:
+    input: str
+    errors: tuple[WhatsAppError, ...]
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            input=data["input"],
+            errors=tuple(WhatsAppError.from_dict(error) for error in data["errors"]),
+        )
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class UsersBlockedResult:
+    added_users: tuple[User, ...] | None
+    failed_users: tuple[BlockUserFailure, ...] | None
+    errors: WhatsAppError | None
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            added_users=tuple(
+                User.from_dict(user)
+                for user in data.get("block_users", {}).get("added_users", [])
+            )
+            or None,
+            failed_users=tuple(
+                BlockUserFailure.from_dict(user)
+                for user in data.get("block_users", {}).get("failed_users", [])
+            )
+            or None,
+            errors=WhatsAppError.from_dict(data["errors"])
+            if "errors" in data
+            else None,
+        )
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class UsersUnblockedResult:
+    removed_users: tuple[User, ...] | None
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            removed_users=tuple(
+                User.from_dict(user)
+                for user in data.get("block_users", {}).get("removed_users", [])
+            )
+            or None,
         )
 
 

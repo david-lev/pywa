@@ -62,7 +62,13 @@ from .types.flows import (
     FlowAsset,
     CreatedFlow,
 )
-from .types.others import InteractiveType
+from .types.others import (
+    InteractiveType,
+    UsersBlockedResult,
+    BlockUserFailure,
+    UsersUnblockedResult,
+    User,
+)
 from .types.sent_message import SentMessage, SentTemplate
 from .utils import FastAPI, Flask
 
@@ -1196,14 +1202,15 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
     async def block_users(
         self, users: Iterable[str | int], phone_id: str | int | None = None
-    ) -> dict[str, Any]:
+    ) -> UsersBlockedResult:
         """
         Block users by phone ID.
 
         Example:
 
             >>> wa = WhatsApp(...)
-            >>> wa.block_users(users=['1234567890', '0987654321'])
+            >>> res = wa.block_users(users=['1234567890', '0987654321'])
+            >>> if res.errors: print(res.failed_users)
 
         Args:
             users: The phone IDs of the users to block.
@@ -1211,15 +1218,16 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             A dictionary with the status of the block operation.
         """
-
-        return await self.api.block_users(
-            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
-            users=[str(phone_id) for phone_id in users],
+        return UsersBlockedResult.from_dict(
+            await self.api.block_users(
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                users=tuple(str(phone_id) for phone_id in users),
+            )
         )
 
     async def unblock_users(
         self, users: Iterable[str | int], phone_id: str | int | None = None
-    ) -> dict[str, Any]:
+    ) -> UsersUnblockedResult:
         """
         Unblock users by phone ID.
 
@@ -1234,9 +1242,44 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             A dictionary with the status of the unblock operation.
         """
-        return await self.api.unblock_users(
-            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
-            users=[str(phone_id) for phone_id in users],
+        return UsersUnblockedResult.from_dict(
+            await self.api.unblock_users(
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                users=tuple(str(phone_id) for phone_id in users),
+            )
+        )
+
+    async def get_blocked_users(
+        self,
+        phone_id: str | int | None = None,
+        limit: int | None = None,
+        batch_size: int | None = None,
+    ) -> Result[User]:
+        """
+        Get the list of blocked users.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> async for user in await wa.get_blocked_users():
+            ...     print(user)
+
+        Args:
+            phone_id: The phone ID to get the list of blocked users from (optional, if not provided, the client's phone ID will be used).
+            limit: The maximum number of users to return (optional, if not provided, all users will be returned).
+            batch_size: The number of users to return per request (optional, default: 50).
+
+        Returns:
+            A list of blocked users.
+        """
+        return Result(
+            fetcher=functools.partial(
+                self.api.get_blocked_users,
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+            ),
+            item_factory=User.from_dict,
+            total_limit=limit,
+            batch_size=batch_size,
         )
 
     async def upload_media(

@@ -557,11 +557,26 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             },
         )
 
-    async def block_users(self, phone_id: str, users: list[str]) -> dict[str, Any]:
+    async def block_users(
+        self,
+        phone_id: str,
+        users: tuple[str, ...],
+    ) -> dict[str, str | dict[str, list]]:
         """
-        Block users on a phone number.
+        Block users from sending messages to the business.
 
-        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/block-users>`_.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/block-users#unblock-users>`_.
+
+        Return example::
+
+            {
+                'messaging_product': 'whatsapp',
+                'block_users': {
+                    'removed_users': [
+                        {'input': '123456789', 'wa_id': '123456789'}
+                    ]
+                }
+            }
 
         Args:
             phone_id: The ID of the phone number to block users on.
@@ -579,11 +594,25 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             },
         )
 
-    async def unblock_users(self, phone_id: str, users: list[str]) -> dict[str, Any]:
+    async def unblock_users(
+        self,
+        phone_id: str,
+        users: tuple[str, ...],
+    ) -> dict[str, list[dict[str, str]]]:
         """
-        Unblock users on a phone number.
+        Unblock users from sending messages to the business.
 
-        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/block-users>`_.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/block-users#unblock-users>`_.
+
+        Return example::
+
+            {
+                'messaging_product': 'whatsapp',
+                'block_users': {
+                    'removed_users': [
+                        {'input': '123456789', 'wa_id': '123456789'}
+                    ]
+                }
 
         Args:
             phone_id: The ID of the phone number to unblock users on.
@@ -599,6 +628,31 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
                 "messaging_product": "whatsapp",
                 "block_users": [{"user": user} for user in users],
             },
+        )
+
+    async def get_blocked_users(
+        self,
+        phone_id: str,
+        limit: int | None = None,
+        after: str | None = None,
+    ) -> dict[str, list[dict[str, str]]]:
+        """
+        Get the list of blocked users.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/block-users#get-list-of-blocked-numbers>`_.
+
+        Args:
+            phone_id: The ID of the phone number to get the blocked users from.
+            limit: The limit of the users to get.
+            after: The cursor to get the users after.
+
+        Returns:
+            The response from the WhatsApp Cloud API.
+        """
+        return await self._make_request(
+            method="GET",
+            endpoint=f"/{phone_id}/block_users",
+            params={k: v for k, v in {"limit": limit, "after": after}.items() if v},
         )
 
     async def get_business_phone_number(
