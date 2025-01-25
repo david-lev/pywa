@@ -1,3 +1,6 @@
+from unittest.mock import Mock, AsyncMock
+import pytest
+
 import datetime
 from pywa import types, WhatsApp
 from pywa.types.flows import FlowDetails
@@ -263,3 +266,104 @@ def test_sent_message():
         from_phone_id=wa.phone_id,
         status=SentTemplateStatus.ACCEPTED,
     )
+
+
+side_effect = [
+    {
+        "data": [{"id": i} for i in range(1, 6)],
+        "paging": {"cursors": {"after": "zzzuuuu"}, "next": "yes"},
+    },
+    {
+        "data": [{"id": i} for i in range(6, 11)],
+        "paging": {"cursors": {"after": "xxxyyy"}, "next": "yes"},
+    },
+    {"data": [{"id": i} for i in range(11, 16)], "paging": {}},
+]
+
+
+@pytest.fixture
+def sync_fetcher():
+    """A mock sync fetcher that simulates paginated data."""
+    return Mock(side_effect=side_effect)
+
+
+@pytest.fixture
+def async_fetcher():
+    """A mock async fetcher that simulates paginated data."""
+    return AsyncMock(side_effect=side_effect)
+
+
+@pytest.fixture
+def item_factory():
+    """A mock item factory that returns the `id`."""
+    return Mock(side_effect=lambda data: data["id"])
+
+
+def test_sync_fetch_all(sync_fetcher, item_factory):
+    result = types.Result(fetcher=sync_fetcher, item_factory=item_factory)
+    items = list(result)
+    assert items == list(range(1, 16))
+    assert sync_fetcher.call_count == 3
+
+
+@pytest.mark.asyncio
+async def test_async_fetch_all(async_fetcher, item_factory):
+    result = types.Result(fetcher=async_fetcher, item_factory=item_factory)
+    items = [item async for item in result]
+    assert items == list(range(1, 16))
+    assert async_fetcher.call_count == 3
+
+
+def test_sync_batch_size(sync_fetcher, item_factory):
+    result = types.Result(fetcher=sync_fetcher, item_factory=item_factory, batch_size=5)
+    items = list(result)
+    assert items == list(range(1, 16))
+    assert sync_fetcher.call_count == 3
+
+
+@pytest.mark.asyncio
+async def test_async_batch_size(async_fetcher, item_factory):
+    result = types.Result(
+        fetcher=async_fetcher, item_factory=item_factory, batch_size=5
+    )
+    items = [item async for item in result]
+    assert items == list(range(1, 16))
+    assert async_fetcher.call_count == 3
+
+
+def test_sync_total_limit_and_batch_size(sync_fetcher, item_factory):
+    result = types.Result(
+        fetcher=sync_fetcher, item_factory=item_factory, total_limit=12, batch_size=5
+    )
+    items = list(result)
+    assert items == list(range(1, 13))
+    assert sync_fetcher.call_count == 3
+
+
+@pytest.mark.asyncio
+async def test_async_total_limit_and_batch_size(async_fetcher, item_factory):
+    result = types.Result(
+        fetcher=async_fetcher, item_factory=item_factory, total_limit=12, batch_size=5
+    )
+    items = [item async for item in result]
+    assert items == list(range(1, 13))
+    assert async_fetcher.call_count == 3
+
+
+def test_sync_total_limit_less_than_batch_size(sync_fetcher, item_factory):
+    result = types.Result(
+        fetcher=sync_fetcher, item_factory=item_factory, total_limit=3, batch_size=5
+    )
+    items = list(result)
+    assert items == list(range(1, 4))
+    assert sync_fetcher.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_async_total_limit_less_than_batch_size(async_fetcher, item_factory):
+    result = types.Result(
+        fetcher=async_fetcher, item_factory=item_factory, total_limit=3, batch_size=5
+    )
+    items = [item async for item in result]
+    assert items == list(range(1, 4))
+    assert async_fetcher.call_count == 1

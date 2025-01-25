@@ -5,7 +5,7 @@ from __future__ import annotations
 import dataclasses
 import math
 import logging
-from typing import TYPE_CHECKING, Any, Iterable
+from typing import TYPE_CHECKING, Any, Iterable, TypeVar, Generic, Protocol
 
 from .. import utils
 
@@ -903,3 +903,106 @@ class QRCode:
             deep_link_url=data.get("deep_link_url"),
             qr_image_url=data.get("qr_image_url"),
         )
+
+
+_T = TypeVar("_T")
+
+
+class _Fetcher(Protocol):
+    # Callable[[after=after?], {data: [items], paging: {cursors: {before, after}, next?}}]
+    def __call__(
+        self, limit: int | None, after: str | None
+    ) -> dict[str, list[dict] | dict]: ...
+
+
+class _AsyncFetcher(Protocol):
+    async def __call__(
+        self, limit: int | None, after: str | None
+    ) -> dict[str, list[dict] | dict]: ...
+
+
+class _ItemFactory(Protocol):
+    # Callable[[data=dict], T]
+    def __call__(self, data: dict) -> _T: ...
+
+
+class Result(Generic[_T]):
+    """
+    A class that represents paginated results which can be iterated over to lazily fetch data page by page.
+    """
+
+    def __init__(
+        self,
+        fetcher: _Fetcher | _AsyncFetcher,
+        item_factory: _ItemFactory,
+        total_limit: int | None = None,
+        batch_size: int | None = None,
+    ) -> None:
+        self._fetcher = fetcher
+        self._is_async = utils.is_async_callable(fetcher)
+        self._item_factory = item_factory
+        self._total_limit = total_limit
+        self._batch_size = batch_size
+        self._current_index = 0
+        self._all_items: list[_T] = []
+        self._after = None
+        self._has_next = True
+
+    def _process_data(self, data: dict) -> list[_T]:
+        self._after = data.get("paging", {}).get("cursors", {}).get("after")
+        self._has_next = "next" in data.get("paging", {})
+        return [self._item_factory(data=item) for item in data["data"]]
+
+    def _get_items_sync(self) -> list[_T]:
+        data = self._fetcher(after=self._after, limit=self._batch_size)
+        return self._process_data(data)
+
+    async def _get_items_async(self) -> list[_T]:
+        data = await self._fetcher(after=self._after, limit=self._batch_size)
+        return self._process_data(data)
+
+    def __iter__(self) -> Result[_T]:
+        if self._is_async:
+            raise TypeError("Use `async for` for async results.")
+        return self
+
+    def __aiter__(self) -> Result[_T]:
+        if not self._is_async:
+            raise TypeError("Use `for` for sync results.")
+        return self
+
+    def _is_fetch_next_needed(self) -> bool:
+        if self._total_limit is not None and self._current_index >= self._total_limit:
+            raise StopAsyncIteration if self._is_async else StopIteration
+        if len(self._all_items) == self._current_index:
+            if not self._has_next:
+                raise StopAsyncIteration if self._is_async else StopIteration
+            return True
+        return False
+
+    def __next__(self) -> _T:
+        if self._is_fetch_next_needed():
+            self._all_items.extend(self._get_items_sync())
+            if not self._all_items:
+                raise StopIteration
+        item = self._all_items[self._current_index]
+        self._current_index += 1
+        return item
+
+    async def __anext__(self) -> _T:
+        if self._is_fetch_next_needed():
+            self._all_items.extend(await self._get_items_async())
+            if not self._all_items:
+                raise StopAsyncIteration
+        item = self._all_items[self._current_index]
+        self._current_index += 1
+        return item
+
+    def __bool__(self) -> bool:
+        return self._has_next or bool(self._all_items)
+
+    def __repr__(self) -> str:
+        return f"Result({self._all_items!r}, has_next={self._has_next})"
+
+    def __str__(self) -> str:
+        return self.__repr__()
