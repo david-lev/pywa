@@ -27,14 +27,22 @@ class User:
     Attributes:
         wa_id: The WhatsApp ID of the user (The phone number with the country code).
         name: The name of the user (``None`` on :class:`MessageStatus` or when message type is :class:`MessageType.SYSTEM`).
+        input: The input of the recipient is only available when sending a message.
     """
 
     wa_id: str
     name: str | None
+    input: str | None = dataclasses.field(
+        default=None, repr=False, hash=False, compare=False
+    )
 
     @classmethod
     def from_dict(cls, data: dict) -> User:
-        return cls(wa_id=data["wa_id"], name=data["profile"]["name"])
+        return cls(
+            wa_id=data["wa_id"],
+            name=data.get("profile", {}).get("name"),
+            input=data.get("input"),
+        )
 
     def as_vcard(self) -> str:
         """Get the user as a vCard."""
