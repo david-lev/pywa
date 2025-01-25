@@ -8,6 +8,7 @@ import bisect
 import collections
 import dataclasses
 import datetime
+import functools
 import hashlib
 import json
 import logging
@@ -67,7 +68,7 @@ from .types.flows import (
     CreatedFlow,
 )
 from .types.sent_message import SentMessage, SentTemplate
-from .types.others import InteractiveType
+from .types.others import InteractiveType, Result
 from .utils import FastAPI, Flask
 from .server import Server
 
@@ -2288,7 +2289,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         invalidate_preview: bool = True,
         waba_id: str | int | None = None,
         phone_number_id: str | int | None = None,
-    ) -> tuple[FlowDetails, ...]:
+        *,
+        limit: int | None = None,
+        batch_size: int | None = None,
+    ) -> Result[FlowDetails]:
         """
         Get the details of all flows belonging to the WhatsApp Business account.
 
@@ -2298,19 +2302,24 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             invalidate_preview: Whether to invalidate the preview (optional, default: True).
             waba_id: The WhatsApp Business account ID (Overrides the client's business account ID).
             phone_number_id: To check that the flows can be used with a specific phone number (optional).
+            limit: The maximum number of flows to return (optional).
+            batch_size: The number of flows to return in each batch (optional).
 
         Returns:
             The details of all flows.
         """
-        return tuple(
-            FlowDetails.from_dict(data=data, client=self)
-            for data in self.api.get_flows(
+        return Result(
+            fetcher=functools.partial(
+                self.api.get_flows,
                 waba_id=helpers.resolve_waba_id_param(self, waba_id),
                 fields=helpers.get_flow_fields(
                     invalidate_preview=invalidate_preview,
                     phone_number_id=phone_number_id,
                 ),
-            )["data"]
+            ),
+            item_factory=functools.partial(FlowDetails.from_dict, client=self),
+            total_limit=limit,
+            batch_size=batch_size,
         )
 
     def get_flow_metrics(
