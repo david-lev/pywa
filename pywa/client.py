@@ -1488,6 +1488,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def get_blocked_users(
         self,
         phone_id: str | int | None = None,
+        *,
         limit: int | None = None,
         batch_size: int | None = None,
     ) -> Result[User]:
@@ -1502,10 +1503,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Args:
             phone_id: The phone ID to get the list of blocked users from (optional, if not provided, the client's phone ID will be used).
             limit: The maximum number of users to return (optional, if not provided, all users will be returned).
-            batch_size: The number of users to return per request (optional, default: 50).
+            batch_size: The number of users to return per request (optional).
 
         Returns:
-            A list of blocked users.
+            A Result object with the list of blocked users. You can iterate over the result to get the users.
         """
         return Result(
             fetcher=functools.partial(
@@ -2394,7 +2395,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             batch_size: The number of flows to return in each batch (optional).
 
         Returns:
-            The details of all flows.
+            A Result object with the list of flows. You can iterate over the result to get the flows.
         """
         return Result(
             fetcher=functools.partial(

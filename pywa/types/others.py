@@ -1009,6 +1009,7 @@ class Result(Generic[_T]):
         self._all_items: list[_T] = []
         self._after = None
         self._has_next = True
+        self._iterating = False
 
     def _process_data(self, data: dict) -> list[_T]:
         self._after = data.get("paging", {}).get("cursors", {}).get("after")
@@ -1026,11 +1027,13 @@ class Result(Generic[_T]):
     def __iter__(self) -> Result[_T]:
         if self._is_async:
             raise TypeError("Use `async for` for async results.")
+        self._iterating = True
         return self
 
     def __aiter__(self) -> Result[_T]:
         if not self._is_async:
             raise TypeError("Use `for` for sync results.")
+        self._iterating = True
         return self
 
     def _is_fetch_next_needed(self) -> bool:
@@ -1061,10 +1064,16 @@ class Result(Generic[_T]):
         return item
 
     def __bool__(self) -> bool:
+        if not self._iterating:
+            raise TypeError("Result is not being iterated over.")
         return self._has_next or bool(self._all_items)
 
     def __repr__(self) -> str:
-        return f"Result({self._all_items!r}, has_next={self._has_next})"
+        return (
+            f"Result({self._all_items!r}, has_next={self._has_next})"
+            if self._iterating
+            else "Result(<start iterating to see items>)"
+        )
 
     def __str__(self) -> str:
         return self.__repr__()
