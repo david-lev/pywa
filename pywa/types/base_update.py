@@ -16,7 +16,12 @@ from typing import TYPE_CHECKING, BinaryIO, Iterable
 
 from pywa import utils
 
-from .others import Contact, Metadata, ProductsSection, User
+from .others import (
+    Contact,
+    Metadata,
+    ProductsSection,
+    User,
+)
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
@@ -838,6 +843,41 @@ class _ClientShortcuts(abc.ABC):
         return self._client.mark_message_as_read(
             sender=self._internal_recipient, message_id=self.message_id_to_reply
         )
+
+    def block_user(self) -> bool:
+        """
+        Block the user.
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.block_users` with ``wa_id``.
+
+        Returns:
+            Whether it was successful.
+
+        Raises:
+            :class:`pywa.errors.BlockUserError`: If the user could not be blocked.
+        """
+        res = self._client.block_users(users=[self._internal_sender])
+        if self._internal_sender in [user.wa_id for user in (res.added_users or ())]:
+            return True
+        for failed_usr in res.failed_users:
+            if failed_usr.input == self._internal_sender:
+                raise failed_usr.errors[0]
+        return False
+
+    def unblock_user(self) -> bool:
+        """
+        Unblock the user.
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.unblock_users` with ``wa_id``.
+
+        Returns:
+            Whether it was successful.
+        """
+        return self._internal_sender in [
+            usr.wa_id
+            for usr in (
+                self._client.unblock_users(users=[self._internal_sender]).removed_users
+                or ()
+            )
+        ]
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
