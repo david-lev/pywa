@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import functools
+
 """The WhatsApp Async client."""
 
 __all__ = ["WhatsApp"]
@@ -14,7 +16,7 @@ import os
 import pathlib
 import warnings
 from types import ModuleType
-from typing import BinaryIO, Iterable, Literal
+from typing import BinaryIO, Iterable, Literal, Any
 
 import httpx
 
@@ -50,6 +52,7 @@ from .types import (
     FlowMetricName,
     FlowMetricGranularity,
     FlowRequest,
+    Result,
 )
 from .types.flows import (
     FlowCategory,
@@ -59,7 +62,13 @@ from .types.flows import (
     FlowAsset,
     CreatedFlow,
 )
-from .types.others import InteractiveType
+from .types.others import (
+    InteractiveType,
+    UsersBlockedResult,
+    BlockUserFailure,
+    UsersUnblockedResult,
+    User,
+)
 from .types.sent_message import SentMessage, SentTemplate
 from .utils import FastAPI, Flask
 
@@ -1191,6 +1200,89 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             )
         )["success"]
 
+    async def block_users(
+        self, users: Iterable[str | int], phone_id: str | int | None = None
+    ) -> UsersBlockedResult:
+        """
+        Block users by phone ID.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> res = wa.block_users(users=['1234567890', '0987654321'])
+            >>> if res.errors: print(res.failed_users)
+
+        Args:
+            users: The phone IDs of the users to block.
+            phone_id: The phone ID to block the users from (optional, if not provided, the client's phone ID will be used).
+        Returns:
+            A dictionary with the status of the block operation.
+        """
+        return UsersBlockedResult.from_dict(
+            await self.api.block_users(
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                users=tuple(str(phone_id) for phone_id in users),
+            )
+        )
+
+    async def unblock_users(
+        self, users: Iterable[str | int], phone_id: str | int | None = None
+    ) -> UsersUnblockedResult:
+        """
+        Unblock users by phone ID.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.unblock_users(users=['1234567890', '0987654321'])
+
+        Args:
+            users: The phone IDs of the users to unblock.
+            phone_id: The phone ID to unblock the users from (optional, if not provided, the client's phone ID will be used).
+        Returns:
+            A dictionary with the status of the unblock operation.
+        """
+        return UsersUnblockedResult.from_dict(
+            await self.api.unblock_users(
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                users=tuple(str(phone_id) for phone_id in users),
+            )
+        )
+
+    async def get_blocked_users(
+        self,
+        phone_id: str | int | None = None,
+        *,
+        limit: int | None = None,
+        batch_size: int | None = None,
+    ) -> Result[User]:
+        """
+        Get the list of blocked users.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> async for user in await wa.get_blocked_users():
+            ...     print(user)
+
+        Args:
+            phone_id: The phone ID to get the list of blocked users from (optional, if not provided, the client's phone ID will be used).
+            limit: The maximum number of users to return (optional, if not provided, all users will be returned).
+            batch_size: The number of users to return per request (optional).
+
+        Returns:
+            A Result object with the list of blocked users. You can iterate over the result to get the users.
+        """
+        return Result(
+            fetcher=functools.partial(
+                self.api.get_blocked_users,
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+            ),
+            item_factory=User.from_dict,
+            total_limit=limit,
+            batch_size=batch_size,
+        )
+
     async def upload_media(
         self,
         media: str | pathlib.Path | bytes | BinaryIO,
@@ -2068,11 +2160,14 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         )
 
     async def get_flows(
-        self,
-        invalidate_preview: bool = True,
-        waba_id: str | int | None = None,
-        phone_number_id: str | int | None = None,
-    ) -> tuple[FlowDetails, ...]:
+            self,
+            invalidate_preview: bool = True,
+            waba_id: str | int | None = None,
+            phone_number_id: str | int | None = None,
+            *,
+            limit: int | None = None,
+            batch_size: int | None = None,
+    ) -> Result[FlowDetails]:
         """
         Get the details of all flows belonging to the WhatsApp Business account.
 
@@ -2082,21 +2177,24 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             invalidate_preview: Whether to invalidate the preview (optional, default: True).
             waba_id: The WhatsApp Business account ID (Overrides the client's business account ID).
             phone_number_id: To check that the flows can be used with a specific phone number (optional).
+            limit: The maximum number of flows to return (optional).
+            batch_size: The number of flows to return in each batch (optional).
 
         Returns:
-            The details of all flows.
+            A Result object with the list of flows. You can iterate over the result to get the flows.
         """
-        return tuple(
-            FlowDetails.from_dict(data=data, client=self)
-            for data in (
-                await self.api.get_flows(
-                    waba_id=helpers.resolve_waba_id_param(self, waba_id),
-                    fields=helpers.get_flow_fields(
-                        invalidate_preview=invalidate_preview,
-                        phone_number_id=phone_number_id,
-                    ),
-                )
-            )["data"]
+        return Result(
+            fetcher=functools.partial(
+                self.api.get_flows,
+                waba_id=helpers.resolve_waba_id_param(self, waba_id),
+                fields=helpers.get_flow_fields(
+                    invalidate_preview=invalidate_preview,
+                    phone_number_id=phone_number_id,
+                ),
+            ),
+            item_factory=functools.partial(FlowDetails.from_dict, client=self),
+            total_limit=limit,
+            batch_size=batch_size,
         )
 
     async def get_flow_metrics(
