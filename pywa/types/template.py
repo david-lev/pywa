@@ -210,38 +210,44 @@ class NewButtonABC(abc.ABC):
     @abc.abstractmethod
     def to_dict(self, placeholder: tuple[str, str] = None) -> dict[str, str | None]: ...
 
+
 @dataclasses.dataclass(slots=True)
 class MediaCardComponent:
     """
     Represents a media card in a WhatsApp carousel template.
     """
+
     header: NewTemplateHeaderABC
     body: str
     buttons: Optional[Iterable[NewButtonABC]] = None
 
     def to_dict(self) -> dict[str, Any]:
-        card_components = [
-            self.header.to_dict(),
-            {"type": "body", "text": self.body}
-        ]
-        
+        card_components = [self.header.to_dict(), {"type": "body", "text": self.body}]
+
         if self.buttons:
-            card_components.append({
-                "type": "buttons",
-                "buttons": [button.to_dict() for button in self.buttons]
-            })
-        
+            card_components.append(
+                {
+                    "type": "buttons",
+                    "buttons": [button.to_dict() for button in self.buttons],
+                }
+            )
+
         return {"components": card_components}
+
 
 @dataclasses.dataclass(slots=True)
 class Carousel:
     """
     Represents a WhatsApp Media Carousel.
     """
+
     cards: Iterable[MediaCardComponent]
-    
+
     def to_dict(self) -> dict[str, Any]:
-        return {"type": ComponentType.CAROUSEL, "cards": [card.to_dict() for card in self.cards]}
+        return {
+            "type": ComponentType.CAROUSEL,
+            "cards": [card.to_dict() for card in self.cards],
+        }
 
 
 @dataclasses.dataclass(slots=True)
@@ -321,7 +327,7 @@ class NewTemplate:
         | FlowButton
         | None
     ) = None
-    
+
     carousel: Optional[Carousel] = None
 
     def __post_init__(self):
@@ -1061,9 +1067,12 @@ class Template:
                         if self.buttons is not None
                         else ()
                     ),
-                    {"type": "carousel", "cards": [card.to_dict() for card in self.cards]}
+                    {
+                        "type": "carousel",
+                        "cards": [card.to_dict() for card in self.cards],
+                    }
                     if self.cards
-                    else None
+                    else None,
                 )
                 if comp is not None
             ),
@@ -1459,7 +1468,7 @@ class Template:
                     ),
                 ),
             )
-    
+
     @dataclasses.dataclass(slots=True)
     class MediaCard(ComponentABC):
         """
@@ -1468,10 +1477,10 @@ class Template:
         Example:
             >>> from pywa.types import Template
             >>> Template.MediaCard(
-            ...         card_index=0, 
-            ...         header_link="https://worldofsucculents.com/wp-content/uploads/2015/08/Aloe-Blue-Elf6-1.jpg", 
-            ...         header_format="image", 
-            ...         quick_reply_payload="more-aloes", 
+            ...         card_index=0,
+            ...         header_link="https://worldofsucculents.com/wp-content/uploads/2015/08/Aloe-Blue-Elf6-1.jpg",
+            ...         header_format="image",
+            ...         quick_reply_payload="more-aloes",
             ...         url_button_text="blue-elf"
             ...         )
         Attributes:
@@ -1483,6 +1492,7 @@ class Template:
             quick_reply_payload: Value to be included in messages webhooks (messages.button.payload) when the button is tapped.
             url_button_text: URL button variable value.
         """
+
         type: ParamType = dataclasses.field(
             default=ParamType.BUTTON, init=False, repr=False
         )
@@ -1503,11 +1513,34 @@ class Template:
 
             components = [{"type": "header", "parameters": [header_data]}]
             if self.body_parameters:
-                components.append({"type": "body", "parameters": [param.to_dict() for param in self.body_parameters]})
+                components.append(
+                    {
+                        "type": "body",
+                        "parameters": [
+                            param.to_dict() for param in self.body_parameters
+                        ],
+                    }
+                )
             if self.quick_reply_payload:
-                components.append({"type": "button", "sub_type": "quick_reply", "index": "0", "parameters": [{"type": "payload", "payload": self.quick_reply_payload}]})
+                components.append(
+                    {
+                        "type": "button",
+                        "sub_type": "quick_reply",
+                        "index": "0",
+                        "parameters": [
+                            {"type": "payload", "payload": self.quick_reply_payload}
+                        ],
+                    }
+                )
             if self.url_button_text:
-                components.append({"type": "button", "sub_type": "url", "index": "1", "parameters": [{"type": "text", "text": self.url_button_text}]})
+                components.append(
+                    {
+                        "type": "button",
+                        "sub_type": "url",
+                        "index": "1",
+                        "parameters": [{"type": "text", "text": self.url_button_text}],
+                    }
+                )
             return {"card_index": str(self.card_index), "components": components}
 
 
