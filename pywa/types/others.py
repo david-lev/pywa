@@ -5,9 +5,10 @@ from __future__ import annotations
 import dataclasses
 import math
 import logging
-from typing import TYPE_CHECKING, Any, Iterable
+from typing import TYPE_CHECKING, Any, Iterable, TypeVar, Generic, Protocol
 
 from .. import utils
+from ..errors import WhatsAppError
 
 if TYPE_CHECKING:
     from .message_status import MessageStatus
@@ -27,14 +28,22 @@ class User:
     Attributes:
         wa_id: The WhatsApp ID of the user (The phone number with the country code).
         name: The name of the user (``None`` on :class:`MessageStatus` or when message type is :class:`MessageType.SYSTEM`).
+        input: The input of the recipient is only available when sending a message.
     """
 
     wa_id: str
     name: str | None
+    input: str | None = dataclasses.field(
+        default=None, repr=False, hash=False, compare=False
+    )
 
     @classmethod
     def from_dict(cls, data: dict) -> User:
-        return cls(wa_id=data["wa_id"], name=data["profile"]["name"])
+        return cls(
+            wa_id=data["wa_id"],
+            name=data.get("profile", {}).get("name"),
+            input=data.get("input"),
+        )
 
     def as_vcard(self) -> str:
         """Get the user as a vCard."""
@@ -903,3 +912,168 @@ class QRCode:
             deep_link_url=data.get("deep_link_url"),
             qr_image_url=data.get("qr_image_url"),
         )
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class BlockUserFailure:
+    input: str
+    errors: tuple[WhatsAppError, ...]
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            input=data["input"],
+            errors=tuple(WhatsAppError.from_dict(error) for error in data["errors"]),
+        )
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class UsersBlockedResult:
+    added_users: tuple[User, ...] | None
+    failed_users: tuple[BlockUserFailure, ...] | None
+    errors: WhatsAppError | None
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            added_users=tuple(
+                User.from_dict(user)
+                for user in data.get("block_users", {}).get("added_users", [])
+            )
+            or None,
+            failed_users=tuple(
+                BlockUserFailure.from_dict(user)
+                for user in data.get("block_users", {}).get("failed_users", [])
+            )
+            or None,
+            errors=WhatsAppError.from_dict(data["errors"])
+            if "errors" in data
+            else None,
+        )
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class UsersUnblockedResult:
+    removed_users: tuple[User, ...] | None
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            removed_users=tuple(
+                User.from_dict(user)
+                for user in data.get("block_users", {}).get("removed_users", [])
+            )
+            or None,
+        )
+
+
+_T = TypeVar("_T")
+
+
+class _Fetcher(Protocol):
+    # Callable[[after=after?], {data: [items], paging: {cursors: {before, after}, next?}}]
+    def __call__(
+        self, limit: int | None, after: str | None
+    ) -> dict[str, list[dict] | dict]: ...
+
+
+class _AsyncFetcher(Protocol):
+    async def __call__(
+        self, limit: int | None, after: str | None
+    ) -> dict[str, list[dict] | dict]: ...
+
+
+class _ItemFactory(Protocol):
+    # Callable[[data=dict], T]
+    def __call__(self, data: dict) -> _T: ...
+
+
+class Result(Generic[_T]):
+    """
+    A class that represents paginated results which can be iterated over to lazily fetch data page by page.
+    """
+
+    def __init__(
+        self,
+        fetcher: _Fetcher | _AsyncFetcher,
+        item_factory: _ItemFactory,
+        total_limit: int | None = None,
+        batch_size: int | None = None,
+    ) -> None:
+        self._fetcher = fetcher
+        self._is_async = utils.is_async_callable(fetcher)
+        self._item_factory = item_factory
+        self._total_limit = total_limit
+        self._batch_size = batch_size
+        self._current_index = 0
+        self._all_items: list[_T] = []
+        self._after = None
+        self._has_next = True
+        self._iterating = False
+
+    def _process_data(self, data: dict) -> list[_T]:
+        self._after = data.get("paging", {}).get("cursors", {}).get("after")
+        self._has_next = "next" in data.get("paging", {})
+        return [self._item_factory(data=item) for item in data["data"]]
+
+    def _get_items_sync(self) -> list[_T]:
+        data = self._fetcher(after=self._after, limit=self._batch_size)
+        return self._process_data(data)
+
+    async def _get_items_async(self) -> list[_T]:
+        data = await self._fetcher(after=self._after, limit=self._batch_size)
+        return self._process_data(data)
+
+    def __iter__(self) -> Result[_T]:
+        if self._is_async:
+            raise TypeError("Use `async for` for async results.")
+        self._iterating = True
+        return self
+
+    def __aiter__(self) -> Result[_T]:
+        if not self._is_async:
+            raise TypeError("Use `for` for sync results.")
+        self._iterating = True
+        return self
+
+    def _is_fetch_next_needed(self) -> bool:
+        if self._total_limit is not None and self._current_index >= self._total_limit:
+            raise StopAsyncIteration if self._is_async else StopIteration
+        if len(self._all_items) == self._current_index:
+            if not self._has_next:
+                raise StopAsyncIteration if self._is_async else StopIteration
+            return True
+        return False
+
+    def __next__(self) -> _T:
+        if self._is_fetch_next_needed():
+            self._all_items.extend(self._get_items_sync())
+            if not self._all_items:
+                raise StopIteration
+        item = self._all_items[self._current_index]
+        self._current_index += 1
+        return item
+
+    async def __anext__(self) -> _T:
+        if self._is_fetch_next_needed():
+            self._all_items.extend(await self._get_items_async())
+            if not self._all_items:
+                raise StopAsyncIteration
+        item = self._all_items[self._current_index]
+        self._current_index += 1
+        return item
+
+    def __bool__(self) -> bool:
+        if not self._iterating:
+            raise TypeError("Result is not being iterated over.")
+        return self._has_next or bool(self._all_items)
+
+    def __repr__(self) -> str:
+        return (
+            f"Result({self._all_items!r}, has_next={self._has_next})"
+            if self._iterating
+            else "Result(<start iterating to see items>)"
+        )
+
+    def __str__(self) -> str:
+        return self.__repr__()
