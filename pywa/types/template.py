@@ -9,6 +9,7 @@ __all__ = [
     "NewTemplate",
     "TemplateResponse",
     "TemplateStatus",
+    "NamedParameter",
 ]
 
 import abc
@@ -911,6 +912,38 @@ class ParamType(utils.StrEnum):
     LOCATION = "location"
     BUTTON = "button"
 
+@dataclasses.dataclass(slots=True)
+class NamedParameter:
+    """
+    Represents a named parameter in a template.
+    
+    This class is used to specify named parameters when sending templates.
+    
+    Example:
+        >>> from pywa.types import Template, NamedParameter
+        >>> Template(
+        ...     name='template_with_named_params',
+        ...     language=Template.Language.ENGLISH_US,
+        ...     body=[
+        ...         NamedParameter(parameter_name='customer_name', value='John Doe'),
+        ...         NamedParameter(parameter_name='order_id', value='9128312831'),
+        ...     ]
+        ... )
+    
+    Attributes:
+        parameter_name: The name of the parameter as defined in the template.
+        value: The value to assign to the named parameter.
+    """
+    parameter_name: str
+    value: str
+    
+    def to_dict(self) -> dict[str, str]:
+        return dict(
+            type=ParamType.TEXT.value,
+            parameter_name=self.parameter_name,
+            text=self.value
+        )
+
 
 class ComponentABC(abc.ABC):
     @property
@@ -985,26 +1018,43 @@ class Template:
             )  # auth template required the code also in the body
 
     def to_dict(self, is_header_url: bool = False) -> dict[str, Any]:
+        # Separate named parameters from positional parameters if body exists
+        body_component = None
+        if self.body:
+            named_params = []
+            positional_params = []
+            
+            for component in self.body:
+                if hasattr(component, 'parameter_name') and component.parameter_name:
+                    named_params.append(component.to_dict())
+                else:
+                    positional_params.append(component.to_dict())
+            
+            # Create body component with appropriate parameters
+            body_component = dict(type=ComponentType.BODY.value)
+            if named_params:
+                body_component['parameters'] = tuple(named_params)
+            elif positional_params:
+                body_component['parameters'] = tuple(positional_params)
+            else:
+                body_component = None
+        
+        # Handle header component - TextValue can have named parameters
+        header_component = None
+        if self.header:
+            header_component = dict(
+                type=ComponentType.HEADER.value,
+                parameters=(self.header.to_dict(is_header_url),),
+            )
+                
         return dict(
             name=self.name,
             language=dict(code=str(self.language)),
             components=tuple(
                 comp
                 for comp in (
-                    dict(
-                        type=ComponentType.BODY.value,
-                        parameters=tuple(
-                            component.to_dict() for component in self.body
-                        ),
-                    )
-                    if self.body
-                    else None,
-                    dict(
-                        type=ComponentType.HEADER.value,
-                        parameters=(self.header.to_dict(is_header_url),),
-                    )
-                    if self.header
-                    else None,
+                    body_component,
+                    header_component,
                     *(
                         (
                             dict(
@@ -1036,19 +1086,24 @@ class Template:
 
         Example:
             >>> from pywa.types import Template
-            >>> Template.TextValue(var='John Doe')  # The template was created with 'Hello, {John}!'
+            >>> Template.TextValue(value='John Doe')  # The template was created with 'Hello, {John}!'
 
         Attributes:
             value: The value to assign to the placeholder.
+            parameter_name: Optional name of the parameter (for named parameters).
         """
 
         type: ParamType = dataclasses.field(
             default=ParamType.TEXT, init=False, repr=False
         )
         value: str
+        parameter_name: str | None = None
 
         def to_dict(self, is_url: None = None) -> dict[str, str]:
-            return dict(type=self.type.value, text=self.value)
+            result = dict(type=self.type.value, text=self.value)
+            if self.parameter_name:
+                result['parameter_name'] = self.parameter_name
+            return result
 
     @dataclasses.dataclass(slots=True)
     class Currency(ComponentABC):
@@ -1059,6 +1114,7 @@ class Template:
             fallback_value: Default text if localization fails.
             code: ISO 4217 currency code (e.g. USD, EUR, etc.).
             amount_1000: Amount multiplied by 1000.
+            parameter_name: Optional name of the parameter (for named parameters).
         """
 
         type: ParamType = dataclasses.field(
@@ -1067,9 +1123,10 @@ class Template:
         fallback_value: str
         code: str
         amount_1000: int
+        parameter_name: str | None = None
 
         def to_dict(self) -> dict[str, str]:
-            return dict(
+            result = dict(
                 type=self.type.value,
                 currency=dict(
                     fallback_value=self.fallback_value,
@@ -1077,6 +1134,9 @@ class Template:
                     amount_1000=self.amount_1000,
                 ),
             )
+            if self.parameter_name:
+                result['parameter_name'] = self.parameter_name
+            return result
 
     @dataclasses.dataclass(slots=True)
     class DateTime(ComponentABC):
@@ -1085,20 +1145,25 @@ class Template:
 
         Attributes:
             fallback_value: Default text if localization fails.
+            parameter_name: Optional name of the parameter (for named parameters).
         """
 
         type: ParamType = dataclasses.field(
             default=ParamType.DATE_TIME, init=False, repr=False
         )
         fallback_value: str
+        parameter_name: str | None = None
 
         def to_dict(self) -> dict[str, str]:
-            return dict(
+            result = dict(
                 type=self.type.value,
                 date_time=dict(
                     fallback_value=self.fallback_value,
                 ),
             )
+            if self.parameter_name:
+                result['parameter_name'] = self.parameter_name
+            return result
 
     @dataclasses.dataclass(slots=True)
     class Document(ComponentABC):
