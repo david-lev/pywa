@@ -912,13 +912,14 @@ class ParamType(utils.StrEnum):
     LOCATION = "location"
     BUTTON = "button"
 
+
 @dataclasses.dataclass(slots=True)
 class NamedParameter:
     """
     Represents a named parameter in a template.
-    
+
     This class is used to specify named parameters when sending templates.
-    
+
     Example:
         >>> from pywa.types import Template, NamedParameter
         >>> Template(
@@ -929,19 +930,20 @@ class NamedParameter:
         ...         NamedParameter(parameter_name='order_id', value='9128312831'),
         ...     ]
         ... )
-    
+
     Attributes:
         parameter_name: The name of the parameter as defined in the template.
         value: The value to assign to the named parameter.
     """
+
     parameter_name: str
     value: str
-    
+
     def to_dict(self) -> dict[str, str]:
         return dict(
             type=ParamType.TEXT.value,
             parameter_name=self.parameter_name,
-            text=self.value
+            text=self.value,
         )
 
 
@@ -1023,22 +1025,22 @@ class Template:
         if self.body:
             named_params = []
             positional_params = []
-            
+
             for component in self.body:
-                if hasattr(component, 'parameter_name') and component.parameter_name:
+                if hasattr(component, "parameter_name") and component.parameter_name:
                     named_params.append(component.to_dict())
                 else:
                     positional_params.append(component.to_dict())
-            
+
             # Create body component with appropriate parameters
             body_component = dict(type=ComponentType.BODY.value)
             if named_params:
-                body_component['parameters'] = tuple(named_params)
+                body_component["parameters"] = tuple(named_params)
             elif positional_params:
-                body_component['parameters'] = tuple(positional_params)
+                body_component["parameters"] = tuple(positional_params)
             else:
                 body_component = None
-        
+
         # Handle header component - TextValue can have named parameters
         header_component = None
         if self.header:
@@ -1046,7 +1048,7 @@ class Template:
                 type=ComponentType.HEADER.value,
                 parameters=(self.header.to_dict(is_header_url),),
             )
-                
+
         return dict(
             name=self.name,
             language=dict(code=str(self.language)),
@@ -1102,7 +1104,7 @@ class Template:
         def to_dict(self, is_url: None = None) -> dict[str, str]:
             result = dict(type=self.type.value, text=self.value)
             if self.parameter_name:
-                result['parameter_name'] = self.parameter_name
+                result["parameter_name"] = self.parameter_name
             return result
 
     @dataclasses.dataclass(slots=True)
@@ -1135,7 +1137,7 @@ class Template:
                 ),
             )
             if self.parameter_name:
-                result['parameter_name'] = self.parameter_name
+                result["parameter_name"] = self.parameter_name
             return result
 
     @dataclasses.dataclass(slots=True)
@@ -1162,7 +1164,7 @@ class Template:
                 ),
             )
             if self.parameter_name:
-                result['parameter_name'] = self.parameter_name
+                result["parameter_name"] = self.parameter_name
             return result
 
     @dataclasses.dataclass(slots=True)

@@ -25,10 +25,10 @@ __all__ = [
 class NamedParameter:
     """
     Base class for named parameters in WhatsApp templates.
-    
+
     This class is used to specify named parameters when sending templates.
     Named parameters can be used in both header components (text type only) and body components.
-    
+
     Example using named parameters in body:
         >>> from pywa.types import Template
         >>> from pywa.types.named_parameter import NamedTextParameter
@@ -40,7 +40,7 @@ class NamedParameter:
         ...         NamedTextParameter(parameter_name='order_id', value='9128312831'),
         ...     ]
         ... )
-    
+
     Example using named parameters in header:
         >>> from pywa.types import Template
         >>> Template(
@@ -51,12 +51,13 @@ class NamedParameter:
         ...         Template.TextValue(value='Welcome to our service!'),
         ...     ]
         ... )
-    
+
     Attributes:
         parameter_name: The name of the parameter as defined in the template.
     """
+
     parameter_name: str
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert the named parameter to a dictionary."""
         raise NotImplementedError("Subclasses must implement this method")
@@ -66,26 +67,25 @@ class NamedParameter:
 class NamedTextParameter(NamedParameter, ComponentABC):
     """
     Represents a named text parameter in a template.
-    
+
     Example:
         >>> from pywa.types.named_parameter import NamedTextParameter
         >>> NamedTextParameter(parameter_name='customer_name', value='John Doe')
-    
+
     Attributes:
         parameter_name: The name of the parameter as defined in the template.
         value: The value to assign to the named parameter.
     """
+
     value: str
-    type: ParamType = dataclasses.field(
-        default=ParamType.TEXT, init=False, repr=False
-    )
-    
+    type: ParamType = dataclasses.field(default=ParamType.TEXT, init=False, repr=False)
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert the named text parameter to a dictionary."""
         return {
             "type": self.type.value,
             "parameter_name": self.parameter_name,
-            "text": self.value
+            "text": self.value,
         }
 
 
@@ -93,7 +93,7 @@ class NamedTextParameter(NamedParameter, ComponentABC):
 class NamedCurrencyParameter(NamedParameter, ComponentABC):
     """
     Represents a named currency parameter in a template.
-    
+
     Example:
         >>> from pywa.types.named_parameter import NamedCurrencyParameter
         >>> NamedCurrencyParameter(
@@ -102,20 +102,21 @@ class NamedCurrencyParameter(NamedParameter, ComponentABC):
         ...     code='USD',
         ...     amount_1000=100000
         ... )
-    
+
     Attributes:
         parameter_name: The name of the parameter as defined in the template.
         fallback_value: Default text if localization fails.
         code: ISO 4217 currency code (e.g. USD, EUR, etc.).
         amount_1000: Amount multiplied by 1000.
     """
+
     fallback_value: str
     code: str
     amount_1000: int
     type: ParamType = dataclasses.field(
         default=ParamType.CURRENCY, init=False, repr=False
     )
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert the named currency parameter to a dictionary."""
         return {
@@ -124,8 +125,8 @@ class NamedCurrencyParameter(NamedParameter, ComponentABC):
             "currency": {
                 "fallback_value": self.fallback_value,
                 "code": self.code,
-                "amount_1000": self.amount_1000
-            }
+                "amount_1000": self.amount_1000,
+            },
         }
 
 
@@ -133,29 +134,28 @@ class NamedCurrencyParameter(NamedParameter, ComponentABC):
 class NamedDateTimeParameter(NamedParameter, ComponentABC):
     """
     Represents a named date time parameter in a template.
-    
+
     Example:
         >>> from pywa.types.named_parameter import NamedDateTimeParameter
         >>> NamedDateTimeParameter(
         ...     parameter_name='delivery_date',
         ...     fallback_value='January 1, 2025'
         ... )
-    
+
     Attributes:
         parameter_name: The name of the parameter as defined in the template.
         fallback_value: Default text if localization fails.
     """
+
     fallback_value: str
     type: ParamType = dataclasses.field(
         default=ParamType.DATE_TIME, init=False, repr=False
     )
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert the named date time parameter to a dictionary."""
         return {
             "type": self.type.value,
             "parameter_name": self.parameter_name,
-            "date_time": {
-                "fallback_value": self.fallback_value
-            }
+            "date_time": {"fallback_value": self.fallback_value},
         }

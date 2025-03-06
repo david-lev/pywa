@@ -14,11 +14,8 @@ from pywa.types import Template
 def main():
     # Initialize WhatsApp client
     # Replace with your actual credentials
-    wa = WhatsApp(
-        phone_id="YOUR_PHONE_ID",
-        token="YOUR_TOKEN"
-    )
-    
+    wa = WhatsApp(phone_id="YOUR_PHONE_ID", token="YOUR_TOKEN")
+
     # Example 1: Using named parameters directly with TextValue
     print("Example 1: Using named parameters with TextValue")
     template1 = Template(
@@ -29,12 +26,12 @@ def main():
             Template.TextValue(value="John Doe", parameter_name="customer_name"),
             Template.TextValue(value="123456789", parameter_name="order_id"),
             Template.TextValue(value="March 15, 2025", parameter_name="delivery_date"),
-        ]
+        ],
     )
-    
+
     # Print the template dictionary to see how named parameters are structured
     print(f"Template with named parameters: {template1.to_dict()}\n")
-    
+
     # Example 2: Using named parameters with currency
     print("Example 2: Using named parameters with currency")
     template2 = Template(
@@ -47,18 +44,17 @@ def main():
                 fallback_value="$100.00",
                 code="USD",
                 amount_1000=100000,
-                parameter_name="payment_amount"
+                parameter_name="payment_amount",
             ),
             Template.DateTime(
-                fallback_value="March 15, 2025",
-                parameter_name="payment_date"
+                fallback_value="March 15, 2025", parameter_name="payment_date"
             ),
-        ]
+        ],
     )
-    
+
     # Print the template dictionary
     print(f"Template with named currency parameter: {template2.to_dict()}\n")
-    
+
     # Example 3: Mixing named and positional parameters (not recommended)
     # Note: WhatsApp API doesn't support mixing named and positional parameters
     # in the same component, this is just to demonstrate how PyWa handles it
@@ -71,13 +67,13 @@ def main():
             Template.TextValue(value="John Doe", parameter_name="customer_name"),
             # Positional parameter (no parameter_name)
             Template.TextValue(value="123456789"),
-        ]
+        ],
     )
-    
+
     # Print the template dictionary
     # Note: PyWa will prioritize named parameters over positional ones
     print(f"Template with mixed parameters: {template3.to_dict()}\n")
-    
+
     # Uncomment to actually send the template
     # recipient = "RECIPIENT_PHONE_NUMBER"  # Format: country code + phone number
     # wa.send_template(to=recipient, template=template1)
