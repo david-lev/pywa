@@ -2280,7 +2280,8 @@ class TextInput(TextEntryComponent):
 
     Attributes:
         name: The unique name (id) for this component.
-        label: The label of the text input. Limited to 20 characters.
+        label: The label of the text input. Limited to 20 characters if ``label_variant`` is not set, otherwise limited to 150 characters.
+        label_variant: "large" to display a large label, the label will be positioned above the input field, accommodating up to 4 lines of text and limited to 150 characters. Added in v7.0
         input_type: The input type of the text input (for keyboard layout and validation rules).
         pattern: The regex pattern to validate the text input. Added in v6.2.
         required: Whether the text input is required or not.
@@ -2298,6 +2299,7 @@ class TextInput(TextEntryComponent):
     )
     name: str
     label: str | FlowStr | ScreenDataRef | ComponentRef
+    label_variant: str | ScreenDataRef | ComponentRef | None = None
     input_type: InputType | str | ScreenDataRef | ComponentRef | None = None
     pattern: str | re.Pattern | ScreenDataRef | ComponentRef | None = None
     required: bool | str | ScreenDataRef | ComponentRef | None = None
@@ -2330,7 +2332,8 @@ class TextArea(TextEntryComponent):
 
     Attributes:
         name: The unique name (id) for this component.
-        label: The label of the text area. Limited to 20 characters.
+        label: The label of the text area. Limited to 20 characters if ``label_variant`` is not set, otherwise limited to 150 characters.
+        label_variant: "large" to display a large label, the label will be positioned above the input field, accommodating up to 4 lines of text and limited to 150 characters. Added in v7.0
         required: Whether the text area is required or not.
         max_length: The maximum number of characters allowed in the text area.
         helper_text: The helper text of the text area. Limited to 80 characters.
@@ -2345,6 +2348,7 @@ class TextArea(TextEntryComponent):
     )
     name: str
     label: str | FlowStr | ScreenDataRef | ComponentRef
+    label_variant: str | ScreenDataRef | ComponentRef | None = None
     required: bool | str | ScreenDataRef | ComponentRef | None = None
     max_length: int | str | ScreenDataRef | ComponentRef | None = None
     helper_text: str | FlowStr | ScreenDataRef | ComponentRef | None = None
