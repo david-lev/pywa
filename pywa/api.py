@@ -1267,3 +1267,93 @@ class WhatsAppCloudApi:
             method="DELETE",
             endpoint=f"/{phone_id}/message_qrdls/{code}",
         )
+
+    def get_templates(
+            self,
+            waba_id: str,
+            *,
+            system_user_token: str | None = None,  # Add system user token parameter
+            category: str | None = None,
+            content: str | None = None,
+            language: str | None = None,
+            name: str | None = None,
+            name_or_content: str | None = None,
+            quality_score: str | None = None,
+            status: str | None = None,
+            limit: int | None = None,
+    ) -> dict[str, list[dict[str, Any]]]:
+        """
+        Get message templates for the WhatsApp Business Account.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/templates>`_.
+
+        Return example::
+
+            {
+              "data": [
+                {
+                  "id": "594425479261596",
+                  "category": "MARKETING",
+                  "components": [...],
+                  "language": "en_US",
+                  "name": "example_template",
+                  "status": "APPROVED"
+                }
+              ],
+              "paging": {
+                "cursors": {
+                  "before": "xyz",
+                  "after": "abc"
+                }
+              }
+            }
+
+        Args:
+            waba_id: The ID of the WhatsApp Business Account.
+            system_user_token: The system user access token to use for this request. Required for accessing templates.
+            category: Filter templates by category (e.g., 'MARKETING', 'UTILITY')
+            content: Filter templates by content text
+            language: Filter templates by language code
+            name: Filter templates by exact template name
+            name_or_content: Filter templates by name or content (partial match)
+            quality_score: Filter templates by quality score
+            status: Filter templates by approval status
+            limit: Maximum number of templates to return
+
+        Returns:
+            Dictionary containing the templates data
+        """
+        params = {}
+        if category:
+            params["category"] = category
+        if content:
+            params["content"] = content
+        if language:
+            params["language"] = language
+        if name:
+            params["name"] = name
+        if name_or_content:
+            params["name_or_content"] = name_or_content
+        if quality_score:
+            params["quality_score"] = quality_score
+        if status:
+            params["status"] = status
+        if limit:
+            params["limit"] = limit
+
+        # Store original headers to restore later
+        original_headers = self._session.headers.copy()
+
+        try:
+            # Update headers with system user token if provided
+            if system_user_token:
+                self._session.headers.update({"Authorization": f"Bearer {system_user_token}"})
+
+            return self._make_request(
+                method="GET",
+                endpoint=f"/{waba_id}/message_templates",
+                params=params,
+            )
+        finally:
+            # Restore original headers
+            self._session.headers = original_headers
