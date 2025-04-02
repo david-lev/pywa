@@ -29,25 +29,17 @@ def test_get_templates(api, wa):
                 "components": [],
                 "language": "en_US",
                 "name": "example_template",
-                "status": "APPROVED"
+                "status": "APPROVED",
             }
         ],
-        "paging": {
-            "cursors": {
-                "before": "xyz",
-                "after": "abc"
-            }
-        }
+        "paging": {"cursors": {"before": "xyz", "after": "abc"}},
     }
 
     # Set up the mock response
     api.return_value = mock_response
 
     # Test the get_templates method
-    result = wa.get_templates(
-        system_user_token="test_token",
-        category="MARKETING"
-    )
+    result = wa.get_templates(system_user_token="test_token", category="MARKETING")
 
     # Verify the result
     assert result == mock_response
