@@ -1,7 +1,8 @@
 import pytest
-
+from unittest.mock import MagicMock
 
 from pywa import WhatsApp
+from pywa.types.template import RetrievedTemplate
 
 PHONE_ID = "123456789"
 TOKEN = "xyz"
@@ -29,7 +30,8 @@ def test_get_templates(api, wa):
                 "components": [],
                 "language": "en_US",
                 "name": "example_template",
-                "status": "APPROVED"
+                "status": "APPROVED",
+                "parameter_format": "POSITIONAL"
             }
         ],
         "paging": {
@@ -50,7 +52,19 @@ def test_get_templates(api, wa):
     )
 
     # Verify the result
-    assert result == mock_response
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert isinstance(result[0], RetrievedTemplate)
+
+    # Check template fields
+    template = result[0]
+    assert template.id == "594425479261596"
+    assert template.name == "example_template"
+    assert template.language == "en_US"
+    assert template.status == "APPROVED"
+    assert template.category == "MARKETING"
+    assert template.parameter_format == "POSITIONAL"
+    assert template.components == []
 
     # Verify the API was called with correct parameters
     api.assert_called_once_with(

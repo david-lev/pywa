@@ -68,6 +68,7 @@ from .types.flows import (
 )
 from .types.sent_message import SentMessage, SentTemplate
 from .types.others import InteractiveType
+from .types.template import RetrievedTemplate
 from .utils import FastAPI, Flask
 from .server import Server
 
@@ -2647,19 +2648,19 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )["success"]
 
     def get_templates(
-        self,
-        *,
-        system_user_token: str,
-        category: str | None = None,
-        content: str | None = None,
-        language: str | None = None,
-        name: str | None = None,
-        name_or_content: str | None = None,
-        quality_score: str | None = None,
-        status: str | None = None,
-        limit: int | None = None,
-        waba_id: str | int | None = None,
-    ) -> dict[str, list[dict[str, Any]]]:
+            self,
+            *,
+            system_user_token: str,
+            category: str | None = None,
+            content: str | None = None,
+            language: str | None = None,
+            name: str | None = None,
+            name_or_content: str | None = None,
+            quality_score: str | None = None,
+            status: str | None = None,
+            limit: int | None = None,
+            waba_id: str | int | None = None,
+    ) -> list[RetrievedTemplate]:
         """
         Get message templates for the WhatsApp Business Account.
 
@@ -2669,10 +2670,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> wa = WhatsApp(...)
-            >>> wa.get_templates(
+            >>> templates = wa.get_templates(
             ...     system_user_token="EAAJqb...",
             ...     category="MARKETING"
             ... )
+            >>> for template in templates:
+            ...     print(f"Template: {template.name}, Language: {template.language}, Status: {template.status}")
 
         Args:
             system_user_token: The system user access token with templates_read permission.
@@ -2687,9 +2690,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             waba_id: The WhatsApp Business account ID (Overrides the client's business account ID).
 
         Returns:
-            Dictionary containing the templates data
+            A list of RetrievedTemplate objects representing all templates that match the filters
         """
-        return self.api.get_templates(
+        response = self.api.get_templates(
             waba_id=helpers.resolve_waba_id_param(self, waba_id),
             system_user_token=system_user_token,
             category=category,
@@ -2701,3 +2704,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             status=status,
             limit=limit,
         )
+
+        return [
+            RetrievedTemplate.from_dict(template_data)
+            for template_data in response.get("data", [])
+        ]

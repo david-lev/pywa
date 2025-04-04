@@ -263,3 +263,54 @@ def test_sent_message():
         from_phone_id=wa.phone_id,
         status=SentTemplateStatus.ACCEPTED,
     )
+
+def test_retrieved_template():
+    assert types.RetrievedTemplate.from_dict(
+        data={
+            "id": "594425479261596",
+            "name": "hello_world",
+            "language": "en_US",
+            "status": "APPROVED",
+            "category": "UTILITY",
+            "parameter_format": "POSITIONAL",
+            "components": [
+                {
+                    "type": "HEADER",
+                    "format": "TEXT",
+                    "text": "Hello World"
+                },
+                {
+                    "type": "BODY",
+                    "text": "Welcome and congratulations!! This message demonstrates your ability to send a WhatsApp message notification from the Cloud API, hosted by Meta. Thank you for taking the time to test with us."
+                },
+                {
+                    "type": "FOOTER",
+                    "text": "WhatsApp Business Platform sample message"
+                }
+            ],
+            "sub_category": "CUSTOM"
+        }
+    ) == types.RetrievedTemplate(
+        id="594425479261596",
+        name="hello_world",
+        language="en_US",
+        status="APPROVED",
+        category="UTILITY",
+        parameter_format="POSITIONAL",
+        components=[
+            {
+                "type": "HEADER",
+                "format": "TEXT",
+                "text": "Hello World"
+            },
+            {
+                "type": "BODY",
+                "text": "Welcome and congratulations!! This message demonstrates your ability to send a WhatsApp message notification from the Cloud API, hosted by Meta. Thank you for taking the time to test with us."
+            },
+            {
+                "type": "FOOTER",
+                "text": "WhatsApp Business Platform sample message"
+            }
+        ],
+        sub_category="CUSTOM"
+    )

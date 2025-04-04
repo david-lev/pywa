@@ -9,6 +9,7 @@ __all__ = [
     "NewTemplate",
     "TemplateResponse",
     "TemplateStatus",
+    "RetrievedTemplate",
 ]
 
 import abc
@@ -1529,3 +1530,41 @@ class TemplateStatus(BaseUpdate):
                 "Unknown template rejection reason: %s. Defaulting to NONE", value
             )
             return cls.NONE
+
+@dataclasses.dataclass(slots=True)
+class RetrievedTemplate:
+    """
+    Represents a template retrieved from the WhatsApp API.
+
+    Attributes:
+        id: The ID of the template.
+        name: The name of the template.
+        language: The language of the template.
+        status: The status of the template (e.g., 'APPROVED', 'REJECTED', 'PENDING').
+        category: The category of the template (e.g., 'MARKETING', 'UTILITY').
+        parameter_format: Format of parameters ('NAMED' or 'POSITIONAL').
+        sub_category: The sub-category of the template, if any.
+        components: The components of the template (header, body, footer, buttons).
+    """
+    id: str
+    name: str
+    language: str
+    status: str
+    category: str
+    parameter_format: str
+    components: list[dict[str, Any]]
+    sub_category: str | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "RetrievedTemplate":
+        """Create a RetrievedTemplate instance from API response data."""
+        return cls(
+            id=data.get("id", ""),
+            name=data.get("name", ""),
+            language=data.get("language", ""),
+            status=data.get("status", ""),
+            category=data.get("category", ""),
+            parameter_format=data.get("parameter_format", ""),
+            components=data.get("components", []),
+            sub_category=data.get("sub_category"),
+        )

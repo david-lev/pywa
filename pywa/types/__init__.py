@@ -48,6 +48,7 @@ from .template import (
     Template,
     TemplateResponse,
     TemplateStatus,
+    RetrievedTemplate
 )
 
 from .flows import (
