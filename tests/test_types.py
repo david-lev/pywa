@@ -264,6 +264,7 @@ def test_sent_message():
         status=SentTemplateStatus.ACCEPTED,
     )
 
+
 def test_retrieved_template():
     assert types.RetrievedTemplate.from_dict(
         data={
@@ -274,21 +275,14 @@ def test_retrieved_template():
             "category": "UTILITY",
             "parameter_format": "POSITIONAL",
             "components": [
-                {
-                    "type": "HEADER",
-                    "format": "TEXT",
-                    "text": "Hello World"
-                },
+                {"type": "HEADER", "format": "TEXT", "text": "Hello World"},
                 {
                     "type": "BODY",
-                    "text": "Welcome and congratulations!! This message demonstrates your ability to send a WhatsApp message notification from the Cloud API, hosted by Meta. Thank you for taking the time to test with us."
+                    "text": "Welcome and congratulations!! This message demonstrates your ability to send a WhatsApp message notification from the Cloud API, hosted by Meta. Thank you for taking the time to test with us.",
                 },
-                {
-                    "type": "FOOTER",
-                    "text": "WhatsApp Business Platform sample message"
-                }
+                {"type": "FOOTER", "text": "WhatsApp Business Platform sample message"},
             ],
-            "sub_category": "CUSTOM"
+            "sub_category": "CUSTOM",
         }
     ) == types.RetrievedTemplate(
         id="594425479261596",
@@ -298,19 +292,12 @@ def test_retrieved_template():
         category="UTILITY",
         parameter_format="POSITIONAL",
         components=[
-            {
-                "type": "HEADER",
-                "format": "TEXT",
-                "text": "Hello World"
-            },
+            {"type": "HEADER", "format": "TEXT", "text": "Hello World"},
             {
                 "type": "BODY",
-                "text": "Welcome and congratulations!! This message demonstrates your ability to send a WhatsApp message notification from the Cloud API, hosted by Meta. Thank you for taking the time to test with us."
+                "text": "Welcome and congratulations!! This message demonstrates your ability to send a WhatsApp message notification from the Cloud API, hosted by Meta. Thank you for taking the time to test with us.",
             },
-            {
-                "type": "FOOTER",
-                "text": "WhatsApp Business Platform sample message"
-            }
+            {"type": "FOOTER", "text": "WhatsApp Business Platform sample message"},
         ],
-        sub_category="CUSTOM"
+        sub_category="CUSTOM",
     )

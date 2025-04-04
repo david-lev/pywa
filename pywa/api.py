@@ -1269,18 +1269,18 @@ class WhatsAppCloudApi:
         )
 
     def get_templates(
-            self,
-            waba_id: str,
-            *,
-            system_user_token: str | None = None,  # Add system user token parameter
-            category: str | None = None,
-            content: str | None = None,
-            language: str | None = None,
-            name: str | None = None,
-            name_or_content: str | None = None,
-            quality_score: str | None = None,
-            status: str | None = None,
-            limit: int | None = None,
+        self,
+        waba_id: str,
+        *,
+        system_user_token: str | None = None,  # Add system user token parameter
+        category: str | None = None,
+        content: str | None = None,
+        language: str | None = None,
+        name: str | None = None,
+        name_or_content: str | None = None,
+        quality_score: str | None = None,
+        status: str | None = None,
+        limit: int | None = None,
     ) -> dict[str, list[dict[str, Any]]]:
         """
         Get message templates for the WhatsApp Business Account.
@@ -1347,7 +1347,9 @@ class WhatsAppCloudApi:
         try:
             # Update headers with system user token if provided
             if system_user_token:
-                self._session.headers.update({"Authorization": f"Bearer {system_user_token}"})
+                self._session.headers.update(
+                    {"Authorization": f"Bearer {system_user_token}"}
+                )
 
             return self._make_request(
                 method="GET",

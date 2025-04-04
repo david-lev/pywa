@@ -31,25 +31,17 @@ def test_get_templates(api, wa):
                 "language": "en_US",
                 "name": "example_template",
                 "status": "APPROVED",
-                "parameter_format": "POSITIONAL"
+                "parameter_format": "POSITIONAL",
             }
         ],
-        "paging": {
-            "cursors": {
-                "before": "xyz",
-                "after": "abc"
-            }
-        }
+        "paging": {"cursors": {"before": "xyz", "after": "abc"}},
     }
 
     # Set up the mock response
     api.return_value = mock_response
 
     # Test the get_templates method
-    result = wa.get_templates(
-        system_user_token="test_token",
-        category="MARKETING"
-    )
+    result = wa.get_templates(system_user_token="test_token", category="MARKETING")
 
     # Verify the result
     assert isinstance(result, list)

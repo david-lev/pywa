@@ -1531,6 +1531,7 @@ class TemplateStatus(BaseUpdate):
             )
             return cls.NONE
 
+
 @dataclasses.dataclass(slots=True)
 class RetrievedTemplate:
     """
@@ -1546,6 +1547,7 @@ class RetrievedTemplate:
         sub_category: The sub-category of the template, if any.
         components: The components of the template (header, body, footer, buttons).
     """
+
     id: str
     name: str
     language: str
