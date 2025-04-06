@@ -29,6 +29,7 @@ from .types import (
     SectionList,
     FlowButton,
     Button,
+    NewTemplate, FlowActionType
 )
 from pywa.types.others import InteractiveType
 
@@ -252,3 +253,141 @@ def resolve_callback_data(data: str | CallbackData) -> str:
     elif isinstance(data, str):
         return data
     raise TypeError(f"Invalid callback data type {type(data)}")
+
+
+def parse_template_data(template_data: dict[str, Any]) -> dict[str, Any]:
+    """Parse template data into a structured dictionary with typed components."""
+    template = {
+        "id": template_data.get("id", ""),
+        "name": template_data.get("name", ""),
+        "language": template_data.get("language", ""),
+        "status": template_data.get("status", ""),
+        "parameter_format": template_data.get("parameter_format", ""),
+        "sub_category": template_data.get("sub_category"),
+    }
+
+    # Convert category to enum
+    category_value = template_data.get("category", "")
+    try:
+        template["category"] = NewTemplate.Category(category_value)
+    except ValueError:
+        raise ValueError(f"Unknown template category: {category_value}")
+
+    # Parse components
+    components = []
+    for component in template_data.get("components", []):
+        comp_type = component.get("type")
+
+        if comp_type == "HEADER":
+            format_type = component.get("format")
+            if format_type == "TEXT":
+                components.append(NewTemplate.Text(text=component.get("text", "")))
+            elif format_type == "IMAGE":
+                example = component.get("example", {}).get("header_handle", [""])[0]
+                components.append(NewTemplate.Image(example=example))
+            elif format_type == "VIDEO":
+                example = component.get("example", {}).get("header_handle", [""])[0]
+                components.append(NewTemplate.Video(example=example))
+            elif format_type == "DOCUMENT":
+                example = component.get("example", {}).get("header_handle", [""])[0]
+                components.append(NewTemplate.Document(example=example))
+            elif format_type == "LOCATION":
+                components.append(NewTemplate.Location())
+            else:
+                raise ValueError(f"Unknown header format: {format_type}")
+
+        elif comp_type == "BODY":
+            text = component.get("text", "")
+            components.append(NewTemplate.Body(text=text))
+
+        elif comp_type == "FOOTER":
+            text = component.get("text", "")
+            components.append(NewTemplate.Footer(text=text))
+
+        elif comp_type == "BUTTONS":
+            buttons = []
+            for button in component.get("buttons", []):
+                button_type = button.get("type")
+
+                if button_type == "PHONE_NUMBER":
+                    buttons.append(NewTemplate.PhoneNumberButton(
+                        title=button.get("text", ""),
+                        phone_number=button.get("phone_number", "")
+                    ))
+
+                elif button_type == "URL":
+                    buttons.append(NewTemplate.UrlButton(
+                        title=button.get("text", ""),
+                        url=button.get("url", "")
+                    ))
+
+                elif button_type == "QUICK_REPLY":
+                    buttons.append(NewTemplate.QuickReplyButton(
+                        text=button.get("text", "")
+                    ))
+
+                elif button_type == "COPY_CODE":
+                    buttons.append(NewTemplate.CopyCodeButton(
+                        example=button.get("example", "")
+                    ))
+
+                elif button_type == "OTP":
+                    otp_type_str = button.get("otp_type", "")
+                    try:
+                        otp_type = NewTemplate.OTPButton.OtpType(otp_type_str)
+                        if otp_type in (NewTemplate.OTPButton.OtpType.ONE_TAP,
+                                        NewTemplate.OTPButton.OtpType.ZERO_TAP):
+                            buttons.append(NewTemplate.OTPButton(
+                                otp_type=otp_type,
+                                title=button.get("text"),
+                                autofill_text=button.get("autofill_text"),
+                                package_name=button.get("package_name"),
+                                signature_hash=button.get("signature_hash"),
+                                zero_tap_terms_accepted=button.get("zero_tap_terms_accepted", True)
+                            ))
+                        else:
+                            buttons.append(NewTemplate.OTPButton(
+                                otp_type=otp_type,
+                                title=button.get("text")
+                            ))
+                    except ValueError:
+                        raise ValueError(f"Unknown OTP button type: {otp_type_str}")
+
+                elif button_type == "MPM":
+                    buttons.append(NewTemplate.MPMButton())
+
+                elif button_type == "CATALOG":
+                    buttons.append(NewTemplate.CatalogButton())
+
+                elif button_type == "FLOW":
+                    flow_id = button.get("flow_id", "")
+                    flow_action_str = button.get("flow_action", "")
+
+                    try:
+                        flow_action = FlowActionType(flow_action_str)
+                        if flow_action == FlowActionType.NAVIGATE:
+                            buttons.append(NewTemplate.FlowButton(
+                                title=button.get("text", ""),
+                                flow_id=flow_id,
+                                flow_action=flow_action,
+                                navigate_screen=button.get("navigate_screen", "")
+                            ))
+                        else:
+                            buttons.append(NewTemplate.FlowButton(
+                                title=button.get("text", ""),
+                                flow_id=flow_id,
+                                flow_action=flow_action
+                            ))
+                    except ValueError:
+                        raise ValueError(f"Unknown flow action type: {flow_action_str}")
+
+                else:
+                    raise ValueError(f"Unknown button type: {button_type}")
+
+            components.append({"type": "BUTTONS", "buttons": buttons})
+
+        else:
+            raise ValueError(f"Unknown component type: {comp_type}")
+
+    template["components"] = components
+    return template

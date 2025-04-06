@@ -68,7 +68,6 @@ from .types.flows import (
 )
 from .types.sent_message import SentMessage, SentTemplate
 from .types.others import InteractiveType
-from .types.template import RetrievedTemplate
 from .utils import FastAPI, Flask
 from .server import Server
 
@@ -2705,7 +2704,4 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             limit=limit,
         )
 
-        return [
-            RetrievedTemplate.from_dict(template_data)
-            for template_data in response.get("data", [])
-        ]
+        return [helpers.parse_template_data(template_data) for template_data in response.get("data", [])]

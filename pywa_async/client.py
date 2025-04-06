@@ -2518,7 +2518,4 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             limit=limit,
         )
 
-        return [
-            RetrievedTemplate.from_dict(template_data)
-            for template_data in response.get("data", [])
-        ]
+        return [helpers.parse_template_data(template_data) for template_data in response.get("data", [])]
