@@ -29,7 +29,8 @@ from .types import (
     SectionList,
     FlowButton,
     Button,
-    NewTemplate, FlowActionType
+    NewTemplate,
+    FlowActionType,
 )
 from pywa.types.others import InteractiveType
 
@@ -310,46 +311,56 @@ def parse_template_data(template_data: dict[str, Any]) -> dict[str, Any]:
                 button_type = button.get("type")
 
                 if button_type == "PHONE_NUMBER":
-                    buttons.append(NewTemplate.PhoneNumberButton(
-                        title=button.get("text", ""),
-                        phone_number=button.get("phone_number", "")
-                    ))
+                    buttons.append(
+                        NewTemplate.PhoneNumberButton(
+                            title=button.get("text", ""),
+                            phone_number=button.get("phone_number", ""),
+                        )
+                    )
 
                 elif button_type == "URL":
-                    buttons.append(NewTemplate.UrlButton(
-                        title=button.get("text", ""),
-                        url=button.get("url", "")
-                    ))
+                    buttons.append(
+                        NewTemplate.UrlButton(
+                            title=button.get("text", ""), url=button.get("url", "")
+                        )
+                    )
 
                 elif button_type == "QUICK_REPLY":
-                    buttons.append(NewTemplate.QuickReplyButton(
-                        text=button.get("text", "")
-                    ))
+                    buttons.append(
+                        NewTemplate.QuickReplyButton(text=button.get("text", ""))
+                    )
 
                 elif button_type == "COPY_CODE":
-                    buttons.append(NewTemplate.CopyCodeButton(
-                        example=button.get("example", "")
-                    ))
+                    buttons.append(
+                        NewTemplate.CopyCodeButton(example=button.get("example", ""))
+                    )
 
                 elif button_type == "OTP":
                     otp_type_str = button.get("otp_type", "")
                     try:
                         otp_type = NewTemplate.OTPButton.OtpType(otp_type_str)
-                        if otp_type in (NewTemplate.OTPButton.OtpType.ONE_TAP,
-                                        NewTemplate.OTPButton.OtpType.ZERO_TAP):
-                            buttons.append(NewTemplate.OTPButton(
-                                otp_type=otp_type,
-                                title=button.get("text"),
-                                autofill_text=button.get("autofill_text"),
-                                package_name=button.get("package_name"),
-                                signature_hash=button.get("signature_hash"),
-                                zero_tap_terms_accepted=button.get("zero_tap_terms_accepted", True)
-                            ))
+                        if otp_type in (
+                            NewTemplate.OTPButton.OtpType.ONE_TAP,
+                            NewTemplate.OTPButton.OtpType.ZERO_TAP,
+                        ):
+                            buttons.append(
+                                NewTemplate.OTPButton(
+                                    otp_type=otp_type,
+                                    title=button.get("text"),
+                                    autofill_text=button.get("autofill_text"),
+                                    package_name=button.get("package_name"),
+                                    signature_hash=button.get("signature_hash"),
+                                    zero_tap_terms_accepted=button.get(
+                                        "zero_tap_terms_accepted", True
+                                    ),
+                                )
+                            )
                         else:
-                            buttons.append(NewTemplate.OTPButton(
-                                otp_type=otp_type,
-                                title=button.get("text")
-                            ))
+                            buttons.append(
+                                NewTemplate.OTPButton(
+                                    otp_type=otp_type, title=button.get("text")
+                                )
+                            )
                     except ValueError:
                         raise ValueError(f"Unknown OTP button type: {otp_type_str}")
 
@@ -366,18 +377,22 @@ def parse_template_data(template_data: dict[str, Any]) -> dict[str, Any]:
                     try:
                         flow_action = FlowActionType(flow_action_str)
                         if flow_action == FlowActionType.NAVIGATE:
-                            buttons.append(NewTemplate.FlowButton(
-                                title=button.get("text", ""),
-                                flow_id=flow_id,
-                                flow_action=flow_action,
-                                navigate_screen=button.get("navigate_screen", "")
-                            ))
+                            buttons.append(
+                                NewTemplate.FlowButton(
+                                    title=button.get("text", ""),
+                                    flow_id=flow_id,
+                                    flow_action=flow_action,
+                                    navigate_screen=button.get("navigate_screen", ""),
+                                )
+                            )
                         else:
-                            buttons.append(NewTemplate.FlowButton(
-                                title=button.get("text", ""),
-                                flow_id=flow_id,
-                                flow_action=flow_action
-                            ))
+                            buttons.append(
+                                NewTemplate.FlowButton(
+                                    title=button.get("text", ""),
+                                    flow_id=flow_id,
+                                    flow_action=flow_action,
+                                )
+                            )
                     except ValueError:
                         raise ValueError(f"Unknown flow action type: {flow_action_str}")
 

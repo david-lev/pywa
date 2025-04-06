@@ -11,7 +11,7 @@ from pywa._helpers import (
     get_flow_metric_field,
     resolve_callback_data,
     resolve_buttons_param,
-    parse_template_data
+    parse_template_data,
 )
 
 import pathlib

@@ -1530,4 +1530,3 @@ class TemplateStatus(BaseUpdate):
                 "Unknown template rejection reason: %s. Defaulting to NONE", value
             )
             return cls.NONE
-

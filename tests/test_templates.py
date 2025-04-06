@@ -28,11 +28,11 @@ def test_get_templates(api, wa, mocker):
         "status": "APPROVED",
         "category": types.NewTemplate.Category.MARKETING,
         "parameter_format": "POSITIONAL",
-        "components": [
-            types.NewTemplate.Body(text="Welcome and congratulations!!")
-        ]
+        "components": [types.NewTemplate.Body(text="Welcome and congratulations!!")],
     }
-    mock_parse = mocker.patch("pywa._helpers.parse_template_data", return_value=mock_parsed_template)
+    mock_parse = mocker.patch(
+        "pywa._helpers.parse_template_data", return_value=mock_parsed_template
+    )
 
     # Mock response data
     mock_response = {
@@ -41,33 +41,22 @@ def test_get_templates(api, wa, mocker):
                 "id": "594425479261596",
                 "category": "MARKETING",
                 "components": [
-                    {
-                        "type": "BODY",
-                        "text": "Welcome and congratulations!!"
-                    }
+                    {"type": "BODY", "text": "Welcome and congratulations!!"}
                 ],
                 "language": "en_US",
                 "name": "example_template",
                 "status": "APPROVED",
-                "parameter_format": "POSITIONAL"
+                "parameter_format": "POSITIONAL",
             }
         ],
-        "paging": {
-            "cursors": {
-                "before": "xyz",
-                "after": "abc"
-            }
-        }
+        "paging": {"cursors": {"before": "xyz", "after": "abc"}},
     }
 
     # Set up the mock response
     api.return_value = mock_response
 
     # Test the get_templates method
-    result = wa.get_templates(
-        system_user_token="test_token",
-        category="MARKETING"
-    )
+    result = wa.get_templates(system_user_token="test_token", category="MARKETING")
 
     # Verify the result
     assert isinstance(result, list)
@@ -113,30 +102,20 @@ def test_parse_template_data():
         "category": "MARKETING",
         "parameter_format": "POSITIONAL",
         "components": [
-            {
-                "type": "HEADER",
-                "format": "TEXT",
-                "text": "Hello World"
-            },
-            {
-                "type": "BODY",
-                "text": "Welcome and congratulations!!"
-            },
-            {
-                "type": "FOOTER",
-                "text": "WhatsApp Business Platform sample message"
-            },
+            {"type": "HEADER", "format": "TEXT", "text": "Hello World"},
+            {"type": "BODY", "text": "Welcome and congratulations!!"},
+            {"type": "FOOTER", "text": "WhatsApp Business Platform sample message"},
             {
                 "type": "BUTTONS",
                 "buttons": [
                     {
                         "type": "URL",
                         "text": "Visit Website",
-                        "url": "https://example.com"
+                        "url": "https://example.com",
                     }
-                ]
-            }
-        ]
+                ],
+            },
+        ],
     }
 
     # Parse the template
@@ -177,9 +156,6 @@ def test_parse_template_data():
     assert button.url == "https://example.com"
 
     # Test error handling for unknown category
-    template_with_bad_category = {
-        "category": "UNKNOWN_CATEGORY",
-        "components": []
-    }
+    template_with_bad_category = {"category": "UNKNOWN_CATEGORY", "components": []}
     with pytest.raises(ValueError, match="Unknown template category"):
         helpers.parse_template_data(template_with_bad_category)
