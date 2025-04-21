@@ -37,6 +37,7 @@ __all__ = [
     "FontWeight",
     "TextInput",
     "InputType",
+    "LabelVariant",
     "TextArea",
     "CheckboxGroup",
     "ChipsSelector",

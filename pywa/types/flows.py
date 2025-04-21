@@ -81,6 +81,7 @@ __all__ = [
     "FontWeight",
     "TextInput",
     "InputType",
+    "LabelVariant",
     "TextArea",
     "CheckboxGroup",
     "ChipsSelector",
@@ -2298,6 +2299,17 @@ class InputType(utils.StrEnum):
     PHONE = "phone"
 
 
+class LabelVariant(utils.StrEnum):
+    """
+    The label variant of the text entry component.
+
+    Attributes:
+        LARGE: Label will have a more prominent style and will be displayed across multiple lines if needed.
+    """
+
+    LARGE = "large"
+
+
 @dataclasses.dataclass(slots=True, kw_only=True)
 class TextInput(TextEntryComponent):
     """
@@ -2322,6 +2334,7 @@ class TextInput(TextEntryComponent):
         name: The unique name (id) for this component.
         label: The label of the text input. Limited to 20 characters.
         input_type: The input type of the text input (for keyboard layout and validation rules).
+        label_variant: Display the label in a more prominent style and allow it to be displayed across multiple lines if needed. Added in v7.0.
         pattern: The regex pattern to validate the text input. Added in v6.2.
         required: Whether the text input is required or not.
         min_chars: The minimum number of characters allowed in the text input.
@@ -2339,6 +2352,9 @@ class TextInput(TextEntryComponent):
     name: str
     label: str | FlowStr | ScreenDataRef[str] | ComponentRef[str]
     input_type: InputType | str | ScreenDataRef[str] | ComponentRef[str] | None = None
+    label_variant: (
+        LabelVariant | str | ScreenDataRef[str] | ComponentRef[str] | None
+    ) = None
     pattern: str | re.Pattern | ScreenDataRef[str] | ComponentRef[str] | None = None
     required: bool | str | ScreenDataRef[str] | ComponentRef[str] | None = None
     min_chars: int | str | ScreenDataRef[str] | ComponentRef[str] | None = None
@@ -2373,6 +2389,7 @@ class TextArea(TextEntryComponent):
     Attributes:
         name: The unique name (id) for this component.
         label: The label of the text area. Limited to 20 characters.
+        label_variant: Display the label in a more prominent style and allow it to be displayed across multiple lines if needed. Added in v7.0.
         required: Whether the text area is required or not.
         max_length: The maximum number of characters allowed in the text area.
         helper_text: The helper text of the text area. Limited to 80 characters.
@@ -2387,6 +2404,9 @@ class TextArea(TextEntryComponent):
     )
     name: str
     label: str | FlowStr | ScreenDataRef[str] | ComponentRef[str]
+    label_variant: (
+        LabelVariant | str | ScreenDataRef[str] | ComponentRef[str] | None
+    ) = None
     required: bool | str | ScreenDataRef[str] | ComponentRef[str] | None = None
     max_length: int | str | ScreenDataRef[str] | ComponentRef[str] | None = None
     helper_text: str | FlowStr | ScreenDataRef[str] | ComponentRef[str] | None = None
