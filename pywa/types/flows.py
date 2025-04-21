@@ -18,6 +18,8 @@ from typing import (
     Literal,
     Type,
     Generic,
+    TypeAlias,
+    TypeVar,
 )
 
 import httpx
@@ -36,13 +38,7 @@ from .others import (
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
-    from ._typing import (
-        _FlowResponseDataType,
-        _ScreenDataValType,
-        _ScreenDataValTypeVar,
-        _MathT,
-        _RefT,
-    )
+
 
 _logger = logging.getLogger(__name__)
 
@@ -1161,6 +1157,19 @@ class DataSource:
         )
 
 
+_SingleScreenDataValType: TypeAlias = (
+    str | int | float | bool | dict | datetime.date | DataSource
+)
+
+_ScreenDataValType: TypeAlias = (
+    _SingleScreenDataValType | Iterable[_SingleScreenDataValType]
+)
+_ScreenDataValTypeVar = TypeVar(
+    "_ScreenDataValTypeVar",
+    bound=_ScreenDataValType,
+)
+
+
 class ScreenData(Generic[_ScreenDataValTypeVar]):
     """
     Represents a screen data that a screen should get from the previous screen or from the data endpoint.
@@ -1680,6 +1689,11 @@ class MathExpression(_Math):
 
     def to_str(self) -> str:
         return self._expression
+
+
+_MathT: TypeAlias = Ref | MathExpression | int | float
+
+_RefT = TypeVar("_RefT", bound=Ref)
 
 
 class Condition(_Combine):
@@ -2838,6 +2852,18 @@ class NavigationItem:
 
     def to_dict(self) -> dict:
         return dataclasses.asdict(obj=self, dict_factory=_TO_DICT_FACTORY)
+
+
+_FlowResponseDataType: TypeAlias = dict[
+    str,
+    str
+    | int
+    | float
+    | bool
+    | dict
+    | DataSource
+    | Iterable[str | int | float | bool | dict | DataSource | NavigationItem],
+]
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
