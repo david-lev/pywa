@@ -2645,3 +2645,59 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return self.api.delete_phone_alternate_callback_url(
             phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
         )["success"]
+
+    def get_templates(
+        self,
+        *,
+        system_user_token: str,
+        category: str | None = None,
+        content: str | None = None,
+        language: str | None = None,
+        name: str | None = None,
+        name_or_content: str | None = None,
+        quality_score: str | None = None,
+        status: str | None = None,
+        limit: int | None = None,
+        waba_id: str | int | None = None,
+    ) -> dict[str, list[dict[str, Any]]]:
+        """
+        Get message templates for the WhatsApp Business Account.
+
+        - This method requires a system user access token with appropriate permissions.
+        - To create a template, use :py:func:`~pywa.client.WhatsApp.create_template`.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.get_templates(
+            ...     system_user_token="EAAJqb...",
+            ...     category="MARKETING"
+            ... )
+
+        Args:
+            system_user_token: The system user access token with templates_read permission.
+            category: Filter templates by category (e.g., 'MARKETING', 'UTILITY')
+            content: Filter templates by content text
+            language: Filter templates by language code
+            name: Filter templates by exact template name
+            name_or_content: Filter templates by name or content (partial match)
+            quality_score: Filter templates by quality score
+            status: Filter templates by approval status
+            limit: Maximum number of templates to return
+            waba_id: The WhatsApp Business account ID (Overrides the client's business account ID).
+
+        Returns:
+            Dictionary containing the templates data
+        """
+        return self.api.get_templates(
+            waba_id=helpers.resolve_waba_id_param(self, waba_id),
+            system_user_token=system_user_token,
+            category=category,
+            content=content,
+            language=language,
+            name=name,
+            name_or_content=name_or_content,
+            quality_score=quality_score,
+            status=status,
+            limit=limit,
+        )
