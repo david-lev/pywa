@@ -9,6 +9,7 @@ __all__ = [
     "NewTemplate",
     "TemplateResponse",
     "TemplateStatus",
+    "RetrievedTemplate",
 ]
 
 import abc
