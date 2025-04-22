@@ -137,6 +137,8 @@ All user-related-updates have common methods and properties:
      - Unreact to the update
    * - :meth:`~BaseUserUpdate.mark_as_read`
      - Mark the update as read
+   * - :meth:`~BaseUserUpdate.indicate_typing`
+     - Indicate that the user is typing
 
 .. toctree::
     message

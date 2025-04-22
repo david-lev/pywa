@@ -839,6 +839,22 @@ class _ClientShortcuts(abc.ABC):
             sender=self._internal_recipient, message_id=self.message_id_to_reply
         )
 
+    def indicate_typing(self) -> bool:
+        """
+        Mark the message as read and display a typing indicator so the WhatsApp user knows you are preparing a response.
+        This is good practice if it will take you a few seconds to respond.
+
+        The typing indicator will be dismissed once you respond, or after 25 seconds, whichever comes first. To prevent a poor user experience, only display a typing indicator if you are going to respond.
+
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.indicate_typing` with ``message_id``.
+
+        Returns:
+            Whether it was successful.
+        """
+        return self._client.indicate_typing(
+            sender=self._internal_recipient, message_id=self.message_id_to_reply
+        )
+
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):

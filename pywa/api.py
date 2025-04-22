@@ -1267,3 +1267,38 @@ class WhatsAppCloudApi:
             method="DELETE",
             endpoint=f"/{phone_id}/message_qrdls/{code}",
         )
+
+    def set_indicator(
+        self, phone_id: str, message_id: str, typ: str
+    ) -> dict[str, bool]:
+        """
+        Set a typing indicator.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/typing-indicators>`_.
+
+        Return example::
+
+            {
+                'success': True
+            }
+
+        Args:
+            phone_id: The ID of the phone number to set the typing indicator on.
+            message_id: The ID of the message in the conversation to set the typing indicator on.
+            typ: The type of indicator to set (currently only "text" is supported).
+
+        Returns:
+            The success of the operation.
+        """
+        return self._make_request(
+            method="POST",
+            endpoint=f"/{phone_id}/messages",
+            json={
+                "messaging_product": "whatsapp",
+                "status": "read",
+                "message_id": message_id,
+                "typing_indicator": {
+                    "type": typ,
+                },
+            },
+        )

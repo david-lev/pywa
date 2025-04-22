@@ -19,6 +19,7 @@ Client Reference
 .. automethod:: WhatsApp.send_reaction
 .. automethod:: WhatsApp.remove_reaction
 .. automethod:: WhatsApp.mark_message_as_read
+.. automethod:: WhatsApp.indicate_typing
 .. automethod:: WhatsApp.listen
 .. automethod:: WhatsApp.stop_listening
 .. automethod:: WhatsApp.upload_media
