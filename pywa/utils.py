@@ -107,7 +107,7 @@ class Version(enum.Enum):
     """
 
     # KEY = (MIN_VERSION: str, LATEST_VERSION: str)
-    GRAPH_API = ("17.0", "21.0")
+    GRAPH_API = ("17.0", "22.0")
     FLOW_JSON = ("2.1", "7.0")
     FLOW_DATA_API = ("3.0", "3.0")
     FLOW_MSG = ("3", "3")

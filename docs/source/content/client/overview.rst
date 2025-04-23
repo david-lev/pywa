@@ -81,6 +81,8 @@ Sending messages
      - Remove a reaction
    * - :meth:`~WhatsApp.mark_message_as_read`
      - Mark a message as read
+   * - :meth:`~WhatsApp.indicate_typing`
+     - Indicate typing
 
 Handling updates
 ----------------

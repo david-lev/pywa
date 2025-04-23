@@ -1191,6 +1191,32 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             )
         )["success"]
 
+    async def indicate_typing(
+        self,
+        message_id: str,
+        sender: str | int | None = None,
+    ) -> bool:
+        """
+        Mark the message as read and display a typing indicator so the WhatsApp user knows you are preparing a response.
+        This is good practice if it will take you a few seconds to respond.
+
+        The typing indicator will be dismissed once you respond, or after 25 seconds, whichever comes first. To prevent a poor user experience, only display a typing indicator if you are going to respond.
+
+        Args:
+            message_id: The message ID to mark as read and display a typing indicator.
+            sender: The phone ID (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            Whether the message was marked as read and the typing indicator was displayed.
+        """
+        return (
+            await self.api.set_indicator(
+                phone_id=helpers.resolve_phone_id_param(self, sender, "sender"),
+                message_id=message_id,
+                typ="text",
+            )
+        )["success"]
+
     async def upload_media(
         self,
         media: str | pathlib.Path | bytes | BinaryIO,
