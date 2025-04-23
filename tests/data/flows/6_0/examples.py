@@ -143,11 +143,11 @@ update_data = FlowJSON(
                                                 id="california",
                                                 title="California",
                                                 on_unselect_action=UpdateDataAction(
-                                                    payload={
+                                                    payload=[
                                                         pincode_visibility.update(
                                                             new_value=False
                                                         )
-                                                    },
+                                                    ],
                                                 ),
                                                 on_select_action=UpdateDataAction(
                                                     payload=[

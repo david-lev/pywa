@@ -271,17 +271,17 @@ forward_refs = FlowJSON(
                             Switch(
                                 value=select_insurance_screen / insurance.ref,
                                 cases={
-                                    basic.id: [
+                                    "basic": [
                                         TextBody(
                                             text="You've selected a basic insurance"
                                         )
                                     ],
-                                    standard.id: [
+                                    "standard": [
                                         TextBody(
                                             text="You've selected a standard insurance"
                                         )
                                     ],
-                                    full.id: [
+                                    "full": [
                                         TextBody(
                                             text="You've selected a comprehensive insurance"
                                         )

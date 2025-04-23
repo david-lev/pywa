@@ -65,18 +65,18 @@ calendar_picker_range_mode = FlowJSON(
                         name="calendar_range",
                         title="Range calendar",
                         description="Use this to select a date range",
-                        label={
-                            "start-date": "Start date",
-                            "end-date": "End date",
-                        },
-                        helper_text={
-                            "start-date": "Select from date",
-                            "end-date": "Select to date",
-                        },
-                        required={
-                            "start-date": True,
-                            "end-date": False,
-                        },
+                        label=CalendarRangeValues(
+                            start_date="Start date",
+                            end_date="End date",
+                        ),
+                        helper_text=CalendarRangeValues(
+                            start_date="Select from date",
+                            end_date="Select to date",
+                        ),
+                        required=CalendarRangeValues(
+                            start_date=True,
+                            end_date=False,
+                        ),
                         mode=CalendarPickerMode.RANGE,
                         min_date=datetime.date(2024, 10, 21),
                         max_date=datetime.date(2025, 12, 12),
@@ -93,10 +93,10 @@ calendar_picker_range_mode = FlowJSON(
                         ],
                         min_days=3,
                         max_days=10,
-                        init_value={
-                            "start-date": datetime.date(2024, 10, 22),
-                            "end-date": datetime.date(2024, 10, 25),
-                        },
+                        init_value=CalendarRangeValues(
+                            start_date=datetime.date(2024, 10, 22),
+                            end_date=datetime.date(2024, 10, 25),
+                        ),
                         on_select_action=DataExchangeAction(
                             payload={"calendar_range": ComponentRef("calendar_range")},
                         ),

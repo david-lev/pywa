@@ -54,6 +54,7 @@ __all__ = [
     "DatePicker",
     "CalendarPicker",
     "CalendarPickerMode",
+    "CalendarRangeValues",
     "CalendarDay",
     "Image",
     "PhotoPicker",
