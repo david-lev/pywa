@@ -42,6 +42,8 @@ from .others import (
     Command,
     ConversationalAutomation,
     QRCode,
+    Result,
+    Pagination,
 )
 from .template import (
     NewTemplate,

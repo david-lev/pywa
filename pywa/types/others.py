@@ -5,7 +5,9 @@ from __future__ import annotations
 import dataclasses
 import math
 import logging
-from typing import TYPE_CHECKING, Any, Iterable
+import datetime
+
+from typing import TYPE_CHECKING, Any, Iterable, TypeVar, Protocol, Generic, Iterator
 
 from .. import utils
 
@@ -911,3 +913,177 @@ class QRCode:
             deep_link_url=data.get("deep_link_url"),
             qr_image_url=data.get("qr_image_url"),
         )
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class Pagination:
+    """
+    Represents pagination parameters for fetching data.
+
+    - See `Paginated Results <https://developers.facebook.com/docs/graph-api/results/>`_.
+
+    **Cursor-based Pagination**
+
+    Cursor-based pagination is the most efficient method of paging and should always be used when possible.
+    A cursor refers to a random string of characters which marks a specific item in a list of data.
+    The cursor will always point to the item, however it will be invalidated if the item is deleted or removed.
+    Therefore, your app shouldn't store cursors or assume that they will be valid in the future.
+
+    - Don't store cursors. Cursors can quickly become invalid if items are added or deleted.
+
+
+    **Time-based Pagination**
+
+    Time pagination is used to navigate through results data using Unix timestamps which point to specific times in a list of data.
+
+    - For consistent results, specify both since and until parameters. Also, it is recommended that the time difference is a maximum of 6 months.
+
+    **Offset-based Pagination**
+
+    Offset pagination can be used when you do not care about chronology and just want a specific number of objects returned.
+    Only use this if the edge does not support cursor or time-based pagination.
+    Note that if new objects are added to the list of items being paged, the contents of each offset-based page will change.
+
+    - Offset based pagination is not supported for all API calls. To get consistent results, we recommend you to paginate using the previous/next links we return in the response.
+
+
+    Attributes:
+        before: This is the cursor that points to the start of the page of data that has been returned.
+        after: This is the cursor that points to the end of the page of data that has been returned.
+        limit: This is the maximum number of objects that `may` be returned. A query may return fewer than the value of
+         limit due to filtering. Do not depend on the number of results being fewer than the limit value to indicate
+         that your query reached the end of the list of data, use the :attr:`~pywa.types.others.Result.has_next` instead as
+         described below. For example, if you set limit to ``10`` and ``9`` results are returned, there may be more
+         data available, but one item was removed due to privacy filtering. Some edges may also have a maximum on the
+         limit value for performance reasons.
+        offset: This offsets the start of each page by the number specified.
+        until: A Unix timestamp or datetime obj value that points to the end of the range of time-based data.
+        since: A Unix timestamp or datetime obj value that points to the start of the range of time-based data.
+    """
+
+    before: str | None = None
+    after: str | None = None
+    limit: int | None = None
+    offset: int | None = None
+    until: int | datetime.datetime | None = None
+    since: int | datetime.datetime | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        """
+        Convert the pagination parameters to a dictionary of request parameters.
+        """
+        params = {}
+        if self.before:
+            params["before"] = self.before
+        if self.after:
+            params["after"] = self.after
+        if self.limit:
+            params["limit"] = self.limit
+        if self.offset:
+            params["offset"] = self.offset
+        if self.until:
+            params["until"] = (
+                int(self.until.timestamp())
+                if isinstance(self.until, datetime.datetime)
+                else self.until
+            )
+        if self.since:
+            params["since"] = (
+                int(self.since.timestamp())
+                if isinstance(self.since, datetime.datetime)
+                else self.since
+            )
+        return params
+
+
+_T = TypeVar("_T")
+
+
+class _ItemFactory(Protocol):
+    def __call__(self, data: dict) -> _T: ...
+
+
+class Result(Generic[_T]):
+    """
+    This class is used to handle paginated results from the WhatsApp API. You can iterate over the results, and also access the next and previous pages of results.
+
+    - When using the ``next`` or ``previous`` methods, the results are returned as a new instance of the :class:`Result` class.
+    - You can access the cursors using the ``before`` and ``after`` properties and use them later in the :class:`Pagination` object.
+    """
+
+    def __init__(
+        self,
+        wa: WhatsApp,
+        response: dict,
+        item_factory: _ItemFactory,
+    ) -> None:
+        self._wa = wa
+        self._item_factory = item_factory
+        self._data = [item_factory(item) for item in response.get("data", [])]
+        self._next_url, self._previous_url = (
+            response.get("paging", {}).get("next"),
+            response.get("paging", {}).get("previous"),
+        )
+        self._cursors: dict = response["paging"].get("cursors", {})
+
+    @property
+    def has_next(self) -> bool:
+        """Check if there is a next page of results."""
+        return bool(self._next_url)
+
+    @property
+    def has_previous(self) -> bool:
+        """Check if there is a previous page of results."""
+        return bool(self._previous_url)
+
+    @property
+    def before(self) -> str | None:
+        """Cursor that points to the start of the page of data that has been returned."""
+        return self._cursors.get("before")
+
+    @property
+    def after(self) -> str | None:
+        """Cursor that points to the end of the page of data that has been returned."""
+        return self._cursors.get("after")
+
+    def next(self) -> Result[_T] | None:
+        """Get the next page of results."""
+        if self.has_next:
+            # noinspection PyProtectedMember
+            response = self._wa.api._make_request(method="GET", endpoint=self._next_url)
+            return Result(
+                wa=self._wa, response=response, item_factory=self._item_factory
+            )
+        return None
+
+    def previous(self) -> Result[_T] | None:
+        """Get the previous page of results."""
+        if self.has_previous:
+            # noinspection PyProtectedMember
+            response = self._wa.api._make_request(
+                method="GET", endpoint=self._previous_url
+            )
+            return Result(
+                wa=self._wa, response=response, item_factory=self._item_factory
+            )
+        return None
+
+    def __iter__(self) -> Iterator[_T]:
+        yield from self._data
+
+    def __len__(self) -> int:
+        return len(self._data)
+
+    def __getitem__(self, index: int) -> _T:
+        return self._data[index]
+
+    def __next__(self) -> _T:
+        if self._data:
+            return self._data.pop(0)
+        raise StopIteration
+
+    def __bool__(self) -> bool:
+        return bool(self._data)
+
+    def __repr__(self) -> str:
+        return f"Result({self._data!r}, has_next={self.has_next}, has_previous={self.has_previous})"

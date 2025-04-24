@@ -12,6 +12,11 @@ Others
 
 .. currentmodule:: pywa.types.others
 
+.. autoclass:: Result()
+    :members: has_next, next, has_previous, previous, before, after
+
+.. autoclass:: Pagination()
+
 .. autoclass:: BusinessProfile()
 
 .. autoclass:: BusinessPhoneNumber()
