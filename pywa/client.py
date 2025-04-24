@@ -8,6 +8,7 @@ import bisect
 import collections
 import dataclasses
 import datetime
+import functools
 import hashlib
 import json
 import logging
@@ -58,6 +59,8 @@ from .types import (
     QRCode,
     CallbackData,
     FlowRequest,
+    Result,
+    Pagination,
 )
 from .types.flows import (
     FlowJSON,
@@ -2312,9 +2315,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         invalidate_preview: bool = True,
         waba_id: str | int | None = None,
         phone_number_id: str | int | None = None,
-    ) -> tuple[FlowDetails, ...]:
+        *,
+        pagination: Pagination | None = None,
+    ) -> Result[FlowDetails]:
         """
-        Get the details of all flows belonging to the WhatsApp Business account.
+        Get
 
         - This method requires the WhatsApp Business account ID to be provided when initializing the client.
 
@@ -2322,19 +2327,22 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             invalidate_preview: Whether to invalidate the preview (optional, default: True).
             waba_id: The WhatsApp Business account ID (Overrides the client's business account ID).
             phone_number_id: To check that the flows can be used with a specific phone number (optional).
+            pagination: The pagination parameters (optional).
 
         Returns:
             The details of all flows.
         """
-        return tuple(
-            FlowDetails.from_dict(data=data, client=self)
-            for data in self.api.get_flows(
+        return Result(
+            wa=self,
+            response=self.api.get_flows(
                 waba_id=helpers.resolve_waba_id_param(self, waba_id),
                 fields=helpers.get_flow_fields(
                     invalidate_preview=invalidate_preview,
                     phone_number_id=phone_number_id,
                 ),
-            )["data"]
+                pagination=pagination.to_dict() if pagination else None,
+            ),
+            item_factory=functools.partial(FlowDetails.from_dict, client=self),
         )
 
     def get_flow_metrics(

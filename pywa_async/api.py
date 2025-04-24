@@ -1046,6 +1046,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         self,
         waba_id: str,
         fields: tuple[str, ...] | None = None,
+        pagination: dict[str, str] | None = None,
     ) -> dict[str, list[dict[str, Any]]]:
         """
         Get all flows.
@@ -1055,6 +1056,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         Args:
             waba_id: The ID of the WhatsApp Business Account.
             fields: The fields to get.
+            pagination: The pagination of the API.
 
         Return example::
 
@@ -1076,11 +1078,17 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             }
         """
         endpoint = f"/{waba_id}/flows"
-        if fields:
-            endpoint += f"?fields={','.join(fields)}"
+        params = {
+            k: v
+            for k, v in {
+                "fields": ",".join(fields) if fields else None,
+            }.items()
+            if v
+        } | (pagination or {})
         return await self._make_request(
             method="GET",
             endpoint=endpoint,
+            params=params,
         )
 
     async def get_flow_assets(
