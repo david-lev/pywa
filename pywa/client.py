@@ -61,6 +61,7 @@ from .types import (
     FlowRequest,
     Result,
     Pagination,
+    User,
 )
 from .types.flows import (
     FlowJSON,
@@ -70,7 +71,7 @@ from .types.flows import (
     CreatedFlow,
 )
 from .types.sent_message import SentMessage, SentTemplate
-from .types.others import InteractiveType
+from .types.others import InteractiveType, UsersBlockedResult, UsersUnblockedResult
 from .utils import FastAPI, Flask
 from .server import Server
 
@@ -2677,3 +2678,83 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return self.api.delete_phone_alternate_callback_url(
             phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
         )["success"]
+
+    def block_users(
+        self, users: Iterable[str | int], *, phone_id: str | int | None = None
+    ) -> UsersBlockedResult:
+        """
+        Block users by phone ID.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> res = wa.block_users(users=['1234567890', '0987654321'])
+            >>> if res.errors: print(res.failed_users)
+
+        Args:
+            users: The phone IDs of the users to block.
+            phone_id: The phone ID to block the users from (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            A dictionary with the status of the block operation.
+        """
+        return UsersBlockedResult.from_dict(
+            self.api.block_users(
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                users=tuple(str(phone_id) for phone_id in users),
+            )
+        )
+
+    def unblock_users(
+        self, users: Iterable[str | int], *, phone_id: str | int | None = None
+    ) -> UsersUnblockedResult:
+        """
+        Unblock users by phone ID.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.unblock_users(users=['1234567890', '0987654321'])
+
+        Args:
+            users: The phone IDs of the users to unblock.
+            phone_id: The phone ID to unblock the users from (optional, if not provided, the client's phone ID will be used).
+        Returns:
+            A dictionary with the status of the unblock operation.
+        """
+        return UsersUnblockedResult.from_dict(
+            self.api.unblock_users(
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                users=tuple(str(phone_id) for phone_id in users),
+            )
+        )
+
+    def get_blocked_users(
+        self,
+        *,
+        pagination: Pagination | None = None,
+        phone_id: str | int | None = None,
+    ) -> Result[User]:
+        """
+        Get the list of blocked users.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> for user in wa.get_blocked_users(): print(user)
+
+        Args:
+            pagination: The pagination parameters (optional).
+            phone_id: The phone ID to get the list of blocked users from (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            A Result object with the list of blocked users. You can iterate over the result to get the users.
+        """
+        return Result(
+            wa=self,
+            response=self.api.get_blocked_users(
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                pagination=pagination.to_dict() if pagination else None,
+            ),
+            item_factory=User.from_dict,
+        )

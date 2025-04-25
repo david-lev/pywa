@@ -458,3 +458,34 @@ class FlowDeletingError(FlowError):
     """
 
     __error_codes__ = (139004,)
+
+
+# ====================================================================================================
+
+
+class BlockUserError(WhatsAppError):
+    """
+    Base exception for all block user errors.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/block-users#error-codes>`_.
+    """
+
+    __error_codes__ = None
+
+
+class BulkBlockingFailed(BlockUserError):
+    """Bulk blocking failed to block some or all of the users."""
+
+    __error_codes__ = (139100,)
+
+
+class BlockListLimitReached(BlockUserError):
+    """The blocklist limit is reached when the 64k limit is met."""
+
+    __error_codes__ = (139101,)
+
+
+class BlockListConcurrentUpdate(BlockUserError):
+    """Occurs when the block list is updated while performing a pagination request and version_id does not match."""
+
+    __error_codes__ = (139102,)
