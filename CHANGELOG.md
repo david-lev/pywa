@@ -3,8 +3,19 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 2.8.0 (2025-04-27) **Latest**
 
-### 2.7.0 (2025-01-18) **Latest**
+- [client] indicate text typing status when preparing a message
+- [client] adding methods to block/unblock and get blocked users
+- [types] adding `Result` and `Pagination` classes to help paginate results in some methods
+- [user] adding `.block()` and `.unblock()` shortcuts
+- [user] adding `input` field, available when sending a message to a user
+- [flows] adding `label_variant` to `TextInput` and `TextArea`
+- [flows] adding generics to prevent type errors when using `ScreenData` and `Components` as refs
+- [flows] adding `CalendarRangeValues` to use when `CalendarPicker` mode is `range`
+- [utils] update Version `FLOW_JSON` to 7.0 and `GRAPH_API` to 22.0
+
+### 2.7.0 (2025-01-18)
 
 - [flows] adding support for `ChipsSelector` component
 - [flows] `flow_name` instead of `flow_id` while sending. `flow_token` is now optional
