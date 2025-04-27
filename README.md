@@ -39,7 +39,7 @@ ________________________
 - ♻️ Create, send and listen to Flows (NEW!)
 - 🔄 Built-in support for webhooks (Flask, FastAPI, etc.)
 - 🔬 Filters for handling incoming updates
-- 📄 Send and create templates
+- 📄 Send and create templates with support for named parameters (NEW!)
 - ✅ Fully typed, documented and tested
 
 ------------------------

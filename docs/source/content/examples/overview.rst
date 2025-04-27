@@ -8,3 +8,4 @@
     media
     sign_up_flow
     template
+    named_parameters

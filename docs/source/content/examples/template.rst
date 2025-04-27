@@ -89,6 +89,62 @@ Sending Template Messages
     )
 
 
+Sending Template Messages with Named Parameters
+------------------------------------------
+
+.. code-block:: python
+    :caption: Sending a template message with named parameters
+    :linenos:
+
+    from pywa.types import Template as Temp
+    wa = WhatsApp(...)
+    wa.send_template(
+        to='1234567890',
+        template=Temp(
+            name='order_confirmation',
+            language=Temp.Language.ENGLISH_US,
+            body=[
+                # Using named parameters by setting the parameter_name attribute
+                Temp.TextValue(value='John Doe', parameter_name='customer_name'),
+                Temp.TextValue(value='123456789', parameter_name='order_id'),
+                Temp.TextValue(value='March 15, 2025', parameter_name='delivery_date'),
+            ],
+        ),
+    )
+
+
+Sending Template Messages with Named Currency and DateTime Parameters
+------------------------------------------------------------------
+
+.. code-block:: python
+    :caption: Sending a template message with named currency and date parameters
+    :linenos:
+
+    from pywa.types import Template as Temp
+    wa = WhatsApp(...)
+    wa.send_template(
+        to='1234567890',
+        template=Temp(
+            name='payment_confirmation',
+            language=Temp.Language.ENGLISH_US,
+            body=[
+                Temp.TextValue(value='John Doe', parameter_name='customer_name'),
+                # Currency with named parameter
+                Temp.Currency(
+                    fallback_value='$100.00',
+                    code='USD',
+                    amount_1000=100000,
+                    parameter_name='payment_amount'
+                ),
+                Temp.DateTime(
+                    fallback_value='March 15, 2025',
+                    parameter_name='payment_date'
+                ),
+            ],
+        ),
+    )
+
+
 Sending Authentication Template Messages
 ----------------------------------------
 

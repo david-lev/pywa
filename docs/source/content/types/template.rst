@@ -13,6 +13,9 @@ Template
     :members: TextValue, Currency, DateTime, QuickReplyButtonData, UrlButtonValue,
                 OTPButtonCode, MPMButton, CatalogButton, CopyCodeButton
 
+.. autoclass:: NamedParameter()
+    :members:
+
 .. autoclass:: Language()
 
 --------------------
