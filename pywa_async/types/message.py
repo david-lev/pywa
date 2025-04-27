@@ -72,16 +72,6 @@ class Message(BaseUserUpdateAsync, _Message):
     sticker: Sticker | None = None
     document: Document | None = None
     audio: Audio | None = None
-    _fields_to_objects_constructors = MappingProxyType(
-        _Message._fields_to_objects_constructors
-        | dict(
-            image=Image.from_dict,
-            video=Video.from_dict,
-            sticker=Sticker.from_dict,
-            document=Document.from_dict,
-            audio=Audio.from_dict,
-        )
-    )
 
     @property
     def media(

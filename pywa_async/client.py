@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import functools
 
 """The WhatsApp Async client."""
 
@@ -8,6 +7,7 @@ __all__ = ["WhatsApp"]
 
 import dataclasses
 import datetime
+import functools
 import hashlib
 import json
 import logging
@@ -16,7 +16,7 @@ import os
 import pathlib
 import warnings
 from types import ModuleType
-from typing import BinaryIO, Iterable, Literal
+from typing import BinaryIO, Iterable, Literal, Callable
 
 import httpx
 
@@ -24,6 +24,7 @@ from pywa.client import (
     WhatsApp as _WhatsApp,
     _DEFAULT_VERIFY_DELAY_SEC,
 )  # noqa MUST BE IMPORTED FIRST
+from pywa.types.base_update import BaseUpdate
 from pywa_async import _helpers as helpers
 from . import utils
 from .api import WhatsAppCloudApiAsync
@@ -55,6 +56,27 @@ from .types import (
     Result,
     Pagination,
     User,
+    MessageStatus,
+    CallbackButton,
+    CallbackSelection,
+    ChatOpened,
+    FlowCompletion,
+    TemplateStatus,
+    Image,
+    Video,
+    Document,
+    Sticker,
+    Audio,
+)
+from .handlers import (
+    Handler,
+    MessageHandler,
+    MessageStatusHandler,
+    CallbackButtonHandler,
+    CallbackSelectionHandler,
+    ChatOpenedHandler,
+    FlowCompletionHandler,
+    TemplateStatusHandler,
 )
 from .types.flows import (
     FlowCategory,
@@ -74,9 +96,35 @@ _logger = logging.getLogger(__name__)
 class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     _api_cls = WhatsAppCloudApiAsync
     _flow_req_cls = FlowRequest
+    _usr_cls = User
     _httpx_client = httpx.AsyncClient
     _async_allowed = True
     api: WhatsAppCloudApiAsync  # IDE type hinting
+
+    _handlers_to_update_constractor: dict[
+        type[Handler], Callable[[WhatsApp, dict], BaseUpdate]
+    ] = {
+        MessageHandler: Message.from_update,
+        MessageStatusHandler: MessageStatus.from_update,
+        CallbackButtonHandler: CallbackButton.from_update,
+        CallbackSelectionHandler: CallbackSelection.from_update,
+        ChatOpenedHandler: ChatOpened.from_update,
+        FlowCompletionHandler: FlowCompletion.from_update,
+        TemplateStatusHandler: TemplateStatus.from_update,
+    }
+    """A dictionary that maps handler types to their respective update constructors."""
+
+    _msg_fields_to_objects_constructors = (
+        _WhatsApp._msg_fields_to_objects_constructors
+        | dict(
+            image=Image.from_dict,
+            video=Video.from_dict,
+            sticker=Sticker.from_dict,
+            document=Document.from_dict,
+            audio=Audio.from_dict,
+        )
+    )
+    """A mapping of message types to their respective constructors."""
 
     def __init__(
         self,
@@ -2524,7 +2572,8 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             data=await self.api.block_users(
                 phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 users=tuple(str(phone_id) for phone_id in users),
-            )
+            ),
+            client=self,
         )
 
     async def unblock_users(
@@ -2551,7 +2600,8 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             data=await self.api.unblock_users(
                 phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 users=tuple(str(phone_id) for phone_id in users),
-            )
+            ),
+            client=self,
         )
 
     async def get_blocked_users(
@@ -2581,5 +2631,5 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 pagination=pagination.to_dict() if pagination else None,
             ),
-            item_factory=User.from_dict,
+            item_factory=functools.partial(self._usr_cls.from_dict, client=self)
         )

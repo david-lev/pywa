@@ -31,7 +31,7 @@ from typing import (
 
 from .base_update import BaseUserUpdate  # noqa
 from .flows import FlowStatus, FlowActionType
-from .others import MessageType, Metadata, ReplyToMessage, User, InteractiveType
+from .others import MessageType, Metadata, ReplyToMessage, InteractiveType
 from .. import utils, _helpers as helpers
 
 if TYPE_CHECKING:
@@ -284,11 +284,7 @@ class CallbackButton(BaseUserUpdate, Generic[_CallbackDataT]):
         shared_data: Shared data between handlers.
     """
 
-    id: str
     type: MessageType
-    metadata: Metadata
-    from_user: User
-    timestamp: datetime.datetime
     reply_to_message: ReplyToMessage
     data: _CallbackDataT
     title: str
@@ -313,7 +309,7 @@ class CallbackButton(BaseUserUpdate, Generic[_CallbackDataT]):
             id=msg["id"],
             metadata=Metadata.from_dict(value["metadata"]),
             type=MessageType(msg_type),
-            from_user=User.from_dict(value["contacts"][0]),
+            from_user=client._usr_cls.from_dict(value["contacts"][0], client=client),
             timestamp=datetime.datetime.fromtimestamp(int(msg["timestamp"])),
             reply_to_message=ReplyToMessage.from_dict(msg["context"]),
             data=data,
@@ -370,11 +366,7 @@ class CallbackSelection(BaseUserUpdate, Generic[_CallbackDataT]):
         description: The description of the selection (optional).
     """
 
-    id: str
     type: MessageType
-    metadata: Metadata
-    from_user: User
-    timestamp: datetime.datetime
     reply_to_message: ReplyToMessage
     data: _CallbackDataT
     title: str
@@ -391,7 +383,7 @@ class CallbackSelection(BaseUserUpdate, Generic[_CallbackDataT]):
             id=msg["id"],
             metadata=Metadata.from_dict(value["metadata"]),
             type=MessageType(msg["type"]),
-            from_user=User.from_dict(value["contacts"][0]),
+            from_user=client._usr_cls.from_dict(value["contacts"][0], client=client),
             timestamp=datetime.datetime.fromtimestamp(int(msg["timestamp"])),
             reply_to_message=ReplyToMessage.from_dict(msg["context"]),
             data=msg["interactive"]["list_reply"]["id"],

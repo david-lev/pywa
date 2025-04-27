@@ -126,10 +126,6 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
         shared_data: Shared data between handlers.
     """
 
-    id: str
-    metadata: Metadata
-    from_user: User
-    timestamp: datetime.datetime
     status: MessageStatusType
     tracker: _CallbackDataT | None
     conversation: Conversation | None
@@ -149,7 +145,9 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
             metadata=Metadata.from_dict(value["metadata"]),
             status=MessageStatusType(status["status"]),
             timestamp=datetime.datetime.fromtimestamp(int(status["timestamp"])),
-            from_user=User(wa_id=status["recipient_id"], name=None),
+            from_user=client._usr_cls(
+                wa_id=status["recipient_id"], name=None, _client=client
+            ),
             tracker=status.get("biz_opaque_callback_data"),
             conversation=Conversation.from_dict(status["conversation"])
             if "conversation" in status

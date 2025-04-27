@@ -72,7 +72,7 @@ class SentMessage(_ClientShortcuts):
     ) -> SentMessage:
         msg_id, user = (
             update["messages"][0]["id"],
-            User.from_dict(update["contacts"][0]),
+            client._usr_cls.from_dict(update["contacts"][0], client=client),
         )
         return cls(
             _client=client,
@@ -421,7 +421,7 @@ class SentTemplate(SentMessage):
     ) -> SentTemplate:
         msg, user = (
             update["messages"][0],
-            User.from_dict(update["contacts"][0]),
+            client._usr_cls.from_dict(update["contacts"][0], client=client),
         )
         return cls(
             _client=client,

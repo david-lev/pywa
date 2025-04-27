@@ -112,6 +112,7 @@ def test_all_methods_are_overwritten_in_async():
         "_register_flow_endpoint_callback",
         "_register_flow_callback_wrapper",
         "_api_cls",
+        "_usr_cls",
         "_httpx_client",
         "_flow_req_cls",
     }
@@ -144,6 +145,7 @@ def test_same_signature():
     skip_methods.extend(
         {
             "_api_cls",
+            "_usr_cls",
             "_httpx_client",
             "_flow_req_cls",
         }

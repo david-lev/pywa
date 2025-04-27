@@ -67,11 +67,7 @@ class Message(BaseUserUpdate):
         shared_data: Shared data between handlers.
     """
 
-    id: str
     type: MessageType
-    metadata: Metadata
-    from_user: User
-    timestamp: datetime.datetime
     reply_to_message: ReplyToMessage | None
     forwarded: bool
     forwarded_many_times: bool
@@ -91,22 +87,6 @@ class Message(BaseUserUpdate):
 
     _media_fields = {"image", "video", "sticker", "document", "audio"}
     _txt_fields = ("text", "caption")
-    _fields_to_objects_constructors = MappingProxyType(
-        dict(
-            text=lambda m, _client: m["body"],
-            image=Image.from_dict,
-            video=Video.from_dict,
-            sticker=Sticker.from_dict,
-            document=Document.from_dict,
-            audio=Audio.from_dict,
-            reaction=Reaction.from_dict,
-            location=Location.from_dict,
-            contacts=lambda m, _client: tuple(Contact.from_dict(c) for c in m),
-            order=Order.from_dict,
-            system=System.from_dict,
-        )
-    )
-    """A mapping of message types to their respective constructors."""
 
     @property
     def message_id_to_reply(self) -> str:
@@ -138,18 +118,18 @@ class Message(BaseUserUpdate):
         error = value.get("errors", msg.get("errors", (None,)))[0]
         msg_type = msg["type"]
         context = msg.get("context", {})
-        constructor = cls._fields_to_objects_constructors.get(msg_type)
-        # noinspection PyArgumentList
+        # noinspection PyProtectedMember
+        constructor = client._msg_fields_to_objects_constructors.get(msg_type)
         msg_content = (
             {msg_type: constructor(msg[msg_type], _client=client)}
             if constructor is not None
             else {}
         )
         try:
-            usr = User.from_dict(value["contacts"][0])
+            usr = client._usr_cls.from_dict(value["contacts"][0], client=client)
         except KeyError:
-            usr = User(
-                wa_id=msg["from"], name=None
+            usr = client._usr_cls(
+                wa_id=msg["from"], name=None, _client=client
             )  # some messages don't have contacts
         return cls(
             _client=client,

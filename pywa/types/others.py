@@ -34,6 +34,7 @@ class User:
         input: The input of the recipient is only available when sending a message.
     """
 
+    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
     wa_id: str
     name: str | None
     input: str | None = dataclasses.field(
@@ -41,12 +42,44 @@ class User:
     )
 
     @classmethod
-    def from_dict(cls, data: dict) -> User:
+    def from_dict(cls, data: dict, client: WhatsApp) -> User:
         return cls(
+            _client=client,
             wa_id=data["wa_id"],
             name=data.get("profile", {}).get("name"),
             input=data.get("input"),
         )
+
+    def block(self) -> bool:
+        """
+        Block the user.
+
+        - Shortcut for :meth:`~pywa.client.WhatsApp.block_users` with the user wa_id.
+
+        Returns:
+            bool: True if the user was blocked
+
+        Raises:
+            BlockUserError: If the user was not blocked
+        """
+        res = self._client.block_users((self.wa_id,))
+        added = self.wa_id in {u.input for u in res.added_users}
+        if not added:
+            raise res.errors
+        return added
+
+    def unblock(self) -> bool:
+        """
+        Unblock the user.
+
+        - Shortcut for :meth:`~pywa.client.WhatsApp.unblock_users` with the user wa_id.
+
+        Returns:
+            bool: True if the user was unblocked, False otherwise.
+        """
+        return self.wa_id in {
+            u.input for u in self._client.unblock_users((self.wa_id,)).removed_users
+        }
 
     def as_vcard(self) -> str:
         """Get the user as a vCard."""
@@ -954,10 +987,10 @@ class UsersBlockedResult:
     errors: WhatsAppError | None
 
     @classmethod
-    def from_dict(cls, data: dict):
+    def from_dict(cls, data: dict, client: WhatsApp):
         return cls(
             added_users=tuple(
-                User.from_dict(user)
+                client._usr_cls.from_dict(user, client=client)
                 for user in data.get("block_users", {}).get("added_users", [])
             ),
             failed_users=tuple(
@@ -982,10 +1015,10 @@ class UsersUnblockedResult:
     removed_users: tuple[User, ...]
 
     @classmethod
-    def from_dict(cls, data: dict):
+    def from_dict(cls, data: dict, client: WhatsApp):
         return cls(
             removed_users=tuple(
-                User.from_dict(user)
+                client._usr_cls.from_dict(user, client=client)
                 for user in data.get("block_users", {}).get("removed_users", [])
             )
         )

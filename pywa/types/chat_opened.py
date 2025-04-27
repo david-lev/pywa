@@ -8,7 +8,6 @@ from .base_update import BaseUserUpdate  # noqa
 from .others import (
     MessageType,
     Metadata,
-    User,
 )
 
 if TYPE_CHECKING:
@@ -32,11 +31,7 @@ class ChatOpened(BaseUserUpdate):
         shared_data: Shared data between handlers.
     """
 
-    id: str
     type: MessageType
-    metadata: Metadata
-    from_user: User
-    timestamp: datetime.datetime
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> ChatOpened:
@@ -47,6 +42,6 @@ class ChatOpened(BaseUserUpdate):
             id=msg["id"],
             type=MessageType(msg["type"]),
             metadata=Metadata.from_dict(value["metadata"]),
-            from_user=User.from_dict(value["contacts"][0]),
+            from_user=client._usr_cls.from_dict(value["contacts"][0], client=client),
             timestamp=datetime.datetime.fromtimestamp(int(msg["timestamp"])),
         )

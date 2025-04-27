@@ -3,13 +3,12 @@
 import json
 import logging
 import threading
-from typing import TYPE_CHECKING, Callable, cast
+from typing import TYPE_CHECKING, cast
 
 from . import utils, handlers, errors
 from .handlers import (
     Handler,
     ChatOpenedHandler,
-    TemplateStatusHandler,
     EncryptedFlowRequestType,
 )  # noqa
 from .handlers import (
@@ -20,16 +19,7 @@ from .handlers import (
     RawUpdateHandler,
     FlowCompletionHandler,
 )
-from .types import (
-    MessageType,
-    Message,
-    TemplateStatus,
-    MessageStatus,
-    CallbackButton,
-    CallbackSelection,
-    FlowCompletion,
-    ChatOpened,
-)
+from .types import MessageType
 from .types.base_update import (
     BaseUpdate,
     StopHandling,
@@ -60,19 +50,6 @@ _logger = logging.getLogger(__name__)
 class Server:
     """This class is used internally by the :class:`WhatsApp` client to set up a webhook for receiving incoming
     requests."""
-
-    _handlers_to_update_constractor: dict[
-        type[Handler], Callable[["WhatsApp", dict], BaseUpdate]
-    ] = {
-        MessageHandler: Message.from_update,
-        MessageStatusHandler: MessageStatus.from_update,
-        CallbackButtonHandler: CallbackButton.from_update,
-        CallbackSelectionHandler: CallbackSelection.from_update,
-        ChatOpenedHandler: ChatOpened.from_update,
-        FlowCompletionHandler: FlowCompletion.from_update,
-        TemplateStatusHandler: TemplateStatus.from_update,
-    }
-    """A dictionary that maps handler types to their respective update constructors."""
 
     def __init__(
         self: "WhatsApp",

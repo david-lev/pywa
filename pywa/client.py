@@ -26,9 +26,16 @@ from .api import WhatsAppCloudApi
 from .filters import Filter
 from .handlers import (
     Handler,
-    _HandlerDecorators,
+    MessageHandler,
+    MessageStatusHandler,
+    CallbackButtonHandler,
+    CallbackSelectionHandler,
+    ChatOpenedHandler,
+    FlowCompletionHandler,
+    TemplateStatusHandler,
     FlowRequestHandler,
     FlowRequestCallbackWrapper,
+    _HandlerDecorators,
     _handlers_attr,
     _flow_request_handler_attr,
 )  # noqa
@@ -62,16 +69,35 @@ from .types import (
     Result,
     Pagination,
     User,
+    MessageStatus,
+    CallbackButton,
+    CallbackSelection,
+    TemplateStatus,
+    Image,
+    Video,
+    Sticker,
+    Document,
+    Audio,
 )
+from .types.base_update import BaseUpdate
 from .types.flows import (
     FlowJSON,
     FlowDetails,
     FlowValidationError,
     FlowAsset,
     CreatedFlow,
+    FlowCompletion,
 )
 from .types.sent_message import SentMessage, SentTemplate
-from .types.others import InteractiveType, UsersBlockedResult, UsersUnblockedResult
+from .types.others import (
+    InteractiveType,
+    UsersBlockedResult,
+    UsersUnblockedResult,
+    Reaction,
+    Location,
+    Order,
+    System,
+)
 from .utils import FastAPI, Flask
 from .server import Server
 
@@ -83,8 +109,35 @@ _DEFAULT_VERIFY_DELAY_SEC = 3
 class WhatsApp(Server, _HandlerDecorators, _Listeners):
     _api_cls = WhatsAppCloudApi
     _flow_req_cls = FlowRequest
+    _usr_cls = User
     _httpx_client = httpx.Client
     _async_allowed = False
+    _handlers_to_update_constractor: dict[
+        type[Handler], Callable[[WhatsApp, dict], BaseUpdate]
+    ] = {
+        MessageHandler: Message.from_update,
+        MessageStatusHandler: MessageStatus.from_update,
+        CallbackButtonHandler: CallbackButton.from_update,
+        CallbackSelectionHandler: CallbackSelection.from_update,
+        ChatOpenedHandler: ChatOpened.from_update,
+        FlowCompletionHandler: FlowCompletion.from_update,
+        TemplateStatusHandler: TemplateStatus.from_update,
+    }
+    """A dictionary that maps handler types to their respective update constructors."""
+    _msg_fields_to_objects_constructors = dict(
+        text=lambda m, _client: m["body"],
+        image=Image.from_dict,
+        video=Video.from_dict,
+        sticker=Sticker.from_dict,
+        document=Document.from_dict,
+        audio=Audio.from_dict,
+        reaction=Reaction.from_dict,
+        location=Location.from_dict,
+        contacts=lambda m, _client: tuple(Contact.from_dict(c) for c in m),
+        order=Order.from_dict,
+        system=System.from_dict,
+    )
+    """A mapping of message types to their respective constructors."""
 
     def __init__(
         self,
@@ -2711,7 +2764,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             data=self.api.block_users(
                 phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 users=tuple(str(phone_id) for phone_id in users),
-            )
+            ),
+            client=self,
         )
 
     def unblock_users(
@@ -2738,7 +2792,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             data=self.api.unblock_users(
                 phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 users=tuple(str(phone_id) for phone_id in users),
-            )
+            ),
+            client=self,
         )
 
     def get_blocked_users(
@@ -2768,5 +2823,5 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 pagination=pagination.to_dict() if pagination else None,
             ),
-            item_factory=User.from_dict,
+            item_factory=functools.partial(self._usr_cls.from_dict, client=self)
         )

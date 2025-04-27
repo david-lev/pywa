@@ -40,19 +40,6 @@ if TYPE_CHECKING:
 
 
 class Server:
-    _handlers_to_update_constractor: dict[
-        type[Handler], Callable[["WhatsApp", dict], BaseUpdate]
-    ] = {
-        MessageHandler: Message.from_update,
-        MessageStatusHandler: MessageStatus.from_update,
-        CallbackButtonHandler: CallbackButton.from_update,
-        CallbackSelectionHandler: CallbackSelection.from_update,
-        ChatOpenedHandler: ChatOpened.from_update,
-        FlowCompletionHandler: FlowCompletion.from_update,
-        TemplateStatusHandler: TemplateStatus.from_update,
-    }
-    """A dictionary that maps handler types to their respective update constructors."""
-
     async def webhook_challenge_handler(
         self: "WhatsApp", vt: str, ch: str
     ) -> tuple[str, int]:

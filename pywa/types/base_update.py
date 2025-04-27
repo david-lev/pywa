@@ -88,9 +88,13 @@ class BaseUpdate(abc.ABC):
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
     id: str
+    """The ID for the message that was received by the business."""
     timestamp: datetime.datetime
+    """Timestamp indicating when the WhatsApp server received the message from the customer."""
     raw: dict = dataclasses.field(repr=False, hash=False, compare=False)
+    """The raw update dict from WhatsApp."""
     shared_data: dict = dataclasses.field(hash=False, default_factory=dict)
+    """Shared data for the update. This data is shared between all handlers for the same update."""
 
     @classmethod
     @abc.abstractmethod
@@ -159,6 +163,7 @@ class _ClientShortcuts(abc.ABC):
     """
 
     id: str
+    """The ID for the message that was received by the business."""
     _client: WhatsApp
     _internal_sender: str
     _internal_recipient: str
@@ -863,13 +868,10 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
     _txt_fields = None
     """Contains the text fields of the update to use when filtering."""
 
-    @property
-    @abc.abstractmethod
-    def metadata(self) -> Metadata: ...
-
-    @property
-    @abc.abstractmethod
-    def from_user(self) -> User: ...
+    metadata: Metadata
+    """A metadata object describing the business subscribed to the webhook"""
+    from_user: User
+    """The user who sent a message to the business."""
 
     @property
     def sender(self) -> str:

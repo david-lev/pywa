@@ -32,7 +32,6 @@ from .others import (
     FacebookApplication,
     MessageType,
     Metadata,
-    User,
     ReplyToMessage,
 )
 
@@ -139,11 +138,7 @@ class FlowCompletion(BaseUserUpdate):
         shared_data: Shared data between handlers.
     """
 
-    id: str
     type: MessageType
-    metadata: Metadata
-    from_user: User
-    timestamp: datetime.datetime
     reply_to_message: ReplyToMessage | None
     body: str
     token: str | None
@@ -169,7 +164,7 @@ class FlowCompletion(BaseUserUpdate):
             id=msg["id"],
             type=MessageType(msg["type"]),
             metadata=Metadata.from_dict(value["metadata"]),
-            from_user=User.from_dict(value["contacts"][0]),
+            from_user=client._usr_cls.from_dict(value["contacts"][0], client=client),
             timestamp=datetime.datetime.fromtimestamp(int(msg["timestamp"])),
             reply_to_message=ReplyToMessage.from_dict(msg["context"]),
             body=msg["interactive"]["nfm_reply"]["body"],

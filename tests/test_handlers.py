@@ -24,6 +24,7 @@ CallbackButtonOnlyDataIsNeeded = functools.partial(
         phone_number_id="1234567890",
     ),
     from_user=types.User(
+        _client=FAKE_WA,
         wa_id="1234567890",
         name="John",
     ),
@@ -211,6 +212,7 @@ def test_shared_data():
             phone_number_id="1234567890",
         ),
         from_user=types.User(
+            _client=wa,
             wa_id="1234567890",
             name="John",
         ),

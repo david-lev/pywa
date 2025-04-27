@@ -12,7 +12,8 @@ from pywa.types.base_update import *  # noqa MUST BE IMPORTED FIRST
 import pathlib
 import dataclasses
 from typing import TYPE_CHECKING, BinaryIO, Iterable
-from .others import Contact, ProductsSection
+
+from .others import Contact, ProductsSection, User
 
 
 if TYPE_CHECKING:
@@ -31,8 +32,15 @@ if TYPE_CHECKING:
 class _ClientShortcuts:
     """Async Base class for all user-related update types (message, callback, etc.)."""
 
-    id: str
     message_id_to_reply: str
+    """
+    The ID of the message to reply to.
+
+    If you want to ``wa.send_x`` with ``reply_to_message_id`` in order to reply to a message, use this property
+    instead of ``id`` to prevent errors.
+    """
+    from_user: User
+    """The user who sent the message."""
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
     _internal_sender: str
     _internal_recipient: str
@@ -723,4 +731,4 @@ class _ClientShortcuts:
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class BaseUserUpdateAsync(_ClientShortcuts):
-    """Base class for all user-related update types (message, callback, etc.)."""
+    """Async Base class for all user-related update types (message, callback, etc.)."""
