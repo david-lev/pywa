@@ -474,18 +474,40 @@ class BlockUserError(WhatsAppError):
 
 
 class BulkBlockingFailed(BlockUserError):
-    """Bulk blocking failed to block some or all of the users."""
+    """
+    Failed to block/unblock some users
+
+    Bulk blocking failed to block some or all of the users.
+    """
 
     __error_codes__ = (139100,)
 
 
 class BlockListLimitReached(BlockUserError):
-    """The blocklist limit is reached when the 64k limit is met."""
+    """
+    Blocklist limit reached
+
+    The blocklist limit is reached when the 64k limit is met.
+    """
 
     __error_codes__ = (139101,)
 
 
 class BlockListConcurrentUpdate(BlockUserError):
-    """Occurs when the block list is updated while performing a pagination request and version_id does not match."""
+    """
+    Blocklist concurrent update
+
+    Occurs when the block list is updated while performing a pagination request and version_id does not match.
+    """
 
     __error_codes__ = (139102,)
+
+
+class BlockUserInternalError(BlockUserError):
+    """
+    Internal error
+
+    Internal error, please try again.
+    """
+
+    __error_codes__ = (139103,)

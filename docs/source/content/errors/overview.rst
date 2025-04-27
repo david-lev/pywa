@@ -147,3 +147,4 @@ Base Exception
     ./authorization_errors
     ./rate_limit_errors
     ./integrity_errors
+    ./block_users_errors
