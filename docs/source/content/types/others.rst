@@ -35,6 +35,12 @@ Others
 
 .. autoclass:: FacebookApplication()
 
+.. autoclass:: UsersBlockedResult()
+
+.. autoclass:: UsersUnblockedResult()
+
+.. autoclass:: BlockUserFailure()
+
 .. currentmodule:: pywa
 
 .. autoclass:: Version()

@@ -2683,7 +2683,16 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         self, users: Iterable[str | int], *, phone_id: str | int | None = None
     ) -> UsersBlockedResult:
         """
-        Block users by phone ID.
+        Block users from sending messages to the WhatsApp Business account.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/block-users#unblock-users>`_.
+
+        When you block a WhatsApp user, the following happens:
+
+        - The user cannot contact your business or see that you are online.
+        - Your business cannot message the user. If you do, you will encounter an error.
+        - You can only block users that have messaged your business in the last 24 hours.
+        - 64k blocklist limit
 
         Example:
 
@@ -2692,14 +2701,14 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             >>> if res.errors: print(res.failed_users)
 
         Args:
-            users: The phone IDs of the users to block.
+            users: The phone numbers/wa IDs of the users to block.
             phone_id: The phone ID to block the users from (optional, if not provided, the client's phone ID will be used).
 
         Returns:
-            A dictionary with the status of the block operation.
+            A UsersBlockedResult object with the status of the block operation.
         """
         return UsersBlockedResult.from_dict(
-            self.api.block_users(
+            data=self.api.block_users(
                 phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 users=tuple(str(phone_id) for phone_id in users),
             )
@@ -2709,21 +2718,24 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         self, users: Iterable[str | int], *, phone_id: str | int | None = None
     ) -> UsersUnblockedResult:
         """
-        Unblock users by phone ID.
+        Unblock users that were previously blocked from sending messages to the WhatsApp Business account.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/block-users#unblock-users>`_.
 
         Example:
-
             >>> wa = WhatsApp(...)
-            >>> wa.unblock_users(users=['1234567890', '0987654321'])
+            >>> res = wa.unblock_users(users=['1234567890', '0987654321'])
+            >>> print(res.removed_users)
 
         Args:
-            users: The phone IDs of the users to unblock.
+            users: The phone numbers/wa IDs of the users to unblock.
             phone_id: The phone ID to unblock the users from (optional, if not provided, the client's phone ID will be used).
+
         Returns:
-            A dictionary with the status of the unblock operation.
+            A UsersUnblockedResult object with the status of the unblock operation.
         """
         return UsersUnblockedResult.from_dict(
-            self.api.unblock_users(
+            data=self.api.unblock_users(
                 phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 users=tuple(str(phone_id) for phone_id in users),
             )
@@ -2736,7 +2748,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         phone_id: str | int | None = None,
     ) -> Result[User]:
         """
-        Get the list of blocked users.
+        Get blocked users.
 
         Example:
 

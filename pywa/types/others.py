@@ -919,6 +919,14 @@ class QRCode:
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class BlockUserFailure:
+    """
+    Represents a failure to block a user.
+
+    Attributes:
+        input: The phone number/wa_id input that failed to be blocked.
+        errors: The errors that occurred during the operation.
+    """
+
     input: str
     errors: tuple[WhatsAppError, ...]
 
@@ -932,6 +940,15 @@ class BlockUserFailure:
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class UsersBlockedResult:
+    """
+    Represents the result of blocking users operation.
+
+    Attributes:
+        added_users: The users that were successfully blocked.
+        failed_users: The users that failed to be blocked. You can access the .errors attribute in each failure to get the error details.
+        errors: The errors that occurred during the operation (if any).
+    """
+
     added_users: tuple[User, ...]
     failed_users: tuple[BlockUserFailure, ...]
     errors: WhatsAppError | None
@@ -955,6 +972,13 @@ class UsersBlockedResult:
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class UsersUnblockedResult:
+    """
+    Represents the result of unblocking users operation.
+
+    Attributes:
+        removed_users: The users that were successfully unblocked.
+    """
+
     removed_users: tuple[User, ...]
 
     @classmethod
@@ -1059,8 +1083,22 @@ class Result(Generic[_T]):
     """
     This class is used to handle paginated results from the WhatsApp API. You can iterate over the results, and also access the next and previous pages of results.
 
-    - When using the ``next`` or ``previous`` methods, the results are returned as a new instance of the :class:`Result` class.
+    - When using the ``next()`` or ``previous()`` methods, the results are returned as a new instance of the :class:`Result` class.
     - You can access the cursors using the ``before`` and ``after`` properties and use them later in the :class:`Pagination` object.
+
+    Example:
+
+        >>> from pywa import WhatsApp, types
+        >>> wa = WhatsApp(...)
+        >>> all_blocked_users = []
+        >>> res = wa.get_blocked_users(pagination=types.Pagination(limit=100))
+        >>> while True:
+        ...     all_blocked_users.extend(res)
+        ...     if not res.has_next:
+        ...         break
+        ...     res = res.next()
+        >>> all_blocked_users
+        [User(...), User(...), User(...), ...]
     """
 
     def __init__(
@@ -1076,7 +1114,7 @@ class Result(Generic[_T]):
             response.get("paging", {}).get("next"),
             response.get("paging", {}).get("previous"),
         )
-        self._cursors: dict = response["paging"].get("cursors", {})
+        self._cursors: dict = response.get("paging", {}).get("cursors", {})
 
     @property
     def has_next(self) -> bool:

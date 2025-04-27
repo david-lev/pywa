@@ -23,6 +23,7 @@ Message Fields
 .. autoclass:: System()
 
 .. autoclass:: User()
+    :members: block, unblock
 
 .. autoclass:: ReplyToMessage()
 
