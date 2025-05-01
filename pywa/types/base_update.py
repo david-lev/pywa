@@ -867,7 +867,6 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
 
     _txt_fields = None
     """Contains the text fields of the update to use when filtering."""
-
     metadata: Metadata
     """A metadata object describing the business subscribed to the webhook"""
     from_user: User

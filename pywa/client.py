@@ -2373,7 +2373,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         pagination: Pagination | None = None,
     ) -> Result[FlowDetails]:
         """
-        Get
+        Get the flows associated with the WhatsApp Business account.
 
         - This method requires the WhatsApp Business account ID to be provided when initializing the client.
 
@@ -2384,7 +2384,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             pagination: The pagination parameters (optional).
 
         Returns:
-            The details of all flows.
+            Result object containing the flows.
         """
         return Result(
             wa=self,
@@ -2542,21 +2542,26 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def get_qr_codes(
         self,
         phone_id: str | int | None = None,
-    ) -> tuple[QRCode, ...]:
+            *,
+        pagination: Pagination | None = None,
+    ) -> Result[QRCode]:
         """
-        Get all QR codes associated with the WhatsApp Business account.
+        Get QR codes associated with the WhatsApp Phone Number.
 
         Args:
             phone_id: The phone ID to get the QR codes for (optional, if not provided, the client's phone ID will be used).
+            pagination: The pagination parameters (optional).
 
         Returns:
-            Tuple of QR codes.
+            Result object containing the QR codes.
         """
-        return tuple(
-            QRCode.from_dict(qr)
-            for qr in self.api.get_qr_codes(
+        return Result(
+            wa=self,
+            response=self.api.get_qr_codes(
                 phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
-            )["data"]
+                pagination=pagination.to_dict() if pagination else None,
+            ),
+            item_factory=QRCode.from_dict,
         )
 
     def update_qr_code(

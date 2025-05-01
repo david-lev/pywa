@@ -1198,7 +1198,11 @@ class WhatsAppCloudApi:
             endpoint=f"/{phone_id}/message_qrdls/{code}",
         )
 
-    def get_qr_codes(self, phone_id: str) -> dict:
+    def get_qr_codes(
+        self,
+        phone_id: str,
+        pagination: dict[str, str] | None = None,
+    ) -> dict:
         """
         Get all QR codes.
 
@@ -1214,15 +1218,23 @@ class WhatsAppCloudApi:
                   "deep_link_url": "https://wa.me/message/4O4YGZEG3RIVE1",
                   "qr_image_url": "https://scontent-iad3-2.xx.fbcdn.net/..."
                 }
-              ]
+              ],
+                "paging": {
+                    "cursors": {
+                    "before": "QVFIU...",
+                    "after": "QVFIU..."
+                    }
+                }
             }
 
         Args:
             phone_id: The ID of the phone number to get the QR codes from.
+            pagination: The pagination parameters.
         """
         return self._make_request(
             method="GET",
             endpoint=f"/{phone_id}/message_qrdls",
+            params=pagination,
         )
 
     def update_qr_code(
