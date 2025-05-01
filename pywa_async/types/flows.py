@@ -86,6 +86,7 @@ from pywa.types.flows import (
     FlowCompletion as _FlowCompletion,
     FlowRequest as _FlowRequest,
 )  # noqa MUST BE IMPORTED FIRST
+from .others import Result
 from .base_update import BaseUserUpdateAsync
 
 import dataclasses
@@ -245,7 +246,7 @@ class FlowDetails(_FlowDetails):
             return True
         return False
 
-    async def get_assets(self) -> tuple[FlowAsset, ...]:
+    async def get_assets(self) -> Result[FlowAsset]:
         """
         Get all assets attached to this flow.
             - A shortcut for :meth:`pywa.client.WhatsApp.get_flow_assets`.

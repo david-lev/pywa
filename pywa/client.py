@@ -2437,22 +2437,28 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def get_flow_assets(
         self,
         flow_id: str | int,
-    ) -> tuple[FlowAsset, ...]:
+        *,
+        pagination: Pagination | None = None,
+    ) -> Result[FlowAsset]:
         """
-        Get all assets attached to a specified Flow.
+        Get assets attached to a specified Flow.
 
         Args:
             flow_id: The flow ID.
+            pagination: The pagination parameters (optional).
 
         Returns:
-            The assets of the flow.
+            Result object containing the assets of the flow.
         """
-        return tuple(
-            FlowAsset.from_dict(data)
-            for data in self.api.get_flow_assets(
+        return Result(
+            wa=self,
+            response=self.api.get_flow_assets(
                 flow_id=str(flow_id),
-            )["data"]
+                pagination=pagination.to_dict() if pagination else None,
+            ),
+            item_factory=FlowAsset.from_dict,
         )
+
 
     def register_phone_number(
         self,

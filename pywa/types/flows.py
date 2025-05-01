@@ -33,6 +33,7 @@ from .others import (
     MessageType,
     Metadata,
     ReplyToMessage,
+    Result,
 )
 
 if TYPE_CHECKING:
@@ -784,7 +785,7 @@ class FlowDetails:
             return True
         return False
 
-    def get_assets(self) -> tuple[FlowAsset, ...]:
+    def get_assets(self) -> Result[FlowAsset]:
         """
         Get all assets attached to this flow.
             - A shortcut for :meth:`pywa.client.WhatsApp.get_flow_assets`.
