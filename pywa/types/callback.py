@@ -276,7 +276,7 @@ class CallbackButton(BaseUserUpdate, Generic[_CallbackDataT]):
         type: The message type (:class:`MessageType.INTERACTIVE` for :class:`Button` presses or
          :class:`MessageType.BUTTON` for :class:`Template.QuickReplyButtonData` choices).
         from_user: The user who sent the message.
-        timestamp: The timestamp when the message was sent.
+        timestamp: The timestamp when the message was sent (in UTC).
         reply_to_message: The message to which this callback button is a reply to.
         data: The data of the button (the ``callback_data`` parameter you provided in :class:`Button` or
          :class:`Template.QuickReplyButtonData`).
@@ -310,7 +310,10 @@ class CallbackButton(BaseUserUpdate, Generic[_CallbackDataT]):
             metadata=Metadata.from_dict(value["metadata"]),
             type=MessageType(msg_type),
             from_user=client._usr_cls.from_dict(value["contacts"][0], client=client),
-            timestamp=datetime.datetime.fromtimestamp(int(msg["timestamp"])),
+            timestamp=datetime.datetime.fromtimestamp(
+                int(msg["timestamp"]),
+                datetime.timezone.utc,
+            ),
             reply_to_message=ReplyToMessage.from_dict(msg["context"]),
             data=data,
             title=title,
@@ -359,7 +362,7 @@ class CallbackSelection(BaseUserUpdate, Generic[_CallbackDataT]):
         metadata: The metadata of the message (to which phone number it was sent).
         type: The message type (always :class:`MessageType.INTERACTIVE`).
         from_user: The user who sent the message.
-        timestamp: The timestamp when the message was sent.
+        timestamp: The timestamp when the message was sent (in UTC).
         reply_to_message: The message to which this callback selection is a reply to.
         data: The data of the selection (the ``callback_data`` parameter you provided in :class:`SectionRow`).
         title: The title of the selection.
@@ -384,7 +387,10 @@ class CallbackSelection(BaseUserUpdate, Generic[_CallbackDataT]):
             metadata=Metadata.from_dict(value["metadata"]),
             type=MessageType(msg["type"]),
             from_user=client._usr_cls.from_dict(value["contacts"][0], client=client),
-            timestamp=datetime.datetime.fromtimestamp(int(msg["timestamp"])),
+            timestamp=datetime.datetime.fromtimestamp(
+                int(msg["timestamp"]),
+                datetime.timezone.utc,
+            ),
             reply_to_message=ReplyToMessage.from_dict(msg["context"]),
             data=msg["interactive"]["list_reply"]["id"],
             title=msg["interactive"]["list_reply"]["title"],

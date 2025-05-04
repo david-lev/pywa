@@ -85,7 +85,7 @@ All updates have common methods and properties:
    * - :attr:`~BaseUpdate.raw`
      - The raw update data
    * - :attr:`~BaseUpdate.timestamp`
-     - The timestamp of the update
+     - The timestamp of the update (in UTC)
    * - :meth:`~BaseUpdate.stop_handling`
      - Stop next handlers from handling the update
    * - :meth:`~BaseUpdate.continue_handling`

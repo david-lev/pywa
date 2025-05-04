@@ -61,7 +61,7 @@ class MessageStatus(BaseUserUpdateAsync, _MessageStatus[_CallbackDataT]):
         id: The ID of the message that the status is for.
         metadata: The metadata of the message (to which phone number it was sent).
         status: The status of the message.
-        timestamp: The timestamp when the status was updated.
+        timestamp: The timestamp when the status was updated (in UTC).
         from_user: The user who the message was sent to.
         tracker: The tracker that the message was sent with (e.g. ``wa.send_message(tracker=...)``).
         conversation: The conversation the given status notification belongs to (Optional).

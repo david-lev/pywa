@@ -130,7 +130,7 @@ class FlowCompletion(BaseUserUpdate):
         metadata: The metadata of the message (to which phone number it was sent).
         type: The message type (Always ``MessageType.INTERACTIVE``).
         from_user: The user who sent the message.
-        timestamp: The timestamp when the message was sent.
+        timestamp: The timestamp when the message was sent (in UTC).
         reply_to_message: The message to which this message is a reply to.
         body: The body of the message.
         token: The token of the flow. can be ``None`` in some cases :|
@@ -165,7 +165,10 @@ class FlowCompletion(BaseUserUpdate):
             type=MessageType(msg["type"]),
             metadata=Metadata.from_dict(value["metadata"]),
             from_user=client._usr_cls.from_dict(value["contacts"][0], client=client),
-            timestamp=datetime.datetime.fromtimestamp(int(msg["timestamp"])),
+            timestamp=datetime.datetime.fromtimestamp(
+                int(msg["timestamp"]),
+                datetime.timezone.utc,
+            ),
             reply_to_message=ReplyToMessage.from_dict(msg["context"]),
             body=msg["interactive"]["nfm_reply"]["body"],
             token=flow_token,

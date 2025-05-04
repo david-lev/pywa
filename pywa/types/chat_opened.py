@@ -27,7 +27,7 @@ class ChatOpened(BaseUserUpdate):
         metadata: The metadata of the message (to which phone number it was sent).
         type: The message type (Always ``MessageType.REQUEST_WELCOME``).
         from_user: The user who opened the chat.
-        timestamp: The timestamp when this message was sent.
+        timestamp: The timestamp when this message was sent (in UTC).
         shared_data: Shared data between handlers.
     """
 
@@ -43,5 +43,8 @@ class ChatOpened(BaseUserUpdate):
             type=MessageType(msg["type"]),
             metadata=Metadata.from_dict(value["metadata"]),
             from_user=client._usr_cls.from_dict(value["contacts"][0], client=client),
-            timestamp=datetime.datetime.fromtimestamp(int(msg["timestamp"])),
+            timestamp=datetime.datetime.fromtimestamp(
+                int(msg["timestamp"]),
+                datetime.timezone.utc,
+            ),
         )
