@@ -117,7 +117,7 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
         id: The ID of the message that the status is for.
         metadata: The metadata of the message (to which phone number it was sent).
         status: The status of the message.
-        timestamp: The timestamp when the status was updated.
+        timestamp: The timestamp when the status was updated (in UTC).
         from_user: The user who the message was sent to.
         tracker: The tracker that the message was sent with (e.g. ``wa.send_message(tracker=...)``).
         conversation: The conversation the given status notification belongs to (Optional).
@@ -144,7 +144,10 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
             id=status["id"],
             metadata=Metadata.from_dict(value["metadata"]),
             status=MessageStatusType(status["status"]),
-            timestamp=datetime.datetime.fromtimestamp(int(status["timestamp"])),
+            timestamp=datetime.datetime.fromtimestamp(
+                int(status["timestamp"]),
+                datetime.timezone.utc,
+            ),
             from_user=client._usr_cls(
                 wa_id=status["recipient_id"], name=None, _client=client
             ),
@@ -167,7 +170,7 @@ class Conversation:
     Attributes:
         id: The ID of the conversation.
         category: The category of the conversation.
-        expiration: The expiration date of the conversation (Optional, only for `sent` updates).
+        expiration: The expiration date (in UTC) of the conversation (Optional, only for `sent` updates).
 
     """
 
@@ -181,7 +184,8 @@ class Conversation:
             id=data["id"],
             category=ConversationCategory(data["origin"]["type"]),
             expiration=datetime.datetime.fromtimestamp(
-                int(data["expiration_timestamp"])
+                int(data["expiration_timestamp"]),
+                datetime.timezone.utc,
             )
             if "expiration_timestamp" in data
             else None,

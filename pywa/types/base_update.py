@@ -90,7 +90,7 @@ class BaseUpdate(abc.ABC):
     id: str
     """The ID for the message that was received by the business."""
     timestamp: datetime.datetime
-    """Timestamp indicating when the WhatsApp server received the message from the customer."""
+    """Timestamp indicating when the WhatsApp server received the message from the customer (in UTC)."""
     raw: dict = dataclasses.field(repr=False, hash=False, compare=False)
     """The raw update dict from WhatsApp."""
     shared_data: dict = dataclasses.field(hash=False, default_factory=dict)

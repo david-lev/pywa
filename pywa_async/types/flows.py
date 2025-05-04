@@ -154,7 +154,7 @@ class FlowCompletion(BaseUserUpdateAsync, _FlowCompletion):
         metadata: The metadata of the message (to which phone number it was sent).
         type: The message type (Always ``MessageType.INTERACTIVE``).
         from_user: The user who sent the message.
-        timestamp: The timestamp when the message was sent.
+        timestamp: The timestamp when the message was sent (in UTC).
         reply_to_message: The message to which this message is a reply to.
         body: The body of the message.
         token: The token of the flow. can be ``None`` in some cases :|

@@ -45,7 +45,7 @@ class Message(BaseUserUpdate):
         metadata: The metadata of the message (to which phone number it was sent).
         type: The message type (See :class:`MessageType`).
         from_user: The user who sent the message.
-        timestamp: The timestamp when the message was sent.
+        timestamp: The timestamp when the message was sent (in UTC).
         reply_to_message: The message to which this message is a reply to. (Optional)
         forwarded: Whether the message was forwarded.
         forwarded_many_times: Whether the message was forwarded many times.
@@ -138,7 +138,10 @@ class Message(BaseUserUpdate):
             type=MessageType(msg_type),
             **msg_content,
             from_user=usr,
-            timestamp=datetime.datetime.fromtimestamp(int(msg["timestamp"])),
+            timestamp=datetime.datetime.fromtimestamp(
+                int(msg["timestamp"]),
+                datetime.timezone.utc,
+            ),
             metadata=Metadata.from_dict(value["metadata"]),
             forwarded=context.get("forwarded", False)
             or context.get("frequently_forwarded", False),

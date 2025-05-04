@@ -1426,7 +1426,7 @@ class TemplateStatus(BaseUpdate):
 
     Attributes:
         id: ID of Whatsapp Business Accounts this update belongs to.
-        timestamp: Timestamp of the update.
+        timestamp: Timestamp of the update (in UTC).
         event: The event that occurred (the template was approved, rejected, etc.).
         message_template_id: The ID of the template.
         message_template_name: The name of the template.
@@ -1454,7 +1454,10 @@ class TemplateStatus(BaseUpdate):
             _client=client,
             raw=update,
             id=data["id"],
-            timestamp=datetime.datetime.fromtimestamp(data["time"]),
+            timestamp=datetime.datetime.fromtimestamp(
+                data["time"],
+                datetime.timezone.utc,
+            ),
             event=cls.TemplateEvent(value["event"]),
             message_template_id=value["message_template_id"],
             message_template_name=value["message_template_name"],

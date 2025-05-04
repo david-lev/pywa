@@ -22,6 +22,6 @@ class ChatOpened(BaseUserUpdateAsync, _ChatOpened):
         metadata: The metadata of the message (to which phone number it was sent).
         type: The message type (Always ``MessageType.REQUEST_WELCOME``).
         from_user: The user who opened the chat.
-        timestamp: The timestamp when this message was sent.
+        timestamp: The timestamp when this message was sent (in UTC).
         shared_data: Shared data between handlers.
     """
