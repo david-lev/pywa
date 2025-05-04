@@ -3,7 +3,14 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-### 2.8.0 (2025-04-27) **Latest**
+
+### 2.9.0 (2025-05-04) **Latest**
+
+- [updates] add timezone (UTC) information to timestamps
+- [client] get qr-codes and flow-assets inside `Result` to allow pagination
+- [docs] update examples
+
+### 2.8.0 (2025-04-27)
 
 - [client] indicate text typing status when preparing a message
 - [client] adding methods to block/unblock and get blocked users
