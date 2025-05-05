@@ -2,7 +2,7 @@
 
 ________________________
 
-# [PyWa](https://github.com/david-lev/pywa) • Build WhatsApp Bots in Python—Fast, Effortless, Powerful 🚀
+# [PyWa](https://github.com/david-lev/pywa) • Build WhatsApp Bots in Python • Fast, Effortless, Powerful 🚀
 
 [![PyPi Downloads](https://img.shields.io/pypi/dm/pywa)](https://pypi.org/project/pywa/)
 [![PyPI Version](https://badge.fury.io/py/pywa.svg)](https://pypi.org/project/pywa/)

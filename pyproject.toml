@@ -12,7 +12,7 @@ include = ["pywa*"]
 
 [project]
 name = "pywa"
-description = "Python wrapper for the WhatsApp Cloud API"
+description = "Build WhatsApp Bots in Python • Fast, Effortless, Powerful 🚀"
 dynamic = ["version", "readme", "dependencies"]
 license = { text = "MIT" }
 requires-python = ">=3.10"
