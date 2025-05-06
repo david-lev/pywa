@@ -1646,9 +1646,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         if path is None:
             path = os.getcwd()
         if filename is None:
-            filename = hashlib.sha256(url.encode()).hexdigest() + (
-                mimetypes.guess_extension(mimetype) or ".bin"
+            clean_mimetype = mimetype.split(";")[0].strip() if mimetype else None
+            extension = (
+                mimetypes.guess_extension(clean_mimetype) if clean_mimetype else None
             )
+            filename = hashlib.sha256(url.encode()).hexdigest() + (extension or ".bin")
         path = os.path.join(path, filename)
         with open(path, "wb") as f:
             f.write(content)

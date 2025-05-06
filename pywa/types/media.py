@@ -48,7 +48,8 @@ class BaseMedia(abc.ABC, utils.FromDict):
     @property
     def extension(self) -> str | None:
         """Gets the extension of the media (with dot.)"""
-        return mimetypes.guess_extension(self.mime_type)
+        clean_mimetype = self.mime_type.split(";")[0].strip()
+        return mimetypes.guess_extension(clean_mimetype)
 
     def download(
         self,
