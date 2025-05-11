@@ -43,11 +43,35 @@ class Server:
     async def webhook_challenge_handler(
         self: "WhatsApp", vt: str, ch: str
     ) -> tuple[str, int]:
+        """
+        Handle the verification challenge from the webhook manually.
+
+        - Use this function only if you are using a custom server (e.g. Django etc.).
+
+        Args:
+            vt: The verify token param (utils.HUB_VT).
+            ch: The challenge param (utils.HUB_CH).
+
+        Returns:
+            A tuple containing the challenge and the status code.
+        """
         return super().webhook_challenge_handler(vt=vt, ch=ch)
 
     async def webhook_update_handler(
         self: "WhatsApp", update: bytes, hmac_header: str = None
     ) -> tuple[str, int]:
+        """
+        Handle the incoming update from the webhook manually.
+
+        - Use this function only if you are using a custom server (e.g. Django etc.).
+
+        Args:
+            update: The incoming raw update from the webhook (bytes)
+            hmac_header: The ``X-Hub-Signature-256`` header (to validate the signature, use ``utils.HUB_SIG`` for the key).
+
+        Returns:
+            A tuple containing the response and the status code.
+        """
         res, status, update_dict, update_hash = self._check_and_prepare_update(
             update=update, hmac_header=hmac_header
         )
@@ -138,7 +162,7 @@ class Server:
         self: "WhatsApp",
         callback_wrapper: handlers.FlowRequestCallbackWrapper,
     ) -> handlers.FlowRequestCallbackWrapper:
-        """Register the flow callback wrapper."""
+        """Register the flow callback wrapper to the server."""
         match self._server_type:
             case utils.ServerType.FLASK:
                 if not utils.is_installed("asgiref"):  # flask[async]

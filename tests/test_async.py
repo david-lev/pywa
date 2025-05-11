@@ -167,11 +167,24 @@ def test_same_signature():
                 inspect.signature(getattr(sync_obj, method_name)),
                 inspect.signature(getattr(async_obj, method_name)),
             )
-            if sync_sig.parameters != async_sig.parameters:
-                if method_name not in skip_signature_check:
-                    raise AssertionError(
+            try:
+                assert sync_sig.parameters == async_sig.parameters, (
+                    f"Method {method_name} has different signature in {async_obj.__name__}"
+                )
+            except AssertionError:
+                if method_name in skip_signature_check:
+                    sync_sig, async_sig = (
+                        dict(sync_sig.parameters),
+                        dict(async_sig.parameters),
+                    )
+                    for param in skip_signature_check[method_name]:
+                        sync_sig.pop(param, None)
+                        async_sig.pop(param, None)
+                    assert sync_sig == async_sig, (
                         f"Method {method_name} has different signature in {async_obj.__name__}"
                     )
+                else:
+                    raise
 
 
 def test_same_return_annotation():
@@ -190,7 +203,46 @@ def test_same_return_annotation():
                 inspect.signature(getattr(sync_obj, method_name)),
                 inspect.signature(getattr(async_obj, method_name)),
             )
-            if sync_sig.return_annotation != async_sig.return_annotation:
+            assert sync_sig.return_annotation == async_sig.return_annotation, (
+                f"Method {method_name} has different return annotations in {async_obj.__name__}"
+            )
+
+
+def test_same_docstring():
+    skip_methods = [
+        m.__name__
+        for m in {
+            BaseMediaSync.from_dict,
+            BaseMediaSync.from_flow_completion,
+        }
+    ] + [
+        "wait_for_completion",
+        "_api_cls",
+        "_usr_cls",
+        "_httpx_client",
+        "_flow_req_cls",
+    ]
+    for sync_obj, async_obj in OVERRIDES:
+        for method_name in get_all_methods_names(sync_obj):
+            if method_name in skip_methods:
+                continue
+            sync_doc, async_doc = (
+                getattr(sync_obj, method_name).__doc__,
+                getattr(async_obj, method_name).__doc__,
+            )
+            if (sync_doc and not async_doc) or (not sync_doc and async_doc):
                 raise AssertionError(
-                    f"Method {method_name} has different return annotations in {async_obj.__name__}"
+                    f"Method {method_name} missing docstrings in {async_obj.__name__}"
                 )
+            try:
+                assert sync_doc == async_doc, (
+                    f"Method {method_name} has different docstrings in {async_obj.__name__}"
+                )
+            except AssertionError:
+                for line in zip(
+                    sync_doc.splitlines(), async_doc.splitlines(), strict=True
+                ):
+                    if line[0] != line[1]:
+                        if "async" in line[1] or "await" in line[1]:  # async examples
+                            continue
+                        raise

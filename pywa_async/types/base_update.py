@@ -66,7 +66,6 @@ class _ClientShortcuts:
             ...     quote=True,
             ... )
 
-
         Args:
             text: The text to reply with (markdown allowed, max 4096 characters).
             header: The header of the reply (if buttons are provided, optional, up to 60 characters,

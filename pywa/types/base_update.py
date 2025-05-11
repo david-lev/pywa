@@ -851,7 +851,7 @@ class _ClientShortcuts(abc.ABC):
 
         The typing indicator will be dismissed once you respond, or after 25 seconds, whichever comes first. To prevent a poor user experience, only display a typing indicator if you are going to respond.
 
-            - Shortcut for :py:func:`~pywa.client.WhatsApp.indicate_typing` with ``message_id``.
+        - Shortcut for :py:func:`~pywa.client.WhatsApp.indicate_typing` with ``message_id``.
 
         Returns:
             Whether it was successful.

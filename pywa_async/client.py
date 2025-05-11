@@ -651,7 +651,9 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender: str | int | None = None,
     ) -> SentMessage:
         """
-        Send an audio file to a WhatsApp user.
+        Send an audio message to a WhatsApp user.
+
+        - See `Supported audio formats <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/audio-messages#supported-audio-formats>`_.
 
         Example:
 

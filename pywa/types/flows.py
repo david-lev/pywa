@@ -379,7 +379,7 @@ class FlowRequest:
         Args:
             key: The key of the media in the data (e.g. ``"driver_license"``).
             index: The index of the media in the data (default to ``0``).
-            dl_session: The HTTPX client session to download the media (optional, new session will be created if not provided).
+            dl_session: The HTTPX session to download the media (optional, new session will be created if not provided).
 
         Returns:
             A tuple of (media_id, filename, decrypted_data) where:

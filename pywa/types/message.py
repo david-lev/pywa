@@ -184,7 +184,7 @@ class Message(BaseUserUpdate):
             filepath: The path where to save the file (if not provided, the current working directory will be used).
             filename: The name of the file (if not provided, it will be guessed from the URL + extension).
             in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
-            **kwargs: Additional arguments to pass to requests.get.
+            **kwargs: Additional arguments to pass to httpx.get.
 
         Returns:
             The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.

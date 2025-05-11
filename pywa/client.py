@@ -894,7 +894,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender: str | int | None = None,
     ) -> SentMessage:
         """
-        Send an audio file to a WhatsApp user.
+        Send an audio message to a WhatsApp user.
+
+        - See `Supported audio formats <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/audio-messages#supported-audio-formats>`_.
 
         Example:
 
@@ -2048,9 +2050,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Returns:
             The sent template.
-
-        Raises:
-
         """
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
         is_url = None

@@ -141,7 +141,7 @@ class Message(BaseUserUpdateAsync, _Message):
         Args:
             to: The phone ID of the WhatsApp user to copy the message to.
             header: The header of the message (if keyboard is provided, optional, up to 60 characters, no markdown allowed).
-            body: The body of the message (if buttons are provided, optional, up to 1024 characters, markdown allowed).
+            body: The body/caption of the message (if buttons are provided, optional, up to 1024 characters, markdown allowed).
             footer: The footer of the message (if buttons is provided, optional, markdown has no effect).
             buttons: The buttons to send with the message (only in case of message from type ``text``, ``document``,
              ``video`` and ``image``. also, the ``SectionList`` is only available to ``text`` type)

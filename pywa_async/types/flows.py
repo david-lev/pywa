@@ -127,15 +127,26 @@ class FlowRequest(_FlowRequest):
             >>> from pywa_async import WhatsApp, types
             >>> wa = WhatsApp(...)
             >>> @wa.on_flow_request("/my-flow-endpoint")
-            ... async def my_flow_endpoint(_: WhatsApp, req: FlowRequest):
-            ...     media_id, filename, decrypted_data = req.decrypt_media(key="driver_license", index=0)
-            ...     # save the decrypted media to your storage
+            ... async def my_flow_endpoint(_: WhatsApp, req: types.FlowRequest):
+            ...     media_id, filename, decrypted_data = await req.decrypt_media(key="driver_license", index=0)
+            ...     with open(filename, "wb") as file:
+            ...         file.write(decrypted_data)
             ...     return req.respond(...)
 
         Args:
             key: The key of the media in the data (e.g. ``"driver_license"``).
-            index: The index of the media in the data (default is ``0``).
-            dl_session: The HTTPX client session to download the media (optional, new session will be created if not provided).
+            index: The index of the media in the data (default to ``0``).
+            dl_session: The HTTPX async session to download the media (optional, new session will be created if not provided).
+
+        Returns:
+            A tuple of (media_id, filename, decrypted_data) where:
+                - media_id: The media ID of the decrypted media.
+                - filename: The filename of the decrypted media.
+                - decrypted_data: The decrypted data of the media.
+        Raises:
+            ValueError: If the request has no data.
+            KeyError: If the key is not found in the data.
+            IndexError: If the index is out of range.
         """
         return await utils.flow_request_media_decryptor(
             encrypted_media=self.data[key][index],
