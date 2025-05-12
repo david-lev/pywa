@@ -59,6 +59,9 @@ __all__ = [
     "FlowValidationError",
     "FlowAsset",
     "CreatedFlow",
+    "MigratedFlow",
+    "MigratedFlowError",
+    "MigrateFlowsResponse",
     "FlowJSON",
     "Screen",
     "ScreenData",
@@ -961,6 +964,68 @@ class CreatedFlow:
                 for e in data.get("validation_errors", [])
             )
             or None,
+        )
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class MigratedFlow(utils.FromDict):
+    """
+    Successfully migrated flow.
+
+    Attributes:
+        source_id: The ID of the flow in the source.
+        source_name: The name of the flow in the source.
+        migrated_id: The ID of the new flow in the destination.
+    """
+
+    source_id: str
+    source_name: str
+    migrated_id: str
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class MigratedFlowError(Exception, utils.FromDict):
+    """
+    Failed to migrate flow.
+
+    - See `Flows API Troubleshooting <https://developers.facebook.com/docs/whatsapp/flows/reference/flowsapi#troubleshooting>`_.
+
+    Attributes:
+        source_name: The name of the flow in the source.
+        error_code: The error code.
+        error_message: The error message.
+    """
+
+    source_name: str
+    error_code: str
+    error_message: str
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class MigrateFlowsResponse:
+    """
+    Represents the response of the migrate flows endpoint.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowsapi#migrate>`_.
+
+    Attributes:
+        migrated_flows: The flows that were successfully migrated.
+        failed_flows: The flows that failed to migrate.
+    """
+
+    migrated_flows: tuple[MigratedFlow, ...]
+    failed_flows: tuple[MigratedFlowError, ...]
+
+    @classmethod
+    def from_dict(cls, data: dict) -> MigrateFlowsResponse:
+        return cls(
+            migrated_flows=tuple(
+                MigratedFlow.from_dict(flow) for flow in data.get("migrated_flows", [])
+            ),
+            failed_flows=tuple(
+                MigratedFlowError.from_dict(flow)
+                for flow in data.get("failed_flows", [])
+            ),
         )
 
 

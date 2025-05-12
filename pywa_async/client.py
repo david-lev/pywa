@@ -85,6 +85,7 @@ from .types.flows import (
     FlowValidationError,
     FlowAsset,
     CreatedFlow,
+    MigrateFlowsResponse,
 )
 from .types.others import InteractiveType, UsersBlockedResult, UsersUnblockedResult
 from .types.sent_message import SentMessage, SentTemplate
@@ -2245,6 +2246,32 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 pagination=pagination.to_dict() if pagination else None,
             ),
             item_factory=FlowAsset.from_dict,
+        )
+
+    async def migrate_flows(
+            self,
+            source_waba_id: str | int,
+            source_flow_names: Iterable[str],
+            *,
+            destination_waba_id: str | int | None = None,
+    ) -> MigrateFlowsResponse:
+        """
+        Migrate flows from one WhatsApp Business Account to another.
+
+        Args:
+            source_waba_id: The source WhatsApp Business Account ID.
+            source_flow_names: The names of the flows to migrate.
+            destination_waba_id: The destination WhatsApp Business Account ID (optional, if not provided, the client's business account ID will be used).
+
+        Returns:
+            The response of the migration request.
+        """
+        return MigrateFlowsResponse.from_dict(
+            await self.api.migrate_flows(
+                dest_waba_id=helpers.resolve_waba_id_param(self, destination_waba_id),
+                source_waba_id=str(source_waba_id),
+                source_flow_names=tuple(source_flow_names),
+            )
         )
 
     async def register_phone_number(

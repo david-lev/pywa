@@ -191,6 +191,8 @@ Flows
      - Get flow metrics
    * - :meth:`~WhatsApp.get_flow_assets`
      - Get flow assets
+   * - :meth:`~WhatsApp.migrate_flows`
+     - Migrate flows from one WABA to another
 
 Business profile
 ----------------

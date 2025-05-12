@@ -27,6 +27,14 @@ Flow Types
 
 .. autoclass:: FlowMetricGranularity()
 
+.. autoclass:: CreatedFlow()
+
+.. autoclass:: MigrateFlowsResponse()
+
+.. autoclass:: MigratedFlow()
+
+.. autoclass:: MigratedFlowError()
+
 .. autoclass:: FlowResponseError()
     :show-inheritance:
 

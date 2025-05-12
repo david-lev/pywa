@@ -1129,6 +1129,58 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             params=pagination,
         )
 
+    async def migrate_flows(
+        self,
+        dest_waba_id: str,
+        source_waba_id: str,
+        source_flow_names: tuple[str, ...],
+    ) -> dict[str, list[dict[str, str]]]:
+        """
+        Migrate Flows from one WhatsApp Business Account (WABA) to another.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowsapi/#migrate>`_.
+
+        Migration doesn't move the source Flows, it creates copies of them with the same names in the destination WABA.
+
+        - You can specify specific Flow names to migrate, or choose to migrate all Flows in source WABA.
+        - Flows can only be migrated between WABAs owned by the same Meta business.
+        - If a Flow exists with the same name in the destination WABA, it will be skipped and the API will return an error message for that Flow. Other Flows in the same request will be copied.
+        - The migrated Flow will be published if the original Flow is published, otherwise it will be in draft state.
+        - New Flows under destination WABA will have new Flow IDs.
+
+
+        Return example::
+
+            {
+              "migrated_flows": [
+                {
+                  "source_name": "appointment-booking",
+                  "source_id": "1234",
+                  "migrated_id": "5678"
+                }
+              ],
+              "failed_flows": [
+                {
+                  "source_name": "lead-gen",
+                  "error_code": "4233041",
+                  "error_message": "Flows Migration Error: Flow with the same name exists in destination WABA."
+                }
+              ]
+            }
+
+        Args:
+            dest_waba_id: Destination WhatsApp Business Account ID.
+            source_waba_id: Source WhatsApp Business Account ID.
+            source_flow_names: Tuple of specific Flow names to migrate. If not specified, it will migrate all flows in source WABA. Only 100 Flows can be migrated in a request.
+
+        Returns:
+            Result of the migration request.
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint=f"/{dest_waba_id}/migrate_flows?source_waba_id={source_waba_id}&source_flow_names={','.join(source_flow_names)}",
+        )
+
     async def create_qr_code(
         self, phone_id: str, prefilled_message: str, generate_qr_image: str
     ) -> dict:
