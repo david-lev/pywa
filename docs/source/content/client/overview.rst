@@ -214,6 +214,22 @@ Business profile
    * - :meth:`~WhatsApp.register_phone_number`
      - Register new phone number
 
+Managing users
+----------------
+
+.. list-table::
+   :widths: 40 60
+   :header-rows: 1
+
+   * - Method
+     - Description
+   * - :meth:`~WhatsApp.block_users`
+     - Block users
+   * - :meth:`~WhatsApp.unblock_users`
+     - Unblock users
+   * - :meth:`~WhatsApp.get_blocked_users`
+     - Get blocked users
+
 QR Codes
 --------
 

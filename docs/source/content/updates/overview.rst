@@ -139,6 +139,10 @@ All user-related-updates have common methods and properties:
      - Mark the update as read
    * - :meth:`~BaseUserUpdate.indicate_typing`
      - Indicate that the user is typing
+   * - :meth:`~BaseUserUpdate.block_sender`
+     - Block the sender
+   * - :meth:`~BaseUserUpdate.unblock_sender`
+     - Unblock the sender
 
 .. toctree::
     message

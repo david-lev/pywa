@@ -43,6 +43,9 @@ Client Reference
 .. automethod:: WhatsApp.get_flows
 .. automethod:: WhatsApp.get_flow_metrics
 .. automethod:: WhatsApp.get_flow_assets
+.. automethod:: WhatsApp.block_users
+.. automethod:: WhatsApp.unblock_users
+.. automethod:: WhatsApp.get_blocked_users
 .. automethod:: WhatsApp.register_phone_number
 .. automethod:: WhatsApp.create_qr_code
 .. automethod:: WhatsApp.get_qr_code

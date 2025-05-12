@@ -731,3 +731,17 @@ class _ClientShortcuts:
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class BaseUserUpdateAsync(_ClientShortcuts):
     """Async Base class for all user-related update types (message, callback, etc.)."""
+
+    async def block_sender(self) -> bool:
+        """
+        Block the sender of the message.
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.block_users` with ``sender``.
+        """
+        return await self.from_user.block()
+
+    async def unblock_sender(self) -> bool:
+        """
+        Unblock the sender of the message.
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.unblock_users` with ``sender``.
+        """
+        return await self.from_user.unblock()

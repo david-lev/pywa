@@ -8,9 +8,7 @@ from pywa_async import WhatsApp as WhatsAppAsync
 from pywa.api import WhatsAppCloudApi as WhatsAppCloudApiSync
 from pywa_async.api import WhatsAppCloudApiAsync
 from pywa.server import Server as ServerSync
-from pywa_async.server import Server as ServerAsync
 from pywa.listeners import _Listeners as ListenersSync
-from pywa_async.listeners import _AsyncListeners as ListenersAsync
 from pywa.types import (
     Message as MessageSync,
     CallbackButton as CallbackButtonSync,
@@ -22,6 +20,8 @@ from pywa.types import (
     FlowRequest as FlowRequestSync,
     FlowResponse as FlowResponseSync,
     MediaUrlResponse as MediaUrlResponseSync,
+    User as UserSync,
+    Result as ResultSync,
 )
 from pywa_async.types import (
     Message as MessageAsync,
@@ -32,7 +32,10 @@ from pywa_async.types import (
     FlowCompletion as FlowCompletionAsync,
     TemplateStatus as TemplateStatusAsync,
     FlowRequest as FlowRequestAsync,
+    FlowResponse as FlowResponseAsync,
     MediaUrlResponse as MediaUrlResponseAsync,
+    User as UserAsync,
+    Result as ResultAsync,
 )
 from pywa.types.flows import FlowDetails as FlowDetailsSync
 from pywa_async.types.flows import FlowDetails as FlowDetailsAsync
@@ -51,11 +54,15 @@ OVERRIDES: list[tuple] = [
     (FlowCompletionSync, FlowCompletionAsync),
     (TemplateStatusSync, TemplateStatusAsync),
     (FlowRequestSync, FlowRequestAsync),
+    (FlowResponseSync, FlowResponseAsync),
     (FlowDetailsSync, FlowDetailsAsync),
     (MediaUrlResponseSync, MediaUrlResponseAsync),
     (BaseMediaSync, BaseMediaAsync),
     (SentMessageSync, SentMessageAsync),
     (WhatsAppCloudApiSync, WhatsAppCloudApiAsync),
+    (WhatsAppCloudApiSync, WhatsAppCloudApiAsync),
+    (UserSync, UserAsync),
+    (ResultSync, ResultAsync),
 ]
 
 
@@ -102,9 +109,11 @@ def test_all_methods_are_overwritten_in_async():
             FlowRequestSync.token_no_longer_valid,
             FlowRequestSync.respond,
             FlowRequestSync.from_dict,
+            FlowResponseSync.to_dict,
             FlowCompletionSync.get_media,
             TemplateStatusSync.TemplateEvent,
             TemplateStatusSync.TemplateRejectionReason,
+            UserSync.as_vcard,
         }
     ]
     non_async = {

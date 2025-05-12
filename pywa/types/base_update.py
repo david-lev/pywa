@@ -896,6 +896,20 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
     def _internal_recipient(self) -> str:
         return self.recipient
 
+    def block_sender(self) -> bool:
+        """
+        Block the sender of the message.
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.block_users` with ``sender``.
+        """
+        return self.from_user.block()
+
+    def unblock_sender(self) -> bool:
+        """
+        Unblock the sender of the message.
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.unblock_users` with ``sender``.
+        """
+        return self.from_user.unblock()
+
     @property
     def listener_identifier(self) -> tuple[str, str]:
         """

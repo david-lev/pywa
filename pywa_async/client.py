@@ -2557,6 +2557,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Block users from sending messages to the WhatsApp Business account.
 
         - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/block-users#unblock-users>`_.
+        - You can block users with the :meth:`~pywa.types.others.User.block` or :meth:`~pywa.types.base_update.BaseUserUpdate.block_sender` shortcuts.
 
         When you block a WhatsApp user, the following happens:
 
