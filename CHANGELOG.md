@@ -4,7 +4,15 @@
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
 
-### 2.9.0 (2025-05-04) **Latest**
+### 2.10.0 (2025-05-14) **Latest**
+
+- [client] allow to migrate flows from one WABA to another
+- [client] improve mime-type handling when downloading media
+- [message_status] adding support for per-message pricing
+- [base_update] shortcuts to un/block user in update level
+- [tests] test the same docstring in async
+
+### 2.9.0 (2025-05-04)
 
 - [updates] add timezone (UTC) information to timestamps
 - [client] get qr-codes and flow-assets inside `Result` to allow pagination

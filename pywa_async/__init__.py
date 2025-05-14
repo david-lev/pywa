@@ -1,5 +1,5 @@
 """
-Python wrapper for the WhatsApp Cloud API - Async package
+Build WhatsApp Bots in Python • Fast, Effortless, Powerful 🚀 [Async package]
 
     - GitHub: https://github.com/david-lev/pywa
     - Docs: https://pywa.readthedocs.io/
