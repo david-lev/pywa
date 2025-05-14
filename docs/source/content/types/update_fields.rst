@@ -34,3 +34,11 @@ Message Fields
 .. autoclass:: Conversation()
 
 .. autoclass:: ConversationCategory()
+
+.. autoclass:: Pricing()
+
+.. autoclass:: PricingModel()
+
+.. autoclass:: PricingType()
+
+.. autoclass:: PricingCategory()
