@@ -7,6 +7,10 @@ __all__ = [
     "MessageStatusType",
     "Conversation",
     "ConversationCategory",
+    "Pricing",
+    "PricingModel",
+    "PricingType",
+    "PricingCategory",
 ]
 
 from pywa.types.message_status import *  # noqa MUST BE IMPORTED FIRST
@@ -57,15 +61,16 @@ class MessageStatus(BaseUserUpdateAsync, _MessageStatus[_CallbackDataT]):
         ...    if s.tracker.admin: print(s.tracker.id) # Access the tracker data
 
 
+
     Attributes:
         id: The ID of the message that the status is for.
         metadata: The metadata of the message (to which phone number it was sent).
         status: The status of the message.
         timestamp: The timestamp when the status was updated (in UTC).
         from_user: The user who the message was sent to.
-        tracker: The tracker that the message was sent with (e.g. ``wa.send_message(tracker=...)``).
-        conversation: The conversation the given status notification belongs to (Optional).
-        pricing_model: Type of pricing model used by the business. Current supported value is CBP.
+        conversation: The conversation that the message was sent in (See `Conversation <https://developers.facebook.com/docs/whatsapp/pricing#conversations>`_).
+        pricing: The pricing of the message (Optional).
         error: The error that occurred (if status is :class:`MessageStatusType.FAILED`).
+        tracker: The tracker that the message was sent with (e.g. ``wa.send_message(tracker=...)``).
         shared_data: Shared data between handlers.
     """

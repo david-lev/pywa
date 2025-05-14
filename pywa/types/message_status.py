@@ -1,14 +1,20 @@
+"""This module contains the types related to message status updates."""
+
 from __future__ import annotations
 
-from .callback import _CallbackDataT
+import warnings
 
-"""This module contains the types related to message status updates."""
+from .callback import _CallbackDataT
 
 __all__ = [
     "MessageStatus",
     "MessageStatusType",
     "Conversation",
     "ConversationCategory",
+    "Pricing",
+    "PricingModel",
+    "PricingType",
+    "PricingCategory",
 ]
 
 import dataclasses
@@ -119,18 +125,18 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
         status: The status of the message.
         timestamp: The timestamp when the status was updated (in UTC).
         from_user: The user who the message was sent to.
-        tracker: The tracker that the message was sent with (e.g. ``wa.send_message(tracker=...)``).
-        conversation: The conversation the given status notification belongs to (Optional).
-        pricing_model: Type of pricing model used by the business. Current supported value is CBP.
+        conversation: The conversation that the message was sent in (See `Conversation <https://developers.facebook.com/docs/whatsapp/pricing#conversations>`_).
+        pricing: The pricing of the message (Optional).
         error: The error that occurred (if status is :class:`MessageStatusType.FAILED`).
+        tracker: The tracker that the message was sent with (e.g. ``wa.send_message(tracker=...)``).
         shared_data: Shared data between handlers.
     """
 
     status: MessageStatusType
-    tracker: _CallbackDataT | None
+    pricing: Pricing | None
     conversation: Conversation | None
-    pricing_model: str | None
     error: WhatsAppError | None
+    tracker: _CallbackDataT | None
 
     _txt_fields = ("tracker",)
 
@@ -155,23 +161,35 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
             conversation=Conversation.from_dict(status["conversation"])
             if "conversation" in status
             else None,
-            pricing_model=status.get("pricing", {}).get("pricing_model"),
+            pricing=Pricing.from_dict(status["pricing"])
+            if "pricing" in status
+            else None,
             error=WhatsAppError.from_dict(error=error) if error else None,
         )
+
+    @property
+    def pricing_model(self) -> str | None:
+        """Deprecated: Use ``.pricing.model`` instead."""
+        warnings.warn(
+            "The `pricing_model` is deprecated. Use `pricing.model` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.pricing.model.value if self.pricing else None
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class Conversation:
     """
-    Represents a conversation.
+    Conversations are 24-hour message threads between you and your customers.
+    They are opened and charged when messages you send to customers are delivered.
 
     - `'Conversation' on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/pricing#conversations>`_.
 
     Attributes:
-        id: The ID of the conversation.
+        id: Represents the ID of the conversation the given status notification belongs to.
         category: The category of the conversation.
         expiration: The expiration date (in UTC) of the conversation (Optional, only for `sent` updates).
-
     """
 
     id: str
@@ -189,4 +207,88 @@ class Conversation:
             )
             if "expiration_timestamp" in data
             else None,
+        )
+
+
+class PricingModel(utils.StrEnum):
+    """
+    Pricing model.
+
+    Attributes:
+        CBP: Indicates conversation-based pricing applies.
+        PMP: Indicates per-message pricing applies.
+    """
+
+    CBP = "CBP"
+    PMP = "PMP"
+
+    @classmethod
+    def _missing_(cls, value: str) -> PricingModel:
+        _logger.warning("Unknown pricing model: %s. Defaulting to CBP.", value)
+        return cls.CBP
+
+
+class PricingType(utils.StrEnum):
+    """
+    Pricing type.
+
+    Attributes:
+        REGULAR: Indicates the message is billable.
+        FREE_CUSTOMER_SERVICE: Indicates the message is free because it was either a utility template message or non-template message sent within a `customer service window <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-messages#customer-service-windows>`_.
+        FREE_ENTRY_POINT: Indicates the message is free because it is part of a `free-entry point conversation <https://developers.facebook.com/docs/whatsapp/pricing#free-entry-point-conversations>`_.
+    """
+
+    REGULAR = "regular"
+    FREE_CUSTOMER_SERVICE = "free_customer_service"
+    FREE_ENTRY_POINT = "free_entry_point"
+
+
+class PricingCategory(utils.StrEnum):
+    """
+    Pricing category.
+
+    Attributes:
+        AUTHENTICATION: Indicates an authentication template message.
+        AUTHENTICATION_INTERNATIONAL: Indicates an authentication template message sent to a WhatsApp user in a country or region that has authentication-international rates.
+        MARKETING: Indicates a marketing template message.
+        UTILITY: Indicates a utility template message.
+        SERVICE: Indicates a non-template message.
+        REFERRAL_CONVERSION: Indicates the message is part of a `free entry point conversation <https://developers.facebook.com/docs/whatsapp/pricing#free-entry-point-conversations>`_.
+    """
+
+    AUTHENTICATION = "authentication"
+    AUTHENTICATION_INTERNATIONAL = "authentication_international"
+    MARKETING = "marketing"
+    UTILITY = "utility"
+    SERVICE = "service"
+    REFERRAL_CONVERSION = "referral_conversion"
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class Pricing:
+    """
+    Represents the pricing of a message.
+
+    - `'Pricing' on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/pricing>`_.
+
+    Attributes:
+        billable: Indicates if the message is billable.
+        model: The pricing model used for the message.
+        type: The pricing type of the message (Only available from webhook v24.0^).
+        category: The pricing category of the message.
+
+    """
+
+    billable: bool
+    model: PricingModel
+    type: PricingType | None
+    category: PricingCategory
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            billable=data.get("billable", data.get("type") == PricingType.REGULAR),
+            model=PricingModel(data["pricing_model"]),
+            type=PricingType(data["pricing_type"]) if "pricing_type" in data else None,
+            category=PricingCategory(data["category"]),
         )
