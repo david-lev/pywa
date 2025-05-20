@@ -7,7 +7,7 @@ The WhatsApp Flows are now the most exciting part of the WhatsApp Cloud API.
 
 From `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows>`_:
 
-    .. image:: ../../../../_static/guides/flows.webp
+    .. image:: ../../../../_static/guides/flows-new.webp
         :alt: WhatsApp Flows
         :width: 100%
 

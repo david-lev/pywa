@@ -632,7 +632,7 @@ class WhatsAppCloudApi:
         return self._make_request(
             method="POST",
             endpoint=f"/{phone_id}/conversational_automation",
-            params={
+            json={
                 k: v
                 for k, v in {
                     "enable_welcome_message": enable_welcome_message,
@@ -1386,7 +1386,7 @@ class WhatsAppCloudApi:
         """
         Block users from sending messages to the business.
 
-        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/block-users#unblock-users>`_.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/block-users#block-users-2>`_.
 
         Return example::
 

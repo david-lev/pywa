@@ -1,5 +1,4 @@
 from pywa.types.flows import *  # noqa
-from pywa.types.flows import FlowStr
 
 string_concatenation = FlowJSON(
     version="6.0",
