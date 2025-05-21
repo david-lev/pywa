@@ -1,0 +1,164 @@
+{
+  "seasonal_promotion": {
+    "name": "seasonal_promotion",
+    "language": "en_US",
+    "category": "MARKETING",
+    "components": [
+      {
+        "type": "HEADER",
+        "format": "TEXT",
+        "text": "Our {{1}} is on!",
+        "example": {
+          "header_text": [
+            "Summer Sale"
+          ]
+        }
+      },
+      {
+        "type": "BODY",
+        "text": "Shop now through {{1}} and use code {{2}} to get {{3}} off of all merchandise.",
+        "example": {
+          "body_text": [
+            [
+              "the end of August",
+              "25OFF",
+              "25%"
+            ]
+          ]
+        }
+      },
+      {
+        "type": "FOOTER",
+        "text": "Use the buttons below to manage your marketing subscriptions"
+      },
+      {
+        "type": "BUTTONS",
+        "buttons": [
+          {
+            "type": "QUICK_REPLY",
+            "text": "Unsubscribe from Promos"
+          },
+          {
+            "type": "QUICK_REPLY",
+            "text": "Unsubscribe from All"
+          }
+        ]
+      }
+    ]
+  },
+  "order_confirmation": {
+    "name": "order_confirmation",
+    "language": "en_US",
+    "category": "UTILITY",
+    "components": [
+      {
+        "type": "HEADER",
+        "format": "DOCUMENT",
+        "example": {
+          "header_handle": [
+            "4::YX..."
+          ]
+        }
+      },
+      {
+        "type": "BODY",
+        "text": "Thank you for your order, {{1}}! Your order number is {{2}}. Tap the PDF linked above to view your receipt. If you have any questions, please use the buttons below to contact support. Thank you for being a customer!",
+        "example": {
+          "body_text": [
+            [
+              "Pablo",
+              "860198-230332"
+            ]
+          ]
+        }
+      },
+      {
+        "type": "BUTTONS",
+        "buttons": [
+          {
+            "type": "PHONE_NUMBER",
+            "text": "Call",
+            "phone_number": "15550051310"
+          },
+          {
+            "type": "URL",
+            "text": "Contact Support",
+            "url": "https://www.luckyshrub.com/support"
+          }
+        ]
+      }
+    ]
+  },
+  "order_delivery_update": {
+    "name": "order_delivery_update",
+    "language": "en_US",
+    "category": "UTILITY",
+    "components": [
+      {
+        "type": "HEADER",
+        "format": "LOCATION"
+      },
+      {
+        "type": "BODY",
+        "text": "Good news {{1}}! Your order #{{2}} is on its way to the location above. Thank you for your order!",
+        "example": {
+          "body_text": [
+            [
+              "Mark",
+              "566701"
+            ]
+          ]
+        }
+      },
+      {
+        "type": "FOOTER",
+        "text": "To stop receiving delivery updates, tap the button below."
+      },
+      {
+        "type": "BUTTONS",
+        "buttons": [
+          {
+            "type": "QUICK_REPLY",
+            "text": "Stop Delivery Updates"
+          }
+        ]
+      }
+    ]
+  },
+  "abandoned_cart_offer": {
+    "name": "abandoned_cart_offer",
+    "language": "en_US",
+    "category": "marketing",
+    "components": [
+      {
+        "type": "header",
+        "format": "product"
+      },
+      {
+        "type": "body",
+        "text": "Use code {{1}} to get {{2}} off our newest succulent!",
+        "example": {
+          "body_text": [
+            [
+              "25OFF",
+              "25%"
+            ]
+          ]
+        }
+      },
+      {
+        "type": "footer",
+        "text": "Offer ends September 30, 2024"
+      },
+      {
+        "type": "buttons",
+        "buttons": [
+          {
+            "type": "spm",
+            "text": "View"
+          }
+        ]
+      }
+    ]
+  }
+}
