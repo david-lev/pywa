@@ -1,37 +1,53 @@
 from __future__ import annotations
 
-from .flows import FlowActionType, FlowJSON
+
+from .flows import FlowActionType
 import abc
 import dataclasses
 import logging
-import re
-import pathlib
-import datetime
-from typing import TYPE_CHECKING, Any, BinaryIO, Iterable, Literal
+from typing import TYPE_CHECKING, Literal
 
-from .. import utils, _helpers as helpers
+from .. import utils
 
-from .base_update import BaseUpdate
-from .callback import CallbackData
-from .others import ProductsSection
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
-
 
 _logger = logging.getLogger(__name__)
 
 
 class TemplateStatus(utils.StrEnum):
+    """
+    The status of the template.
+
+    `'Template status' on
+    developers.facebook.com
+    <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#template-status>`_
+
+    Attributes:
+        APPROVED: The template is approved and can be used.
+        DISABLED: The template is disabled and cannot be used.
+        IN_APPEAL: The template is in appeal and cannot be used.
+        PENDING: The template is pending approval and cannot be used.
+        REINSTATED: The template has been reinstated and can be used.
+        REJECTED: The template has been rejected and cannot be used.
+        PENDING_DELETION: The template is pending deletion and cannot be used.
+        FLAGGED: The template has been flagged for review and cannot be used.
+        PAUSED: The template is paused and cannot be used.
+        UNKNOWN: The status of the template is unknown.
+    """
+
     APPROVED = "APPROVED"
     DISABLED = "DISABLED"
     IN_APPEAL = "IN_APPEAL"
     PENDING = "PENDING"
     REINSTATED = "REINSTATED"
     REJECTED = "REJECTED"
+    DELETED = "DELETED"
     PENDING_DELETION = "PENDING_DELETION"
     FLAGGED = "FLAGGED"
     PAUSED = "PAUSED"
+    LIMIT_EXCEEDED = "LIMIT_EXCEEDED"
     UNKNOWN = "UNKNOWN"
 
     @classmethod
@@ -40,18 +56,51 @@ class TemplateStatus(utils.StrEnum):
         return cls.UNKNOWN
 
 
-class Category(utils.StrEnum):
+class TemplateRejectionReason(utils.StrEnum):
+    """
+    The reason the template was rejected (if applicable).
+
+    `'Rejection status' on
+    developers.facebook.com
+    <https://developers.facebook.com/docs/whatsapp/updates-to-pricing/new-template-guidelines#rejected-status>`_
+
+    Attributes:
+        PROMOTIONAL: The template was rejected because it was promotional.
+        ABUSIVE_CONTENT: The template was rejected because it contained abusive content.
+        INCORRECT_CATEGORY: The template was rejected because it was in the wrong category.
+        INVALID_FORMAT: The template was rejected because it was in the wrong format.
+        SCAM: The template was rejected because it was a scam.
+        NONE: The template was not rejected.
+    """
+
+    PROMOTIONAL = "PROMOTIONAL"
+    ABUSIVE_CONTENT = "ABUSIVE_CONTENT"
+    INCORRECT_CATEGORY = "INCORRECT_CATEGORY"
+    INVALID_FORMAT = "INVALID_FORMAT"
+    TAG_CONTENT_MISMATCH = "TAG_CONTENT_MISMATCH"
+    SCAM = "SCAM"
+    NONE = "NONE"
+
+    @classmethod
+    def _missing_(cls, value: str):
+        _logger.warning(
+            "Unknown template rejection reason: %s. Defaulting to NONE", value
+        )
+        return cls.NONE
+
+
+class TemplateCategory(utils.StrEnum):
     """
     Template category.
 
     `'Template Categorization' on
     developers.facebook.com
-    <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#categories>`_
+    <https://developers.facebook.com/docs/whatsapp/updates-to-pricing/new-template-guidelines#template-categorization>`_
 
     Attributes:
-        AUTHENTICATION: Authentication templates are used to send one-time passwords (OTPs) or codes to app users.
-        MARKETING: Marketing templates are used to send promotional messages to app users.
-        UTILITY: Utility templates are used to send non-promotional messages to app users.
+        AUTHENTICATION: Enable businesses to verify a user’s identity, potentially at various steps of the customer journey.
+        MARKETING: Enable businesses to achieve a wide range of goals, from generating awareness to driving sales and retargeting customers.
+        UTILITY: Enable businesses to follow up on user actions or requests, since these messages are typically triggered by user actions.
     """
 
     AUTHENTICATION = "AUTHENTICATION"
@@ -66,18 +115,6 @@ class ComponentType(utils.StrEnum):
     BUTTONS = "BUTTONS"
     CAROUSEL = "CAROUSEL"
     LIMITED_TIME_OFFER = "LIMITED_TIME_OFFER"
-
-
-class HeaderFormatType(utils.StrEnum):
-    TEXT = "TEXT"
-    IMAGE = "IMAGE"
-    VIDEO = "VIDEO"
-    DOCUMENT = "DOCUMENT"
-    LOCATION = "LOCATION"
-    PRODUCT = "PRODUCT"
-
-
-class ButtonType(utils.StrEnum):
     PHONE_NUMBER = "PHONE_NUMBER"
     URL = "URL"
     QUICK_REPLY = "QUICK_REPLY"
@@ -91,6 +128,15 @@ class ButtonType(utils.StrEnum):
     APP = "APP"
 
 
+class HeaderFormatType(utils.StrEnum):
+    TEXT = "TEXT"
+    IMAGE = "IMAGE"
+    VIDEO = "VIDEO"
+    DOCUMENT = "DOCUMENT"
+    LOCATION = "LOCATION"
+    PRODUCT = "PRODUCT"
+
+
 class ParamType(utils.StrEnum):
     TEXT = "text"
     CURRENCY = "currency"
@@ -102,7 +148,7 @@ class ParamType(utils.StrEnum):
     BUTTON = "button"
 
 
-class Language(utils.StrEnum):
+class TemplateLanguage(utils.StrEnum):
     """
     Template language and locale code.
 
@@ -183,12 +229,22 @@ class Language(utils.StrEnum):
     VIETNAMESE = "vi"
     ZULU = "zu"
 
+    @classmethod
+    def _missing_(cls, value: str) -> TemplateLanguage:
+        _logger.warning("Unknown template language: %s. Defaulting to ENGLISH", value)
+        return cls.ENGLISH
+
 
 class ParamFormat(utils.StrEnum):
     """The type of parameter formatting the HEADER and BODY components of the template will use."""
 
     POSITIONAL = "POSITIONAL"
     NAMED = "NAMED"
+
+    @classmethod
+    def _missing_(cls, value: str) -> ParamFormat:
+        _logger.warning("Unknown parameter format: %s. Defaulting to POSITIONAL", value)
+        return cls.POSITIONAL
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -210,7 +266,7 @@ class BaseComponent(abc.ABC):
             **{
                 k: v
                 for k, v in data.items()
-                if k in {f.name for f in dataclasses.fields(cls)}
+                if k in {f.name for f in dataclasses.fields(cls) if f.init}
             }
         )
 
@@ -369,14 +425,13 @@ class Footer(BaseFooterComponent):
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class BaseButtonComponent(BaseComponent, abc.ABC):
-    type: ButtonType
+class BaseButtonComponent(BaseComponent, abc.ABC): ...
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class CopyCodeButton(BaseButtonComponent):
-    type: ButtonType = dataclasses.field(
-        default=ButtonType.COPY_CODE,
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.COPY_CODE,
         init=False,
         repr=False,
     )
@@ -391,8 +446,8 @@ class FlowButtonIcon(utils.StrEnum):
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class FlowButton(BaseButtonComponent):
-    type: ButtonType = dataclasses.field(
-        default=ButtonType.FLOW,
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.FLOW,
         init=False,
         repr=False,
     )
@@ -419,8 +474,8 @@ class FlowButton(BaseButtonComponent):
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class PhoneNumberButton(BaseButtonComponent):
-    type: ButtonType = dataclasses.field(
-        default=ButtonType.PHONE_NUMBER,
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.PHONE_NUMBER,
         init=False,
         repr=False,
     )
@@ -430,8 +485,8 @@ class PhoneNumberButton(BaseButtonComponent):
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class QuickReplyButton(BaseButtonComponent):
-    type: ButtonType = dataclasses.field(
-        default=ButtonType.QUICK_REPLY,
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.QUICK_REPLY,
         init=False,
         repr=False,
     )
@@ -440,8 +495,8 @@ class QuickReplyButton(BaseButtonComponent):
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class URLButton(BaseButtonComponent):
-    type: ButtonType = dataclasses.field(
-        default=ButtonType.URL,
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.URL,
         init=False,
         repr=False,
     )
@@ -451,8 +506,8 @@ class URLButton(BaseButtonComponent):
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class CatalogButton(BaseButtonComponent):
-    type: ButtonType = dataclasses.field(
-        default=ButtonType.CATALOG,
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.CATALOG,
         init=False,
         repr=False,
     )
@@ -461,8 +516,8 @@ class CatalogButton(BaseButtonComponent):
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class MPMButton(BaseButtonComponent):
-    type: ButtonType = dataclasses.field(
-        default=ButtonType.MPM,
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.MPM,
         init=False,
         repr=False,
     )
@@ -471,8 +526,8 @@ class MPMButton(BaseButtonComponent):
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class SPMButton(BaseButtonComponent):
-    type: ButtonType = dataclasses.field(
-        default=ButtonType.SPM,
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.SPM,
         init=False,
         repr=False,
     )
@@ -502,8 +557,8 @@ class OTPSupportedApp:
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class OneTapOTPButton(BaseButtonComponent):
-    type: ButtonType = dataclasses.field(
-        default=ButtonType.OTP,
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.OTP,
         init=False,
         repr=False,
     )
@@ -519,8 +574,8 @@ class OneTapOTPButton(BaseButtonComponent):
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class ZeroTapOTPButton(BaseButtonComponent):
-    type: ButtonType = dataclasses.field(
-        default=ButtonType.OTP,
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.OTP,
         init=False,
         repr=False,
     )
@@ -537,8 +592,8 @@ class ZeroTapOTPButton(BaseButtonComponent):
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class CopyCodeOTPButton(BaseButtonComponent):
-    type: ButtonType = dataclasses.field(
-        default=ButtonType.OTP,
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.OTP,
         init=False,
         repr=False,
     )
@@ -615,53 +670,54 @@ class AuthenticationFooter(BaseFooterComponent):
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class TemplateV2:
+    """
+    Represents a WhatsApp template.
+
+    Attributes:
+        name: The name of the template (should be unique).
+        language: The language of the template.
+        category: The category of the template (See `Template Categorization <https://developers.facebook.com/docs/whatsapp/updates-to-pricing/new-template-guidelines#template-categorization>`_).
+        components: Components that make up the template. Header, body, footer, buttons, cards, etc.
+        parameter_format: The type of parameters inside texts (positional or named).
+    """
+
     name: str
-    language: Language
-    category: Category
+    language: TemplateLanguage
+    category: TemplateCategory
     components: list[BaseComponent]
     parameter_format: ParamFormat | None = None
 
-    def to_dict(self) -> dict[str, Any]:
-        """
-        Convert the TemplateV2 object to a dictionary (skip None values).
-
-        Returns:
-            dict: A dictionary representation of the TemplateV2 object.
-        """
+    def to_dict(self) -> dict:
         return dataclasses.asdict(
             self, dict_factory=lambda d: {k: v for k, v in d if v is not None}
         )
 
 
-comp_types_to_component: dict[ComponentType, type[BaseComponent]] = {
+_comp_types_to_component: dict[ComponentType, type[BaseComponent]] = {
     ComponentType.HEADER: BaseHeaderComponent,
     ComponentType.BODY: Body,
     ComponentType.FOOTER: Footer,
     ComponentType.BUTTONS: Buttons,
     ComponentType.CAROUSEL: Carousel,
     ComponentType.LIMITED_TIME_OFFER: LimitedTimeOffer,
+    ComponentType.PHONE_NUMBER: PhoneNumberButton,
+    ComponentType.URL: URLButton,
+    ComponentType.QUICK_REPLY: QuickReplyButton,
+    ComponentType.OTP: OneTapOTPButton,
+    ComponentType.MPM: MPMButton,
+    ComponentType.SPM: SPMButton,
+    ComponentType.CATALOG: CatalogButton,
+    ComponentType.COPY_CODE: CopyCodeOTPButton,
+    ComponentType.FLOW: FlowButton,
 }
 
-header_formats_to_component: dict[HeaderFormatType, type[BaseHeaderComponent]] = {
+_header_formats_to_component: dict[HeaderFormatType, type[BaseHeaderComponent]] = {
     HeaderFormatType.TEXT: HeaderText,
     HeaderFormatType.IMAGE: HeaderImage,
     HeaderFormatType.VIDEO: HeaderVideo,
     HeaderFormatType.DOCUMENT: HeaderDocument,
     HeaderFormatType.LOCATION: HeaderLocation,
     HeaderFormatType.PRODUCT: HeaderProduct,
-}
-
-
-button_types_to_component: dict[ButtonType, type[BaseButtonComponent]] = {
-    ButtonType.PHONE_NUMBER: PhoneNumberButton,
-    ButtonType.URL: URLButton,
-    ButtonType.QUICK_REPLY: QuickReplyButton,
-    ButtonType.OTP: OneTapOTPButton,
-    ButtonType.MPM: MPMButton,
-    ButtonType.SPM: SPMButton,
-    ButtonType.CATALOG: CatalogButton,
-    ButtonType.COPY_CODE: CopyCodeOTPButton,
-    ButtonType.FLOW: FlowButton,
 }
 
 
@@ -683,7 +739,7 @@ def _parse_component(component: dict) -> BaseComponent | dict:
             component["type"],
         )
         return component
-    component_cls = comp_types_to_component[comp_type]
+    component_cls = _comp_types_to_component[comp_type]
 
     if issubclass(component_cls, BaseHeaderComponent):
         try:
@@ -694,7 +750,7 @@ def _parse_component(component: dict) -> BaseComponent | dict:
                 component["format"],
             )
             return component
-        return header_formats_to_component[header_format].from_dict(component)
+        return _header_formats_to_component[header_format].from_dict(component)
 
     elif issubclass(component_cls, BaseBodyComponent):
         if "add_security_recommendation" in component:
@@ -742,16 +798,6 @@ def _parse_component(component: dict) -> BaseComponent | dict:
             )
         )
 
-    elif issubclass(component_cls, BaseButtonComponent):
-        try:
-            button_type = ButtonType(component["type"])
-        except ValueError:
-            _logger.warning(
-                "Unknown button type: %s. Defaulting to dictionary representation.",
-                component["type"],
-            )
-            return component
-        return button_types_to_component[button_type].from_dict(component)
     try:
         return component_cls.from_dict(component)
     except Exception:
@@ -764,28 +810,60 @@ def _parse_component(component: dict) -> BaseComponent | dict:
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class RetrievedTemplate(TemplateV2):
+    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
     id: int
-    correct_category: Category
+    status: TemplateStatus
+    correct_category: TemplateCategory | None
+    previous_category: TemplateCategory | None
+    rejected_reason: TemplateRejectionReason
     library_template_name: str
     message_send_ttl_seconds: int
-    previous_category: Category
-    quality_score: Any
-    rejected_reason: Any
-    status: Any
-    sub_category: Any
+    quality_score: dict[str, str | int] | None
+    cta_url_link_tracking_opted_out: bool
+    sub_category: TemplateCategory | None
 
     @classmethod
-    def from_dict(cls, data: dict) -> RetrievedTemplate:
+    def from_dict(cls, data: dict, client: WhatsApp) -> RetrievedTemplate:
         return RetrievedTemplate(
+            _client=client,
             id=data["id"],
             name=data["name"],
-            library_template_name=data["library_template_name"],
-            language=Language(data["language"]),
-            category=Category(data["category"]),
+            language=TemplateLanguage(data["language"]),
             status=TemplateStatus(data["status"]),
+            category=TemplateCategory(data["category"]),
+            previous_category=TemplateCategory(data["previous_category"])
+            if "previous_category" in data
+            else None,
+            correct_category=TemplateCategory(data["correct_category"])
+            if "correct_category" in data
+            else None,
             parameter_format=ParamFormat(data["parameter_format"]),
+            rejected_reason=TemplateRejectionReason(data["rejected_reason"])
+            if "rejected_reason" in data
+            else TemplateRejectionReason.NONE,
+            library_template_name=data["library_template_name"],
             message_send_ttl_seconds=int(data["message_send_ttl_seconds"]),
             components=[
                 _parse_component(component) for component in data["components"]
             ],
+            quality_score=data.get("quality_score"),
+            cta_url_link_tracking_opted_out=data.get(
+                "cta_url_link_tracking_opted_out", False
+            ),
+            sub_category=TemplateCategory(data["sub_category"])
+            if "sub_category" in data
+            else None,
         )
+
+    def delete(self) -> bool: ...
+
+    def update(
+        self,
+        *,
+        new_category: TemplateCategory | None = None,
+        new_components: list[BaseComponent] | None = None,
+    ): ...
+
+    def compare(self, template: TemplateV2): ...
+
+    def migrate(self): ...
