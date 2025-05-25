@@ -1431,7 +1431,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         if (
             self._request_decryptor is utils.default_flow_request_decryptor
             or self._response_encryptor is utils.default_flow_response_encryptor
-        ) and not utils.is_installed("cryptography"):
+        ) and not utils.is_cryptography_installed:
             raise ValueError(
                 "The default decryptor/encryptor requires the `cryptography` package to be installed."
                 '\n>> Install it with `pip install cryptography` / pip install "pywa[cryptography]" or use a '

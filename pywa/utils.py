@@ -15,6 +15,17 @@ from typing import Any, Callable, Protocol, TypeAlias
 
 import httpx
 
+try:
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives.padding import PKCS7
+    from cryptography.hazmat.primitives.asymmetric.padding import OAEP, MGF1, hashes
+    from cryptography.hazmat.primitives.ciphers import algorithms, Cipher, modes
+    from cryptography.hazmat.primitives.serialization import load_pem_private_key
+
+    is_cryptography_installed = True
+except ImportError:
+    is_cryptography_installed = False
+
 _logger = logging.getLogger(__name__)
 
 
@@ -227,9 +238,6 @@ def default_flow_request_decryptor(
         >>> @wa.on_flow_request("/sign-up-flow", request_decryptor=default_flow_request_decryptor)
         ... def on_sign_up_request(_: WhatsApp, flow: FlowRequest) -> FlowResponse | None: ...
     """
-    from cryptography.hazmat.primitives.asymmetric.padding import OAEP, MGF1, hashes
-    from cryptography.hazmat.primitives.ciphers import algorithms, Cipher, modes
-    from cryptography.hazmat.primitives.serialization import load_pem_private_key
 
     flow_data = base64.b64decode(encrypted_flow_data_b64)
     iv = base64.b64decode(initial_vector_b64)
@@ -299,7 +307,6 @@ def default_flow_response_encryptor(response: dict, aes_key: bytes, iv: bytes) -
         >>> @wa.on_flow_request("/sign-up-flow", response_encryptor=default_flow_response_encryptor)
         ... def on_sign_up_request(_: WhatsApp, flow: FlowRequest) -> FlowResponse | None: ...
     """
-    from cryptography.hazmat.primitives.ciphers import algorithms, Cipher, modes
 
     flipped_iv = bytearray()
     for byte in iv:
@@ -374,9 +381,6 @@ def _flow_request_media_decryptor(
     cdn_file: bytes, encryption_metadata: dict[str, str]
 ) -> bytes:
     """The actual implementation of the media decryption."""
-    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-    from cryptography.hazmat.primitives.padding import PKCS7
-    from cryptography.hazmat.backends import default_backend
 
     ciphertext = cdn_file[:-10]
     sha256 = hashlib.sha256(cdn_file)
