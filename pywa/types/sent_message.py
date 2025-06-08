@@ -34,7 +34,7 @@ class SentMessage(_ClientShortcuts):
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
     _callback_options: set[str] | None = dataclasses.field(
         repr=False, hash=False, compare=False, default=None
-    )
+    )  # TODO need this?
     _flow_token: str | None = dataclasses.field(
         repr=False, hash=False, compare=False, default=None
     )
@@ -268,12 +268,8 @@ class SentMessage(_ClientShortcuts):
             ListenerStopped: If the listener was stopped manually.
         """
         if force_options:
-            if not self._callback_options:
-                raise ValueError("No callback options available to wait for")
-            contains_filter = pywa_filters.new(
-                lambda _, c: c.data in self._callback_options
-            )
-            filters = (contains_filter & filters) if filters else contains_filter
+            reply_filter = pywa_filters.replays_to(self.id)
+            filters = (reply_filter & filters) if filters else reply_filter
         filters = (
             (pywa_filters.callback_button & filters)
             if filters
@@ -313,12 +309,8 @@ class SentMessage(_ClientShortcuts):
             ListenerStopped: If the listener was stopped manually.
         """
         if force_options:
-            if not self._callback_options:
-                raise ValueError("No callback options available to wait for")
-            contains_filter = pywa_filters.new(
-                lambda _, c: c.data in self._callback_options
-            )
-            filters = (contains_filter & filters) if filters else contains_filter
+            reply_filter = pywa_filters.replays_to(self.id)
+            filters = (reply_filter & filters) if filters else reply_filter
         filters = (
             (pywa_filters.callback_selection & filters)
             if filters
