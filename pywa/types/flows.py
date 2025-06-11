@@ -100,6 +100,8 @@ __all__ = [
     "CalendarRangeValues",
     "CalendarDay",
     "Image",
+    "ImageCarouselItem",
+    "ImageCarousel",
     "PhotoPicker",
     "PhotoSource",
     "DocumentPicker",
@@ -1565,6 +1567,7 @@ class ComponentType(utils.StrEnum):
     DATE_PICKER = "DatePicker"
     CALENDAR_PICKER = "CalendarPicker"
     IMAGE = "Image"
+    IMAGE_CAROUSEL = "ImageCarousel"
     PHOTO_PICKER = "PhotoPicker"
     DOCUMENT_PICKER = "DocumentPicker"
     IF = "If"
@@ -3273,6 +3276,69 @@ class Image(Component):
     scale_type: ScaleType | str | ScreenDataRef[str] | ComponentRef[str] | None = None
     aspect_ratio: int | ScreenDataRef[int]
     alt_text: str | ScreenDataRef[str] | ComponentRef[str] | None = None
+    visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class ImageCarouselItem:
+    """
+    ImageCarouselItem represents an item in the `ImageCarousel` component.
+
+    - Supported images formats are JPEG PNG
+    - Recommended image size is up to 300kb
+
+    Example:
+
+        >>> ImageCarouselItem(
+        ...     src='iVBORw0KGgoAAAANSUhEUgAAAlgAAAM...',
+        ...     alt_text='Image of a cat'
+        ... )
+
+    Attributes:
+        src: Base64 of an image.
+        alt_text: Alternative Text is for the accessibility feature, eg. Talkback and Voice over.
+    """
+
+    src: str | ScreenDataRef[str] | ComponentRef[str]
+    alt_text: str | ScreenDataRef[str] | ComponentRef[str]
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class ImageCarousel(Component):
+    """
+    ImageCarousel component that displays a carousel of images.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#image_carousel>`_.
+    - Added in v7.1
+    - Max number of images is 3.
+    - Max number of `ImageCarousel` per screen is 2
+    - Max number of `ImageCarousel ` per Flow is 3
+
+    Example:
+        >>> ImageCarousel(
+        ...     images=[
+        ...         ImageCarouselItem(src='iVBORw0KGgoAAAANSUhEUgAAAlgAAAM...', alt_text='Image 1'),
+        ...         ImageCarouselItem(src='iVBORw0KGgoAAAANSUhEUgAAAlgAAAN...', alt_text='Image 2'),
+        ...     ],
+        ...     aspect_ratio='4:3',
+        ...     scale_type=ScaleType.CONTAIN
+        ... )
+
+    Attributes:
+        images: A list of `ImageCarouselItem` objects or a reference to a list of `ImageCarouselItem` objects.
+        aspect_ratio: The aspect ratio of the image carousel, can be "4:3" or "16:9". Default to "4:3".
+        scale_type: The scale type of the image carousel. Default to ``ScaleType.CONTAIN``.
+        visible: Whether the image carousel is visible or not. Default to ``True``.
+    """
+
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.IMAGE_CAROUSEL, init=False, repr=False
+    )
+    images: list[ImageCarouselItem] | ScreenDataRef[list[ImageCarouselItem]]
+    aspect_ratio: str | ScreenDataRef[str] | ComponentRef[str] | None = "4:3"
+    scale_type: ScaleType | str | ScreenDataRef[str] | ComponentRef[str] | None = (
+        ScaleType.CONTAIN
+    )
     visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
 
 
