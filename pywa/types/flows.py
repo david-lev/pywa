@@ -2702,7 +2702,8 @@ class ChipsSelector(FormComponent[list[str]]):
         visible: Whether the chips selector is visible or not. Default to ``True``.
         enabled: Whether the chips selector is enabled or not. Default to ``True``.
         init_value: The default values (IDs of the data sources).
-        on_select_action: The action to perform when an item is selected.
+        on_select_action: The action to perform when an item is selected. UpdateDataAction supported since v7.1.
+        on_unselect_action: The action to perform when an item is unselected. if not set, the on_select_action will handle both selection and unselection events. Added in v7.1.
     """
 
     type: ComponentType = dataclasses.field(
