@@ -1,0 +1,43 @@
+{
+  "image_carousel": {
+    "version": "7.1",
+    "screens": [
+      {
+        "id": "DEMO_SCREEN",
+        "terminal": true,
+        "title": "Demo screen",
+        "layout": {
+          "type": "SingleColumnLayout",
+          "children": [
+            {
+              "type": "ImageCarousel",
+              "scale-type": "cover",
+              "images": [
+                {
+                  "alt-text": "Landscape image",
+                  "src": "iVBORw0KGgoAAAANSUhEUgAAAB4AAAAKCAIAAAAsFXl4AAAANElEQVR4nGL5ctWagWjwuH0b8YqZiFdKKhg1Gg2wzOawIV61t1AF8YqHZoAMTaMBAQAA"
+                },
+                {
+                  "alt-text": "Square image",
+                  "src": "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAALElEQVR4nGIRPRrBgATeWLsjc5kY8AKaSrPIL3FA5i9evZNudhOQBgQAAP"
+                },
+                {
+                  "alt-text": "Portrait image",
+                  "src": "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAUCAIAAAA7jDsBAAAALUlEQVR4nGIJWfabAQls8DVA5jIx4AUjVZqRP2AJMn"
+                }
+              ]
+            },
+            {
+              "type": "Footer",
+              "label": "Continue",
+              "on-click-action": {
+                "name": "complete",
+                "payload": {}
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
