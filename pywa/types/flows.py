@@ -3266,6 +3266,7 @@ class Image(Component):
         scale_type: The scale type of the image. Defaule to ``ScaleType.CONTAIN`` Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#image-scale-types>`_.
         aspect_ratio: The aspect ratio of the image. Default to ``1``.
         alt_text: Alternative Text is for the accessibility feature, eg. Talkback and Voice over.
+        visible: Whether the image is visible or not. Default to ``True``.
     """
 
     type: ComponentType = dataclasses.field(
@@ -3312,8 +3313,8 @@ class ImageCarousel(Component):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#image_carousel>`_.
     - Added in v7.1
     - Max number of images is 3.
-    - Max number of `ImageCarousel` per screen is 2
-    - Max number of `ImageCarousel ` per Flow is 3
+    - Max number of :class:`ImageCarousel` per screen is 2
+    - Max number of :class:`ImageCarousel` per Flow is 3
 
     Example:
         >>> ImageCarousel(
@@ -3326,9 +3327,9 @@ class ImageCarousel(Component):
         ... )
 
     Attributes:
-        images: A list of `ImageCarouselItem` objects or a reference to a list of `ImageCarouselItem` objects.
-        aspect_ratio: The aspect ratio of the image carousel, can be "4:3" or "16:9". Default to "4:3".
-        scale_type: The scale type of the image carousel. Default to ``ScaleType.CONTAIN``.
+        images: A list of images to display in the carousel. Each image is represented by an :class:`ImageCarouselItem` object.
+        aspect_ratio: The aspect ratio of the images in the carousel. Default to ``4:3``.
+        scale_type: The scale type of the images in the carousel. Default to ``ScaleType.CONTAIN``.
         visible: Whether the image carousel is visible or not. Default to ``True``.
     """
 
@@ -3336,10 +3337,8 @@ class ImageCarousel(Component):
         default=ComponentType.IMAGE_CAROUSEL, init=False, repr=False
     )
     images: list[ImageCarouselItem] | ScreenDataRef[list[ImageCarouselItem]]
-    aspect_ratio: str | ScreenDataRef[str] | ComponentRef[str] | None = "4:3"
-    scale_type: ScaleType | str | ScreenDataRef[str] | ComponentRef[str] | None = (
-        ScaleType.CONTAIN
-    )
+    aspect_ratio: str | ScreenDataRef[str] | ComponentRef[str] | None = None
+    scale_type: ScaleType | str | ScreenDataRef[str] | ComponentRef[str] | None = None
     visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
 
 
