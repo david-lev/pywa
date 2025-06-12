@@ -9,6 +9,7 @@ import json
 import logging
 import pathlib
 import re
+from urllib import parse as urllib_parse
 import warnings
 from typing import (
     Iterable,
@@ -660,6 +661,59 @@ class FlowPreview:
                 data["expires_at"], "%Y-%m-%dT%H:%M:%S%z"
             ),
         )
+
+    def with_params(
+        self,
+        interactive: bool | None = None,
+        flow_token: str | None = None,
+        flow_action: Literal[
+            FlowRequestActionType.NAVIGATE, FlowRequestActionType.DATA_EXCHANGE
+        ]
+        | None = None,
+        flow_action_payload: dict | None = None,
+        phone_number: str | None = None,
+        debug: bool | None = None,
+    ) -> str:
+        """
+        Configure the interactive Web Preview.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowsapi#preview>`_.
+
+        Args:
+            interactive: If true, the preview will run in interactive mode. Defaults to false.
+            flow_token: It will be sent as part of each request. You should always verify that token on your server to block any other unexpected requests. Required for Flows with endpoint.
+            flow_action: First action when Flow starts. data_exchange if it will make a request to the endpoint, or navigate if it won't (this will also require flow_action_payload to be provided).
+            flow_action_payload: Initial screen data. Required if flow_action is navigate. Should be omitted otherwise.
+            phone_number: Phone number that will be used to send the Flow, from which the public key will be used to encrypt the request payload. Required for Flows with endpoint.
+            debug: Show actions in a separate panel while interacting with the preview.
+
+        Returns:
+            The URL of the preview with the parameters added.
+        """
+        params = {}
+
+        if flow_token is not None:
+            params["flow_token"] = flow_token
+        if interactive is not None:
+            params["interactive"] = str(interactive).lower()
+        if flow_action is not None:
+            params["flow_action"] = flow_action
+        if flow_action_payload is not None:
+            params["flow_action_payload"] = json.dumps(
+                flow_action_payload, separators=(",", ":")
+            )
+        if phone_number is not None:
+            params["phone_number"] = phone_number
+        if debug is not None:
+            params["debug"] = str(debug).lower()
+        if not params:
+            return self.url
+
+        url_parts = list(urllib_parse.urlparse(self.url))
+        query = dict(urllib_parse.parse_qsl(url_parts[4]))
+        query.update(params)
+        url_parts[4] = urllib_parse.urlencode(query)
+        return str(urllib_parse.urlunparse(url_parts))
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)

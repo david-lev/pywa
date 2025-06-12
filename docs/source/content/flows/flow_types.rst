@@ -18,6 +18,7 @@ Flow Types
 .. autoclass:: FlowStatus()
 
 .. autoclass:: FlowPreview()
+    :members: with_params
 
 .. autoclass:: FlowValidationError()
 
