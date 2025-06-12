@@ -826,7 +826,7 @@ class RetrievedTemplate(TemplateV2):
     def from_dict(cls, data: dict, client: WhatsApp) -> RetrievedTemplate:
         return RetrievedTemplate(
             _client=client,
-            id=data["id"],
+            id=int(data["id"]),
             name=data["name"],
             language=TemplateLanguage(data["language"]),
             status=TemplateStatus(data["status"]),
@@ -841,8 +841,10 @@ class RetrievedTemplate(TemplateV2):
             rejected_reason=TemplateRejectionReason(data["rejected_reason"])
             if "rejected_reason" in data
             else TemplateRejectionReason.NONE,
-            library_template_name=data["library_template_name"],
-            message_send_ttl_seconds=int(data["message_send_ttl_seconds"]),
+            library_template_name=data.get("library_template_name"),
+            message_send_ttl_seconds=int(data["message_send_ttl_seconds"])
+            if "message_send_ttl_seconds" in data
+            else None,
             components=[
                 _parse_component(component) for component in data["components"]
             ],
