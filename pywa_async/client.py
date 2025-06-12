@@ -1451,6 +1451,39 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             )
         )
 
+    async def get_business_phone_numbers(
+        self,
+        *,
+        waba_id: str | int | None = None,
+        pagination: Pagination | None = None,
+    ) -> Result[BusinessPhoneNumber]:
+        """
+        Get the phone numbers of the WhatsApp Business account.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.get_business_phone_numbers()
+
+        Args:
+            waba_id: The WABA ID to get the phone numbers from (optional, if not provided, the client's WABA ID will be used).
+            pagination: Pagination object to paginate through the results (optional).
+
+        Returns:
+            A Result object containing BusinessPhoneNumber objects.
+        """
+        return Result(
+            wa=self,
+            response=await self.api.get_business_phone_numbers(
+                waba_id=helpers.resolve_waba_id_param(self, waba_id),
+                pagination=pagination.to_dict() if pagination else None,
+                fields=tuple(
+                    field.name for field in dataclasses.fields(BusinessPhoneNumber)
+                ),
+            ),
+            item_factory=BusinessPhoneNumber.from_dict,
+        )
+
     async def update_conversational_automation(
         self,
         enable_chat_opened: bool,
