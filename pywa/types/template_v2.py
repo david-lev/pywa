@@ -816,8 +816,8 @@ class RetrievedTemplate(TemplateV2):
     correct_category: TemplateCategory | None
     previous_category: TemplateCategory | None
     rejected_reason: TemplateRejectionReason
-    library_template_name: str
-    message_send_ttl_seconds: int
+    library_template_name: str | None
+    message_send_ttl_seconds: int | None
     quality_score: dict[str, str | int] | None
     cta_url_link_tracking_opted_out: bool
     sub_category: TemplateCategory | None
