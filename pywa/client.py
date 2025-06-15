@@ -509,12 +509,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         text: str,
         header: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button]
-        | ButtonUrl
-        | CallButton
-        | SectionList
-        | FlowButton
-        | None = None,
+        buttons: (
+            Iterable[Button] | ButtonUrl | CallButton | SectionList | FlowButton | None
+        ) = None,
         preview_url: bool = False,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
