@@ -157,6 +157,7 @@ class InteractiveType(utils.StrEnum):
     PRODUCT_LIST = "product_list"
     FLOW = "flow"
     LOCATION_REQUEST_MESSAGE = "location_request_message"
+    VOICE_CALL = "voice_call"
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
