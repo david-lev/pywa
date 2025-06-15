@@ -51,12 +51,9 @@ class _ClientShortcuts:
         text: str,
         header: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button]
-        | ButtonUrl
-        | CallButton
-        | FlowButton
-        | SectionList
-        | None = None,
+        buttons: (
+            Iterable[Button] | ButtonUrl | CallButton | SectionList | FlowButton | None
+        ) = None,
         quote: bool = False,
         preview_url: bool = False,
         tracker: str | CallbackData | None = None,
