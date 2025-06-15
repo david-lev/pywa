@@ -34,6 +34,7 @@ from .types import (
     BusinessProfile,
     Button,
     ButtonUrl,
+    CallButton,
     CommerceSettings,
     Contact,
     Industry,
@@ -264,7 +265,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         text: str,
         header: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | SectionList | FlowButton | None = None,
+        buttons: Iterable[Button]
+        | ButtonUrl
+        | CallButton
+        | SectionList
+        | FlowButton
+        | None = None,
         preview_url: bool = False,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
