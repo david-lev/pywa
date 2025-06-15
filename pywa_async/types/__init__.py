@@ -6,6 +6,7 @@ from .base_update import StopHandling, ContinueHandling
 from .callback import (
     Button,
     ButtonUrl,
+    CallButton,
     CallbackButton,
     CallbackData,
     CallbackSelection,

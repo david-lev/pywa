@@ -5,6 +5,7 @@ __all__ = [
     "CallbackSelection",
     "Button",
     "ButtonUrl",
+    "CallButton",
     "SectionRow",
     "Section",
     "SectionList",
@@ -440,6 +441,35 @@ class ButtonUrl:
             "name": InteractiveType.CTA_URL,
             "parameters": {"display_text": self.title, "url": self.url},
         }
+
+
+@dataclasses.dataclass(slots=True)
+class CallButton:
+    """
+    Represents a button that initiates a voice call on WhatsApp.
+
+    Attributes:
+        display_text: The text to display on the button (up to 20 characters) default is "Call Now".
+        ttl_minutes: The time-to-live for the call in minutes (up to 43200 minutes (30 days)), default is 10080  minutes (7 days).
+    """
+
+    display_text: str | None = None
+    ttl_minutes: int | None = None
+
+    def to_dict(self) -> dict:
+        parameters = (
+            {
+                "parameters": {
+                    **(
+                        {"display_text": self.display_text} if self.display_text else {}
+                    ),
+                    **({"ttl_minutes": self.ttl_minutes} if self.ttl_minutes else {}),
+                }
+            }
+            if self.display_text or self.ttl_minutes
+            else {}
+        )
+        return {"name": InteractiveType.VOICE_CALL, **parameters}
 
 
 @dataclasses.dataclass(slots=True)
