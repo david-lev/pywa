@@ -13,7 +13,7 @@ Others
 .. currentmodule:: pywa.types.others
 
 .. autoclass:: Result()
-    :members: has_next, next, has_previous, previous, before, after
+    :members: has_next, next, has_previous, previous, all, before, after, empty
 
 .. autoclass:: Pagination()
 
