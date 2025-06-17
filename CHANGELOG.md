@@ -3,8 +3,18 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+### 2.11.0 (2025-06-17) **Latest**
 
-### 2.10.0 (2025-05-14) **Latest**
+- [flows] adding support for `ImageCarousel`
+- [flows] adding `with_params` to `FlowPreview` to configure the interactive web preview
+- [client] adding `get_business_phone_numbers` method
+- [types] adding `all` method to `Result` and fix `next` and `previous` to return empty result
+- [sent_message] fix `wait_for_click` to wait only for reply-clicks and not to same `data`
+- [api] fix `update_conversational_automation` request
+- [utils] try to import `cryptography` globally
+- [utils] bump graph-api version to `23.0`
+
+### 2.10.0 (2025-05-14)
 
 - [client] allow to migrate flows from one WABA to another
 - [client] improve mime-type handling when downloading media
