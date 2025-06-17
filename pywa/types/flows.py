@@ -101,6 +101,8 @@ __all__ = [
     "CalendarRangeValues",
     "CalendarDay",
     "Image",
+    "ImageCarouselItem",
+    "ImageCarousel",
     "PhotoPicker",
     "PhotoSource",
     "DocumentPicker",
@@ -1619,6 +1621,7 @@ class ComponentType(utils.StrEnum):
     DATE_PICKER = "DatePicker"
     CALENDAR_PICKER = "CalendarPicker"
     IMAGE = "Image"
+    IMAGE_CAROUSEL = "ImageCarousel"
     PHOTO_PICKER = "PhotoPicker"
     DOCUMENT_PICKER = "DocumentPicker"
     IF = "If"
@@ -2753,7 +2756,8 @@ class ChipsSelector(FormComponent[list[str]]):
         visible: Whether the chips selector is visible or not. Default to ``True``.
         enabled: Whether the chips selector is enabled or not. Default to ``True``.
         init_value: The default values (IDs of the data sources).
-        on_select_action: The action to perform when an item is selected.
+        on_select_action: The action to perform when an item is selected. UpdateDataAction supported since v7.1.
+        on_unselect_action: The action to perform when an item is unselected. if not set, the on_select_action will handle both selection and unselection events. Added in v7.1.
     """
 
     type: ComponentType = dataclasses.field(
@@ -3316,6 +3320,7 @@ class Image(Component):
         scale_type: The scale type of the image. Defaule to ``ScaleType.CONTAIN`` Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#image-scale-types>`_.
         aspect_ratio: The aspect ratio of the image. Default to ``1``.
         alt_text: Alternative Text is for the accessibility feature, eg. Talkback and Voice over.
+        visible: Whether the image is visible or not. Default to ``True``.
     """
 
     type: ComponentType = dataclasses.field(
@@ -3327,6 +3332,67 @@ class Image(Component):
     scale_type: ScaleType | str | ScreenDataRef[str] | ComponentRef[str] | None = None
     aspect_ratio: int | ScreenDataRef[int]
     alt_text: str | ScreenDataRef[str] | ComponentRef[str] | None = None
+    visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class ImageCarouselItem:
+    """
+    ImageCarouselItem represents an item in the `ImageCarousel` component.
+
+    - Supported images formats are JPEG PNG
+    - Recommended image size is up to 300kb
+
+    Example:
+
+        >>> ImageCarouselItem(
+        ...     src='iVBORw0KGgoAAAANSUhEUgAAAlgAAAM...',
+        ...     alt_text='Image of a cat'
+        ... )
+
+    Attributes:
+        src: Base64 of an image.
+        alt_text: Alternative Text is for the accessibility feature, eg. Talkback and Voice over.
+    """
+
+    src: str | ScreenDataRef[str] | ComponentRef[str]
+    alt_text: str | ScreenDataRef[str] | ComponentRef[str]
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class ImageCarousel(Component):
+    """
+    ImageCarousel component that displays a carousel of images.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#image_carousel>`_.
+    - Added in v7.1
+    - Max number of images is 3.
+    - Max number of :class:`ImageCarousel` per screen is 2
+    - Max number of :class:`ImageCarousel` per Flow is 3
+
+    Example:
+        >>> ImageCarousel(
+        ...     images=[
+        ...         ImageCarouselItem(src='iVBORw0KGgoAAAANSUhEUgAAAlgAAAM...', alt_text='Image 1'),
+        ...         ImageCarouselItem(src='iVBORw0KGgoAAAANSUhEUgAAAlgAAAN...', alt_text='Image 2'),
+        ...     ],
+        ...     aspect_ratio='4:3',
+        ...     scale_type=ScaleType.CONTAIN
+        ... )
+
+    Attributes:
+        images: A list of images to display in the carousel. Each image is represented by an :class:`ImageCarouselItem` object.
+        aspect_ratio: The aspect ratio of the images in the carousel. Default to ``4:3``.
+        scale_type: The scale type of the images in the carousel. Default to ``ScaleType.CONTAIN``.
+        visible: Whether the image carousel is visible or not. Default to ``True``.
+    """
+
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.IMAGE_CAROUSEL, init=False, repr=False
+    )
+    images: list[ImageCarouselItem] | ScreenDataRef[list[ImageCarouselItem]]
+    aspect_ratio: str | ScreenDataRef[str] | ComponentRef[str] | None = None
+    scale_type: ScaleType | str | ScreenDataRef[str] | ComponentRef[str] | None = None
     visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
 
 
