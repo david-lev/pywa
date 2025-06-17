@@ -1,5 +1,5 @@
-User Preferences
-================
+User Marketing Preferences
+=========================
 
 .. currentmodule:: pywa.types.user_preferences
 

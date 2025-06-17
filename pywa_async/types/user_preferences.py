@@ -37,7 +37,7 @@ class UserPreferences(BaseUserUpdateAsync, _UserPreferences):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class UserMarketingPreferences(_UserMarketingPreferences):
+class UserMarketingPreferences(BaseUserUpdateAsync, _UserMarketingPreferences):
     """
     Represents user marketing preferences updates from WhatsApp.
 

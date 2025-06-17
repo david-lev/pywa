@@ -1,6 +1,8 @@
 import asyncio
 import inspect
 
+import pytest
+
 from pywa import WhatsApp as WhatsAppSync
 from pywa.handlers import _HandlerDecorators
 from pywa.types.base_update import BaseUpdate
@@ -17,6 +19,8 @@ from pywa.types import (
     ChatOpened as ChatOpenedSync,
     FlowCompletion as FlowCompletionSync,
     TemplateStatus as TemplateStatusSync,
+    UserPreferences as UserPreferencesSync,
+    UserMarketingPreferences as UserMarketingPreferencesSync,
     FlowRequest as FlowRequestSync,
     FlowResponse as FlowResponseSync,
     MediaUrlResponse as MediaUrlResponseSync,
@@ -31,6 +35,8 @@ from pywa_async.types import (
     ChatOpened as ChatOpenedAsync,
     FlowCompletion as FlowCompletionAsync,
     TemplateStatus as TemplateStatusAsync,
+    UserPreferences as UserPreferencesAsync,
+    UserMarketingPreferences as UserMarketingPreferencesAsync,
     FlowRequest as FlowRequestAsync,
     FlowResponse as FlowResponseAsync,
     MediaUrlResponse as MediaUrlResponseAsync,
@@ -44,33 +50,39 @@ from pywa_async.types.media import BaseMediaAsync
 from pywa.types.sent_message import SentMessage as SentMessageSync
 from pywa_async.types.sent_message import SentMessage as SentMessageAsync
 
-OVERRIDES: list[tuple] = [
-    (WhatsAppSync, WhatsAppAsync),
-    (MessageSync, MessageAsync),
-    (CallbackButtonSync, CallbackButtonAsync),
-    (CallbackSelectionSync, CallbackSelectionAsync),
-    (MessageStatusSync, MessageStatusAsync),
-    (ChatOpenedSync, ChatOpenedAsync),
-    (FlowCompletionSync, FlowCompletionAsync),
-    (TemplateStatusSync, TemplateStatusAsync),
-    (FlowRequestSync, FlowRequestAsync),
-    (FlowResponseSync, FlowResponseAsync),
-    (FlowDetailsSync, FlowDetailsAsync),
-    (MediaUrlResponseSync, MediaUrlResponseAsync),
-    (BaseMediaSync, BaseMediaAsync),
-    (SentMessageSync, SentMessageAsync),
-    (WhatsAppCloudApiSync, WhatsAppCloudApiAsync),
-    (WhatsAppCloudApiSync, WhatsAppCloudApiAsync),
-    (UserSync, UserAsync),
-    (ResultSync, ResultAsync),
-]
+
+@pytest.fixture(scope="session")
+def overrides() -> list[tuple[type, type]]:
+    return [
+        (WhatsAppSync, WhatsAppAsync),
+        (MessageSync, MessageAsync),
+        (CallbackButtonSync, CallbackButtonAsync),
+        (CallbackSelectionSync, CallbackSelectionAsync),
+        (MessageStatusSync, MessageStatusAsync),
+        (ChatOpenedSync, ChatOpenedAsync),
+        (FlowCompletionSync, FlowCompletionAsync),
+        (TemplateStatusSync, TemplateStatusAsync),
+        (TemplateStatusSync, TemplateStatusAsync),
+        (UserPreferencesSync, UserPreferencesAsync),
+        (UserMarketingPreferencesSync, UserMarketingPreferencesAsync),
+        (FlowRequestSync, FlowRequestAsync),
+        (FlowResponseSync, FlowResponseAsync),
+        (FlowDetailsSync, FlowDetailsAsync),
+        (MediaUrlResponseSync, MediaUrlResponseAsync),
+        (BaseMediaSync, BaseMediaAsync),
+        (SentMessageSync, SentMessageAsync),
+        (WhatsAppCloudApiSync, WhatsAppCloudApiAsync),
+        (WhatsAppCloudApiSync, WhatsAppCloudApiAsync),
+        (UserSync, UserAsync),
+        (ResultSync, ResultAsync),
+    ]
 
 
-def get_all_methods_names(obj):
+def get_obj_methods_names(obj):
     return {m for m in dir(obj) if callable(getattr(obj, m)) and not m.startswith("__")}
 
 
-def test_all_methods_are_overwritten_in_async():
+def test_all_methods_are_overwritten_in_async(overrides):
     skip_methods = [
         m.__name__
         for m in {
@@ -116,6 +128,7 @@ def test_all_methods_are_overwritten_in_async():
             TemplateStatusSync.TemplateEvent,
             TemplateStatusSync.TemplateRejectionReason,
             UserSync.as_vcard,
+            UserPreferencesSync._get_cls_kwargs,
         }
     ]
     non_async = {
@@ -127,9 +140,9 @@ def test_all_methods_are_overwritten_in_async():
         "_httpx_client",
         "_flow_req_cls",
     }
-    for sync_obj, async_obj in OVERRIDES:
+    for sync_obj, async_obj in overrides:
         for method_name in filter(
-            lambda m: m not in skip_methods, get_all_methods_names(sync_obj)
+            lambda m: m not in skip_methods, get_obj_methods_names(sync_obj)
         ):
             sync_method, async_method = (
                 getattr(sync_obj, method_name),
@@ -138,15 +151,15 @@ def test_all_methods_are_overwritten_in_async():
             if not asyncio.iscoroutinefunction(async_method):
                 if method_name in non_async:
                     assert sync_method != async_method, (
-                        f"Method/attr {method_name} is not overwritten in {async_obj.__name__}"
+                        f"Method/attr {method_name} is not overwritten in {async_obj}"
                     )
                     continue
                 raise AssertionError(
-                    f"Method {method_name} is not overwritten in {async_obj.__name__}"
+                    f"Method {method_name} is not overwritten in {async_obj}"
                 )
 
 
-def test_same_signature():
+def test_same_signature(overrides):
     skip_methods = [
         m.__name__
         for m in {
@@ -170,8 +183,8 @@ def test_same_signature():
             (WhatsAppSync.webhook_challenge_handler, ("self",)),
         )
     }
-    for sync_obj, async_obj in OVERRIDES:
-        for method_name in get_all_methods_names(sync_obj):
+    for sync_obj, async_obj in overrides:
+        for method_name in get_obj_methods_names(sync_obj):
             if method_name in skip_methods:
                 continue
             sync_sig, async_sig = (
@@ -180,7 +193,7 @@ def test_same_signature():
             )
             try:
                 assert sync_sig.parameters == async_sig.parameters, (
-                    f"Method {method_name} has different signature in {async_obj.__name__}"
+                    f"Method {method_name} has different signature in {async_obj}"
                 )
             except AssertionError:
                 if method_name in skip_signature_check:
@@ -192,13 +205,13 @@ def test_same_signature():
                         sync_sig.pop(param, None)
                         async_sig.pop(param, None)
                     assert sync_sig == async_sig, (
-                        f"Method {method_name} has different signature in {async_obj.__name__}"
+                        f"Method {method_name} has different signature in {async_obj}"
                     )
                 else:
                     raise
 
 
-def test_same_return_annotation():
+def test_same_return_annotation(overrides):
     skip_methods = [
         m.__name__
         for m in {
@@ -206,8 +219,8 @@ def test_same_return_annotation():
             BaseMediaSync.from_flow_completion,
         }
     ]
-    for sync_obj, async_obj in OVERRIDES:
-        for method_name in get_all_methods_names(sync_obj):
+    for sync_obj, async_obj in overrides:
+        for method_name in get_obj_methods_names(sync_obj):
             if method_name in skip_methods:
                 continue
             sync_sig, async_sig = (
@@ -215,11 +228,11 @@ def test_same_return_annotation():
                 inspect.signature(getattr(async_obj, method_name)),
             )
             assert sync_sig.return_annotation == async_sig.return_annotation, (
-                f"Method {method_name} has different return annotations in {async_obj.__name__}"
+                f"Method {method_name} has different return annotations in {async_obj}"
             )
 
 
-def test_same_docstring():
+def test_same_docstring(overrides):
     skip_methods = [
         m.__name__
         for m in {
@@ -233,8 +246,8 @@ def test_same_docstring():
         "_httpx_client",
         "_flow_req_cls",
     ]
-    for sync_obj, async_obj in OVERRIDES:
-        for method_name in get_all_methods_names(sync_obj):
+    for sync_obj, async_obj in overrides:
+        for method_name in get_obj_methods_names(sync_obj):
             if method_name in skip_methods:
                 continue
             sync_doc, async_doc = (
@@ -243,11 +256,11 @@ def test_same_docstring():
             )
             if (sync_doc and not async_doc) or (not sync_doc and async_doc):
                 raise AssertionError(
-                    f"Method {method_name} missing docstrings in {async_obj.__name__}"
+                    f"Method {method_name} missing docstrings in {async_obj}"
                 )
             try:
                 assert sync_doc == async_doc, (
-                    f"Method {method_name} has different docstrings in {async_obj.__name__}"
+                    f"Method {method_name} has different docstrings in {async_obj}"
                 )
             except AssertionError:
                 for line in zip(
