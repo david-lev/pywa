@@ -154,6 +154,7 @@ and the verify token that you used when initializing the WhatsApp client.
     The current supported fields are:
         - ``messages`` (all user related updates)
         - ``message_template_status_update`` (template got approved, rejected, etc.)
+        - ``user_preferences`` (user preferences updates, e.g. marketing preferences, etc.)
 
     You can subscribe to all the other fields, but they will not be handled by pywa, they can still be handled manually by
     registering a callback for the :meth:`~pywa.client.WhatsApp.on_raw_update` decorator (or the :class:`RawUpdateHandler` handler).
@@ -344,6 +345,12 @@ __________________
    * - :meth:`~pywa.client.WhatsApp.on_chat_opened`
      - :class:`ChatOpenedHandler`
      - :class:`~pywa.types.chat_opened.ChatOpened`
+   * - :meth:`~pywa.client.WhatsApp.on_user_preferences`
+     - :class:`UserPreferencesHandler`
+     - :class:`~pywa.types.user_preferences.UserPreferences`
+   * - :meth:`~pywa.client.WhatsApp.on_user_marketing_preferences`
+     - :class:`UserMarketingPreferencesHandler`
+     - :class:`~pywa.types.user_preferences.UserMarketingPreferences`
    * - :meth:`~pywa.client.WhatsApp.on_raw_update`
      - :class:`RawUpdateHandler`
      - :class:`dict`

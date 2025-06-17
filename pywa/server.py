@@ -8,16 +8,16 @@ from typing import TYPE_CHECKING, cast
 from . import utils, handlers, errors
 from .handlers import (
     Handler,
-    ChatOpenedHandler,
     EncryptedFlowRequestType,
-)  # noqa
-from .handlers import (
     CallbackButtonHandler,
     CallbackSelectionHandler,
     MessageHandler,
     MessageStatusHandler,
     RawUpdateHandler,
     FlowCompletionHandler,
+    UserMarketingPreferencesHandler,
+    UserPreferencesHandler,
+    ChatOpenedHandler,
 )
 from .types import MessageType
 from .types.base_update import (
@@ -428,6 +428,12 @@ class Server:
                 value,
             )
             return None
+
+        # The `user_preferences` field is handled differently because it can be a user preference or marketing preference
+        elif field == "user_preferences":
+            if value["user_preferences"][0]["category"] == "marketing_messages":
+                return UserMarketingPreferencesHandler
+            return UserPreferencesHandler
 
         # noinspection PyProtectedMember
         return Handler._fields_to_subclasses().get(field)

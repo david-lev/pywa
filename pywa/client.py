@@ -34,6 +34,8 @@ from .handlers import (
     FlowCompletionHandler,
     TemplateStatusHandler,
     FlowRequestHandler,
+    UserPreferencesHandler,
+    UserMarketingPreferencesHandler,
     FlowRequestCallbackWrapper,
     _HandlerDecorators,
     _handlers_attr,
@@ -78,6 +80,8 @@ from .types import (
     Sticker,
     Document,
     Audio,
+    UserPreferences,
+    UserMarketingPreferences,
 )
 from .types.base_update import BaseUpdate
 from .types.flows import (
@@ -123,6 +127,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         ChatOpenedHandler: ChatOpened.from_update,
         FlowCompletionHandler: FlowCompletion.from_update,
         TemplateStatusHandler: TemplateStatus.from_update,
+        UserPreferencesHandler: UserPreferences.from_update,
+        UserMarketingPreferencesHandler: UserMarketingPreferences.from_update,
     }
     """A dictionary that maps handler types to their respective update constructors."""
     _msg_fields_to_objects_constructors = dict(

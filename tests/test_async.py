@@ -98,6 +98,8 @@ def test_all_methods_are_overwritten_in_async():
             _HandlerDecorators.on_flow_completion,
             _HandlerDecorators.on_flow_request,
             _HandlerDecorators.on_template_status,
+            _HandlerDecorators.on_user_preferences,
+            _HandlerDecorators.on_user_marketing_preferences,
             _HandlerDecorators.on_raw_update,
             ListenersSync._remove_listener,
             BaseUpdate.from_update,

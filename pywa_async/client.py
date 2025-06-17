@@ -62,6 +62,8 @@ from .types import (
     ChatOpened,
     FlowCompletion,
     TemplateStatus,
+    UserPreferences,
+    UserMarketingPreferences,
     Image,
     Video,
     Document,
@@ -77,6 +79,8 @@ from .handlers import (
     ChatOpenedHandler,
     FlowCompletionHandler,
     TemplateStatusHandler,
+    UserPreferencesHandler,
+    UserMarketingPreferencesHandler,
 )
 from .types.flows import (
     FlowCategory,
@@ -112,6 +116,8 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         ChatOpenedHandler: ChatOpened.from_update,
         FlowCompletionHandler: FlowCompletion.from_update,
         TemplateStatusHandler: TemplateStatus.from_update,
+        UserPreferencesHandler: UserPreferences.from_update,
+        UserMarketingPreferencesHandler: UserMarketingPreferences.from_update,
     }
     """A dictionary that maps handler types to their respective update constructors."""
 
