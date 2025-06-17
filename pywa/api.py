@@ -602,6 +602,54 @@ class WhatsAppCloudApi:
             params={"fields": ",".join(fields)} if fields else None,
         )
 
+    def get_business_phone_numbers(
+        self,
+        waba_id: str,
+        fields: tuple[str, ...] | None = None,
+        pagination: dict[str, str] | None = None,
+    ) -> dict[str, list[dict[str, Any]]]:
+        """
+        Get business phone numbers.
+
+        Return example::
+
+            {
+                'data': [
+                    {
+                        'verified_name': 'Test Number',
+                        'code_verification_status': 'NOT_VERIFIED',
+                        'display_phone_number': '+1 555-096-7852',
+                        'quality_rating': 'GREEN',
+                        'platform_type': 'CLOUD_API',
+                        'throughput': {'level': 'STANDARD'},
+                        'id': '277321005464405'
+                    },
+                    ...
+                ]
+            }
+
+        Args:
+            waba_id: The ID of the WhatsApp Business Account.
+            fields: The fields to get.
+            pagination: The pagination of the API.
+
+        Returns:
+            The business phone numbers.
+        """
+        endpoint = f"/{waba_id}/phone_numbers"
+        params = {
+            k: v
+            for k, v in {
+                "fields": ",".join(fields) if fields else None,
+            }.items()
+            if v
+        } | (pagination or {})
+        return self._make_request(
+            method="GET",
+            endpoint=endpoint,
+            params=params,
+        )
+
     def update_conversational_automation(
         self,
         phone_id: str,
