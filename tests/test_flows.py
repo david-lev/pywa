@@ -1,4 +1,5 @@
 import dataclasses
+import datetime
 import importlib
 import json
 import pathlib
@@ -33,6 +34,7 @@ from pywa.types.flows import (
     ActionNext,
     ActionNextType,
     FlowStr,
+    FlowPreview,
 )
 from pywa.utils import Version
 
@@ -760,3 +762,25 @@ def test_flows_server():
                 endpoint=...,
             )
         )
+
+
+def test_flow_preview_with_params():
+    preview = FlowPreview(
+        url="https://business.facebook.com/wa/manage/flows/1460367762010364/preview/?token=fihsufcisd-09ad-4b88-b6aa-hdiewfcw",
+        expires_at=datetime.datetime.now(),
+    )
+    assert (
+        preview.with_params(
+            interactive=True,
+            flow_token="flow_token_example",
+            flow_action=FlowRequestActionType.NAVIGATE,
+            flow_action_payload={
+                "screen": "START",
+                "is_new_user": True,
+                "welcome_msg": "Welcome to our service!",
+            },
+            phone_number="1234567890",
+            debug=True,
+        )
+        == "https://business.facebook.com/wa/manage/flows/1460367762010364/preview/?token=fihsufcisd-09ad-4b88-b6aa-hdiewfcw&flow_token=flow_token_example&interactive=true&flow_action=navigate&flow_action_payload=%7B%22screen%22%3A%22START%22%2C%22is_new_user%22%3Atrue%2C%22welcome_msg%22%3A%22Welcome+to+our+service%21%22%7D&phone_number=1234567890&debug=true"
+    )
