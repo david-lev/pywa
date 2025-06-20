@@ -4,8 +4,9 @@ __all__ = [
     "CallbackButton",
     "CallbackSelection",
     "Button",
-    "ButtonUrl",
-    "CallButton",
+    "URLButton",
+    "ButtonUrl",  # Alias for URLButton for backward compatibility
+    "VoiceCallButton",
     "SectionRow",
     "Section",
     "SectionList",
@@ -17,6 +18,7 @@ import dataclasses
 import datetime
 import enum
 import types
+import warnings
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -424,7 +426,7 @@ class Button:
 
 
 @dataclasses.dataclass(slots=True)
-class ButtonUrl:
+class URLButton:
     """
     Represents a button in the bottom of the message that opens a URL.
 
@@ -444,32 +446,41 @@ class ButtonUrl:
 
 
 @dataclasses.dataclass(slots=True)
-class CallButton:
+class ButtonUrl(URLButton):
+    """Deprecated. Use :class:`URLButton` instead."""
+
+    def __post_init__(self):
+        warnings.warn(
+            "ButtonUrl is deprecated, use URLButton instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
+
+@dataclasses.dataclass(slots=True)
+class VoiceCallButton:
     """
     Represents a button that initiates a voice call on WhatsApp.
 
     Attributes:
-        display_text: The text to display on the button (up to 20 characters) default is "Call Now".
-        ttl_minutes: The time-to-live for the call in minutes (up to 43200 minutes (30 days)), default is 10080  minutes (7 days).
+        title: The text to display on the button (up to 20 characters) default is `Call Now`.
+        ttl_minutes: The time-to-live for the call in minutes (up to ``43200`` minutes (30 days)), default is ``10080``  minutes (7 days).
     """
 
-    display_text: str | None = None
+    title: str | None = None
     ttl_minutes: int | None = None
 
     def to_dict(self) -> dict:
-        parameters = (
-            {
-                "parameters": {
-                    **(
-                        {"display_text": self.display_text} if self.display_text else {}
-                    ),
-                    **({"ttl_minutes": self.ttl_minutes} if self.ttl_minutes else {}),
-                }
-            }
-            if self.display_text or self.ttl_minutes
-            else {}
-        )
-        return {"name": InteractiveType.VOICE_CALL, **parameters}
+        params = {}
+        if self.title:
+            params["display_text"] = self.title
+        if self.ttl_minutes:
+            params["ttl_minutes"] = self.ttl_minutes
+
+        return {
+            "name": InteractiveType.VOICE_CALL,
+            "parameters": params,
+        }
 
 
 @dataclasses.dataclass(slots=True)

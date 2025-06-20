@@ -93,7 +93,7 @@ def test_resolve_buttons_param():
     )
 
     assert helpers.resolve_buttons_param(
-        types.ButtonUrl(title="PyWa Docs", url="https://pywa.readthedocs.io")
+        types.URLButton(title="PyWa Docs", url="https://pywa.readthedocs.io")
     ) == (
         types.others.InteractiveType.CTA_URL,
         {
@@ -107,8 +107,8 @@ def test_resolve_buttons_param():
     )
 
     assert helpers.resolve_buttons_param(
-        types.CallButton(
-            display_text="Call me",
+        types.VoiceCallButton(
+            title="Call me",
             ttl_minutes=50,
         )
     ) == (

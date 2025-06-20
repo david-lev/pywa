@@ -21,8 +21,8 @@ if TYPE_CHECKING:
     from .sent_message import SentMessage, SentTemplate
     from .callback import (
         Button,
-        ButtonUrl,
-        CallButton,
+        URLButton,
+        VoiceCallButton,
         SectionList,
         FlowButton,
         CallbackData,
@@ -52,7 +52,12 @@ class _ClientShortcuts:
         header: str | None = None,
         footer: str | None = None,
         buttons: (
-            Iterable[Button] | ButtonUrl | CallButton | SectionList | FlowButton | None
+            Iterable[Button]
+            | URLButton
+            | VoiceCallButton
+            | SectionList
+            | FlowButton
+            | None
         ) = None,
         quote: bool = False,
         preview_url: bool = False,
@@ -102,7 +107,7 @@ class _ClientShortcuts:
         image: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
+        buttons: Iterable[Button] | URLButton | FlowButton | None = None,
         quote: bool = False,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -153,7 +158,7 @@ class _ClientShortcuts:
         video: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
+        buttons: Iterable[Button] | URLButton | FlowButton | None = None,
         quote: bool = False,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -206,7 +211,7 @@ class _ClientShortcuts:
         filename: str | None = None,
         caption: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
+        buttons: Iterable[Button] | URLButton | FlowButton | None = None,
         quote: bool = False,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,

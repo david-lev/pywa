@@ -14,7 +14,7 @@ import dataclasses
 from typing import TYPE_CHECKING, Iterable, Callable, Any
 
 from .base_update import BaseUserUpdateAsync  # noqa
-from .callback import Button, ButtonUrl, SectionList
+from .callback import Button, URLButton, SectionList
 from .media import Audio, Document, Image, Sticker, Video
 from .others import (
     MessageType,
@@ -46,22 +46,20 @@ class Message(BaseUserUpdateAsync, _Message):
         timestamp: The timestamp when the message was sent (in UTC).
         reply_to_message: The message to which this message is a reply to. (Optional)
         forwarded: Whether the message was forwarded.
-        forwarded_many_times: Whether the message was forwarded many times.
-         (when True, ``forwarded`` will be True as well)
-        text: The text of the message (if the message type is :class:`MessageType.TEXT`).
-        image: The image of the message (if the message type is :class:`MessageType.IMAGE`).
-        video: The video of the message (if the message type is :class:`MessageType.VIDEO`).
-        sticker: The sticker of the message (if the message type is :class:`MessageType.STICKER`).
-        document: The document of the message (if the message type is :class:`MessageType.DOCUMENT`).
-        audio: The audio of the message (if the message type is :class:`MessageType.AUDIO`).
-        caption: The caption of the message (Optional, only available for :class:`MessageType.IMAGE`,
-         :class:`MessageType.VIDEO` and :class:`MessageType.DOCUMENT`).
-        reaction: The reaction of the message (if the message type is :class:`MessageType.REACTION`).
-        location: The location of the message (if the message type is :class:`MessageType.LOCATION`).
-        contacts: The contacts of the message (if the message type is :class:`MessageType.CONTACTS`).
-        order: The order of the message (if the message type is :class:`MessageType.ORDER`).
-        system: The system update (if the message type is :class:`MessageType.SYSTEM`).
-        error: The error of the message (if the message type is :class:`MessageType.UNSUPPORTED`).
+        forwarded_many_times: Whether the message was forwarded many times. (when True, ``forwarded`` will be True as well)
+        text: The text of the message.
+        image: The image of the message.
+        video: The video of the message.
+        sticker: The sticker of the message.
+        document: The document of the message.
+        audio: The audio of the message.
+        caption: The caption of the message (Optional, only available for image video and document messages).
+        reaction: The reaction of the message.
+        location: The location of the message.
+        contacts: The contacts of the message.
+        order: The order of the message.
+        system: The system update.
+        error: The error of the message.
         shared_data: Shared data between handlers.
     """
 
@@ -125,7 +123,7 @@ class Message(BaseUserUpdateAsync, _Message):
         header: str | None = None,
         body: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | SectionList | None = None,
+        buttons: Iterable[Button] | URLButton | SectionList | None = None,
         preview_url: bool = False,
         reply_to_message_id: str = None,
         tracker: str | None = None,
