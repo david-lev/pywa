@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+"""This module contains types related to WhatsApp calls, including call connection, termination, and status updates."""
+
+__all__ = ["CallConnect", "CallTerminate", "CallStatus", "CallingSettings"]
+
 import dataclasses
 import datetime
 from typing import TYPE_CHECKING, Generic
@@ -244,3 +248,236 @@ class CallStatusType(utils.StrEnum):
     RINGING = "RINGING"
     ACCEPTED = "ACCEPTED"
     REJECTED = "REJECTED"
+
+
+class CallingSettingsStatus(utils.StrEnum):
+    """
+    Represents the status of calling settings.
+    """
+
+    ENABLED = "ENABLED"
+    DISABLED = "DISABLED"
+
+
+class CallIconVisibility(utils.StrEnum):
+    """
+    Represents the visibility of the call icon.
+    """
+
+    DEFAULT = "DEFAULT"
+    DISABLE_ALL = "DISABLE_ALL"
+
+
+class CallbackPermissionStatus(utils.StrEnum):
+    """
+    Represents the status of callback permission.
+    """
+
+    ENABLED = "ENABLED"
+    DISABLED = "DISABLED"
+
+
+class SIPStatus(utils.StrEnum):
+    """
+    Represents the status of SIP (Session Initiation Protocol).
+    """
+
+    ENABLED = "ENABLED"
+    DISABLED = "DISABLED"
+
+
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+class SIPServer(utils.FromDict):
+    """
+    Represents a SIP server configuration.
+
+    Attributes:
+        hostname: The hostname of the SIP server.
+        port: The port of the SIP server.
+        request_uri_user_params: Optional parameters for the request URI user.
+        sip_user_password: The password for the SIP user (only if ``include_sip_credentials`` is True).
+    """
+
+    hostname: str
+    port: int
+    request_uri_user_params: dict[str, str] | None
+    sip_user_password: str | None
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class WeekDay:
+    """
+    Represents a day of the week with its opening and closing times.
+
+    Attributes:
+        day_of_week: The day of the week (e.g., "MONDAY", "TUESDAY").
+        open_time: The opening time in 24-hour format (e.g., "0400" for 4:00 AM).
+        close_time: The closing time in 24-hour format (e.g., "2200" for 10:00 PM).
+    """
+
+    day_of_week: str
+    open_time: datetime.time
+    close_time: datetime.time
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "day_of_week": self.day_of_week,
+            "open_time": self.open_time.strftime("%H%M"),
+            "close_time": self.close_time.strftime("%H%M"),
+        }
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class Monday(WeekDay):
+    """
+    Represents Monday with its opening and closing times.
+    """
+
+    day_of_week: str = dataclasses.field(default="MONDAY", init=False)
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class Tuesday(WeekDay):
+    """
+    Represents Tuesday with its opening and closing times.
+    """
+
+    day_of_week: str = dataclasses.field(default="TUESDAY", init=False)
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class Wednesday(WeekDay):
+    """
+    Represents Wednesday with its opening and closing times.
+    """
+
+    day_of_week: str = dataclasses.field(default="WEDNESDAY", init=False)
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class Thursday(WeekDay):
+    """
+    Represents Thursday with its opening and closing times.
+    """
+
+    day_of_week: str = dataclasses.field(default="THURSDAY", init=False)
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class Friday(WeekDay):
+    """
+    Represents Friday with its opening and closing times.
+    """
+
+    day_of_week: str = dataclasses.field(default="FRIDAY", init=False)
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class Saturday(WeekDay):
+    """
+    Represents Saturday with its opening and closing times.
+    """
+
+    day_of_week: str = dataclasses.field(default="SATURDAY", init=False)
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class Sunday(WeekDay):
+    """
+    Represents Sunday with its opening and closing times.
+    """
+
+    day_of_week: str = dataclasses.field(default="SUNDAY", init=False)
+
+
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+class HolidaySchedule(utils.FromDict):
+    """
+    Represents a holiday schedule with a date and opening/closing times.
+
+    Attributes:
+        date: The date of the holiday.
+        start_time: The opening time in 24-hour format (e.g., "0000" for midnight).
+        end_time: The closing time in 24-hour format (e.g., "2359" for 11:59 PM).
+    """
+
+    date: datetime.date
+    start_time: datetime.time
+    end_time: datetime.time
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "date": self.date.strftime("%Y-%m-%d"),
+            "start_time": self.start_time.strftime("%H%M"),
+            "end_time": self.end_time.strftime("%H%M"),
+        }
+
+
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+class CallHours(utils.FromDict):
+    """
+    Represents the call hours settings for a business.
+
+    - Maximum of 2 entries allowed per day of week
+    - open_time must be before close_time
+    - Overlapping entries not allowed
+
+    Attributes:
+        status: Enable or disable the call hours for the business (If call hours are disabled, the business is considered open all 24 hours of the day, 7 days a week).
+        timezone_id: The timezone that the business is operating within. `Learn more about supported values for timezone_id <https://developers.facebook.com/docs/facebook-business-extension/fbe/reference#time-zones>`_.
+        weekly_operating_hours: The operating hours schedule for each day of the week.
+        holiday_schedule: An optional override to the weekly schedule, Up to 20 overrides can be specified. Note: If holiday_schedule is not passed in the request, then the existing holiday_schedule will be deleted and replaced with an empty schedule.
+    """
+
+    status: CallingSettingsStatus
+    timezone_id: str
+    weekly_operating_hours: list[WeekDay]
+    holiday_schedule: list[HolidaySchedule] | None = None
+
+    def to_dict(self) -> dict:
+        return {
+            "status": self.status.value,
+            "timezone_id": self.timezone_id,
+            "weekly_operating_hours": [
+                day.to_dict() for day in self.weekly_operating_hours
+            ],
+            "holiday_schedule": [holiday.to_dict() for holiday in self.holiday_schedule]
+            if self.holiday_schedule
+            else None,
+        }
+
+
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+class CallingSettings(utils.FromDict):
+    """
+    Represents the calling settings for a business phone number.
+
+    - See `Configure Call Settings <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/call-settings>`_ for more details.
+
+    Attributes:
+        status: Enable or disable the Calling API for the given business phone number.
+        call_icon_visibility: Configure whether the WhatsApp call button icon displays for users when chatting with the business. See `Call Icon Visibility <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/call-settings#parameter-details>`_ for more details.
+        call_hours: Allows you specify and trigger call settings for incoming calls based on your timezone, business operating hours, and holiday schedules.
+        callback_permission_status: Configure whether a WhatsApp user is prompted with a call permission request after calling your business.
+        sip: Configure call signaling via signal initiation protocol (SIP). Note: When SIP is enabled, you cannot use calling related endpoints and will not receive calling related webhooks.
+    """
+
+    status: CallingSettingsStatus | None = None
+    call_icon_visibility: CallIconVisibility | None = None
+    call_hours: CallHours | None = None
+    callback_permission_status: CallbackPermissionStatus | None = None
+    sip: SIPServer | None = None
+
+    def to_dict(self):
+        data = {}
+        if self.status:
+            data["status"] = self.status.value
+        if self.call_icon_visibility:
+            data["call_icon_visibility"] = self.call_icon_visibility.value
+        if self.callback_permission_status:
+            data["callback_permission_status"] = self.callback_permission_status.value
+        if self.call_hours:
+            data["call_hours"] = self.call_hours.to_dict()
+        if self.sip:
+            data["sip"] = dataclasses.asdict(self.sip)
+        return data
