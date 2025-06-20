@@ -14,7 +14,7 @@ import dataclasses
 from typing import TYPE_CHECKING, Iterable, Callable, Any
 
 from .base_update import BaseUserUpdateAsync  # noqa
-from .callback import Button, URLButton, SectionList
+from .callback import Button, URLButton, SectionList, VoiceCallButton, FlowButton
 from .media import Audio, Document, Image, Sticker, Video
 from .others import (
     MessageType,
@@ -123,7 +123,12 @@ class Message(BaseUserUpdateAsync, _Message):
         header: str | None = None,
         body: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | URLButton | SectionList | None = None,
+        buttons: Iterable[Button]
+        | URLButton
+        | VoiceCallButton
+        | FlowButton
+        | SectionList
+        | None = None,
         preview_url: bool = False,
         reply_to_message_id: str = None,
         tracker: str | None = None,
