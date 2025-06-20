@@ -33,7 +33,8 @@ from .server import Server
 from .types import (
     BusinessProfile,
     Button,
-    ButtonUrl,
+    URLButton,
+    VoiceCallButton,
     CommerceSettings,
     Contact,
     Industry,
@@ -264,7 +265,14 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         text: str,
         header: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | SectionList | FlowButton | None = None,
+        buttons: (
+            Iterable[Button]
+            | URLButton
+            | VoiceCallButton
+            | SectionList
+            | FlowButton
+            | None
+        ) = None,
         preview_url: bool = False,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -346,7 +354,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         image: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
+        buttons: Iterable[Button] | URLButton | FlowButton | None = None,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -444,7 +452,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         video: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
+        buttons: Iterable[Button] | URLButton | FlowButton | None = None,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -543,7 +551,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         filename: str | None = None,
         caption: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
+        buttons: Iterable[Button] | URLButton | FlowButton | None = None,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,

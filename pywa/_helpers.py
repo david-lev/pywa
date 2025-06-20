@@ -25,7 +25,8 @@ from .types import (
     FlowJSON,
     CallbackData,
     MessageType,
-    ButtonUrl,
+    URLButton,
+    VoiceCallButton,
     SectionList,
     FlowButton,
     Button,
@@ -37,7 +38,7 @@ if TYPE_CHECKING:
 
 
 def resolve_buttons_param(
-    buttons: Iterable[Button] | ButtonUrl | FlowButton | SectionList,
+    buttons: Iterable[Button] | URLButton | VoiceCallButton | FlowButton | SectionList,
 ) -> tuple[
     InteractiveType,
     dict,
@@ -57,8 +58,10 @@ def resolve_buttons_param(
                 }
             },
         )
-    elif isinstance(buttons, ButtonUrl):
+    elif isinstance(buttons, URLButton):
         return InteractiveType.CTA_URL, buttons.to_dict(), {}
+    elif isinstance(buttons, VoiceCallButton):
+        return InteractiveType.VOICE_CALL, buttons.to_dict(), {}
     elif isinstance(buttons, FlowButton):
         return (
             InteractiveType.FLOW,

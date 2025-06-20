@@ -5,7 +5,9 @@ This package contains all the types used in the library.
 from .base_update import StopHandling, ContinueHandling
 from .callback import (
     Button,
-    ButtonUrl,
+    URLButton,
+    ButtonUrl,  # Alias for URLButton for backward compatibility
+    VoiceCallButton,
     CallbackButton,
     CallbackData,
     CallbackSelection,
