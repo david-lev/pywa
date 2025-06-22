@@ -309,6 +309,8 @@ class WeekDay:
     """
     Represents a day of the week with its opening and closing times.
 
+    - You can use the subclasses for specific days (e.g., ``Monday``, ``Tuesday``, etc.) to create instances with predefined day names.
+
     Attributes:
         day_of_week: The day of the week (e.g., "MONDAY", "TUESDAY").
         open_time: The opening time in 24-hour format (e.g., "0400" for 4:00 AM).
@@ -390,8 +392,36 @@ class Sunday(WeekDay):
     day_of_week: str = dataclasses.field(default="SUNDAY", init=False)
 
 
+_day_to_weekday_map = {
+    "MONDAY": Monday,
+    "TUESDAY": Tuesday,
+    "WEDNESDAY": Wednesday,
+    "THURSDAY": Thursday,
+    "FRIDAY": Friday,
+    "SATURDAY": Saturday,
+    "SUNDAY": Sunday,
+}
+
+
+def _day_to_weekday(day: dict[str, str]) -> WeekDay:
+    """
+    Converts a dictionary representation of a day to a WeekDay object.
+
+    Args:
+        day: A dictionary containing the day of the week, open time, and close time.
+
+    Returns:
+        An instance of a specific WeekDay subclass based on the day of the week.
+    """
+    # noinspection PyArgumentList
+    return _day_to_weekday_map[day["day_of_week"]](
+        open_time=datetime.datetime.strptime(day["open_time"], "%H%M").time(),
+        close_time=datetime.datetime.strptime(day["close_time"], "%H%M").time(),
+    )
+
+
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
-class HolidaySchedule(utils.FromDict):
+class HolidaySchedule:
     """
     Represents a holiday schedule with a date and opening/closing times.
 
@@ -412,9 +442,17 @@ class HolidaySchedule(utils.FromDict):
             "end_time": self.end_time.strftime("%H%M"),
         }
 
+    @classmethod
+    def from_dict(cls, data: dict) -> HolidaySchedule:
+        return cls(
+            date=datetime.datetime.strptime(data["date"], "%Y-%m-%d").date(),
+            start_time=datetime.datetime.strptime(data["start_time"], "%H%M").time(),
+            end_time=datetime.datetime.strptime(data["end_time"], "%H%M").time(),
+        )
+
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
-class CallHours(utils.FromDict):
+class CallHours:
     """
     Represents the call hours settings for a business.
 
@@ -446,9 +484,38 @@ class CallHours(utils.FromDict):
             else None,
         }
 
+    @classmethod
+    def from_dict(cls, data: dict) -> CallHours:
+        return cls(
+            status=CallingSettingsStatus(data["status"]),
+            timezone_id=data["timezone_id"],
+            weekly_operating_hours=[
+                _day_to_weekday(day) for day in data["weekly_operating_hours"]
+            ],
+            holiday_schedule=[
+                HolidaySchedule.from_dict(holiday)
+                for holiday in data.get("holiday_schedule", [])
+            ]
+            if "holiday_schedule" in data
+            else None,
+        )
+
+
+class STRPKeyExchangeProtocol(utils.StrEnum):
+    """
+    Represents the SRTP key exchange protocol.
+
+    Attributes:
+        DTLS: Datagram Transport Layer Security (DTLS) is used for key exchange.
+        SDES: Session Description Protocol Security Descriptions (SDES) is used for key exchange.
+    """
+
+    DTLS = "DTLS"
+    SDES = "SDES"
+
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
-class CallingSettings(utils.FromDict):
+class CallingSettings:
     """
     Represents the calling settings for a business phone number.
 
@@ -466,6 +533,7 @@ class CallingSettings(utils.FromDict):
     call_icon_visibility: CallIconVisibility | None = None
     call_hours: CallHours | None = None
     callback_permission_status: CallbackPermissionStatus | None = None
+    srtp_key_exchange_protocol: STRPKeyExchangeProtocol | None = None
     sip: SIPServer | None = None
 
     def to_dict(self):
@@ -478,6 +546,31 @@ class CallingSettings(utils.FromDict):
             data["callback_permission_status"] = self.callback_permission_status.value
         if self.call_hours:
             data["call_hours"] = self.call_hours.to_dict()
+        if self.srtp_key_exchange_protocol:
+            data["srtp_key_exchange_protocol"] = self.srtp_key_exchange_protocol.value
         if self.sip:
             data["sip"] = dataclasses.asdict(self.sip)
         return data
+
+    @classmethod
+    def from_dict(cls, data: dict) -> CallingSettings:
+        return cls(
+            status=CallingSettingsStatus(data["status"]) if "status" in data else None,
+            call_icon_visibility=CallIconVisibility(data["call_icon_visibility"])
+            if "call_icon_visibility" in data
+            else None,
+            call_hours=CallHours.from_dict(data["call_hours"])
+            if "call_hours" in data
+            else None,
+            callback_permission_status=CallbackPermissionStatus(
+                data["callback_permission_status"]
+            )
+            if "callback_permission_status" in data
+            else None,
+            srtp_key_exchange_protocol=STRPKeyExchangeProtocol(
+                data["srtp_key_exchange_protocol"]
+            )
+            if "srtp_key_exchange_protocol" in data
+            else None,
+            sip=SIPServer.from_dict(data["sip"]) if "sip" in data else None,
+        )
