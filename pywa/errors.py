@@ -14,6 +14,8 @@ class WhatsAppError(Exception):
 
     - `'Cloud API Error Codes' on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/support/error-codes>`_.
     - `'Flow Error Codes' on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/error-codes>`_.
+    - `'Calling Error Codes' on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/troubleshooting>`_.
+    - `'Block User Error Codes' on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/block-users#error-codes>`_.
 
     Attributes:
         error_code: The error code.
@@ -372,7 +374,7 @@ class RecipientCannotBeSender(SendMessageError):
 class BusinessPaymentIssue(SendMessageError):
     """Message failed to send because there were one or more errors related to your payment method."""
 
-    __error_codes__ = (131042,)
+    __error_codes__ = (131042, 131044)  # 131044 is for calling
 
 
 class IncorrectCertificate(SendMessageError):
@@ -511,3 +513,132 @@ class BlockUserInternalError(BlockUserError):
     """
 
     __error_codes__ = (139103,)
+
+
+# ====================================================================================================
+
+
+class CallingError(WhatsAppError):
+    """
+    Base exception for all calling errors.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/troubleshooting>`_.
+    """
+
+    __error_codes__ = None
+
+
+class CallingNotEnabled(CallingError):
+    """
+    Calling is not enabled on the business phone number.
+
+    `Configure call settings to enable Calling API features <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/call-settings>`_.
+    """
+
+    __error_codes__ = (138000,)
+
+
+class ReceiverUncallable(CallingError):
+    """
+    Receiver is unable to receive calls
+
+    Reasons can include:
+
+    - The recipient phone number is not a WhatsApp phone number.
+    - The recipient has not accepted our new Terms of Service and Privacy Policy.
+    - Recipient using an unsupported client. The currently supported clients are Android, iOS, SMB Android and SMB iOS
+
+    Confirm with the recipient that they agree to be contacted by you over WhatsApp and are using the latest version of WhatsApp.
+    """
+
+    __error_codes__ = (138001,)
+
+
+class ConcurrentCallsLimit(CallingError):
+    """
+    Limit reached for maximum concurrent calls (1000) for the given number
+
+    Try again later or reduce the frequency or amount of API calls the app is making.
+    """
+
+    __error_codes__ = (138002,)
+
+
+class DuplicateCall(CallingError):
+    """
+    A call is already ongoing with the receiver
+
+    Try again later when the current call ends.
+    """
+
+    __error_codes__ = (138003,)
+
+
+class CallConnectionError(CallingError):
+    """
+    Error while connecting the call
+
+    Try again later or investigate the connection params provided to the API.
+    """
+
+    __error_codes__ = (138004,)
+
+
+class CallRateLimitExceeded(CallingError):
+    """
+    Limit reached for maximum calls that can be initiated by the business phone number
+
+    Try again later or reduce the frequency or amount of API calls the app is making.
+    """
+
+    __error_codes__ = (138005,)
+
+
+class CallPermissionNotFound(CallingError):
+    """
+    No approved `call permission <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-call-permissions>`_ from the recipient
+
+    Ensure a call permission has been accepted by the consumer
+    """
+
+    __error_codes__ = (138006,)
+
+
+class CallConnectionTimeout(CallingError):
+    """
+    Call was unable to connect due to a timeout
+
+    Business did not apply the offer/answer SDP from Cloud API in time. Connect API was not invoked with the answer SDP in time
+    """
+
+    __error_codes__ = (138007,)
+
+
+class CallPermissionRequestLimitHit(CallingError):
+    """
+    Limit reached for call permission request sends for the given business and consumer pair
+
+    When a business sends more than the limit of call permission requests per time period, Call Permission Requests are rate limited. A connected call with a consumer will reset the limits.
+    """
+
+    __error_codes__ = (138009,)
+
+
+class BusinessInitiatedCallsLimitHit(CallingError):
+    """
+    Limit reached for maximum business initiated calls allowed in 24 hours. Currently 5 connected business initiated calls are allowed within 24 hours.
+
+    Exact error details will be listed in the error_data section of the response payload. Details will include a timestamp when the next call is allowed.
+    """
+
+    __error_codes__ = (138012,)
+
+
+class FetchCallPermissionLimitHit(CallingError):
+    """
+    Limit reached for requests to the fetch call permission status API.
+
+    Try again later or reduce the frequency or amount of requests to the API the app is making.
+    """
+
+    __error_codes__ = (138013,)
