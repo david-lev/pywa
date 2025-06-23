@@ -60,6 +60,17 @@ class User(_User):
             for u in (await self._client.unblock_users((self.wa_id,))).removed_users
         }
 
+    async def get_call_permissions(self) -> CallPermissions:
+        """
+        Get the call permissions of the user.
+
+        - Shortcut for :meth:`~pywa.client.WhatsApp.get_call_permissions` with the user wa_id.
+
+        Returns:
+            CallPermissions: The call permissions of the user.
+        """
+        return await self._client.get_call_permissions(wa_id=self.wa_id)
+
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class UsersBlockedResult(_UsersBlockedResult):

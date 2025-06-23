@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from .chat_opened import ChatOpened
     from .media import Image, Video, Document, Audio, Sticker
     from .callback import CallbackButton, CallbackSelection
+    from .calls import CallPermissions
     from ..client import WhatsApp
 
 _logger = logging.getLogger(__name__)
@@ -80,6 +81,17 @@ class User:
         return self.wa_id in {
             u.input for u in self._client.unblock_users((self.wa_id,)).removed_users
         }
+
+    def get_call_permissions(self) -> CallPermissions:
+        """
+        Get the call permissions of the user.
+
+        - Shortcut for :meth:`~pywa.client.WhatsApp.get_call_permissions` with the user wa_id.
+
+        Returns:
+            CallPermissions: The call permissions of the user.
+        """
+        return self._client.get_call_permissions(wa_id=self.wa_id)
 
     def as_vcard(self) -> str:
         """Get the user as a vCard."""
