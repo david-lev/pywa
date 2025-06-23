@@ -158,6 +158,7 @@ class InteractiveType(utils.StrEnum):
     FLOW = "flow"
     LOCATION_REQUEST_MESSAGE = "location_request_message"
     VOICE_CALL = "voice_call"
+    CALL_PERMISSION_REQUEST = "call_permission_request"
 
 
 @dataclasses.dataclass(frozen=True, slots=True)

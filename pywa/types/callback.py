@@ -7,6 +7,7 @@ __all__ = [
     "URLButton",
     "ButtonUrl",  # Alias for URLButton for backward compatibility
     "VoiceCallButton",
+    "CallRequestButton",
     "SectionRow",
     "Section",
     "SectionList",
@@ -480,6 +481,17 @@ class VoiceCallButton:
         return {
             "name": InteractiveType.VOICE_CALL,
             "parameters": params,
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class CallRequestButton:
+    """Represents a button that requests a call on WhatsApp."""
+
+    @staticmethod
+    def to_dict() -> dict:
+        return {
+            "name": InteractiveType.CALL_PERMISSION_REQUEST,
         }
 
 

@@ -17,6 +17,8 @@ Keyboard
 
 .. autoclass:: VoiceCallButton()
 
+.. autoclass:: CallRequestButton()
+
 .. autoclass:: CallbackData()
 
 ----------------

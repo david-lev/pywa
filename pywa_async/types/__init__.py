@@ -8,6 +8,7 @@ from .callback import (
     URLButton,
     ButtonUrl,  # Alias for URLButton for backward compatibility
     VoiceCallButton,
+    CallRequestButton,
     CallbackButton,
     CallbackData,
     CallbackSelection,
