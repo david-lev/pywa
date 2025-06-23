@@ -1475,3 +1475,62 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             endpoint=f"/{phone_id}/block_users",
             params=pagination,
         )
+
+    async def get_call_permissions(self, phone_id: str, user_wa_id: str) -> dict:
+        """
+        Get call permissions for a user.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-call-permissions>`_.
+
+        Return example::
+
+            {
+              "messaging_product": "whatsapp",
+              "permission": {
+                "status": "temporary",
+                "expiration_time": 1745343479
+              },
+              "actions": [
+                {
+                  "action_name": "send_call_permission_request",
+                  "can_perform_action": True,
+                  "limits": [
+                    {
+                      "time_period": "PT24H",
+                      "max_allowed": 1,
+                      "current_usage": 0,
+                    },
+                    {
+                      "time_period": "P7D",
+                      "max_allowed": 2,
+                      "current_usage": 1,
+                    }
+                  ]
+                },
+                {
+                  "action_name": "start_call",
+                  "can_perform_action": False,
+                  "limits": [
+                    {
+                      "time_period": "PT24H",
+                      "max_allowed": 5,
+                      "current_usage": 5,
+                      "limit_expiration_time": 1745622600,
+                    }
+                  ]
+                }
+              }
+            }
+
+        Args:
+            phone_id: The ID of the phone number to get call permissions for.
+            user_wa_id: The WhatsApp ID of the user to check permissions for.
+
+        Returns:
+            The response from the WhatsApp Cloud API.
+        """
+        return await self._make_request(
+            method="GET",
+            endpoint=f"/{phone_id}/call_permissions",
+            params={"user_wa_id": user_wa_id},
+        )

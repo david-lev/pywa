@@ -2,7 +2,13 @@ from __future__ import annotations
 
 """This module contains types related to WhatsApp calls, including call connection, termination, and status updates."""
 
-__all__ = ["CallConnect", "CallTerminate", "CallStatus", "CallingSettings"]
+__all__ = [
+    "CallConnect",
+    "CallTerminate",
+    "CallStatus",
+    "CallingSettings",
+    "CallPermissions",
+]
 
 import dataclasses
 import datetime
@@ -514,7 +520,7 @@ class STRPKeyExchangeProtocol(utils.StrEnum):
     SDES = "SDES"
 
 
-@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+@dataclasses.dataclass(slots=True, kw_only=True)
 class CallingSettings:
     """
     Represents the calling settings for a business phone number.
@@ -573,4 +579,124 @@ class CallingSettings:
             if "srtp_key_exchange_protocol" in data
             else None,
             sip=SIPServer.from_dict(data["sip"]) if "sip" in data else None,
+        )
+
+
+class CallPermissionStatus(utils.StrEnum):
+    """
+    Represents the status of a call permission.
+
+    Attributes:
+        NO_PERMISSION: No permission granted.
+        TEMPORARY: Temporary permission granted.
+    """
+
+    NO_PERMISSION = "no_permission"
+    TEMPORARY = "temporary"
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class CallPermissionActionLimit:
+    """
+    Represents a limit for a specific action that can be performed with the call permission.
+
+    Attributes:
+        time_period: The time period for which the limit applies, represented in ISO 8601 format (e.g., "PT24H" for 24 hours).
+        max_allowed: The maximum number of actions allowed within the specified time period.
+        current_usage: The current number of actions taken within the specified time period.
+        limit_expiration_time: The Unix time at which the limit will expire in UTC timezone (optional).
+    """
+
+    time_period: str
+    max_allowed: int
+    current_usage: int
+    limit_expiration_time: datetime.datetime | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict) -> CallPermissionActionLimit:
+        return cls(
+            time_period=data["time_period"],
+            max_allowed=data["max_allowed"],
+            current_usage=data["current_usage"],
+            limit_expiration_time=datetime.datetime.fromtimestamp(
+                data["limit_expiration_time"], datetime.timezone.utc
+            )
+            if "limit_expiration_time" in data
+            else None,
+        )
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class CallPermissionAction:
+    """
+    Represents an action that can be performed with the call permission.
+
+    Attributes:
+        action_name: The name of the action (e.g., "send_call_permission_request").
+        can_perform_action: Whether the action can be performed.
+        limits: A list of limits associated with the action.
+    """
+
+    action_name: str
+    can_perform_action: bool
+    limits: list[CallPermissionActionLimit]
+
+    @classmethod
+    def from_dict(cls, data: dict) -> CallPermissionAction:
+        return cls(
+            action_name=data["action_name"],
+            can_perform_action=data["can_perform_action"],
+            limits=[
+                CallPermissionActionLimit.from_dict(limit) for limit in data["limits"]
+            ],
+        )
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class CallPermission:
+    """
+    Represents a call permission with its status and expiration time.
+
+    Attributes:
+        status: The current status of the permission.
+        expiration_time: The time at which the permission will expire in UTC timezone.
+    """
+
+    status: CallPermissionStatus
+    expiration_time: datetime.datetime | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict) -> CallPermission:
+        return cls(
+            status=CallPermissionStatus(data["status"]),
+            expiration_time=datetime.datetime.fromtimestamp(
+                data["expiration_time"], datetime.timezone.utc
+            )
+            if "expiration_time" in data
+            else None,
+        )
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class CallPermissions:
+    """
+    Represents the call permissions to specific WhatsApp user.
+
+    - Read more about `Call Permissions <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-call-permissions>`_.
+
+    Attributes:
+        permission: The call permission status and expiration time.
+        actions: A list of actions that can be performed with the call permission.
+    """
+
+    permission: CallPermission
+    actions: list[CallPermissionAction]
+
+    @classmethod
+    def from_dict(cls, data: dict) -> CallPermissions:
+        return cls(
+            permission=CallPermission.from_dict(data["permission"]),
+            actions=[
+                CallPermissionAction.from_dict(action) for action in data["actions"]
+            ],
         )

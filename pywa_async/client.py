@@ -69,6 +69,7 @@ from .types import (
     Document,
     Sticker,
     Audio,
+    CallPermissions,
 )
 from .handlers import (
     Handler,
@@ -2680,4 +2681,29 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 pagination=pagination.to_dict() if pagination else None,
             ),
             item_factory=functools.partial(self._usr_cls.from_dict, client=self)
+        )
+
+    async def get_call_permissions(
+            self,
+            wa_id: str | int,
+            *,
+            phone_id: str | int | None = None,
+    ) -> CallPermissions:
+        """
+        Get the call permissions for the WhatsApp Business account.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-call-permissions>`_.
+
+        Args:
+            wa_id: The WhatsApp ID of the user to get the call permissions for.
+            phone_id: The phone ID to get the call permissions from (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            The call permissions for the user.
+        """
+        return CallPermissions.from_dict(
+            await self.api.get_call_permissions(
+                user_wa_id=str(wa_id),
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+            ),
         )
