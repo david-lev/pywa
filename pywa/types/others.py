@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from .chat_opened import ChatOpened
     from .media import Image, Video, Document, Audio, Sticker
     from .callback import CallbackButton, CallbackSelection
-    from .calls import CallPermissions
+    from .calls import CallPermissions, CallingSettings
     from ..client import WhatsApp
 
 _logger = logging.getLogger(__name__)
@@ -833,7 +833,7 @@ class ConversationalAutomation:
         )
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True, slots=True)
 class BusinessPhoneNumber:
     """
     Represents a WhatsApp Business Phone Number.
@@ -934,6 +934,29 @@ class BusinessPhoneNumber:
             new_certificate=data.get("new_certificate"),
             last_onboarded_time=data.get("last_onboarded_time"),
         )
+
+
+@dataclasses.dataclass(slots=True)
+class BusinessPhoneNumberSettings:
+    """
+    Represents the settings of a WhatsApp Business Phone Number.
+
+    Attributes:
+        calling: The calling settings of the phone number.
+    """
+
+    calling: CallingSettings | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict) -> BusinessPhoneNumberSettings:
+        return cls(
+            calling=CallingSettings.from_dict(data.get("calling"))
+            if data.get("calling")
+            else None
+        )
+
+    def to_dict(self) -> dict:
+        return {"calling": dataclasses.asdict(self.calling) if self.calling else None}
 
 
 @dataclasses.dataclass(frozen=True, slots=True)

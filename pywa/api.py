@@ -602,6 +602,45 @@ class WhatsAppCloudApi:
             params={"fields": ",".join(fields)} if fields else None,
         )
 
+    def get_business_phone_number_settings(
+        self,
+        phone_id: str,
+    ) -> dict[str, Any]:
+        """
+        Get the business phone number settings.
+
+        Args:
+            phone_id: The ID of the phone number to get.
+
+        Returns:
+            The business phone number settings.
+        """
+        return self._make_request(
+            method="GET",
+            endpoint=f"/{phone_id}/settings",
+        )
+
+    def update_business_phone_number_settings(
+        self,
+        phone_id: str,
+        settings: dict[str, Any],
+    ) -> dict[str, bool]:
+        """
+        Update the business phone number settings.
+
+        Args:
+            phone_id: The ID of the phone number to update.
+            settings: The settings to update.
+
+        Returns:
+            The success of the operation.
+        """
+        return self._make_request(
+            method="POST",
+            endpoint=f"/{phone_id}/settings",
+            json=settings,
+        )
+
     def update_conversational_automation(
         self,
         phone_id: str,

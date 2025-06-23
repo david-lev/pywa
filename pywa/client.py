@@ -81,6 +81,7 @@ from .types import (
     Document,
     Audio,
     CallPermissions,
+    BusinessPhoneNumberSettings,
 )
 from .types.base_update import BaseUpdate
 from .types.flows import (
@@ -1696,6 +1697,60 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 ),
             )
         )
+
+    def get_business_phone_number_settings(
+        self,
+        *,
+        phone_id: str | int | None = None,
+    ) -> BusinessPhoneNumberSettings:
+        """
+        Get the settings of the WhatsApp Business phone number.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.get_business_phone_number_settings()
+
+        Args:
+            phone_id: The phone ID to get the settings from (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            The business phone number settings.
+        """
+        return BusinessPhoneNumberSettings.from_dict(
+            data=self.api.get_business_phone_number_settings(
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+            )
+        )
+
+    def update_business_phone_number_settings(
+        self,
+        settings: BusinessPhoneNumberSettings,
+        *,
+        phone_id: str | int | None = None,
+    ) -> bool:
+        """
+        Update the settings of the WhatsApp Business phone number.
+
+        Example:
+
+            >>> from pywa.types.calls import CallingSettingsStatus
+            >>> wa = WhatsApp(...)
+            >>> s = wa.get_business_phone_number_settings()
+            >>> s.calling.status = CallingSettingsStatus.ENABLED
+            >>> wa.update_business_phone_number_settings(settings)
+
+        Args:
+            settings: The new settings to update.
+            phone_id: The phone ID to update the settings for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            Whether the settings were updated successfully.
+        """
+        return self.api.update_business_phone_number_settings(
+            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+            settings=settings.to_dict(),
+        )["success"]
 
     def update_conversational_automation(
         self,
