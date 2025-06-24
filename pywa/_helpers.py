@@ -30,6 +30,7 @@ from .types import (
     SectionList,
     FlowButton,
     Button,
+    CallRequestButton,
 )
 from pywa.types.others import InteractiveType
 
@@ -38,7 +39,14 @@ if TYPE_CHECKING:
 
 
 def resolve_buttons_param(
-    buttons: Iterable[Button] | URLButton | VoiceCallButton | FlowButton | SectionList,
+    buttons: (
+        Iterable[Button]
+        | URLButton
+        | VoiceCallButton
+        | CallRequestButton
+        | FlowButton
+        | SectionList
+    ),
 ) -> tuple[
     InteractiveType,
     dict,
@@ -62,6 +70,8 @@ def resolve_buttons_param(
         return InteractiveType.CTA_URL, buttons.to_dict(), {}
     elif isinstance(buttons, VoiceCallButton):
         return InteractiveType.VOICE_CALL, buttons.to_dict(), {}
+    elif isinstance(buttons, CallRequestButton):
+        return InteractiveType.CALL_PERMISSION_REQUEST, buttons.to_dict(), {}
     elif isinstance(buttons, FlowButton):
         return (
             InteractiveType.FLOW,
