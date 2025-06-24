@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pywa.types.calls import SDP
 
 """The WhatsApp Async client."""
 
@@ -2764,3 +2765,101 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
             ),
         )
+
+    async def pre_accept_call(
+            self,
+            call_id: str,
+            sdp: SDP | None = None
+    ) -> bool:
+        """
+        Pre-accept a call.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#pre-accept-call>`_.
+
+        In essence, when you pre-accept an inbound call, you are allowing the calling media connection to be established before attempting to send call media through the connection.
+
+        When you then call the accept call endpoint, media begins flowing immediately since the connection has already been established
+
+        Pre-accepting calls is recommended because it facilitates faster connection times and avoids `audio clipping issues <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/troubleshooting#audio-clipping-issue-and-solution>`_.
+
+        There is about 30 to 60 seconds after the Call Connect webhook is sent for the business to accept the phone call. If the business does not respond, the call is terminated on the WhatsApp user side with a "Not Answered" notification and a Terminate Webhook is delivered back to you.
+
+        Args:
+            call_id: The ID of the call to pre-accept.
+            sdp: Contains the session description protocol (SDP) type and description language.
+
+        Returns:
+            Whether the call was pre-accepted.
+        """
+        return (await self.api.pre_accept_call(call_id=call_id, sdp=sdp.to_dict() if sdp else None))["success"]
+
+    async def accept_call(
+            self,
+            call_id: str,
+            sdp: SDP | None = None,
+            *,
+            tracker: str | CallbackData | None = None,
+    ) -> bool:
+        """
+        Connect to a call by providing a call agent's SDP.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#accept-call>`_.
+
+        You have about 30 to 60 seconds after the Call Connect Webhook is sent to accept the phone call. If your business does not respond, the call is terminated on the WhatsApp user side with a "Not Answered" notification and a Terminate Webhook is delivered back to you.
+
+        Args:
+            call_id: The ID of the call to accept.
+            sdp: Contains the session description protocol (SDP) type and description language.
+            tracker: The data to track the call with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+
+        Returns:
+            Whether the call was accepted.
+        """
+        return (await self.api.accept_call(
+            call_id=call_id, sdp=sdp.to_dict() if sdp else None,
+            biz_opaque_callback_data=helpers.resolve_tracker_param(tracker)
+        ))["success"]
+
+    async def reject_call(
+            self,
+            call_id: str,
+    ) -> bool:
+        """
+        Reject a call.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#reject-call>`_.
+
+        You have about 30 to 60 seconds after the Call Connect webhook is sent to accept the phone call. If the business does not respond the call is terminated on the WhatsApp user side with a "Not Answered" notification and a Terminate Webhook is delivered back to you.
+
+        Args:
+            call_id: The ID of the call to reject.
+
+        Returns:
+            Whether the call was rejected.
+        """
+        return (await self.api.reject_call(
+            call_id=call_id,
+        ))["success"]
+
+    async def terminate_call(
+            self,
+            call_id: str,
+    ) -> bool:
+        """
+        Terminate an active call.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#terminate-call>`_.
+
+        This must be done even if there is an RTCP BYE packet in the media path. Ending the call this way also ensures pricing is more accurate.
+        When the WhatsApp user terminates the call, you do not have to call this endpoint. Once the call is successfully terminated, a Call Terminate Webhook will be sent to you.
+
+        Args:
+            call_id: The ID of the call to terminate.
+
+        Returns:
+            Whether the call was terminated.
+        """
+        return (
+            await self.api.terminate_call(
+            call_id=call_id,
+        ))["success"]

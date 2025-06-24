@@ -1581,3 +1581,136 @@ class WhatsAppCloudApi:
             endpoint=f"/{phone_id}/call_permissions",
             params={"user_wa_id": user_wa_id},
         )
+
+    def pre_accept_call(
+        self, call_id: str, sdp: dict[str, str] | None = None
+    ) -> dict[str, str | bool]:
+        """
+        Pre-accept a call.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#pre-accept-call>`_.
+
+        Return example::
+
+            {
+                "messaging_product": "whatsapp",
+                "success": True
+            }
+
+        Args:
+            call_id: The ID of the call to pre-accept.
+            sdp: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
+
+        Returns:
+            The response from the WhatsApp Cloud API.
+        """
+        return self._make_request(
+            method="POST",
+            endpoint="/calls",
+            json={
+                "messaging_product": "whatsapp",
+                "call_id": call_id,
+                "action": "pre_accept",
+                **({"session": sdp} if sdp else {}),
+            },
+        )
+
+    def accept_call(
+        self,
+        call_id: str,
+        sdp: dict[str, str] | None = None,
+        biz_opaque_callback_data: str | None = None,
+    ) -> dict[str, str | bool]:
+        """
+        Accept a call.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#accept-call>`_.
+
+        Return example::
+
+            {
+                "messaging_product": "whatsapp",
+                "success": True
+            }
+
+        Args:
+            call_id: The ID of the call to accept.
+            sdp: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
+            biz_opaque_callback_data: An arbitrary string you can pass in that is useful for tracking and logging purposes.
+
+        Returns:
+            The response from the WhatsApp Cloud API.
+        """
+        return self._make_request(
+            method="POST",
+            endpoint="/calls",
+            json={
+                "messaging_product": "whatsapp",
+                "call_id": call_id,
+                "action": "accept",
+                **({"session": sdp} if sdp else {}),
+                **(
+                    {"biz_opaque_callback_data": biz_opaque_callback_data}
+                    if biz_opaque_callback_data
+                    else {}
+                ),
+            },
+        )
+
+    def reject_call(self, call_id: str) -> dict[str, bool]:
+        """
+        Reject a call.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#reject-call>`_.
+
+        Return example::
+
+            {
+                "messaging_product": "whatsapp",
+                "success": True
+            }
+
+        Args:
+            call_id: The ID of the call to reject.
+
+        Returns:
+            The response from the WhatsApp Cloud API.
+        """
+        return self._make_request(
+            method="POST",
+            endpoint="/calls",
+            json={
+                "messaging_product": "whatsapp",
+                "call_id": call_id,
+                "action": "reject",
+            },
+        )
+
+    def terminate_call(self, call_id: str) -> dict[str, bool]:
+        """
+        Terminate a call.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#terminate-call>`_.
+
+        Return example::
+
+            {
+                "messaging_product": "whatsapp",
+                "success": True
+            }
+
+        Args:
+            call_id: The ID of the call to terminate.
+
+        Returns:
+            The response from the WhatsApp Cloud API.
+        """
+        return self._make_request(
+            method="POST",
+            endpoint="/calls",
+            json={
+                "messaging_product": "whatsapp",
+                "call_id": call_id,
+                "action": "terminate",
+            },
+        )
