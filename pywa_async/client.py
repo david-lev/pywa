@@ -1521,6 +1521,34 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             )
         )["success"]
 
+    async def update_display_name(
+        self,
+        display_name: str,
+        phone_id: str | int | None = None,
+    ) -> bool:
+        """
+        Update the display name of the WhatsApp Business account.
+        - The display name is the name that appears in the WhatsApp app for your business.
+        - The display name will undergo verification by WhatsApp, and you will receive a webhook notification when the verification is complete.
+        - Read more about `Display Name Verification <https://developers.facebook.com/docs/whatsapp/cloud-api/phone-numbers#display-name-verification>`_.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.update_display_name(display_name='My Business')
+
+        Args:
+            display_name: The new display name.
+            phone_id: The phone ID to update the display name for (optional, if not provided, the client's phone ID will be used).
+        """
+
+        return (
+            await self.api.update_display_name(
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                new_display_name=display_name,
+            )
+        )["success"]
+
     async def get_business_profile(
         self,
         phone_id: str | int | None = None,

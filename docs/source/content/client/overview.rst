@@ -217,6 +217,8 @@ Business profile
      - Upload business public key
    * - :meth:`~WhatsApp.register_phone_number`
      - Register new phone number
+   * - :meth:`~WhatsApp.update_display_name`
+     - Update display name of the phone number
 
 Managing users
 ----------------
