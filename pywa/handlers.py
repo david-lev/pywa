@@ -47,6 +47,9 @@ __all__ = [
     "FlowCompletionHandler",
     "FlowRequestHandler",
     "ChatOpenedHandler",
+    "CallConnectHandler",
+    "CallTerminateHandler",
+    "CallStatusHandler",
 ]
 
 import abc
@@ -71,6 +74,9 @@ from .types import (
     CallbackData,
     FlowButton,
     FlowActionType,
+    CallConnect,
+    CallTerminate,
+    CallStatus,
 )
 from .types.flows import (
     FlowCompletion,
@@ -109,6 +115,15 @@ _TemplateStatusCallback: TypeAlias = Callable[
 ]
 _FlowCompletionCallback: TypeAlias = Callable[
     ["WhatsApp", FlowCompletion], Any | Awaitable[Any]
+]
+_CallConnectCallback: TypeAlias = Callable[
+    ["WhatsApp", CallConnect], Any | Awaitable[Any]
+]
+_CallTerminateCallback: TypeAlias = Callable[
+    ["WhatsApp", CallTerminate], Any | Awaitable[Any]
+]
+_CallStatusCallback: TypeAlias = Callable[
+    ["WhatsApp", CallStatus], Any | Awaitable[Any]
 ]
 
 
@@ -494,6 +509,105 @@ class FlowCompletionHandler(Handler):
     def __init__(
         self,
         callback: _FlowCompletionCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class CallConnectHandler(Handler):
+    """
+    Handler for :class:`pywa.types.CallConnect` updates.
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_call_connect` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_call = lambda _, call: print(call)
+        >>> wa.add_handlers(CallConnectHandler(print_call))
+
+    Args:
+        callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a
+            :class:`pywa.types.CallConnect` as arguments)
+        filters: The filters to apply to the handler
+        priority: The priority of the handler (default: ``0``)
+
+    """
+
+    _field_name = "calls"
+    _is_user_update = True
+
+    def __init__(
+        self,
+        callback: _CallConnectCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class CallTerminateHandler(Handler):
+    """
+    Handler for :class:`pywa.types.CallTerminate` updates.
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_call_terminate` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_call = lambda _, call: print(call)
+        >>> wa.add_handlers(CallTerminateHandler(print_call))
+
+    Args:
+        callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a
+            :class:`pywa.types.CallTerminate` as arguments)
+        filters: The filters to apply to the handler
+        priority: The priority of the handler (default: ``0``)
+
+    """
+
+    _field_name = "calls"
+    _is_user_update = True
+
+    def __init__(
+        self,
+        callback: _CallTerminateCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class CallStatusHandler(Handler):
+    """
+    Handler for :class:`pywa.types.CallStatus` updates.
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_call_status` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_call = lambda _, call: print(call)
+        >>> wa.add_handlers(CallStatusHandler(print_call))
+
+    Args:
+        callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a
+            :class:`pywa.types.CallStatus` as arguments)
+        filters: The filters to apply to the handler
+        priority: The priority of the handler (default: ``0``)
+
+    """
+
+    _field_name = "calls"
+    _is_user_update = True
+
+    def __init__(
+        self,
+        callback: _CallStatusCallback,
         filters: Filter = None,
         priority: int = 0,
     ):
@@ -1221,6 +1335,143 @@ class _HandlerDecorators:
             return _registered_with_parentheses(
                 self=self,
                 handler_type=FlowCompletionHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_call_connect(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> Callable[[_CallConnectCallback], _CallConnectCallback] | _CallConnectCallback:
+        """
+        Decorator to register a function as a callback for :class:`pywa.types.CallConnect` updates.
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`CallConnectHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_call_connect
+            ... def incoming_call_handler(client: WhatsApp, call: types.CallConnect):
+            ...     print(f"You getting an incoming call from {call.from_user.name}")
+            ...     call.accept()
+
+
+        Args:
+            filters: Filters to apply to the incoming call connect.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=CallConnectHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(callback: _CallConnectCallback) -> _CallConnectCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=CallConnectHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_call_terminate(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_CallTerminateCallback], _CallTerminateCallback]
+        | _CallTerminateCallback
+    ):
+        """
+        Decorator to register a function as a callback for :class:`pywa.types.CallTerminate` updates.
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`CallTerminateHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_call_terminate
+            ... def on_hangup(client: WhatsApp, call: types.CallTerminate):
+            ...     print(f"The call {call.from_user.name} is terminated")
+
+        Args:
+            filters: Filters to apply to the incoming call terminate.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=CallTerminateHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(callback: _CallTerminateCallback) -> _CallTerminateCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=CallTerminateHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_call_status(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> Callable[[_CallStatusCallback], _CallStatusCallback] | _CallStatusCallback:
+        """
+        Decorator to register a function as a callback for :class:`pywa.types.CallStatus` updates.
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`CallStatusHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_call_status
+            ... def on_status(client: WhatsApp, call: types.CallStatus):
+            ...     print(f"The call with {call.from_user.name} is {call.status}")
+
+        Args:
+            filters: Filters to apply to the incoming call status.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=CallStatusHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(callback: _CallStatusCallback) -> _CallStatusCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=CallStatusHandler,
                 callback=callback,
                 filters=filters,
                 priority=priority,

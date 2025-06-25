@@ -344,6 +344,15 @@ __________________
    * - :meth:`~pywa.client.WhatsApp.on_chat_opened`
      - :class:`ChatOpenedHandler`
      - :class:`~pywa.types.chat_opened.ChatOpened`
+   * - :meth:`~pywa.client.WhatsApp.on_call_connect`
+     - :class:`CallConnectHandler`
+     - :class:`~pywa.types.calls.CallConnect`
+   * - :meth:`~pywa.client.WhatsApp.on_call_terminate`
+     - :class:`CallTerminateHandler`
+     - :class:`~pywa.types.calls.CallTerminate`
+   * - :meth:`~pywa.client.WhatsApp.on_call_status`
+     - :class:`CallStatusHandler`
+     - :class:`~pywa.types.calls.CallStatus`
    * - :meth:`~pywa.client.WhatsApp.on_raw_update`
      - :class:`RawUpdateHandler`
      - :class:`dict`

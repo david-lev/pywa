@@ -18,5 +18,8 @@ Handler Objects
 .. autoclass:: FlowRequestHandler
 .. autoclass:: MessageStatusHandler
 .. autoclass:: ChatOpenedHandler
+.. autoclass:: CallConnectHandler
+.. autoclass:: CallTerminateHandler
+.. autoclass:: CallStatusHandler
 .. autoclass:: TemplateStatusHandler
 .. autoclass:: RawUpdateHandler
