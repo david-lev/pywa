@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pywa.types.calls import SDP
-
 """The WhatsApp Async client."""
 
 __all__ = ["WhatsApp"]
@@ -70,7 +68,6 @@ from .types import (
     Document,
     Sticker,
     Audio,
-    CallPermissions,
     BusinessPhoneNumberSettings,
 )
 from .handlers import (
@@ -92,6 +89,7 @@ from .types.flows import (
     CreatedFlow,
     MigrateFlowsResponse,
 )
+from .types.calls import CallPermissions, SDP
 from .types.others import InteractiveType, UsersBlockedResult, UsersUnblockedResult
 from .types.sent_message import SentMessage, SentTemplate
 from .utils import FastAPI, Flask

@@ -2,14 +2,6 @@ from __future__ import annotations
 
 """This module contains types related to WhatsApp calls, including call connection, termination, and status updates."""
 
-__all__ = [
-    "CallConnect",
-    "CallTerminate",
-    "CallStatus",
-    "CallingSettings",
-    "CallPermissions",
-]
-
 import dataclasses
 import datetime
 from typing import TYPE_CHECKING, Generic
@@ -41,7 +33,7 @@ class CallConnect(BaseUserUpdate):
         event: The calling event (always "connect").
         direction: The direction of the call (either "BUSINESS_INITIATED" or "USER_INITIATED").
         session: The session information, including SDP type and SDP info.
-
+        shared_data: Shared data between handlers.
     """
 
     event: CallEvent
@@ -279,6 +271,7 @@ class CallStatus(BaseUserUpdate, Generic[_CallbackDataT]):
         type: The type of the status update (always "call").
         status: The status of the call (either "RINGING", "ACCEPTED", or "REJECTED").
         tracker: The tracker that the call is initiated with.
+        shared_data: Shared data between handlers.
     """
 
     type: str

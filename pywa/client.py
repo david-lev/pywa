@@ -80,11 +80,10 @@ from .types import (
     Sticker,
     Document,
     Audio,
-    CallPermissions,
     BusinessPhoneNumberSettings,
 )
 from .types.base_update import BaseUpdate
-from .types.calls import SDP
+from .types.calls import CallPermissions, SDP
 from .types.flows import (
     FlowJSON,
     FlowDetails,
