@@ -84,6 +84,7 @@ class Message(BaseUserUpdate):
 
     _media_fields = {"image", "video", "sticker", "document", "audio"}
     _txt_fields = ("text", "caption")
+    _webhook_field = "messages"
 
     @property
     def message_id_to_reply(self) -> str:

@@ -149,6 +149,7 @@ class FlowCompletion(BaseUserUpdate):
     response: dict[str, Any]
 
     _txt_fields = ("token", "body")
+    _webhook_field = "messages"
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> FlowCompletion:

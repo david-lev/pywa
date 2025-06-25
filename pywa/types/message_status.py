@@ -139,6 +139,7 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
     tracker: _CallbackDataT | None
 
     _txt_fields = ("tracker",)
+    _webhook_field = "messages"
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> MessageStatus:

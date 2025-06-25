@@ -133,7 +133,7 @@ class Server:
                 app_id=app_id,
                 app_secret=app_secret,
                 verify_token=verify_token,
-                fields=tuple(webhook_fields or Handler._fields_to_subclasses().keys()),
+                fields=tuple(webhook_fields or Handler._handled_fields().keys()),
                 delay=webhook_challenge_delay,
             )
 
@@ -430,7 +430,7 @@ class Server:
             return None
 
         # noinspection PyProtectedMember
-        return Handler._fields_to_subclasses().get(field)
+        return Handler._handled_fields().get(field)
 
     def _delayed_register_callback_url(
         self: "WhatsApp",

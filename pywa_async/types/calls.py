@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+"""This module contains types related to WhatsApp calls, including call connection, termination, and status updates."""
+
 from pywa.types.calls import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.calls import (
     CallConnect as _CallConnect,

@@ -16,6 +16,9 @@ from pywa.types import (
     MessageStatus as MessageStatusSync,
     ChatOpened as ChatOpenedSync,
     FlowCompletion as FlowCompletionSync,
+    CallConnect as CallConnectSync,
+    CallTerminate as CallTerminateSync,
+    CallStatus as CallStatusSync,
     TemplateStatus as TemplateStatusSync,
     FlowRequest as FlowRequestSync,
     FlowResponse as FlowResponseSync,
@@ -30,6 +33,9 @@ from pywa_async.types import (
     MessageStatus as MessageStatusAsync,
     ChatOpened as ChatOpenedAsync,
     FlowCompletion as FlowCompletionAsync,
+    CallConnect as CallConnectAsync,
+    CallTerminate as CallTerminateAsync,
+    CallStatus as CallStatusAsync,
     TemplateStatus as TemplateStatusAsync,
     FlowRequest as FlowRequestAsync,
     FlowResponse as FlowResponseAsync,
@@ -52,6 +58,9 @@ OVERRIDES: list[tuple] = [
     (MessageStatusSync, MessageStatusAsync),
     (ChatOpenedSync, ChatOpenedAsync),
     (FlowCompletionSync, FlowCompletionAsync),
+    (CallConnectSync, CallConnectAsync),
+    (CallTerminateSync, CallTerminateAsync),
+    (CallStatusSync, CallStatusAsync),
     (TemplateStatusSync, TemplateStatusAsync),
     (FlowRequestSync, FlowRequestAsync),
     (FlowResponseSync, FlowResponseAsync),
@@ -98,6 +107,9 @@ def test_all_methods_are_overwritten_in_async():
             _HandlerDecorators.on_flow_completion,
             _HandlerDecorators.on_flow_request,
             _HandlerDecorators.on_template_status,
+            _HandlerDecorators.on_call_connect,
+            _HandlerDecorators.on_call_terminate,
+            _HandlerDecorators.on_call_status,
             _HandlerDecorators.on_raw_update,
             ListenersSync._remove_listener,
             BaseUpdate.from_update,
@@ -232,6 +244,7 @@ def test_same_docstring():
         "_flow_req_cls",
     ]
     for sync_obj, async_obj in OVERRIDES:
+        # assert sync_obj.__doc__ == async_obj.__doc__
         for method_name in get_all_methods_names(sync_obj):
             if method_name in skip_methods:
                 continue

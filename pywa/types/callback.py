@@ -294,6 +294,7 @@ class CallbackButton(BaseUserUpdate, Generic[_CallbackDataT]):
     title: str
 
     _txt_fields = ("data",)
+    _webhook_field = "messages"
 
     @classmethod
     def from_update(cls, client: "WhatsApp", update: dict) -> "CallbackButton":
@@ -380,6 +381,7 @@ class CallbackSelection(BaseUserUpdate, Generic[_CallbackDataT]):
     description: str | None
 
     _txt_fields = ("data",)
+    _webhook_field = "messages"
 
     @classmethod
     def from_update(cls, client: "WhatsApp", update: dict) -> "CallbackSelection":

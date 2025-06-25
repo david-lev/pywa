@@ -2962,7 +2962,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             sdp: SDP | None = None
     ) -> bool:
         """
-        Pre-accept a call
+        Pre-accept a call.
 
         - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#pre-accept-call>`_.
 

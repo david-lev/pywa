@@ -40,6 +40,8 @@ class CallConnect(BaseUserUpdate):
     direction: CallDirection
     session: SDP | None
 
+    _webhook_field = "calls"
+
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> CallConnect:
         call = (value := update["entry"][0]["changes"][0]["value"])["calls"][0]
@@ -209,6 +211,8 @@ class CallTerminate(BaseUserUpdate, Generic[_CallbackDataT]):
     error: WhatsAppError | None
     tracker: _CallbackDataT | None
 
+    _webhook_field = "messages"
+
     @classmethod
     def from_update(
         cls, client: WhatsApp, update: dict
@@ -277,6 +281,8 @@ class CallStatus(BaseUserUpdate, Generic[_CallbackDataT]):
     type: str
     status: CallStatusType
     tracker: _CallbackDataT | None = None
+
+    _webhook_field = "messages"
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> CallStatus:

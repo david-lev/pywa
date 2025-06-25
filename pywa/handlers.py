@@ -58,7 +58,17 @@ import dataclasses
 import functools
 import logging
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, cast, TypeAlias, Awaitable, TypedDict
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    cast,
+    TypeAlias,
+    Awaitable,
+    TypedDict,
+    Generic,
+    TypeVar,
+)
 
 from . import utils
 from .filters import Filter, new as new_filter
@@ -139,28 +149,18 @@ _logger = logging.getLogger(__name__)
 
 _FactorySupported: TypeAlias = CallbackButton | CallbackSelection | MessageStatus
 
+_UpdateType = TypeVar("_UpdateType")
 
-class Handler(abc.ABC):
+
+class Handler(Generic[_UpdateType]):
     """Base class for all handlers."""
 
-    @property
-    @abc.abstractmethod
-    def _field_name(self) -> str | None:
-        """
-        The field name of the webhook update
-        https://developers.facebook.com/docs/graph-api/webhooks/reference/whatsapp-business-account
-        """
-
-    @property
-    @abc.abstractmethod
-    def _is_user_update(self) -> bool:
-        """
-        Whether the update is a user update or not.
-        """
+    _update: type[_UpdateType] | None
+    """The update this handler should handle"""
 
     def __init__(
         self,
-        callback: Callable[[WhatsApp, Any | dict], Any | Awaitable[Any]],
+        callback: Callable[[WhatsApp, _UpdateType], Any | Awaitable[Any]],
         filters: Filter | None,
         priority: int,
     ):
@@ -172,19 +172,19 @@ class Handler(abc.ABC):
         self._priority = priority
         self._is_async_callback = utils.is_async_callable(callback)
 
-    def check(self, wa: WhatsApp, update: BaseUpdate | dict) -> bool:
+    def check(self, wa: WhatsApp, update: _UpdateType) -> bool:
         return self._filters is None or self._filters.check_sync(wa, update)
 
-    def handle(self, wa: WhatsApp, update: BaseUpdate | dict) -> bool:
+    def handle(self, wa: WhatsApp, update: _UpdateType) -> bool:
         if not self.check(wa, update):
             return False
         self._callback(wa, update)
         return True
 
-    async def acheck(self, wa: WhatsApp, update: BaseUpdate | dict) -> bool:
+    async def acheck(self, wa: WhatsApp, update: _UpdateType) -> bool:
         return self._filters is None or await self._filters.check_async(wa, update)
 
-    async def ahandle(self, wa: WhatsApp, update: BaseUpdate | dict) -> bool:
+    async def ahandle(self, wa: WhatsApp, update: _UpdateType) -> bool:
         if not await self.acheck(wa, update):
             return False
         await self._callback(wa, update) if self._is_async_callback else self._callback(
@@ -194,23 +194,23 @@ class Handler(abc.ABC):
 
     @staticmethod
     @functools.cache
-    def _fields_to_subclasses() -> dict[str, type[Handler]]:
+    def _handled_fields() -> dict[str, type[Handler]]:
         """
-        Return a dict of all the subclasses of `Handler` with their field name as the key.
-        (e.g. ``{'messages': MessageHandler}``)
+        Return a dict of all the subclasses of `Handler` with their update field name as the key.
+        (e.g. `{'messages': MessageHandler}, 'calls': CallConnect}`)
 
         **IMPORTANT:** This function is for internal use only, DO NOT USE IT to get the available handlers
         (use ``Handler.__subclasses__()`` instead).
 
-        **IMPORTANT:** This function is cached, so if you subclass `Handler` after calling this function, the new class
+        **IMPORTANT:** This function is cached, so if you subclass ``Handler`` after calling this function, the new class
         will not be included in the returned dict.
         """
         return cast(
             dict[str, type[Handler]],
             {
-                h._field_name: h
+                h._update._webhook_field: h
                 for h in Handler.__subclasses__()
-                if h._field_name is not None
+                if h._update is not None
             },
         )
 
@@ -221,7 +221,7 @@ class Handler(abc.ABC):
         return self.__repr__()
 
 
-class MessageHandler(Handler):
+class MessageHandler(Handler[Message]):
     """
     Handler for incoming :class:`pywa.types.Message`.
 
@@ -241,8 +241,7 @@ class MessageHandler(Handler):
         priority: The priority of the handler (default: ``0``)
     """
 
-    _field_name = "messages"
-    _is_user_update = True
+    _update = Message
 
     def __init__(
         self,
@@ -253,12 +252,11 @@ class MessageHandler(Handler):
         super().__init__(callback=callback, filters=filters, priority=priority)
 
 
-class _FactoryHandler(Handler):
+class _FactoryHandler(Generic[_UpdateType], Handler[_UpdateType]):
     """Base class for handlers that use a factory to construct the callback data."""
 
-    _field_name = "messages"
+    _update = None
     _data_field: str
-    _is_user_update = True
 
     def __init__(
         self,
@@ -300,7 +298,7 @@ class _FactoryHandler(Handler):
         return f"{self.__class__.__name__}(callback={self._callback}, filters={self._filters}, factory={self._factory}, priority={self._priority})"
 
 
-class CallbackButtonHandler(_FactoryHandler):
+class CallbackButtonHandler(_FactoryHandler[CallbackButton]):
     """
     Handler for callback buttons (User clicks on a :class:`pywa.types.Button`).
 
@@ -321,6 +319,7 @@ class CallbackButtonHandler(_FactoryHandler):
         priority: The priority of the handler (default: ``0``)
     """
 
+    _update = CallbackButton
     _data_field = "data"
 
     def __init__(
@@ -338,7 +337,7 @@ class CallbackButtonHandler(_FactoryHandler):
         )
 
 
-class CallbackSelectionHandler(_FactoryHandler):
+class CallbackSelectionHandler(_FactoryHandler[CallbackSelection]):
     """
     Handler for callback selections (User selects an option from :class:`pywa.types.SectionList`).
 
@@ -359,6 +358,7 @@ class CallbackSelectionHandler(_FactoryHandler):
         priority: The priority of the handler (default: ``0``)
     """
 
+    _update = CallbackSelection
     _data_field = "data"
 
     def __init__(
@@ -376,7 +376,7 @@ class CallbackSelectionHandler(_FactoryHandler):
         )
 
 
-class MessageStatusHandler(_FactoryHandler):
+class MessageStatusHandler(_FactoryHandler[MessageStatus]):
     """
     Handler for :class:`pywa.types.MessageStatus` updates (Message is sent, delivered, read, failed, etc...).
 
@@ -399,6 +399,7 @@ class MessageStatusHandler(_FactoryHandler):
         priority: The priority of the handler (default: ``0``)
     """
 
+    _update = MessageStatus
     _data_field = "tracker"
 
     def __init__(
@@ -416,7 +417,7 @@ class MessageStatusHandler(_FactoryHandler):
         )
 
 
-class ChatOpenedHandler(Handler):
+class ChatOpenedHandler(Handler[ChatOpened]):
     """
     Handler for :class:`pywa.types.ChatOpened`
 
@@ -437,8 +438,7 @@ class ChatOpenedHandler(Handler):
 
     """
 
-    _field_name = "messages"
-    _is_user_update = True
+    _update = ChatOpened
 
     def __init__(
         self,
@@ -449,7 +449,7 @@ class ChatOpenedHandler(Handler):
         super().__init__(callback=callback, filters=filters, priority=priority)
 
 
-class TemplateStatusHandler(Handler):
+class TemplateStatusHandler(Handler[TemplateStatus]):
     """
     Handler for :class:`pywa.types.TemplateStatus` updates (Template message is approved, rejected etc...).
 
@@ -470,8 +470,7 @@ class TemplateStatusHandler(Handler):
         priority: The priority of the handler (default: ``0``)
     """
 
-    _field_name = "message_template_status_update"
-    _is_user_update = False
+    _update = TemplateStatus
 
     def __init__(
         self,
@@ -482,7 +481,7 @@ class TemplateStatusHandler(Handler):
         super().__init__(callback=callback, filters=filters, priority=priority)
 
 
-class FlowCompletionHandler(Handler):
+class FlowCompletionHandler(Handler[FlowCompletion]):
     """
     Handler for :class:`pywa.types.FlowCompletion` updates (Flow is completed).
 
@@ -503,8 +502,7 @@ class FlowCompletionHandler(Handler):
 
     """
 
-    _field_name = "messages"
-    _is_user_update = True
+    _update = FlowCompletion
 
     def __init__(
         self,
@@ -515,7 +513,7 @@ class FlowCompletionHandler(Handler):
         super().__init__(callback=callback, filters=filters, priority=priority)
 
 
-class CallConnectHandler(Handler):
+class CallConnectHandler(Handler[CallConnect]):
     """
     Handler for :class:`pywa.types.CallConnect` updates.
 
@@ -536,8 +534,7 @@ class CallConnectHandler(Handler):
 
     """
 
-    _field_name = "calls"
-    _is_user_update = True
+    _update = CallConnect
 
     def __init__(
         self,
@@ -548,7 +545,7 @@ class CallConnectHandler(Handler):
         super().__init__(callback=callback, filters=filters, priority=priority)
 
 
-class CallTerminateHandler(Handler):
+class CallTerminateHandler(Handler[CallTerminate]):
     """
     Handler for :class:`pywa.types.CallTerminate` updates.
 
@@ -569,8 +566,7 @@ class CallTerminateHandler(Handler):
 
     """
 
-    _field_name = "calls"
-    _is_user_update = True
+    _update = CallTerminate
 
     def __init__(
         self,
@@ -581,7 +577,7 @@ class CallTerminateHandler(Handler):
         super().__init__(callback=callback, filters=filters, priority=priority)
 
 
-class CallStatusHandler(Handler):
+class CallStatusHandler(Handler[CallStatus]):
     """
     Handler for :class:`pywa.types.CallStatus` updates.
 
@@ -602,8 +598,7 @@ class CallStatusHandler(Handler):
 
     """
 
-    _field_name = "calls"
-    _is_user_update = True
+    _update = CallStatus
 
     def __init__(
         self,
@@ -614,7 +609,7 @@ class CallStatusHandler(Handler):
         super().__init__(callback=callback, filters=filters, priority=priority)
 
 
-class RawUpdateHandler(Handler):
+class RawUpdateHandler(Handler[dict]):
     """
     A raw update callback.
 
@@ -634,8 +629,7 @@ class RawUpdateHandler(Handler):
         priority: The priority of the handler (default: ``0``)
     """
 
-    _field_name = None
-    _is_user_update = False
+    _update = None
 
     def __init__(
         self,

@@ -1447,6 +1447,8 @@ class TemplateStatus(BaseUpdate):
     disable_date: str | None = None
     other_info: str | None = None
 
+    _webhook_field = "message_template_status_update"
+
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> TemplateStatus:
         value = (data := update["entry"][0])["changes"][0]["value"]

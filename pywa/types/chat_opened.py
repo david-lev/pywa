@@ -33,6 +33,8 @@ class ChatOpened(BaseUserUpdate):
 
     type: MessageType
 
+    _webhook_field = "messages"
+
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> ChatOpened:
         msg = (value := update["entry"][0]["changes"][0]["value"])["messages"][0]
