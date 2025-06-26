@@ -691,6 +691,35 @@ class WhatsAppCloudApi:
             },
         )
 
+    def update_display_name(
+        self,
+        phone_id: str,
+        new_display_name: str,
+    ) -> dict[str, bool]:
+        """
+        Update the display name of the business phone number.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/phone-numbers#updating-display-name-via-api>`_.
+
+        Return example::
+
+            {
+                'success': True
+            }
+
+        Args:
+            phone_id: The ID of the phone number to update.
+            new_display_name: The new display name to set.
+        """
+        return self._make_request(
+            method="POST",
+            endpoint=f"/{phone_id}",
+            json={
+                "new_display_name": new_display_name,
+                "messaging_product": "whatsapp",
+            },
+        )
+
     def get_business_profile(
         self,
         phone_id: str,
