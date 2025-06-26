@@ -1,7 +1,7 @@
 import os
 import asyncio
 
-from telegram import Bot, LinkPreviewOptions
+from pyrogram import Client, types
 
 
 def format_release_message(tag_name: str, name: str, body: str) -> str:
@@ -57,6 +57,8 @@ def format_release_message(tag_name: str, name: str, body: str) -> str:
 
 async def send_to_telegram():
     bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    api_id = os.getenv("TELEGRAM_API_ID")
+    api_hash = os.getenv("TELEGRAM_API_HASH")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
     release_name = os.getenv("RELEASE_NAME")
     release_tag = os.getenv("RELEASE_TAG")
@@ -65,17 +67,19 @@ async def send_to_telegram():
     message = format_release_message(release_tag, release_name, release_body)
     print(message)
 
-    bot = Bot(token=bot_token)
+    bot = Client(name="pywa_bot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
+
+    await bot.start()
     await bot.send_message(
         chat_id=chat_id,
         text=message,
-        parse_mode="Markdown",
-        link_preview_options=LinkPreviewOptions(
+        link_preview_options=types.LinkPreviewOptions(
             url="https://pywa.readthedocs.io/",
             prefer_large_media=False,
             show_above_text=True,
         ),
     )
+    await bot.stop()
 
 
 if __name__ == "__main__":
