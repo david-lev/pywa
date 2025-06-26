@@ -3,7 +3,7 @@
 import json
 import logging
 import threading
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, cast, Callable
 
 from . import utils, handlers, errors
 from .handlers import (
@@ -400,53 +400,10 @@ class Server:
         field = update["entry"][0]["changes"][0]["field"]
         value = update["entry"][0]["changes"][0]["value"]
 
-        if field == "messages":
-            if self.filter_updates and (
-                value["metadata"]["phone_number_id"] != self.phone_id
-            ):
-                return None
-
-            if "messages" in value:
-                msg_type = value["messages"][0]["type"]
-                if msg_type == MessageType.INTERACTIVE:
-                    try:
-                        interactive_type = value["messages"][0]["interactive"]["type"]
-                    except KeyError:  # value with errors, when a user tries to send the interactive msg again
-                        return MessageHandler
-                    if (
-                        handler := _INTERACTIVE_TYPES.get(interactive_type)
-                    ) is not None:
-                        return handler
-                    _logger.warning(
-                        "Webhook ('%s'): Unknown interactive message type: %s. Falling back to MessageHandler.",
-                        self._webhook_endpoint,
-                        interactive_type,
-                    )
-                return _MESSAGE_TYPES.get(msg_type, MessageHandler)
-
-            elif "statuses" in value:  # status
-                return MessageStatusHandler
-
-            _logger.warning(
-                "Webhook ('%s'): Unknown message type: %s",
-                self._webhook_endpoint,
-                value,
-            )
-            return None
-
-        elif field == "calls":
-            if "calls" in value:
-                if (
-                    handler := _CALL_EVENTS.get(value["calls"][0]["event"])
-                ) is not None:
-                    return handler
-                _logger.warning(
-                    "Webhook ('%s'): Unknown call event: %s.",
-                    self._webhook_endpoint,
-                    value["calls"][0]["event"],
-                )
-            elif "statuses" in value:
-                return CallStatusHandler
+        if handler := _complex_fields_handlers.get(field, lambda wa, v: None)(
+            self, value
+        ):
+            return handler
 
         # noinspection PyProtectedMember
         return Handler._handled_fields().get(field)
@@ -634,3 +591,61 @@ class Server:
                     )
 
         return callback_wrapper
+
+
+def _handle_messages_field(wa: "WhatsApp", value: dict) -> type[Handler] | None:
+    """Handle webhook updates with 'messages' field."""
+    if wa.filter_updates and (value["metadata"]["phone_number_id"] != wa.phone_id):
+        return None
+
+    if "messages" in value:
+        msg_type = value["messages"][0]["type"]
+        if msg_type == MessageType.INTERACTIVE:
+            try:
+                interactive_type = value["messages"][0]["interactive"]["type"]
+            except (
+                KeyError
+            ):  # value with errors, when a user tries to send the interactive msg again
+                return MessageHandler
+            if (handler := _INTERACTIVE_TYPES.get(interactive_type)) is not None:
+                return handler
+            _logger.warning(
+                "Webhook ('%s'): Unknown interactive message type: %s. Falling back to MessageHandler.",
+                wa._webhook_endpoint,
+                interactive_type,
+            )
+        return _MESSAGE_TYPES.get(msg_type, MessageHandler)
+
+    elif "statuses" in value:  # status
+        return MessageStatusHandler
+
+    _logger.warning(
+        "Webhook ('%s'): Unknown message type: %s",
+        wa._webhook_endpoint,
+        value,
+    )
+    return None
+
+
+def _handle_calls_field(wa: "WhatsApp", value: dict) -> type[Handler] | None:
+    """Handle webhook updates with 'calls' field."""
+    if wa.filter_updates and (value["metadata"]["phone_number_id"] != wa.phone_id):
+        return None
+    if "calls" in value:
+        if (handler := _CALL_EVENTS.get(value["calls"][0]["event"])) is not None:
+            return handler
+        _logger.warning(
+            "Webhook ('%s'): Unknown call event: %s.",
+            wa._webhook_endpoint,
+            value["calls"][0]["event"],
+        )
+    elif "statuses" in value:
+        return CallStatusHandler
+
+
+_complex_fields_handlers: dict[
+    str, Callable[["WhatsApp", dict], type[Handler] | None]
+] = {
+    "messages": _handle_messages_field,
+    "calls": _handle_calls_field,
+}
