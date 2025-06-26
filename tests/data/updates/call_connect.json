@@ -1,0 +1,44 @@
+{
+  "call_connect": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "837432645395",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "16315553601",
+                "phone_number_id": "743897493242"
+              },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "<CALLEE_NAME>"
+                  },
+                  "wa_id": "16315553602"
+                }
+              ],
+              "calls": [
+                {
+                  "id": "wacid.ABGGFjFVU2AfAgo6V-Hc5eCgK5Gh",
+                  "to": "16315553601",
+                  "from": "16315553602",
+                  "event": "connect",
+                  "timestamp": "1671644824",
+                  "direction": "BUSINESS_INITIATED",
+                  "session": {
+                    "sdp_type": "answer",
+                    "sdp": "<<RFC 8866 SDP>>"
+                  }
+                }
+              ]
+            },
+            "field": "calls"
+          }
+        ]
+      }
+    ]
+  }
+}

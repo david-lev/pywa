@@ -56,7 +56,7 @@ class CallConnect(BaseUserUpdate):
                 datetime.timezone.utc,
             ),
             event=CallEvent(call["event"]),
-            direction=CallDirection(["direction"]),
+            direction=CallDirection(call["direction"]),
             session=SDP.from_dict(call["session"]) if "session" in call else None,
         )
 
@@ -219,18 +219,25 @@ class CallTerminate(BaseUserUpdate, Generic[_CallbackDataT]):
     ) -> CallTerminate[_CallbackDataT]:
         call = (value := update["entry"][0]["changes"][0]["value"])["calls"][0]
         error = value.get("errors", (None,))[0]
+        direction = CallDirection(call["direction"])
         return cls(
             _client=client,
             raw=update,
             id=call["id"],
             metadata=Metadata.from_dict(value["metadata"]),
-            from_user=client._usr_cls.from_dict(value["contacts"][0], client=client),
+            from_user=client._usr_cls(
+                _client=client,
+                wa_id=call["from"]
+                if direction == CallDirection.BUSINESS_INITIATED
+                else call["to"],
+                name=None,
+            ),
             timestamp=datetime.datetime.fromtimestamp(
                 int(call["timestamp"]),
                 datetime.timezone.utc,
             ),
             event=CallEvent(call["event"]),
-            direction=CallDirection(call["direction"]),
+            direction=direction,
             status=CallTerminateStatus(call["status"]),
             start_time=datetime.datetime.fromtimestamp(
                 int(call["start_time"]), datetime.timezone.utc

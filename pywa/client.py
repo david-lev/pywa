@@ -33,6 +33,9 @@ from .handlers import (
     ChatOpenedHandler,
     FlowCompletionHandler,
     TemplateStatusHandler,
+    CallConnectHandler,
+    CallTerminateHandler,
+    CallStatusHandler,
     FlowRequestHandler,
     FlowRequestCallbackWrapper,
     _HandlerDecorators,
@@ -81,6 +84,9 @@ from .types import (
     Document,
     Audio,
     BusinessPhoneNumberSettings,
+    CallConnect,
+    CallTerminate,
+    CallStatus,
 )
 from .types.base_update import BaseUpdate
 from .types.calls import CallPermissions, SDP
@@ -127,6 +133,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         ChatOpenedHandler: ChatOpened.from_update,
         FlowCompletionHandler: FlowCompletion.from_update,
         TemplateStatusHandler: TemplateStatus.from_update,
+        CallConnectHandler: CallConnect.from_update,
+        CallTerminateHandler: CallTerminate.from_update,
+        CallStatusHandler: CallStatus.from_update,
     }
     """A dictionary that maps handler types to their respective update constructors."""
     _msg_fields_to_objects_constructors = dict(

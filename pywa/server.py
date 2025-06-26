@@ -10,6 +10,9 @@ from .handlers import (
     Handler,
     ChatOpenedHandler,
     EncryptedFlowRequestType,
+    CallStatusHandler,
+    CallConnectHandler,
+    CallTerminateHandler,
 )  # noqa
 from .handlers import (
     CallbackButtonHandler,
@@ -41,6 +44,10 @@ _INTERACTIVE_TYPES: dict[str, type[Handler]] = {
     "button_reply": CallbackButtonHandler,
     "list_reply": CallbackSelectionHandler,
     "nfm_reply": FlowCompletionHandler,
+}
+_CALL_EVENTS: dict[str, type[Handler]] = {
+    "connect": CallConnectHandler,
+    "terminate": CallTerminateHandler,
 }
 
 
@@ -393,8 +400,6 @@ class Server:
         field = update["entry"][0]["changes"][0]["field"]
         value = update["entry"][0]["changes"][0]["value"]
 
-        # The `messages` field needs to be handled differently because it can be a message, button, selection, or status
-        # This check must return handler or None *BEFORE* getting the handler from the dict!!
         if field == "messages":
             if self.filter_updates and (
                 value["metadata"]["phone_number_id"] != self.phone_id
@@ -428,6 +433,20 @@ class Server:
                 value,
             )
             return None
+
+        elif field == "calls":
+            if "calls" in value:
+                if (
+                    handler := _CALL_EVENTS.get(value["calls"][0]["event"])
+                ) is not None:
+                    return handler
+                _logger.warning(
+                    "Webhook ('%s'): Unknown call event: %s.",
+                    self._webhook_endpoint,
+                    value["calls"][0]["event"],
+                )
+            elif "statuses" in value:
+                return CallStatusHandler
 
         # noinspection PyProtectedMember
         return Handler._handled_fields().get(field)

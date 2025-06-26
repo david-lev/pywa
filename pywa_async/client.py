@@ -69,6 +69,9 @@ from .types import (
     Sticker,
     Audio,
     BusinessPhoneNumberSettings,
+    CallConnect,
+    CallTerminate,
+    CallStatus,
 )
 from .handlers import (
     Handler,
@@ -79,6 +82,9 @@ from .handlers import (
     ChatOpenedHandler,
     FlowCompletionHandler,
     TemplateStatusHandler,
+    CallConnectHandler,
+    CallTerminateHandler,
+    CallStatusHandler,
 )
 from .types.flows import (
     FlowCategory,
@@ -115,6 +121,9 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         ChatOpenedHandler: ChatOpened.from_update,
         FlowCompletionHandler: FlowCompletion.from_update,
         TemplateStatusHandler: TemplateStatus.from_update,
+        CallConnectHandler: CallConnect.from_update,
+        CallTerminateHandler: CallTerminate.from_update,
+        CallStatusHandler: CallStatus.from_update,
     }
     """A dictionary that maps handler types to their respective update constructors."""
 

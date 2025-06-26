@@ -1,0 +1,32 @@
+{
+  "call_status": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "487439753",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "16315553601",
+                "phone_number_id": "5483758353"
+              },
+              "statuses": [
+                {
+                  "id": "wacid.ABGGFjFVU2AfAgo6V",
+                  "timestamp": "1671644824",
+                  "type": "call",
+                  "status": "RINGING",
+                  "recipient_id": "163155536021",
+                  "biz_opaque_callback_data": "random_string"
+                }
+              ]
+            },
+            "field": "calls"
+          }
+        ]
+      }
+    ]
+  }
+}

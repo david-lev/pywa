@@ -5,11 +5,12 @@ from pywa.types import (
     MessageStatusType,
     TemplateStatus,
 )
+from pywa.types.calls import CallEvent
 from pywa.types.media import Image, Video, Document, Audio
 from .common import CLIENTS
 
-# {filename: {test_name: [test_funcs]}}
-TYPES: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
+# {update_file: {update_name: [test_funcs]}}
+TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
     "message": {
         "text": [lambda m: m.text is not None],
         "image": [
@@ -82,19 +83,26 @@ TYPES: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
     "chat_opened": {
         "chat_opened": [lambda c: c.type == MessageType.REQUEST_WELCOME],
     },
+    "call_connect": {
+        "call_connect": [lambda c: c.event == CallEvent.CONNECT],
+    },
+    "call_terminate": {
+        "call_terminate": [lambda c: c.event == CallEvent.TERMINATE],
+    },
+    "call_status": {
+        "call_status": [lambda c: c.type is not None],
+    },
 }
 
 
 def test_types():
-    for client, updates in CLIENTS.items():
-        for version, files in updates.items():
-            for filename, tests in files.items():
-                for test in tests:
-                    for test_name, update in test.items():
-                        for test_func in TYPES[filename][test_name]:
-                            try:
-                                assert test_func(update)
-                            except AssertionError as e:
-                                raise AssertionError(
-                                    f"Failed to assert test='{test_name}', v={version}, error={e}"
-                                )
+    for client, update_files in CLIENTS.items():
+        for file, updates in update_files.items():
+            for update_name, update in updates.items():
+                for test_func in TESTS[file.stem][update_name]:
+                    try:
+                        assert test_func(update)
+                    except AssertionError as e:
+                        raise AssertionError(
+                            f"Failed to assert update_name='{update_name}' error={e}"
+                        )
