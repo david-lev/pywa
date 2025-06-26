@@ -212,6 +212,10 @@ Business profile
    * - :meth:`~WhatsApp.update_conversational_automation`
      - Update commands and ice breakers
    * - :meth:`~WhatsApp.set_business_public_key`
+   * - :meth:`~WhatsApp.get_business_phone_number_settings`
+     - Get business phone number settings
+   * - :meth:`~WhatsApp.update_business_phone_number_settings`
+     - Update business phone number settings
      - Upload business public key
    * - :meth:`~WhatsApp.register_phone_number`
      - Register new phone number
@@ -265,6 +269,26 @@ Commerce
      - Get commerce settings
    * - :meth:`~WhatsApp.update_commerce_settings`
      - Update commerce settings
+
+Calls
+------
+
+.. list-table::
+   :widths: 40 60
+   :header-rows: 1
+
+   * - Method
+     - Description
+   * - :meth:`~WhatsApp.get_call_permissions`
+     - Get call permissions
+   * - :meth:`~WhatsApp.pre_accept_call`
+     - Pre-accept a call
+   * - :meth:`~WhatsApp.accept_call`
+     - Accept a call
+   * - :meth:`~WhatsApp.reject_call`
+     - Reject a call
+   * - :meth:`~WhatsApp.terminate_call`
+     - Terminate a call
 
 Server
 ------

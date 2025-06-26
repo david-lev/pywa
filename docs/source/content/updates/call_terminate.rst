@@ -5,3 +5,5 @@ Call Terminate
 
 
 .. autoclass:: CallTerminate()
+
+.. autoclass:: CallTerminateStatus()

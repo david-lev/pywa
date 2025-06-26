@@ -5,3 +5,5 @@ Call Status
 
 
 .. autoclass:: CallStatus()
+
+.. autoclass:: CallStatusType()
