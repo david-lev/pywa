@@ -335,7 +335,7 @@ class Server:
                     self, update
                 )
                 if constructed_update:
-                    if handler_type._is_user_update and self._process_listener(
+                    if handler_type._update._is_user_update and self._process_listener(
                         cast(BaseUserUpdate, constructed_update)
                     ):
                         return
