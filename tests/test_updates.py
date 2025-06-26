@@ -82,6 +82,13 @@ TYPES: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
     "chat_opened": {
         "chat_opened": [lambda c: c.type == MessageType.REQUEST_WELCOME],
     },
+    "user_preferences": {
+        "user_preferences": [lambda u: u.value is not None],
+        "user_marketing_preferences": [
+            lambda u: u.value in ["stop", "resume"]
+            and u.category == "marketing_messages"
+        ],
+    },
 }
 
 

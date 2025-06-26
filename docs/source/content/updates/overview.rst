@@ -57,6 +57,10 @@ User related updates:
      - A message status update (e.g. delivered, seen, etc.)
    * - :py:class:`~pywa.types.chat_opened.ChatOpened`
      - A chat opened by a user
+   * - :py:class:`~pywa.types.user_preferences.UserPreferences`
+     - A user preferences update
+   * - :py:class:`~pywa.types.user_preferences.UserMarketingPreferences`
+     - A user marketing preferences update
 
 Account related updates:
 
@@ -151,5 +155,7 @@ All user-related-updates have common methods and properties:
     flow_completion
     message_status
     chat_opened
+    user_preferences
+    user_marketing_preferences
     template_status
     common_methods
