@@ -889,12 +889,12 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
     metadata: Metadata
     """A metadata object describing the business subscribed to the webhook"""
     from_user: User
-    """The user who sent a message to the business."""
+    """The user who made the update (e.g., sent a message, changed preferences, etc.)."""
 
     @property
     def sender(self) -> str:
         """
-        The WhatsApp ID of the sender who sent the message.
+        The Phone Number ID which the update was sent from.
             - Shortcut for ``.from_user.wa_id``.
         """
         return self.from_user.wa_id
@@ -906,7 +906,7 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
     @property
     def recipient(self) -> str:
         """
-        The WhatsApp ID which the message was sent to.
+        The Phone Number ID which the update was sent to.
             - Shortcut for ``.metadata.phone_number_id``.
         """
         return self.metadata.phone_number_id
@@ -917,14 +917,14 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
 
     def block_sender(self) -> bool:
         """
-        Block the sender of the message.
+        Block the sender of the update.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.block_users` with ``sender``.
         """
         return self.from_user.block()
 
     def unblock_sender(self) -> bool:
         """
-        Unblock the sender of the message.
+        Unblock the sender of the update.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.unblock_users` with ``sender``.
         """
         return self.from_user.unblock()
@@ -932,7 +932,7 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
     @property
     def listener_identifier(self) -> tuple[str, str]:
         """
-        The listener identifier of the message.
+        The listener identifier of the update.
         """
         return utils.listener_identifier(sender=self.sender, recipient=self.recipient)
 

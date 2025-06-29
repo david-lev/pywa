@@ -152,7 +152,8 @@ and the verify token that you used when initializing the WhatsApp client.
     Then, subscribe to the fields you want to receive.
 
     The current supported fields are:
-        - ``messages`` (all user related updates)
+        - ``messages`` (all user related updates: messages, callbacks and message status updates)
+        - ``calls`` (call connect, terminate and status updates)
         - ``message_template_status_update`` (template got approved, rejected, etc.)
         - ``user_preferences`` (user preferences updates, e.g. marketing preferences, etc.)
 

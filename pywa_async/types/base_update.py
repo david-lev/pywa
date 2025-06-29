@@ -742,14 +742,14 @@ class BaseUserUpdateAsync(_ClientShortcuts):
 
     async def block_sender(self) -> bool:
         """
-        Block the sender of the message.
+        Block the sender of the update.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.block_users` with ``sender``.
         """
         return await self.from_user.block()
 
     async def unblock_sender(self) -> bool:
         """
-        Unblock the sender of the message.
+        Unblock the sender of the update.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.unblock_users` with ``sender``.
         """
         return await self.from_user.unblock()

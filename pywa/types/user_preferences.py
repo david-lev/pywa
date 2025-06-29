@@ -44,6 +44,15 @@ class UserPreferences(BaseUserUpdate):
     detail: str
     category: UserPreferenceCategory
 
+    _webhook_field = "user_preferences"
+
+    @property
+    def message_id_to_reply(self) -> str:
+        """Raises an error because user preferences updates cannot be replied."""
+        raise ValueError(
+            "You cannot use `message_id_to_reply` to quote a user preference update."
+        )
+
     @staticmethod
     def _get_cls_kwargs(client: WhatsApp, update: dict) -> dict:
         """Extracts the relevant fields from the update."""

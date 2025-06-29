@@ -42,6 +42,13 @@ class CallConnect(BaseUserUpdate):
 
     _webhook_field = "calls"
 
+    @property
+    def message_id_to_reply(self) -> str:
+        """Raises an error because call connect updates cannot be replied."""
+        raise ValueError(
+            "You cannot use `message_id_to_reply` to quote a call connect update."
+        )
+
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> CallConnect:
         call = (value := update["entry"][0]["changes"][0]["value"])["calls"][0]
@@ -211,7 +218,14 @@ class CallTerminate(BaseUserUpdate, Generic[_CallbackDataT]):
     error: WhatsAppError | None
     tracker: _CallbackDataT | None
 
-    _webhook_field = "messages"
+    _webhook_field = "calls"
+
+    @property
+    def message_id_to_reply(self) -> str:
+        """Raises an error because call terminate updates cannot be replied."""
+        raise ValueError(
+            "You cannot use `message_id_to_reply` to quote a call terminate update."
+        )
 
     @classmethod
     def from_update(
@@ -289,7 +303,14 @@ class CallStatus(BaseUserUpdate, Generic[_CallbackDataT]):
     status: CallStatusType
     tracker: _CallbackDataT | None = None
 
-    _webhook_field = "messages"
+    _webhook_field = "calls"
+
+    @property
+    def message_id_to_reply(self) -> str:
+        """Raises an error because call status updates cannot be replied."""
+        raise ValueError(
+            "You cannot use `message_id_to_reply` to quote a call status update."
+        )
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> CallStatus:
