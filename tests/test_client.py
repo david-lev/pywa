@@ -91,8 +91,9 @@ def test_resolve_buttons_param():
         },
         {"_callback_options": {"button2", "button1"}},
     )
+
     assert helpers.resolve_buttons_param(
-        types.ButtonUrl(title="PyWa Docs", url="https://pywa.readthedocs.io")
+        types.URLButton(title="PyWa Docs", url="https://pywa.readthedocs.io")
     ) == (
         types.others.InteractiveType.CTA_URL,
         {
@@ -104,6 +105,24 @@ def test_resolve_buttons_param():
         },
         {},
     )
+
+    assert helpers.resolve_buttons_param(
+        types.VoiceCallButton(
+            title="Call me",
+            ttl_minutes=50,
+        )
+    ) == (
+        types.others.InteractiveType.VOICE_CALL,
+        {
+            "name": "voice_call",
+            "parameters": {
+                "display_text": "Call me",
+                "ttl_minutes": 50,
+            },
+        },
+        {},
+    )
+
     assert helpers.resolve_buttons_param(
         types.FlowButton(
             title="Next",

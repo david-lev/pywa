@@ -12,7 +12,9 @@ In WhatsApp Cloud API, the updates called ``fields`` and need to be subscribed t
 The currently supported fields by PyWa are:
 
 - ``messages`` (all user related updates: messages, callbacks and message status updates)
+- ``calls`` (call connect, terminate and status updates)
 - ``message_template_status_update`` (template got approved, rejected, etc.)
+- ``user_preferences`` (user preferences updates, e.g. marketing preferences, etc.)
 
 .. important::
 
@@ -151,5 +153,10 @@ All user-related-updates have common methods and properties:
     flow_completion
     message_status
     chat_opened
+    call_connect
+    call_terminate
+    call_status
+    user_preferences
+    user_marketing_preferences
     template_status
     common_methods

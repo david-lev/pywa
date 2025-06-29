@@ -28,7 +28,10 @@ Client Reference
 .. automethod:: WhatsApp.get_business_profile
 .. automethod:: WhatsApp.get_business_phone_numbers
 .. automethod:: WhatsApp.get_business_phone_number
+.. automethod:: WhatsApp.get_business_phone_number_settings
+.. automethod:: WhatsApp.update_business_phone_number_settings
 .. automethod:: WhatsApp.update_business_profile
+.. automethod:: WhatsApp.update_display_name
 .. automethod:: WhatsApp.update_conversational_automation
 .. automethod:: WhatsApp.set_business_public_key
 .. automethod:: WhatsApp.get_commerce_settings
@@ -54,6 +57,11 @@ Client Reference
 .. automethod:: WhatsApp.get_qr_codes
 .. automethod:: WhatsApp.update_qr_code
 .. automethod:: WhatsApp.delete_qr_code
+.. automethod:: WhatsApp.get_call_permissions
+.. automethod:: WhatsApp.pre_accept_call
+.. automethod:: WhatsApp.accept_call
+.. automethod:: WhatsApp.reject_call
+.. automethod:: WhatsApp.terminate_call
 .. automethod:: WhatsApp.get_app_access_token
 .. automethod:: WhatsApp.set_app_callback_url
 .. automethod:: WhatsApp.override_waba_callback_url

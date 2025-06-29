@@ -165,6 +165,25 @@ class StrEnum(str, enum.Enum):
     def __repr__(self):
         return f"{self.__class__.__name__}.{self.name}"
 
+    def __init_subclass__(cls, *args, **kwargs):
+        if not hasattr(cls, "UNKNOWN"):
+            raise TypeError(
+                f"Enum {cls.__name__} must have an 'UNKNOWN' member to handle missing values."
+            )
+        return super().__init_subclass__(*args, **kwargs)
+
+    @classmethod
+    def _missing_(cls, value):
+        """Handle missing values in the enum."""
+        _logger.warning(
+            "Unknown value '%s' for enum '%s'. Defaulting to `%s.UNKNOWN`.",
+            value,
+            cls.__name__,
+            cls.__name__,
+        )
+        # noinspection PyUnresolvedReferences
+        return cls.UNKNOWN
+
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class FromDict:

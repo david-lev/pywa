@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from .chat_opened import ChatOpened
     from .media import Image, Video, Document, Audio, Sticker
     from .callback import CallbackButton, CallbackSelection
+    from .calls import CallPermissions, CallingSettings
     from ..client import WhatsApp
 
 _logger = logging.getLogger(__name__)
@@ -83,6 +84,17 @@ class User:
             u.input for u in self._client.unblock_users((self.wa_id,)).removed_users
         }
 
+    def get_call_permissions(self) -> CallPermissions:
+        """
+        Get the call permissions of the user.
+
+        - Shortcut for :meth:`~pywa.client.WhatsApp.get_call_permissions` with the user wa_id.
+
+        Returns:
+            CallPermissions: The call permissions of the user.
+        """
+        return self._client.get_call_permissions(wa_id=self.wa_id)
+
     def as_vcard(self) -> str:
         """Get the user as a vCard."""
         return "\n".join(
@@ -137,11 +149,6 @@ class MessageType(utils.StrEnum):
     BUTTON = "button"
     REQUEST_WELCOME = "request_welcome"
 
-    @classmethod
-    def _missing_(cls, value: str) -> MessageType:
-        _logger.warning("Unknown message type: %s. Defaulting to UNKNOWN.", value)
-        return cls.UNKNOWN
-
 
 class InteractiveType(utils.StrEnum):
     """
@@ -159,6 +166,10 @@ class InteractiveType(utils.StrEnum):
     PRODUCT_LIST = "product_list"
     FLOW = "flow"
     LOCATION_REQUEST_MESSAGE = "location_request_message"
+    VOICE_CALL = "voice_call"
+    CALL_PERMISSION_REQUEST = "call_permission_request"
+
+    UNKNOWN = "unknown"
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -659,10 +670,7 @@ class Industry(utils.StrEnum):
     RESTAURANT = "RESTAURANT"
     NOT_A_BIZ = "NOT_A_BIZ"
 
-    @classmethod
-    def _missing_(cls, value: str) -> Industry:
-        _logger.warning("Unknown industry: %s. Defaulting to UNDEFINED.", value)
-        return cls.UNDEFINED
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -821,7 +829,7 @@ class ConversationalAutomation:
         )
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True, slots=True)
 class BusinessPhoneNumber:
     """
     Represents a WhatsApp Business Phone Number.
@@ -922,6 +930,29 @@ class BusinessPhoneNumber:
             new_certificate=data.get("new_certificate"),
             last_onboarded_time=data.get("last_onboarded_time"),
         )
+
+
+@dataclasses.dataclass(slots=True)
+class BusinessPhoneNumberSettings:
+    """
+    Represents the settings of a WhatsApp Business Phone Number.
+
+    Attributes:
+        calling: The calling settings of the phone number.
+    """
+
+    calling: CallingSettings | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict) -> BusinessPhoneNumberSettings:
+        return cls(
+            calling=CallingSettings.from_dict(data.get("calling"))
+            if data.get("calling")
+            else None
+        )
+
+    def to_dict(self) -> dict:
+        return {"calling": dataclasses.asdict(self.calling) if self.calling else None}
 
 
 @dataclasses.dataclass(frozen=True, slots=True)

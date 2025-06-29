@@ -33,7 +33,12 @@ from .handlers import (
     ChatOpenedHandler,
     FlowCompletionHandler,
     TemplateStatusHandler,
+    CallConnectHandler,
+    CallTerminateHandler,
+    CallStatusHandler,
     FlowRequestHandler,
+    UserPreferencesHandler,
+    UserMarketingPreferencesHandler,
     FlowRequestCallbackWrapper,
     _HandlerDecorators,
     _handlers_attr,
@@ -43,7 +48,9 @@ from .listeners import _Listeners, Listener
 from .types import (
     BusinessProfile,
     Button,
-    ButtonUrl,
+    URLButton,
+    VoiceCallButton,
+    CallRequestButton,
     CommerceSettings,
     Contact,
     Industry,
@@ -78,8 +85,15 @@ from .types import (
     Sticker,
     Document,
     Audio,
+    BusinessPhoneNumberSettings,
+    CallConnect,
+    CallTerminate,
+    CallStatus,
+    UserPreferences,
+    UserMarketingPreferences,
 )
 from .types.base_update import BaseUpdate
+from .types.calls import CallPermissions, SDP
 from .types.flows import (
     FlowJSON,
     FlowDetails,
@@ -123,6 +137,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         ChatOpenedHandler: ChatOpened.from_update,
         FlowCompletionHandler: FlowCompletion.from_update,
         TemplateStatusHandler: TemplateStatus.from_update,
+        UserPreferencesHandler: UserPreferences.from_update,
+        UserMarketingPreferencesHandler: UserMarketingPreferences.from_update,
+        CallConnectHandler: CallConnect.from_update,
+        CallTerminateHandler: CallTerminate.from_update,
+        CallStatusHandler: CallStatus.from_update,
     }
     """A dictionary that maps handler types to their respective update constructors."""
     _msg_fields_to_objects_constructors = dict(
@@ -508,7 +527,15 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         text: str,
         header: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | SectionList | FlowButton | None = None,
+        buttons: (
+            Iterable[Button]
+            | URLButton
+            | VoiceCallButton
+            | CallRequestButton
+            | SectionList
+            | FlowButton
+            | None
+        ) = None,
         preview_url: bool = False,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -590,7 +617,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         image: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
+        buttons: Iterable[Button] | URLButton | FlowButton | None = None,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -687,7 +714,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         video: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
+        buttons: Iterable[Button] | URLButton | FlowButton | None = None,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -786,7 +813,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         filename: str | None = None,
         caption: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
+        buttons: Iterable[Button] | URLButton | FlowButton | None = None,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -1719,6 +1746,60 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             item_factory=BusinessPhoneNumber.from_dict,
         )
 
+    def get_business_phone_number_settings(
+        self,
+        *,
+        phone_id: str | int | None = None,
+    ) -> BusinessPhoneNumberSettings:
+        """
+        Get the settings of the WhatsApp Business phone number.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.get_business_phone_number_settings()
+
+        Args:
+            phone_id: The phone ID to get the settings from (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            The business phone number settings.
+        """
+        return BusinessPhoneNumberSettings.from_dict(
+            data=self.api.get_business_phone_number_settings(
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+            )
+        )
+
+    def update_business_phone_number_settings(
+        self,
+        settings: BusinessPhoneNumberSettings,
+        *,
+        phone_id: str | int | None = None,
+    ) -> bool:
+        """
+        Update the settings of the WhatsApp Business phone number.
+
+        Example:
+
+            >>> from pywa.types.calls import CallingSettingsStatus
+            >>> wa = WhatsApp(...)
+            >>> s = wa.get_business_phone_number_settings()
+            >>> s.calling.status = CallingSettingsStatus.ENABLED
+            >>> wa.update_business_phone_number_settings(settings)
+
+        Args:
+            settings: The new settings to update.
+            phone_id: The phone ID to update the settings for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            Whether the settings were updated successfully.
+        """
+        return self.api.update_business_phone_number_settings(
+            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+            settings=settings.to_dict(),
+        )["success"]
+
     def update_conversational_automation(
         self,
         enable_chat_opened: bool,
@@ -1750,6 +1831,36 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             enable_welcome_message=enable_chat_opened,
             prompts=tuple(ice_breakers) if ice_breakers else None,
             commands=json.dumps([c.to_dict() for c in commands]) if commands else None,
+        )["success"]
+
+    def update_display_name(
+        self,
+        new_display_name: str,
+        *,
+        phone_id: str | int | None = None,
+    ) -> bool:
+        """
+        Update the display name of the WhatsApp Business account.
+
+        - The display name is the name that appears in the WhatsApp app for your business.
+        - The display name will undergo verification by WhatsApp, and you will receive a webhook notification when the verification is complete.
+        - Read more about `Display Name Verification <https://developers.facebook.com/docs/whatsapp/cloud-api/phone-numbers#display-name-verification>`_.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.update_display_name()
+
+        Args:
+            new_display_name: The new display name.
+            phone_id: The phone ID to update the display name for (optional, if not provided, the client's phone ID will be used).
+        """
+
+        return (
+            self.api.update_display_name(
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                new_display_name=new_display_name,
+            )
         )["success"]
 
     def get_business_profile(
@@ -2308,8 +2419,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )
 
     def publish_flow(
-        self,
-        flow_id: str | int,
+            self,
+            flow_id: str | int,
     ) -> bool:
         """
         This request updates the status of the Flow to "PUBLISHED".
@@ -2372,10 +2483,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return self.api.deprecate_flow(flow_id=str(flow_id))["success"]
 
     def get_flow(
-        self,
-        flow_id: str | int,
-        invalidate_preview: bool = True,
-        phone_number_id: str | int | None = None,
+            self,
+            flow_id: str | int,
+            invalidate_preview: bool = True,
+            phone_number_id: str | int | None = None,
     ) -> FlowDetails:
         """
         Get the details of a flow.
@@ -2400,12 +2511,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )
 
     def get_flows(
-        self,
-        invalidate_preview: bool = True,
-        waba_id: str | int | None = None,
-        phone_number_id: str | int | None = None,
-        *,
-        pagination: Pagination | None = None,
+            self,
+            invalidate_preview: bool = True,
+            waba_id: str | int | None = None,
+            phone_number_id: str | int | None = None,
+            *,
+            pagination: Pagination | None = None,
     ) -> Result[FlowDetails]:
         """
         Get the flows associated with the WhatsApp Business account.
@@ -2435,12 +2546,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )
 
     def get_flow_metrics(
-        self,
-        flow_id: str | int,
-        metric_name: FlowMetricName,
-        granularity: FlowMetricGranularity,
-        since: datetime.date | str | None = None,
-        until: datetime.date | str | None = None,
+            self,
+            flow_id: str | int,
+            metric_name: FlowMetricName,
+            granularity: FlowMetricGranularity,
+            since: datetime.date | str | None = None,
+            until: datetime.date | str | None = None,
     ) -> dict:
         """
         Get the metrics of a flow.
@@ -2470,10 +2581,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )["metric"]
 
     def get_flow_assets(
-        self,
-        flow_id: str | int,
-        *,
-        pagination: Pagination | None = None,
+            self,
+            flow_id: str | int,
+            *,
+            pagination: Pagination | None = None,
     ) -> Result[FlowAsset]:
         """
         Get assets attached to a specified Flow.
@@ -2521,10 +2632,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )
 
     def register_phone_number(
-        self,
-        pin: int | str,
-        data_localization_region: str | None = None,
-        phone_id: str | int | None = None,
+            self,
+            pin: int | str,
+            data_localization_region: str | None = None,
+            phone_id: str | int | None = None,
     ) -> bool:
         """
         Register a Business Phone Number
@@ -2558,10 +2669,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )["success"]
 
     def create_qr_code(
-        self,
-        prefilled_message: str,
-        image_type: Literal["PNG", "SVG"] = "PNG",
-        phone_id: str | int | None = None,
+            self,
+            prefilled_message: str,
+            image_type: Literal["PNG", "SVG"] = "PNG",
+            phone_id: str | int | None = None,
     ) -> QRCode:
         """
         Create a QR code for a prefilled message.
@@ -2585,9 +2696,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )
 
     def get_qr_code(
-        self,
-        code: str,
-        phone_id: str | int | None = None,
+            self,
+            code: str,
+            phone_id: str | int | None = None,
     ) -> QRCode | None:
         """
         Get a QR code.
@@ -2606,10 +2717,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return QRCode.from_dict(qrs[0]) if qrs else None
 
     def get_qr_codes(
-        self,
-        phone_id: str | int | None = None,
+            self,
+            phone_id: str | int | None = None,
             *,
-        pagination: Pagination | None = None,
+            pagination: Pagination | None = None,
     ) -> Result[QRCode]:
         """
         Get QR codes associated with the WhatsApp Phone Number.
@@ -2631,10 +2742,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )
 
     def update_qr_code(
-        self,
-        code: str,
-        prefilled_message: str,
-        phone_id: str | int | None = None,
+            self,
+            code: str,
+            prefilled_message: str,
+            phone_id: str | int | None = None,
     ) -> QRCode:
         """
         Update a QR code.
@@ -2656,9 +2767,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )
 
     def delete_qr_code(
-        self,
-        code: str,
-        phone_id: str | int | None = None,
+            self,
+            code: str,
+            phone_id: str | int | None = None,
     ) -> bool:
         """
         Delete a QR code.
@@ -2695,12 +2806,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )["access_token"]
 
     def set_app_callback_url(
-        self,
-        app_id: int,
-        app_access_token: str,
-        callback_url: str,
-        verify_token: str,
-        fields: Iterable[str],
+            self,
+            app_id: int,
+            app_access_token: str,
+            callback_url: str,
+            verify_token: str,
+            fields: Iterable[str],
     ) -> bool:
         """
         Set the callback URL for the webhook.
@@ -2727,7 +2838,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )["success"]
 
     def override_waba_callback_url(
-        self, callback_url: str, verify_token: str, waba_id: str | int | None = None
+            self, callback_url: str, verify_token: str, waba_id: str | int | None = None
     ) -> bool:
         """
         Override the callback URL for the WhatsApp Business account.
@@ -2765,7 +2876,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )["success"]
 
     def override_phone_callback_url(
-        self, callback_url: str, verify_token: str, phone_id: str | int | None = None
+            self, callback_url: str, verify_token: str, phone_id: str | int | None = None
     ) -> bool:
         """
         Override the callback URL for the phone.
@@ -2804,7 +2915,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )["success"]
 
     def block_users(
-        self, users: Iterable[str | int], *, phone_id: str | int | None = None
+            self, users: Iterable[str | int], *, phone_id: str | int | None = None
     ) -> UsersBlockedResult:
         """
         Block users from sending messages to the WhatsApp Business account.
@@ -2841,7 +2952,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )
 
     def unblock_users(
-        self, users: Iterable[str | int], *, phone_id: str | int | None = None
+            self, users: Iterable[str | int], *, phone_id: str | int | None = None
     ) -> UsersUnblockedResult:
         """
         Unblock users that were previously blocked from sending messages to the WhatsApp Business account.
@@ -2869,10 +2980,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )
 
     def get_blocked_users(
-        self,
-        *,
-        pagination: Pagination | None = None,
-        phone_id: str | int | None = None,
+            self,
+            *,
+            pagination: Pagination | None = None,
+            phone_id: str | int | None = None,
     ) -> Result[User]:
         """
         Get blocked users.
@@ -2897,3 +3008,125 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             ),
             item_factory=functools.partial(self._usr_cls.from_dict, client=self)
         )
+
+    def get_call_permissions(
+            self,
+            wa_id: str | int,
+            *,
+            phone_id: str | int | None = None,
+    ) -> CallPermissions:
+        """
+        Get the call permissions for the WhatsApp Business account.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-call-permissions>`_.
+
+        Args:
+            wa_id: The WhatsApp ID of the user to get the call permissions for.
+            phone_id: The phone ID to get the call permissions from (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            The call permissions for the user.
+        """
+        return CallPermissions.from_dict(
+            self.api.get_call_permissions(
+                user_wa_id=str(wa_id),
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+            ),
+        )
+
+    def pre_accept_call(
+            self,
+            call_id: str,
+            sdp: SDP | None = None
+    ) -> bool:
+        """
+        Pre-accept a call.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#pre-accept-call>`_.
+
+        In essence, when you pre-accept an inbound call, you are allowing the calling media connection to be established before attempting to send call media through the connection.
+
+        When you then call the accept call endpoint, media begins flowing immediately since the connection has already been established
+
+        Pre-accepting calls is recommended because it facilitates faster connection times and avoids `audio clipping issues <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/troubleshooting#audio-clipping-issue-and-solution>`_.
+
+        There is about 30 to 60 seconds after the Call Connect webhook is sent for the business to accept the phone call. If the business does not respond, the call is terminated on the WhatsApp user side with a "Not Answered" notification and a Terminate Webhook is delivered back to you.
+
+        Args:
+            call_id: The ID of the call to pre-accept.
+            sdp: Contains the session description protocol (SDP) type and description language.
+
+        Returns:
+            Whether the call was pre-accepted.
+        """
+        return self.api.pre_accept_call(call_id=call_id, sdp=sdp.to_dict() if sdp else None)["success"]
+
+    def accept_call(
+            self,
+            call_id: str,
+            sdp: SDP | None = None,
+            *,
+            tracker: str | CallbackData | None = None,
+    ) -> bool:
+        """
+        Connect to a call by providing a call agent's SDP.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#accept-call>`_.
+
+        You have about 30 to 60 seconds after the Call Connect Webhook is sent to accept the phone call. If your business does not respond, the call is terminated on the WhatsApp user side with a "Not Answered" notification and a Terminate Webhook is delivered back to you.
+
+        Args:
+            call_id: The ID of the call to accept.
+            sdp: Contains the session description protocol (SDP) type and description language.
+            tracker: The data to track the call with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+
+        Returns:
+            Whether the call was accepted.
+        """
+        return self.api.accept_call(
+            call_id=call_id, sdp=sdp.to_dict() if sdp else None,
+            biz_opaque_callback_data=helpers.resolve_tracker_param(tracker)
+        )["success"]
+
+    def reject_call(
+            self,
+            call_id: str,
+    ) -> bool:
+        """
+        Reject a call.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#reject-call>`_.
+
+        You have about 30 to 60 seconds after the Call Connect webhook is sent to accept the phone call. If the business does not respond the call is terminated on the WhatsApp user side with a "Not Answered" notification and a Terminate Webhook is delivered back to you.
+
+        Args:
+            call_id: The ID of the call to reject.
+
+        Returns:
+            Whether the call was rejected.
+        """
+        return self.api.reject_call(
+            call_id=call_id,
+        )["success"]
+
+    def terminate_call(
+            self,
+            call_id: str,
+    ) -> bool:
+        """
+        Terminate an active call.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#terminate-call>`_.
+
+        This must be done even if there is an RTCP BYE packet in the media path. Ending the call this way also ensures pricing is more accurate.
+        When the WhatsApp user terminates the call, you do not have to call this endpoint. Once the call is successfully terminated, a Call Terminate Webhook will be sent to you.
+
+        Args:
+            call_id: The ID of the call to terminate.
+
+        Returns:
+            Whether the call was terminated.
+        """
+        return self.api.terminate_call(
+            call_id=call_id,
+        )["success"]

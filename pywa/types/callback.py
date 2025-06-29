@@ -4,7 +4,10 @@ __all__ = [
     "CallbackButton",
     "CallbackSelection",
     "Button",
-    "ButtonUrl",
+    "URLButton",
+    "ButtonUrl",  # Alias for URLButton for backward compatibility
+    "VoiceCallButton",
+    "CallRequestButton",
     "SectionRow",
     "Section",
     "SectionList",
@@ -16,6 +19,7 @@ import dataclasses
 import datetime
 import enum
 import types
+import warnings
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -290,6 +294,7 @@ class CallbackButton(BaseUserUpdate, Generic[_CallbackDataT]):
     title: str
 
     _txt_fields = ("data",)
+    _webhook_field = "messages"
 
     @classmethod
     def from_update(cls, client: "WhatsApp", update: dict) -> "CallbackButton":
@@ -376,6 +381,7 @@ class CallbackSelection(BaseUserUpdate, Generic[_CallbackDataT]):
     description: str | None
 
     _txt_fields = ("data",)
+    _webhook_field = "messages"
 
     @classmethod
     def from_update(cls, client: "WhatsApp", update: dict) -> "CallbackSelection":
@@ -423,7 +429,7 @@ class Button:
 
 
 @dataclasses.dataclass(slots=True)
-class ButtonUrl:
+class URLButton:
     """
     Represents a button in the bottom of the message that opens a URL.
 
@@ -439,6 +445,55 @@ class ButtonUrl:
         return {
             "name": InteractiveType.CTA_URL,
             "parameters": {"display_text": self.title, "url": self.url},
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class ButtonUrl(URLButton):
+    """Deprecated. Use :class:`URLButton` instead."""
+
+    def __post_init__(self):
+        warnings.warn(
+            "ButtonUrl is deprecated, use URLButton instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
+
+@dataclasses.dataclass(slots=True)
+class VoiceCallButton:
+    """
+    Represents a button that initiates a voice call on WhatsApp.
+
+    Attributes:
+        title: The text to display on the button (up to 20 characters) default is `Call Now`.
+        ttl_minutes: The time-to-live for the call in minutes (up to ``43200`` minutes (30 days)), default is ``10080``  minutes (7 days).
+    """
+
+    title: str | None = None
+    ttl_minutes: int | None = None
+
+    def to_dict(self) -> dict:
+        params = {}
+        if self.title:
+            params["display_text"] = self.title
+        if self.ttl_minutes:
+            params["ttl_minutes"] = self.ttl_minutes
+
+        return {
+            "name": InteractiveType.VOICE_CALL,
+            "parameters": params,
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class CallRequestButton:
+    """Represents a button that requests a call on WhatsApp."""
+
+    @staticmethod
+    def to_dict() -> dict:
+        return {
+            "name": InteractiveType.CALL_PERMISSION_REQUEST,
         }
 
 

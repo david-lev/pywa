@@ -152,6 +152,7 @@ class FlowCompletion(BaseUserUpdate):
     response: dict[str, Any]
 
     _txt_fields = ("token", "body")
+    _webhook_field = "messages"
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> FlowCompletion:
@@ -224,14 +225,8 @@ class FlowRequestActionType(utils.StrEnum):
     DATA_EXCHANGE = "data_exchange"
     PING = "ping"
     NAVIGATE = "navigate"
-    UNKNOWN = "UNKNOWN"
 
-    @classmethod
-    def _missing_(cls, value):
-        _logger.warning(
-            "Unknown flow request action type: %s. Defaulting to UNKNOWN.", value
-        )
-        return cls.UNKNOWN
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
@@ -580,12 +575,8 @@ class FlowStatus(utils.StrEnum):
     DEPRECATED = "DEPRECATED"
     BLOCKED = "BLOCKED"
     THROTTLED = "THROTTLED"
-    UNKNOWN = "UNKNOWN"
 
-    @classmethod
-    def _missing_(cls, value):
-        _logger.warning("Unknown flow status: %s. Defaulting to UNKNOWN.", value)
-        return cls.UNKNOWN
+    UNKNOWN = "UNKNOWN"
 
 
 class FlowCategory(utils.StrEnum):
@@ -612,10 +603,7 @@ class FlowCategory(utils.StrEnum):
     SURVEY = "SURVEY"
     OTHER = "OTHER"
 
-    @classmethod
-    def _missing_(cls, value):
-        _logger.warning("Unknown flow category: %s. Defaulting to OTHER.", value)
-        return cls.OTHER
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
@@ -953,6 +941,8 @@ class FlowMetricName(utils.StrEnum):
     ENDPOINT_REQUEST_LATENCY_SECONDS_CEIL = "ENDPOINT_REQUEST_LATENCY_SECONDS_CEIL"
     ENDPOINT_AVAILABILITY = "ENDPOINT_AVAILABILITY"
 
+    UNKNOWN = "UNKNOWN"
+
 
 class FlowMetricGranularity(utils.StrEnum):
     """
@@ -967,6 +957,8 @@ class FlowMetricGranularity(utils.StrEnum):
     DAY = "DAY"
     HOUR = "HOUR"
     LIFETIME = "LIFETIME"
+
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
@@ -1565,6 +1557,8 @@ class LayoutType(utils.StrEnum):
 
     SINGLE_COLUMN = "SingleColumnLayout"
 
+    UNKNOWN = "UNKNOWN"
+
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class Layout:
@@ -1628,6 +1622,8 @@ class ComponentType(utils.StrEnum):
     SWITCH = "Switch"
     NAVIGATION_LIST = "NavigationList"
     CHIPS_SELECTOR = "ChipsSelector"
+
+    UNKNOWN = "UNKNOWN"
 
 
 class _Expr(abc.ABC):
@@ -2211,6 +2207,8 @@ class FontWeight(utils.StrEnum):
     BOLD_ITALIC = "bold_italic"
     NORMAL = "normal"
 
+    UNKNOWN = "UNKNOWN"
+
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class TextHeading(TextComponent):
@@ -2434,6 +2432,8 @@ class InputType(utils.StrEnum):
     PASSCODE = "passcode"
     PHONE = "phone"
 
+    UNKNOWN = "UNKNOWN"
+
 
 class LabelVariant(utils.StrEnum):
     """
@@ -2444,6 +2444,8 @@ class LabelVariant(utils.StrEnum):
     """
 
     LARGE = "large"
+
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -2561,6 +2563,8 @@ class MediaSize(utils.StrEnum):
 
     REGULAR = "regular"
     LARGE = "large"
+
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -3113,6 +3117,8 @@ class CalendarPickerMode(utils.StrEnum):
     SINGLE = "single"
     RANGE = "range"
 
+    UNKNOWN = "UNKNOWN"
+
 
 class CalendarDay(utils.StrEnum):
     """
@@ -3135,6 +3141,8 @@ class CalendarDay(utils.StrEnum):
     FRI = "Fri"
     SAT = "Sat"
     SUN = "Sun"
+
+    UNKNOWN = "UNKNOWN"
 
 
 _StartEndTypeVar = TypeVar("_StartEndTypeVar", bound=datetime.date | str | bool)
@@ -3291,6 +3299,8 @@ class ScaleType(utils.StrEnum):
     COVER = "cover"
     CONTAIN = "contain"
 
+    UNKNOWN = "UNKNOWN"
+
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class Image(Component):
@@ -3409,6 +3419,8 @@ class PhotoSource(utils.StrEnum):
     CAMERA_GALLERY = "camera_gallery"
     CAMERA = "camera"
     GALLERY = "gallery"
+
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -3626,6 +3638,8 @@ class FlowActionType(utils.StrEnum):
     OPEN_URL = "open_url"
     UPDATE_DATA = "update_data"
 
+    UNKNOWN = "UNKNOWN"
+
 
 class NextType(utils.StrEnum):
     """
@@ -3638,6 +3652,8 @@ class NextType(utils.StrEnum):
 
     SCREEN = "screen"
     PLUGIN = "plugin"
+
+    UNKNOWN = "UNKNOWN"
 
 
 class _DeprecatedNextType(type):

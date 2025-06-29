@@ -4,7 +4,10 @@ __all__ = [
     "CallbackButton",
     "CallbackSelection",
     "Button",
-    "ButtonUrl",
+    "URLButton",
+    "ButtonUrl",  #
+    "VoiceCallButton",
+    "CallRequestButton",
     "SectionRow",
     "Section",
     "SectionList",

@@ -12,7 +12,7 @@ import abc
 import pathlib
 import dataclasses
 import datetime
-from typing import TYPE_CHECKING, BinaryIO, Iterable
+from typing import TYPE_CHECKING, BinaryIO, Iterable, ClassVar
 
 from pywa import utils
 
@@ -24,7 +24,8 @@ if TYPE_CHECKING:
 
     from .callback import (
         Button,
-        ButtonUrl,
+        URLButton,
+        VoiceCallButton,
         SectionList,
         FlowButton,
         CallbackData,
@@ -85,6 +86,14 @@ class ContinueHandling(Exception):
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class BaseUpdate(abc.ABC):
     """Base class for all update types."""
+
+    _webhook_field: ClassVar[str]
+    """
+    The field name of the webhook update
+    https://developers.facebook.com/docs/graph-api/webhooks/reference/whatsapp-business-account
+    """
+    _is_user_update: ClassVar[bool] = False
+    """Is the update related to WhatsApp User"""
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
     id: str
@@ -183,7 +192,14 @@ class _ClientShortcuts(abc.ABC):
         text: str,
         header: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | FlowButton | SectionList | None = None,
+        buttons: (
+            Iterable[Button]
+            | URLButton
+            | VoiceCallButton
+            | SectionList
+            | FlowButton
+            | None
+        ) = None,
         quote: bool = False,
         preview_url: bool = False,
         tracker: str | CallbackData | None = None,
@@ -232,7 +248,7 @@ class _ClientShortcuts(abc.ABC):
         image: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
+        buttons: Iterable[Button] | URLButton | FlowButton | None = None,
         quote: bool = False,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -283,7 +299,7 @@ class _ClientShortcuts(abc.ABC):
         video: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
+        buttons: Iterable[Button] | URLButton | FlowButton | None = None,
         quote: bool = False,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -336,7 +352,7 @@ class _ClientShortcuts(abc.ABC):
         filename: str | None = None,
         caption: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
+        buttons: Iterable[Button] | URLButton | FlowButton | None = None,
         quote: bool = False,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -865,17 +881,20 @@ class _ClientShortcuts(abc.ABC):
 class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
     """Base class for all user-related update types (message, callback, etc.)."""
 
-    _txt_fields = None
+    _is_user_update: ClassVar[bool] = True
+
+    _txt_fields: ClassVar[tuple[str, ...] | None] = None
     """Contains the text fields of the update to use when filtering."""
+
     metadata: Metadata
     """A metadata object describing the business subscribed to the webhook"""
     from_user: User
-    """The user who sent a message to the business."""
+    """The user who made the update (e.g., sent a message, changed preferences, etc.)."""
 
     @property
     def sender(self) -> str:
         """
-        The WhatsApp ID of the sender who sent the message.
+        The Phone Number ID which the update was sent from.
             - Shortcut for ``.from_user.wa_id``.
         """
         return self.from_user.wa_id
@@ -887,7 +906,7 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
     @property
     def recipient(self) -> str:
         """
-        The WhatsApp ID which the message was sent to.
+        The Phone Number ID which the update was sent to.
             - Shortcut for ``.metadata.phone_number_id``.
         """
         return self.metadata.phone_number_id
@@ -898,14 +917,14 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
 
     def block_sender(self) -> bool:
         """
-        Block the sender of the message.
+        Block the sender of the update.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.block_users` with ``sender``.
         """
         return self.from_user.block()
 
     def unblock_sender(self) -> bool:
         """
-        Unblock the sender of the message.
+        Unblock the sender of the update.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.unblock_users` with ``sender``.
         """
         return self.from_user.unblock()
@@ -913,7 +932,7 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
     @property
     def listener_identifier(self) -> tuple[str, str]:
         """
-        The listener identifier of the message.
+        The listener identifier of the update.
         """
         return utils.listener_identifier(sender=self.sender, recipient=self.recipient)
 

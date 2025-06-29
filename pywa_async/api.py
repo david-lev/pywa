@@ -640,6 +640,45 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             params=params,
         )
 
+    async def get_business_phone_number_settings(
+        self,
+        phone_id: str,
+    ) -> dict[str, Any]:
+        """
+        Get the business phone number settings.
+
+        Args:
+            phone_id: The ID of the phone number to get.
+
+        Returns:
+            The business phone number settings.
+        """
+        return await self._make_request(
+            method="GET",
+            endpoint=f"/{phone_id}/settings",
+        )
+
+    async def update_business_phone_number_settings(
+        self,
+        phone_id: str,
+        settings: dict[str, Any],
+    ) -> dict[str, bool]:
+        """
+        Update the business phone number settings.
+
+        Args:
+            phone_id: The ID of the phone number to update.
+            settings: The settings to update.
+
+        Returns:
+            The success of the operation.
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint=f"/{phone_id}/settings",
+            json=settings,
+        )
+
     async def update_conversational_automation(
         self,
         phone_id: str,
@@ -678,6 +717,36 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
                     "commands": commands,
                 }.items()
                 if v is not None
+            },
+        )
+
+    async def update_display_name(
+        self,
+        phone_id: str,
+        new_display_name: str,
+    ) -> dict[str, bool]:
+        """
+        Update the display name of the business phone number.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/phone-numbers#updating-display-name-via-api>`_.
+
+        Return example::
+
+            {
+                'success': True
+            }
+
+        Args:
+            phone_id: The ID of the phone number to update.
+            new_display_name: The new display name to set.
+        """
+
+        return await self._make_request(
+            method="POST",
+            endpoint=f"/{phone_id}",
+            json={
+                "new_display_name": new_display_name,
+                "messaging_product": "whatsapp",
             },
         )
 
@@ -1522,4 +1591,196 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             method="GET",
             endpoint=f"/{phone_id}/block_users",
             params=pagination,
+        )
+
+    async def get_call_permissions(self, phone_id: str, user_wa_id: str) -> dict:
+        """
+        Get call permissions for a user.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-call-permissions>`_.
+
+        Return example::
+
+            {
+              "messaging_product": "whatsapp",
+              "permission": {
+                "status": "temporary",
+                "expiration_time": 1745343479
+              },
+              "actions": [
+                {
+                  "action_name": "send_call_permission_request",
+                  "can_perform_action": True,
+                  "limits": [
+                    {
+                      "time_period": "PT24H",
+                      "max_allowed": 1,
+                      "current_usage": 0,
+                    },
+                    {
+                      "time_period": "P7D",
+                      "max_allowed": 2,
+                      "current_usage": 1,
+                    }
+                  ]
+                },
+                {
+                  "action_name": "start_call",
+                  "can_perform_action": False,
+                  "limits": [
+                    {
+                      "time_period": "PT24H",
+                      "max_allowed": 5,
+                      "current_usage": 5,
+                      "limit_expiration_time": 1745622600,
+                    }
+                  ]
+                }
+              }
+            }
+
+        Args:
+            phone_id: The ID of the phone number to get call permissions for.
+            user_wa_id: The WhatsApp ID of the user to check permissions for.
+
+        Returns:
+            The response from the WhatsApp Cloud API.
+        """
+        return await self._make_request(
+            method="GET",
+            endpoint=f"/{phone_id}/call_permissions",
+            params={"user_wa_id": user_wa_id},
+        )
+
+    async def pre_accept_call(
+        self, call_id: str, sdp: dict[str, str] | None = None
+    ) -> dict[str, str | bool]:
+        """
+        Pre-accept a call.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#pre-accept-call>`_.
+
+        Return example::
+
+            {
+                "messaging_product": "whatsapp",
+                "success": True
+            }
+
+        Args:
+            call_id: The ID of the call to pre-accept.
+            sdp: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
+
+        Returns:
+            The response from the WhatsApp Cloud API.
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint="/calls",
+            json={
+                "messaging_product": "whatsapp",
+                "call_id": call_id,
+                "action": "pre_accept",
+                **({"session": sdp} if sdp else {}),
+            },
+        )
+
+    async def accept_call(
+        self,
+        call_id: str,
+        sdp: dict[str, str] | None = None,
+        biz_opaque_callback_data: str | None = None,
+    ) -> dict[str, str | bool]:
+        """
+        Accept a call.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#accept-call>`_.
+
+        Return example::
+
+            {
+                "messaging_product": "whatsapp",
+                "success": True
+            }
+
+        Args:
+            call_id: The ID of the call to accept.
+            sdp: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
+            biz_opaque_callback_data: An arbitrary string you can pass in that is useful for tracking and logging purposes.
+
+        Returns:
+            The response from the WhatsApp Cloud API.
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint="/calls",
+            json={
+                "messaging_product": "whatsapp",
+                "call_id": call_id,
+                "action": "accept",
+                **({"session": sdp} if sdp else {}),
+                **(
+                    {"biz_opaque_callback_data": biz_opaque_callback_data}
+                    if biz_opaque_callback_data
+                    else {}
+                ),
+            },
+        )
+
+    async def reject_call(self, call_id: str) -> dict[str, bool]:
+        """
+        Reject a call.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#reject-call>`_.
+
+        Return example::
+
+            {
+                "messaging_product": "whatsapp",
+                "success": True
+            }
+
+        Args:
+            call_id: The ID of the call to reject.
+
+        Returns:
+            The response from the WhatsApp Cloud API.
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint="/calls",
+            json={
+                "messaging_product": "whatsapp",
+                "call_id": call_id,
+                "action": "reject",
+            },
+        )
+
+    async def terminate_call(self, call_id: str) -> dict[str, bool]:
+        """
+        Terminate a call.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#terminate-call>`_.
+
+        Return example::
+
+            {
+                "messaging_product": "whatsapp",
+                "success": True
+            }
+
+        Args:
+            call_id: The ID of the call to terminate.
+
+        Returns:
+            The response from the WhatsApp Cloud API.
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint="/calls",
+            json={
+                "messaging_product": "whatsapp",
+                "call_id": call_id,
+                "action": "terminate",
+            },
         )

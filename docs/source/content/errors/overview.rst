@@ -148,3 +148,4 @@ Base Exception
     ./rate_limit_errors
     ./integrity_errors
     ./block_users_errors
+    ./calling_errors
