@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+
 """The WhatsApp Async client."""
 
 __all__ = ["WhatsApp"]
@@ -63,6 +64,8 @@ from .types import (
     ChatOpened,
     FlowCompletion,
     TemplateStatus,
+    UserPreferences,
+    UserMarketingPreferences,
     Image,
     Video,
     Document,
@@ -82,6 +85,8 @@ from .handlers import (
     ChatOpenedHandler,
     FlowCompletionHandler,
     TemplateStatusHandler,
+    UserPreferencesHandler,
+    UserMarketingPreferencesHandler,
     CallConnectHandler,
     CallTerminateHandler,
     CallStatusHandler,
@@ -124,6 +129,8 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         CallConnectHandler: CallConnect.from_update,
         CallTerminateHandler: CallTerminate.from_update,
         CallStatusHandler: CallStatus.from_update,
+        UserPreferencesHandler: UserPreferences.from_update,
+        UserMarketingPreferencesHandler: UserMarketingPreferences.from_update,
     }
     """A dictionary that maps handler types to their respective update constructors."""
 
@@ -1469,6 +1476,39 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                     field.name for field in dataclasses.fields(BusinessPhoneNumber)
                 ),
             )
+        )
+
+    async def get_business_phone_numbers(
+        self,
+        *,
+        waba_id: str | int | None = None,
+        pagination: Pagination | None = None,
+    ) -> Result[BusinessPhoneNumber]:
+        """
+        Get the phone numbers of the WhatsApp Business account.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.get_business_phone_numbers()
+
+        Args:
+            waba_id: The WABA ID to get the phone numbers from (optional, if not provided, the client's WABA ID will be used).
+            pagination: Pagination object to paginate through the results (optional).
+
+        Returns:
+            A Result object containing BusinessPhoneNumber objects.
+        """
+        return Result(
+            wa=self,
+            response=await self.api.get_business_phone_numbers(
+                waba_id=helpers.resolve_waba_id_param(self, waba_id),
+                pagination=pagination.to_dict() if pagination else None,
+                fields=tuple(
+                    field.name for field in dataclasses.fields(BusinessPhoneNumber)
+                ),
+            ),
+            item_factory=BusinessPhoneNumber.from_dict,
         )
 
     async def get_business_phone_number_settings(

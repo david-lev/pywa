@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, cast, Callable
 from . import utils, handlers, errors
 from .handlers import (
     Handler,
-    ChatOpenedHandler,
     EncryptedFlowRequestType,
     CallStatusHandler,
     CallConnectHandler,
@@ -21,6 +20,9 @@ from .handlers import (
     MessageStatusHandler,
     RawUpdateHandler,
     FlowCompletionHandler,
+    UserMarketingPreferencesHandler,
+    UserPreferencesHandler,
+    ChatOpenedHandler,
 )
 from .types import MessageType
 from .types.base_update import (
@@ -643,9 +645,17 @@ def _handle_calls_field(wa: "WhatsApp", value: dict) -> type[Handler] | None:
         return CallStatusHandler
 
 
+def _handle_user_preferences(wa: "WhatsApp", value: dict) -> type[Handler]:
+    """Handle webhook updates with 'user_preferences' field."""
+    if value["user_preferences"][0]["category"] == "marketing_messages":
+        return UserMarketingPreferencesHandler
+    return UserPreferencesHandler
+
+
 _complex_fields_handlers: dict[
     str, Callable[["WhatsApp", dict], type[Handler] | None]
 ] = {
     "messages": _handle_messages_field,
     "calls": _handle_calls_field,
+    "user_preferences": _handle_user_preferences,
 }

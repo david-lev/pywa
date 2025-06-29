@@ -1,7 +1,10 @@
 import datetime
 from pywa import types, WhatsApp
+from pywa.types import Result
 from pywa.types.flows import FlowDetails
 from pywa.types.sent_message import SentMessage, SentTemplate, SentTemplateStatus
+import pytest
+from unittest.mock import MagicMock, call
 
 wa = WhatsApp(token="token")
 
@@ -263,3 +266,165 @@ def test_sent_message():
         from_phone_id=wa.phone_id,
         status=SentTemplateStatus.ACCEPTED,
     )
+
+
+@pytest.fixture
+def fake_item_factory():
+    return lambda data: {"name": data["name"]}
+
+
+@pytest.fixture
+def wa_result():
+    _wa = MagicMock()
+    _wa.api._make_request = MagicMock()
+    return _wa
+
+
+@pytest.fixture
+def response_data():
+    return {
+        "data": [{"name": "Alice"}, {"name": "Bob"}],
+        "paging": {
+            "next": "/next-url",
+            "previous": "/prev-url",
+            "cursors": {"before": "abc", "after": "xyz"},
+        },
+    }
+
+
+@pytest.fixture
+def pages():
+    return (
+        {
+            "data": [{"name": "Zed"}],
+            "paging": {"next": "/page2", "previous": None, "cursors": {}},
+        },
+        {
+            "data": [{"name": "Yara"}],
+            "paging": {"next": "/page3", "previous": "/page1", "cursors": {}},
+        },
+        {
+            "data": [{"name": "Xander"}],
+            "paging": {"next": None, "previous": "/page2", "cursors": {}},
+        },
+    )
+
+
+def test_result_behavior(wa_result, fake_item_factory, response_data):
+    result = Result(wa_result, response_data, fake_item_factory)
+    assert len(result) == 2
+    assert list(result) == [{"name": "Alice"}, {"name": "Bob"}]
+    assert result[0]["name"] == "Alice"
+    assert bool(result)
+
+
+def test_result_properties(wa_result, fake_item_factory, response_data):
+    result = Result(wa_result, response_data, fake_item_factory)
+    assert result.has_next is True
+    assert result.has_previous is True
+    assert result.before == "abc"
+    assert result.after == "xyz"
+
+
+def test_result_empty(wa_result, fake_item_factory, response_data):
+    result = Result(wa_result, response_data, fake_item_factory)
+    empty = result.empty
+    assert isinstance(empty, Result)
+    assert list(empty) == []
+    assert empty.has_next is True  # next_url is preserved
+    assert empty.has_previous is False
+    assert empty.before == "abc"
+
+
+def test_result_next(wa_result, fake_item_factory, response_data):
+    wa_result.api._make_request.return_value = {
+        "data": [{"name": "Charlie"}],
+        "paging": {},
+    }
+
+    result = Result(wa_result, response_data, fake_item_factory)
+    next_result = result.next()
+    wa_result.api._make_request.assert_called_once_with(
+        method="GET", endpoint="/next-url"
+    )
+    assert list(next_result) == [{"name": "Charlie"}]
+
+
+def test_next_result_when_no_next(wa_result, fake_item_factory, response_data):
+    response_data["paging"]["next"] = None
+    result = Result(wa_result, response_data, fake_item_factory)
+    next_result = result.next()
+    assert not next_result.has_next
+    assert next_result._data == []
+
+
+def test_previous_result(wa_result, fake_item_factory, response_data):
+    wa_result.api._make_request.return_value = {
+        "data": [{"name": "Dave"}],
+        "paging": {},
+    }
+
+    result = Result(wa_result, response_data, fake_item_factory)
+    prev_result = result.previous()
+    wa_result.api._make_request.assert_called_once_with(
+        method="GET", endpoint="/prev-url"
+    )
+    assert list(prev_result) == [{"name": "Dave"}]
+
+
+def test_previous_result_when_no_previous(wa_result, fake_item_factory, response_data):
+    response_data["paging"]["previous"] = None
+    result = Result(wa_result, response_data, fake_item_factory)
+    prev_result = result.previous()
+    assert not prev_result.has_previous
+    assert prev_result._data == []
+
+
+def test_all_on_first_page(wa_result, fake_item_factory, pages):
+    first_page, second_page, third_page = pages
+    wa_result.api._make_request.side_effect = [second_page, third_page]
+    first_result = Result(wa_result, first_page, fake_item_factory)
+    all_results = first_result.all()
+    wa_result.api._make_request.assert_has_calls(
+        [call(method="GET", endpoint="/page2"), call(method="GET", endpoint="/page3")],
+        any_order=False,
+    )
+    assert all_results == [{"name": "Zed"}, {"name": "Yara"}, {"name": "Xander"}]
+
+
+def test_all_on_middle_page(wa_result, fake_item_factory, pages):
+    first_page, second_page, third_page = pages
+    wa_result.api._make_request.side_effect = [first_page, third_page]
+    second_result = Result(wa_result, second_page, fake_item_factory)
+    all_results = second_result.all()
+    wa_result.api._make_request.assert_has_calls(
+        [
+            call(method="GET", endpoint="/page1"),
+            call(method="GET", endpoint="/page3"),
+        ],
+        any_order=False,
+    )
+    assert all_results == [{"name": "Zed"}, {"name": "Yara"}, {"name": "Xander"}]
+
+
+def test_all_on_last_page(wa_result, fake_item_factory, pages):
+    first_page, second_page, third_page = pages
+    wa_result.api._make_request.side_effect = [second_page, first_page]
+    third_result = Result(wa_result, third_page, fake_item_factory)
+    all_results = third_result.all()
+    wa_result.api._make_request.assert_has_calls(
+        [
+            call(method="GET", endpoint="/page2"),
+            call(method="GET", endpoint="/page1"),
+        ],
+        any_order=False,
+    )
+    assert all_results == [{"name": "Zed"}, {"name": "Yara"}, {"name": "Xander"}]
+
+
+def test_repr(wa_result, fake_item_factory, response_data):
+    result = Result(wa_result, response_data, fake_item_factory)
+    r = repr(result)
+    assert "Result" in r
+    assert "has_next=True" in r
+    assert "has_previous=True" in r

@@ -88,6 +88,7 @@ class _AsyncListeners:
             - :meth:`~pywa_async.types.sent_message.SentMessage.wait_for_reply`
             - :meth:`~pywa_async.types.sent_message.SentMessage.wait_for_click`
             - :meth:`~pywa_async.types.sent_message.SentMessage.wait_for_selection`
+            - :meth:`~pywa_async.types.sent_message.SentMessage.wait_for_completion`
             - :meth:`~pywa_async.types.sent_message.SentMessage.wait_until_read`
             - :meth:`~pywa_async.types.sent_message.SentMessage.wait_until_delivered`
 

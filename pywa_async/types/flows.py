@@ -60,6 +60,8 @@ __all__ = [
     "CalendarRangeValues",
     "CalendarDay",
     "Image",
+    "ImageCarouselItem",
+    "ImageCarousel",
     "PhotoPicker",
     "PhotoSource",
     "DocumentPicker",

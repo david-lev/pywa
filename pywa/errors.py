@@ -389,6 +389,12 @@ class AccountInMaintenanceMode(SendMessageError):
     __error_codes__ = (131057,)
 
 
+class UserStoppedMarketingMessages(SendMessageError):
+    """User has stopped marketing messages from the business account. you should listen to UserMarketingPreferences updates"""
+
+    __error_codes__ = (131050,)
+
+
 # ====================================================================================================
 
 

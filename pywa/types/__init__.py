@@ -69,5 +69,11 @@ from .flows import (
     FlowMetricGranularity,
 )
 from .chat_opened import ChatOpened
+from .user_preferences import (
+    UserPreferences,
+    UserMarketingPreferences,
+    UserPreferenceCategory,
+    MarketingPreference,
+)
 from ..listeners import ListenerCanceled, ListenerTimeout, ListenerStopped
 from .calls import CallConnect, CallTerminate, CallStatus, CallingSettings

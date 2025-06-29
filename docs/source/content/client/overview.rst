@@ -205,6 +205,8 @@ Business profile
      - Description
    * - :meth:`~WhatsApp.get_business_profile`
      - Get business profile
+   * - :meth:`~WhatsApp.get_business_phone_numbers`
+     - Get business phone numbers
    * - :meth:`~WhatsApp.get_business_phone_number`
      - Get business phone number
    * - :meth:`~WhatsApp.update_business_profile`

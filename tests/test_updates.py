@@ -92,6 +92,13 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
     "call_status": {
         "call_status": [lambda c: c.type is not None],
     },
+    "user_preferences": {
+        "user_preferences": [lambda u: u.value is not None],
+        "user_marketing_preferences": [
+            lambda u: u.value in ["stop", "resume"]
+            and u.category == "marketing_messages"
+        ],
+    },
 }
 
 

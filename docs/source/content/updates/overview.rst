@@ -58,13 +58,6 @@ User related updates:
      - A message status update (e.g. delivered, seen, etc.)
    * - :py:class:`~pywa.types.chat_opened.ChatOpened`
      - A chat opened by a user
-   * - :py:class:`~pywa.types.calls.CallConnect`
-     - An incoming call
-   * - :py:class:`~pywa.types.calls.CallTerminate`
-     - A call terminated update
-   * - :py:class:`~pywa.types.calls.CallStatus`
-     - A call status update (e.g. ringing, answered, etc.)
-
 
 Account related updates:
 
@@ -159,8 +152,10 @@ All user-related-updates have common methods and properties:
     flow_completion
     message_status
     chat_opened
-    template_status
     call_connect
     call_terminate
     call_status
+    user_preferences
+    user_marketing_preferences
+    template_status
     common_methods

@@ -50,6 +50,8 @@ __all__ = [
     "CallConnectHandler",
     "CallTerminateHandler",
     "CallStatusHandler",
+    "UserPreferencesHandler",
+    "UserMarketingPreferencesHandler",
 ]
 
 import abc
@@ -78,6 +80,8 @@ from .types import (
     Message,
     MessageStatus,
     TemplateStatus,
+    UserPreferences,
+    UserMarketingPreferences,
     FlowRequest,
     FlowResponse,
     ChatOpened,
@@ -134,6 +138,15 @@ _CallTerminateCallback: TypeAlias = Callable[
 ]
 _CallStatusCallback: TypeAlias = Callable[
     ["WhatsApp", CallStatus], Any | Awaitable[Any]
+]
+_UserPreferencesCallback: TypeAlias = Callable[
+    ["WhatsApp", "UserPreferences"],
+    Any | Awaitable[Any],
+]
+
+_UserMarketingPreferencesCallback: TypeAlias = Callable[
+    ["WhatsApp", "UserMarketingPreferences"],
+    Any | Awaitable[Any],
 ]
 
 
@@ -475,6 +488,68 @@ class TemplateStatusHandler(Handler[TemplateStatus]):
     def __init__(
         self,
         callback: _TemplateStatusCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class UserPreferencesHandler(Handler[UserPreferences]):
+    """
+    Handler for :class:`pywa.types.UserPreferences`
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_user_preferences` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_user_preferences = lambda _, prefs: print(prefs)
+        >>> wa.add_handlers(UserPreferencesHandler(print_user_preferences))
+
+    Args:
+        callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a
+            :class:`pywa.types.UserPreferences` as arguments)
+        filters: The filters to apply to the handler
+        priority: The priority of the handler (default: ``0``)
+    """
+
+    _update = UserPreferences
+
+    def __init__(
+        self,
+        callback: _UserPreferencesCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class UserMarketingPreferencesHandler(Handler[UserMarketingPreferences]):
+    """
+    Handler for :class:`pywa.types.UserMarketingPreferences`
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_user_marketing_preferences` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_user_marketing_preferences = lambda _, prefs: print(prefs)
+        >>> wa.add_handlers(UserMarketingPreferencesHandler(print_user_marketing_preferences))
+
+    Args:
+        callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a
+            :class:`pywa.types.UserMarketingPreferences` as arguments)
+        filters: The filters to apply to the handler
+        priority: The priority of the handler (default: ``0``)
+    """
+
+    _update = UserMarketingPreferences
+
+    def __init__(
+        self,
+        callback: _UserMarketingPreferencesCallback,
         filters: Filter = None,
         priority: int = 0,
     ):
@@ -1466,6 +1541,102 @@ class _HandlerDecorators:
             return _registered_with_parentheses(
                 self=self,
                 handler_type=CallStatusHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_user_preferences(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_UserPreferencesCallback], _UserPreferencesCallback]
+        | _UserPreferencesCallback
+    ):
+        """
+        Decorator to register a function as a callback for :class:`pywa.types.UserPreferences` updates (User preferences are updated).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`UserPreferencesHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_user_preferences
+            ... def user_preferences_handler(client: WhatsApp, prefs: types.UserPreferences):
+            ...     print(f"User preferences updated: {prefs}")
+
+        Args:
+            filters: Filters to apply to the incoming user preferences updates.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=UserPreferencesHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(callback: _UserPreferencesCallback) -> _UserPreferencesCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=UserPreferencesHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_user_marketing_preferences(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_UserMarketingPreferencesCallback], _UserMarketingPreferencesCallback]
+        | _UserMarketingPreferencesCallback
+    ):
+        """
+        Decorator to register a function as a callback for :class:`pywa.types.UserMarketingPreferences` updates (User wants to stop or resume receiving marketing messages).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`UserMarketingPreferencesHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_user_marketing_preferences
+            ... def user_marketing_preferences_handler(client: WhatsApp, prefs: types.UserMarketingPreferences):
+            ...     print(f"User marketing preferences updated: {prefs}")
+
+        Args:
+            filters: Filters to apply to the incoming user marketing preferences updates.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=UserMarketingPreferencesHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(
+            callback: _UserMarketingPreferencesCallback,
+        ) -> _UserMarketingPreferencesCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=UserMarketingPreferencesHandler,
                 callback=callback,
                 filters=filters,
                 priority=priority,

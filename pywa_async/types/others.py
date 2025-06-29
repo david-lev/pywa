@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING
 
 from pywa.types.others import *  # noqa MUST BE IMPORTED FIRST
@@ -107,23 +108,50 @@ class Result(_Result[_T]):
 
     Example:
 
-        >>> from pywa_async import WhatsApp, types
+        >>> from pywa import WhatsApp, types
         >>> wa = WhatsApp(...)
-        >>> all_blocked_users = []
-        >>> res = await wa.get_blocked_users(pagination=types.Pagination(limit=100))
-        >>> while True:
-        ...     all_blocked_users.extend(res)
-        ...     if not res.has_next:
-        ...         break
-        ...     res = await res.next()
-        >>> all_blocked_users
-        [User(...), User(...), User(...), ...]
+        >>> res = wa.get_blocked_users(pagination=types.Pagination(limit=100))
+        >>> for user in res:
+        ...     print(user.name, user.wa_id)
+        ...
+        >>> if res.has_next:
+        ...     next_res = res.next()
+        ...
+        >>> print(res.all())
+
+    Methods:
+        next: Get the next page of results. if there is no next page, it returns empty Result.
+        previous: Get the previous page of results. if there is no previous page, it returns empty Result.
+        all: Get all results from the current page, previous pages, and next pages.
+        empty: Returns an empty Result instance.
+
+    Properties:
+        has_next: Check if there is a next page of results.
+        has_previous: Check if there is a previous page of results.
+        before: Cursor that points to the start of the page of data that has been returned.
+        after: Cursor that points to the end of the page of data that has been returned.
     """
 
     _wa: WhatsAppAsync
 
-    async def next(self) -> Result[_T] | None:
-        """Get the next page of results."""
+    @property
+    def empty(self) -> Result[_T]:
+        """Returns an empty Result instance."""
+        return Result(
+            wa=self._wa,
+            response={
+                "data": [],
+                "paging": {"next": self._next_url, "cursors": self._cursors},
+            },
+            item_factory=self._item_factory,
+        )
+
+    async def next(self) -> Result[_T]:
+        """
+        Get the next page of results. if there is no next page, it returns empty Result.
+
+        - Check if there is a next page using the :attr:`~pywa.types.others.Result.has_next` property before calling this method.
+        """
         if self.has_next:
             # noinspection PyProtectedMember
             response = await self._wa.api._make_request(
@@ -132,10 +160,14 @@ class Result(_Result[_T]):
             return Result(
                 wa=self._wa, response=response, item_factory=self._item_factory
             )
-        return None
+        return self.empty
 
-    async def previous(self) -> Result[_T] | None:
-        """Get the previous page of results."""
+    async def previous(self) -> Result[_T]:
+        """
+        Get the previous page of results. if there is no previous page, it returns empty Result.
+
+        - Check if there is a previous page using the :attr:`~pywa.types.others.Result.has_previous` property before calling this method.
+        """
         if self.has_previous:
             # noinspection PyProtectedMember
             response = await self._wa.api._make_request(
@@ -144,4 +176,41 @@ class Result(_Result[_T]):
             return Result(
                 wa=self._wa, response=response, item_factory=self._item_factory
             )
-        return None
+        return self.empty
+
+    async def all(
+        self,
+        *,
+        sleep: float = 0.0,
+    ) -> list[_T]:
+        """
+        Get all results from the current page, previous pages, and next pages.
+
+        - Make sure to provide higher limit in the ``Pagination`` parameter to avoid hitting rate limits.
+        - Also consider using the ``sleep`` parameter to avoid hitting rate limits.
+
+        Args:
+            sleep: The number of seconds to sleep between requests to avoid hitting rate limits. Default is 0.0 (no sleep).
+
+        Returns:
+            A list of all results from the current page, previous pages, and next pages.
+        """
+        before_data = []
+        after_data = []
+
+        prev = self
+        while prev.has_previous:
+            if sleep > 0:
+                await asyncio.sleep(sleep)
+            prev = await prev.previous()
+            # noinspection PyProtectedMember
+            before_data = prev._data + before_data
+
+        next_page = self
+        while next_page.has_next:
+            if sleep > 0:
+                await asyncio.sleep(sleep)
+            next_page = await next_page.next()
+            after_data += next_page._data
+
+        return before_data + self._data + after_data

@@ -9,6 +9,7 @@ import json
 import logging
 import pathlib
 import re
+from urllib import parse as urllib_parse
 import warnings
 from typing import (
     Iterable,
@@ -100,6 +101,8 @@ __all__ = [
     "CalendarRangeValues",
     "CalendarDay",
     "Image",
+    "ImageCarouselItem",
+    "ImageCarousel",
     "PhotoPicker",
     "PhotoSource",
     "DocumentPicker",
@@ -661,6 +664,59 @@ class FlowPreview:
                 data["expires_at"], "%Y-%m-%dT%H:%M:%S%z"
             ),
         )
+
+    def with_params(
+        self,
+        interactive: bool | None = None,
+        flow_token: str | None = None,
+        flow_action: Literal[
+            FlowRequestActionType.NAVIGATE, FlowRequestActionType.DATA_EXCHANGE
+        ]
+        | None = None,
+        flow_action_payload: dict | None = None,
+        phone_number: str | None = None,
+        debug: bool | None = None,
+    ) -> str:
+        """
+        Configure the interactive Web Preview.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowsapi#preview>`_.
+
+        Args:
+            interactive: If true, the preview will run in interactive mode. Defaults to false.
+            flow_token: It will be sent as part of each request. You should always verify that token on your server to block any other unexpected requests. Required for Flows with endpoint.
+            flow_action: First action when Flow starts. data_exchange if it will make a request to the endpoint, or navigate if it won't (this will also require flow_action_payload to be provided).
+            flow_action_payload: Initial screen data. Required if flow_action is navigate. Should be omitted otherwise.
+            phone_number: Phone number that will be used to send the Flow, from which the public key will be used to encrypt the request payload. Required for Flows with endpoint.
+            debug: Show actions in a separate panel while interacting with the preview.
+
+        Returns:
+            The URL of the preview with the parameters added.
+        """
+        params = {}
+
+        if flow_token is not None:
+            params["flow_token"] = flow_token
+        if interactive is not None:
+            params["interactive"] = str(interactive).lower()
+        if flow_action is not None:
+            params["flow_action"] = flow_action
+        if flow_action_payload is not None:
+            params["flow_action_payload"] = json.dumps(
+                flow_action_payload, separators=(",", ":")
+            )
+        if phone_number is not None:
+            params["phone_number"] = phone_number
+        if debug is not None:
+            params["debug"] = str(debug).lower()
+        if not params:
+            return self.url
+
+        url_parts = list(urllib_parse.urlparse(self.url))
+        query = dict(urllib_parse.parse_qsl(url_parts[4]))
+        query.update(params)
+        url_parts[4] = urllib_parse.urlencode(query)
+        return str(urllib_parse.urlunparse(url_parts))
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1566,6 +1622,7 @@ class ComponentType(utils.StrEnum):
     DATE_PICKER = "DatePicker"
     CALENDAR_PICKER = "CalendarPicker"
     IMAGE = "Image"
+    IMAGE_CAROUSEL = "ImageCarousel"
     PHOTO_PICKER = "PhotoPicker"
     DOCUMENT_PICKER = "DocumentPicker"
     IF = "If"
@@ -2700,7 +2757,8 @@ class ChipsSelector(FormComponent[list[str]]):
         visible: Whether the chips selector is visible or not. Default to ``True``.
         enabled: Whether the chips selector is enabled or not. Default to ``True``.
         init_value: The default values (IDs of the data sources).
-        on_select_action: The action to perform when an item is selected.
+        on_select_action: The action to perform when an item is selected. UpdateDataAction supported since v7.1.
+        on_unselect_action: The action to perform when an item is unselected. if not set, the on_select_action will handle both selection and unselection events. Added in v7.1.
     """
 
     type: ComponentType = dataclasses.field(
@@ -3263,6 +3321,7 @@ class Image(Component):
         scale_type: The scale type of the image. Defaule to ``ScaleType.CONTAIN`` Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#image-scale-types>`_.
         aspect_ratio: The aspect ratio of the image. Default to ``1``.
         alt_text: Alternative Text is for the accessibility feature, eg. Talkback and Voice over.
+        visible: Whether the image is visible or not. Default to ``True``.
     """
 
     type: ComponentType = dataclasses.field(
@@ -3274,6 +3333,67 @@ class Image(Component):
     scale_type: ScaleType | str | ScreenDataRef[str] | ComponentRef[str] | None = None
     aspect_ratio: int | ScreenDataRef[int]
     alt_text: str | ScreenDataRef[str] | ComponentRef[str] | None = None
+    visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class ImageCarouselItem:
+    """
+    ImageCarouselItem represents an item in the `ImageCarousel` component.
+
+    - Supported images formats are JPEG PNG
+    - Recommended image size is up to 300kb
+
+    Example:
+
+        >>> ImageCarouselItem(
+        ...     src='iVBORw0KGgoAAAANSUhEUgAAAlgAAAM...',
+        ...     alt_text='Image of a cat'
+        ... )
+
+    Attributes:
+        src: Base64 of an image.
+        alt_text: Alternative Text is for the accessibility feature, eg. Talkback and Voice over.
+    """
+
+    src: str | ScreenDataRef[str] | ComponentRef[str]
+    alt_text: str | ScreenDataRef[str] | ComponentRef[str]
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class ImageCarousel(Component):
+    """
+    ImageCarousel component that displays a carousel of images.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#image_carousel>`_.
+    - Added in v7.1
+    - Max number of images is 3.
+    - Max number of :class:`ImageCarousel` per screen is 2
+    - Max number of :class:`ImageCarousel` per Flow is 3
+
+    Example:
+        >>> ImageCarousel(
+        ...     images=[
+        ...         ImageCarouselItem(src='iVBORw0KGgoAAAANSUhEUgAAAlgAAAM...', alt_text='Image 1'),
+        ...         ImageCarouselItem(src='iVBORw0KGgoAAAANSUhEUgAAAlgAAAN...', alt_text='Image 2'),
+        ...     ],
+        ...     aspect_ratio='4:3',
+        ...     scale_type=ScaleType.CONTAIN
+        ... )
+
+    Attributes:
+        images: A list of images to display in the carousel. Each image is represented by an :class:`ImageCarouselItem` object.
+        aspect_ratio: The aspect ratio of the images in the carousel. Default to ``4:3``.
+        scale_type: The scale type of the images in the carousel. Default to ``ScaleType.CONTAIN``.
+        visible: Whether the image carousel is visible or not. Default to ``True``.
+    """
+
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.IMAGE_CAROUSEL, init=False, repr=False
+    )
+    images: list[ImageCarouselItem] | ScreenDataRef[list[ImageCarouselItem]]
+    aspect_ratio: str | ScreenDataRef[str] | ComponentRef[str] | None = None
+    scale_type: ScaleType | str | ScreenDataRef[str] | ComponentRef[str] | None = None
     visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
 
 
