@@ -643,10 +643,13 @@ def _handle_calls_field(wa: "WhatsApp", value: dict) -> type[Handler] | None:
         )
     elif "statuses" in value:
         return CallStatusHandler
+    return None
 
 
-def _handle_user_preferences(wa: "WhatsApp", value: dict) -> type[Handler]:
+def _handle_user_preferences_field(wa: "WhatsApp", value: dict) -> type[Handler] | None:
     """Handle webhook updates with 'user_preferences' field."""
+    if wa.filter_updates and (value["metadata"]["phone_number_id"] != wa.phone_id):
+        return None
     if value["user_preferences"][0]["category"] == "marketing_messages":
         return UserMarketingPreferencesHandler
     return UserPreferencesHandler
@@ -657,5 +660,5 @@ _complex_fields_handlers: dict[
 ] = {
     "messages": _handle_messages_field,
     "calls": _handle_calls_field,
-    "user_preferences": _handle_user_preferences,
+    "user_preferences": _handle_user_preferences_field,
 }

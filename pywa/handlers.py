@@ -160,7 +160,9 @@ class EncryptedFlowRequestType(TypedDict):
 
 _logger = logging.getLogger(__name__)
 
-_FactorySupported: TypeAlias = CallbackButton | CallbackSelection | MessageStatus
+_FactorySupported: TypeAlias = (
+    CallbackButton | CallbackSelection | MessageStatus | CallStatus
+)
 
 _UpdateType = TypeVar("_UpdateType")
 
@@ -652,7 +654,7 @@ class CallTerminateHandler(Handler[CallTerminate]):
         super().__init__(callback=callback, filters=filters, priority=priority)
 
 
-class CallStatusHandler(Handler[CallStatus]):
+class CallStatusHandler(_FactoryHandler[CallStatus]):
     """
     Handler for :class:`pywa.types.CallStatus` updates.
 
@@ -669,19 +671,27 @@ class CallStatusHandler(Handler[CallStatus]):
         callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a
             :class:`pywa.types.CallStatus` as arguments)
         filters: The filters to apply to the handler
+        factory: The constructor to use to construct the callback data.
         priority: The priority of the handler (default: ``0``)
 
     """
 
     _update = CallStatus
+    _data_field = "tracker"
 
     def __init__(
         self,
         callback: _CallStatusCallback,
         filters: Filter = None,
+        factory: type[CallbackData] | None = None,
         priority: int = 0,
     ):
-        super().__init__(callback=callback, filters=filters, priority=priority)
+        super().__init__(
+            callback=callback,
+            filters=filters,
+            factory=factory,
+            priority=priority,
+        )
 
 
 class RawUpdateHandler(Handler[dict]):
@@ -1507,6 +1517,7 @@ class _HandlerDecorators:
     def on_call_status(
         self: WhatsApp | Filter = None,
         filters: Filter = None,
+        factory: type[CallbackData] | None = None,
         priority: int = 0,
     ) -> Callable[[_CallStatusCallback], _CallStatusCallback] | _CallStatusCallback:
         """
@@ -1524,6 +1535,7 @@ class _HandlerDecorators:
 
         Args:
             filters: Filters to apply to the incoming call status.
+            factory: The constructor to use to construct the callback data.
             priority: The priority of the handler (default: ``0``).
         """
 
@@ -1533,6 +1545,7 @@ class _HandlerDecorators:
                 handler_type=CallStatusHandler,
                 filters=filters,
                 priority=priority,
+                factory=factory,
             )
         ) is not None:
             return clb
@@ -1544,6 +1557,7 @@ class _HandlerDecorators:
                 callback=callback,
                 filters=filters,
                 priority=priority,
+                factory=factory,
             )
 
         return deco
