@@ -173,6 +173,8 @@ class CallEvent(utils.StrEnum):
     CONNECT = "connect"
     TERMINATE = "terminate"
 
+    UNKNOWN = "UNKNOWN"
+
 
 class CallDirection(utils.StrEnum):
     """
@@ -185,6 +187,8 @@ class CallDirection(utils.StrEnum):
 
     BUSINESS_INITIATED = "BUSINESS_INITIATED"
     USER_INITIATED = "USER_INITIATED"
+
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
@@ -281,6 +285,8 @@ class CallTerminateStatus(utils.StrEnum):
     FAILED = "FAILED"
     COMPLETED = "COMPLETED"
 
+    UNKNOWN = "UNKNOWN"
+
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
 class CallStatus(BaseUserUpdate, Generic[_CallbackDataT]):
@@ -348,6 +354,8 @@ class CallStatusType(utils.StrEnum):
     ACCEPTED = "ACCEPTED"
     REJECTED = "REJECTED"
 
+    UNKNOWN = "UNKNOWN"
+
 
 class CallingSettingsStatus(utils.StrEnum):
     """
@@ -356,6 +364,8 @@ class CallingSettingsStatus(utils.StrEnum):
 
     ENABLED = "ENABLED"
     DISABLED = "DISABLED"
+
+    UNKNOWN = "UNKNOWN"
 
 
 class CallIconVisibility(utils.StrEnum):
@@ -366,6 +376,8 @@ class CallIconVisibility(utils.StrEnum):
     DEFAULT = "DEFAULT"
     DISABLE_ALL = "DISABLE_ALL"
 
+    UNKNOWN = "UNKNOWN"
+
 
 class CallbackPermissionStatus(utils.StrEnum):
     """
@@ -375,6 +387,8 @@ class CallbackPermissionStatus(utils.StrEnum):
     ENABLED = "ENABLED"
     DISABLED = "DISABLED"
 
+    UNKNOWN = "UNKNOWN"
+
 
 class SIPStatus(utils.StrEnum):
     """
@@ -383,6 +397,8 @@ class SIPStatus(utils.StrEnum):
 
     ENABLED = "ENABLED"
     DISABLED = "DISABLED"
+
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
@@ -612,6 +628,8 @@ class STRPKeyExchangeProtocol(utils.StrEnum):
     DTLS = "DTLS"
     SDES = "SDES"
 
+    UNKNOWN = "UNKNOWN"
+
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class CallingSettings:
@@ -686,6 +704,8 @@ class CallPermissionStatus(utils.StrEnum):
 
     NO_PERMISSION = "no_permission"
     TEMPORARY = "temporary"
+
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)

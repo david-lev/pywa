@@ -50,10 +50,7 @@ class MessageStatusType(utils.StrEnum):
     READ = "read"
     FAILED = "failed"
 
-    @classmethod
-    def _missing_(cls, value: str) -> MessageStatusType:
-        _logger.warning("Unknown message status type: %s. Defaulting to FAILED.", value)
-        return cls.FAILED
+    UNKNOWN = "UNKNOWN"
 
 
 class ConversationCategory(utils.StrEnum):
@@ -74,14 +71,8 @@ class ConversationCategory(utils.StrEnum):
     UTILITY = "utility"
     SERVICE = "service"
     REFERRAL_CONVERSION = "referral_conversion"
-    UNKNOWN = "unknown"
 
-    @classmethod
-    def _missing_(cls, value: str) -> ConversationCategory:
-        _logger.warning(
-            "Unknown conversation category: %s. Defaulting to UNKNOWN.", value
-        )
-        return cls.UNKNOWN
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -223,10 +214,7 @@ class PricingModel(utils.StrEnum):
     CBP = "CBP"
     PMP = "PMP"
 
-    @classmethod
-    def _missing_(cls, value: str) -> PricingModel:
-        _logger.warning("Unknown pricing model: %s. Defaulting to CBP.", value)
-        return cls.CBP
+    UNKNOWN = "UNKNOWN"
 
 
 class PricingType(utils.StrEnum):
@@ -242,6 +230,8 @@ class PricingType(utils.StrEnum):
     REGULAR = "regular"
     FREE_CUSTOMER_SERVICE = "free_customer_service"
     FREE_ENTRY_POINT = "free_entry_point"
+
+    UNKNOWN = "UNKNOWN"
 
 
 class PricingCategory(utils.StrEnum):
@@ -263,6 +253,8 @@ class PricingCategory(utils.StrEnum):
     UTILITY = "utility"
     SERVICE = "service"
     REFERRAL_CONVERSION = "referral_conversion"
+
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(frozen=True, slots=True)

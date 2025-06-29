@@ -149,11 +149,6 @@ class MessageType(utils.StrEnum):
     BUTTON = "button"
     REQUEST_WELCOME = "request_welcome"
 
-    @classmethod
-    def _missing_(cls, value: str) -> MessageType:
-        _logger.warning("Unknown message type: %s. Defaulting to UNKNOWN.", value)
-        return cls.UNKNOWN
-
 
 class InteractiveType(utils.StrEnum):
     """
@@ -173,6 +168,8 @@ class InteractiveType(utils.StrEnum):
     LOCATION_REQUEST_MESSAGE = "location_request_message"
     VOICE_CALL = "voice_call"
     CALL_PERMISSION_REQUEST = "call_permission_request"
+
+    UNKNOWN = "unknown"
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -673,10 +670,7 @@ class Industry(utils.StrEnum):
     RESTAURANT = "RESTAURANT"
     NOT_A_BIZ = "NOT_A_BIZ"
 
-    @classmethod
-    def _missing_(cls, value: str) -> Industry:
-        _logger.warning("Unknown industry: %s. Defaulting to UNDEFINED.", value)
-        return cls.UNDEFINED
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(frozen=True, slots=True)

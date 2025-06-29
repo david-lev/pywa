@@ -392,6 +392,8 @@ class SentTemplateStatus(utils.StrEnum):
     ACCEPTED = "accepted"
     HELD_FOR_QUALITY_ASSESSMENT = "held_for_quality_assessment"
 
+    UNKNOWN = "UNKNOWN"
+
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class SentTemplate(SentMessage):

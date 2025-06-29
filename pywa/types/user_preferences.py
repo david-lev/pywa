@@ -88,14 +88,8 @@ class UserPreferenceCategory(utils.StrEnum):
     """
 
     MARKETING_MESSAGES = "marketing_messages"
-    UNKNOWN = "unknown"
 
-    @classmethod
-    def _missing_(cls, value: str) -> str:
-        _logger.warning(
-            "Unknown user preference category: %s. Defaulting to UNKNOWN.", value
-        )
-        return cls.UNKNOWN
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -135,3 +129,5 @@ class MarketingPreference(utils.StrEnum):
 
     STOP = "stop"
     RESUME = "resume"
+
+    UNKNOWN = "UNKNOWN"

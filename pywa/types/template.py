@@ -80,6 +80,8 @@ class ComponentType(utils.StrEnum):
     FOOTER = "FOOTER"
     BUTTONS = "BUTTONS"
 
+    UNKNOWN = "UNKNOWN"
+
 
 class HeaderFormatType(utils.StrEnum):
     TEXT = "TEXT"
@@ -87,6 +89,8 @@ class HeaderFormatType(utils.StrEnum):
     VIDEO = "VIDEO"
     DOCUMENT = "DOCUMENT"
     LOCATION = "LOCATION"
+
+    UNKNOWN = "UNKNOWN"
 
 
 class ButtonType(utils.StrEnum):
@@ -98,6 +102,8 @@ class ButtonType(utils.StrEnum):
     CATALOG = "CATALOG"
     COPY_CODE = "COPY_CODE"
     FLOW = "FLOW"
+
+    UNKNOWN = "UNKNOWN"
 
 
 class Language(utils.StrEnum):
@@ -187,6 +193,8 @@ class Language(utils.StrEnum):
     UZBEK = "uz"
     VIETNAMESE = "vi"
     ZULU = "zu"
+
+    UNKNOWN = "UNKNOWN"
 
 
 class NewTemplateComponentABC(abc.ABC):
@@ -362,6 +370,8 @@ class NewTemplate:
         AUTHENTICATION = "AUTHENTICATION"
         MARKETING = "MARKETING"
         UTILITY = "UTILITY"
+
+        UNKNOWN = "UNKNOWN"
 
     @dataclasses.dataclass(slots=True)
     class Text(NewTemplateHeaderABC):
@@ -759,6 +769,8 @@ class NewTemplate:
             ONE_TAP = "ONE_TAP"
             ZERO_TAP = "ZERO_TAP"
 
+            UNKNOWN = "UNKNOWN"
+
         def __post_init__(self):
             if self.otp_type in (self.OtpType.ONE_TAP, self.OtpType.ZERO_TAP) and not (
                 self.package_name and self.signature_hash
@@ -910,6 +922,8 @@ class ParamType(utils.StrEnum):
     VIDEO = "video"
     LOCATION = "location"
     BUTTON = "button"
+
+    UNKNOWN = "UNKNOWN"
 
 
 class ComponentABC(abc.ABC):
@@ -1505,11 +1519,6 @@ class TemplateStatus(BaseUpdate):
         PAUSED = "PAUSED"
         UNKNOWN = "UNKNOWN"
 
-        @classmethod
-        def _missing_(cls, value: str) -> TemplateStatus.TemplateEvent:
-            _logger.warning("Unknown template event: %s. Defaulting to UNKNOWN", value)
-            return cls.UNKNOWN
-
     class TemplateRejectionReason(utils.StrEnum):
         """
         The reason the template was rejected (if applicable).
@@ -1528,9 +1537,4 @@ class TemplateStatus(BaseUpdate):
         SCAM = "SCAM"
         NONE = "NONE"
 
-        @classmethod
-        def _missing_(cls, value: str):
-            _logger.warning(
-                "Unknown template rejection reason: %s. Defaulting to NONE", value
-            )
-            return cls.NONE
+        UNKNOWN = "UNKNOWN"
