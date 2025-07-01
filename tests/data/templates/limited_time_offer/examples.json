@@ -1,0 +1,54 @@
+{
+  "limited_time_offer_caribbean_pkg_2023": {
+    "name": "limited_time_offer_caribbean_pkg_2023",
+    "language": "en_US",
+    "category": "marketing",
+    "components": [
+      {
+        "type": "header",
+        "format": "image",
+        "example": {
+          "header_handle": [
+            "4::aW..."
+          ]
+        }
+      },
+      {
+        "type": "limited_time_offer",
+        "limited_time_offer": {
+          "text": "Expiring offer!",
+          "has_expiration": true
+        }
+      },
+      {
+        "type": "body",
+        "text": "Good news, {{1}}! Use code {{2}} to get 25% off all Caribbean Destination packages!",
+        "example": {
+          "body_text": [
+            [
+              "Pablo",
+              "CARIBE25"
+            ]
+          ]
+        }
+      },
+      {
+        "type": "buttons",
+        "buttons": [
+          {
+            "type": "copy_code",
+            "example": "CARIBE25"
+          },
+          {
+            "type": "url",
+            "text": "Book now!",
+            "url": "https://awesomedestinations.com/offers?code={{1}}",
+            "example": [
+              "https://awesomedestinations.com/offers?ref=n3mtql"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

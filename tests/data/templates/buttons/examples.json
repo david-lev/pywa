@@ -160,5 +160,112 @@
         ]
       }
     ]
+  },
+  "intro_catalog_offer": {
+    "name": "intro_catalog_offer",
+    "language": "en_US",
+    "category": "MARKETING",
+    "components": [
+      {
+        "type": "BODY",
+        "text": "Now shop for your favourite products right here on WhatsApp! Get Rs {{1}} off on all orders above {{2}}Rs! Valid for your first {{3}} orders placed on WhatsApp!",
+        "example": {
+          "body_text": [
+            [
+              "100",
+              "400",
+              "3"
+            ]
+          ]
+        }
+      },
+      {
+        "type": "FOOTER",
+        "text": "Best grocery deals on WhatsApp!"
+      },
+      {
+        "type": "BUTTONS",
+        "buttons": [
+          {
+            "type": "CATALOG",
+            "text": "View catalog"
+          }
+        ]
+      }
+    ]
+  },
+  "coupon_code_fall2023_25off": {
+    "name": "coupon_code_fall2023_25off",
+    "language": "en_US",
+    "category": "MARKETING",
+    "components": [
+      {
+        "type": "HEADER",
+        "format": "TEXT",
+        "text": "Our Fall Sale is on!"
+      },
+      {
+        "type": "BODY",
+        "text": "Shop now through November and use code {{1}} to get {{2}} off of all merchandise!",
+        "example": {
+          "body_text": [
+            [
+              "25OFF",
+              "25%"
+            ]
+          ]
+        }
+      },
+      {
+        "type": "BUTTONS",
+        "buttons": [
+          {
+            "type": "QUICK_REPLY",
+            "text": "Unsubscribe"
+          },
+          {
+            "type": "COPY_CODE",
+            "example": "250FF"
+          }
+        ]
+      }
+    ]
+  },
+  "abandoned_cart": {
+    "name": "abandoned_cart",
+    "language": "en_US",
+    "category": "MARKETING",
+    "components": [
+      {
+        "type": "HEADER",
+        "format": "TEXT",
+        "text": "Forget something, {{1}}?",
+        "example": {
+          "header_text": [
+            "Pablo"
+          ]
+        }
+      },
+      {
+        "type": "BODY",
+        "text": "Looks like you left these items in your cart, still interested? Use code {{1}} to get 10% off!",
+        "example": {
+          "body_text": [
+            [
+              "10OFF"
+            ]
+          ]
+        }
+      },
+      {
+        "type": "BUTTONS",
+        "buttons": [
+          {
+            "type": "MPM",
+            "text": "View items"
+          }
+        ]
+      }
+    ]
   }
 }
