@@ -78,6 +78,7 @@ from .types import (
     Sticker,
     Document,
     Audio,
+    template_v2,
 )
 from .types.base_update import BaseUpdate
 from .types.flows import (
@@ -99,6 +100,7 @@ from .types.others import (
     Order,
     System,
 )
+from .types.template_v2 import RetrievedTemplate, TemplatesResult
 from .utils import FastAPI, Flask
 from .server import Server
 
@@ -2094,6 +2096,74 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             ),
             from_phone_id=sender,
         )
+
+    def get_templates(
+        self,
+        *,
+        statuses: Iterable[template_v2.TemplateStatus] | None = None,
+        categories: Iterable[template_v2.TemplateCategory] | None = None,
+        languages: Iterable[template_v2.TemplateLanguage] | None = None,
+        name: str | None = None,
+        content: str | None = None,
+        name_or_content: str | None = None,
+        quality_scores: Iterable[template_v2.QualityScoreType] | None = None,
+        pagination: Pagination | None = None,
+        waba_id: str | int | None = None,
+    ) -> TemplatesResult:
+        """
+        Get a list of templates.
+
+        - This method requires the WhatsApp Business account ID to be provided when initializing the client.
+
+        Args:
+            statuses: The statuses of the templates to filter by (optional).
+            categories: The categories of the templates to filter by (optional).
+            languages: The languages of the templates to filter by (optional).
+            name: The name (or part of it) of the template to filter by (optional).
+            content: The content of the template to filter by (optional).
+            name_or_content: The name or content of the template to filter by (optional).
+            quality_scores: The quality scores of the templates to filter by (optional).
+            pagination: Pagination parameters (optional).
+            waba_id: The WhatsApp Business account ID (Overrides the client's business account ID, optional).
+
+        Returns:
+            A Result object containing the templates
+        """
+
+    def get_template(self, template_id: int | str) -> RetrievedTemplate: ...
+
+    def update_template(
+        self,
+        template_id: int | str,
+        *,
+        new_category: template_v2.TemplateCategory | None = None,
+        new_components: list[template_v2.BaseComponent] | None = None,
+        new_message_send_ttl_seconds: int | None = None,
+        new_parameter_format: template_v2.ParamFormat | None = None,
+    ) -> bool: ...
+
+    def delete_template(
+        self,
+        template_name: str,
+        *,
+        template_id: int | str | None = None,
+        waba_id: str | int | None = None,
+    ) -> bool: ...
+
+    def compare_templates(
+        self,
+        template_ids: Iterable[int | str],
+        start: datetime.datetime,
+        end: datetime.datetime,
+    ) -> Result[dict]: ...
+
+    def migrate_templates(
+        self,
+        source_waba_id: str | int,
+        page_number: int | None = None,
+        *,
+        destination_waba_id: str | int | None = None,
+    ) -> dict[str, list]: ...
 
     # fmt: off
     def create_flow(

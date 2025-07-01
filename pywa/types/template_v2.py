@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import datetime
 
+from . import Result
 from .flows import FlowActionType
 import abc
 import dataclasses
 import logging
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, Iterable
 
+from .others import _ItemFactory
 from .. import utils
 
 
@@ -34,6 +37,7 @@ class TemplateStatus(utils.StrEnum):
         PENDING_DELETION: The template is pending deletion and cannot be used.
         FLAGGED: The template has been flagged for review and cannot be used.
         PAUSED: The template is paused and cannot be used.
+        ARCHIVED: The template is archived and cannot be used.
         UNKNOWN: The status of the template is unknown.
     """
 
@@ -48,12 +52,9 @@ class TemplateStatus(utils.StrEnum):
     FLAGGED = "FLAGGED"
     PAUSED = "PAUSED"
     LIMIT_EXCEEDED = "LIMIT_EXCEEDED"
-    UNKNOWN = "UNKNOWN"
+    ARCHIVED = "ARCHIVED"
 
-    @classmethod
-    def _missing_(cls, value: str) -> TemplateStatus:
-        _logger.warning("Unknown template event: %s. Defaulting to UNKNOWN", value)
-        return cls.UNKNOWN
+    UNKNOWN = "UNKNOWN"
 
 
 class TemplateRejectionReason(utils.StrEnum):
@@ -81,12 +82,45 @@ class TemplateRejectionReason(utils.StrEnum):
     SCAM = "SCAM"
     NONE = "NONE"
 
+    UNKNOWN = "UNKNOWN"
+
+
+class QualityScoreType(utils.StrEnum):
+    GREEN = "GREEN"
+    YELLOW = "YELLOW"
+    RED = "RED"
+    UNKNOWN = "UNKNOWN"
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class LibraryTemplateBodyInputs:
+    add_contact_number: bool | None = None
+    add_learn_more_link: bool | None = None
+    add_security_recommendation: bool | None = None
+    add_track_package_link: bool | None = None
+    code_expiration_minutes: int | None = None
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class LibraryTemplateButtonInputs:
+    type: ComponentType | None = None
+    url: dict | None = None
+    otp_type: OtpType | None = None
+    zero_tap_terms_accepted: bool | None = None
+    supported_apps: list[OTPSupportedApp] | None = None
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class QualityScore:
+    score: QualityScoreType
+    date: datetime.datetime
+
     @classmethod
-    def _missing_(cls, value: str):
-        _logger.warning(
-            "Unknown template rejection reason: %s. Defaulting to NONE", value
+    def from_dict(cls, data: dict[str, str | int]):
+        return cls(
+            score=QualityScoreType(data["score"]),
+            date=datetime.datetime.fromtimestamp(data["date"]),
         )
-        return cls.NONE
 
 
 class TemplateCategory(utils.StrEnum):
@@ -229,10 +263,7 @@ class TemplateLanguage(utils.StrEnum):
     VIETNAMESE = "vi"
     ZULU = "zu"
 
-    @classmethod
-    def _missing_(cls, value: str) -> TemplateLanguage:
-        _logger.warning("Unknown template language: %s. Defaulting to ENGLISH", value)
-        return cls.ENGLISH
+    UNKNOWN = "UNKNOWN"
 
 
 class ParamFormat(utils.StrEnum):
@@ -241,10 +272,7 @@ class ParamFormat(utils.StrEnum):
     POSITIONAL = "POSITIONAL"
     NAMED = "NAMED"
 
-    @classmethod
-    def _missing_(cls, value: str) -> ParamFormat:
-        _logger.warning("Unknown parameter format: %s. Defaulting to POSITIONAL", value)
-        return cls.POSITIONAL
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -292,7 +320,7 @@ class HeaderText(BaseHeaderComponent):
         repr=False,
     )
     text: str
-    example: HeaderTextExample
+    example: HeaderTextExample | None = None
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -385,12 +413,12 @@ class BaseBodyComponent(BaseComponent, abc.ABC):
 @dataclasses.dataclass(kw_only=True, slots=True)
 class Body(BaseBodyComponent):
     text: str
-    example: BodyTextExample
+    example: BodyTextExample | None = None
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class BodyTextExample:
-    body_text: list[str] | None = None
+    body_text: list[list[str]] | str | None = None
     body_text_named_params: list[TextNamedParam] | None = None
 
     def __post_init__(self):
@@ -502,6 +530,7 @@ class URLButton(BaseButtonComponent):
     )
     text: str
     url: str
+    example: list[str] | None = None
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -679,6 +708,7 @@ class TemplateV2:
         category: The category of the template (See `Template Categorization <https://developers.facebook.com/docs/whatsapp/updates-to-pricing/new-template-guidelines#template-categorization>`_).
         components: Components that make up the template. Header, body, footer, buttons, cards, etc.
         parameter_format: The type of parameters inside texts (positional or named).
+        message_send_ttl_seconds: The time-to-live (TTL) for the template message in seconds. (See `Time-to-live (TTL) <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#time-to-live--ttl---customization--defaults--min-max-values--and-compatibility>`_).
     """
 
     name: str
@@ -686,6 +716,7 @@ class TemplateV2:
     category: TemplateCategory
     components: list[BaseComponent]
     parameter_format: ParamFormat | None = None
+    message_send_ttl_seconds: int | None = None
 
     def to_dict(self) -> dict:
         return dataclasses.asdict(
@@ -815,11 +846,10 @@ class RetrievedTemplate(TemplateV2):
     status: TemplateStatus
     correct_category: TemplateCategory | None
     previous_category: TemplateCategory | None
-    rejected_reason: TemplateRejectionReason
+    rejected_reason: TemplateRejectionReason | None
     library_template_name: str | None
-    message_send_ttl_seconds: int | None
-    quality_score: dict[str, str | int] | None
-    cta_url_link_tracking_opted_out: bool
+    quality_score: QualityScore | None
+    cta_url_link_tracking_opted_out: bool | None
     sub_category: TemplateCategory | None
 
     @classmethod
@@ -840,7 +870,7 @@ class RetrievedTemplate(TemplateV2):
             parameter_format=ParamFormat(data["parameter_format"]),
             rejected_reason=TemplateRejectionReason(data["rejected_reason"])
             if "rejected_reason" in data
-            else TemplateRejectionReason.NONE,
+            else None,
             library_template_name=data.get("library_template_name"),
             message_send_ttl_seconds=int(data["message_send_ttl_seconds"])
             if "message_send_ttl_seconds" in data
@@ -848,24 +878,73 @@ class RetrievedTemplate(TemplateV2):
             components=[
                 _parse_component(component) for component in data["components"]
             ],
-            quality_score=data.get("quality_score"),
-            cta_url_link_tracking_opted_out=data.get(
-                "cta_url_link_tracking_opted_out", False
-            ),
+            quality_score=QualityScore.from_dict(data=data["quality_score"])
+            if "quality_score" in data
+            else None,
+            cta_url_link_tracking_opted_out=data.get("cta_url_link_tracking_opted_out"),
             sub_category=TemplateCategory(data["sub_category"])
             if "sub_category" in data
             else None,
         )
 
-    def delete(self) -> bool: ...
+    def delete(self) -> bool:
+        """Delete this template"""
+        return self._client.delete_template(
+            template_name=self.name, template_id=self.id
+        )
 
     def update(
         self,
         *,
         new_category: TemplateCategory | None = None,
         new_components: list[BaseComponent] | None = None,
-    ): ...
+        new_message_send_ttl_seconds: int | None = None,
+        new_parameter_format: ParamFormat | None = None,
+    ) -> bool:
+        return self._client.update_template(
+            template_id=self.id,
+            new_category=new_category,
+            new_components=new_components,
+            new_message_send_ttl_seconds=new_message_send_ttl_seconds,
+            new_parameter_format=new_parameter_format,
+        )
 
-    def compare(self, template: TemplateV2): ...
+    def compare(
+        self,
+        others: Iterable[int | str],
+        start: datetime.datetime,
+        end: datetime.datetime,
+    ):
+        return self._client.compare_templates(
+            template_ids=[self.id, *others], start=start, end=end
+        )
 
     def migrate(self): ...
+
+    def send(self): ...
+
+
+class TemplatesResult(Result[RetrievedTemplate]):
+    total_count: int
+    message_template_count: int
+    message_template_limit: int
+    are_translations_complete: bool
+
+    def __init__(
+        self,
+        wa: WhatsApp,
+        response: dict,
+        item_factory: _ItemFactory,
+    ):
+        super().__init__(wa=wa, response=response, item_factory=item_factory)
+        self.total_count = response["summary"]["total_count"]
+        self.message_template_count = response["summary"]["message_template_count"]
+        self.message_template_limit = response["summary"]["message_template_limit"]
+        self.are_translations_complete = response["summary"][
+            "are_translations_complete"
+        ]
+
+    def compare(self, start: datetime.datetime, end: datetime.datetime):
+        return self._wa.compare_templates(
+            template_ids=[t.id for t in self], start=start, end=end
+        )
