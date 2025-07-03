@@ -2,10 +2,10 @@
   "carousel_template_media_cards_v1": {
     "name": "carousel_template_media_cards_v1",
     "language": "en_US",
-    "category": "marketing",
+    "category": "MARKETING",
     "components": [
       {
-        "type": "body",
+        "type": "BODY",
         "text": "Rare succulents for sale! {{1}}, add these unique plants to your collection. Each of these rare succulents are {{2}} if you checkout using code {{3}}. Shop now and add some unique and beautiful plants to your collection!",
         "example": {
           "body_text": [
@@ -18,13 +18,13 @@
         }
       },
       {
-        "type": "carousel",
+        "type": "CAROUSEL",
         "cards": [
           {
             "components": [
               {
-                "type": "header",
-                "format": "image",
+                "type": "HEADER",
+                "format": "IMAGE",
                 "example": {
                   "header_handle": [
                     "4::an..."
@@ -32,18 +32,18 @@
                 }
               },
               {
-                "type": "body",
+                "type": "BODY",
                 "text": "Add a touch of elegance to your collection with the beautiful Aloe 'Blue Elf' succulent. Its deep blue-green leaves have a hint of pink around the edges."
               },
               {
-                "type": "buttons",
+                "type": "BUTTONS",
                 "buttons": [
                   {
-                    "type": "quick_reply",
+                    "type": "QUICK_REPLY",
                     "text": "Send me more like this!"
                   },
                   {
-                    "type": "url",
+                    "type": "URL",
                     "text": "Shop",
                     "url": "https://www.luckyshrub.com/rare-succulents/{{1}}",
                     "example": [
@@ -57,8 +57,8 @@
           {
             "components": [
               {
-                "type": "header",
-                "format": "image",
+                "type": "HEADER",
+                "format": "IMAGE",
                 "example": {
                   "header_handle": [
                     "4::an..."
@@ -66,20 +66,20 @@
                 }
               },
               {
-                "type": "body",
+                "type": "BODY",
                 "text": "The Crassula Buddha's Temple is sure to be a conversation starter with its tiny temple shaped leaves, intricate details, and lacy texture."
               },
               {
-                "type": "buttons",
+                "type": "BUTTONS",
                 "buttons": [
                   {
-                    "type": "quick_reply",
+                    "type": "QUICK_REPLY",
                     "text": "Send me more like this!"
                   },
                   {
-                    "type": "url",
+                    "type": "URL",
                     "text": "Shop",
-                    "url": "https://www.luckyshrub.com/rare-succulents{{1}}",
+                    "url": "https://www.luckyshrub.com/rare-succulents/{{1}}",
                     "example": [
                       "BUDDHA"
                     ]
@@ -91,8 +91,8 @@
           {
             "components": [
               {
-                "type": "header",
-                "format": "image",
+                "type": "HEADER",
+                "format": "IMAGE",
                 "example": {
                   "header_handle": [
                     "4::an..."
@@ -100,20 +100,20 @@
                 }
               },
               {
-                "type": "body",
+                "type": "BODY",
                 "text": "The Echeveria 'Black Prince' is a stunning succulent, with near-black leaves, adorned with a hint of green around the edges, giving it its striking appearance."
               },
               {
-                "type": "buttons",
+                "type": "BUTTONS",
                 "buttons": [
                   {
-                    "type": "quick_reply",
+                    "type": "QUICK_REPLY",
                     "text": "Send me more like this!"
                   },
                   {
-                    "type": "url",
+                    "type": "URL",
                     "text": "Shop",
-                    "url": "https://www.luckyshrub.com/rare-succulents{{1}}",
+                    "url": "https://www.luckyshrub.com/rare-succulents/{{1}}",
                     "example": [
                       "BLACK_PRINCE"
                     ]
@@ -127,56 +127,60 @@
     ]
   },
   "carousel_template_product_cards_v1": {
-  "name": "carousel_template_product_cards_v1",
-  "language": "en_US",
-  "category": "marketing",
-  "components": [
-    {
-      "type": "body",
-      "text": "Rare succulents for sale! {{1}}, add these unique plants to your collection. All three of these rare succulents are available for purchase on our website, and they come with a 100% satisfaction guarantee. Whether you're a seasoned succulent enthusiast or just starting your plant collection, these rare succulents are sure to impress. Shop now and add some unique and beautiful plants to your collection!",
-      "example": {
-        "body_text": "Pablo"
-      }
-    },
-    {
-      "type": "carousel",
-      "cards": [
-        {
-          "components": [
-            {
-              "type": "header",
-              "format": "product"
-            },
-            {
-              "type": "buttons",
-              "buttons": [
-                {
-                  "type": "spm",
-                  "text": "View"
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "components": [
-            {
-              "type": "header",
-              "format": "product"
-            },
-            {
-              "type": "buttons",
-              "buttons": [
-                {
-                  "type": "spm",
-                  "text": "View"
-                }
-              ]
-            }
+    "name": "carousel_template_product_cards_v1",
+    "language": "en_US",
+    "category": "MARKETING",
+    "components": [
+      {
+        "type": "BODY",
+        "text": "Rare succulents for sale! {{1}}, add these unique plants to your collection. All three of these rare succulents are available for purchase on our website, and they come with a 100% satisfaction guarantee. Whether you're a seasoned succulent enthusiast or just starting your plant collection, these rare succulents are sure to impress. Shop now and add some unique and beautiful plants to your collection!",
+        "example": {
+          "body_text": [
+            [
+              "Pablo"
+            ]
           ]
         }
-      ]
-    }
-  ]
-}
+      },
+      {
+        "type": "CAROUSEL",
+        "cards": [
+          {
+            "components": [
+              {
+                "type": "HEADER",
+                "format": "PRODUCT"
+              },
+              {
+                "type": "BUTTONS",
+                "buttons": [
+                  {
+                    "type": "SPM",
+                    "text": "View"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "components": [
+              {
+                "type": "HEADER",
+                "format": "PRODUCT"
+              },
+              {
+                "type": "BUTTONS",
+                "buttons": [
+                  {
+                    "type": "SPM",
+                    "text": "View"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
 }

@@ -30,6 +30,7 @@ See the full changelog `here <content/changelog.html>`_.
     /content/listeners/overview
     /content/updates/overview
     /content/flows/overview
+    /content/templates/overview
     /content/filters/overview
     /content/errors/overview
     /content/types/overview

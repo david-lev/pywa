@@ -29,7 +29,7 @@
       },
       {
         "type": "FOOTER",
-        "text": "Use the buttons below to manage your marketing subscriptions"
+        "text": "Use the buttons below to manage your MARKETING subscriptions"
       },
       {
         "type": "BUTTONS",
@@ -128,14 +128,14 @@
   "abandoned_cart_offer": {
     "name": "abandoned_cart_offer",
     "language": "en_US",
-    "category": "marketing",
+    "category": "MARKETING",
     "components": [
       {
-        "type": "header",
-        "format": "product"
+        "type": "HEADER",
+        "format": "PRODUCT"
       },
       {
-        "type": "body",
+        "type": "BODY",
         "text": "Use code {{1}} to get {{2}} off our newest succulent!",
         "example": {
           "body_text": [
@@ -147,14 +147,14 @@
         }
       },
       {
-        "type": "footer",
+        "type": "FOOTER",
         "text": "Offer ends September 30, 2024"
       },
       {
-        "type": "buttons",
+        "type": "BUTTONS",
         "buttons": [
           {
-            "type": "spm",
+            "type": "SPM",
             "text": "View"
           }
         ]

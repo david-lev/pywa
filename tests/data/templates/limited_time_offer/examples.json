@@ -2,11 +2,11 @@
   "limited_time_offer_caribbean_pkg_2023": {
     "name": "limited_time_offer_caribbean_pkg_2023",
     "language": "en_US",
-    "category": "marketing",
+    "category": "MARKETING",
     "components": [
       {
-        "type": "header",
-        "format": "image",
+        "type": "HEADER",
+        "format": "IMAGE",
         "example": {
           "header_handle": [
             "4::aW..."
@@ -14,14 +14,14 @@
         }
       },
       {
-        "type": "limited_time_offer",
+        "type": "LIMITED_TIME_OFFER",
         "limited_time_offer": {
           "text": "Expiring offer!",
           "has_expiration": true
         }
       },
       {
-        "type": "body",
+        "type": "BODY",
         "text": "Good news, {{1}}! Use code {{2}} to get 25% off all Caribbean Destination packages!",
         "example": {
           "body_text": [
@@ -33,14 +33,14 @@
         }
       },
       {
-        "type": "buttons",
+        "type": "BUTTONS",
         "buttons": [
           {
-            "type": "copy_code",
+            "type": "COPY_CODE",
             "example": "CARIBE25"
           },
           {
-            "type": "url",
+            "type": "URL",
             "text": "Book now!",
             "url": "https://awesomedestinations.com/offers?code={{1}}",
             "example": [

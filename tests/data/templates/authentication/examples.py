@@ -36,7 +36,7 @@ authentication_code_copy_code_button = TemplateV2(
     message_send_ttl_seconds=60,
     components=[
         AuthenticationBody(add_security_recommendation=True),
-        AuthenticationFooter(code_expiration_minutes=10),
+        AuthenticationFooter(code_expiration_minutes=5),
         Buttons(
             buttons=[
                 CopyCodeOTPButton(
@@ -54,7 +54,7 @@ zero_tap_auth_template = TemplateV2(
     message_send_ttl_seconds=60,
     components=[
         AuthenticationBody(add_security_recommendation=True),
-        AuthenticationFooter(code_expiration_minutes=10),
+        AuthenticationFooter(code_expiration_minutes=5),
         Buttons(
             buttons=[
                 ZeroTapOTPButton(
@@ -62,10 +62,6 @@ zero_tap_auth_template = TemplateV2(
                     autofill_text="Autofill",
                     zero_tap_terms_accepted=True,
                     supported_apps=[
-                        OTPSupportedApp(
-                            package_name="com.example.luckyshrub",
-                            signature_hash="K8a/AINcGX7",
-                        ),
                         OTPSupportedApp(
                             package_name="com.example.luckyshrub",
                             signature_hash="K8a/AINcGX7",

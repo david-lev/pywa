@@ -100,7 +100,7 @@ from .types.others import (
     Order,
     System,
 )
-from .types.template_v2 import RetrievedTemplate, TemplatesResult
+from .types.template_v2 import RetrievedTemplate, TemplatesResults
 from .utils import FastAPI, Flask
 from .server import Server
 
@@ -2109,7 +2109,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         quality_scores: Iterable[template_v2.QualityScoreType] | None = None,
         pagination: Pagination | None = None,
         waba_id: str | int | None = None,
-    ) -> TemplatesResult:
+    ) -> TemplatesResults:
         """
         Get a list of templates.
 

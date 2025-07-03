@@ -2,23 +2,23 @@
   "authentication_code_autofill_button": {
     "name": "authentication_code_autofill_button",
     "language": "en_US",
-    "category": "authentication",
+    "category": "AUTHENTICATION",
     "message_send_ttl_seconds": 60,
     "components": [
       {
-        "type": "body",
+        "type": "BODY",
         "add_security_recommendation": true
       },
       {
-        "type": "footer",
+        "type": "FOOTER",
         "code_expiration_minutes": 10
       },
       {
-        "type": "buttons",
+        "type": "BUTTONS",
         "buttons": [
           {
-            "type": "otp",
-            "otp_type": "one_tap",
+            "type": "OTP",
+            "otp_type": "ONE_TAP",
             "text": "Copy Code",
             "autofill_text": "Autofill",
             "supported_apps": [
@@ -39,23 +39,23 @@
   "authentication_code_copy_code_button": {
     "name": "authentication_code_copy_code_button",
     "language": "en_US",
-    "category": "authentication",
+    "category": "AUTHENTICATION",
     "message_send_ttl_seconds": 60,
     "components": [
       {
-        "type": "body",
+        "type": "BODY",
         "add_security_recommendation": true
       },
       {
-        "type": "footer",
+        "type": "FOOTER",
         "code_expiration_minutes": 5
       },
       {
-        "type": "buttons",
+        "type": "BUTTONS",
         "buttons": [
           {
-            "type": "otp",
-            "otp_type": "copy_code",
+            "type": "OTP",
+            "otp_type": "COPY_CODE",
             "text": "Copy Code"
           }
         ]
@@ -65,23 +65,23 @@
   "zero_tap_auth_template": {
     "name": "zero_tap_auth_template",
     "language": "en_US",
-    "category": "authentication",
+    "category": "AUTHENTICATION",
     "message_send_ttl_seconds": 60,
     "components": [
       {
-        "type": "body",
+        "type": "BODY",
         "add_security_recommendation": true
       },
       {
-        "type": "footer",
+        "type": "FOOTER",
         "code_expiration_minutes": 5
       },
       {
-        "type": "buttons",
+        "type": "BUTTONS",
         "buttons": [
           {
-            "type": "otp",
-            "otp_type": "zero_tap",
+            "type": "OTP",
+            "otp_type": "ZERO_TAP",
             "text": "Copy Code",
             "autofill_text": "Autofill",
             "zero_tap_terms_accepted": true,
