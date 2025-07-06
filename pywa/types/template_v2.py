@@ -499,7 +499,7 @@ class HeaderText(BaseHeaderComponent):
 
     text: str | TemplateText
 
-    def __init__(self, text: str | TemplateText):
+    def __init__(self, *, text: str | TemplateText):
         self.type = ComponentType.HEADER
         self.format = HeaderFormatType.TEXT
         self.text = text
@@ -539,7 +539,7 @@ class HeaderMediaExample:
 
     handle: str
 
-    def __init__(self, handle: str):
+    def __init__(self, *, handle: str):
         self.handle = handle
 
     def __repr__(self):
@@ -688,7 +688,7 @@ class Body(BaseBodyComponent):
     )
     text: str | TemplateText
 
-    def __init__(self, text: str | TemplateText):
+    def __init__(self, *, text: str | TemplateText):
         self.type = ComponentType.BODY
         self.text = text
         if isinstance(self.text, TemplateText):
@@ -833,6 +833,7 @@ class FlowButton(BaseButtonComponent):
 
     def __init__(
         self,
+        *,
         text: str,
         flow_id: str | None = None,
         flow_name: str | None = None,
@@ -980,7 +981,7 @@ class URLButton(BaseButtonComponent):
     url: str
     example: str | None
 
-    def __init__(self, text: str, url: str, example: str | None = None):
+    def __init__(self, *, text: str, url: str, example: str | None = None):
         self.type = ComponentType.URL
         self.text = text
         self.url = url
