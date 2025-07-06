@@ -16,7 +16,7 @@ import os
 import pathlib
 import warnings
 from types import ModuleType
-from typing import BinaryIO, Iterable, Literal, Callable
+from typing import BinaryIO, Iterable, Literal, Callable, Any
 
 import httpx
 
@@ -271,7 +271,11 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender: str | int | None = None,
     ) -> SentMessage:
         """
-        Send a message to a WhatsApp user.
+        Text messages are messages containing text and an optional link preview.
+
+        - You can have the WhatsApp client attempt to render a preview of the first URL in the body text string, if it contains one. URLs must begin with ``http://`` or ``https://``. If multiple URLs are in the body text string, only the first URL will be rendered. If omitted, or if unable to retrieve a link preview, a clickable link will be rendered instead.
+        - See `Text messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/text-messages>`_.
+        - See `Markdown <https://faq.whatsapp.com/539178204879377>`_ for formatting text messages.
 
         Example:
 
@@ -353,8 +357,11 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender: str | int | None = None,
     ) -> SentMessage:
         """
-        Send an image to a WhatsApp user.
-            - Images must be 8-bit, RGB or RGBA.
+        Image messages are messages that display a single image and an optional caption.
+
+        - See `Image messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/image-messages>`_.
+        - See `Supported image formats <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/image-messages#supported-image-formats>`_.
+        - Images must be 8-bit, RGB or RGBA.
 
         Example:
 
@@ -451,9 +458,11 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender: str | int | None = None,
     ) -> SentMessage:
         """
-        Send a video to a WhatsApp user.
-            - Only H.264 video codec and AAC audio codec is supported.
-            - Videos with a single audio stream or no audio stream are supported.
+        Video messages display a thumbnail preview of a video image with an optional caption. When the WhatsApp user taps the preview, it loads the video and displays it to the user.
+
+        - Only H.264 video codec and AAC audio codec supported. Single audio stream or no audio stream only.
+        - See `Video messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/video-messages>`_.
+        - See `Supported video formats <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/video-messages#supported-video-formats>`_.
 
         Example:
 
@@ -550,7 +559,10 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender: str | int | None = None,
     ) -> SentMessage:
         """
-        Send a document to a WhatsApp user.
+        Document messages are messages that display a document icon, linked to a document, that a WhatsApp user can tap to download.
+
+        - See `Document messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/document-messages>`_.
+        - See `Supported document types <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/document-messages#supported-document-types>`_.
 
         Example:
 
@@ -567,8 +579,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             to: The phone ID of the WhatsApp user.
             document: The document to send (either a media ID, URL, file path, bytes, or an open file object. When
              buttons are provided, only URL is supported).
-            filename: The filename of the document (optional, The extension of the filename will specify what format the
-             document is displayed as in WhatsApp).
+            filename: Document filename, with extension. The WhatsApp client will use an appropriate file type icon based on the extension.
             caption: The caption of the document (required when sending a document with buttons,
              `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
             footer: The footer of the message (if buttons are provided, optional,
@@ -652,8 +663,9 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender: str | int | None = None,
     ) -> SentMessage:
         """
-        Send an audio message to a WhatsApp user.
+        Audio messages display an audio icon and a link to an audio file. When the WhatsApp user taps the icon, the WhatsApp client loads and plays the audio file.
 
+        - See `Audio messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/audio-messages>`_.
         - See `Supported audio formats <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/audio-messages#supported-audio-formats>`_.
 
         Example:
@@ -709,9 +721,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender: str | int | None = None,
     ) -> SentMessage:
         """
-        Send a sticker to a WhatsApp user.
-            - A static sticker needs to be 512x512 pixels and cannot exceed 100 KB.
-            - An animated sticker must be 512x512 pixels and cannot exceed 500 KB.
+        Sticker messages display animated or static sticker images in a WhatsApp message.
+
+        - A static sticker needs to be 512x512 pixels and cannot exceed 100 KB.
+        - An animated sticker must be 512x512 pixels and cannot exceed 500 KB.
+        - See `Sticker messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/sticker-messages>`_.
+        - See `Supported sticker formats <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/sticker-messages#supported-sticker-formats>`_.
 
         Example:
 
@@ -765,14 +780,15 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender: str | int | None = None,
     ) -> SentMessage:
         """
-        React to a message with an emoji.
-            - You can react to incoming messages by using the
-              :py:func:`~pywa.types.base_update.BaseUserUpdate.react` method on every update.
+        Reaction messages are emoji-reactions that you can apply to a previous WhatsApp user message that you have received.
 
-                >>> wa = WhatsApp(...)
-                >>> @wa.on_message()
-                ... def message_handler(_: WhatsApp, msg: Message):
-                ...     msg.react('👍')
+        - When sending a reaction message, only a :class:`MessageStatus` update (``type`` set to ``SENT``) will be triggered; ``DELIVERED`` and ``READ`` updates will not be triggered.
+        - You can react to incoming messages by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.react` method on every update.
+
+        >>> wa = WhatsApp(...)
+        >>> @wa.on_message()
+        ... def message_handler(_: WhatsApp, msg: Message):
+        ...     msg.react('👍')
 
         Example:
 
@@ -816,13 +832,13 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     ) -> SentMessage:
         """
         Remove reaction from a message.
-            - You can remove reactions from incoming messages by using the
-              :py:func:`~pywa.types.base_update.BaseUserUpdate.unreact` method on every update.
 
-                >>> wa = WhatsApp(...)
-                >>> @wa.on_message()
-                ... def message_handler(_: WhatsApp, msg: Message):
-                ...     msg.unreact()
+        - You can remove reactions from incoming messages by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.unreact` method on every update.
+
+        >>> wa = WhatsApp(...)
+        >>> @wa.on_message()
+        ... def message_handler(_: WhatsApp, msg: Message):
+        ...     msg.unreact()
 
         Example:
 
@@ -867,7 +883,9 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender: str | int | None = None,
     ) -> SentMessage:
         """
-        Send a location to a WhatsApp user.
+        Location messages allow you to send a location's latitude and longitude coordinates to a WhatsApp user.
+
+        - Read more about `Location messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/location-messages>`_.
 
         Example:
 
@@ -921,7 +939,10 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender: str | int | None = None,
     ) -> SentMessage:
         """
-        Send a text message with button to request the user's location.
+        Location request messages display body text and a send location button. When a WhatsApp user taps the button, a location sharing screen appears which the user can then use to share their location.
+
+        - Once the user shares their location, a :class:`Message` update is triggered, containing the user's location details.
+        - Read more about `Location request messages <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-messages/location-request-messages>`_.
 
         Example:
 
@@ -968,7 +989,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender: str | int | None = None,
     ) -> SentMessage:
         """
-        Send a contact/s to a WhatsApp user.
+        Contacts messages allow you to send rich contact information directly to WhatsApp users, such as names, phone numbers, physical addresses, and email addresses.
+        When a WhatsApp user taps the message's profile arrow, it displays the contact's information in a profile view:
+
+        - Each message can include information for up to 257 contacts, although it is recommended to send fewer for usability and negative feedback reasons.
+
+        - See `Contacts messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/contacts-messages>`_.
 
         Example:
 
@@ -1021,7 +1047,13 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender: str | int | None = None,
     ) -> SentMessage:
         """
-        Send the business catalog to a WhatsApp user.
+        Catalog messages are messages that allow you to showcase your product catalog entirely within WhatsApp.
+
+        Catalog messages display a product thumbnail header image of your choice, custom body text, a fixed text header, a fixed text sub-header, and a View catalog button.
+
+        - When a customer taps the View catalog button, your product catalog appears within WhatsApp.
+        - You must have `inventory uploaded to Meta <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/sell-products-and-services/upload-inventory>`_ in an ecommerce catalog `connected to your WhatsApp Business Account <https://www.facebook.com/business/help/158662536425974>`_.
+        - Read more about `Catalog messages <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/sell-products-and-services/share-products#catalog-messages>`_.
 
         Example:
 
@@ -1037,8 +1069,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             to: The phone ID of the WhatsApp user.
             body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
-            thumbnail_product_sku: The thumbnail of this item will be used as the message's header image (optional, if
-                not provided, the first item in the catalog will be used).
+            thumbnail_product_sku: Item SKU number. Labeled as Content ID in the Commerce Manager. The thumbnail of this item will be used as the message's header image. If omitted, the product image of the first item in your catalog will be used.
             reply_to_message_id: The message ID to reply to (optional).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
@@ -1089,7 +1120,9 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     ) -> SentMessage:
         """
         Send a product from a business catalog to a WhatsApp user.
-            - To send multiple products, use :py:func:`~pywa.client.WhatsApp.send_products`.
+
+        - To send multiple products, use :py:func:`~pywa.client.WhatsApp.send_products`.
+        - See `Product messages <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/sell-products-and-services/share-products#product-messages>`_.
 
         Example:
 
@@ -1153,7 +1186,9 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     ) -> SentMessage:
         """
         Send products from a business catalog to a WhatsApp user.
-            - To send a single product, use :py:func:`~pywa.client.WhatsApp.send_product`.
+
+        - To send a single product, use :py:func:`~pywa.client.WhatsApp.send_product`.
+        - See `Product messages <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/sell-products-and-services/share-products#product-messages>`_.
 
         Example:
 
@@ -1225,8 +1260,11 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender: str | int | None = None,
     ) -> bool:
         """
-        Mark a message as read.
-            - You can mark incoming messages as read by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.mark_as_read` method.
+        When you get a :class:`Message`, you can use the msg.id value to mark the message as read.
+
+        - You can mark incoming messages as read by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.mark_as_read` method or indicate typing by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.indicate_typing` method on every update.
+        - It's good practice to mark an incoming messages as read within 30 days of receipt. Marking a message as read will also mark earlier messages in the thread as read.
+        - Read more about `Mark messages as read <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/mark-message-as-read>`_.
 
         Example:
 
@@ -1253,10 +1291,11 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender: str | int | None = None,
     ) -> bool:
         """
-        Mark the message as read and display a typing indicator so the WhatsApp user knows you are preparing a response.
-        This is good practice if it will take you a few seconds to respond.
+        When you get a :class:`Message`, you can use the msg.id value to mark the message as read and display a typing indicator so the WhatsApp user knows you are preparing a response. This is good practice if it will take you a few seconds to respond.
 
-        The typing indicator will be dismissed once you respond, or after 25 seconds, whichever comes first. To prevent a poor user experience, only display a typing indicator if you are going to respond.
+        - You can indicate typing by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.indicate_typing` method on every update.
+        - The typing indicator will be dismissed once you respond, or after 25 seconds, whichever comes first. To prevent a poor user experience, only display a typing indicator if you are going to respond.
+        - Read more about `Typing indicators <https://developers.facebook.com/docs/whatsapp/cloud-api/typing-indicators>`_.
 
         Args:
             message_id: The message ID to mark as read and display a typing indicator.
@@ -1283,6 +1322,11 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     ) -> str:
         """
         Upload media to WhatsApp servers.
+
+        - All media files sent through this endpoint are encrypted and persist for 30 days, unless they are deleted earlier.
+        - You can get media URL with :py:func:`~pywa.client.WhatsApp.get_media_url` and download it with :py:func:`~pywa.client.WhatsApp.download_media` or delete it with :py:func:`~pywa.client.WhatsApp.delete_media`.
+        - See `Upload media <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#upload-media>`_.
+        - See `Supported media types <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#supported-media-types>`_.
 
         Example:
 
@@ -1353,9 +1397,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
     async def get_media_url(self, media_id: str) -> MediaUrlResponse:
         """
-        Get the URL of a media.
-            - The URL is valid for 5 minutes.
-            - The media can be downloaded directly from the message using the :py:func:`~pywa.types.Message.download_media` method.
+        Get a media URL for a media ID.
+
+        - Note that clicking this URL (i.e. performing a generic ``GET``) will not return the media; you must include an access token. Use the :py:func:`~pywa.client.WhatsApp.download_media` method to download the media.
+        - The media can be downloaded directly from the message using the :py:func:`~pywa.types.Message.download_media` method.
+        - The URL is valid for 5 minutes.
+        - See `Retrieve Media URL <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#retrieve-media-url>`_.
 
         Example:
 
@@ -1384,10 +1431,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         path: str | None = None,
         filename: str | None = None,
         in_memory: bool = False,
-        **kwargs,
+        **httpx_kwargs: Any,
     ) -> str | bytes:
         """
         Download a media file from WhatsApp servers.
+
+        - See `Download media <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#download-media>`_.
 
         Example:
 
@@ -1403,12 +1452,14 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             path: The path where to save the file (if not provided, the current working directory will be used).
             filename: The name of the file (if not provided, it will be guessed from the URL + extension).
             in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
-            **kwargs: Additional arguments to pass to :py:func:`httpx.get`.
+            **httpx_kwargs: Additional arguments to pass to :py:func:`httpx.get`.
 
         Returns:
             The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
         """
-        content, mimetype = await self.api.get_media_bytes(media_url=url, **kwargs)
+        content, mimetype = await self.api.get_media_bytes(
+            media_url=url, **httpx_kwargs
+        )
         if in_memory:
             return content
         if path is None:

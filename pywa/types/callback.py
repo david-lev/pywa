@@ -401,7 +401,8 @@ class CallbackSelection(BaseUserUpdate, Generic[_CallbackDataT]):
 @dataclasses.dataclass(slots=True)
 class Button:
     """
-    Represents a button in the button list.
+    Interactive reply buttons messages allow you to send up to three predefined replies for users to choose from.
+    Users can respond to a message by selecting one of the predefined buttons, which triggers an :class:`CallbackButton` update.
 
     Attributes:
         title: The title of the button (up to 20 characters).
@@ -491,7 +492,12 @@ class Section:
 @dataclasses.dataclass(slots=True)
 class SectionList:
     """
-    Represents a section list in an interactive message.
+    Interactive list messages allow you to present WhatsApp users with a list of options to choose from.
+    When a user taps the button in the message, it displays a modal that lists the options available.
+
+    - Users can then choose one option and their selection will be sent as a reply. When a user selects an option, a :class:`CallbackSelection` update is triggered.
+    - Interactive list messages support up to 10 sections, with up to 10 rows for all sections combined, and can include an optional header and footer.
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/interactive-list-messages>`_.
 
     Attributes:
         button_title: The title of the button that opens the section list (up to 20 characters).

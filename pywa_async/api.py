@@ -371,7 +371,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
     async def get_media_bytes(
         self,
         media_url: str,
-        **kwargs,
+        **httpx_kwargs,
     ) -> tuple[bytes, str | None]:
         """
         Get the bytes of a media file from WhatsApp servers.
@@ -380,13 +380,13 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
 
         Args:
             media_url: The URL of the media file (from ``get_media_url``).
-            **kwargs: Additional arguments to pass to the request.
+            **httpx_kwargs: Additional arguments to pass to the httpx get request.
 
         Returns:
             The media file bytes and the MIME type (if available).
         """
         headers = self._session.headers.copy()
-        res = await self._session.get(media_url, headers=headers, **kwargs)
+        res = await self._session.get(media_url, headers=headers, **httpx_kwargs)
         res.raise_for_status()
         return res.content, res.headers.get("Content-Type")
 
