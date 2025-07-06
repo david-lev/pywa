@@ -389,6 +389,9 @@ class SentTemplateStatus(utils.StrEnum):
         HELD_FOR_QUALITY_ASSESSMENT: The template was held for quality assessment.
     """
 
+    __check_value = str.islower
+    __modify_value = str.lower
+
     ACCEPTED = "accepted"
     HELD_FOR_QUALITY_ASSESSMENT = "held_for_quality_assessment"
 

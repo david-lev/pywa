@@ -131,6 +131,9 @@ class MessageType(utils.StrEnum):
         REQUEST_WELCOME: Only used in :class:`ChatOpened`.
     """
 
+    __check_value = str.islower
+    __modify_value = str.lower
+
     TEXT = "text"
     IMAGE = "image"
     VIDEO = "video"
@@ -158,6 +161,9 @@ class InteractiveType(utils.StrEnum):
 
     """
 
+    __check_value = str.islower
+    __modify_value = str.lower
+
     BUTTON = "button"
     CTA_URL = "cta_url"
     CATALOG_MESSAGE = "catalog_message"
@@ -169,7 +175,7 @@ class InteractiveType(utils.StrEnum):
     VOICE_CALL = "voice_call"
     CALL_PERMISSION_REQUEST = "call_permission_request"
 
-    UNKNOWN = "unknown"
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(frozen=True, slots=True)

@@ -1555,6 +1555,9 @@ class LayoutType(utils.StrEnum):
         SINGLE_COLUMN: A vertical flexbox container that stacks the components in a single column.
     """
 
+    __check_value = None
+    __modify_value = None
+
     SINGLE_COLUMN = "SingleColumnLayout"
 
     UNKNOWN = "UNKNOWN"
@@ -1597,6 +1600,9 @@ class Component(abc.ABC):
 
 class ComponentType(utils.StrEnum):
     """Internal component types"""
+
+    __check_value = None
+    __modify_value = None
 
     FORM = "Form"
     TEXT_HEADING = "TextHeading"
@@ -2202,6 +2208,9 @@ class FontWeight(utils.StrEnum):
         NORMAL: Normal text
     """
 
+    __check_value = str.islower
+    __modify_value = str.lower
+
     BOLD = "bold"
     ITALIC = "italic"
     BOLD_ITALIC = "bold_italic"
@@ -2425,6 +2434,9 @@ class InputType(utils.StrEnum):
         PHONE: A phone number (keyboard layout is numeric, with a special character for the + symbol).
     """
 
+    __check_value = str.islower
+    __modify_value = str.lower
+
     TEXT = "text"
     NUMBER = "number"
     EMAIL = "email"
@@ -2442,6 +2454,9 @@ class LabelVariant(utils.StrEnum):
     Attributes:
         LARGE: Label will have a more prominent style and will be displayed across multiple lines if needed.
     """
+
+    __check_value = str.islower
+    __modify_value = str.lower
 
     LARGE = "large"
 
@@ -2560,6 +2575,9 @@ class MediaSize(utils.StrEnum):
         REGULAR: Regular size
         LARGE: Large size
     """
+
+    __check_value = str.islower
+    __modify_value = str.lower
 
     REGULAR = "regular"
     LARGE = "large"
@@ -3114,6 +3132,9 @@ class CalendarPickerMode(utils.StrEnum):
         RANGE: Allows to select start and end dates.
     """
 
+    __check_value = str.islower
+    __modify_value = str.lower
+
     SINGLE = "single"
     RANGE = "range"
 
@@ -3133,6 +3154,9 @@ class CalendarDay(utils.StrEnum):
         SAT: Saturday
         SUN: Sunday
     """
+
+    __check_value = str.istitle
+    __modify_value = str.title
 
     MON = "Mon"
     TUE = "Tue"
@@ -3296,6 +3320,9 @@ class ScaleType(utils.StrEnum):
         CONTAIN: Image is contained within the image container with the original aspect ratio.
     """
 
+    __check_value = str.islower
+    __modify_value = str.lower
+
     COVER = "cover"
     CONTAIN = "contain"
 
@@ -3415,6 +3442,9 @@ class PhotoSource(utils.StrEnum):
         CAMERA: User can select only from gallery
         GALLERY: User can only take a photo
     """
+
+    __check_value = str.islower
+    __modify_value = str.lower
 
     CAMERA_GALLERY = "camera_gallery"
     CAMERA = "camera"
@@ -3632,6 +3662,9 @@ class FlowActionType(utils.StrEnum):
          (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#update-data-action>`_).
     """
 
+    __check_value = str.islower
+    __modify_value = str.lower
+
     COMPLETE = "complete"
     DATA_EXCHANGE = "data_exchange"
     NAVIGATE = "navigate"
@@ -3649,6 +3682,9 @@ class NextType(utils.StrEnum):
         SCREEN: Navigate to the next screen
         PLUGIN: Trigger a plugin
     """
+
+    __check_value = str.islower
+    __modify_value = str.lower
 
     SCREEN = "screen"
     PLUGIN = "plugin"

@@ -170,6 +170,9 @@ class CallEvent(utils.StrEnum):
         TERMINATE: The call is terminated.
     """
 
+    __check_value = str.islower
+    __modify_value = str.lower
+
     CONNECT = "connect"
     TERMINATE = "terminate"
 
@@ -701,6 +704,9 @@ class CallPermissionStatus(utils.StrEnum):
         NO_PERMISSION: No permission granted.
         TEMPORARY: Temporary permission granted.
     """
+
+    __check_value = str.islower
+    __modify_value = str.lower
 
     NO_PERMISSION = "no_permission"
     TEMPORARY = "temporary"

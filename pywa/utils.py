@@ -157,15 +157,22 @@ class CallbackURLScope(enum.Enum):
 
 
 class StrEnum(str, enum.Enum):
-    """Enum where the values are also (and must be) strings."""
+    """A string-based enum that allows for custom handling of missing values."""
+
+    __check_value: Callable[[str], bool] | None = str.isupper
+    """Check if the value needs to be modified or not."""
+    __modify_value: Callable[[str], str] | None = str.upper
+    """Modify the value if needed."""
 
     def __str__(self):
+        """Return the string representation of the enum member."""
         return self.value
 
     def __repr__(self):
         return f"{self.__class__.__name__}.{self.name}"
 
     def __init_subclass__(cls, *args, **kwargs):
+        """Ensure that the enum has an 'UNKNOWN' member to handle missing values."""
         if not hasattr(cls, "UNKNOWN"):
             raise TypeError(
                 f"Enum {cls.__name__} must have an 'UNKNOWN' member to handle missing values."
@@ -173,8 +180,11 @@ class StrEnum(str, enum.Enum):
         return super().__init_subclass__(*args, **kwargs)
 
     @classmethod
-    def _missing_(cls, value):
+    def _missing_(cls, value: str):
         """Handle missing values in the enum."""
+        if cls.__check_value is not None and not cls.__check_value(value):
+            return cls(cls.__modify_value(value))
+
         _logger.warning(
             "Unknown value '%s' for enum '%s'. Defaulting to `%s.UNKNOWN`.",
             value,
