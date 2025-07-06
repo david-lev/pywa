@@ -44,7 +44,13 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         Raises:
             WhatsAppError: If the request failed.
         """
-        res = await self._session.request(method=method, url=endpoint, **kwargs)
+        try:
+            res = await self._session.request(method=method, url=endpoint, **kwargs)
+        except httpx.RequestError as e:
+            e.add_note(
+                "You may want to provide your own `httpx.AsyncClient` instance. e.g. `WhatsApp(session=httpx.AsyncClient(timeout=..., proxies=...))`. See https://www.python-httpx.org/api/#asyncclient for more information."
+            )
+            raise
         if res.status_code >= 400:
             raise WhatsAppError.from_dict(error=res.json()["error"], response=res)
         return res.json()

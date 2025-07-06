@@ -58,7 +58,13 @@ class WhatsAppCloudApi:
         Raises:
             WhatsAppError: If the request failed.
         """
-        res = self._session.request(method=method, url=endpoint, **kwargs)
+        try:
+            res = self._session.request(method=method, url=endpoint, **kwargs)
+        except httpx.RequestError as e:
+            e.add_note(
+                "You may want to provide your own `httpx.Client` instance. e.g. `WhatsApp(session=httpx.Client(timeout=..., proxies=...))`. See https://www.python-httpx.org/api/#client for more information."
+            )
+            raise
         if res.status_code >= 400:
             raise WhatsAppError.from_dict(error=res.json()["error"], response=res)
         return res.json()
