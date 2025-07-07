@@ -5,7 +5,7 @@ Template Types
 
 .. autoclass:: TemplateV2()
 
-.. autoclass:: RetrievedTemplate()
+.. autoclass:: TemplateDetails()
     :members: update, delete, compare, migrate, send
 
 .. autoclass:: TemplateStatus()
@@ -65,3 +65,7 @@ Template Types
 
 .. autoclass:: AuthenticationBody()
 .. autoclass:: AuthenticationFooter()
+
+.. autoclass:: TemplatesResult()
+    :show-inheritance:
+    :members: compare

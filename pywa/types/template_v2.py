@@ -17,6 +17,7 @@ from .. import _helpers as helpers
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
+    from .sent_message import SentTemplate
 
 _logger = logging.getLogger(__name__)
 
@@ -238,6 +239,9 @@ class HeaderFormatType(utils.StrEnum):
 
 
 class ParamType(utils.StrEnum):
+    __check_value = str.islower
+    __modify_value = str.lower
+
     TEXT = "text"
     CURRENCY = "currency"
     DATE_TIME = "date_time"
@@ -258,6 +262,9 @@ class TemplateLanguage(utils.StrEnum):
     developers.facebook.com
     <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/supported-languages>`_
     """
+
+    __check_value = None
+    __modify_value = None
 
     AFRIKAANS = "af"
     ALBANIAN = "sq"
@@ -1308,14 +1315,16 @@ class AuthenticationFooter(BaseFooterComponent):
 @dataclasses.dataclass(kw_only=True, slots=True)
 class TemplateV2:
     """
-    Represents a WhatsApp template.
+    Represents a New WhatsApp Template.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates>`_.
 
     Attributes:
-        name: The name of the template (should be unique).
-        language: The language of the template.
+        name: The name of the template (should be unique, maximum 512 characters).
+        language: The language of the template (See `Supported Languages <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/supported-languages>`_).
         category: The category of the template (See `Template Categorization <https://developers.facebook.com/docs/whatsapp/updates-to-pricing/new-template-guidelines#template-categorization>`_).
-        components: Components that make up the template. Header, body, footer, buttons, cards, etc.
-        parameter_format: The type of parameters inside texts (positional or named).
+        components: Components that make up the template. Header, Body, Footer, Buttons, Cards, etc. (See `Template Components <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components>`_).
+        parameter_format: The type of parameter formatting the Header and Body components of the template will use. Defaults to ``POSITIONAL``.
         message_send_ttl_seconds: The time-to-live (TTL) for the template message in seconds. (See `Time-to-live (TTL) <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#time-to-live--ttl---customization--defaults--min-max-values--and-compatibility>`_).
     """
 
@@ -1466,7 +1475,28 @@ def _template_to_json(template: TemplateV2) -> str:
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class RetrievedTemplate(TemplateV2):
+class TemplateDetails(TemplateV2):
+    """
+    Represents the details of an existing WhatsApp Template.
+
+    Attributes:
+        id: The unique identifier of the template.
+        name: The name of the template.
+        status: The status of the template (See `Template Status <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#template-status>`_).
+        category: The category of the template (See `Template Categorization <https://developers.facebook.com/docs/whatsapp/updates-to-pricing/new-template-guidelines#template-categorization>`_).
+        language: The language of the template (See `Supported Languages <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/supported-languages>`_).
+        components: Components that make up the template. Header, Body, Footer, Buttons, Cards, etc. (See `Template Components <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components>`_).
+        parameter_format: The type of parameter formatting the Header and Body components of the template will use.
+        message_send_ttl_seconds: The time-to-live (TTL) for the template message in seconds (See `Time-to-live (TTL) <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#time-to-live--ttl---customization--defaults--min-max-values--and-compatibility>`_).
+        correct_category: The correct category of the template, if applicable.
+        previous_category: The previous category of the template, if applicable.
+        rejected_reason: The reason the message template was rejected, if applicable (See `Template Rejected Status <https://developers.facebook.com/docs/whatsapp/updates-to-pricing/new-template-guidelines#rejected-status>`_).
+        library_template_name: Template Library name that this template is cloned from, if applicable.
+        quality_score: The quality score of the template, if applicable (See `Template Quality Score <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#template-quality-score>`_).
+        cta_url_link_tracking_opted_out: Optional boolean field for opting out/in of link tracking at template level.
+        sub_category: The sub-category of the template, if applicable.
+    """
+
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
     id: int
     status: TemplateStatus
@@ -1479,8 +1509,8 @@ class RetrievedTemplate(TemplateV2):
     sub_category: TemplateCategory | None
 
     @classmethod
-    def from_dict(cls, data: dict, client: WhatsApp) -> RetrievedTemplate:
-        return RetrievedTemplate(
+    def from_dict(cls, data: dict, client: WhatsApp) -> TemplateDetails:
+        return TemplateDetails(
             _client=client,
             id=int(data["id"]),
             name=data["name"],
@@ -1520,7 +1550,12 @@ class RetrievedTemplate(TemplateV2):
         return _template_to_json(self)
 
     def delete(self) -> bool:
-        """Delete this template"""
+        """
+        Delete this template
+
+        - If you delete a template that has been sent in a template message but has yet to be delivered (e.g. because the customer's phone is turned off), the template's status will be set to ``PENDING_DELETION`` and we will attempt to deliver the message for 30 days. After this time you will receive a "Structure Unavailable" error and the customer will not receive the message.
+        - Names of an approved template that has been deleted cannot be used again for 30 days.
+        """
         return self._client.delete_template(
             template_name=self.name, template_id=self.id
         )
@@ -1533,13 +1568,40 @@ class RetrievedTemplate(TemplateV2):
         new_message_send_ttl_seconds: int | None = None,
         new_parameter_format: ParamFormat | None = None,
     ) -> bool:
-        return self._client.update_template(
+        """
+        Update this template with new values.
+
+        - The template object will be updated in memory after a successful update.
+        - Only templates with an ``APPROVED``, ``REJECTED``, or ``PAUSED`` status can be edited.
+        - Approved templates can be edited up to 10 times in a 30 day window, or 1 time in a 24 hour window. Rejected or paused templates can be edited an unlimited number of times.
+        - After editing an approved or paused template, it will automatically be approved unless it fails template review.
+
+        Args:
+            new_category: The new category for the template (See `Template Categorization <https://developers.facebook.com/docs/whatsapp/updates-to-pricing/new-template-guidelines#template-categorization>`_).
+            new_components: The new components for the template.
+            new_message_send_ttl_seconds: The new time-to-live (TTL) for the template message in seconds (See `Time-to-live (TTL) <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#time-to-live--ttl---customization--defaults--min-max-values--and-compatibility>`_).
+            new_parameter_format: The new type of parameter formatting the Header and Body components of the template will use.
+
+        Returns:
+            bool: True if the update was successful, False otherwise.
+        """
+        if self._client.update_template(
             template_id=self.id,
             new_category=new_category,
             new_components=new_components,
             new_message_send_ttl_seconds=new_message_send_ttl_seconds,
             new_parameter_format=new_parameter_format,
-        )
+        ):
+            if new_category:
+                self.category = new_category
+            if new_components:
+                self.components = new_components
+            if new_message_send_ttl_seconds is not None:
+                self.message_send_ttl_seconds = new_message_send_ttl_seconds
+            if new_parameter_format is not None:
+                self.parameter_format = new_parameter_format
+            return True
+        return False
 
     def compare(
         self,
@@ -1553,10 +1615,20 @@ class RetrievedTemplate(TemplateV2):
 
     def migrate(self): ...
 
-    def send(self): ...
+    def send(self) -> SentTemplate: ...
 
 
-class TemplatesResults(Result[RetrievedTemplate]):
+class TemplatesResult(Result[TemplateDetails]):
+    """
+    Represents the result of a templates query.
+
+    Attributes:
+        total_count: The total number of message templates that belong to a WhatsApp Business Account.
+        message_template_count: The current number of message templates that belong to the WhatsApp Business Account.
+        message_template_limit: The maximum number of message templates that can belong to a WhatsApp Business Account.
+        are_translations_complete: The status for template translations.
+    """
+
     total_count: int
     message_template_count: int
     message_template_limit: int
