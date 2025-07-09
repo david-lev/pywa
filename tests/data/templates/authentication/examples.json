@@ -1,0 +1,99 @@
+{
+  "authentication_code_autofill_button": {
+    "name": "authentication_code_autofill_button",
+    "language": "en_US",
+    "category": "AUTHENTICATION",
+    "message_send_ttl_seconds": 60,
+    "components": [
+      {
+        "type": "BODY",
+        "add_security_recommendation": true
+      },
+      {
+        "type": "FOOTER",
+        "code_expiration_minutes": 10
+      },
+      {
+        "type": "BUTTONS",
+        "buttons": [
+          {
+            "type": "OTP",
+            "otp_type": "ONE_TAP",
+            "text": "Copy Code",
+            "autofill_text": "Autofill",
+            "supported_apps": [
+              {
+                "package_name": "com.example.luckyshrub",
+                "signature_hash": "K8a/AINcGX7"
+              },
+              {
+                "package_name": "com.example.luckyshrub",
+                "signature_hash": "K8a/AINcGX7"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "authentication_code_copy_code_button": {
+    "name": "authentication_code_copy_code_button",
+    "language": "en_US",
+    "category": "AUTHENTICATION",
+    "message_send_ttl_seconds": 60,
+    "components": [
+      {
+        "type": "BODY",
+        "add_security_recommendation": true
+      },
+      {
+        "type": "FOOTER",
+        "code_expiration_minutes": 5
+      },
+      {
+        "type": "BUTTONS",
+        "buttons": [
+          {
+            "type": "OTP",
+            "otp_type": "COPY_CODE",
+            "text": "Copy Code"
+          }
+        ]
+      }
+    ]
+  },
+  "zero_tap_auth_template": {
+    "name": "zero_tap_auth_template",
+    "language": "en_US",
+    "category": "AUTHENTICATION",
+    "message_send_ttl_seconds": 60,
+    "components": [
+      {
+        "type": "BODY",
+        "add_security_recommendation": true
+      },
+      {
+        "type": "FOOTER",
+        "code_expiration_minutes": 5
+      },
+      {
+        "type": "BUTTONS",
+        "buttons": [
+          {
+            "type": "OTP",
+            "otp_type": "ZERO_TAP",
+            "text": "Copy Code",
+            "autofill_text": "Autofill",
+            "zero_tap_terms_accepted": true,
+            "supported_apps": [
+              {
+                "package_name": "com.example.luckyshrub",
+                "signature_hash": "K8a/AINcGX7"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

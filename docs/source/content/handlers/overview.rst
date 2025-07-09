@@ -340,9 +340,9 @@ __________________
    * - :meth:`~pywa.client.WhatsApp.on_message_status`
      - :class:`MessageStatusHandler`
      - :class:`~pywa.types.message_status.MessageStatus`
-   * - :meth:`~pywa.client.WhatsApp.on_template_status`
-     - :class:`TemplateStatusHandler`
-     - :class:`~pywa.types.template.TemplateStatus`
+   * - :meth:`~pywa.client.WhatsApp.on_template_status_update`
+     - :class:`TemplateStatusUpdateHandler`
+     - :class:`~pywa.types.template.TemplateStatusUpdate`
    * - :meth:`~pywa.client.WhatsApp.on_chat_opened`
      - :class:`ChatOpenedHandler`
      - :class:`~pywa.types.chat_opened.ChatOpened`

@@ -25,6 +25,9 @@ class WhatsAppError(Exception):
         details: The error details (optional).
         fbtrace_id: The Facebook trace ID (optional).
         href: The href to the documentation (optional).
+        is_transient: Whether the error is transient (optional).
+        error_user_title: The user-facing title for the error (optional).
+        error_user_msg: The user-facing message for the error (optional).
         raw_response: The :class:`httpx.Response` obj that returned the error (optional, only if the error was raised
          from an API call).
     """
@@ -41,6 +44,9 @@ class WhatsAppError(Exception):
         raw_response: httpx.Response | None,
         error_subcode: int | None = None,
         err_type: str | None = None,
+        is_transient: bool | None = None,
+        error_user_title: str | None = None,
+        error_user_msg: str | None = None,
     ) -> None:
         self.error_code = error_code
         self.error_subcode = error_subcode
@@ -50,6 +56,9 @@ class WhatsAppError(Exception):
         self.fbtrace_id = fbtrace_id
         self.href = href
         self.raw_response = raw_response
+        self.is_transient = is_transient
+        self.error_user_title = error_user_title
+        self.error_user_msg = error_user_msg
 
     @property
     def status_code(self) -> int | None:
@@ -70,6 +79,9 @@ class WhatsAppError(Exception):
             href=error.get("href"),
             error_subcode=error.get("error_subcode"),
             err_type=error.get("type"),
+            is_transient=error.get("is_transient"),
+            error_user_title=error.get("error_user_title"),
+            error_user_msg=error.get("error_user_msg"),
         )
 
     @staticmethod

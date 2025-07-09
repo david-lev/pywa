@@ -24,4 +24,5 @@ Handler Objects
 .. autoclass:: UserPreferencesHandler
 .. autoclass:: UserMarketingPreferencesHandler
 .. autoclass:: TemplateStatusHandler
+.. autoclass:: TemplateStatusUpdateHandler
 .. autoclass:: RawUpdateHandler

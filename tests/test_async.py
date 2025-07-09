@@ -11,6 +11,10 @@ from pywa.api import WhatsAppCloudApi as WhatsAppCloudApiSync
 from pywa_async.api import WhatsAppCloudApiAsync
 from pywa.server import Server as ServerSync
 from pywa.listeners import _Listeners as ListenersSync
+from pywa.types.template import TemplateStatusUpdate as TemplateStatusUpdateSync
+from pywa_async.types.template import TemplateStatusUpdate as TemplateStatusUpdateAsync
+
+
 from pywa.types import (
     Message as MessageSync,
     CallbackButton as CallbackButtonSync,
@@ -21,7 +25,6 @@ from pywa.types import (
     CallConnect as CallConnectSync,
     CallTerminate as CallTerminateSync,
     CallStatus as CallStatusSync,
-    TemplateStatus as TemplateStatusSync,
     UserPreferences as UserPreferencesSync,
     UserMarketingPreferences as UserMarketingPreferencesSync,
     FlowRequest as FlowRequestSync,
@@ -40,7 +43,6 @@ from pywa_async.types import (
     CallConnect as CallConnectAsync,
     CallTerminate as CallTerminateAsync,
     CallStatus as CallStatusAsync,
-    TemplateStatus as TemplateStatusAsync,
     UserPreferences as UserPreferencesAsync,
     UserMarketingPreferences as UserMarketingPreferencesAsync,
     FlowRequest as FlowRequestAsync,
@@ -67,8 +69,7 @@ def overrides() -> list[tuple[type, type]]:
         (MessageStatusSync, MessageStatusAsync),
         (ChatOpenedSync, ChatOpenedAsync),
         (FlowCompletionSync, FlowCompletionAsync),
-        (TemplateStatusSync, TemplateStatusAsync),
-        (TemplateStatusSync, TemplateStatusAsync),
+        (TemplateStatusUpdateSync, TemplateStatusUpdateAsync),
         (UserPreferencesSync, UserPreferencesAsync),
         (UserMarketingPreferencesSync, UserMarketingPreferencesAsync),
         (CallConnectSync, CallConnectAsync),
@@ -118,7 +119,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
             _HandlerDecorators.on_chat_opened,
             _HandlerDecorators.on_flow_completion,
             _HandlerDecorators.on_flow_request,
-            _HandlerDecorators.on_template_status,
+            _HandlerDecorators.on_template_status_update,
             _HandlerDecorators.on_call_connect,
             _HandlerDecorators.on_call_terminate,
             _HandlerDecorators.on_call_status,
@@ -137,8 +138,6 @@ def test_all_methods_are_overwritten_in_async(overrides):
             FlowRequestSync.from_dict,
             FlowResponseSync.to_dict,
             FlowCompletionSync.get_media,
-            TemplateStatusSync.TemplateEvent,
-            TemplateStatusSync.TemplateRejectionReason,
             UserSync.as_vcard,
             UserPreferencesSync._get_cls_kwargs,
         }

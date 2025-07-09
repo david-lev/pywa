@@ -161,6 +161,18 @@ Templates
      - Description
    * - :meth:`~WhatsApp.create_template`
      - Create a template
+   * - :meth:`~WhatsApp.get_templates`
+     - List all templates
+   * - :meth:`~WhatsApp.get_template`
+     - Get a template details
+   * - :meth:`~WhatsApp.update_template`
+     - Update a template
+   * - :meth:`~WhatsApp.delete_template`
+     - Delete a template
+   * - :meth:`~WhatsApp.compare_templates`
+     - Compare two templates
+   * - :meth:`~WhatsApp.migrate_templates`
+     - Migrate templates from one WABA to another
 
 Flows
 -----

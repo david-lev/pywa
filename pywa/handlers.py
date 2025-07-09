@@ -43,7 +43,7 @@ __all__ = [
     "CallbackSelectionHandler",
     "RawUpdateHandler",
     "MessageStatusHandler",
-    "TemplateStatusHandler",
+    "TemplateStatusUpdateHandler",
     "FlowCompletionHandler",
     "FlowRequestHandler",
     "ChatOpenedHandler",
@@ -79,7 +79,7 @@ from .types import (
     CallbackSelection,
     Message,
     MessageStatus,
-    TemplateStatus,
+    TemplateStatusUpdate,
     UserPreferences,
     UserMarketingPreferences,
     FlowRequest,
@@ -124,8 +124,8 @@ _MessageStatusCallback: TypeAlias = Callable[
 _ChatOpenedCallback: TypeAlias = Callable[
     ["WhatsApp", ChatOpened], Any | Awaitable[Any]
 ]
-_TemplateStatusCallback: TypeAlias = Callable[
-    ["WhatsApp", TemplateStatus], Any | Awaitable[Any]
+_TemplateStatusUpdateCallback: TypeAlias = Callable[
+    ["WhatsApp", TemplateStatusUpdate], Any | Awaitable[Any]
 ]
 _FlowCompletionCallback: TypeAlias = Callable[
     ["WhatsApp", FlowCompletion], Any | Awaitable[Any]
@@ -464,11 +464,11 @@ class ChatOpenedHandler(Handler[ChatOpened]):
         super().__init__(callback=callback, filters=filters, priority=priority)
 
 
-class TemplateStatusHandler(Handler[TemplateStatus]):
+class TemplateStatusUpdateHandler(Handler[TemplateStatusUpdate]):
     """
-    Handler for :class:`pywa.types.TemplateStatus` updates (Template message is approved, rejected etc...).
+    Handler for :class:`pywa.types.TemplateStatusUpdate` status updates (Template message is approved, rejected etc...).
 
-    - You can use the :func:`~pywa.client.WhatsApp.on_template_status` decorator to register a handler for this type.
+    - You can use the :func:`~pywa.client.WhatsApp.on_template_status_change` decorator to register a handler for this type.
 
 
     Example:
@@ -476,20 +476,20 @@ class TemplateStatusHandler(Handler[TemplateStatus]):
         >>> from pywa import WhatsApp
         >>> wa = WhatsApp(...)
         >>> print_template_status = lambda _, msg: print(msg)
-        >>> wa.add_handlers(TemplateStatusHandler(print_template_status))
+        >>> wa.add_handlers(TemplateStatusUpdateHandler(print_template_status))
 
     Args:
         callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a
-            :class:`pywa.types.TemplateStatus` as arguments)
+            :class:`pywa.types.TemplateStatusUpdate` as arguments)
         filters: The filters to apply to the handler
         priority: The priority of the handler (default: ``0``)
     """
 
-    _update = TemplateStatus
+    _update = TemplateStatusUpdate
 
     def __init__(
         self,
-        callback: _TemplateStatusCallback,
+        callback: _TemplateStatusUpdateCallback,
         filters: Filter = None,
         priority: int = 0,
     ):
@@ -1326,27 +1326,27 @@ class _HandlerDecorators:
 
         return deco
 
-    def on_template_status(
+    def on_template_status_update(
         self: WhatsApp | Filter = None,
         filters: Filter = None,
         priority: int = 0,
     ) -> (
-        Callable[[_TemplateStatusCallback], _TemplateStatusCallback]
-        | _TemplateStatusCallback
+        Callable[[_TemplateStatusUpdateCallback], _TemplateStatusUpdateCallback]
+        | _TemplateStatusUpdateCallback
     ):
         """
-        Decorator to register a function as a callback for :class:`pywa.types.TemplateStatus` updates (Template message
+        Decorator to register a function as a callback for :class:`pywa.types.TemplateStatusUpdate` updates (Template message
         is approved, rejected etc...).
 
-        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`TemplateStatusHandler`.
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`TemplateStatusUpdateHandler`.
 
         Example:
 
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
-            >>> @wa.on_template_status
-            ... def approved_handler(client: WhatsApp, status: types.TemplateStatus):
-            ...     print(f"Template {status.message_template_name} just got {status.event}!")
+            >>> @wa.on_template_status_update
+            ... def approved_handler(client: WhatsApp, update: types.TemplateStatusUpdate):
+            ...     print(f"Template {update.message_template_name} just got {update.new_status}!")
 
         Args:
             filters: Filters to apply to the incoming template status changes.
@@ -1356,17 +1356,19 @@ class _HandlerDecorators:
         if (
             clb := _registered_without_parentheses(
                 self=self,
-                handler_type=TemplateStatusHandler,
+                handler_type=TemplateStatusUpdateHandler,
                 filters=filters,
                 priority=priority,
             )
         ) is not None:
             return clb
 
-        def deco(callback: _TemplateStatusCallback) -> _TemplateStatusCallback:
+        def deco(
+            callback: _TemplateStatusUpdateCallback,
+        ) -> _TemplateStatusUpdateCallback:
             return _registered_with_parentheses(
                 self=self,
-                handler_type=TemplateStatusHandler,
+                handler_type=TemplateStatusUpdateHandler,
                 callback=callback,
                 filters=filters,
                 priority=priority,

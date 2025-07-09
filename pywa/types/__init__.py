@@ -53,7 +53,7 @@ from .template import (
     NewTemplate,
     Template,
     TemplateResponse,
-    TemplateStatus,
+    TemplateStatusUpdate,
 )
 
 from .flows import (

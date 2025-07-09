@@ -82,7 +82,7 @@ from .types import CallbackSelection as _Cls
 from .types import MessageStatus as _Ms
 from .types import MessageStatusType as _Mst
 from .types import MessageType as _Mt
-from .types import TemplateStatus as _Ts
+from .types import TemplateStatusUpdate as _Ts
 from .types import FlowCompletion as _Fc
 from .types import ChatOpened as _Co
 from .types.base_update import (

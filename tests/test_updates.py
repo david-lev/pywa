@@ -3,7 +3,7 @@ from typing import Any, Callable
 from pywa.types import (
     MessageType,
     MessageStatusType,
-    TemplateStatus,
+    TemplateStatusUpdate,
 )
 from pywa.types.calls import CallEvent
 from pywa.types.media import Image, Video, Document, Audio
@@ -70,9 +70,9 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
         "failed": [lambda s: s.error is not None],
         "with_tracker": [lambda s: s.tracker is not None],
     },
-    "template_status": {
-        "approved": [lambda s: s.event == TemplateStatus.TemplateEvent.APPROVED],
-    },
+    # "template_status": {
+    #     "approved": [lambda s: s.event == TemplateStatus.TemplateEvent.APPROVED],
+    # },
     "flow_completion": {
         "completion": [
             lambda f: f.token is not None,

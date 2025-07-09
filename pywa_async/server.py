@@ -14,7 +14,7 @@ from .handlers import (
     FlowCompletionHandler,
     RawUpdateHandler,
     Handler,
-    TemplateStatusHandler,
+    TemplateStatusUpdateHandler,
     ChatOpenedHandler,
     EncryptedFlowRequestType,
 )
@@ -22,7 +22,7 @@ from .types import (
     Message,
 )
 from .types import (
-    TemplateStatus,
+    TemplateStatusUpdate,
     MessageStatus,
     CallbackButton,
     CallbackSelection,

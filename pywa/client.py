@@ -32,6 +32,7 @@ from .handlers import (
     CallbackSelectionHandler,
     ChatOpenedHandler,
     FlowCompletionHandler,
+    TemplateStatusUpdateHandler,
     TemplateStatusHandler,
     CallConnectHandler,
     CallTerminateHandler,
@@ -56,11 +57,8 @@ from .types import (
     Industry,
     MediaUrlResponse,
     Message,
-    NewTemplate,
     ProductsSection,
     SectionList,
-    Template,
-    TemplateResponse,
     FlowButton,
     MessageType,
     FlowStatus,
@@ -79,7 +77,7 @@ from .types import (
     MessageStatus,
     CallbackButton,
     CallbackSelection,
-    TemplateStatus,
+    TemplateStatusUpdate,
     Image,
     Video,
     Sticker,
@@ -113,6 +111,21 @@ from .types.others import (
     Order,
     System,
 )
+from .types.template import (
+    TemplatesResult,
+    TemplateDetails,
+    TemplateCategory,
+    TemplateLanguage,
+    QualityScoreType,
+    TemplateBaseComponent,
+    ParamFormat,
+    TemplatesCompareResult,
+    MigrateTemplatesResult,
+    TemplateStatus,
+    LibraryTemplate,
+    Template,
+    CreatedTemplate,
+)
 from .utils import FastAPI, Flask
 from .server import Server
 
@@ -136,7 +149,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         CallbackSelectionHandler: CallbackSelection.from_update,
         ChatOpenedHandler: ChatOpened.from_update,
         FlowCompletionHandler: FlowCompletion.from_update,
-        TemplateStatusHandler: TemplateStatus.from_update,
+        TemplateStatusUpdateHandler: TemplateStatusUpdate.from_update,
         UserPreferencesHandler: UserPreferences.from_update,
         UserMarketingPreferencesHandler: UserMarketingPreferences.from_update,
         CallConnectHandler: CallConnect.from_update,
@@ -542,7 +555,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender: str | int | None = None,
     ) -> SentMessage:
         """
-        Send a message to a WhatsApp user.
+        Text messages are messages containing text and an optional link preview.
+
+        - You can have the WhatsApp client attempt to render a preview of the first URL in the body text string, if it contains one. URLs must begin with ``http://`` or ``https://``. If multiple URLs are in the body text string, only the first URL will be rendered. If omitted, or if unable to retrieve a link preview, a clickable link will be rendered instead.
+        - See `Text messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/text-messages>`_.
+        - See `Markdown <https://faq.whatsapp.com/539178204879377>`_ for formatting text messages.
 
         Example:
 
@@ -624,8 +641,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender: str | int | None = None,
     ) -> SentMessage:
         """
-        Send an image to a WhatsApp user.
-            - Images must be 8-bit, RGB or RGBA.
+        Image messages are messages that display a single image and an optional caption.
+
+        - See `Image messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/image-messages>`_.
+        - See `Supported image formats <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/image-messages#supported-image-formats>`_.
+        - Images must be 8-bit, RGB or RGBA.
 
         Example:
 
@@ -721,9 +741,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender: str | int | None = None,
     ) -> SentMessage:
         """
-        Send a video to a WhatsApp user.
-            - Only H.264 video codec and AAC audio codec is supported.
-            - Videos with a single audio stream or no audio stream are supported.
+        Video messages display a thumbnail preview of a video image with an optional caption. When the WhatsApp user taps the preview, it loads the video and displays it to the user.
+
+        - Only H.264 video codec and AAC audio codec supported. Single audio stream or no audio stream only.
+        - See `Video messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/video-messages>`_.
+        - See `Supported video formats <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/video-messages#supported-video-formats>`_.
 
         Example:
 
@@ -820,7 +842,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender: str | int | None = None,
     ) -> SentMessage:
         """
-        Send a document to a WhatsApp user.
+        Document messages are messages that display a document icon, linked to a document, that a WhatsApp user can tap to download.
+
+        - See `Document messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/document-messages>`_.
+        - See `Supported document types <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/document-messages#supported-document-types>`_.
 
         Example:
 
@@ -837,8 +862,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             to: The phone ID of the WhatsApp user.
             document: The document to send (either a media ID, URL, file path, bytes, or an open file object. When
              buttons are provided, only URL is supported).
-            filename: The filename of the document (optional, The extension of the filename will specify what format the
-             document is displayed as in WhatsApp).
+            filename: Document filename, with extension. The WhatsApp client will use an appropriate file type icon based on the extension.
             caption: The caption of the document (required when sending a document with buttons,
              `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
             footer: The footer of the message (if buttons are provided, optional,
@@ -922,8 +946,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender: str | int | None = None,
     ) -> SentMessage:
         """
-        Send an audio message to a WhatsApp user.
+        Audio messages display an audio icon and a link to an audio file. When the WhatsApp user taps the icon, the WhatsApp client loads and plays the audio file.
 
+        - See `Audio messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/audio-messages>`_.
         - See `Supported audio formats <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/audio-messages#supported-audio-formats>`_.
 
         Example:
@@ -979,9 +1004,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender: str | int | None = None,
     ) -> SentMessage:
         """
-        Send a sticker to a WhatsApp user.
-            - A static sticker needs to be 512x512 pixels and cannot exceed 100 KB.
-            - An animated sticker must be 512x512 pixels and cannot exceed 500 KB.
+        Sticker messages display animated or static sticker images in a WhatsApp message.
+
+        - A static sticker needs to be 512x512 pixels and cannot exceed 100 KB.
+        - An animated sticker must be 512x512 pixels and cannot exceed 500 KB.
+        - See `Sticker messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/sticker-messages>`_.
+        - See `Supported sticker formats <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/sticker-messages#supported-sticker-formats>`_.
 
         Example:
 
@@ -1035,14 +1063,15 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender: str | int | None = None,
     ) -> SentMessage:
         """
-        React to a message with an emoji.
-            - You can react to incoming messages by using the
-              :py:func:`~pywa.types.base_update.BaseUserUpdate.react` method on every update.
+        Reaction messages are emoji-reactions that you can apply to a previous WhatsApp user message that you have received.
 
-                >>> wa = WhatsApp(...)
-                >>> @wa.on_message()
-                ... def message_handler(_: WhatsApp, msg: Message):
-                ...     msg.react('👍')
+        - When sending a reaction message, only a :class:`MessageStatus` update (``type`` set to ``SENT``) will be triggered; ``DELIVERED`` and ``READ`` updates will not be triggered.
+        - You can react to incoming messages by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.react` method on every update.
+
+        >>> wa = WhatsApp(...)
+        >>> @wa.on_message()
+        ... def message_handler(_: WhatsApp, msg: Message):
+        ...     msg.react('👍')
 
         Example:
 
@@ -1086,13 +1115,13 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     ) -> SentMessage:
         """
         Remove reaction from a message.
-            - You can remove reactions from incoming messages by using the
-              :py:func:`~pywa.types.base_update.BaseUserUpdate.unreact` method on every update.
 
-                >>> wa = WhatsApp(...)
-                >>> @wa.on_message()
-                ... def message_handler(_: WhatsApp, msg: Message):
-                ...     msg.unreact()
+        - You can remove reactions from incoming messages by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.unreact` method on every update.
+
+        >>> wa = WhatsApp(...)
+        >>> @wa.on_message()
+        ... def message_handler(_: WhatsApp, msg: Message):
+        ...     msg.unreact()
 
         Example:
 
@@ -1137,7 +1166,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender: str | int | None = None,
     ) -> SentMessage:
         """
-        Send a location to a WhatsApp user.
+        Location messages allow you to send a location's latitude and longitude coordinates to a WhatsApp user.
+
+        - Read more about `Location messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/location-messages>`_.
 
         Example:
 
@@ -1191,7 +1222,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender: str | int | None = None,
     ) -> SentMessage:
         """
-        Send a text message with button to request the user's location.
+        Location request messages display body text and a send location button. When a WhatsApp user taps the button, a location sharing screen appears which the user can then use to share their location.
+
+        - Once the user shares their location, a :class:`Message` update is triggered, containing the user's location details.
+        - Read more about `Location request messages <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-messages/location-request-messages>`_.
 
         Example:
 
@@ -1238,7 +1272,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender: str | int | None = None,
     ) -> SentMessage:
         """
-        Send a contact/s to a WhatsApp user.
+        Contacts messages allow you to send rich contact information directly to WhatsApp users, such as names, phone numbers, physical addresses, and email addresses.
+        When a WhatsApp user taps the message's profile arrow, it displays the contact's information in a profile view:
+
+        - Each message can include information for up to 257 contacts, although it is recommended to send fewer for usability and negative feedback reasons.
+
+        - See `Contacts messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/contacts-messages>`_.
 
         Example:
 
@@ -1291,7 +1330,13 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender: str | int | None = None,
     ) -> SentMessage:
         """
-        Send the business catalog to a WhatsApp user.
+        Catalog messages are messages that allow you to showcase your product catalog entirely within WhatsApp.
+
+        Catalog messages display a product thumbnail header image of your choice, custom body text, a fixed text header, a fixed text sub-header, and a View catalog button.
+
+        - When a customer taps the View catalog button, your product catalog appears within WhatsApp.
+        - You must have `inventory uploaded to Meta <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/sell-products-and-services/upload-inventory>`_ in an ecommerce catalog `connected to your WhatsApp Business Account <https://www.facebook.com/business/help/158662536425974>`_.
+        - Read more about `Catalog messages <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/sell-products-and-services/share-products#catalog-messages>`_.
 
         Example:
 
@@ -1307,8 +1352,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             to: The phone ID of the WhatsApp user.
             body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
-            thumbnail_product_sku: The thumbnail of this item will be used as the message's header image (optional, if
-                not provided, the first item in the catalog will be used).
+            thumbnail_product_sku: Item SKU number. Labeled as Content ID in the Commerce Manager. The thumbnail of this item will be used as the message's header image. If omitted, the product image of the first item in your catalog will be used.
             reply_to_message_id: The message ID to reply to (optional).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
@@ -1359,7 +1403,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     ) -> SentMessage:
         """
         Send a product from a business catalog to a WhatsApp user.
-            - To send multiple products, use :py:func:`~pywa.client.WhatsApp.send_products`.
+
+        - To send multiple products, use :py:func:`~pywa.client.WhatsApp.send_products`.
+        - See `Product messages <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/sell-products-and-services/share-products#product-messages>`_.
 
         Example:
 
@@ -1423,7 +1469,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     ) -> SentMessage:
         """
         Send products from a business catalog to a WhatsApp user.
-            - To send a single product, use :py:func:`~pywa.client.WhatsApp.send_product`.
+
+        - To send a single product, use :py:func:`~pywa.client.WhatsApp.send_product`.
+        - See `Product messages <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/sell-products-and-services/share-products#product-messages>`_.
 
         Example:
 
@@ -1495,8 +1543,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender: str | int | None = None,
     ) -> bool:
         """
-        Mark a message as read.
-            - You can mark incoming messages as read by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.mark_as_read` method.
+        When you get a :class:`Message`, you can use the msg.id value to mark the message as read.
+
+        - You can mark incoming messages as read by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.mark_as_read` method or indicate typing by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.indicate_typing` method on every update.
+        - It's good practice to mark an incoming messages as read within 30 days of receipt. Marking a message as read will also mark earlier messages in the thread as read.
+        - Read more about `Mark messages as read <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/mark-message-as-read>`_.
 
         Example:
 
@@ -1521,10 +1572,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender: str | int | None = None,
     ) -> bool:
         """
-        Mark the message as read and display a typing indicator so the WhatsApp user knows you are preparing a response.
-        This is good practice if it will take you a few seconds to respond.
+        When you get a :class:`Message`, you can use the msg.id value to mark the message as read and display a typing indicator so the WhatsApp user knows you are preparing a response. This is good practice if it will take you a few seconds to respond.
 
-        The typing indicator will be dismissed once you respond, or after 25 seconds, whichever comes first. To prevent a poor user experience, only display a typing indicator if you are going to respond.
+        - You can indicate typing by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.indicate_typing` method on every update.
+        - The typing indicator will be dismissed once you respond, or after 25 seconds, whichever comes first. To prevent a poor user experience, only display a typing indicator if you are going to respond.
+        - Read more about `Typing indicators <https://developers.facebook.com/docs/whatsapp/cloud-api/typing-indicators>`_.
 
         Args:
             message_id: The message ID to mark as read and display a typing indicator.
@@ -1549,6 +1601,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     ) -> str:
         """
         Upload media to WhatsApp servers.
+
+        - All media files sent through this endpoint are encrypted and persist for 30 days, unless they are deleted earlier.
+        - You can get media URL with :py:func:`~pywa.client.WhatsApp.get_media_url` and download it with :py:func:`~pywa.client.WhatsApp.download_media` or delete it with :py:func:`~pywa.client.WhatsApp.delete_media`.
+        - See `Upload media <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#upload-media>`_.
+        - See `Supported media types <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#supported-media-types>`_.
 
         Example:
 
@@ -1615,9 +1672,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
     def get_media_url(self, media_id: str) -> MediaUrlResponse:
         """
-        Get the URL of a media.
-            - The URL is valid for 5 minutes.
-            - The media can be downloaded directly from the message using the :py:func:`~pywa.types.Message.download_media` method.
+        Get a media URL for a media ID.
+
+        - Note that clicking this URL (i.e. performing a generic ``GET``) will not return the media; you must include an access token. Use the :py:func:`~pywa.client.WhatsApp.download_media` method to download the media.
+        - The media can be downloaded directly from the message using the :py:func:`~pywa.types.Message.download_media` method.
+        - The URL is valid for 5 minutes.
+        - See `Retrieve Media URL <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#retrieve-media-url>`_.
 
         Example:
 
@@ -1646,10 +1706,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         path: str | None = None,
         filename: str | None = None,
         in_memory: bool = False,
-        **kwargs,
+        **httpx_kwargs: Any,
     ) -> str | bytes:
         """
         Download a media file from WhatsApp servers.
+
+        - See `Download media <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#download-media>`_.
 
         Example:
 
@@ -1665,12 +1727,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             path: The path where to save the file (if not provided, the current working directory will be used).
             filename: The name of the file (if not provided, it will be guessed from the URL + extension).
             in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
-            **kwargs: Additional arguments to pass to :py:func:`httpx.get`.
+            **httpx_kwargs: Additional arguments to pass to :py:func:`httpx.get`.
 
         Returns:
             The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
         """
-        content, mimetype = self.api.get_media_bytes(media_url=url, **kwargs)
+        content, mimetype = self.api.get_media_bytes(media_url=url, **httpx_kwargs)
         if in_memory:
             return content
         if path is None:
@@ -2056,85 +2118,55 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
     def create_template(
         self,
-        template: NewTemplate,
-        placeholder: tuple[str, str] | None = None,
+        template: Template | LibraryTemplate,
+        *,
         waba_id: str | int | None = None,
-    ) -> TemplateResponse:
+    ) -> CreatedTemplate:
         """
-        `'Create Templates' on developers.facebook.com
-        <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates>`_.
+        Create a template for the WhatsApp Business account.
 
-        - This method requires the WhatsApp Business account ID to be provided when initializing the client.
-        - To send a template, use :py:func:`~pywa.client.WhatsApp.send_template`.
+        - WhatsApp Business Accounts can only create 100 message templates per hour.
+        - Read more about `Create and Manage Templates <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#create-and-manage-templates>`_.
 
-        ATTENTION: In case of an errors, WhatsApp does not return a proper error message, instead, it returns a message
-        of `invalid parameter` with error code of 100. You need to pay attention to the following:
+        Example::
 
-        - The template name must be unique.
-        - The limitiations of the characters in every field (all documented).
-        - The order of the buttons.
-
-
-        Templates can be created and managed in the
-        `WhatsApp Message Templates <https://business.facebook.com/wa/manage/message-templates/>`_ dashboard.
-
-        Example:
-
-            >>> from pywa.types import NewTemplate as NewTemp
-            >>> wa = WhatsApp(...)
-            >>> wa.create_template(
-            ...     template=NewTemp(
-            ...         name='buy_new_iphone_x',
-            ...         category=NewTemp.Category.MARKETING,
-            ...         language=NewTemp.Language.ENGLISH_US,
-            ...         header=NewTemp.Text('The New iPhone {15} is here!'),
-            ...         body=NewTemp.Body('Buy now and use the code {WA_IPHONE_15} to get {15%} off!'),
-            ...         footer=NewTemp.Footer('Powered by PyWa'),
-            ...         buttons=[
-            ...             NewTemp.UrlButton(title='Buy Now', url='https://example.com/shop/{iphone15}'),
-            ...             NewTemp.PhoneNumberButton(title='Call Us', phone_number='1234567890'),
-            ...             NewTemp.QuickReplyButton('Unsubscribe from marketing messages'),
-            ...             NewTemp.QuickReplyButton('Unsubscribe from all messages'),
-            ...         ],
-            ...     ),
-            ... )
-
-        Example for Authentication Template:
-
-            >>> from pywa.types import NewTemplate as NewTemp
-            >>> wa = WhatsApp(...)
-            >>> wa.create_template(
-            ...     template=NewTemp(
-            ...         name='auth_with_otp',
-            ...         category=NewTemp.Category.AUTHENTICATION,
-            ...         language=NewTemp.Language.ENGLISH_US,
-            ...         body=NewTemp.AuthBody(
-            ...             code_expiration_minutes=5,
-            ...             add_security_recommendation=True,
-            ...         ),
-            ...         buttons=NewTemp.OTPButton(
-            ...             otp_type=NewTemp.OTPButton.OtpType.ZERO_TAP,
-            ...             title='Copy Code',
-            ...             autofill_text='Autofill',
-            ...             package_name='com.example.app',
-            ...             signature_hash='1234567890ABCDEF1234567890ABCDEF12345678'
-            ...         )
-            ...     ),
-            ... )
+            seasonal_promotion = Template(
+                name="seasonal_promotion",
+                category=TemplateCategory.MARKETING,
+                language=TemplateLanguage.ENGLISH_US,
+                parameter_format=ParamFormat.NAMED,
+                components=[
+                    HeaderText(
+                        text=TemplateText(text="Our {{sale_name}} is on!", sale_name="Summer Sale")
+                    ),
+                    Body(
+                        text=TemplateText(
+                            text="Shop now through {{end_date}} and use code {{discount_code}} to get {{discount_amount}} off of all merchandise.",
+                            end_date="the end of August", discount_code="25OFF", discount_amount="25%")
+                    ),
+                    Footer(text="Use the buttons below to manage your marketing subscriptions"),
+                    Buttons(
+                        buttons=[
+                            QuickReplyButton(text="Unsubscribe from Promos"),
+                            QuickReplyButton(text="Unsubscribe from All"),
+                        ]
+                    ),
+                ],
+            )
 
         Args:
             template: The template to create.
-            placeholder: The placeholders start & end (optional, default: ``('{', '}')``)).
-            waba_id: The WhatsApp Business account ID (Overrides the client's business account ID).
+            waba_id: The WhatsApp Business account ID (Overrides the client's business account ID, optional).
 
         Returns:
-            The template created response. containing the template ID, status and category.
+            The created template.
         """
-        return TemplateResponse(
-            **self.api.create_template(
+        return CreatedTemplate.from_dict(
+            client=self,
+            data=self.api.create_template(
                 waba_id=helpers.resolve_waba_id_param(self, waba_id),
-                template=template.to_dict(placeholder=placeholder),
-            )
+                template=json.loads(template.to_json()),
+            ),
         )
 
     def send_template(
@@ -2237,6 +2269,242 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             ),
             from_phone_id=sender,
+        )
+
+    def get_templates(
+        self,
+        *,
+        statuses: Iterable[TemplateStatus] | None = None,
+        categories: Iterable[TemplateCategory] | None = None,
+        languages: Iterable[TemplateLanguage] | None = None,
+        name: str | None = None,
+        content: str | None = None,
+        name_or_content: str | None = None,
+        quality_scores: Iterable[QualityScoreType] | None = None,
+        pagination: Pagination | None = None,
+        waba_id: str | int | None = None,
+    ) -> TemplatesResult:
+        """
+        Get templates of the WhatsApp Business account.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> templates = wa.get_templates(
+            ...     statuses=[TemplateStatus.APPROVED],
+            ...     categories=[TemplateCategory.MARKETING],
+            ...     languages=[TemplateLanguage.ENGLISH_US],
+            ...     pagination=Pagination(limit=10)
+            ... )
+
+        Args:
+            statuses: The statuses of the templates to filter by (optional).
+            categories: The categories of the templates to filter by (optional).
+            languages: The languages of the templates to filter by (optional).
+            name: The name (or part of it) of the template to filter by (optional).
+            content: The content of the template to filter by (optional).
+            name_or_content: The name or content of the template to filter by (optional).
+            quality_scores: The quality scores of the templates to filter by (optional).
+            pagination: Pagination parameters (optional).
+            waba_id: The WhatsApp Business account ID (Overrides the client's business account ID, optional).
+
+        Returns:
+            A Result object containing the templates
+        """
+        return TemplatesResult(
+            wa=self,
+            response=self.api.get_templates(
+                waba_id=helpers.resolve_waba_id_param(self, waba_id),
+                fields=tuple(
+                    field.name for field in dataclasses.fields(TemplateDetails)
+                ),
+                filters={
+                    k: v
+                    for k, v in {
+                        "status": ",".join(statuses) if statuses else None,
+                        "category": ",".join(categories) if categories else None,
+                        "language": ",".join(languages) if languages else None,
+                        "name": name,
+                        "content": content,
+                        "name_or_content": name_or_content,
+                        "quality_score": ",".join(quality_scores)
+                        if quality_scores
+                        else None,
+                    }.items()
+                    if v is not None
+                },
+                summary_fields=(
+                    "total_count",
+                    "message_template_count",
+                    "message_template_limit",
+                    "are_translations_complete",
+                ),
+                pagination=pagination.to_dict() if pagination else None,
+            ),
+        )
+
+    def get_template(self, template_id: int | str) -> TemplateDetails:
+        """
+        Get the details of a specific template.
+
+        Args:
+            template_id: The ID of the template to retrieve.
+
+        Returns:
+            A TemplateDetails object containing the template details.
+        """
+        return TemplateDetails.from_dict(
+            data=self.api.get_template(
+                template_id=str(template_id),
+                fields=tuple(
+                    field.name for field in dataclasses.fields(TemplateDetails)
+                ),
+            ),
+            client=self,
+        )
+
+    def update_template(
+        self,
+        template_id: int | str,
+        *,
+        new_category: TemplateCategory | None = None,
+        new_components: list[TemplateBaseComponent] | None = None,
+        new_message_send_ttl_seconds: int | None = None,
+        new_parameter_format: ParamFormat | None = None,
+    ) -> bool:
+        """
+        Update an existing template.
+
+        - Only templates with an ``APPROVED``, ``REJECTED``, or ``PAUSED`` status can be edited.
+        - You cannot edit the category of an approved template.
+        - Approved templates can be edited up to 10 times in a 30 day window, or 1 time in a 24 hour window. Rejected or paused templates can be edited an unlimited number of times.
+        - After editing an approved or paused template, it will automatically be approved unless it fails template review.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#edit-a-message-template>`_.
+
+        Args:
+            template_id: The ID of the template to update.
+            new_category: The new category of the template (optional, cannot be changed for approved templates).
+            new_components: The new components of the template (optional, if not provided, the existing components will be used).
+            new_message_send_ttl_seconds: The new message send TTL in seconds (optional, if not provided, the existing TTL will be used).
+            new_parameter_format: The new parameter format (optional, if not provided, the existing format will be used).
+
+        Returns:
+            Whether the template was updated successfully.
+        """
+        return self.api.update_template(
+            template_id=template_id,
+            template={
+                k: v
+                for k, v in {
+                    "category": new_category,
+                    "components": new_components,
+                    "message_send_ttl_seconds": new_message_send_ttl_seconds,
+                    "parameter_format": new_parameter_format,
+                }.items()
+                if v is not None
+            },
+        )["success"]
+
+    def delete_template(
+        self,
+        template_name: str,
+        *,
+        template_id: int | str | None = None,
+        waba_id: str | int | None = None,
+    ) -> bool:
+        """
+        Delete a template.
+
+        - If you delete a template that has been sent in a template message but has yet to be delivered (e.g. because the customer's phone is turned off), the template's status will be set to PENDING_DELETION and we will attempt to deliver the message for 30 days. After this time you will receive a "Structure Unavailable" error and the customer will not receive the message.
+        - Names of an approved template that has been deleted cannot be used again for 30 days.
+        - Deleting a template by name deletes all templates that match that name (meaning templates with the same name but different languages will also be deleted).
+        - To delete a template by ID, include the template's ID along with its name in your request; only the template with the matching template ID will be deleted.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#deleting-templates>`_.
+
+        Args:
+            template_name: The name of the template to delete.
+            template_id: The ID of the template to delete (optional, if provided, only the template with the matching ID will be deleted).
+            waba_id: The WhatsApp Business account ID (Overrides the client's business account ID, optional).
+
+        Returns:
+            Whether the template was deleted successfully.
+        """
+        return self.api.delete_template(
+            waba_id=helpers.resolve_waba_id_param(self, waba_id),
+            template_name=template_name,
+            template_id=template_id,
+        )["success"]
+
+    def compare_templates(
+        self,
+        template_id: int | str,
+        template_ids: Iterable[int | str],
+        start: datetime.datetime | int,
+        end: datetime.datetime | int,
+    ) -> TemplatesCompareResult:
+        """
+        You can compare two templates by examining how often each one is sent, which one has the lower ratio of blocks to sends, and each template's top reason for being blocked.
+
+        - Only two templates can be compared at a time.
+        - Both templates must be in the same WhatsApp Business Account.
+        - Templates must have been sent at least 1,000 times in the queries specified timeframe.
+        - Timeframes are limited to ``7``, ``30``, ``60`` and ``90`` day lookbacks from the time of the request.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/template-comparison>`_.
+
+        Args:
+            template_id: The ID of the template to compare against others.
+            template_ids: The IDs of the templates to compare with the given template.
+            start: The start date of the comparison period.
+            end: The end date of the comparison period.
+
+        Returns:
+            A TemplatesCompareResult object containing the comparison results.
+        """
+        return TemplatesCompareResult.from_dict(
+            data=self.api.compare_templates(
+                template_id=template_id,
+                template_ids=tuple(map(str, template_ids)),
+                start=str(
+                    int(start.timestamp())
+                    if isinstance(start, datetime.datetime)
+                    else start
+                ),
+                end=str(
+                    int(end.timestamp()) if isinstance(end, datetime.datetime) else end
+                ),
+            )
+        )
+
+    def migrate_templates(
+        self,
+        source_waba_id: str | int,
+        page_number: int | None = None,
+        *,
+        destination_waba_id: str | int | None = None,
+    ) -> MigrateTemplatesResult:
+        """
+        Migrate templates from one WhatsApp Business account to another.
+
+        - Templates can only be migrated between WABAs owned by the same Meta business.
+        - Only templates with a status of APPROVED and a quality_score of either GREEN or UNKNOWN are eligible for migration.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/template-migration>`_.
+
+        Args:
+            source_waba_id: The WhatsApp Business account ID to migrate templates from.
+            page_number: Indicates amount of templates to migrate as sets of 500. Zero-indexed. For example, to migrate 1000 templates, send one request with this value set to 0 and another request with this value set to 1, in parallel.
+            destination_waba_id: The WhatsApp Business account ID to migrate templates to (optional, overrides the client's business account ID).
+
+        Returns:
+            A MigrateTemplatesResult object containing the migration results.
+        """
+        return MigrateTemplatesResult.from_dict(
+            data=self.api.migrate_templates(
+                source_waba_id=str(source_waba_id),
+                dest_waba_id=helpers.resolve_waba_id_param(
+                    self, destination_waba_id, "destination_waba_id"
+                ),
+                page_number=page_number,
+            )
         )
 
     # fmt: off
@@ -2625,7 +2893,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         return MigrateFlowsResponse.from_dict(
             self.api.migrate_flows(
-                dest_waba_id=helpers.resolve_waba_id_param(self, destination_waba_id),
+                dest_waba_id=helpers.resolve_waba_id_param(self, destination_waba_id, "destination_waba_id"),
                 source_waba_id=str(source_waba_id),
                 source_flow_names=tuple(source_flow_names),
             )
