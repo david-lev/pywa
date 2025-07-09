@@ -18,5 +18,5 @@ Handler Objects
 .. autoclass:: FlowRequestHandler
 .. autoclass:: MessageStatusHandler
 .. autoclass:: ChatOpenedHandler
-.. autoclass:: TemplateStatusHandler
+.. autoclass:: TemplateStatusUpdateHandler
 .. autoclass:: RawUpdateHandler

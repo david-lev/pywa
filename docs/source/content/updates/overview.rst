@@ -66,7 +66,7 @@ Account related updates:
 
    * - Type
      - Description
-   * - :py:class:`~pywa.types.template.TemplateStatus`
+   * - :py:class:`~pywa.types.template.TemplateStatusUpdate`
      - A template status update (e.g. approved, rejected, etc.)
 
 
@@ -151,5 +151,5 @@ All user-related-updates have common methods and properties:
     flow_completion
     message_status
     chat_opened
-    template_status
+    template_status_update
     common_methods

@@ -770,7 +770,7 @@ class WhatsAppCloudApi:
     def create_template(
         self,
         waba_id: str,
-        template: dict[str, str | list[str]],
+        template: dict,
     ) -> dict[str, str]:
         """
         Create a message template.
@@ -793,6 +793,180 @@ class WhatsAppCloudApi:
             method="POST",
             endpoint=f"/{waba_id}/message_templates",
             json=template,
+        )
+
+    def get_template(
+        self,
+        template_id: str,
+        fields: tuple[str, ...] | None = None,
+    ) -> dict[str, Any]:
+        """
+        Get a message template.
+
+        Example::
+
+            {
+              "name": "seasonal_promotion_text_only",
+              "status": "APPROVED",
+              "id": "564750795574598"
+            }
+
+        Args:
+            template_id: The ID of the template to get.
+            fields: The fields to get. If None, all fields will be returned.
+
+        Returns:
+            The template data.
+        """
+        return self._make_request(
+            method="GET",
+            endpoint=f"/{template_id}",
+            params={"fields": ",".join(fields)} if fields else None,
+        )
+
+    def get_templates(
+        self,
+        waba_id: str,
+        fields: tuple[str, ...] | None = None,
+        filters: dict[str, Any] | None = None,
+        summary_fields: tuple[str, ...] | None = None,
+        pagination: dict[str, str] | None = None,
+    ) -> dict[str, list[dict[str, Any]]]:
+        """
+        Get a list of message templates.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#retrieve-templates>`_.
+
+        Args:
+            waba_id: The ID of the WhatsApp Business Account.
+            fields: The fields to get. If None, all fields will be returned.
+            filters: Filters to apply to the templates. e.g. {"status": "APPROVED"}.
+            summary_fields: Aggregated information a such as counts.
+            pagination: Pagination parameters to apply to the templates.
+
+        Returns:
+            A dict with the templates data.
+        """
+        params = {
+            "fields": ",".join(fields) if fields else None,
+            **(filters if filters else {}),
+            **(pagination if pagination else {}),
+            **({"summary": ",".join(summary_fields)} if summary_fields else {}),
+        }
+        return self._make_request(
+            method="GET",
+            endpoint=f"/{waba_id}/message_templates",
+            params={k: v for k, v in params.items() if v is not None},
+        )
+
+    def update_template(
+        self,
+        template_id: str,
+        template: dict,
+    ) -> dict[str, bool]:
+        """
+        Update a message template.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#edit-a-message-template>`_.
+
+        Args:
+            template_id: The ID of the template to update.
+            template: The template data to update.
+
+        Returns:
+            A dict with the success status of the operation.
+        """
+        return self._make_request(
+            method="POST",
+            endpoint=f"/{template_id}",
+            json=template,
+        )
+
+    def delete_template(
+        self,
+        waba_id: str,
+        template_name: str,
+        template_id: str | None = None,
+    ) -> dict[str, bool]:
+        """
+        Delete a message template.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#deleting-templates>`_.
+
+        Args:
+            waba_id: The ID of the WhatsApp Business Account.
+            template_name: The name of the template to delete.
+            template_id: The ID of the template to delete. If not provided, the template will be deleted by name.
+
+        Returns:
+            A dict with the success status of the operation.
+        """
+        return self._make_request(
+            method="DELETE",
+            endpoint=f"/{waba_id}/message_templates",
+            params={
+                "name": template_name,
+                **({"hsm_id": template_id} if template_id else {}),
+            },
+        )
+
+    def compare_templates(
+        self,
+        template_id: str,
+        template_ids: tuple[str, ...],
+        start: str,
+        end: str,
+    ) -> dict:
+        """
+        Compare a template with other templates.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/template-comparison>`_.
+
+        Args:
+            template_id: The ID of the template to compare.
+            template_ids: The IDs of the templates to compare with.
+            start: TUNIX timestamp indicating start of timeframe.
+            end: UNIX timestamp indicating end of timeframe.
+
+        Returns:
+            A dict with the comparison results.
+        """
+        return self._make_request(
+            method="GET",
+            endpoint=f"/{template_id}/compare",
+            params={
+                "template_ids": ",".join(template_ids),
+                "start": start,
+                "end": end,
+            },
+        )
+
+    def migrate_templates(
+        self,
+        dest_waba_id: str,
+        source_waba_id: str,
+        page_number: int | None = None,
+    ) -> dict:
+        """
+        Migrate templates from one WABA to another.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/template-migration>`_.
+
+        Args:
+            dest_waba_id: The ID of the destination WhatsApp Business Account.
+            source_waba_id: The ID of the source WhatsApp Business Account.
+            page_number: Indicates amount of templates to migrate as sets of 500. Zero-indexed. For example, to migrate 1000 templates, send one request with this value set to 0 and another request with this value set to 1, in parallel.
+
+        Returns:
+            A dict with the migration results.
+        """
+        return self._make_request(
+            method="POST",
+            endpoint=f"/{dest_waba_id}/migrate_message_templates",
+            params={
+                "source_waba_id": source_waba_id,
+                **({"page_number": page_number} if page_number is not None else {}),
+            },
         )
 
     def create_flow(

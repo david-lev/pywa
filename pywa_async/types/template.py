@@ -1,12 +1,15 @@
+from __future__ import annotations
+
 from pywa.types.template import *  # noqa MUST BE IMPORTED FIRST
-from pywa.types.template_v2 import *  # noqa MUST BE IMPORTED FIRST
-from pywa.types.template_v2 import (
+from pywa.types.template import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.template import (
     TemplateDetails as _TemplateDetails,
-    TemplatesResult as _TemplatesResult,
+    CreatedTemplate as _CreatedTemplate,
 )  # noqa MUST BE IMPORTED FIRST
+from .others import Result
 
 if TYPE_CHECKING:
-    from ..client import WhatsApp
+    from ..client import WhatsApp as WhatsAppAsync
     from .sent_message import SentTemplate
 
 
@@ -33,7 +36,7 @@ class TemplateDetails(_TemplateDetails):
         sub_category: The sub-category of the template, if applicable.
     """
 
-    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
+    _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)
 
     async def delete(self) -> bool:
         """
@@ -50,7 +53,7 @@ class TemplateDetails(_TemplateDetails):
         self,
         *,
         new_category: TemplateCategory | None = None,
-        new_components: list[BaseComponent] | None = None,
+        new_components: list[TemplateBaseComponent] | None = None,
         new_message_send_ttl_seconds: int | None = None,
         new_parameter_format: ParamFormat | None = None,
     ) -> bool:
@@ -99,15 +102,64 @@ class TemplateDetails(_TemplateDetails):
             template_ids=[self.id, *others], start=start, end=end
         )
 
-    async def migrate(self): ...
-
     async def send(self) -> SentTemplate: ...
 
 
-class TemplatesResult(_TemplatesResult):
-    _wa: WhatsApp
+class TemplatesResult(Result[TemplateDetails]):
+    """
+    Represents the result of a templates query.
 
-    async def compare(self, start: datetime.datetime, end: datetime.datetime):
-        return await self._wa.compare_templates(
-            template_ids=[t.id for t in self], start=start, end=end
+    Attributes:
+        total_count: The total number of message templates that belong to a WhatsApp Business Account.
+        message_template_count: The current number of message templates that belong to the WhatsApp Business Account.
+        message_template_limit: The maximum number of message templates that can belong to a WhatsApp Business Account.
+        are_translations_complete: The status for template translations.
+    """
+
+    total_count: int
+    message_template_count: int
+    message_template_limit: int
+    are_translations_complete: bool
+
+    def __init__(
+        self,
+        wa: WhatsApp,
+        response: dict,
+    ):
+        super().__init__(
+            wa=wa,
+            response=response,
+            item_factory=functools.partial(
+                TemplateDetails.from_dict,
+                client=wa,
+            ),
         )
+        self.total_count = response["summary"]["total_count"]
+        self.message_template_count = response["summary"]["message_template_count"]
+        self.message_template_limit = response["summary"]["message_template_limit"]
+        self.are_translations_complete = response["summary"][
+            "are_translations_complete"
+        ]
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class CreatedTemplate(_CreatedTemplate):
+    """
+    Represents a created WhatsApp Template.
+
+    Attributes:
+        id: the template ID.
+        status: the template status.
+        category: the template category.
+    """
+
+    _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)
+
+    async def get(self) -> TemplateDetails:
+        """
+        Retrieve the details of the created template.
+
+        Returns:
+            TemplateDetails: The details of the created template.
+        """
+        return await self._client.get_template(template_id=self.id)

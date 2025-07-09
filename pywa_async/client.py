@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 """The WhatsApp Async client."""
 
 __all__ = ["WhatsApp"]
@@ -39,11 +38,9 @@ from .types import (
     Industry,
     MediaUrlResponse,
     Message,
-    NewTemplate,
     ProductsSection,
     SectionList,
     Template,
-    TemplateResponse,
     FlowButton,
     MessageType,
     BusinessPhoneNumber,
@@ -61,7 +58,7 @@ from .types import (
     CallbackSelection,
     ChatOpened,
     FlowCompletion,
-    TemplateStatus,
+    TemplateStatusUpdate,
     Image,
     Video,
     Document,
@@ -76,7 +73,7 @@ from .handlers import (
     CallbackSelectionHandler,
     ChatOpenedHandler,
     FlowCompletionHandler,
-    TemplateStatusHandler,
+    TemplateStatusUpdateHandler,
 )
 from .types.flows import (
     FlowCategory,
@@ -86,6 +83,20 @@ from .types.flows import (
     FlowAsset,
     CreatedFlow,
     MigrateFlowsResponse,
+)
+from .types.template import (
+    TemplatesResult,
+    TemplateDetails,
+    TemplateCategory,
+    TemplateLanguage,
+    QualityScoreType,
+    TemplateBaseComponent,
+    ParamFormat,
+    TemplatesCompareResult,
+    MigrateTemplatesResult,
+    CreatedTemplate,
+    LibraryTemplate,
+    TemplateStatus,
 )
 from .types.others import InteractiveType, UsersBlockedResult, UsersUnblockedResult
 from .types.sent_message import SentMessage, SentTemplate
@@ -111,7 +122,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         CallbackSelectionHandler: CallbackSelection.from_update,
         ChatOpenedHandler: ChatOpened.from_update,
         FlowCompletionHandler: FlowCompletion.from_update,
-        TemplateStatusHandler: TemplateStatus.from_update,
+        TemplateStatusUpdateHandler: TemplateStatusUpdate.from_update,
     }
     """A dictionary that maps handler types to their respective update constructors."""
 
@@ -1742,87 +1753,55 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
     async def create_template(
         self,
-        template: NewTemplate,
-        placeholder: tuple[str, str] | None = None,
+        template: Template | LibraryTemplate,
+        *,
         waba_id: str | int | None = None,
-    ) -> TemplateResponse:
+    ) -> CreatedTemplate:
         """
-        `'Create Templates' on developers.facebook.com
-        <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates>`_.
+        Create a template for the WhatsApp Business account.
 
-        - This method requires the WhatsApp Business account ID to be provided when initializing the client.
-        - To send a template, use :py:func:`~pywa.client.WhatsApp.send_template`.
+        - WhatsApp Business Accounts can only create 100 message templates per hour.
+        - Read more about `Create and Manage Templates <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#create-and-manage-templates>`_.
 
-        ATTENTION: In case of an errors, WhatsApp does not return a proper error message, instead, it returns a message
-        of `invalid parameter` with error code of 100. You need to pay attention to the following:
+        Example::
 
-        - The template name must be unique.
-        - The limitiations of the characters in every field (all documented).
-        - The order of the buttons.
-
-
-        Templates can be created and managed in the
-        `WhatsApp Message Templates <https://business.facebook.com/wa/manage/message-templates/>`_ dashboard.
-
-        Example:
-
-            >>> from pywa.types import NewTemplate as NewTemp
-            >>> wa = WhatsApp(...)
-            >>> wa.create_template(
-            ...     template=NewTemp(
-            ...         name='buy_new_iphone_x',
-            ...         category=NewTemp.Category.MARKETING,
-            ...         language=NewTemp.Language.ENGLISH_US,
-            ...         header=NewTemp.Text('The New iPhone {15} is here!'),
-            ...         body=NewTemp.Body('Buy now and use the code {WA_IPHONE_15} to get {15%} off!'),
-            ...         footer=NewTemp.Footer('Powered by PyWa'),
-            ...         buttons=[
-            ...             NewTemp.UrlButton(title='Buy Now', url='https://example.com/shop/{iphone15}'),
-            ...             NewTemp.PhoneNumberButton(title='Call Us', phone_number='1234567890'),
-            ...             NewTemp.QuickReplyButton('Unsubscribe from marketing messages'),
-            ...             NewTemp.QuickReplyButton('Unsubscribe from all messages'),
-            ...         ],
-            ...     ),
-            ... )
-
-        Example for Authentication Template:
-
-            >>> from pywa.types import NewTemplate as NewTemp
-            >>> wa = WhatsApp(...)
-            >>> wa.create_template(
-            ...     template=NewTemp(
-            ...         name='auth_with_otp',
-            ...         category=NewTemp.Category.AUTHENTICATION,
-            ...         language=NewTemp.Language.ENGLISH_US,
-            ...         body=NewTemp.AuthBody(
-            ...             code_expiration_minutes=5,
-            ...             add_security_recommendation=True,
-            ...         ),
-            ...         buttons=NewTemp.OTPButton(
-            ...             otp_type=NewTemp.OTPButton.OtpType.ZERO_TAP,
-            ...             title='Copy Code',
-            ...             autofill_text='Autofill',
-            ...             package_name='com.example.app',
-            ...             signature_hash='1234567890ABCDEF1234567890ABCDEF12345678'
-            ...         )
-            ...     ),
-            ... )
+            seasonal_promotion = Template(
+                name="seasonal_promotion",
+                category=TemplateCategory.MARKETING,
+                language=TemplateLanguage.ENGLISH_US,
+                parameter_format=ParamFormat.NAMED,
+                components=[
+                    HeaderText(
+                        text=TemplateText(text="Our {{sale_name}} is on!", sale_name="Summer Sale")
+                    ),
+                    Body(
+                        text=TemplateText(
+                            text="Shop now through {{end_date}} and use code {{discount_code}} to get {{discount_amount}} off of all merchandise.",
+                            end_date="the end of August", discount_code="25OFF", discount_amount="25%")
+                    ),
+                    Footer(text="Use the buttons below to manage your marketing subscriptions"),
+                    Buttons(
+                        buttons=[
+                            QuickReplyButton(text="Unsubscribe from Promos"),
+                            QuickReplyButton(text="Unsubscribe from All"),
+                        ]
+                    ),
+                ],
+            )
 
         Args:
             template: The template to create.
-            placeholder: The placeholders start & end (optional, default: ``('{', '}')``)).
-            waba_id: The WhatsApp Business account ID (Overrides the client's business account ID).
+            waba_id: The WhatsApp Business account ID (Overrides the client's business account ID, optional).
 
         Returns:
-            The template created response. containing the template ID, status and category.
+            The created template.
         """
-        return TemplateResponse(
-            **(
-                await self.api.create_template(
-                    waba_id=helpers.resolve_waba_id_param(self, waba_id),
-                    template=template.to_dict(placeholder=placeholder),
-                )
-            )
+        return CreatedTemplate.from_dict(
+            client=self,
+            data=await self.api.create_template(
+                waba_id=helpers.resolve_waba_id_param(self, waba_id),
+                template=json.loads(template.to_json()),
+            ),
         )
 
     async def send_template(
@@ -1925,6 +1904,240 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             ),
             from_phone_id=sender,
+        )
+
+    async def get_templates(
+        self,
+        *,
+        statuses: Iterable[TemplateStatus] | None = None,
+        categories: Iterable[TemplateCategory] | None = None,
+        languages: Iterable[TemplateLanguage] | None = None,
+        name: str | None = None,
+        content: str | None = None,
+        name_or_content: str | None = None,
+        quality_scores: Iterable[QualityScoreType] | None = None,
+        pagination: Pagination | None = None,
+        waba_id: str | int | None = None,
+    ) -> TemplatesResult:
+        """
+        Get templates of the WhatsApp Business account.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> templates = wa.get_templates(
+            ...     statuses=[TemplateStatus.APPROVED],
+            ...     categories=[TemplateCategory.MARKETING],
+            ...     languages=[TemplateLanguage.ENGLISH_US],
+            ...     pagination=Pagination(limit=10)
+            ... )
+
+        Args:
+            statuses: The statuses of the templates to filter by (optional).
+            categories: The categories of the templates to filter by (optional).
+            languages: The languages of the templates to filter by (optional).
+            name: The name (or part of it) of the template to filter by (optional).
+            content: The content of the template to filter by (optional).
+            name_or_content: The name or content of the template to filter by (optional).
+            quality_scores: The quality scores of the templates to filter by (optional).
+            pagination: Pagination parameters (optional).
+            waba_id: The WhatsApp Business account ID (Overrides the client's business account ID, optional).
+
+        Returns:
+            A Result object containing the templates
+        """
+        return TemplatesResult(
+            wa=self,
+            response=await self.api.get_templates(
+                waba_id=helpers.resolve_waba_id_param(self, waba_id),
+                fields=tuple(
+                    field.name for field in dataclasses.fields(TemplateDetails)
+                ),
+                filters={
+                    k: v
+                    for k, v in {
+                        "status": ",".join(statuses) if statuses else None,
+                        "category": ",".join(categories) if categories else None,
+                        "language": ",".join(languages) if languages else None,
+                        "name": name,
+                        "content": content,
+                        "name_or_content": name_or_content,
+                        "quality_score": ",".join(quality_scores)
+                        if quality_scores
+                        else None,
+                    }.items()
+                    if v is not None
+                },
+                summary_fields=(
+                    "total_count",
+                    "message_template_count",
+                    "message_template_limit",
+                    "are_translations_complete",
+                ),
+                pagination=pagination.to_dict() if pagination else None,
+            ),
+        )
+
+    async def get_template(self, template_id: int | str) -> TemplateDetails:
+        """
+        Get the details of a specific template.
+
+        Args:
+            template_id: The ID of the template to retrieve.
+
+        Returns:
+            A TemplateDetails object containing the template details.
+        """
+        return TemplateDetails.from_dict(
+            data=await self.api.get_template(template_id=str(template_id)), client=self
+        )
+
+    async def update_template(
+        self,
+        template_id: int | str,
+        *,
+        new_category: TemplateCategory | None = None,
+        new_components: list[TemplateBaseComponent] | None = None,
+        new_message_send_ttl_seconds: int | None = None,
+        new_parameter_format: ParamFormat | None = None,
+    ) -> bool:
+        """
+        Update an existing template.
+
+        - Only templates with an ``APPROVED``, ``REJECTED``, or ``PAUSED`` status can be edited.
+        - You cannot edit the category of an approved template.
+        - Approved templates can be edited up to 10 times in a 30 day window, or 1 time in a 24 hour window. Rejected or paused templates can be edited an unlimited number of times.
+        - After editing an approved or paused template, it will automatically be approved unless it fails template review.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#edit-a-message-template>`_.
+
+        Args:
+            template_id: The ID of the template to update.
+            new_category: The new category of the template (optional, cannot be changed for approved templates).
+            new_components: The new components of the template (optional, if not provided, the existing components will be used).
+            new_message_send_ttl_seconds: The new message send TTL in seconds (optional, if not provided, the existing TTL will be used).
+            new_parameter_format: The new parameter format (optional, if not provided, the existing format will be used).
+
+        Returns:
+            Whether the template was updated successfully.
+        """
+        return (
+            await self.api.update_template(
+                template_id=template_id,
+                template={
+                    k: v
+                    for k, v in {
+                        "category": new_category,
+                        "components": new_components,
+                        "message_send_ttl_seconds": new_message_send_ttl_seconds,
+                        "parameter_format": new_parameter_format,
+                    }.items()
+                    if v is not None
+                },
+            )
+        )["success"]
+
+    async def delete_template(
+        self,
+        template_name: str,
+        *,
+        template_id: int | str | None = None,
+        waba_id: str | int | None = None,
+    ) -> bool:
+        """
+        Delete a template.
+
+        - If you delete a template that has been sent in a template message but has yet to be delivered (e.g. because the customer's phone is turned off), the template's status will be set to PENDING_DELETION and we will attempt to deliver the message for 30 days. After this time you will receive a "Structure Unavailable" error and the customer will not receive the message.
+        - Names of an approved template that has been deleted cannot be used again for 30 days.
+        - Deleting a template by name deletes all templates that match that name (meaning templates with the same name but different languages will also be deleted).
+        - To delete a template by ID, include the template's ID along with its name in your request; only the template with the matching template ID will be deleted.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#deleting-templates>`_.
+
+        Args:
+            template_name: The name of the template to delete.
+            template_id: The ID of the template to delete (optional, if provided, only the template with the matching ID will be deleted).
+            waba_id: The WhatsApp Business account ID (Overrides the client's business account ID, optional).
+
+        Returns:
+            Whether the template was deleted successfully.
+        """
+        return (
+            await self.api.delete_template(
+                waba_id=helpers.resolve_waba_id_param(self, waba_id),
+                template_name=template_name,
+                template_id=template_id,
+            )
+        )["success"]
+
+    async def compare_templates(
+        self,
+        template_id: int | str,
+        template_ids: Iterable[int | str],
+        start: datetime.datetime | int,
+        end: datetime.datetime | int,
+    ) -> TemplatesCompareResult:
+        """
+        You can compare two templates by examining how often each one is sent, which one has the lower ratio of blocks to sends, and each template's top reason for being blocked.
+
+        - Only two templates can be compared at a time.
+        - Both templates must be in the same WhatsApp Business Account.
+        - Templates must have been sent at least 1,000 times in the queries specified timeframe.
+        - Timeframes are limited to ``7``, ``30``, ``60`` and ``90`` day lookbacks from the time of the request.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/template-comparison>`_.
+
+        Args:
+            template_id: The ID of the template to compare against others.
+            template_ids: The IDs of the templates to compare with the given template.
+            start: The start date of the comparison period.
+            end: The end date of the comparison period.
+
+        Returns:
+            A TemplatesCompareResult object containing the comparison results.
+        """
+        return TemplatesCompareResult.from_dict(
+            data=await self.api.compare_templates(
+                template_id=template_id,
+                template_ids=tuple(map(str, template_ids)),
+                start=str(
+                    int(start.timestamp())
+                    if isinstance(start, datetime.datetime)
+                    else start
+                ),
+                end=str(
+                    int(end.timestamp()) if isinstance(end, datetime.datetime) else end
+                ),
+            )
+        )
+
+    async def migrate_templates(
+        self,
+        source_waba_id: str | int,
+        page_number: int | None = None,
+        *,
+        destination_waba_id: str | int | None = None,
+    ) -> MigrateTemplatesResult:
+        """
+        Migrate templates from one WhatsApp Business account to another.
+
+        - Templates can only be migrated between WABAs owned by the same Meta business.
+        - Only templates with a status of APPROVED and a quality_score of either GREEN or UNKNOWN are eligible for migration.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/template-migration>`_.
+
+        Args:
+            source_waba_id: The WhatsApp Business account ID to migrate templates from.
+            page_number: Indicates amount of templates to migrate as sets of 500. Zero-indexed. For example, to migrate 1000 templates, send one request with this value set to 0 and another request with this value set to 1, in parallel.
+            destination_waba_id: The WhatsApp Business account ID to migrate templates to (optional, overrides the client's business account ID).
+
+        Returns:
+            A MigrateTemplatesResult object containing the migration results.
+        """
+        return MigrateTemplatesResult.from_dict(
+            data=await self.api.migrate_templates(
+                source_waba_id=str(source_waba_id),
+                dest_waba_id=helpers.resolve_waba_id_param(
+                    self, destination_waba_id, "destination_waba_id"
+                ),
+                page_number=page_number,
+            )
         )
 
     # fmt: off
@@ -2319,7 +2532,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         """
         return MigrateFlowsResponse.from_dict(
             await self.api.migrate_flows(
-                dest_waba_id=helpers.resolve_waba_id_param(self, destination_waba_id),
+                dest_waba_id=helpers.resolve_waba_id_param(self, destination_waba_id, "destination_waba_id"),
                 source_waba_id=str(source_waba_id),
                 source_flow_names=tuple(source_flow_names),
             )

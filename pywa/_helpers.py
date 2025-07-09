@@ -124,18 +124,20 @@ def resolve_phone_id_param(
     if wa.phone_id is not None:
         return wa.phone_id
     raise ValueError(
-        f"When initializing WhatsApp without phone_id, {arg_name} must be provided."
+        f"When initializing WhatsApp without `phone_id`, `{arg_name}` must be provided."
     )
 
 
-def resolve_waba_id_param(wa: WhatsApp, waba_id: str | int | None) -> str:
+def resolve_waba_id_param(
+    wa: WhatsApp, waba_id: str | int | None, arg_name: str = "waba_id"
+) -> str:
     """Internal method to resolve the `waba_id` parameter."""
     if waba_id is not None:
         return str(waba_id)
     if wa.business_account_id is not None:
         return wa.business_account_id
     raise ValueError(
-        "When initializing WhatsApp without business_account_id, waba_id must be provided."
+        f"When initializing WhatsApp without `business_account_id`, `{arg_name}` must be provided."
     )
 
 

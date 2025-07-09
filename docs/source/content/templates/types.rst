@@ -3,12 +3,12 @@ Template Types
 
 .. currentmodule:: pywa.types.template_v2
 
-.. autoclass:: TemplateV2()
+.. autoclass:: Template()
 
 .. autoclass:: TemplateDetails()
     :members: update, delete, compare, migrate, send
 
-.. autoclass:: TemplateStatus()
+.. autoclass:: TemplateStatusUpdate()
 
 .. autoclass:: TemplateRejectionReason()
 
