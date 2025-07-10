@@ -1244,7 +1244,7 @@ Now, let's handle the flow request. we can handle all the screens in one code bl
     @on_sign_up_request.on(
         action=FlowRequestActionType.DATA_EXCHANGE,
         screen="SIGN_UP",
-        data_filter=lambda _, data: user_repository.exists(data["email"]),
+        filters=filters.new(lambda _, request: user_repository.exists(request.data["email"])),
     )
     def if_already_registered(_: WhatsApp, request: FlowRequest) -> FlowResponse | None:
         return FlowResponse(
@@ -1260,7 +1260,7 @@ Now, let's handle the flow request. we can handle all the screens in one code bl
     @on_sign_up_request.on(
         action=FlowRequestActionType.DATA_EXCHANGE,
         screen="SIGN_UP",
-        data_filter=lambda _, data: data["password"] != data["confirm_password"],
+        filters=filters.new(lambda _, request: request.data["password"] != request.data["confirm_password"]),
     )
     def if_passwords_dont_match(_: WhatsApp, request: FlowRequest) -> FlowResponse | None:
         return FlowResponse(
@@ -1279,7 +1279,7 @@ Now, let's handle the flow request. we can handle all the screens in one code bl
     @on_sign_up_request.on(
         action=FlowRequestActionType.DATA_EXCHANGE,
         screen="SIGN_UP",
-        data_filter=lambda _, data: not any(char.isdigit() for char in data["password"]),
+        filters=filters.new(lambda _, request: not any(char.isdigit() for char in request.data["password"])),
     )
     def if_password_does_not_contain_number(
         _: WhatsApp, request: FlowRequest
@@ -1360,7 +1360,7 @@ Now, let's handle the ``LOGIN`` screen:
     @on_sign_up_request.on(
         action=FlowRequestActionType.DATA_EXCHANGE,
         screen="LOGIN",
-        data_filter=lambda _, data: not user_repository.exists(data["email"]),
+        filters=filters.new(lambda _, request: not user_repository.exists(request.data["email"])),
     )
     def if_not_registered(_: WhatsApp, request: FlowRequest) -> FlowResponse | None:
         return FlowResponse(
@@ -1379,7 +1379,8 @@ Now, let's handle the ``LOGIN`` screen:
     @on_sign_up_request.on(
         action=FlowRequestActionType.DATA_EXCHANGE,
         screen="LOGIN",
-        data_filter=lambda _, data: not user_repository.is_password_valid(data["email"], data["password"]),
+        filters=filters.new(
+            lambda _, request: not user_repository.is_password_valid(request.data["email"], request.data["password"])),
     )
     def if_incorrect_password(_: WhatsApp, request: FlowRequest) -> FlowResponse | None:
         return FlowResponse(
