@@ -5,12 +5,168 @@ from pywa.types.template import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.template import (
     TemplateDetails as _TemplateDetails,
     CreatedTemplate as _CreatedTemplate,
+    TemplateStatusUpdate as _TemplateStatusUpdate,
+    TemplateQualityUpdate as _TemplateQualityUpdate,
+    TemplateCategoryUpdate as _TemplateCategoryUpdate,
+    TemplateComponentsUpdate as _TemplateComponentsUpdate,
 )  # noqa MUST BE IMPORTED FIRST
 from .others import Result
 
 if TYPE_CHECKING:
     from ..client import WhatsApp as WhatsAppAsync
     from .sent_message import SentTemplate
+
+
+@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
+class _BaseTemplateUpdateAsync:
+    """Base class for template updates."""
+
+    _client: WhatsAppAsync
+    template_id: str
+
+    async def get_template(self) -> TemplateDetails:
+        """
+        Fetches the template details from WhatsApp.
+
+        Returns:
+            TemplateDetails: The details of the template.
+        """
+        return await self._client.get_template(
+            template_id=self.template_id,
+        )
+
+
+@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
+class TemplateStatusUpdate(_BaseTemplateUpdateAsync, _TemplateStatusUpdate):
+    """
+    Represents status change of a template.
+
+    Triggers::
+
+        - A template is approved.
+        - A template is rejected.
+        - A template is disabled.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/reference/message_template_status_update>`_.
+
+    Attributes:
+        id: ID of Whatsapp Business Accounts this update belongs to.
+        timestamp: Timestamp of the update (in UTC).
+        new_status: The new status of the template.
+        template_id: The ID of the template.
+        template_name: The name of the template.
+        template_language: The language of the template.
+        reason: The reason the template was rejected (if status is ``REJECTED``).
+        disable_date: The date the template was disabled (if status is ``DISABLED``).
+        title: Title of template pause or unpause event.
+        description: String describing why the template was locked or unlocked.
+        shared_data: Shared data between handlers.
+    """
+
+    async def unpause(self) -> TemplateUnpauseResult:
+        """
+        Unpause the template that has been paused due to pacing.
+
+        - You must wait 5 minutes after a template has been paused as a result of pacing before calling this method.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/message-templates/guidelines#unpausing>`_.
+
+        Returns:
+            A TemplateUnpauseResult object containing the result of the unpause operation.
+        """
+        return await self._client.unpause_template(template_id=self.template_id)
+
+
+@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
+class TemplateCategoryUpdate(_BaseTemplateUpdateAsync, _TemplateCategoryUpdate):
+    """
+    Represents a template category update.
+
+    Triggers::
+
+        - The existing category of a WhatsApp template is going to be changed by an automated process.
+        - The existing category of a WhatsApp template is changed manually or by an automated process.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/reference/template_category_update>`_.
+
+    Attributes:
+        id: ID of Whatsapp Business Accounts this update belongs to.
+        timestamp: Timestamp of the update (in UTC).
+        template_id: The ID of the template.
+        template_name: The name of the template.
+        template_language: The language of the template.
+        correct_category: The category that the template will be `recategorized <https://developers.facebook.com/docs/whatsapp/updates-to-pricing/new-template-guidelines/#how-we-update-a-template-s-category-after-initial-approval>`_ as in 24 hours.
+        previous_category: The template's previous category.
+        new_category: If ``correct_category`` is set - the ``new_category`` is the current category of the template. If ``previous_category`` is set - the ``new_category`` is the category that the template was recategorized to.
+    """
+
+
+@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
+class TemplateComponentsUpdate(_BaseTemplateUpdateAsync, _TemplateComponentsUpdate):
+    """
+    Represents a template components update.
+
+    Triggers::
+
+        - A template is edited.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/reference/message_template_components_update>`_.
+
+    Attributes:
+        id: ID of Whatsapp Business Accounts this update belongs to.
+        timestamp: Timestamp of the update (in UTC).
+        template_id: The ID of the template.
+        template_name: The name of the template.
+        template_language: The language of the template.
+        template_element: The body text of the template.
+        template_title: The header text of the template.
+        template_footer: The footer text of the template.
+        template_buttons: A list of buttons in the template.
+    """
+
+
+@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
+class TemplateQualityUpdate(_BaseTemplateUpdateAsync, _TemplateQualityUpdate):
+    """
+    Represents a template quality update.
+
+    Triggers::
+
+        - A template's quality score changes.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/reference/message_template_quality_update>`_.
+
+    Attributes:
+        id: ID of Whatsapp Business Accounts this update belongs to.
+        timestamp: Timestamp of the update (in UTC).
+        template_id: The ID of the template.
+        template_name: The name of the template.
+        template_language: The language of the template.
+        new_quality_score: The new quality score of the template.
+        previous_quality_score: The previous quality score of the template.
+    """
+
+    new_quality_score: QualityScoreType
+    previous_quality_score: QualityScoreType
+
+    _webhook_field = "message_template_quality_update"
+
+    @classmethod
+    def from_update(cls, client: WhatsApp, update: dict) -> TemplateQualityUpdate:
+        value = (data := update["entry"][0])["changes"][0]["value"]
+        return cls(
+            _client=client,
+            raw=update,
+            id=data["id"],
+            timestamp=datetime.datetime.fromtimestamp(
+                data["time"],
+                datetime.timezone.utc,
+            ),
+            template_id=value["message_template_id"],
+            template_name=value["message_template_name"],
+            template_language=TemplateLanguage(value["message_template_language"]),
+            new_quality_score=QualityScoreType(value["new_quality_score"]),
+            previous_quality_score=QualityScoreType(value["previous_quality_score"]),
+        )
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -58,21 +214,23 @@ class TemplateDetails(_TemplateDetails):
         new_parameter_format: ParamFormat | None = None,
     ) -> bool:
         """
-        Update this template with new values.
+        Update this template.
 
         - The template object will be updated in memory after a successful update.
         - Only templates with an ``APPROVED``, ``REJECTED``, or ``PAUSED`` status can be edited.
+        - You cannot edit the category of an approved template.
         - Approved templates can be edited up to 10 times in a 30 day window, or 1 time in a 24 hour window. Rejected or paused templates can be edited an unlimited number of times.
         - After editing an approved or paused template, it will automatically be approved unless it fails template review.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#edit-a-message-template>`_.
 
         Args:
-            new_category: The new category for the template (See `Template Categorization <https://developers.facebook.com/docs/whatsapp/updates-to-pricing/new-template-guidelines#template-categorization>`_).
-            new_components: The new components for the template.
-            new_message_send_ttl_seconds: The new time-to-live (TTL) for the template message in seconds (See `Time-to-live (TTL) <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#time-to-live--ttl---customization--defaults--min-max-values--and-compatibility>`_).
-            new_parameter_format: The new type of parameter formatting the Header and Body components of the template will use.
+            new_category: The new category of the template (optional, cannot be changed for approved templates).
+            new_components: The new components of the template (optional, if not provided, the existing components will be used).
+            new_message_send_ttl_seconds: The new message send TTL in seconds (optional, if not provided, the existing TTL will be used).
+            new_parameter_format: The new parameter format (optional, if not provided, the existing format will be used).
 
         Returns:
-            bool: True if the update was successful, False otherwise.
+            Whether the template was updated successfully.
         """
         if await self._client.update_template(
             template_id=self.id,
@@ -94,13 +252,46 @@ class TemplateDetails(_TemplateDetails):
 
     async def compare(
         self,
-        others: Iterable[int | str],
-        start: datetime.datetime,
-        end: datetime.datetime,
-    ):
+        to: Iterable[int | str],
+        start: datetime.datetime | int,
+        end: datetime.datetime | int,
+    ) -> TemplatesCompareResult:
+        """
+        You can compare two templates by examining how often each one is sent, which one has the lower ratio of blocks to sends, and each template's top reason for being blocked.
+
+        - Only two templates can be compared at a time.
+        - Both templates must be in the same WhatsApp Business Account.
+        - Templates must have been sent at least 1,000 times in the queries specified timeframe.
+        - Timeframes are limited to ``7``, ``30``, ``60`` and ``90`` day lookbacks from the time of the request.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/template-comparison>`_.
+
+        Args:
+            to: The IDs of the templates to compare with the given template.
+            start: The start date of the comparison period.
+            end: The end date of the comparison period.
+
+        Returns:
+            A TemplatesCompareResult object containing the comparison results.
+        """
         return await self._client.compare_templates(
-            template_ids=[self.id, *others], start=start, end=end
+            template_id=self.id, template_ids=to, start=start, end=end
         )
+
+    async def unpause(self) -> TemplateUnpauseResult:
+        """
+        Unpause a template that has been paused due to pacing.
+
+        - This method can only be called if the template is currently paused due to pacing.
+        - You must wait 5 minutes after a template has been paused as a result of pacing before calling this method.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/message-templates/guidelines#unpausing>`_.
+
+        Returns:
+            A TemplateUnpauseResult object containing the result of the unpause operation.
+        """
+        res = await self._client.unpause_template(template_id=self.id)
+        if res:
+            self.status = TemplateStatus.APPROVED
+        return res
 
     async def send(self) -> SentTemplate: ...
 

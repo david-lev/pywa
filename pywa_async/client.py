@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pywa.types.template import TemplateUnpauseResult
 
 """The WhatsApp Async client."""
 
@@ -2282,6 +2283,28 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 ),
                 page_number=page_number,
             )
+        )
+
+    async def unpause_template(
+        self,
+        template_id: int | str,
+    ) -> TemplateUnpauseResult:
+        """
+        Unpause a template that has been paused due to pacing.
+
+        - You must wait 5 minutes after a template has been paused as a result of pacing before calling this method.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/message-templates/guidelines#unpausing>`_.
+
+        Args:
+            template_id: The ID of the template to unpause.
+
+        Returns:
+            A TemplateUnpauseResult object containing the result of the unpause operation.
+        """
+        res = await self.api.unpause_template(str(template_id))
+        return TemplateUnpauseResult(
+            success=res["success"],
+            reason=res.get("reason"),
         )
 
     # fmt: off

@@ -125,6 +125,7 @@ from .types.template import (
     LibraryTemplate,
     Template,
     CreatedTemplate,
+    TemplateUnpauseResult,
 )
 from .utils import FastAPI, Flask
 from .server import Server
@@ -2505,6 +2506,28 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 ),
                 page_number=page_number,
             )
+        )
+
+    def unpause_template(
+        self,
+        template_id: int | str,
+    ) -> TemplateUnpauseResult:
+        """
+        Unpause a template that has been paused due to pacing.
+
+        - You must wait 5 minutes after a template has been paused as a result of pacing before calling this method.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/message-templates/guidelines#unpausing>`_.
+
+        Args:
+            template_id: The ID of the template to unpause.
+
+        Returns:
+            A TemplateUnpauseResult object containing the result of the unpause operation.
+        """
+        res = self.api.unpause_template(str(template_id))
+        return TemplateUnpauseResult(
+            success=res["success"],
+            reason=res.get("reason"),
         )
 
     # fmt: off

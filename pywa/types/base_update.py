@@ -85,7 +85,7 @@ class ContinueHandling(Exception):
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class BaseUpdate(abc.ABC):
-    """Base class for all update types."""
+    """Base class for all webhook updates."""
 
     _webhook_field: ClassVar[str]
     """
@@ -110,10 +110,6 @@ class BaseUpdate(abc.ABC):
     def from_update(cls, client: WhatsApp, update: dict) -> BaseUpdate:
         """Create an update object from a raw update dict."""
         ...
-
-    def __hash__(self):
-        """Return the hash of the update ID."""
-        return hash(self.id)
 
     def stop_handling(self) -> None:
         """

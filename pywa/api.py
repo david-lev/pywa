@@ -1085,6 +1085,23 @@ class WhatsAppCloudApi:
             },
         )
 
+    def unpause_template(self, template_id: str) -> dict[str, bool | str]:
+        """
+        Unpause a message template.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/graph-api/reference/whats-app-business-hsm/unpause/>`_.
+
+        Args:
+            template_id: The ID of the template to unpause.
+
+        Returns:
+            A dict with the success status of the operation.
+        """
+        return self._make_request(
+            method="POST",
+            endpoint=f"/{template_id}/unpause",
+        )
+
     def create_flow(
         self,
         waba_id: str,

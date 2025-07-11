@@ -96,7 +96,27 @@ class TemplateRejectionReason(utils.StrEnum):
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
-class TemplateStatusUpdate(BaseUpdate):
+class _BaseTemplateUpdate(BaseUpdate, abc.ABC):
+    """Base class for template updates."""
+
+    template_id: str
+    template_name: str
+    template_language: TemplateLanguage
+
+    def get_template(self) -> TemplateDetails:
+        """
+        Fetches the template details from WhatsApp.
+
+        Returns:
+            TemplateDetails: The details of the template.
+        """
+        return self._client.get_template(
+            template_id=self.template_id,
+        )
+
+
+@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
+class TemplateStatusUpdate(_BaseTemplateUpdate):
     """
     Represents status change of a template.
 
@@ -111,7 +131,7 @@ class TemplateStatusUpdate(BaseUpdate):
     Attributes:
         id: ID of Whatsapp Business Accounts this update belongs to.
         timestamp: Timestamp of the update (in UTC).
-        new_status: The new status of the template. e.g. ``APPROVED``, ``DISABLED``, ``REJECTED``, etc.
+        new_status: The new status of the template.
         template_id: The ID of the template.
         template_name: The name of the template.
         template_language: The language of the template.
@@ -123,9 +143,6 @@ class TemplateStatusUpdate(BaseUpdate):
     """
 
     new_status: TemplateStatus
-    template_id: str
-    template_name: str
-    template_language: TemplateLanguage
     reason: TemplateRejectionReason | None = None
     disable_date: datetime.datetime | None = None
     title: str | None = None
@@ -161,9 +178,48 @@ class TemplateStatusUpdate(BaseUpdate):
             description=value.get("other_info", {}).get("description"),
         )
 
+    def unpause(self) -> TemplateUnpauseResult:
+        """
+        Unpause the template that has been paused due to pacing.
+
+        - You must wait 5 minutes after a template has been paused as a result of pacing before calling this method.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/message-templates/guidelines#unpausing>`_.
+
+        Returns:
+            A TemplateUnpauseResult object containing the result of the unpause operation.
+        """
+        return self._client.unpause_template(template_id=self.template_id)
+
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
-class TemplateCategoryUpdate(BaseUpdate):
+class TemplateUnpauseResult:
+    """
+    Represents the result of a template unpause operation.
+
+    >>> wa = WhatsApp(...)
+    >>> template = wa.get_template(template_id=123456)
+    >>> if template.status == TemplateStatus.PAUSED:
+    ...     result = template.unpause()
+
+
+
+    Attributes:
+        success: Whether the unpause operation was successful.
+        reason: The reason for the unpause operation failure, if any.
+    """
+
+    success: bool
+    reason: str | None = None
+
+    def __bool__(self) -> bool:
+        """
+        Returns True if the unpause operation was successful, False otherwise.
+        """
+        return self.success
+
+
+@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
+class TemplateCategoryUpdate(_BaseTemplateUpdate):
     """
     Represents a template category update.
 
@@ -185,9 +241,6 @@ class TemplateCategoryUpdate(BaseUpdate):
         new_category: If ``correct_category`` is set - the ``new_category`` is the current category of the template. If ``previous_category`` is set - the ``new_category`` is the category that the template was recategorized to.
     """
 
-    template_id: str
-    template_name: str
-    template_language: TemplateLanguage
     new_category: TemplateCategory
     previous_category: TemplateCategory | None = None
     correct_category: TemplateCategory | None = None
@@ -219,7 +272,7 @@ class TemplateCategoryUpdate(BaseUpdate):
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
-class TemplateComponentsUpdate(BaseUpdate):
+class TemplateComponentsUpdate(_BaseTemplateUpdate):
     """
     Represents a template components update.
 
@@ -241,9 +294,6 @@ class TemplateComponentsUpdate(BaseUpdate):
         template_buttons: A list of buttons in the template.
     """
 
-    template_id: str
-    template_name: str
-    template_language: TemplateLanguage
     template_element: str | None = None
     template_title: str | None = None
     template_footer: str | None = None
@@ -273,7 +323,7 @@ class TemplateComponentsUpdate(BaseUpdate):
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
-class TemplateQualityUpdate(BaseUpdate):
+class TemplateQualityUpdate(_BaseTemplateUpdate):
     """
     Represents a template quality update.
 
@@ -293,9 +343,6 @@ class TemplateQualityUpdate(BaseUpdate):
         previous_quality_score: The previous quality score of the template.
     """
 
-    template_id: str
-    template_name: str
-    template_language: TemplateLanguage
     new_quality_score: QualityScoreType
     previous_quality_score: QualityScoreType
 
@@ -1890,6 +1937,22 @@ class TemplateDetails(Template):
         return self._client.compare_templates(
             template_id=self.id, template_ids=to, start=start, end=end
         )
+
+    def unpause(self) -> TemplateUnpauseResult:
+        """
+        Unpause a template that has been paused due to pacing.
+
+        - This method can only be called if the template is currently paused due to pacing.
+        - You must wait 5 minutes after a template has been paused as a result of pacing before calling this method.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/message-templates/guidelines#unpausing>`_.
+
+        Returns:
+            A TemplateUnpauseResult object containing the result of the unpause operation.
+        """
+        res = self._client.unpause_template(template_id=self.id)
+        if res:
+            self.status = TemplateStatus.APPROVED
+        return res
 
     def send(self) -> SentTemplate: ...
 
