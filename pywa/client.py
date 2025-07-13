@@ -33,7 +33,6 @@ from .handlers import (
     ChatOpenedHandler,
     FlowCompletionHandler,
     TemplateStatusUpdateHandler,
-    TemplateStatusHandler,
     CallConnectHandler,
     CallTerminateHandler,
     CallStatusHandler,
@@ -452,6 +451,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     screen=screen,
                     filters=filters,
                 )
+        self.add_handlers(*handler._completion_handlers)
         return wrapper
 
     def add_handlers(self, *handlers: Handler) -> None:

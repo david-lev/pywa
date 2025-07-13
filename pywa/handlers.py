@@ -750,6 +750,12 @@ class _CallbackWrapperDecorators(abc.ABC):
         filters: Filter = None,
     ) -> _CallbackWrapperDecorators: ...
 
+    @abc.abstractmethod
+    def add_completion_handler(
+        self,
+        handler: FlowCompletionHandler,
+    ) -> _CallbackWrapperDecorators: ...
+
     def set_errors_handler(self, callback: None) -> None:
         """Deprecated. Use ``.add_handler(...)`` with filter to check ``req.has_error``"""
         warnings.warn(
@@ -967,6 +973,44 @@ class _CallbackWrapperDecorators(abc.ABC):
 
         return deco
 
+    def on_completion(
+        self=None,
+        filters: Filter = None,
+        *,
+        priority: int = 0,
+    ) -> Callable[[_FlowCompletionCallback], _FlowCompletionCallback]:
+        """
+        Decorator to add a handler for flow completion requests.
+
+        **The :class:`FlowCompletion` update is not sent to the flow endpoint, but to the webhook endpoint.**
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_flow_request("/feedback_flow")
+            ... def feedback_flow_handler(_: WhatsApp, req: FlowRequest):
+            ...     ...
+
+            >>> @feedback_flow_handler.on_completion(filters=filters.new(lambda _, flow: flow.response["rating"] == "5"))
+            ... def on_flow_completion(_: WhatsApp, flow: FlowCompletion):
+            ...     print("Flow completed with rating 5")
+        """
+        if callable(filters):
+            self.add_completion_handler(
+                FlowCompletionHandler(callback=filters, filters=None, priority=priority)
+            )
+            return filters
+
+        def deco(callback: _FlowCompletionCallback) -> _FlowCompletionCallback:
+            self.add_completion_handler(
+                FlowCompletionHandler(
+                    callback=callback, filters=filters, priority=priority
+                )
+            )
+            return callback
+
+        return deco
+
 
 class FlowRequestHandler(_CallbackWrapperDecorators):
     """
@@ -1007,6 +1051,7 @@ class FlowRequestHandler(_CallbackWrapperDecorators):
             tuple[FlowRequestActionType | str, str | None],
             list[tuple[Filter | None, _FlowRequestHandlerT]],
         ] = collections.defaultdict(list)  # {(action, screen?): [(filters?, callback)]}
+        self._completion_handlers: list[FlowCompletionHandler] = []
         self._endpoint = endpoint
         self._acknowledge_errors = acknowledge_errors
         self._private_key = private_key
@@ -1023,6 +1068,18 @@ class FlowRequestHandler(_CallbackWrapperDecorators):
         filters: Filter = None,
     ) -> _CallbackWrapperDecorators:
         self._handlers[(action, screen)].append((filters, callback))
+        return self
+
+    def add_completion_handler(
+        self, handler: FlowCompletionHandler
+    ) -> _CallbackWrapperDecorators:
+        """
+        Add a handler for flow completion requests.
+
+        Args:
+            handler: The handler to add.
+        """
+        self._completion_handlers.append(handler)
         return self
 
 
@@ -1913,6 +1970,23 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         self._handlers[
             (action, screen.id if isinstance(screen, Screen) else screen)
         ].append((filters, callback))
+        return self
+
+    def add_completion_handler(
+        self, handler: FlowCompletionHandler
+    ) -> FlowRequestCallbackWrapper:
+        """
+        Add a handler for flow completion events.
+
+        - This is a shortcut for adding a handler for the `FlowCompletionHandler` type.
+
+        Args:
+            handler: The FlowCompletionHandler instance to add.
+
+        Returns:
+            The current instance.
+        """
+        self._wa.add_handlers(handler)
         return self
 
     def _get_callback(self, req: FlowRequest) -> _FlowRequestHandlerT:

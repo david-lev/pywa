@@ -8,6 +8,7 @@ from typing import Callable
 import pytest
 
 from pywa import WhatsApp, handlers, utils, filters
+from pywa.handlers import FlowCompletionHandler
 from pywa.types.flows import (
     FlowJSON,
     Screen,
@@ -723,6 +724,15 @@ def test_flow_callback_wrapper_on_error(flow_request):
         data={"error_message": "Example"},
     )
     assert wrapper._get_callback(req) is on_error
+
+
+def test_flow_callback_wrapper_on_completion():
+    wrapper = get_flow_callback_wrapper(lambda _, __: ...)
+
+    @wrapper.on_completion
+    def on_completion(_, __): ...
+
+    assert wrapper._wa._handlers[FlowCompletionHandler][0]._callback is on_completion
 
 
 def test_on_errors_deprecated(flow_request):
