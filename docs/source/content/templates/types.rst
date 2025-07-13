@@ -1,7 +1,7 @@
 Template Types
 ==============
 
-.. currentmodule:: pywa.types.template_v2
+.. currentmodule:: pywa.types.template
 
 .. autoclass:: Template()
 

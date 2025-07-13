@@ -1,7 +1,7 @@
 📄 Templates
 ==============
 
-.. currentmodule:: pywa.types.template_v2
+.. currentmodule:: pywa.types.template
 
 .. note::
 
