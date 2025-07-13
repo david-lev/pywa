@@ -3,10 +3,10 @@ from typing import Any, Callable
 from pywa.types import (
     MessageType,
     MessageStatusType,
-    TemplateStatusUpdate,
 )
 from pywa.types.calls import CallEvent
 from pywa.types.media import Image, Video, Document, Audio
+from pywa.types.template import TemplateStatus, TemplateCategory
 from .common import CLIENTS
 
 # {update_file: {update_name: [test_funcs]}}
@@ -70,9 +70,15 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
         "failed": [lambda s: s.error is not None],
         "with_tracker": [lambda s: s.tracker is not None],
     },
-    # "template_status": {
-    #     "approved": [lambda s: s.event == TemplateStatus.TemplateEvent.APPROVED],
-    # },
+    "template_status_update": {
+        "approved": [lambda s: s.new_status == TemplateStatus.APPROVED],
+    },
+    "template_category_update": {
+        "marketing": [lambda c: c.new_category == TemplateCategory.MARKETING],
+    },
+    "template_components_update": {
+        "element": [lambda c: c.template_element is not None],
+    },
     "flow_completion": {
         "completion": [
             lambda f: f.token is not None,

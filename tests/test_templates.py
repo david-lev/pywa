@@ -1,6 +1,6 @@
 import pytest
 
-from pywa.types.template_v2 import *  # noqa: F403
+from pywa.types.template import *  # noqa: F403
 import importlib
 import json
 import pathlib

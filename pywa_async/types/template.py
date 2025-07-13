@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from .sent_message import SentTemplate
 
 
-@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
+@dataclasses.dataclass(frozen=True, kw_only=True)
 class _BaseTemplateUpdateAsync:
     """Base class for template updates."""
 

@@ -1,6 +1,6 @@
-from pywa.types.template_v2 import *  # noqa: F403
+from pywa.types.template import *  # noqa: F403
 
-authentication_code_autofill_button = TemplateV2(
+authentication_code_autofill_button = Template(
     name="authentication_code_autofill_button",
     language=TemplateLanguage.ENGLISH_US,
     category=TemplateCategory.AUTHENTICATION,
@@ -29,7 +29,7 @@ authentication_code_autofill_button = TemplateV2(
     ],
 )
 
-authentication_code_copy_code_button = TemplateV2(
+authentication_code_copy_code_button = Template(
     name="authentication_code_copy_code_button",
     language=TemplateLanguage.ENGLISH_US,
     category=TemplateCategory.AUTHENTICATION,
@@ -47,7 +47,7 @@ authentication_code_copy_code_button = TemplateV2(
     ],
 )
 
-zero_tap_auth_template = TemplateV2(
+zero_tap_auth_template = Template(
     name="zero_tap_auth_template",
     language=TemplateLanguage.ENGLISH_US,
     category=TemplateCategory.AUTHENTICATION,

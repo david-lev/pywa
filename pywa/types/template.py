@@ -6,14 +6,13 @@ import json
 import pathlib
 import re
 
-from . import Result, FlowJSON
 from .base_update import BaseUpdate
-from .flows import FlowActionType
+from .flows import FlowActionType, FlowJSON
 import abc
 import dataclasses
 import logging
 from typing import TYPE_CHECKING, Literal, Iterable, BinaryIO
-from .others import _ItemFactory
+from .others import Result
 from .. import utils
 from .. import _helpers as helpers
 
@@ -162,11 +161,11 @@ class TemplateStatusUpdate(_BaseTemplateUpdate):
                 datetime.timezone.utc,
             ),
             new_status=TemplateStatus(value["event"]),
-            template_id=value["message_template_id"],
+            template_id=str(value["message_template_id"]),
             template_name=value["message_template_name"],
             template_language=TemplateLanguage(value["message_template_language"]),
             reason=TemplateRejectionReason(value["reason"])
-            if "reason" in value
+            if value.get("reason")
             else None,
             disable_date=datetime.datetime.fromtimestamp(
                 value["disable_info"]["disable_date"],
@@ -258,7 +257,7 @@ class TemplateCategoryUpdate(_BaseTemplateUpdate):
                 data["time"],
                 datetime.timezone.utc,
             ),
-            template_id=value["message_template_id"],
+            template_id=str(value["message_template_id"]),
             template_name=value["message_template_name"],
             template_language=TemplateLanguage(value["message_template_language"]),
             new_category=TemplateCategory(value["new_category"]),
@@ -312,7 +311,7 @@ class TemplateComponentsUpdate(_BaseTemplateUpdate):
                 data["time"],
                 datetime.timezone.utc,
             ),
-            template_id=value["message_template_id"],
+            template_id=str(value["message_template_id"]),
             template_name=value["message_template_name"],
             template_language=TemplateLanguage(value["message_template_language"]),
             template_element=value.get("message_template_element"),
@@ -359,7 +358,7 @@ class TemplateQualityUpdate(_BaseTemplateUpdate):
                 data["time"],
                 datetime.timezone.utc,
             ),
-            template_id=value["message_template_id"],
+            template_id=str(value["message_template_id"]),
             template_name=value["message_template_name"],
             template_language=TemplateLanguage(value["message_template_language"]),
             new_quality_score=QualityScoreType(value["new_quality_score"]),
@@ -1781,7 +1780,7 @@ def _template_to_json(template: Template | LibraryTemplate) -> str:
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class TemplateDetails(Template):
+class TemplateDetails:
     """
     Represents the details of an existing WhatsApp Template.
 
@@ -1805,7 +1804,13 @@ class TemplateDetails(Template):
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
     id: str
+    name: str
+    language: TemplateLanguage
+    category: TemplateCategory
     status: TemplateStatus
+    components: list[TemplateBaseComponent]
+    parameter_format: ParamFormat | None
+    message_send_ttl_seconds: int | None
     correct_category: TemplateCategory | None
     previous_category: TemplateCategory | None
     rejected_reason: TemplateRejectionReason | None

@@ -340,9 +340,9 @@ class Server:
             if handler_type is None:
                 return
             try:
-                constructed_update = self._handlers_to_update_constractor[handler_type](
-                    self, update
-                )
+                constructed_update = self._handlers_to_updates[
+                    handler_type
+                ].from_update(client=self, update=update)
                 if constructed_update:
                     if handler_type._update._is_user_update and self._process_listener(
                         cast(BaseUserUpdate, constructed_update)

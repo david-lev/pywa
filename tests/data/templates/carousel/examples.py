@@ -1,7 +1,6 @@
-from pywa.types.template_v2 import *  # noqa: F403
-from pywa.types.template_v2 import TemplateText
+from pywa.types.template import *  # noqa: F403
 
-carousel_template_media_cards_v1 = TemplateV2(
+carousel_template_media_cards_v1 = Template(
     name="carousel_template_media_cards_v1",
     language=TemplateLanguage.ENGLISH_US,
     category=TemplateCategory.MARKETING,
@@ -76,7 +75,7 @@ carousel_template_media_cards_v1 = TemplateV2(
 )
 
 
-carousel_template_product_cards_v1 = TemplateV2(
+carousel_template_product_cards_v1 = Template(
     name="carousel_template_product_cards_v1",
     language=TemplateLanguage.ENGLISH_US,
     category=TemplateCategory.MARKETING,

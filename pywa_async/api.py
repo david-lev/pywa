@@ -877,8 +877,8 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
     async def create_template(
         self,
         waba_id: str,
-        template: dict[str, str | list[str]],
-    ) -> dict[str, str]:
+        template: dict,
+    ) -> dict:
         """
         Create a message template.
 

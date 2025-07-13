@@ -44,6 +44,9 @@ __all__ = [
     "RawUpdateHandler",
     "MessageStatusHandler",
     "TemplateStatusUpdateHandler",
+    "TemplateCategoryUpdateHandler",
+    "TemplateQualityUpdateHandler",
+    "TemplateComponentsUpdateHandler",
     "FlowCompletionHandler",
     "FlowRequestHandler",
     "ChatOpenedHandler",
@@ -80,6 +83,9 @@ from .types import (
     Message,
     MessageStatus,
     TemplateStatusUpdate,
+    TemplateQualityUpdate,
+    TemplateComponentsUpdate,
+    TemplateCategoryUpdate,
     UserPreferences,
     UserMarketingPreferences,
     FlowRequest,
@@ -126,6 +132,15 @@ _ChatOpenedCallback: TypeAlias = Callable[
 ]
 _TemplateStatusUpdateCallback: TypeAlias = Callable[
     ["WhatsApp", TemplateStatusUpdate], Any | Awaitable[Any]
+]
+_TemplateCategoryUpdateCallback: TypeAlias = Callable[
+    ["WhatsApp", TemplateCategoryUpdate], Any | Awaitable[Any]
+]
+_TemplateQualityUpdateCallback: TypeAlias = Callable[
+    ["WhatsApp", TemplateQualityUpdate], Any | Awaitable[Any]
+]
+_TemplateComponentsUpdateCallback: TypeAlias = Callable[
+    ["WhatsApp", TemplateComponentsUpdate], Any | Awaitable[Any]
 ]
 _FlowCompletionCallback: TypeAlias = Callable[
     ["WhatsApp", FlowCompletion], Any | Awaitable[Any]
@@ -490,6 +505,99 @@ class TemplateStatusUpdateHandler(Handler[TemplateStatusUpdate]):
     def __init__(
         self,
         callback: _TemplateStatusUpdateCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class TemplateCategoryUpdateHandler(Handler[TemplateCategoryUpdate]):
+    """
+    Handler for :class:`pywa.types.TemplateCategoryUpdate`
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_template_category_update` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_template_category_update = lambda _, msg: print(msg)
+        >>> wa.add_handlers(TemplateCategoryUpdateHandler(print_template_category_update))
+
+    Args:
+        callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a
+            :class:`pywa.types.TemplateCategoryUpdate` as arguments)
+        filters: The filters to apply to the handler
+        priority: The priority of the handler (default: ``0``)
+    """
+
+    _update = TemplateCategoryUpdate
+
+    def __init__(
+        self,
+        callback: _TemplateCategoryUpdateCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class TemplateQualityUpdateHandler(Handler[TemplateQualityUpdate]):
+    """
+    Handler for :class:`pywa.types.TemplateQualityUpdate`
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_template_quality_update` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_template_quality_update = lambda _, msg: print(msg)
+        >>> wa.add_handlers(TemplateQualityUpdateHandler(print_template_quality_update))
+
+    Args:
+        callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a
+            :class:`pywa.types.TemplateQualityUpdate` as arguments)
+        filters: The filters to apply to the handler
+        priority: The priority of the handler (default: ``0``)
+    """
+
+    _update = TemplateQualityUpdate
+
+    def __init__(
+        self,
+        callback: _TemplateQualityUpdateCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class TemplateComponentsUpdateHandler(Handler[TemplateComponentsUpdate]):
+    """
+    Handler for :class:`pywa.types.TemplateComponentsUpdate`
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_template_components_update` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_template_components_update = lambda _, msg: print(msg)
+        >>> wa.add_handlers(TemplateComponentsUpdateHandler(print_template_components_update))
+
+    Args:
+        callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a
+            :class:`pywa.types.TemplateComponentsUpdate` as arguments)
+        filters: The filters to apply to the handler
+        priority: The priority of the handler (default: ``0``)
+    """
+
+    _update = TemplateComponentsUpdate
+
+    def __init__(
+        self,
+        callback: _TemplateComponentsUpdateCallback,
         filters: Filter = None,
         priority: int = 0,
     ):
@@ -1426,6 +1534,153 @@ class _HandlerDecorators:
             return _registered_with_parentheses(
                 self=self,
                 handler_type=TemplateStatusUpdateHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_template_category_update(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_TemplateCategoryUpdateCallback], _TemplateCategoryUpdateCallback]
+        | _TemplateCategoryUpdateCallback
+    ):
+        """
+        Decorator to register a function as a callback for :class:`pywa.types.TemplateCategoryUpdate` updates (Template category changed).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`TemplateCategoryUpdateHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types, filters
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_template_category_update
+            ... def category_update_handler(client: WhatsApp, update: types.TemplateCategoryUpdate):
+            ...     print(f"Template {update.template_name} category changed to {update.new_category}!")
+
+        Args:
+            filters: Filters to apply to the incoming template category changes.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=TemplateCategoryUpdateHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(
+            callback: _TemplateCategoryUpdateCallback,
+        ) -> _TemplateCategoryUpdateCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=TemplateCategoryUpdateHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_template_quality_update(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_TemplateQualityUpdateCallback], _TemplateQualityUpdateCallback]
+        | _TemplateQualityUpdateCallback
+    ):
+        """
+        Decorator to register a function as a callback for :class:`pywa.types.TemplateQualityUpdate` updates (Template quality changed).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`TemplateQualityUpdateHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types, filters
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_template_quality_update
+            ... def quality_update_handler(client: WhatsApp, update: types.TemplateQualityUpdate):
+            ...     print(f"Template {update.template_name} quality changed to {update.new_quality_score}!")
+
+        Args:
+            filters: Filters to apply to the incoming template quality changes.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=TemplateQualityUpdateHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(
+            callback: _TemplateQualityUpdateCallback,
+        ) -> _TemplateQualityUpdateCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=TemplateQualityUpdateHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_template_components_update(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_TemplateComponentsUpdateCallback], _TemplateComponentsUpdateCallback]
+        | _TemplateComponentsUpdateCallback
+    ):
+        """
+        Decorator to register a function as a callback for :class:`pywa.types.TemplateComponentsUpdate` updates (Template components changed).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`TemplateComponentsUpdateHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types, filters
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_template_components_update
+            ... def components_update_handler(client: WhatsApp, update: types.TemplateComponentsUpdate):
+            ...     print(f"Template {update.template_name} components updated!")
+
+        Args:
+            filters: Filters to apply to the incoming template components changes.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=TemplateComponentsUpdateHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(
+            callback: _TemplateComponentsUpdateCallback,
+        ) -> _TemplateComponentsUpdateCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=TemplateComponentsUpdateHandler,
                 callback=callback,
                 filters=filters,
                 priority=priority,

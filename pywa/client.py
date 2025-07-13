@@ -33,6 +33,9 @@ from .handlers import (
     ChatOpenedHandler,
     FlowCompletionHandler,
     TemplateStatusUpdateHandler,
+    TemplateCategoryUpdateHandler,
+    TemplateQualityUpdateHandler,
+    TemplateComponentsUpdateHandler,
     CallConnectHandler,
     CallTerminateHandler,
     CallStatusHandler,
@@ -77,6 +80,9 @@ from .types import (
     CallbackButton,
     CallbackSelection,
     TemplateStatusUpdate,
+    TemplateCategoryUpdate,
+    TemplateQualityUpdate,
+    TemplateComponentsUpdate,
     Image,
     Video,
     Sticker,
@@ -140,21 +146,22 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     _usr_cls = User
     _httpx_client = httpx.Client
     _async_allowed = False
-    _handlers_to_update_constractor: dict[
-        type[Handler], Callable[[WhatsApp, dict], BaseUpdate]
-    ] = {
-        MessageHandler: Message.from_update,
-        MessageStatusHandler: MessageStatus.from_update,
-        CallbackButtonHandler: CallbackButton.from_update,
-        CallbackSelectionHandler: CallbackSelection.from_update,
-        ChatOpenedHandler: ChatOpened.from_update,
-        FlowCompletionHandler: FlowCompletion.from_update,
-        TemplateStatusUpdateHandler: TemplateStatusUpdate.from_update,
-        UserPreferencesHandler: UserPreferences.from_update,
-        UserMarketingPreferencesHandler: UserMarketingPreferences.from_update,
-        CallConnectHandler: CallConnect.from_update,
-        CallTerminateHandler: CallTerminate.from_update,
-        CallStatusHandler: CallStatus.from_update,
+    _handlers_to_updates: dict[type[Handler], type[BaseUpdate]] = {
+        MessageHandler: Message,
+        MessageStatusHandler: MessageStatus,
+        CallbackButtonHandler: CallbackButton,
+        CallbackSelectionHandler: CallbackSelection,
+        ChatOpenedHandler: ChatOpened,
+        FlowCompletionHandler: FlowCompletion,
+        TemplateStatusUpdateHandler: TemplateStatusUpdate,
+        TemplateCategoryUpdateHandler: TemplateCategoryUpdate,
+        TemplateQualityUpdateHandler: TemplateQualityUpdate,
+        TemplateComponentsUpdateHandler: TemplateComponentsUpdate,
+        UserPreferencesHandler: UserPreferences,
+        UserMarketingPreferencesHandler: UserMarketingPreferences,
+        CallConnectHandler: CallConnect,
+        CallTerminateHandler: CallTerminate,
+        CallStatusHandler: CallStatus,
     }
     """A dictionary that maps handler types to their respective update constructors."""
     _msg_fields_to_objects_constructors = dict(

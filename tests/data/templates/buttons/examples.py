@@ -1,7 +1,6 @@
-from pywa.types.template_v2 import *  # noqa: F403
-from pywa.types.template_v2 import TemplateText
+from pywa.types.template import *  # noqa: F403
 
-seasonal_promotion = TemplateV2(
+seasonal_promotion = Template(
     name="seasonal_promotion",
     language=TemplateLanguage.ENGLISH_US,
     category=TemplateCategory.MARKETING,
@@ -27,7 +26,7 @@ seasonal_promotion = TemplateV2(
     ],
 )
 
-order_confirmation = TemplateV2(
+order_confirmation = Template(
     name="order_confirmation",
     language=TemplateLanguage.ENGLISH_US,
     category=TemplateCategory.UTILITY,
@@ -53,7 +52,7 @@ order_confirmation = TemplateV2(
     ],
 )
 
-order_delivery_update = TemplateV2(
+order_delivery_update = Template(
     name="order_delivery_update",
     language=TemplateLanguage.ENGLISH_US,
     category=TemplateCategory.UTILITY,
@@ -75,7 +74,7 @@ order_delivery_update = TemplateV2(
     ],
 )
 
-abandoned_cart_offer = TemplateV2(
+abandoned_cart_offer = Template(
     name="abandoned_cart_offer",
     language=TemplateLanguage.ENGLISH_US,
     category=TemplateCategory.MARKETING,
@@ -95,7 +94,7 @@ abandoned_cart_offer = TemplateV2(
     ],
 )
 
-intro_catalog_offer = TemplateV2(
+intro_catalog_offer = Template(
     name="intro_catalog_offer",
     language=TemplateLanguage.ENGLISH_US,
     category=TemplateCategory.MARKETING,
@@ -117,7 +116,7 @@ intro_catalog_offer = TemplateV2(
     ],
 )
 
-coupon_code_fall2023_25off = TemplateV2(
+coupon_code_fall2023_25off = Template(
     name="coupon_code_fall2023_25off",
     language=TemplateLanguage.ENGLISH_US,
     category=TemplateCategory.MARKETING,
@@ -139,7 +138,7 @@ coupon_code_fall2023_25off = TemplateV2(
     ],
 )
 
-abandoned_cart = TemplateV2(
+abandoned_cart = Template(
     name="abandoned_cart",
     language=TemplateLanguage.ENGLISH_US,
     category=TemplateCategory.MARKETING,

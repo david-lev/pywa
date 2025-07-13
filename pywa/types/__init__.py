@@ -50,10 +50,11 @@ from .others import (
     BusinessPhoneNumberSettings,
 )
 from .template import (
-    NewTemplate,
     Template,
-    TemplateResponse,
     TemplateStatusUpdate,
+    TemplateQualityUpdate,
+    TemplateCategoryUpdate,
+    TemplateComponentsUpdate,
 )
 
 from .flows import (

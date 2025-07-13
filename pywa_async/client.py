@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from pywa.handlers import (
+    TemplateCategoryUpdateHandler,
+    TemplateQualityUpdateHandler,
+    TemplateComponentsUpdateHandler,
+)
 from pywa.types.template import TemplateUnpauseResult
 
 """The WhatsApp Async client."""
@@ -74,6 +79,9 @@ from .types import (
     CallConnect,
     CallTerminate,
     CallStatus,
+    TemplateCategoryUpdate,
+    TemplateQualityUpdate,
+    TemplateComponentsUpdate,
 )
 from .handlers import (
     Handler,
@@ -129,21 +137,22 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     _async_allowed = True
     api: WhatsAppCloudApiAsync  # IDE type hinting
 
-    _handlers_to_update_constractor: dict[
-        type[Handler], Callable[[WhatsApp, dict], BaseUpdate]
-    ] = {
-        MessageHandler: Message.from_update,
-        MessageStatusHandler: MessageStatus.from_update,
-        CallbackButtonHandler: CallbackButton.from_update,
-        CallbackSelectionHandler: CallbackSelection.from_update,
-        ChatOpenedHandler: ChatOpened.from_update,
-        FlowCompletionHandler: FlowCompletion.from_update,
-        CallConnectHandler: CallConnect.from_update,
-        CallTerminateHandler: CallTerminate.from_update,
-        CallStatusHandler: CallStatus.from_update,
-        UserPreferencesHandler: UserPreferences.from_update,
-        UserMarketingPreferencesHandler: UserMarketingPreferences.from_update,
-        TemplateStatusUpdateHandler: TemplateStatusUpdate.from_update,
+    _handlers_to_updates: dict[type[Handler], BaseUpdate] = {
+        MessageHandler: Message,
+        MessageStatusHandler: MessageStatus,
+        CallbackButtonHandler: CallbackButton,
+        CallbackSelectionHandler: CallbackSelection,
+        ChatOpenedHandler: ChatOpened,
+        FlowCompletionHandler: FlowCompletion,
+        TemplateStatusUpdateHandler: TemplateStatusUpdate,
+        TemplateCategoryUpdateHandler: TemplateCategoryUpdate,
+        TemplateQualityUpdateHandler: TemplateQualityUpdate,
+        TemplateComponentsUpdateHandler: TemplateComponentsUpdate,
+        UserPreferencesHandler: UserPreferences,
+        UserMarketingPreferencesHandler: UserMarketingPreferences,
+        CallConnectHandler: CallConnect,
+        CallTerminateHandler: CallTerminate,
+        CallStatusHandler: CallStatus,
     }
     """A dictionary that maps handler types to their respective update constructors."""
 

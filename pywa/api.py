@@ -887,7 +887,7 @@ class WhatsAppCloudApi:
         self,
         waba_id: str,
         template: dict,
-    ) -> dict[str, str]:
+    ) -> dict:
         """
         Create a message template.
 

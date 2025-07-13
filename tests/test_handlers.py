@@ -40,8 +40,7 @@ CallbackButtonOnlyDataIsNeeded = functools.partial(
 
 def test_all_updates_are_overridden():
     assert (
-        FAKE_WA._handlers_to_update_constractor.keys()
-        == FAKE_WA_ASYNC._handlers_to_update_constractor.keys()
+        FAKE_WA._handlers_to_updates.keys() == FAKE_WA_ASYNC._handlers_to_updates.keys()
     )
 
 

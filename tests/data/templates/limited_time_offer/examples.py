@@ -1,6 +1,6 @@
-from pywa.types.template_v2 import *  # noqa: F403
+from pywa.types.template import *  # noqa: F403
 
-limited_time_offer_caribbean_pkg_2023 = TemplateV2(
+limited_time_offer_caribbean_pkg_2023 = Template(
     name="limited_time_offer_caribbean_pkg_2023",
     language=TemplateLanguage.ENGLISH_US,
     category=TemplateCategory.MARKETING,
