@@ -155,6 +155,9 @@ and the verify token that you used when initializing the WhatsApp client.
         - ``messages`` (all user related updates: messages, callbacks and message status updates)
         - ``calls`` (call connect, terminate and status updates)
         - ``message_template_status_update`` (template got approved, rejected, etc.)
+        - ``message_template_quality_update`` (template quality score got changed)
+        - ``message_template_components_update`` (template components got changed, e.g. header, body, footer or buttons)
+        - ``template_category_update`` (template category got changed)
         - ``user_preferences`` (user preferences updates, e.g. marketing preferences, etc.)
 
     You can subscribe to all the other fields, but they will not be handled by pywa, they can still be handled manually by
@@ -343,6 +346,15 @@ __________________
    * - :meth:`~pywa.client.WhatsApp.on_template_status_update`
      - :class:`TemplateStatusUpdateHandler`
      - :class:`~pywa.types.template.TemplateStatusUpdate`
+   * - :meth:`~pywa.client.WhatsApp.on_template_category_update`
+     - :class:`TemplateCategoryUpdateHandler`
+     - :class:`~pywa.types.template.TemplateCategoryUpdate`
+   * - :meth:`~pywa.client.WhatsApp.on_template_quality_update`
+     - :class:`TemplateQualityUpdateHandler`
+     - :class:`~pywa.types.template.TemplateQualityUpdate`
+   * - :meth:`~pywa.client.WhatsApp.on_template_components_update`
+     - :class:`TemplateComponentsUpdateHandler`
+     - :class:`~pywa.types.template.TemplateComponentsUpdate`
    * - :meth:`~pywa.client.WhatsApp.on_chat_opened`
      - :class:`ChatOpenedHandler`
      - :class:`~pywa.types.chat_opened.ChatOpened`

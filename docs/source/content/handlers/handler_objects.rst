@@ -23,6 +23,8 @@ Handler Objects
 .. autoclass:: CallStatusHandler
 .. autoclass:: UserPreferencesHandler
 .. autoclass:: UserMarketingPreferencesHandler
-.. autoclass:: TemplateStatusHandler
 .. autoclass:: TemplateStatusUpdateHandler
+.. autoclass:: TemplateCategoryUpdateHandler
+.. autoclass:: TemplateQualityUpdateHandler
+.. autoclass:: TemplateComponentsUpdateHandler
 .. autoclass:: RawUpdateHandler

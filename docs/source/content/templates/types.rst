@@ -6,9 +6,9 @@ Template Types
 .. autoclass:: Template()
 
 .. autoclass:: TemplateDetails()
-    :members: update, delete, compare, migrate, send
+    :members: update, delete, compare, migrate, send, unpause
 
-.. autoclass:: TemplateStatusUpdate()
+.. autoclass:: TemplateStatus()
 
 .. autoclass:: TemplateRejectionReason()
 
@@ -68,4 +68,3 @@ Template Types
 
 .. autoclass:: TemplatesResult()
     :show-inheritance:
-    :members: compare
