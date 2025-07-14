@@ -5,7 +5,6 @@ from pywa.handlers import (
     TemplateQualityUpdateHandler,
     TemplateComponentsUpdateHandler,
 )
-from pywa.types.template import TemplateUnpauseResult
 
 """The WhatsApp Async client."""
 
@@ -120,6 +119,8 @@ from .types.template import (
     CreatedTemplate,
     LibraryTemplate,
     TemplateStatus,
+    TemplateUnpauseResult,
+    AuthenticationTemplates,
 )
 from .types.calls import CallPermissions, SDP
 from .types.others import InteractiveType, UsersBlockedResult, UsersUnblockedResult
@@ -1919,29 +1920,37 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Example::
 
-            seasonal_promotion = Template(
-                name="seasonal_promotion",
-                category=TemplateCategory.MARKETING,
-                language=TemplateLanguage.ENGLISH_US,
-                parameter_format=ParamFormat.NAMED,
-                components=[
-                    HeaderText(
-                        text=TemplateText(text="Our {{sale_name}} is on!", sale_name="Summer Sale")
-                    ),
-                    Body(
-                        text=TemplateText(
-                            text="Shop now through {{end_date}} and use code {{discount_code}} to get {{discount_amount}} off of all merchandise.",
-                            end_date="the end of August", discount_code="25OFF", discount_amount="25%")
-                    ),
-                    Footer(text="Use the buttons below to manage your marketing subscriptions"),
-                    Buttons(
-                        buttons=[
-                            QuickReplyButton(text="Unsubscribe from Promos"),
-                            QuickReplyButton(text="Unsubscribe from All"),
-                        ]
-                    ),
-                ],
-            )
+            from pywa.types import template as t
+
+            wa = WhatsApp(..., business_account_id='1234567890')
+
+            created = wa.create_template(
+                template=t.Template(
+                    name='seasonal_promotion',
+                    category=t.TemplateCategory.MARKETING,
+                    language=t.TemplateLanguage.ENGLISH_US,
+                    parameter_format=t.ParamFormat.NAMED,
+                    components=[
+                        t.HeaderText(text='Our {{sale_name}} is on!', sale_name='Summer Sale'),
+                        t.BodyText(
+                            text=t.TemplateText(
+                                text='Shop now through {{end_date}} and use code {{discount_code}} to get {{discount_amount}} off of all merchandise.',
+                                end_date='the end of August', discount_code='25OFF', discount_amount='25%')
+                        ),
+                        t.Footer(text='Use the buttons below to manage your marketing subscriptions'),
+                        t.Buttons(
+                            buttons=[
+                                t.QuickReplyButton(text='Unsubscribe from Promos'),
+                                t.QuickReplyButton(text='Unsubscribe from All'),
+                            ]
+                        ),
+                    ],
+                ),
+
+                print('Template created:', created.id, created.status)
+
+
+
 
         Args:
             template: The template to create.
@@ -1956,6 +1965,63 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 waba_id=helpers.resolve_waba_id_param(self, waba_id),
                 template=json.loads(template.to_json()),
             ),
+        )
+
+    async def upsert_authentication_template(
+        self, templates: AuthenticationTemplates, *, waba_id: str | int | None = None
+    ) -> tuple[CreatedTemplate, ...]:
+        """
+        Bulk update or create authentication templates in multiple languages that include or exclude the optional security and expiration warnings.
+
+        - If a template already exists with a matching name and language, the template will be updated with the contents of the request, otherwise, a new template will be created.
+        - You can't provide the ``text`` or ``autofill_text`` properties for the OTP Buttons. It will be automatically set to a pre-set value localized to the template's language. For example, `Copy Code` for English (US) and `Autofill` for English (US).
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates#bulk-management>`_.
+        - Read more about `Authentication Templates <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/authentication-templates>`_.
+
+        Example::
+
+            from pywa.types import template as t
+
+            wa = WhatsApp(...)
+            created = wa.upsert_authentication_template(
+                templates=t.AuthenticationTemplates(
+                    name='auth_with_otp',
+                    languages=[
+                        t.TemplateLanguage.ENGLISH_US,
+                        t.TemplateLanguage.SPANISH,
+                    ],
+                    components=[
+                        t.AuthenticationBody(add_security_recommendation=True),
+                        t.AuthenticationFooter(code_expiration_minutes=5),
+                        t.Buttons(
+                            buttons=[
+                                t.CopyCodeOTPButton(),
+                            ]
+                        ),
+                    ],
+                ),
+            )
+            for template in created:
+                print('Template created:', template.id, template.status)
+
+        Args:
+            templates: The authentication templates to upsert.
+            waba_id: The WhatsApp Business account ID (Overrides the client's business account ID, optional).
+
+        Returns:
+            A tuple of created/updated templates.
+        """
+        return tuple(
+            CreatedTemplate.from_dict(
+                client=self,
+                data=res,
+            )
+            for res in (
+                await self.api.upsert_message_templates(
+                    waba_id=helpers.resolve_waba_id_param(self, waba_id),
+                    templates=json.loads(templates.to_json()),
+                )
+            )["data"]
         )
 
     async def send_template(

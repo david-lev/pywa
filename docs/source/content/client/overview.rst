@@ -161,6 +161,8 @@ Templates
      - Description
    * - :meth:`~WhatsApp.create_template`
      - Create a template
+   * - :meth:`~WhatsApp.upsert_authentication_template`
+     - Bulk create or update authentication templates
    * - :meth:`~WhatsApp.get_templates`
      - List all templates
    * - :meth:`~WhatsApp.get_template`
@@ -169,6 +171,8 @@ Templates
      - Update a template
    * - :meth:`~WhatsApp.delete_template`
      - Delete a template
+   * - :meth:`~WhatsApp.unpause_template`
+     - Unpause a template
    * - :meth:`~WhatsApp.compare_templates`
      - Compare two templates
    * - :meth:`~WhatsApp.migrate_templates`

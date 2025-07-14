@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+import dataclasses
+import datetime
+import functools
+from typing import TYPE_CHECKING, Iterable
+
 from pywa.types.template import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.template import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.template import (
@@ -145,29 +150,6 @@ class TemplateQualityUpdate(_BaseTemplateUpdateAsync, _TemplateQualityUpdate):
         previous_quality_score: The previous quality score of the template.
     """
 
-    new_quality_score: QualityScoreType
-    previous_quality_score: QualityScoreType
-
-    _webhook_field = "message_template_quality_update"
-
-    @classmethod
-    def from_update(cls, client: WhatsApp, update: dict) -> TemplateQualityUpdate:
-        value = (data := update["entry"][0])["changes"][0]["value"]
-        return cls(
-            _client=client,
-            raw=update,
-            id=data["id"],
-            timestamp=datetime.datetime.fromtimestamp(
-                data["time"],
-                datetime.timezone.utc,
-            ),
-            template_id=value["message_template_id"],
-            template_name=value["message_template_name"],
-            template_language=TemplateLanguage(value["message_template_language"]),
-            new_quality_score=QualityScoreType(value["new_quality_score"]),
-            previous_quality_score=QualityScoreType(value["previous_quality_score"]),
-        )
-
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class TemplateDetails(_TemplateDetails):
@@ -180,8 +162,8 @@ class TemplateDetails(_TemplateDetails):
         status: The status of the template (See `Template Status <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#template-status>`_).
         category: The category of the template (See `Template Categorization <https://developers.facebook.com/docs/whatsapp/updates-to-pricing/new-template-guidelines#template-categorization>`_).
         language: The language of the template (See `Supported Languages <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/supported-languages>`_).
-        components: Components that make up the template. Header, Body, Footer, Buttons, Cards, etc. (See `Template Components <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components>`_).
-        parameter_format: The type of parameter formatting the Header and Body components of the template will use.
+        components: Components that make up the template. Header, BodyText, Footer, Buttons, Cards, etc. (See `Template Components <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components>`_).
+        parameter_format: The type of parameter formatting the class:`HeaderText` and BodyText components of the template will use.
         message_send_ttl_seconds: The time-to-live (TTL) for the template message in seconds (See `Time-to-live (TTL) <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#time-to-live--ttl---customization--defaults--min-max-values--and-compatibility>`_).
         correct_category: The correct category of the template, if applicable.
         previous_category: The previous category of the template, if applicable.
@@ -314,7 +296,7 @@ class TemplatesResult(Result[TemplateDetails]):
 
     def __init__(
         self,
-        wa: WhatsApp,
+        wa: WhatsAppAsync,
         response: dict,
     ):
         super().__init__(

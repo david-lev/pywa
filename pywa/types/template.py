@@ -1,5 +1,63 @@
 from __future__ import annotations
 
+__all__ = [
+    "TemplateStatusUpdate",
+    "TemplateStatus",
+    "TemplateRejectionReason",
+    "TemplateCategoryUpdate",
+    "TemplateCategory",
+    "TemplateComponentsUpdate",
+    "TemplateQualityUpdate",
+    "QualityScore",
+    "QualityScoreType",
+    "TemplateLanguage",
+    "ParamFormat",
+    "TemplateBaseComponent",
+    "TemplateText",
+    "HeaderText",
+    "HeaderMediaExample",
+    "HeaderImage",
+    "HeaderVideo",
+    "HeaderDocument",
+    "HeaderLocation",
+    "HeaderProduct",
+    "BodyText",
+    "AuthenticationBody",
+    "Footer",
+    "AuthenticationFooter",
+    "Buttons",
+    "CopyCodeButton",
+    "FlowButton",
+    "FlowButtonIcon",
+    "PhoneNumberButton",
+    "QuickReplyButton",
+    "URLButton",
+    "CatalogButton",
+    "MPMButton",
+    "SPMButton",
+    "CopyCodeOTPButton",
+    "OneTapOTPButton",
+    "ZeroTapOTPButton",
+    "OTPSupportedApp",
+    "LimitedTimeOffer",
+    "LimitedTimeOfferConfig",
+    "Carousel",
+    "CarouselMediaCard",
+    "Template",
+    "CreatedTemplate",
+    "TemplateDetails",
+    "AuthenticationTemplates",
+    "TemplatesResult",
+    "TemplatesCompareResult",
+    "TemplateUnpauseResult",
+    "MigrateTemplatesResult",
+    "MigratedTemplate",
+    "MigratedTemplateError",
+    "LibraryTemplate",
+    "LibraryTemplateBodyInputs",
+    "LibraryTemplateButtonInputs",
+]
+
 import datetime
 import functools
 import json
@@ -982,7 +1040,7 @@ class BaseBodyComponent(TemplateBaseComponent, abc.ABC):
     type: ComponentType
 
 
-class Body(BaseBodyComponent):
+class BodyText(BaseBodyComponent):
     """
     The body component represents the core text of your message template and is a text-only template component. It is required for all templates.
 
@@ -1007,10 +1065,10 @@ class Body(BaseBodyComponent):
             self.text.param_type = "body"
 
     def __repr__(self):
-        return f"Body(text={self.text!r})"
+        return f"BodyText(text={self.text!r})"
 
     @classmethod
-    def from_dict(cls, data: dict) -> Body:
+    def from_dict(cls, data: dict) -> BodyText:
         return cls(text=TemplateText.from_dict(data))
 
     def to_dict(self) -> dict[str, str | dict]:
@@ -1063,7 +1121,7 @@ class Buttons(TemplateBaseComponent):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#buttons>`_.
 
     Attributes:
-        buttons: A list of button components. Can contain a mixture of :class:`QuickReply
+        buttons: A list of button components.
     """
 
     type: ComponentType = dataclasses.field(
@@ -1319,7 +1377,7 @@ class URLButton(BaseButtonComponent):
         return cls(
             text=data["text"],
             url=data["url"],
-            example=[data["example"][0]] if "example" in data else None,
+            example=data["example"][0] if "example" in data else None,
         )
 
 
@@ -1550,7 +1608,7 @@ class Carousel(TemplateBaseComponent):
     """
     Media card carousel templates allow you to send a single text message accompanied by a set of up to 10 media cards in a horizontally scrollable view:
 
-    Carousel templates are composed of message body text and up to 10 media cards. Each card in the template has an :class:`HeaderImage` or :class:`HeaderVideo` header asset, card :class:`Body`, and up to two buttons. Button combinations can be a mix of :class:`QuickReplyButton` buttons, :class:`PhoneNumberButton` buttons, and :class:`URLButton` buttons.
+    Carousel templates are composed of message body text and up to 10 media cards. Each card in the template has an :class:`HeaderImage` or :class:`HeaderVideo` header asset, card :class:`BodyText`, and up to two buttons. Button combinations can be a mix of :class:`QuickReplyButton` buttons, :class:`PhoneNumberButton` buttons, and :class:`URLButton` buttons.
 
     - All cards defined on a template must have the same components.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/media-card-carousel-templates>`_.
@@ -1570,7 +1628,7 @@ class Carousel(TemplateBaseComponent):
 @dataclasses.dataclass(kw_only=True, slots=True)
 class CarouselMediaCard:
     """
-    Carousel templates are composed of message body text and up to 10 media cards. Each card in the template has an :class:`HeaderImage` or :class:`HeaderVideo` header asset, card :class:`Body`, and up to two buttons. Button combinations can be a mix of :class:`QuickReplyButton` buttons, :class:`PhoneNumberButton` buttons, and :class:`URLButton` buttons.
+    Carousel templates are composed of message body text and up to 10 media cards. Each card in the template has an :class:`HeaderImage` or :class:`HeaderVideo` header asset, card :class:`BodyText`, and up to two buttons. Button combinations can be a mix of :class:`QuickReplyButton` buttons, :class:`PhoneNumberButton` buttons, and :class:`URLButton` buttons.
 
     Attributes:
         components: A list of components that make up the media card, such as header, body, footer, and buttons.
@@ -1628,15 +1686,15 @@ class Template:
         name: The name of the template (should be unique, maximum 512 characters).
         language: The language of the template (See `Supported Languages <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/supported-languages>`_).
         category: The category of the template (See `Template Categorization <https://developers.facebook.com/docs/whatsapp/updates-to-pricing/new-template-guidelines#template-categorization>`_).
-        components: Components that make up the template. Header, Body, Footer, Buttons, Cards, etc. (See `Template Components <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components>`_).
-        parameter_format: The type of parameter formatting the Header and Body components of the template will use. Defaults to ``POSITIONAL``.
+        components: Components that make up the template. Header, BodyText, Footer, Buttons, Cards, etc. (See `Template Components <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components>`_).
+        parameter_format: The type of parameter formatting the :class:`HeaderText` and :class:`BodyText` components of the template will use. Defaults to ``POSITIONAL``.
         message_send_ttl_seconds: The time-to-live (TTL) for the template message in seconds. (See `Time-to-live (TTL) <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#time-to-live--ttl---customization--defaults--min-max-values--and-compatibility>`_).
     """
 
     name: str
     language: TemplateLanguage
     category: TemplateCategory
-    components: list[TemplateBaseComponent]
+    components: list[TemplateBaseComponent | dict]
     parameter_format: ParamFormat | None = None
     message_send_ttl_seconds: int | None = None
 
@@ -1647,9 +1705,39 @@ class Template:
         return _template_to_json(self)
 
 
+@dataclasses.dataclass(kw_only=True, slots=True)
+class AuthenticationTemplates(Template):
+    """
+    Bulk update or create authentication templates in multiple languages that include or exclude the optional security and expiration warnings.
+
+    - If a template already exists with a matching name and language, the template will be updated with the contents of the request, otherwise, a new template will be created.
+    - You can't provide the ``text`` or ``autofill_text`` properties for the OTP Buttons. It will be automatically set to a pre-set value localized to the template's language. For example, `Copy Code` for English (US) and `Autofill` for English (US).
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates#bulk-management>`_.
+
+    Attributes:
+        name: The name of the template (should be unique, maximum 512 characters).
+        languages: A list of languages and locale codes to create or update the template in (See `Supported Languages <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/supported-languages>`_).
+        components: Components that make up the authentication template. :class:`AuthenticationBody`, :class:`AuthenticationFooter` and  :class:`Buttons` with :class:`OneTapOTPButton`, :class:`ZeroTapOTPButton`, or :class:`CopyCodeOTPButton` buttons.
+        message_send_ttl_seconds: The time-to-live (TTL) for the template message in seconds. (See `Time-to-live (TTL) <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#time-to-live--ttl---customization--defaults--min-max-values--and-compatibility>`_).
+    """
+
+    language: None = dataclasses.field(
+        default=None,
+        init=False,
+        repr=False,
+    )
+    category: TemplateCategory = dataclasses.field(
+        default=TemplateCategory.AUTHENTICATION,
+        init=False,
+        repr=False,
+    )
+    languages: list[TemplateLanguage]
+    components: list[AuthenticationBody | AuthenticationFooter | Buttons | dict]
+
+
 _comp_types_to_component: dict[ComponentType, type[TemplateBaseComponent]] = {
     ComponentType.HEADER: BaseHeaderComponent,
-    ComponentType.BODY: Body,
+    ComponentType.BODY: BodyText,
     ComponentType.FOOTER: Footer,
     ComponentType.BUTTONS: Buttons,
     ComponentType.CAROUSEL: Carousel,
@@ -1708,7 +1796,7 @@ def _parse_component(component: dict) -> TemplateBaseComponent | dict:
         if "add_security_recommendation" in component:
             return AuthenticationBody.from_dict(component)
         elif "text" in component:
-            return Body.from_dict(component)
+            return BodyText.from_dict(component)
         _logger.warning(
             "Unknown body component: %s. Defaulting to dictionary representation.",
             component,
@@ -1790,8 +1878,8 @@ class TemplateDetails:
         status: The status of the template (See `Template Status <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#template-status>`_).
         category: The category of the template (See `Template Categorization <https://developers.facebook.com/docs/whatsapp/updates-to-pricing/new-template-guidelines#template-categorization>`_).
         language: The language of the template (See `Supported Languages <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/supported-languages>`_).
-        components: Components that make up the template. Header, Body, Footer, Buttons, Cards, etc. (See `Template Components <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components>`_).
-        parameter_format: The type of parameter formatting the Header and Body components of the template will use.
+        components: Components that make up the template. Header, BodyText, Footer, Buttons, Cards, etc. (See `Template Components <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components>`_).
+        parameter_format: The type of parameter formatting the Header and BodyText components of the template will use.
         message_send_ttl_seconds: The time-to-live (TTL) for the template message in seconds (See `Time-to-live (TTL) <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#time-to-live--ttl---customization--defaults--min-max-values--and-compatibility>`_).
         correct_category: The correct category of the template, if applicable.
         previous_category: The previous category of the template, if applicable.

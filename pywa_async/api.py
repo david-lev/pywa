@@ -1093,6 +1093,40 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             endpoint=f"/{template_id}/unpause",
         )
 
+    async def upsert_message_templates(
+        self,
+        waba_id: str,
+        templates: dict,
+    ) -> dict:
+        """
+        Bulk update or create authentication templates in multiple languages that include or exclude the optional security and expiration warnings.
+
+        If a template already exists with a matching name and language, the template will be updated with the contents of the request, otherwise, a new template will be created.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates#bulk-management>`_.
+
+        Return example::
+
+            {
+                "data": [
+                    {
+                        "id": "123456789012345",
+                        "language": "en_US",
+                        "status": "APPROVED"
+                    },
+                    ...
+                ],
+
+        Args:
+            waba_id: The ID of the WhatsApp Business Account.
+            templates: A dict containing the template to create or update to all languages listed in the template.
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint=f"/{waba_id}/upsert_message_templates",
+            json=templates,
+        )
+
     async def create_flow(
         self,
         waba_id: str,

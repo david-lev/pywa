@@ -38,7 +38,7 @@ Template Types
 .. autoclass:: HeaderLocation()
 .. autoclass:: HeaderProduct()
 
-.. autoclass:: Body()
+.. autoclass:: BodyText()
 
 .. autoclass:: Footer()
 

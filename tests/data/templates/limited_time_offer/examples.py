@@ -11,7 +11,7 @@ limited_time_offer_caribbean_pkg_2023 = Template(
                 text="Expiring offer!", has_expiration=True
             )
         ),
-        Body(
+        BodyText(
             text=TemplateText(
                 "Good news, {{1}}! Use code {{2}} to get 25% off all Caribbean Destination packages!",
                 "Pablo",

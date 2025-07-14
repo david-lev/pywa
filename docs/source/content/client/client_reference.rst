@@ -37,10 +37,12 @@ Client Reference
 .. automethod:: WhatsApp.get_commerce_settings
 .. automethod:: WhatsApp.update_commerce_settings
 .. automethod:: WhatsApp.create_template
+.. automethod:: WhatsApp.upsert_authentication_template
 .. automethod:: WhatsApp.update_template
 .. automethod:: WhatsApp.get_template
 .. automethod:: WhatsApp.get_templates
 .. automethod:: WhatsApp.delete_template
+.. automethod:: WhatsApp.unpause_template
 .. automethod:: WhatsApp.complete_templates
 .. automethod:: WhatsApp.migrate_templates
 .. automethod:: WhatsApp.create_flow

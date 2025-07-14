@@ -55,6 +55,7 @@ from .template import (
     TemplateQualityUpdate,
     TemplateCategoryUpdate,
     TemplateComponentsUpdate,
+    AuthenticationTemplates,
 )
 
 from .flows import (

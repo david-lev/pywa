@@ -8,7 +8,7 @@ seasonal_promotion = Template(
         HeaderText(
             text=TemplateText("Our {{1}} is on!", "Summer Sale"),
         ),
-        Body(
+        BodyText(
             text=TemplateText(
                 "Shop now through {{1}} and use code {{2}} to get {{3}} off of all merchandise.",
                 "the end of August",
@@ -34,7 +34,7 @@ order_confirmation = Template(
         HeaderDocument(
             example=HeaderMediaExample(handle="4::YX..."),
         ),
-        Body(
+        BodyText(
             text=TemplateText(
                 "Thank you for your order, {{1}}! Your order number is {{2}}. Tap the PDF linked above to view your receipt. If you have any questions, please use the buttons below to contact support. Thank you for being a customer!",
                 "Pablo",
@@ -58,7 +58,7 @@ order_delivery_update = Template(
     category=TemplateCategory.UTILITY,
     components=[
         HeaderLocation(),
-        Body(
+        BodyText(
             text=TemplateText(
                 "Good news {{1}}! Your order #{{2}} is on its way to the location above. Thank you for your order!",
                 "Mark",
@@ -80,7 +80,7 @@ abandoned_cart_offer = Template(
     category=TemplateCategory.MARKETING,
     components=[
         HeaderProduct(),
-        Body(
+        BodyText(
             text=TemplateText(
                 "Use code {{1}} to get {{2}} off our newest succulent!", "25OFF", "25%"
             )
@@ -99,7 +99,7 @@ intro_catalog_offer = Template(
     language=TemplateLanguage.ENGLISH_US,
     category=TemplateCategory.MARKETING,
     components=[
-        Body(
+        BodyText(
             text=TemplateText(
                 "Now shop for your favourite products right here on WhatsApp! Get Rs {{1}} off on all orders above {{2}}Rs! Valid for your first {{3}} orders placed on WhatsApp!",
                 "100",
@@ -122,7 +122,7 @@ coupon_code_fall2023_25off = Template(
     category=TemplateCategory.MARKETING,
     components=[
         HeaderText(text=TemplateText("Our Fall Sale is on!")),
-        Body(
+        BodyText(
             text=TemplateText(
                 "Shop now through November and use code {{1}} to get {{2}} off of all merchandise!",
                 "25OFF",
@@ -146,7 +146,7 @@ abandoned_cart = Template(
         HeaderText(
             text=TemplateText("Forget something, {{1}}?", "Pablo"),
         ),
-        Body(
+        BodyText(
             text=TemplateText(
                 "Looks like you left these items in your cart, still interested? Use code {{1}} to get 10% off!",
                 "10OFF",
