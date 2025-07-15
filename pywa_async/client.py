@@ -1588,6 +1588,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def get_business_phone_number_settings(
         self,
         *,
+        include_sip_credentials: bool | None = None,
         phone_id: str | int | None = None,
     ) -> BusinessPhoneNumberSettings:
         """
@@ -1599,6 +1600,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             >>> wa.get_business_phone_number_settings()
 
         Args:
+            include_sip_credentials: Whether to include SIP credentials in the response (optional, default: False).
             phone_id: The phone ID to get the settings from (optional, if not provided, the client's phone ID will be used).
 
         Returns:
@@ -1607,6 +1609,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         return BusinessPhoneNumberSettings.from_dict(
             data=await self.api.get_business_phone_number_settings(
                 phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                include_sip_credentials=include_sip_credentials,
             )
         )
 

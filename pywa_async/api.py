@@ -649,11 +649,13 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
     async def get_business_phone_number_settings(
         self,
         phone_id: str,
+        include_sip_credentials: bool | None = None,
     ) -> dict[str, Any]:
         """
         Get the business phone number settings.
 
         Args:
+            include_sip_credentials: Whether to include SIP credentials in the response.
             phone_id: The ID of the phone number to get.
 
         Returns:
@@ -662,6 +664,9 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         return await self._make_request(
             method="GET",
             endpoint=f"/{phone_id}/settings",
+            params={"include_sip_credentials": include_sip_credentials}
+            if include_sip_credentials is not None
+            else None,
         )
 
     async def update_business_phone_number_settings(

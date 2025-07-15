@@ -742,17 +742,17 @@ class TemplateText:
 
     __slots__ = ("text", "example", "param_format", "_param_type")
 
-    def __init__(self, text: str, *positionals, **named):
-        if positionals and named:
+    def __init__(self, text: str, *positionals_examples, **named_examples):
+        if positionals_examples and named_examples:
             raise ValueError("You can't use both positional and named args!")
-        if positionals:
+        if positionals_examples:
             self.param_format = ParamFormat.POSITIONAL
             self.text = text
-            self.example = positionals
-        elif named:
+            self.example = positionals_examples
+        elif named_examples:
             self.param_format = ParamFormat.NAMED
             self.text = text
-            self.example = named
+            self.example = named_examples
         else:
             self.param_format = None
             self.example = None

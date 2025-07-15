@@ -51,9 +51,7 @@ def test_template_text_positionals():
 
 def test_template_text_named():
     named = TemplateText(
-        "Hi {{name}}!, How are you? Get {{discount}}% OFF!",
-        name="David",
-        discount=15,
+        "Hi {{name}}!, How are you? Get {{discount}}% OFF!", name="David", discount=15
     )
     assert named.param_format == ParamFormat.NAMED
     assert named.example == {"name": "David", "discount": 15}

@@ -230,11 +230,11 @@ Business profile
    * - :meth:`~WhatsApp.update_conversational_automation`
      - Update commands and ice breakers
    * - :meth:`~WhatsApp.set_business_public_key`
+     - Upload business public key
    * - :meth:`~WhatsApp.get_business_phone_number_settings`
      - Get business phone number settings
    * - :meth:`~WhatsApp.update_business_phone_number_settings`
      - Update business phone number settings
-     - Upload business public key
    * - :meth:`~WhatsApp.register_phone_number`
      - Register new phone number
    * - :meth:`~WhatsApp.update_display_name`
