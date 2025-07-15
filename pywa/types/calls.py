@@ -453,7 +453,7 @@ class Monday(WeekDay):
     Represents Monday with its opening and closing times.
     """
 
-    day_of_week: str = dataclasses.field(default="MONDAY", init=False)
+    day_of_week: str = dataclasses.field(default="MONDAY", init=False, repr=False)
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -462,7 +462,7 @@ class Tuesday(WeekDay):
     Represents Tuesday with its opening and closing times.
     """
 
-    day_of_week: str = dataclasses.field(default="TUESDAY", init=False)
+    day_of_week: str = dataclasses.field(default="TUESDAY", init=False, repr=False)
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -471,7 +471,7 @@ class Wednesday(WeekDay):
     Represents Wednesday with its opening and closing times.
     """
 
-    day_of_week: str = dataclasses.field(default="WEDNESDAY", init=False)
+    day_of_week: str = dataclasses.field(default="WEDNESDAY", init=False, repr=False)
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -480,7 +480,7 @@ class Thursday(WeekDay):
     Represents Thursday with its opening and closing times.
     """
 
-    day_of_week: str = dataclasses.field(default="THURSDAY", init=False)
+    day_of_week: str = dataclasses.field(default="THURSDAY", init=False, repr=False)
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -489,7 +489,7 @@ class Friday(WeekDay):
     Represents Friday with its opening and closing times.
     """
 
-    day_of_week: str = dataclasses.field(default="FRIDAY", init=False)
+    day_of_week: str = dataclasses.field(default="FRIDAY", init=False, repr=False)
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -498,7 +498,7 @@ class Saturday(WeekDay):
     Represents Saturday with its opening and closing times.
     """
 
-    day_of_week: str = dataclasses.field(default="SATURDAY", init=False)
+    day_of_week: str = dataclasses.field(default="SATURDAY", init=False, repr=False)
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -507,7 +507,7 @@ class Sunday(WeekDay):
     Represents Sunday with its opening and closing times.
     """
 
-    day_of_week: str = dataclasses.field(default="SUNDAY", init=False)
+    day_of_week: str = dataclasses.field(default="SUNDAY", init=False, repr=False)
 
 
 _day_to_weekday_map = {
@@ -694,6 +694,29 @@ class CallingSettings:
             else None,
             sip=SIPServer.from_dict(data["sip"]) if "sip" in data else None,
         )
+
+
+@dataclasses.dataclass(slots=True)
+class BusinessPhoneNumberSettings:
+    """
+    Represents the settings of a WhatsApp Business Phone Number.
+
+    Attributes:
+        calling: The calling settings of the phone number.
+    """
+
+    calling: CallingSettings | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict) -> BusinessPhoneNumberSettings:
+        return cls(
+            calling=CallingSettings.from_dict(data.get("calling"))
+            if data.get("calling")
+            else None
+        )
+
+    def to_dict(self) -> dict:
+        return {"calling": self.calling.to_dict() if self.calling else None}
 
 
 class CallPermissionStatus(utils.StrEnum):

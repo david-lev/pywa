@@ -9,6 +9,9 @@ Calling Errors
 .. autoclass:: CallingNotEnabled()
     :show-inheritance:
 
+.. autoclass:: CallingCannotBeEnabled()
+    :show-inheritance:
+
 .. autoclass:: ReceiverUncallable()
     :show-inheritance:
 

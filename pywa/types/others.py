@@ -938,29 +938,6 @@ class BusinessPhoneNumber:
         )
 
 
-@dataclasses.dataclass(slots=True)
-class BusinessPhoneNumberSettings:
-    """
-    Represents the settings of a WhatsApp Business Phone Number.
-
-    Attributes:
-        calling: The calling settings of the phone number.
-    """
-
-    calling: CallingSettings | None = None
-
-    @classmethod
-    def from_dict(cls, data: dict) -> BusinessPhoneNumberSettings:
-        return cls(
-            calling=CallingSettings.from_dict(data.get("calling"))
-            if data.get("calling")
-            else None
-        )
-
-    def to_dict(self) -> dict:
-        return {"calling": dataclasses.asdict(self.calling) if self.calling else None}
-
-
 @dataclasses.dataclass(frozen=True, slots=True)
 class QRCode:
     """

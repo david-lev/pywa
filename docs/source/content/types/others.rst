@@ -21,6 +21,12 @@ Others
 
 .. autoclass:: BusinessPhoneNumber()
 
+.. currentmodule:: pywa.types.calls
+
+.. autoclass:: BusinessPhoneNumberSettings()
+
+.. currentmodule:: pywa.types.others
+
 .. autoclass:: ConversationalAutomation()
 
 .. autoclass:: QRCode()

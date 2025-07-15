@@ -47,7 +47,6 @@ from .others import (
     QRCode,
     Result,
     Pagination,
-    BusinessPhoneNumberSettings,
 )
 from .template import (
     Template,
@@ -78,4 +77,10 @@ from .user_preferences import (
     MarketingPreference,
 )
 from ..listeners import ListenerCanceled, ListenerTimeout, ListenerStopped
-from .calls import CallConnect, CallTerminate, CallStatus, CallingSettings
+from .calls import (
+    CallConnect,
+    CallTerminate,
+    CallStatus,
+    CallingSettings,
+    BusinessPhoneNumberSettings,
+)
