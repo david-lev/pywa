@@ -3206,10 +3206,13 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             ),
         )
 
+
     async def pre_accept_call(
             self,
             call_id: str,
-            sdp: SDP | None = None
+            sdp: SDP | None = None,
+            *,
+            phone_id: str | int | None = None,
     ) -> bool:
         """
         Pre-accept a call.
@@ -3227,11 +3230,16 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Args:
             call_id: The ID of the call to pre-accept.
             sdp: Contains the session description protocol (SDP) type and description language.
+            phone_id: The phone ID to pre-accept the call from (optional, if not provided, the client's phone ID will be used).
 
         Returns:
             Whether the call was pre-accepted.
         """
-        return (await self.api.pre_accept_call(call_id=call_id, sdp=sdp.to_dict() if sdp else None))["success"]
+        return (await self.api.pre_accept_call(
+            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+            call_id=call_id,
+            sdp=sdp.to_dict() if sdp else None,
+        ))["success"]
 
     async def accept_call(
             self,
@@ -3239,6 +3247,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             sdp: SDP | None = None,
             *,
             tracker: str | CallbackData | None = None,
+            phone_id: str | int | None = None,
     ) -> bool:
         """
         Connect to a call by providing a call agent's SDP.
@@ -3251,18 +3260,23 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             call_id: The ID of the call to accept.
             sdp: Contains the session description protocol (SDP) type and description language.
             tracker: The data to track the call with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            phone_id: The phone ID to accept the call from (optional, if not provided, the client's phone ID will be used).
 
         Returns:
             Whether the call was accepted.
         """
         return (await self.api.accept_call(
-            call_id=call_id, sdp=sdp.to_dict() if sdp else None,
+            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+            call_id=call_id,
+            sdp=sdp.to_dict() if sdp else None,
             biz_opaque_callback_data=helpers.resolve_tracker_param(tracker)
         ))["success"]
 
     async def reject_call(
             self,
             call_id: str,
+            *,
+            phone_id: str | int | None = None,
     ) -> bool:
         """
         Reject a call.
@@ -3273,17 +3287,21 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Args:
             call_id: The ID of the call to reject.
+            phone_id: The phone ID to reject the call from (optional, if not provided, the client's phone ID will be used).
 
         Returns:
             Whether the call was rejected.
         """
         return (await self.api.reject_call(
+            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
             call_id=call_id,
         ))["success"]
 
     async def terminate_call(
             self,
             call_id: str,
+            *,
+            phone_id: str | int | None = None,
     ) -> bool:
         """
         Terminate an active call.
@@ -3295,11 +3313,14 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Args:
             call_id: The ID of the call to terminate.
+            phone_id: The phone ID to terminate the call from (optional, if not provided, the client's phone ID will be used).
 
         Returns:
             Whether the call was terminated.
         """
         return (
             await self.api.terminate_call(
-            call_id=call_id,
+                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+
+                call_id=call_id,
         ))["success"]

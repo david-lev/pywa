@@ -1895,8 +1895,54 @@ class WhatsAppCloudApi:
             params={"user_wa_id": user_wa_id},
         )
 
+    def initiate_call(
+        self,
+        phone_id: str,
+        to: str,
+        sdp: dict[str, str] | None = None,
+        biz_opaque_callback_data: str | None = None,
+    ) -> dict[str, str | bool]:
+        """
+        Initiate a call.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#initiate-call>`_.
+
+        Return example::
+
+            {
+              "messaging_product": "whatsapp",
+              "calls" : [{
+                 "id" : "wacid.ABGGFjFVU2AfAgo6V",
+               }]
+            }
+
+        Args:
+            phone_id: The ID of the phone number to initiate the call on.
+            to: The number being called (callee).
+            sdp: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
+            biz_opaque_callback_data: An arbitrary string you can pass in that is useful for tracking and logging purposes.
+
+        Returns:
+            The response from the WhatsApp Cloud API containing the call ID.
+        """
+        return self._make_request(
+            method="POST",
+            endpoint=f"{phone_id}/calls",
+            json={
+                "messaging_product": "whatsapp",
+                "to": to,
+                "action": "connect",
+                **({"session": sdp} if sdp else {}),
+                **(
+                    {"biz_opaque_callback_data": biz_opaque_callback_data}
+                    if biz_opaque_callback_data
+                    else {}
+                ),
+            },
+        )
+
     def pre_accept_call(
-        self, call_id: str, sdp: dict[str, str] | None = None
+        self, phone_id: str, call_id: str, sdp: dict[str, str] | None = None
     ) -> dict[str, str | bool]:
         """
         Pre-accept a call.
@@ -1911,6 +1957,7 @@ class WhatsAppCloudApi:
             }
 
         Args:
+            phone_id: The ID of the phone number to pre-accept the call on.
             call_id: The ID of the call to pre-accept.
             sdp: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
 
@@ -1919,7 +1966,7 @@ class WhatsAppCloudApi:
         """
         return self._make_request(
             method="POST",
-            endpoint="/calls",
+            endpoint=f"{phone_id}/calls",
             json={
                 "messaging_product": "whatsapp",
                 "call_id": call_id,
@@ -1930,6 +1977,7 @@ class WhatsAppCloudApi:
 
     def accept_call(
         self,
+        phone_id: str,
         call_id: str,
         sdp: dict[str, str] | None = None,
         biz_opaque_callback_data: str | None = None,
@@ -1947,6 +1995,7 @@ class WhatsAppCloudApi:
             }
 
         Args:
+            phone_id: The ID of the phone number to accept the call on.
             call_id: The ID of the call to accept.
             sdp: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
             biz_opaque_callback_data: An arbitrary string you can pass in that is useful for tracking and logging purposes.
@@ -1956,7 +2005,7 @@ class WhatsAppCloudApi:
         """
         return self._make_request(
             method="POST",
-            endpoint="/calls",
+            endpoint=f"{phone_id}/calls",
             json={
                 "messaging_product": "whatsapp",
                 "call_id": call_id,
@@ -1970,7 +2019,7 @@ class WhatsAppCloudApi:
             },
         )
 
-    def reject_call(self, call_id: str) -> dict[str, bool]:
+    def reject_call(self, phone_id: str, call_id: str) -> dict[str, bool]:
         """
         Reject a call.
 
@@ -1984,6 +2033,7 @@ class WhatsAppCloudApi:
             }
 
         Args:
+            phone_id: The ID of the phone number to reject the call on.
             call_id: The ID of the call to reject.
 
         Returns:
@@ -1991,7 +2041,7 @@ class WhatsAppCloudApi:
         """
         return self._make_request(
             method="POST",
-            endpoint="/calls",
+            endpoint=f"{phone_id}/calls",
             json={
                 "messaging_product": "whatsapp",
                 "call_id": call_id,
@@ -1999,7 +2049,7 @@ class WhatsAppCloudApi:
             },
         )
 
-    def terminate_call(self, call_id: str) -> dict[str, bool]:
+    def terminate_call(self, phone_id: str, call_id: str) -> dict[str, bool]:
         """
         Terminate a call.
 
@@ -2013,6 +2063,7 @@ class WhatsAppCloudApi:
             }
 
         Args:
+            phone_id: The ID of the phone number to terminate the call on.
             call_id: The ID of the call to terminate.
 
         Returns:
@@ -2020,7 +2071,7 @@ class WhatsAppCloudApi:
         """
         return self._make_request(
             method="POST",
-            endpoint="/calls",
+            endpoint=f"{phone_id}/calls",
             json={
                 "messaging_product": "whatsapp",
                 "call_id": call_id,
