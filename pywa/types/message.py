@@ -23,7 +23,6 @@ from .others import (
     ProductsSection,
     Reaction,
     ReplyToMessage,
-    System,
     User,
     Referral,
 )
@@ -60,7 +59,6 @@ class Message(BaseUserUpdate):
         location: The location of the message.
         contacts: The contacts of the message.
         order: The order of the message.
-        system: When a user changes their phone number on WhatsApp.
         referral: The referral information of the message (if any).
         error: The error of the message.
         shared_data: Shared data between handlers.
@@ -81,7 +79,6 @@ class Message(BaseUserUpdate):
     location: Location | None = None
     contacts: tuple[Contact, ...] | None = None
     order: Order | None = None
-    system: System | None = None
     referral: Referral | None = None
     error: WhatsAppError | None = None
 

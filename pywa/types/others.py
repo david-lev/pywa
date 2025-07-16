@@ -123,12 +123,12 @@ class MessageType(utils.StrEnum):
         LOCATION: Message.location -> :class:`Location`.
         CONTACTS: Message.contacts -> tuple[:class:`Contact`].
         ORDER: Message.order -> :class:`Order`.
-        SYSTEM: Message.system -> :class:`System`.
         UNKNOWN: An unknown message (Warning with the actual type will be logged).
         UNSUPPORTED: An unsupported message (message type not supported by WhatsApp Cloud API).
         INTERACTIVE: Only used in :class:`CallbackButton` and :class:`CallbackSelection`.
         BUTTON: Only used in :class:`CallbackButton`.
         REQUEST_WELCOME: Only used in :class:`ChatOpened`.
+        SYSTEM: Only used in :class:`UserNumberChanged` and :class:`UserIdentityChanged`
     """
 
     __check_value = str.islower
@@ -144,13 +144,13 @@ class MessageType(utils.StrEnum):
     LOCATION = "location"
     CONTACTS = "contacts"
     ORDER = "order"
-    SYSTEM = "system"
     UNKNOWN = "unknown"
     UNSUPPORTED = "unsupported"
 
     INTERACTIVE = "interactive"
     BUTTON = "button"
     REQUEST_WELCOME = "request_welcome"
+    SYSTEM = "system"
 
 
 class InteractiveType(utils.StrEnum):
@@ -578,26 +578,6 @@ class Order:
     def total_price(self) -> float:
         """Total price of the order."""
         return sum(p.total_price for p in self.products)
-
-
-@dataclasses.dataclass(frozen=True, slots=True)
-class System(utils.FromDict):
-    """
-    Represents a system update (A customer has updated their phone number or profile information).
-
-    Attributes:
-        type: The type of the system update (``customer_changed_number`` or ``customer_identity_changed``).
-        body: Describes the change to the customer's identity or phone number.
-        identity: Hash for the identity fetched from server.
-        wa_id: The WhatsApp ID for the customer prior to the update.
-        new_wa_id: New WhatsApp ID for the customer when their phone number is updated.
-    """
-
-    type: str | None = None
-    body: str | None = None
-    identity: str | None = None
-    wa_id: str | None = None
-    new_wa_id: str | None = None
 
 
 @dataclasses.dataclass(frozen=True, slots=True)

@@ -47,7 +47,6 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
         "chosen_location": [lambda m: not m.location.current_location],
         "contacts": [lambda m: m.contacts is not None],
         "order": [lambda m: m.order is not None],
-        "system": [lambda m: m.system is not None],
         "unsupported": [lambda m: m.error is not None],
         "reply": [lambda m: m.is_reply],
         "forwarded": [lambda m: m.forwarded],

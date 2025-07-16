@@ -22,7 +22,6 @@ from .others import (
     Location,
     Order,
     Reaction,
-    System,
     Contact,
 )
 
@@ -58,7 +57,6 @@ class Message(BaseUserUpdateAsync, _Message):
         location: The location of the message.
         contacts: The contacts of the message.
         order: The order of the message.
-        system: When a user changes their phone number on WhatsApp.
         referral: The referral information of the message (if any).
         error: The error of the message.
         shared_data: Shared data between handlers.

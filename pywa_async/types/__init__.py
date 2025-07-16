@@ -40,7 +40,6 @@ from .others import (
     Reaction,
     ReplyToMessage,
     ReferredProduct,
-    System,
     Referral,
     User,
     Command,
@@ -55,6 +54,7 @@ from .template import (
     TemplateQualityUpdate,
     TemplateCategoryUpdate,
     TemplateComponentsUpdate,
+    AuthenticationTemplates,
 )
 
 from .flows import (
@@ -83,3 +83,4 @@ from .calls import (
     CallingSettings,
     BusinessPhoneNumberSettings,
 )
+from .system import UserNumberChanged, UserIdentityChanged, Identity

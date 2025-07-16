@@ -112,7 +112,6 @@ from .types.others import (
     Reaction,
     Location,
     Order,
-    System,
 )
 from .types.template import (
     TemplatesResult,
@@ -173,7 +172,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         location=Location.from_dict,
         contacts=lambda m, _client: tuple(Contact.from_dict(c) for c in m),
         order=Order.from_dict,
-        system=System.from_dict,
     )
     """A mapping of message types to their respective constructors."""
 
