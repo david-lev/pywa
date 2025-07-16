@@ -17,7 +17,7 @@ The currently supported fields by PyWa are:
 - ``message_template_quality_update`` (template quality score got changed)
 - ``message_template_components_update`` (template components got changed, e.g. header, body, footer or buttons)
 - ``template_category_update`` (template category got changed)
-- ``user_preferences`` (user preferences updates, e.g. marketing preferences, etc.)
+- ``user_preferences`` (user marketing preferences)
 
 .. important::
 
@@ -172,7 +172,6 @@ All user-related-updates have common methods and properties:
     call_connect
     call_terminate
     call_status
-    user_preferences
     user_marketing_preferences
     template_status_update
     template_category_update

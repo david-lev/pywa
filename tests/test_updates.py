@@ -3,8 +3,9 @@ from typing import Any, Callable
 from pywa.types import (
     MessageType,
     MessageStatusType,
+    MarketingPreference,
 )
-from pywa.types.calls import CallEvent
+from pywa.types.calls import CallEvent, CallDirection
 from pywa.types.media import Image, Video, Document, Audio
 from pywa.types.template import TemplateStatus, TemplateCategory
 from .common import CLIENTS
@@ -90,7 +91,10 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
         "chat_opened": [lambda c: c.type == MessageType.REQUEST_WELCOME],
     },
     "call_connect": {
-        "call_connect": [lambda c: c.event == CallEvent.CONNECT],
+        "business_initiated": [
+            lambda c: c.direction == CallDirection.BUSINESS_INITIATED
+        ],
+        "user_initiated": [lambda c: c.direction == CallDirection.USER_INITIATED],
     },
     "call_terminate": {
         "call_terminate": [lambda c: c.event == CallEvent.TERMINATE],
@@ -98,12 +102,8 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
     "call_status": {
         "call_status": [lambda c: c.type is not None],
     },
-    "user_preferences": {
-        "user_preferences": [lambda u: u.value is not None],
-        "user_marketing_preferences": [
-            lambda u: u.value in ["stop", "resume"]
-            and u.category == "marketing_messages"
-        ],
+    "user_marketing_preferences": {
+        "resume": [lambda u: u.value == MarketingPreference.RESUME],
     },
 }
 

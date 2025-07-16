@@ -21,7 +21,6 @@ Handler Objects
 .. autoclass:: CallConnectHandler
 .. autoclass:: CallTerminateHandler
 .. autoclass:: CallStatusHandler
-.. autoclass:: UserPreferencesHandler
 .. autoclass:: UserMarketingPreferencesHandler
 .. autoclass:: TemplateStatusUpdateHandler
 .. autoclass:: TemplateCategoryUpdateHandler

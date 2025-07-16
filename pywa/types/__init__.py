@@ -71,7 +71,6 @@ from .flows import (
 )
 from .chat_opened import ChatOpened
 from .user_preferences import (
-    UserPreferences,
     UserMarketingPreferences,
     UserPreferenceCategory,
     MarketingPreference,

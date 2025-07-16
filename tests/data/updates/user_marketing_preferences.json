@@ -1,38 +1,5 @@
 {
-  "user_preferences": {
-    "object": "whatsapp_business_account",
-    "entry": [
-      {
-        "id": "102290129340398",
-        "changes": [
-          {
-            "value": {
-              "messaging_product": "whatsapp",
-              "metadata": {
-                "display_phone_number": "15550783881",
-                "phone_number_id": "106540352242922"
-              },
-              "contacts": [
-                {
-                  "wa_id": "16505551234"
-                }
-              ],
-              "user_preferences": [
-                {
-                  "detail": "xyz",
-                  "category": "unknown",
-                  "value": "bla",
-                  "timestamp": 1731705721
-                }
-              ]
-            },
-            "field": "user_preferences"
-          }
-        ]
-      }
-    ]
-  },
-  "user_marketing_preferences": {
+  "resume": {
     "object": "whatsapp_business_account",
     "entry": [
       {

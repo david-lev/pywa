@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 __all__ = [
-    "UserPreferences",
     "UserMarketingPreferences",
     "UserPreferenceCategory",
     "MarketingPreference",
@@ -11,29 +10,12 @@ __all__ = [
 
 from pywa.types.user_preferences import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.user_preferences import (
-    UserPreferences as _UserPreferences,
     UserMarketingPreferences as _UserMarketingPreferences,
 )  # noqa MUST BE IMPORTED FIRST
 
 import dataclasses
 
 from .base_update import BaseUserUpdateAsync  # noqa
-
-
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class UserPreferences(BaseUserUpdateAsync, _UserPreferences):
-    """
-    Represents user preferences updates from WhatsApp.
-
-    Attributes:
-        id: The ID of the update (not a real ID, just a hash of the update).
-        metadata: The metadata of the message (to which phone number it was sent).
-        timestamp: The timestamp when the update was sent.
-        from_user: The user who makes the preference change.
-        value: The value of the user preference.
-        detail: A description of the user preference.
-        category: The category of the user preference.
-    """
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)

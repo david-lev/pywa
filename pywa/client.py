@@ -40,7 +40,6 @@ from .handlers import (
     CallTerminateHandler,
     CallStatusHandler,
     FlowRequestHandler,
-    UserPreferencesHandler,
     UserMarketingPreferencesHandler,
     FlowRequestCallbackWrapper,
     _HandlerDecorators,
@@ -92,7 +91,6 @@ from .types import (
     CallConnect,
     CallTerminate,
     CallStatus,
-    UserPreferences,
     UserMarketingPreferences,
 )
 from .types.base_update import BaseUpdate
@@ -158,7 +156,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         TemplateCategoryUpdateHandler: TemplateCategoryUpdate,
         TemplateQualityUpdateHandler: TemplateQualityUpdate,
         TemplateComponentsUpdateHandler: TemplateComponentsUpdate,
-        UserPreferencesHandler: UserPreferences,
         UserMarketingPreferencesHandler: UserMarketingPreferences,
         CallConnectHandler: CallConnect,
         CallTerminateHandler: CallTerminate,

@@ -27,7 +27,6 @@ from pywa.types import (
     CallConnect as CallConnectSync,
     CallTerminate as CallTerminateSync,
     CallStatus as CallStatusSync,
-    UserPreferences as UserPreferencesSync,
     UserMarketingPreferences as UserMarketingPreferencesSync,
     FlowRequest as FlowRequestSync,
     FlowResponse as FlowResponseSync,
@@ -49,7 +48,6 @@ from pywa_async.types import (
     CallConnect as CallConnectAsync,
     CallTerminate as CallTerminateAsync,
     CallStatus as CallStatusAsync,
-    UserPreferences as UserPreferencesAsync,
     UserMarketingPreferences as UserMarketingPreferencesAsync,
     FlowRequest as FlowRequestAsync,
     FlowResponse as FlowResponseAsync,
@@ -79,7 +77,6 @@ def overrides() -> list[tuple[type, type]]:
         (TemplateCategoryUpdateSync, TemplateCategoryUpdateAsync),
         (TemplateQualityUpdateSync, TemplateQualityUpdateAsync),
         (TemplateComponentsUpdateSync, TemplateComponentsUpdateAsync),
-        (UserPreferencesSync, UserPreferencesAsync),
         (UserMarketingPreferencesSync, UserMarketingPreferencesAsync),
         (CallConnectSync, CallConnectAsync),
         (CallTerminateSync, CallTerminateAsync),
@@ -135,7 +132,6 @@ def test_all_methods_are_overwritten_in_async(overrides):
             _HandlerDecorators.on_call_connect,
             _HandlerDecorators.on_call_terminate,
             _HandlerDecorators.on_call_status,
-            _HandlerDecorators.on_user_preferences,
             _HandlerDecorators.on_user_marketing_preferences,
             _HandlerDecorators.on_raw_update,
             ListenersSync._remove_listener,
@@ -151,7 +147,6 @@ def test_all_methods_are_overwritten_in_async(overrides):
             FlowResponseSync.to_dict,
             FlowCompletionSync.get_media,
             UserSync.as_vcard,
-            UserPreferencesSync._get_cls_kwargs,
         }
     ]
     non_async = {

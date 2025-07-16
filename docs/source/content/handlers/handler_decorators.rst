@@ -13,7 +13,6 @@ Handler Decorators
 .. automethod:: WhatsApp.on_call_connect
 .. automethod:: WhatsApp.on_call_terminate
 .. automethod:: WhatsApp.on_call_status
-.. automethod:: WhatsApp.on_user_preferences
 .. automethod:: WhatsApp.on_user_marketing_preferences
 .. automethod:: WhatsApp.on_template_status_update
 .. automethod:: WhatsApp.on_template_category_update

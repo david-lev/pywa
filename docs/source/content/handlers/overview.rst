@@ -158,7 +158,7 @@ and the verify token that you used when initializing the WhatsApp client.
         - ``message_template_quality_update`` (template quality score got changed)
         - ``message_template_components_update`` (template components got changed, e.g. header, body, footer or buttons)
         - ``template_category_update`` (template category got changed)
-        - ``user_preferences`` (user preferences updates, e.g. marketing preferences, etc.)
+        - ``user_preferences`` (user marketing preferences)
 
     You can subscribe to all the other fields, but they will not be handled by pywa, they can still be handled manually by
     registering a callback for the :meth:`~pywa.client.WhatsApp.on_raw_update` decorator (or the :class:`RawUpdateHandler` handler).
@@ -367,9 +367,6 @@ __________________
    * - :meth:`~pywa.client.WhatsApp.on_call_status`
      - :class:`CallStatusHandler`
      - :class:`~pywa.types.calls.CallStatus`
-   * - :meth:`~pywa.client.WhatsApp.on_user_preferences`
-     - :class:`UserPreferencesHandler`
-     - :class:`~pywa.types.user_preferences.UserPreferences`
    * - :meth:`~pywa.client.WhatsApp.on_user_marketing_preferences`
      - :class:`UserMarketingPreferencesHandler`
      - :class:`~pywa.types.user_preferences.UserMarketingPreferences`

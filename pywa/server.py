@@ -21,10 +21,9 @@ from .handlers import (
     RawUpdateHandler,
     FlowCompletionHandler,
     UserMarketingPreferencesHandler,
-    UserPreferencesHandler,
     ChatOpenedHandler,
 )
-from .types import MessageType
+from .types import MessageType, UserPreferenceCategory
 from .types.base_update import (
     BaseUpdate,
     StopHandling,
@@ -672,9 +671,17 @@ def _handle_user_preferences_field(wa: "WhatsApp", value: dict) -> type[Handler]
     """Handle webhook updates with 'user_preferences' field."""
     if wa.filter_updates and (value["metadata"]["phone_number_id"] != wa.phone_id):
         return None
-    if value["user_preferences"][0]["category"] == "marketing_messages":
+    if (
+        value["user_preferences"][0]["category"]
+        == UserPreferenceCategory.MARKETING_MESSAGES
+    ):
         return UserMarketingPreferencesHandler
-    return UserPreferencesHandler
+    _logger.warning(
+        "Webhook ('%s'): Unknown user preference category: %s.",
+        wa._webhook_endpoint,
+        value["user_preferences"][0]["category"],
+    )
+    return None
 
 
 _complex_fields_handlers: dict[

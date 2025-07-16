@@ -201,6 +201,7 @@ def test_shared_data():
     msg = Message(
         _client=wa,
         raw={},
+        waba_id="456",
         id="123",
         type=types.MessageType.TEXT,
         forwarded=False,
