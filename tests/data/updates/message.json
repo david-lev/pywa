@@ -943,5 +943,56 @@
         ]
       }
     ]
+  },
+  "referral": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "1234567890987654321",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "972123456789",
+                "phone_number_id": "1122334455667"
+              },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321"
+                }
+              ],
+              "messages": [
+                {
+                  "referral": {
+                    "source_url": "AD_OR_POST_FB_URL",
+                    "source_id": "ADID",
+                    "source_type": "ad or post",
+                    "headline": "AD_TITLE",
+                    "body": "AD_DESCRIPTION",
+                    "media_type": "image or video",
+                    "image_url": "RAW_IMAGE_URL",
+                    "video_url": "RAW_VIDEO_URL",
+                    "thumbnail_url": "RAW_THUMBNAIL_URL",
+                    "ctwa_clid": "CTWA_CLID"
+                  },
+                  "from": "972987654321",
+                  "id": "wamid.ID",
+                  "timestamp": "1697045000",
+                  "type": "text",
+                  "text": {
+                    "body": "BODY"
+                  }
+                }
+              ]
+            },
+            "field": "messages"
+          }
+        ]
+      }
+    ]
   }
 }

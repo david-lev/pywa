@@ -41,6 +41,7 @@ from .others import (
     ReplyToMessage,
     ReferredProduct,
     System,
+    Referral,
     User,
     Command,
     ConversationalAutomation,

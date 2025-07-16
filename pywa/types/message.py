@@ -25,6 +25,7 @@ from .others import (
     ReplyToMessage,
     System,
     User,
+    Referral,
 )
 
 if TYPE_CHECKING:
@@ -44,10 +45,10 @@ class Message(BaseUserUpdate):
         metadata: The metadata of the message (to which phone number it was sent).
         type: The message type (See :class:`MessageType`).
         from_user: The user who sent the message.
-        timestamp: The timestamp when the message was sent (in UTC).
-        reply_to_message: The message to which this message is a reply to. (Optional)
+        timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
+        reply_to_message: The message to which this message is a reply (if any).
         forwarded: Whether the message was forwarded.
-        forwarded_many_times: Whether the message was forwarded many times. (when True, ``forwarded`` will be True as well)
+        forwarded_many_times: Whether the message was forwarded more than 5 times. (when ``True``, ``forwarded`` will be ``True`` as well)
         text: The text of the message.
         image: The image of the message.
         video: The video of the message.
@@ -59,7 +60,8 @@ class Message(BaseUserUpdate):
         location: The location of the message.
         contacts: The contacts of the message.
         order: The order of the message.
-        system: The system update.
+        system: When a user changes their phone number on WhatsApp.
+        referral: The referral information of the message (if any).
         error: The error of the message.
         shared_data: Shared data between handlers.
     """
@@ -80,6 +82,7 @@ class Message(BaseUserUpdate):
     contacts: tuple[Contact, ...] | None = None
     order: Order | None = None
     system: System | None = None
+    referral: Referral | None = None
     error: WhatsAppError | None = None
 
     _media_fields = {"image", "video", "sticker", "document", "audio"}
@@ -151,6 +154,7 @@ class Message(BaseUserUpdate):
             caption=msg.get(msg_type, {}).get("caption")
             if msg_type in cls._media_fields
             else None,
+            referral=Referral.from_dict(msg["referral"]) if "referral" in msg else None,
             error=WhatsAppError.from_dict(error=error) if error is not None else None,
         )
 
