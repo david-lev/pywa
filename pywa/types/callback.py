@@ -298,7 +298,9 @@ class CallbackButton(BaseUserUpdate, Generic[_CallbackDataT]):
 
     @classmethod
     def from_update(cls, client: "WhatsApp", update: dict) -> "CallbackButton":
-        msg = (value := update["entry"][0]["changes"][0]["value"])["messages"][0]
+        msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
+            "messages"
+        ][0]
         match msg_type := msg["type"]:
             case MessageType.INTERACTIVE:
                 title = msg["interactive"]["button_reply"]["title"]
@@ -311,6 +313,7 @@ class CallbackButton(BaseUserUpdate, Generic[_CallbackDataT]):
         return cls(
             _client=client,
             raw=update,
+            waba_id=entry["id"],
             id=msg["id"],
             metadata=Metadata.from_dict(value["metadata"]),
             type=MessageType(msg_type),
@@ -385,10 +388,13 @@ class CallbackSelection(BaseUserUpdate, Generic[_CallbackDataT]):
 
     @classmethod
     def from_update(cls, client: "WhatsApp", update: dict) -> "CallbackSelection":
-        msg = (value := update["entry"][0]["changes"][0]["value"])["messages"][0]
+        msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
+            "messages"
+        ][0]
         return cls(
             _client=client,
             raw=update,
+            waba_id=entry["id"],
             id=msg["id"],
             metadata=Metadata.from_dict(value["metadata"]),
             type=MessageType(msg["type"]),

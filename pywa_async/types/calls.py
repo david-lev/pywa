@@ -16,15 +16,15 @@ class CallConnect(BaseUserUpdateAsync, _CallConnect):
     """
     Represents a call connection event.
 
-    - This update arrives when a call is initiated by the business.
+    - This update arrives when a call is initiated by the business or the user.
 
     Attributes:
-        id: The message ID.
+        id: The call ID.
         metadata: The metadata of the message (to which phone number this call was made).
-        from_user: The user who made the call.
+        from_user: The user who participated in the call, either as caller or callee.
         timestamp: The timestamp when this call was made (in UTC).
-        event: The calling event (always "connect").
-        direction: The direction of the call (either "BUSINESS_INITIATED" or "USER_INITIATED").
+        event: The calling event (always "CONNECT").
+        direction: Whether the call was initiated by the business or the user.
         session: The session information, including SDP type and SDP info.
         shared_data: Shared data between handlers.
     """

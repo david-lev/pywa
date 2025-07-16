@@ -165,15 +165,15 @@ class CallConnect(BaseUserUpdate, _CallActions):
     """
     Represents a call connection event.
 
-    - This update arrives when a call is initiated by the business.
+    - This update arrives when a call is initiated by the business or the user.
 
     Attributes:
-        id: The message ID.
+        id: The call ID.
         metadata: The metadata of the message (to which phone number this call was made).
-        from_user: The user who made the call.
+        from_user: The user who participated in the call, either as caller or callee.
         timestamp: The timestamp when this call was made (in UTC).
-        event: The calling event (always "connect").
-        direction: The direction of the call (either "BUSINESS_INITIATED" or "USER_INITIATED").
+        event: The calling event (always "CONNECT").
+        direction: Whether the call was initiated by the business or the user.
         session: The session information, including SDP type and SDP info.
         shared_data: Shared data between handlers.
     """
@@ -193,13 +193,18 @@ class CallConnect(BaseUserUpdate, _CallActions):
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> CallConnect:
-        call = (value := update["entry"][0]["changes"][0]["value"])["calls"][0]
+        call = (value := (entry := update["entry"][0])["changes"][0]["value"])["calls"][
+            0
+        ]
         return cls(
             _client=client,
             raw=update,
+            waba_id=entry["id"],
             id=call["id"],
             metadata=Metadata.from_dict(value["metadata"]),
-            from_user=client._usr_cls.from_dict(value["contacts"][0], client=client),
+            from_user=client._usr_cls.from_dict(value["contacts"][0], client=client)
+            if "contacts" in value  # Only available for USER_INITIATED calls
+            else client._usr_cls(_client=client, wa_id=call["to"], name=None),
             timestamp=datetime.datetime.fromtimestamp(
                 int(call["timestamp"]),
                 datetime.timezone.utc,
@@ -274,12 +279,12 @@ class CallTerminate(BaseUserUpdate, Generic[_CallbackDataT]):
     - This update arrives when a call is terminated, either by the business or the user.
 
     Attributes:
-        id: The message ID.
+        id: The call ID.
         metadata: The metadata of the message (to which phone number this call was made).
-        from_user: The user who made the call.
-        timestamp: The timestamp when this call was made (in UTC).
+        from_user: The user who participated in the call, either as caller or callee.
+        timestamp: The timestamp when this update is sent (in UTC).
         event: The calling event (always "terminate").
-        direction: The direction of the call (either "BUSINESS_INITIATED" or "USER_INITIATED").
+        direction: Whether the call was initiated by the business or the user.
         status: The status of the call (either "FAILED" or "COMPLETED").
         start_time: The start time of the call in UTC (Only if the call was picked up).
         end_time: The end time of the call in UTC (Only if the call was picked up).
@@ -310,12 +315,15 @@ class CallTerminate(BaseUserUpdate, Generic[_CallbackDataT]):
     def from_update(
         cls, client: WhatsApp, update: dict
     ) -> CallTerminate[_CallbackDataT]:
-        call = (value := update["entry"][0]["changes"][0]["value"])["calls"][0]
+        call = (value := (entry := update["entry"][0])["changes"][0]["value"])["calls"][
+            0
+        ]
         error = value.get("errors", (None,))[0]
         direction = CallDirection(call["direction"])
         return cls(
             _client=client,
             raw=update,
+            waba_id=entry["id"],
             id=call["id"],
             metadata=Metadata.from_dict(value["metadata"]),
             from_user=client._usr_cls(
@@ -368,7 +376,7 @@ class CallStatus(BaseUserUpdate, _CallActions, Generic[_CallbackDataT]):
     """
     Represents a call status update.
 
-    This update arrives when during a business-initiated call, the user either accepts or rejects the call.
+    - This update arrives when during a business-initiated call, the user either accepts or rejects the call.
 
     Attributes:
         id: The message ID.
@@ -395,11 +403,13 @@ class CallStatus(BaseUserUpdate, _CallActions, Generic[_CallbackDataT]):
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> CallStatus:
-        value = update["entry"][0]["changes"][0]["value"]
-        status = value["statuses"][0]
+        status = (value := (entry := update["entry"][0])["changes"][0]["value"])[
+            "statuses"
+        ][0]
         return cls(
             _client=client,
             raw=update,
+            waba_id=entry["id"],
             id=status["id"],
             metadata=Metadata.from_dict(value["metadata"]),
             timestamp=datetime.datetime.fromtimestamp(

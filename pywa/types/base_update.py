@@ -97,7 +97,7 @@ class BaseUpdate(abc.ABC):
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
     id: str
-    """The ID for the message that was received by the business."""
+    """The WhatsApp Business Account ID that the update was sent to."""
     timestamp: datetime.datetime
     """Timestamp indicating when the WhatsApp server received the message from the customer (in UTC)."""
     raw: dict = dataclasses.field(repr=False, hash=False, compare=False)
@@ -886,6 +886,8 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
     """A metadata object describing the business subscribed to the webhook"""
     from_user: User
     """The user who made the update (e.g., sent a message, changed preferences, etc.)."""
+    waba_id: str
+    """The WhatsApp Business Account ID that the update was sent to."""
 
     @property
     def sender(self) -> str:

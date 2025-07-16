@@ -112,7 +112,9 @@ class Message(BaseUserUpdate):
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> Message:
-        msg = (value := update["entry"][0]["changes"][0]["value"])["messages"][0]
+        msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
+            "messages"
+        ][0]
         error = value.get("errors", msg.get("errors", (None,)))[0]
         msg_type = msg["type"]
         context = msg.get("context", {})
@@ -132,6 +134,7 @@ class Message(BaseUserUpdate):
         return cls(
             _client=client,
             raw=update,
+            waba_id=entry["id"],
             id=msg["id"],
             type=MessageType(msg_type),
             **msg_content,

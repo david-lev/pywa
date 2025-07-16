@@ -140,11 +140,14 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> MessageStatus:
-        status = (value := update["entry"][0]["changes"][0]["value"])["statuses"][0]
+        status = (value := (entry := update["entry"][0])["changes"][0]["value"])[
+            "statuses"
+        ][0]
         error = value.get("errors", status.get("errors", (None,)))[0]
         return cls(
             _client=client,
             raw=update,
+            waba_id=entry["id"],
             id=status["id"],
             metadata=Metadata.from_dict(value["metadata"]),
             status=MessageStatusType(status["status"]),

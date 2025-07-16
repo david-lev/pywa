@@ -156,7 +156,9 @@ class FlowCompletion(BaseUserUpdate):
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> FlowCompletion:
-        msg = (value := update["entry"][0]["changes"][0]["value"])["messages"][0]
+        msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
+            "messages"
+        ][0]
         response: dict = json.loads(msg["interactive"]["nfm_reply"]["response_json"])
         try:
             flow_token = response.pop("flow_token")
@@ -169,6 +171,7 @@ class FlowCompletion(BaseUserUpdate):
         return cls(
             _client=client,
             raw=update,
+            waba_id=entry["id"],
             id=msg["id"],
             type=MessageType(msg["type"]),
             metadata=Metadata.from_dict(value["metadata"]),
