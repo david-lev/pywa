@@ -49,6 +49,8 @@ Flow Types
 
 .. currentmodule:: pywa.utils
 
+.. autoclass:: FlowRequestDecryptedMedia()
+
 .. autoclass:: FlowRequestDecryptor()
 
 .. autoclass:: FlowResponseEncryptor()

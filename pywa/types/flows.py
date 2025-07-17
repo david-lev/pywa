@@ -367,7 +367,7 @@ class FlowRequest:
 
     def decrypt_media(
         self, key: str, index: int = 0, dl_session: httpx.Client | None = None
-    ) -> tuple[str, str, bytes]:
+    ) -> utils.FlowRequestDecryptedMedia:
         """
         Decrypt the encrypted media file from the flow request.
 

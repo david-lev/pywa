@@ -91,16 +91,6 @@ def is_installed(lib: str) -> bool:
         return False
 
 
-def is_requests_and_err(session) -> tuple[bool, type[Exception]]:
-    """Check if the given object is a requests/httpx session and return the error type."""
-    try:
-        if isinstance(session, importlib.import_module("requests").Session):
-            return True, importlib.import_module("requests").HTTPError
-        raise ImportError
-    except ImportError:
-        return False, importlib.import_module("httpx").HTTPStatusError
-
-
 class Version(enum.Enum):
     """
     Enum for the latest and minimum versions of the `Graph API <https://developers.facebook.com/docs/graph-api>`_ and
@@ -359,15 +349,40 @@ def webhook_updates_validator(
     return hmac.compare_digest(signature, x_hub_signature.removeprefix("sha256="))
 
 
+@dataclasses.dataclass(frozen=True, slots=True)
+class FlowRequestDecryptedMedia:
+    """
+    Represents the decrypted media from a flow request.
+
+    Attributes:
+        media_id (str): The media ID.
+        filename (str): The filename of the media.
+        data (bytes): The decrypted media data.
+    """
+
+    media_id: str
+    filename: str
+    data: bytes
+
+    def __iter__(self):
+        """Allow iteration over the attributes."""
+        warnings.warn(
+            "flow_request_media_decryptor() is no longer return (media_id, filename, data) tuple, but FlowRequestDecryptedMedia object.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return iter((self.media_id, self.filename, self.data))
+
+
 def flow_request_media_decryptor(
     encrypted_media: dict[str, str | dict[str, str]],
     dl_session: httpx.Client | None = None,
-) -> tuple[str, str, bytes]:
+) -> FlowRequestDecryptedMedia:
     """
     Decrypt the encrypted media file from the flow request.
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components/media_upload#endpoint>`_.
-    - Use the .decrypt_media() s
+    - Use the .decrypt_media() shorthand method of the :class:`FlowRequest` class instead.
     - This implementation requires ``cryptography`` to be installed. To install it, run ``pip3 install 'pywa[cryptography]'`` or ``pip3 install cryptography``.
 
     Example:
@@ -376,9 +391,9 @@ def flow_request_media_decryptor(
         >>> wa = WhatsApp(...)
         >>> @wa.on_flow_request("/media-upload")
         ... def on_media_upload_request(_: WhatsApp, req: types.FlowRequest) -> types.FlowResponse | None:
-        ...     media_id, filename, decrypted_data = req.decrypt_media(key="driver_license", index=0)
-        ...     with open(filename, "wb") as file:
-        ...         file.write(decrypted_data)
+        ...     dec = req.decrypt_media(key="driver_license", index=0)
+        ...     with open(dec.filename, "wb") as file:
+        ...         file.write(dec.data)
         ...     return req.respond(...)
 
     Args:
@@ -386,10 +401,7 @@ def flow_request_media_decryptor(
         dl_session (httpx.Client): download session. Optional.
 
     Returns:
-        tuple[str, str, bytes]
-        - media_id (str): media ID
-        - filename (str): media filename
-        - decrypted_data (bytes): decrypted media file
+        An object containing the media ID, filename, and decrypted data.
 
     Raises:
         HTTPStatusError: If the request to the CDN URL fails.
@@ -397,10 +409,10 @@ def flow_request_media_decryptor(
     """
     res = (dl_session or httpx.Client()).get(encrypted_media["cdn_url"])
     res.raise_for_status()
-    return (
-        encrypted_media["media_id"],
-        encrypted_media["file_name"],
-        _flow_request_media_decryptor(
+    return FlowRequestDecryptedMedia(
+        media_id=encrypted_media["media_id"],
+        filename=encrypted_media["file_name"],
+        data=_flow_request_media_decryptor(
             res.content, encrypted_media["encryption_metadata"]
         ),
     )

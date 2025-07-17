@@ -125,7 +125,7 @@ class FlowRequest(_FlowRequest):
 
     async def decrypt_media(
         self, key: str, index: int = 0, dl_session: httpx.AsyncClient | None = None
-    ) -> tuple[str, str, bytes]:
+    ) -> utils.FlowRequestDecryptedMedia:
         """
         Decrypt the encrypted media file from the flow request.
 
