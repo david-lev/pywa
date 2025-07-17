@@ -12,6 +12,8 @@ Others
 
 .. currentmodule:: pywa.types.others
 
+.. autoclass:: SuccessResult()
+
 .. autoclass:: Result()
     :members: has_next, next, has_previous, previous, all, before, after, empty
 

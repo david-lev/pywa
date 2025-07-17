@@ -35,6 +35,7 @@ from .others import (
     Metadata,
     ReplyToMessage,
     Result,
+    SuccessResult,
 )
 
 if TYPE_CHECKING:
@@ -57,6 +58,7 @@ __all__ = [
     "FlowMetricGranularity",
     "FlowStatus",
     "FlowPreview",
+    "FlowJSONUpdateResult",
     "FlowValidationError",
     "FlowAsset",
     "CreatedFlow",
@@ -610,6 +612,37 @@ class FlowCategory(utils.StrEnum):
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+class FlowJSONUpdateResult(SuccessResult):
+    """
+    Represents the result of updating a flow JSON.
+
+    Attributes:
+        success: Whether the operation was successful.
+        validation_errors: The validation errors of the flow, if any.
+    """
+
+    validation_errors: tuple[FlowValidationError, ...]
+
+    def __iter__(self):
+        warnings.warn(
+            "WhatsApp.update_flow_json() is no longer return (success, validation_errors) tuple, but FlowJSONUpdateResult object.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return iter((self.success, self.validation_errors))
+
+    @classmethod
+    def from_dict(cls, data: dict, **kwargs):
+        return cls(
+            success=data["success"],
+            validation_errors=tuple(
+                FlowValidationError.from_dict(e)
+                for e in data.get("validation_errors", [])
+            ),
+        )
+
+
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
 class FlowValidationError(Exception, utils.FromDict):
     """
     Represents a validation error of a :class:`FlowJSON`.
@@ -780,7 +813,7 @@ class FlowDetails:
             health_status=data.get("health_status"),
         )
 
-    def publish(self) -> bool:
+    def publish(self) -> SuccessResult:
         """
         Update the status of this flow to ``FlowStatus.PUBLISHED``.
             - A shortcut for :meth:`pywa.client.WhatsApp.publish_flow`.
@@ -801,12 +834,11 @@ class FlowDetails:
         Raises:
             FlowPublishingError: If this flow has validation errors or not all publishing checks have been resolved.
         """
-        if self._client.publish_flow(self.id):
+        if res := self._client.publish_flow(self.id):
             self.status = FlowStatus.PUBLISHED
-            return True
-        return False
+        return res
 
-    def delete(self) -> bool:
+    def delete(self) -> SuccessResult:
         """
         When the flow is in ``FlowStatus.DRAFT`` status, you can delete it.
             - A shortcut for :meth:`pywa.client.WhatsApp.delete_flow`.
@@ -817,12 +849,11 @@ class FlowDetails:
         Raises:
             FlowDeletingError: If this flow is already published.
         """
-        if self._client.delete_flow(self.id):
+        if res := self._client.delete_flow(self.id):
             self.status = FlowStatus.DEPRECATED  # there is no `DELETED` status
-            return True
-        return False
+        return res
 
-    def deprecate(self) -> bool:
+    def deprecate(self) -> SuccessResult:
         """
         When the flow is in ``FlowStatus.PUBLISHED`` status, you can only deprecate it.
             - A shortcut for :meth:`pywa.client.WhatsApp.deprecate_flow`.
@@ -833,10 +864,9 @@ class FlowDetails:
         Raises:
             FlowDeprecatingError: If this flow is not published or already deprecated.
         """
-        if self._client.deprecate_flow(self.id):
+        if res := self._client.deprecate_flow(self.id):
             self.status = FlowStatus.DEPRECATED
-            return True
-        return False
+        return res
 
     def get_assets(self) -> Result[FlowAsset]:
         """
@@ -854,7 +884,7 @@ class FlowDetails:
         categories: Iterable[FlowCategory | str] | None = None,
         endpoint_uri: str | None = None,
         application_id: int | None = None,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Update the metadata of this flow.
             - A shortcut for :meth:`pywa.client.WhatsApp.update_flow_metadata`.
@@ -901,7 +931,7 @@ class FlowDetails:
 
     def update_json(
         self, flow_json: FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO
-    ) -> bool:
+    ) -> FlowJSONUpdateResult:
         """
         Update the json of this flow.
             - A shortcut for :meth:`pywa.client.WhatsApp.update_flow_json`.
@@ -916,12 +946,12 @@ class FlowDetails:
         Raises:
             FlowUpdatingError: If the flow json is invalid or this flow is already published.
         """
-        is_success, errors = self._client.update_flow_json(
+        res = self._client.update_flow_json(
             flow_id=self.id,
             flow_json=flow_json,
         )
-        self.validation_errors = errors or None
-        return is_success
+        self.validation_errors = res.validation_errors or None
+        return res
 
 
 class FlowMetricName(utils.StrEnum):

@@ -10,6 +10,8 @@ __all__ = [
     "Audio",
     "MediaUrlResponse",
 ]
+
+from pywa.types.others import SuccessResult
 from .. import utils
 from pywa.types.media import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.media import (
@@ -68,7 +70,9 @@ class Media:
             **kwargs,
         )
 
-    async def delete(self, *, phone_id: str | int | None = utils.MISSING) -> bool:
+    async def delete(
+        self, *, phone_id: str | int | None = utils.MISSING
+    ) -> SuccessResult:
         """
         Deletes the media from WhatsApp servers.
 

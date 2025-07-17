@@ -10,6 +10,7 @@ from .base_update import BaseUserUpdate, BaseUpdate, _ClientShortcuts  # noqa
 from .others import (
     Metadata,
     User,
+    SuccessResult,
 )
 from .callback import _CallbackDataT, CallbackData
 from .. import utils
@@ -25,7 +26,7 @@ class _CallActions:
     id: str
     _client: WhatsApp
 
-    def pre_accept(self, *, sdp: SDP) -> bool:
+    def pre_accept(self, *, sdp: SDP) -> SuccessResult:
         """
         Pre-accept the call.
 
@@ -52,7 +53,7 @@ class _CallActions:
         sdp: SDP,
         *,
         tracker: str | CallbackData | None = None,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Connect to a call by providing a call agent's SDP.
 
@@ -69,7 +70,7 @@ class _CallActions:
         """
         return self._client.accept_call(call_id=self.id, sdp=sdp, tracker=tracker)
 
-    def reject(self) -> bool:
+    def reject(self) -> SuccessResult:
         """
         Reject the call.
 
@@ -82,7 +83,7 @@ class _CallActions:
         """
         return self._client.reject_call(call_id=self.id)
 
-    def terminate(self) -> bool:
+    def terminate(self) -> SuccessResult:
         """
         Terminate the active call.
 

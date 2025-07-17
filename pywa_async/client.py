@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pywa.types.flows import FlowJSONUpdateResult
+from pywa.types.others import SuccessResult
 from .types.media import Media
 
 """The WhatsApp Async client."""
@@ -1310,7 +1312,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         self,
         message_id: str,
         sender: str | int | None = None,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         When you get a :class:`Message`, you can use the msg.id value to mark the message as read.
 
@@ -1330,18 +1332,18 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             Whether the message was marked as read.
         """
-        return (
+        return SuccessResult.from_dict(
             await self.api.mark_message_as_read(
                 phone_id=helpers.resolve_phone_id_param(self, sender, "sender"),
                 message_id=message_id,
             )
-        )["success"]
+        )
 
     async def indicate_typing(
         self,
         message_id: str,
         sender: str | int | None = None,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         When you get a :class:`Message`, you can use the msg.id value to mark the message as read and display a typing indicator so the WhatsApp user knows you are preparing a response. This is good practice if it will take you a few seconds to respond.
 
@@ -1356,13 +1358,13 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             Whether the message was marked as read and the typing indicator was displayed.
         """
-        return (
+        return SuccessResult.from_dict(
             await self.api.set_indicator(
                 phone_id=helpers.resolve_phone_id_param(self, sender, "sender"),
                 message_id=message_id,
                 typ="text",
             )
-        )["success"]
+        )
 
     async def upload_media(
         self,
@@ -1483,7 +1485,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def download_media(
         self,
         url: str,
-        path: str | None = None,
+        path: str | pathlib.Path | None = None,
         filename: str | None = None,
         in_memory: bool = False,
         **httpx_kwargs: Any,
@@ -1535,7 +1537,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         media_id: str,
         *,
         phone_id: str | int | None = utils.MISSING,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Delete a media file from WhatsApp servers.
 
@@ -1553,7 +1555,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             Whether the media was deleted successfully.
         """
-        return (
+        return SuccessResult.from_dict(
             await self.api.delete_media(
                 media_id=media_id,
                 phone_number_id=helpers.resolve_phone_id_param(
@@ -1562,7 +1564,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 if phone_id is not utils.MISSING
                 else None,
             )
-        )["success"]
+        )
 
     async def get_business_phone_number(
         self,
@@ -1657,7 +1659,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         settings: BusinessPhoneNumberSettings,
         *,
         phone_id: str | int | None = None,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Update the settings of the WhatsApp Business phone number.
 
@@ -1676,12 +1678,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             Whether the settings were updated successfully.
         """
-        return (
+        return SuccessResult.from_dict(
             await self.api.update_business_phone_number_settings(
                 phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 settings=settings.to_dict(),
             )
-        )["success"]
+        )
 
     async def update_conversational_automation(
         self,
@@ -1689,7 +1691,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         ice_breakers: Iterable[str] | None = None,
         commands: Iterable[Command] | None = None,
         phone_id: str | int | None = None,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Update the conversational automation settings of the WhatsApp Business account.
 
@@ -1709,7 +1711,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             Whether the conversational automation settings were updated.
         """
-        return (
+        return SuccessResult.from_dict(
             await self.api.update_conversational_automation(
                 phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 enable_welcome_message=enable_chat_opened,
@@ -1718,11 +1720,11 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 if commands
                 else None,
             )
-        )["success"]
+        )
 
     async def update_display_name(
         self, new_display_name: str, *, phone_id: str | int | None = None
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Update the display name of the WhatsApp Business account.
 
@@ -1740,12 +1742,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             phone_id: The phone ID to update the display name for (optional, if not provided, the client's phone ID will be used).
         """
 
-        return (
+        return SuccessResult.from_dict(
             await self.api.update_display_name(
                 phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 new_display_name=new_display_name,
             )
-        )["success"]
+        )
 
     async def get_business_profile(
         self,
@@ -1786,7 +1788,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         self,
         public_key: str,
         phone_id: str | int | None = None,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Set the business public key of the WhatsApp Business account (required for end-to-end encryption in flows)
 
@@ -1805,12 +1807,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             Whether the business public key was set.
         """
-        return (
+        return SuccessResult.from_dict(
             await self.api.set_business_public_key(
                 phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 public_key=public_key,
             )
-        )["success"]
+        )
 
     async def update_business_profile(
         self,
@@ -1822,7 +1824,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         industry: Industry | None = utils.MISSING,
         websites: Iterable[str] | None = utils.MISSING,
         phone_id: str | int | None = None,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Update the business profile of the WhatsApp Business account.
 
@@ -1873,12 +1875,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             }.items()
             if value is not utils.MISSING
         }
-        return (
+        return SuccessResult.from_dict(
             await self.api.update_business_profile(
                 phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 data=data,
             )
-        )["success"]
+        )
 
     async def get_commerce_settings(
         self,
@@ -1908,7 +1910,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         is_catalog_visible: bool = None,
         is_cart_enabled: bool = None,
         phone_id: str | int | None = None,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Update the commerce settings of the WhatsApp Business account.
 
@@ -1941,12 +1943,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         }
         if not data:
             raise ValueError("At least one argument must be provided")
-        return (
+        return SuccessResult.from_dict(
             await self.api.update_commerce_settings(
                 phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 data=data,
             )
-        )["success"]
+        )
 
     async def create_template(
         self,
@@ -2262,7 +2264,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         new_components: list[TemplateBaseComponent] | None = None,
         new_message_send_ttl_seconds: int | None = None,
         new_parameter_format: ParamFormat | None = None,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Update an existing template.
 
@@ -2282,7 +2284,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             Whether the template was updated successfully.
         """
-        return (
+        return SuccessResult.from_dict(
             await self.api.update_template(
                 template_id=template_id,
                 template={
@@ -2296,7 +2298,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                     if v is not None
                 },
             )
-        )["success"]
+        )
 
     async def delete_template(
         self,
@@ -2304,7 +2306,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         *,
         template_id: int | str | None = None,
         waba_id: str | int | None = None,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Delete a template.
 
@@ -2322,13 +2324,13 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             Whether the template was deleted successfully.
         """
-        return (
+        return SuccessResult.from_dict(
             await self.api.delete_template(
                 waba_id=helpers.resolve_waba_id_param(self, waba_id),
                 template_name=template_name,
                 template_id=template_id,
             )
-        )["success"]
+        )
 
     async def compare_templates(
         self,
@@ -2427,21 +2429,17 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     # fmt: off
     async def create_flow(
         self,
-        name: str,
-        categories: Iterable[FlowCategory | str],
-        clone_flow_id: str | None = None,
-        endpoint_uri: str | None = None,
-        waba_id: str | int | None = None,
-        flow_json: FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO | None = None,
-        publish: bool | None = None,
-        *,
-        return_only_id: bool = True,
-    ) -> CreatedFlow | str:
+            name: str,
+            categories: Iterable[FlowCategory | str],
+            *,
+            clone_flow_id: str | None = None,
+            endpoint_uri: str | None = None,
+            waba_id: str | int | None = None,
+            flow_json: FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO | None = None,
+            publish: bool | None = None,
+    ) -> CreatedFlow:
         """
         Create a flow.
-
-        For backward compatibility, when ``flow_json`` is not provided, the method will return the ID of the created flow.
-        Set ``return_only_id=False`` to return the created flow object instead.
 
         - This method requires the WhatsApp Business account ID to be provided when initializing the client.
         - New Flows are created in :class:`FlowStatus.DRAFT` status unless ``flow_json`` is provided and ``publish`` is True.
@@ -2457,7 +2455,6 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             endpoint_uri: The URL of the FlowJSON Endpoint. Starting from Flow 3.0 this property should be
              specified only gere. Do not provide this field if you are cloning a Flow with version below 3.0.
             waba_id: The WhatsApp Business account ID (Overrides the client's business account ID).
-            return_only_id: Only for backward compatibility. Switch to False to return the created flow object. ignored when flow_json provided.
 
         Example:
 
@@ -2471,23 +2468,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             ... )
 
         Returns:
-            The created flow or the ID of the created flow (if ``return_only_id`` is True).
+            The created flow.
 
         Raises:
             FlowBlockedByIntegrity: If you can't create a flow because of integrity issues.
         """
-        if return_only_id:
-            if flow_json:
-                return_only_id = False
-            else:
-                warnings.warn(
-                    "The `return_only_id` argument is for backward compatibility and will be removed in a future version.\n"
-                    ">>> Set `return_only_id=False` and access the `.id` attribute of the returned object instead.",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
-
-        created = CreatedFlow.from_dict(
+        return CreatedFlow.from_dict(
             await self.api.create_flow(
                 name=name,
                 categories=tuple(map(str, categories)),
@@ -2500,9 +2486,6 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 publish=publish,
             )
         )
-        if return_only_id:
-            return created.id
-        return created
 
     async def update_flow_metadata(
         self,
@@ -2512,7 +2495,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         categories: Iterable[FlowCategory | str] | None = None,
         endpoint_uri: str | None = None,
         application_id: int | None = None,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Update the metadata of a flow.
 
@@ -2544,7 +2527,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         """
         if not any((name, categories, endpoint_uri, application_id)):
             raise ValueError("At least one argument must be provided")
-        return (
+        return SuccessResult.from_dict(
             await self.api.update_flow_metadata(
                 flow_id=str(flow_id),
                 name=name,
@@ -2552,13 +2535,13 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 endpoint_uri=endpoint_uri,
                 application_id=application_id,
             )
-        )["success"]
+        )
 
     async def update_flow_json(
         self,
         flow_id: str | int,
         flow_json: FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO,
-    ) -> tuple[bool, tuple[FlowValidationError, ...]]:
+    ) -> FlowJSONUpdateResult:
         """
         Update the json of a flow.
 
@@ -2599,16 +2582,13 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Raises:
             FlowUpdatingError: If the flow json is invalid or the flow is already published.
         """
-        json_str = helpers.resolve_flow_json_param(flow_json)
-        res = await self.api.update_flow_json(flow_id=str(flow_id), flow_json=json_str)
-        return res["success"], tuple(
-            FlowValidationError.from_dict(data) for data in res["validation_errors"]
-        )
+        return FlowJSONUpdateResult.from_dict(
+            await self.api.update_flow_json(flow_id=str(flow_id), flow_json=helpers.resolve_flow_json_param(flow_json)))
 
     async def publish_flow(
         self,
         flow_id: str | int,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         This request updates the status of the Flow to "PUBLISHED".
 
@@ -2631,12 +2611,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Raises:
             FlowPublishingError: If the flow has validation errors or not all publishing checks have been resolved.
         """
-        return (await self.api.publish_flow(flow_id=str(flow_id)))["success"]
+        return SuccessResult.from_dict(await self.api.publish_flow(flow_id=str(flow_id)))
 
     async def delete_flow(
         self,
         flow_id: str | int,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         While a Flow is in DRAFT status, it can be deleted.
 
@@ -2649,12 +2629,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Raises:
             FlowDeletingError: If the flow is already published.
         """
-        return (await self.api.delete_flow(flow_id=str(flow_id)))["success"]
+        return SuccessResult.from_dict(await self.api.delete_flow(flow_id=str(flow_id)))
 
     async def deprecate_flow(
         self,
         flow_id: str | int,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Once a Flow is published, it cannot be modified or deleted, but can be marked as deprecated.
 
@@ -2667,7 +2647,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Raises:
             FlowDeprecatingError: If the flow is not published or already deprecated.
         """
-        return (await self.api.deprecate_flow(flow_id=str(flow_id)))["success"]
+        return SuccessResult.from_dict(await self.api.deprecate_flow(flow_id=str(flow_id)))
 
     async def get_flow(
         self,
@@ -2827,7 +2807,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         pin: int | str,
         data_localization_region: str | None = None,
         phone_id: str | int | None = None,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Register a Business Phone Number
 
@@ -2853,13 +2833,13 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             The success of the registration.
         """
-        return (
+        return SuccessResult.from_dict(
             await self.api.register_phone_number(
                 phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 pin=str(pin),
                 data_localization_region=data_localization_region,
             )
-        )["success"]
+        )
 
     async def create_qr_code(
         self,
@@ -2965,7 +2945,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         self,
         code: str,
         phone_id: str | int | None = None,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Delete a QR code.
 
@@ -2976,12 +2956,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             Whether the QR code was deleted.
         """
-        return (
+        return SuccessResult.from_dict(
             await self.api.delete_qr_code(
                 phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 code=code,
             )
-        )["success"]
+        )
 
     async def get_app_access_token(self, app_id: int, app_secret: str) -> str:
         """
@@ -3011,7 +2991,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         callback_url: str,
         verify_token: str,
         fields: Iterable[str],
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Set the callback URL for the webhook.
 
@@ -3028,7 +3008,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             Whether the callback URL was set.
         """
-        return (
+        return SuccessResult.from_dict(
             await self.api.set_app_callback_url(
                 app_id=app_id,
                 app_access_token=app_access_token,
@@ -3036,11 +3016,11 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 verify_token=verify_token,
                 fields=tuple(fields),
             )
-        )["success"]
+        )
 
     async def override_waba_callback_url(
         self, callback_url: str, verify_token: str, waba_id: str | int | None = None
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Override the callback URL for the WhatsApp Business account.
 
@@ -3054,15 +3034,15 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             Whether the callback URL was overridden.
         """
-        return (
+        return SuccessResult.from_dict(
             await self.api.set_waba_alternate_callback_url(
                 waba_id=helpers.resolve_waba_id_param(self, waba_id),
                 callback_url=callback_url,
                 verify_token=verify_token,
             )
-        )["success"]
+        )
 
-    async def delete_waba_callback_url(self, waba_id: str | int | None = None) -> bool:
+    async def delete_waba_callback_url(self, waba_id: str | int | None = None) -> SuccessResult:
         """
         Delete the callback URL for the WhatsApp Business account.
 
@@ -3074,15 +3054,15 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             Whether the callback URL was deleted.
         """
-        return (
+        return SuccessResult.from_dict(
             await self.api.delete_waba_alternate_callback_url(
                 waba_id=helpers.resolve_waba_id_param(self, waba_id),
             )
-        )["success"]
+        )
 
     async def override_phone_callback_url(
         self, callback_url: str, verify_token: str, phone_id: str | int | None = None
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Override the callback URL for the phone.
 
@@ -3097,17 +3077,17 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             Whether the callback URL was overridden.
         """
-        return (
+        return SuccessResult.from_dict(
             await self.api.set_phone_alternate_callback_url(
                 callback_url=callback_url,
                 verify_token=verify_token,
                 phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
             )
-        )["success"]
+        )
 
     async def delete_phone_callback_url(
         self, phone_id: str | int | None = None
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Delete the callback URL for the phone.
 
@@ -3119,11 +3099,11 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             Whether the callback URL was deleted.
         """
-        return (
+        return SuccessResult.from_dict(
             await self.api.delete_phone_alternate_callback_url(
                 phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
             )
-        )["success"]
+        )
 
     async def block_users(
         self, users: Iterable[str | int], *, phone_id: str | int | None = None
@@ -3252,7 +3232,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             sdp: SDP | None = None,
             *,
             phone_id: str | int | None = None,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Pre-accept a call.
 
@@ -3274,11 +3254,11 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             Whether the call was pre-accepted.
         """
-        return (await self.api.pre_accept_call(
+        return SuccessResult.from_dict(await self.api.pre_accept_call(
             phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
             call_id=call_id,
             sdp=sdp.to_dict() if sdp else None,
-        ))["success"]
+        ))
 
     async def accept_call(
             self,
@@ -3287,7 +3267,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             *,
             tracker: str | CallbackData | None = None,
             phone_id: str | int | None = None,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Connect to a call by providing a call agent's SDP.
 
@@ -3304,19 +3284,19 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             Whether the call was accepted.
         """
-        return (await self.api.accept_call(
+        return SuccessResult.from_dict(await self.api.accept_call(
             phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
             call_id=call_id,
             sdp=sdp.to_dict() if sdp else None,
             biz_opaque_callback_data=helpers.resolve_tracker_param(tracker)
-        ))["success"]
+        ))
 
     async def reject_call(
             self,
             call_id: str,
             *,
             phone_id: str | int | None = None,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Reject a call.
 
@@ -3331,17 +3311,17 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             Whether the call was rejected.
         """
-        return (await self.api.reject_call(
+        return SuccessResult.from_dict(await self.api.reject_call(
             phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
             call_id=call_id,
-        ))["success"]
+        ))
 
     async def terminate_call(
             self,
             call_id: str,
             *,
             phone_id: str | int | None = None,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Terminate an active call.
 
@@ -3357,9 +3337,9 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             Whether the call was terminated.
         """
-        return (
+        return SuccessResult.from_dict(
             await self.api.terminate_call(
                 phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
 
                 call_id=call_id,
-        ))["success"]
+        ))

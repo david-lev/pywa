@@ -29,7 +29,7 @@ class CallConnect(BaseUserUpdateAsync, _CallConnect):
         shared_data: Shared data between handlers.
     """
 
-    async def pre_accept(self, sdp: SDP) -> bool:
+    async def pre_accept(self, *, sdp: SDP) -> SuccessResult:
         """
         Pre-accept the call.
 
@@ -54,8 +54,9 @@ class CallConnect(BaseUserUpdateAsync, _CallConnect):
     async def accept(
         self,
         sdp: SDP,
+        *,
         tracker: str | CallbackData | None = None,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Connect to a call by providing a call agent's SDP.
 
@@ -72,7 +73,7 @@ class CallConnect(BaseUserUpdateAsync, _CallConnect):
         """
         return await self._client.accept_call(call_id=self.id, sdp=sdp, tracker=tracker)
 
-    async def reject(self) -> bool:
+    async def reject(self) -> SuccessResult:
         """
         Reject the call.
 
@@ -85,7 +86,7 @@ class CallConnect(BaseUserUpdateAsync, _CallConnect):
         """
         return await self._client.reject_call(call_id=self.id)
 
-    async def terminate(self) -> bool:
+    async def terminate(self) -> SuccessResult:
         """
         Terminate the active call.
 

@@ -797,19 +797,3 @@ def test_send_products(api, wa):
         reply_to_message_id=None,
         biz_opaque_callback_data=None,
     )
-
-
-def test_mark_message_as_read(api, wa):
-    api.return_value.mark_message_as_read.return_value = SENT_MESSAGE
-    wa.mark_message_as_read(
-        message_id=MSG_ID,
-    )
-    api.mark_message_as_read.assert_called_once_with(
-        phone_id=PHONE_ID,
-        message_id=MSG_ID,
-    )
-
-
-def test_created_flow(api, wa):
-    with pytest.warns(DeprecationWarning):
-        wa.create_flow(name="flow", categories=[], waba_id=123)

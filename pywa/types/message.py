@@ -364,15 +364,5 @@ class Message(BaseUserUpdate):
                     footer=footer,
                     reply_to_message_id=reply_to_message_id,
                 )
-            case MessageType.SYSTEM:
-                return self._client.send_message(
-                    sender=sender,
-                    to=to,
-                    text=self.system.body,
-                    header=header,
-                    footer=footer,
-                    buttons=buttons,
-                    reply_to_message_id=reply_to_message_id,
-                )
             case _:
                 raise ValueError(f"Message of type {self.type} cannot be copied.")

@@ -20,6 +20,8 @@ Flow Types
 .. autoclass:: FlowPreview()
     :members: with_params
 
+.. autoclass:: FlowJSONUpdateResult()
+
 .. autoclass:: FlowValidationError()
 
 .. autoclass:: FlowAsset()

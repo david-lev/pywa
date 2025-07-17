@@ -70,7 +70,7 @@ import abc
 import dataclasses
 import logging
 from typing import TYPE_CHECKING, Literal, Iterable, BinaryIO
-from .others import Result
+from .others import Result, SuccessResult
 from .. import utils
 from .. import _helpers as helpers
 
@@ -1948,7 +1948,7 @@ class TemplateDetails:
         """
         return _template_to_json(self)
 
-    def delete(self) -> bool:
+    def delete(self) -> SuccessResult:
         """
         Delete this template
 
@@ -1966,7 +1966,7 @@ class TemplateDetails:
         new_components: list[TemplateBaseComponent] | None = None,
         new_message_send_ttl_seconds: int | None = None,
         new_parameter_format: ParamFormat | None = None,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Update this template.
 
@@ -1986,7 +1986,7 @@ class TemplateDetails:
         Returns:
             Whether the template was updated successfully.
         """
-        if self._client.update_template(
+        if res := self._client.update_template(
             template_id=self.id,
             new_category=new_category,
             new_components=new_components,
@@ -2001,8 +2001,7 @@ class TemplateDetails:
                 self.message_send_ttl_seconds = new_message_send_ttl_seconds
             if new_parameter_format is not None:
                 self.parameter_format = new_parameter_format
-            return True
-        return False
+        return res
 
     def compare(
         self,

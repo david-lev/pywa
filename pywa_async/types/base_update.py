@@ -13,7 +13,7 @@ import pathlib
 import dataclasses
 from typing import TYPE_CHECKING, BinaryIO, Iterable
 
-from .others import Contact, ProductsSection, User
+from .others import Contact, ProductsSection, User, SuccessResult
 
 
 if TYPE_CHECKING:
@@ -707,7 +707,7 @@ class _ClientShortcuts:
             tracker=tracker,
         )
 
-    async def mark_as_read(self) -> bool:
+    async def mark_as_read(self) -> SuccessResult:
         """
         Mark the message as read.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.mark_message_as_read` with ``message_id``.
@@ -719,7 +719,7 @@ class _ClientShortcuts:
             sender=self._internal_recipient, message_id=self.message_id_to_reply
         )
 
-    async def indicate_typing(self) -> bool:
+    async def indicate_typing(self) -> SuccessResult:
         """
         Mark the message as read and display a typing indicator so the WhatsApp user knows you are preparing a response.
         This is good practice if it will take you a few seconds to respond.

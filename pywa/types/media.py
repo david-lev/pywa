@@ -17,6 +17,7 @@ import dataclasses
 import mimetypes
 from typing import TYPE_CHECKING
 
+from .others import SuccessResult
 from .. import utils
 
 if TYPE_CHECKING:
@@ -64,7 +65,7 @@ class Media:
             **kwargs,
         )
 
-    def delete(self, *, phone_id: str | int | None = utils.MISSING) -> bool:
+    def delete(self, *, phone_id: str | int | None = utils.MISSING) -> SuccessResult:
         """
         Deletes the media from WhatsApp servers.
 

@@ -1290,3 +1290,27 @@ class Result(Generic[_T]):
 
     def __repr__(self) -> str:
         return f"Result({self._data!r}, has_next={self.has_next}, has_previous={self.has_previous})"
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class SuccessResult(utils.FromDict):
+    """
+    Represents a simple success result.
+
+    - This is used for operations that do not return any data, but only indicate success or failure.
+
+    You can use *this* class to check if an operation was successful or not::
+
+        >>> wa = WhatsApp(...)
+        >>> if wa.update_template(...): # update_template returns SuccessResult so we can check it directly
+        ...     print("Template updated successfully")
+
+    Attributes:
+        success: Whether the operation was successful.
+    """
+
+    success: bool
+
+    def __bool__(self) -> bool:
+        """Returns True if the operation was successful."""
+        return self.success
