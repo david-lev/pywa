@@ -874,7 +874,7 @@ class BusinessPhoneNumber:
     new_name_status: str | None
     code_verification_status: str | None
     account_mode: str | None
-    is_on_biz_app: bool | None
+    is_on_biz_app: bool
     is_official_business_account: bool
     is_pin_enabled: bool
     is_preverified_number: bool
