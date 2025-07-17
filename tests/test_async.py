@@ -61,7 +61,7 @@ from pywa_async.types import (
 )
 from pywa.types.flows import FlowDetails as FlowDetailsSync
 from pywa_async.types.flows import FlowDetails as FlowDetailsAsync
-from pywa.types.media import BaseMedia as BaseMediaSync
+from pywa.types.media import BaseUserMedia as BaseMediaSync
 from pywa_async.types.media import BaseMediaAsync
 from pywa.types.sent_message import SentMessage as SentMessageSync
 from pywa_async.types.sent_message import SentMessage as SentMessageAsync

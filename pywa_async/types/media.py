@@ -28,13 +28,9 @@ if TYPE_CHECKING:
     from ..client import WhatsApp
 
 
-class BaseMediaAsync:
-    """Base class for all media types."""
-
+class Media:
+    _client: WhatsApp
     id: str
-    sha256: str
-    mime_type: str
-    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
 
     async def get_media_url(self) -> str:
         """Gets the URL of the media. (expires after 5 minutes)"""
@@ -63,12 +59,18 @@ class BaseMediaAsync:
             The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
         """
         return await self._client.download_media(
-            url=await self.get_media_url(),
+            url=(await self.get_media_url())
+            if not hasattr(self, "url")
+            else self.url,  # MediaUrlResponse
             path=path,
             filename=filename,
             in_memory=in_memory,
             **kwargs,
         )
+
+
+class BaseMediaAsync(Media):
+    """Base class for all media types."""
 
     @classmethod
     def from_flow_completion(
@@ -173,32 +175,3 @@ class MediaUrlResponse(_MediaUrlResponse):
         sha256: The SHA256 hash of the media.
         file_size: The size of the media in bytes.
     """
-
-    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
-
-    async def download(
-        self,
-        filepath: str | None = None,
-        filename: str | None = None,
-        in_memory: bool = False,
-        **kwargs,
-    ) -> bytes | str:
-        """
-        Download a media file from WhatsApp servers.
-
-        Args:
-            filepath: The path where to save the file (if not provided, the current working directory will be used).
-            filename: The name of the file (if not provided, it will be guessed from the URL + extension).
-            in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
-            **kwargs: Additional arguments to pass to ``httpx.get(...)``.
-
-        Returns:
-            The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
-        """
-        return await self._client.download_media(
-            url=self.url,
-            path=filepath,
-            filename=filename,
-            in_memory=in_memory,
-            **kwargs,
-        )

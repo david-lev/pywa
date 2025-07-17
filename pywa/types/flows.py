@@ -25,7 +25,7 @@ from typing import (
 
 import httpx
 
-from .media import BaseMedia
+from .media import BaseUserMedia
 from .. import utils
 from .base_update import BaseUserUpdate  # noqa
 from .others import (
@@ -186,7 +186,7 @@ class FlowCompletion(BaseUserUpdate):
             response=response,
         )
 
-    def get_media(self, media_cls: Type[BaseMedia], key: str) -> BaseMedia:
+    def get_media(self, media_cls: Type[BaseUserMedia], key: str) -> BaseUserMedia:
         """
         Get the media object from the response.
 

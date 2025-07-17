@@ -20,13 +20,15 @@ from .types import MessageType
 
 from typing import BinaryIO, Literal, TYPE_CHECKING
 
+from .types.media import Media
+
 if TYPE_CHECKING:
     from pywa_async import WhatsApp
 
 
 async def resolve_media_param(
     wa: WhatsApp,
-    media: str | pathlib.Path | bytes | BinaryIO,
+    media: str | Media | pathlib.Path | bytes | BinaryIO,
     mime_type: str | None,
     filename: str | None,
     media_type: Literal[
@@ -38,15 +40,19 @@ async def resolve_media_param(
     """
     Internal method to resolve the ``media`` parameter. Returns a tuple of (``is_url``, ``media_id_or_url``).
     """
+    if isinstance(media, Media):
+        return False, media.id
     if isinstance(media, (str, pathlib.Path)):
         if str(media).startswith(("https://", "http://")):
             return True, media
         elif str(media).isdigit() and not pathlib.Path(media).is_file():
             return False, media  # assume it's a media ID
     # assume its bytes or a file path
-    return False, await wa.upload_media(
-        phone_id=phone_id,
-        media=media,
-        mime_type=mime_type,
-        filename=_media_types_default_filenames.get(media_type, filename),
-    )
+    return False, (
+        await wa.upload_media(
+            phone_id=phone_id,
+            media=media,
+            mime_type=mime_type,
+            filename=_media_types_default_filenames.get(media_type, filename),
+        )
+    ).id

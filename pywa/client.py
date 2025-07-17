@@ -108,6 +108,7 @@ from .types.flows import (
     FlowCompletion,
     MigrateFlowsResponse,
 )
+from .types.media import Media
 from .types.sent_message import SentMessage, SentTemplate
 from .types.others import (
     InteractiveType,
@@ -645,7 +646,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def send_image(
         self,
         to: str | int,
-        image: str | pathlib.Path | bytes | BinaryIO,
+        image: str | Media | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
@@ -745,7 +746,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def send_video(
         self,
         to: str | int,
-        video: str | pathlib.Path | bytes | BinaryIO,
+        video: str | Media | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
@@ -845,7 +846,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def send_document(
         self,
         to: str | int,
-        document: str | pathlib.Path | bytes | BinaryIO,
+        document: str | Media | pathlib.Path | bytes | BinaryIO,
         filename: str | None = None,
         caption: str | None = None,
         footer: str | None = None,
@@ -953,7 +954,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def send_audio(
         self,
         to: str | int,
-        audio: str | pathlib.Path | bytes | BinaryIO,
+        audio: str | Media | pathlib.Path | bytes | BinaryIO,
         mime_type: str | None = None,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -1011,7 +1012,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def send_sticker(
         self,
         to: str | int,
-        sticker: str | pathlib.Path | bytes | BinaryIO,
+        sticker: str | Media | pathlib.Path | bytes | BinaryIO,
         mime_type: str | None = None,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -1612,7 +1613,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         filename: str | None = None,
         dl_session: httpx.Client | None = None,
         phone_id: str | int | None = None,
-    ) -> str:
+    ) -> Media:
         """
         Upload media to WhatsApp servers.
 
@@ -1677,12 +1678,15 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             raise ValueError("`filename` is required if media is bytes")
         if mime_type is None:
             raise ValueError("`mime_type` is required if media is bytes")
-        return self.api.upload_media(
-            phone_id=phone_id,
-            filename=filename,
-            media=file,
-            mime_type=mime_type,
-        )["id"]
+        return Media(
+            _client=self,
+            id=self.api.upload_media(
+                phone_id=phone_id,
+                filename=filename,
+                media=file,
+                mime_type=mime_type,
+            )["id"],
+        )
 
     def get_media_url(self, media_id: str) -> MediaUrlResponse:
         """

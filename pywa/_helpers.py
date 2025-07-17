@@ -33,6 +33,7 @@ from .types import (
     CallRequestButton,
 )
 from pywa.types.others import InteractiveType
+from .types.media import Media
 
 if TYPE_CHECKING:
     from pywa import WhatsApp
@@ -97,7 +98,7 @@ _media_types_default_filenames = {
 
 def resolve_media_param(
     wa: WhatsApp,
-    media: str | pathlib.Path | bytes | BinaryIO,
+    media: str | Media | pathlib.Path | bytes | BinaryIO,
     mime_type: str | None,
     filename: str | None,
     media_type: Literal[
@@ -109,6 +110,8 @@ def resolve_media_param(
     """
     Internal method to resolve the ``media`` parameter. Returns a tuple of (``is_url``, ``media_id_or_url``).
     """
+    if isinstance(media, Media):
+        return False, media.id
     if isinstance(media, (str, pathlib.Path)):
         if str(media).startswith(("https://", "http://")):
             return True, media
@@ -120,7 +123,7 @@ def resolve_media_param(
         media=media,
         mime_type=mime_type,
         filename=_media_types_default_filenames.get(media_type, filename),
-    )
+    ).id
 
 
 def resolve_tracker_param(tracker: str | CallbackData | None) -> str | None:

@@ -8,6 +8,7 @@ import pytest
 
 from pywa import WhatsApp, types, utils, _helpers as helpers, filters
 from pywa.types import sent_message, Contact
+from pywa.types.media import Media
 
 PHONE_ID = "123456789"
 TOKEN = "xyz"
@@ -406,6 +407,17 @@ def test_resolve_media_param_with_media_id():
     assert helpers.resolve_media_param(
         wa=wa,
         media="1234567890",
+        mime_type=None,
+        filename=None,
+        media_type=types.MessageType.IMAGE,
+        phone_id=PHONE_ID,
+    ) == (False, "1234567890")
+
+
+def test_resolve_media_param_with_media():
+    assert helpers.resolve_media_param(
+        wa=wa,
+        media=Media(_client=wa, id="1234567890"),
         mime_type=None,
         filename=None,
         media_type=types.MessageType.IMAGE,
