@@ -2,7 +2,7 @@ from __future__ import annotations
 
 """This module contains the types related to system messages."""
 
-__all__ = ["UserNumberChanged", "UserIdentityChanged", "SystemType", "Identity"]
+__all__ = ["PhoneNumberChange", "IdentityChange", "SystemType", "Identity"]
 
 
 from .. import utils
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class UserNumberChanged(BaseUserUpdate):
+class PhoneNumberChange(BaseUserUpdate):
     """
     A update received when a user changes their phone number on WhatsApp.
 
@@ -43,8 +43,10 @@ class UserNumberChanged(BaseUserUpdate):
     new_wa_id: str
     body: str
 
+    _webhook_field = "messages"
+
     @classmethod
-    def from_update(cls, client: WhatsApp, update: dict) -> UserNumberChanged:
+    def from_update(cls, client: WhatsApp, update: dict) -> PhoneNumberChange:
         sys = (
             msg := (value := (entry := update["entry"][0])["changes"][0]["value"])[
                 "messages"
@@ -60,7 +62,8 @@ class UserNumberChanged(BaseUserUpdate):
                 datetime.timezone.utc,
             ),
             metadata=Metadata.from_dict(value["metadata"]),
-            type=SystemType(sys["type"]),
+            type=MessageType(msg["type"]),
+            sys_type=SystemType(sys["type"]),
             from_user=client._usr_cls.from_dict(value["contacts"][0], client=client),
             old_wa_id=sys["customer"],
             new_wa_id=sys.get("new_wa_id", sys["wa_id"]),  # v12^ wa_id
@@ -73,18 +76,18 @@ class SystemType(utils.StrEnum):
     The type of the system message.
 
     Attributes:
-        USER_CHANGED_NUMBER: A customer changed their phone number.
+        CUSTOMER_CHANGED_NUMBER: A customer changed their phone number.
         CUSTOMER_IDENTITY_CHANGED: A customer changed their profile information.
     """
 
-    USER_CHANGED_NUMBER = "customer_changed_number"
+    CUSTOMER_CHANGED_NUMBER = "customer_changed_number"
     CUSTOMER_IDENTITY_CHANGED = "customer_identity_changed"
 
     UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class UserIdentityChanged(BaseUserUpdate):
+class IdentityChange(BaseUserUpdate):
     """
     A message received when a user changes their profile information on WhatsApp.
 
@@ -103,8 +106,10 @@ class UserIdentityChanged(BaseUserUpdate):
     body: str
     identity: Identity
 
+    _webhook_field = "messages"
+
     @classmethod
-    def from_update(cls, client: WhatsApp, update: dict) -> UserIdentityChanged:
+    def from_update(cls, client: WhatsApp, update: dict) -> IdentityChange:
         msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
             "messages"
         ][0]

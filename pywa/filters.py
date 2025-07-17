@@ -718,7 +718,7 @@ def failed_with(
         lambda _, s: s.status == _Mst.FAILED
         and (
             any((isinstance(s.error, e) for e in exceptions))
-            or s.error.error_code in error_codes
+            or s.error.code in error_codes
         ),
         name="status_failed_with",
     )

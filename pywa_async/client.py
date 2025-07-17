@@ -1,11 +1,5 @@
 from __future__ import annotations
 
-from pywa.handlers import (
-    TemplateCategoryUpdateHandler,
-    TemplateQualityUpdateHandler,
-    TemplateComponentsUpdateHandler,
-)
-
 """The WhatsApp Async client."""
 
 __all__ = ["WhatsApp"]
@@ -80,6 +74,8 @@ from .types import (
     TemplateCategoryUpdate,
     TemplateQualityUpdate,
     TemplateComponentsUpdate,
+    PhoneNumberChange,
+    IdentityChange,
 )
 from .handlers import (
     Handler,
@@ -94,6 +90,11 @@ from .handlers import (
     CallConnectHandler,
     CallTerminateHandler,
     CallStatusHandler,
+    TemplateCategoryUpdateHandler,
+    TemplateQualityUpdateHandler,
+    TemplateComponentsUpdateHandler,
+    PhoneNumberChangeHandler,
+    IdentityChangeHandler,
 )
 from .types.flows import (
     FlowCategory,
@@ -142,6 +143,8 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         CallbackButtonHandler: CallbackButton,
         CallbackSelectionHandler: CallbackSelection,
         ChatOpenedHandler: ChatOpened,
+        PhoneNumberChangeHandler: PhoneNumberChange,
+        IdentityChangeHandler: IdentityChange,
         FlowCompletionHandler: FlowCompletion,
         TemplateStatusUpdateHandler: TemplateStatusUpdate,
         TemplateCategoryUpdateHandler: TemplateCategoryUpdate,

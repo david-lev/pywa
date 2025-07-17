@@ -7,6 +7,7 @@ from pywa.types import (
 )
 from pywa.types.calls import CallEvent, CallDirection
 from pywa.types.media import Image, Video, Document, Audio
+from pywa.types.system import SystemType
 from pywa.types.template import TemplateStatus, TemplateCategory
 from .common import CLIENTS
 
@@ -89,6 +90,14 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
     },
     "chat_opened": {
         "chat_opened": [lambda c: c.type == MessageType.REQUEST_WELCOME],
+    },
+    "system": {
+        "phone_number_change": [
+            lambda s: s.sys_type == SystemType.CUSTOMER_CHANGED_NUMBER,
+        ],
+        "identity_change": [
+            lambda s: s.sys_type == SystemType.CUSTOMER_IDENTITY_CHANGED,
+        ],
     },
     "call_connect": {
         "business_initiated": [

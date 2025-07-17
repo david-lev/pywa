@@ -128,7 +128,7 @@ class MessageType(utils.StrEnum):
         INTERACTIVE: Only used in :class:`CallbackButton` and :class:`CallbackSelection`.
         BUTTON: Only used in :class:`CallbackButton`.
         REQUEST_WELCOME: Only used in :class:`ChatOpened`.
-        SYSTEM: Only used in :class:`UserNumberChanged` and :class:`UserIdentityChanged`
+        SYSTEM: Only used in :class:`PhoneNumberChange` and :class:`IdentityChange`
     """
 
     __check_value = str.islower

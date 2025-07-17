@@ -6,23 +6,22 @@ import threading
 from typing import TYPE_CHECKING, cast, Callable
 
 from . import utils, handlers, errors
-from .handlers import (
-    Handler,
-    EncryptedFlowRequestType,
-    CallStatusHandler,
-    CallConnectHandler,
-    CallTerminateHandler,
-)  # noqa
-from .handlers import (
-    CallbackButtonHandler,
-    CallbackSelectionHandler,
-    MessageHandler,
-    MessageStatusHandler,
-    RawUpdateHandler,
-    FlowCompletionHandler,
-    UserMarketingPreferencesHandler,
-    ChatOpenedHandler,
-)
+
+# from .handlers import (
+# Handler,
+#     EncryptedFlowRequestType,
+#     CallStatusHandler,
+#     CallConnectHandler,
+#     CallTerminateHandler, PhoneNumberChangeHandler, IdentityChangeHandler,
+#     CallbackButtonHandler,
+#     CallbackSelectionHandler,
+#     MessageHandler,
+#     MessageStatusHandler,
+#     RawUpdateHandler,
+#     FlowCompletionHandler,
+#     UserMarketingPreferencesHandler,
+#     ChatOpenedHandler,
+# )
 from .types import MessageType, UserPreferenceCategory
 from .types.base_update import (
     BaseUpdate,
@@ -30,6 +29,7 @@ from .types.base_update import (
     ContinueHandling,
     BaseUserUpdate,
 )  # noqa
+from .types.system import SystemType
 
 from .utils import FastAPI, Flask
 
@@ -37,18 +37,22 @@ if TYPE_CHECKING:
     from .client import WhatsApp
 
 
-_MESSAGE_TYPES: dict[MessageType, type[Handler]] = {
-    MessageType.BUTTON: CallbackButtonHandler,
-    MessageType.REQUEST_WELCOME: ChatOpenedHandler,
+_MESSAGE_TYPES: dict[MessageType, type[handlers.Handler]] = {
+    MessageType.BUTTON: handlers.CallbackButtonHandler,
+    MessageType.REQUEST_WELCOME: handlers.ChatOpenedHandler,
 }
-_INTERACTIVE_TYPES: dict[str, type[Handler]] = {
-    "button_reply": CallbackButtonHandler,
-    "list_reply": CallbackSelectionHandler,
-    "nfm_reply": FlowCompletionHandler,
+_SYSTEM_TYPES: dict[SystemType, type[handlers.Handler]] = {
+    SystemType.CUSTOMER_CHANGED_NUMBER: handlers.PhoneNumberChangeHandler,
+    SystemType.CUSTOMER_IDENTITY_CHANGED: handlers.IdentityChangeHandler,
 }
-_CALL_EVENTS: dict[str, type[Handler]] = {
-    "connect": CallConnectHandler,
-    "terminate": CallTerminateHandler,
+_INTERACTIVE_TYPES: dict[str, type[handlers.Handler]] = {
+    "button_reply": handlers.CallbackButtonHandler,
+    "list_reply": handlers.CallbackSelectionHandler,
+    "nfm_reply": handlers.FlowCompletionHandler,
+}
+_CALL_EVENTS: dict[str, type[handlers.Handler]] = {
+    "connect": handlers.CallConnectHandler,
+    "terminate": handlers.CallTerminateHandler,
 }
 
 
@@ -141,7 +145,9 @@ class Server:
                 app_id=app_id,
                 app_secret=app_secret,
                 verify_token=verify_token,
-                fields=tuple(webhook_fields or Handler._handled_fields().keys()),
+                fields=tuple(
+                    webhook_fields or handlers.Handler._handled_fields().keys()
+                ),
                 delay=webhook_challenge_delay,
             )
 
@@ -378,10 +384,12 @@ class Server:
 
     def _call_raw_update_handler(self: "WhatsApp", update: dict) -> None:
         """Invoke the raw update handler."""
-        self._invoke_callbacks(RawUpdateHandler, update)
+        self._invoke_callbacks(handlers.RawUpdateHandler, update)
 
     def _invoke_callbacks(
-        self: "WhatsApp", handler_type: type[Handler], update: BaseUpdate | dict
+        self: "WhatsApp",
+        handler_type: type[handlers.Handler],
+        update: BaseUpdate | dict,
     ) -> None:
         """Process and call registered handlers for the update."""
         for handler in self._handlers[handler_type]:
@@ -418,10 +426,22 @@ class Server:
 
         return not self._continue_handling
 
-    def _get_handler(self: "WhatsApp", update: dict) -> type[Handler] | None:
+    def _get_handler(self: "WhatsApp", update: dict) -> type[handlers.Handler] | None:
         """Get the handler for the given update."""
         field = update["entry"][0]["changes"][0]["field"]
         value = update["entry"][0]["changes"][0]["value"]
+
+        if self.filter_updates and update["entry"][0]["id"] != self.business_account_id:
+            return None
+
+        try:
+            if (
+                self.filter_updates
+                and value["metadata"]["phone_number_id"] != self.phone_id
+            ):
+                return None
+        except KeyError:  # no metadata in update
+            pass
 
         if handler := _complex_fields_handlers.get(field, lambda wa, v: None)(
             self, value
@@ -429,7 +449,7 @@ class Server:
             return handler
 
         # noinspection PyProtectedMember
-        return Handler._handled_fields().get(field)
+        return handlers.Handler._handled_fields().get(field)
 
     def _delayed_register_callback_url(
         self: "WhatsApp",
@@ -604,7 +624,7 @@ class Server:
                 @self._server.post(callback_wrapper._endpoint)
                 @utils.rename_func(f"('{callback_wrapper._endpoint}')")
                 def pywa_flow(
-                    flow_req: EncryptedFlowRequestType,
+                    flow_req: handlers.EncryptedFlowRequestType,
                 ) -> fastapi.Response:
                     """Automatically generated by pywa to handle incoming flow requests."""
                     response, status_code = callback_wrapper.handle(flow_req)
@@ -616,7 +636,9 @@ class Server:
         return callback_wrapper
 
 
-def _handle_messages_field(wa: "WhatsApp", value: dict) -> type[Handler] | None:
+def _handle_messages_field(
+    wa: "WhatsApp", value: dict
+) -> type[handlers.Handler] | None:
     """Handle webhook updates with 'messages' field."""
     if wa.filter_updates and (value["metadata"]["phone_number_id"] != wa.phone_id):
         return None
@@ -629,7 +651,7 @@ def _handle_messages_field(wa: "WhatsApp", value: dict) -> type[Handler] | None:
             except (
                 KeyError
             ):  # value with errors, when a user tries to send the interactive msg again
-                return MessageHandler
+                return handlers.MessageHandler
             if (handler := _INTERACTIVE_TYPES.get(interactive_type)) is not None:
                 return handler
             _logger.warning(
@@ -637,10 +659,20 @@ def _handle_messages_field(wa: "WhatsApp", value: dict) -> type[Handler] | None:
                 wa._webhook_endpoint,
                 interactive_type,
             )
-        return _MESSAGE_TYPES.get(msg_type, MessageHandler)
+        elif msg_type == MessageType.SYSTEM:
+            system_type = value["messages"][0]["system"]["type"]
+
+            if (handler := _SYSTEM_TYPES.get(system_type)) is not None:
+                return handler
+            _logger.warning(
+                "Webhook ('%s'): Unknown system message type: %s. Falling back to MessageHandler.",
+                wa._webhook_endpoint,
+                system_type,
+            )
+        return _MESSAGE_TYPES.get(msg_type, handlers.MessageHandler)
 
     elif "statuses" in value:  # status
-        return MessageStatusHandler
+        return handlers.MessageStatusHandler
 
     _logger.warning(
         "Webhook ('%s'): Unknown message type: %s",
@@ -650,7 +682,7 @@ def _handle_messages_field(wa: "WhatsApp", value: dict) -> type[Handler] | None:
     return None
 
 
-def _handle_calls_field(wa: "WhatsApp", value: dict) -> type[Handler] | None:
+def _handle_calls_field(wa: "WhatsApp", value: dict) -> type[handlers.Handler] | None:
     """Handle webhook updates with 'calls' field."""
     if wa.filter_updates and (value["metadata"]["phone_number_id"] != wa.phone_id):
         return None
@@ -663,11 +695,13 @@ def _handle_calls_field(wa: "WhatsApp", value: dict) -> type[Handler] | None:
             value["calls"][0]["event"],
         )
     elif "statuses" in value:
-        return CallStatusHandler
+        return handlers.CallStatusHandler
     return None
 
 
-def _handle_user_preferences_field(wa: "WhatsApp", value: dict) -> type[Handler] | None:
+def _handle_user_preferences_field(
+    wa: "WhatsApp", value: dict
+) -> type[handlers.Handler] | None:
     """Handle webhook updates with 'user_preferences' field."""
     if wa.filter_updates and (value["metadata"]["phone_number_id"] != wa.phone_id):
         return None
@@ -675,7 +709,7 @@ def _handle_user_preferences_field(wa: "WhatsApp", value: dict) -> type[Handler]
         value["user_preferences"][0]["category"]
         == UserPreferenceCategory.MARKETING_MESSAGES
     ):
-        return UserMarketingPreferencesHandler
+        return handlers.UserMarketingPreferencesHandler
     _logger.warning(
         "Webhook ('%s'): Unknown user preference category: %s.",
         wa._webhook_endpoint,
@@ -685,7 +719,7 @@ def _handle_user_preferences_field(wa: "WhatsApp", value: dict) -> type[Handler]
 
 
 _complex_fields_handlers: dict[
-    str, Callable[["WhatsApp", dict], type[Handler] | None]
+    str, Callable[["WhatsApp", dict], type[handlers.Handler] | None]
 ] = {
     "messages": _handle_messages_field,
     "calls": _handle_calls_field,

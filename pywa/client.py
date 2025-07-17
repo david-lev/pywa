@@ -45,6 +45,8 @@ from .handlers import (
     _HandlerDecorators,
     _handlers_attr,
     _flow_request_handler_attr,
+    PhoneNumberChangeHandler,
+    IdentityChangeHandler,
 )  # noqa
 from .listeners import _Listeners, Listener
 from .types import (
@@ -92,6 +94,8 @@ from .types import (
     CallTerminate,
     CallStatus,
     UserMarketingPreferences,
+    PhoneNumberChange,
+    IdentityChange,
 )
 from .types.base_update import BaseUpdate
 from .types.calls import CallPermissions, SDP, InitiatedCall
@@ -150,6 +154,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         CallbackButtonHandler: CallbackButton,
         CallbackSelectionHandler: CallbackSelection,
         ChatOpenedHandler: ChatOpened,
+        PhoneNumberChangeHandler: PhoneNumberChange,
+        IdentityChangeHandler: IdentityChange,
         FlowCompletionHandler: FlowCompletion,
         TemplateStatusUpdateHandler: TemplateStatusUpdate,
         TemplateCategoryUpdateHandler: TemplateCategoryUpdate,
@@ -288,7 +294,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             )
 
         self.phone_id = str(phone_id) if phone_id is not None else None
-        self.filter_updates = filter_updates if phone_id is not None else False
+        self.filter_updates = (
+            filter_updates
+            if (phone_id is not None or business_account_id is not None)
+            else False
+        )
         self.business_account_id = (
             str(business_account_id) if business_account_id is not None else None
         )

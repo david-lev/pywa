@@ -50,6 +50,8 @@ __all__ = [
     "FlowCompletionHandler",
     "FlowRequestHandler",
     "ChatOpenedHandler",
+    "PhoneNumberChangeHandler",
+    "IdentityChangeHandler",
     "CallConnectHandler",
     "CallTerminateHandler",
     "CallStatusHandler",
@@ -95,6 +97,8 @@ from .types import (
     CallConnect,
     CallTerminate,
     CallStatus,
+    PhoneNumberChange,
+    IdentityChange,
 )
 from .types.flows import (
     FlowCompletion,
@@ -154,6 +158,14 @@ _CallStatusCallback: TypeAlias = Callable[
 ]
 _UserMarketingPreferencesCallback: TypeAlias = Callable[
     ["WhatsApp", "UserMarketingPreferences"],
+    Any | Awaitable[Any],
+]
+_PhoneNumberChangeCallback: TypeAlias = Callable[
+    ["WhatsApp", "PhoneNumberChange"],
+    Any | Awaitable[Any],
+]
+_IdentityChangeCallback: TypeAlias = Callable[
+    ["WhatsApp", "IdentityChange"],
     Any | Awaitable[Any],
 ]
 
@@ -466,6 +478,70 @@ class ChatOpenedHandler(Handler[ChatOpened]):
     def __init__(
         self,
         callback: _ChatOpenedCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class PhoneNumberChangeHandler(Handler[PhoneNumberChange]):
+    """
+    Handler for :class:`pywa.types.PhoneNumberChange`
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_phone_number_change` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_phone_number_change = lambda _, msg: print(msg)
+        >>> wa.add_handlers(PhoneNumberChangeHandler(print_phone_number_change))
+
+    Args:
+        callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a
+            :class:`pywa.types.PhoneNumberChange` as arguments)
+        filters: The filters to apply to the handler
+        priority: The priority of the handler (default: ``0``)
+
+    """
+
+    _update = PhoneNumberChange
+
+    def __init__(
+        self,
+        callback: _PhoneNumberChangeCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class IdentityChangeHandler(Handler[PhoneNumberChange]):
+    """
+    Handler for :class:`pywa.types.IdentityChange`
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_identity_change` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_identity_change = lambda _, msg: print(msg)
+        >>> wa.add_handlers(IdentityChangeHandler(print_identity_change))
+
+    Args:
+        callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a
+            :class:`pywa.types.IdentityChange` as arguments)
+        filters: The filters to apply to the handler
+        priority: The priority of the handler (default: ``0``)
+
+    """
+
+    _update = IdentityChange
+
+    def __init__(
+        self,
+        callback: _IdentityChangeCallback,
         filters: Filter = None,
         priority: int = 0,
     ):
@@ -1446,6 +1522,100 @@ class _HandlerDecorators:
             return _registered_with_parentheses(
                 self=self,
                 handler_type=ChatOpenedHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_phone_number_change(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_PhoneNumberChangeCallback], _PhoneNumberChangeCallback]
+        | _PhoneNumberChangeCallback
+    ):
+        """
+        Decorator to register a function as a callback for incoming phone number change (User changes their phone number).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`PhoneNumberChangeHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_phone_number_change
+            ... def phone_number_change_handler(client: WhatsApp, phone_number_change: types.PhoneNumberChange):
+            ...     print(f"The user {phone_number_change.from_user.wa_id} just changed their phone number to {phone_number_change.new_phone_number}!")
+
+        Args:
+            filters: Filters to apply to the incoming phone number change.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=PhoneNumberChangeHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(callback: _PhoneNumberChangeCallback) -> _PhoneNumberChangeCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=PhoneNumberChangeHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_identity_change(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_IdentityChangeCallback], _IdentityChangeCallback]
+        | _IdentityChangeCallback
+    ):
+        """
+        Decorator to register a function as a callback for incoming identity change (User changes their identity).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`IdentityChangeHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_identity_change
+            ... def identity_change_handler(client: WhatsApp, identity_change: types.IdentityChange):
+            ...     print(f"The user {identity_change.from_user.wa_id} just changed their identity to {identity_change.new_identity}!")
+
+        Args:
+            filters: Filters to apply to the incoming identity change.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=IdentityChangeHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(callback: _IdentityChangeCallback) -> _IdentityChangeCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=IdentityChangeHandler,
                 callback=callback,
                 filters=filters,
                 priority=priority,
