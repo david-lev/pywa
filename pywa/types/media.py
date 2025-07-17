@@ -64,6 +64,15 @@ class Media:
             **kwargs,
         )
 
+    def delete(self, *, phone_id: str | int | None = utils.MISSING) -> bool:
+        """
+        Deletes the media from WhatsApp servers.
+
+        Args:
+            phone_id: The phone ID to delete the media from (optional, If included, the operation will only be processed if the ID matches the ID of the business phone number that the media was uploaded on. pass None to use the client's phone ID).
+        """
+        return self._client.delete_media(media_id=self.id, phone_id=phone_id)
+
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class BaseUserMedia(Media, utils.FromDict):

@@ -61,8 +61,10 @@ from pywa_async.types import (
 )
 from pywa.types.flows import FlowDetails as FlowDetailsSync
 from pywa_async.types.flows import FlowDetails as FlowDetailsAsync
-from pywa.types.media import BaseUserMedia as BaseMediaSync
-from pywa_async.types.media import BaseMediaAsync
+from pywa.types.media import Media as MediaSync
+from pywa_async.types.media import Media as MediaAsync
+from pywa.types.media import BaseUserMedia as BaseUserMediaSync
+from pywa_async.types.media import BaseUserMedia as BaseUserMediaAsync
 from pywa.types.sent_message import SentMessage as SentMessageSync
 from pywa_async.types.sent_message import SentMessage as SentMessageAsync
 
@@ -91,7 +93,8 @@ def overrides() -> list[tuple[type, type]]:
         (FlowResponseSync, FlowResponseAsync),
         (FlowDetailsSync, FlowDetailsAsync),
         (MediaUrlResponseSync, MediaUrlResponseAsync),
-        (BaseMediaSync, BaseMediaAsync),
+        (MediaSync, MediaAsync),
+        (BaseUserMediaSync, BaseUserMediaAsync),
         (SentMessageSync, SentMessageAsync),
         (WhatsAppCloudApiSync, WhatsAppCloudApiAsync),
         (WhatsAppCloudApiSync, WhatsAppCloudApiAsync),
@@ -146,7 +149,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
             BaseUpdate.from_update,
             BaseUpdate.stop_handling,
             BaseUpdate.continue_handling,
-            BaseMediaSync.from_flow_completion,
+            BaseUserMediaSync.from_flow_completion,
             SentMessageSync.from_sent_update,
             FlowRequestSync.decrypt_media,
             FlowRequestSync.token_no_longer_valid,
@@ -189,7 +192,7 @@ def test_same_signature(overrides):
     skip_methods = [
         m.__name__
         for m in {
-            BaseMediaSync.from_dict,
+            BaseUserMediaSync.from_dict,
         }
     ]
     skip_methods.extend(
@@ -241,8 +244,8 @@ def test_same_return_annotation(overrides):
     skip_methods = [
         m.__name__
         for m in {
-            BaseMediaSync.from_dict,
-            BaseMediaSync.from_flow_completion,
+            BaseUserMediaSync.from_dict,
+            BaseUserMediaSync.from_flow_completion,
         }
     ]
     for sync_obj, async_obj in overrides:
@@ -262,8 +265,8 @@ def test_same_docstring(overrides):
     skip_methods = [
         m.__name__
         for m in {
-            BaseMediaSync.from_dict,
-            BaseMediaSync.from_flow_completion,
+            BaseUserMediaSync.from_dict,
+            BaseUserMediaSync.from_flow_completion,
         }
     ] + [
         "wait_for_completion",

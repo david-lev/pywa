@@ -406,7 +406,9 @@ class WhatsAppCloudApi:
         res.raise_for_status()
         return res.content, res.headers.get("Content-Type")
 
-    def delete_media(self, media_id: str) -> dict[str, bool]:
+    def delete_media(
+        self, media_id: str, phone_number_id: str | None = None
+    ) -> dict[str, bool]:
         """
         Delete a media file from WhatsApp servers.
 
@@ -418,11 +420,15 @@ class WhatsAppCloudApi:
 
         Args:
             media_id: The ID of the media file.
+            phone_number_id: Business phone number ID. If included, the operation will only be processed if the ID matches the ID of the business phone number that the media was uploaded on.
 
         Returns:
             True if the media file was deleted successfully, False otherwise.
         """
-        return self._make_request(method="DELETE", endpoint=f"/{media_id}")
+        params = {"phone_number_id": phone_number_id} if phone_number_id else None
+        return self._make_request(
+            method="DELETE", endpoint=f"/{media_id}", params=params
+        )
 
     def send_raw_request(self, method: str, endpoint: str, **kwargs) -> Any:
         """

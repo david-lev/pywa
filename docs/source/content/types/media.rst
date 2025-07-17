@@ -21,6 +21,7 @@ Media
 
 .. automethod:: Media.get_media_url
 .. automethod:: Media.download
+.. automethod:: Media.delete
 .. autoproperty:: BaseUserMedia.extension
 .. automethod:: BaseUserMedia.from_flow_completion
 

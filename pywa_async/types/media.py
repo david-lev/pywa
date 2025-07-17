@@ -10,7 +10,7 @@ __all__ = [
     "Audio",
     "MediaUrlResponse",
 ]
-
+from .. import utils
 from pywa.types.media import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.media import (
     Image as _Image,
@@ -47,7 +47,7 @@ class Media:
         Download a media file from WhatsApp servers.
             - Same as :func:`~pywa.client.WhatsApp.download_media` with ``media_url=media.get_media_url()``
 
-        >>> await message.image.download()
+        >>> message.image.download()
 
         Args:
             path: The path where to save the file (if not provided, the current working directory will be used).
@@ -68,14 +68,23 @@ class Media:
             **kwargs,
         )
 
+    async def delete(self, *, phone_id: str | int | None = utils.MISSING) -> bool:
+        """
+        Deletes the media from WhatsApp servers.
 
-class BaseMediaAsync(Media):
+        Args:
+            phone_id: The phone ID to delete the media from (optional, If included, the operation will only be processed if the ID matches the ID of the business phone number that the media was uploaded on. pass None to use the client's phone ID).
+        """
+        return await self._client.delete_media(media_id=self.id, phone_id=phone_id)
+
+
+class BaseUserMedia(Media):
     """Base class for all media types."""
 
     @classmethod
     def from_flow_completion(
         cls, client: WhatsApp, media: dict[str, str]
-    ) -> BaseMediaAsync:
+    ) -> BaseUserMedia:
         """
         Create a media object from the media dict returned by the flow completion.
 
@@ -101,7 +110,7 @@ class BaseMediaAsync(Media):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Image(BaseMediaAsync, _Image):
+class Image(BaseUserMedia, _Image):
     """
     Represents an received image.
 
@@ -113,7 +122,7 @@ class Image(BaseMediaAsync, _Image):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Video(BaseMediaAsync, _Video):
+class Video(BaseUserMedia, _Video):
     """
     Represents a video.
 
@@ -125,7 +134,7 @@ class Video(BaseMediaAsync, _Video):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Sticker(BaseMediaAsync, _Sticker):
+class Sticker(BaseUserMedia, _Sticker):
     """
     Represents a sticker.
 
@@ -138,7 +147,7 @@ class Sticker(BaseMediaAsync, _Sticker):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Document(BaseMediaAsync, _Document):
+class Document(BaseUserMedia, _Document):
     """
     Represents a document.
 
@@ -151,7 +160,7 @@ class Document(BaseMediaAsync, _Document):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Audio(BaseMediaAsync, _Audio):
+class Audio(BaseUserMedia, _Audio):
     """
     Represents an audio.
 

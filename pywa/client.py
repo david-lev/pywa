@@ -1721,11 +1721,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def download_media(
         self,
         url: str,
-        path: str | None = None,
+        path: str | pathlib.Path | None = None,
         filename: str | None = None,
         in_memory: bool = False,
         **httpx_kwargs: Any,
-    ) -> str | bytes:
+    ) -> pathlib.Path | bytes:
         """
         Download a media file from WhatsApp servers.
 
@@ -1754,17 +1754,47 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         if in_memory:
             return content
         if path is None:
-            path = os.getcwd()
+            path = pathlib.Path.cwd()
         if filename is None:
             clean_mimetype = mimetype.split(";")[0].strip() if mimetype else None
-            extension = (
-                mimetypes.guess_extension(clean_mimetype) if clean_mimetype else None
+            filename = hashlib.sha256(url.encode()).hexdigest() + (
+                (mimetypes.guess_extension(clean_mimetype) if clean_mimetype else None)
+                or ".bin"
             )
-            filename = hashlib.sha256(url.encode()).hexdigest() + (extension or ".bin")
-        path = os.path.join(path, filename)
+        path = pathlib.Path(path) / filename
         with open(path, "wb") as f:
             f.write(content)
         return path
+
+    def delete_media(
+        self,
+        media_id: str,
+        *,
+        phone_id: str | int | None = utils.MISSING,
+    ) -> bool:
+        """
+        Delete a media file from WhatsApp servers.
+
+        - See `Delete media <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#delete-media>`_.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.delete_media(media_id='wamid.XXX=')
+
+        Args:
+            media_id: The media ID to delete.
+            phone_id: The phone ID to delete the media from (optional, If included, the operation will only be processed if the ID matches the ID of the business phone number that the media was uploaded on. pass ``None`` to use the client's phone ID).
+
+        Returns:
+            Whether the media was deleted successfully.
+        """
+        return self.api.delete_media(
+            media_id=media_id,
+            phone_number_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id")
+            if phone_id is not utils.MISSING
+            else None,
+        )["success"]
 
     def get_business_phone_number(
         self,

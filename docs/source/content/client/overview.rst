@@ -149,6 +149,8 @@ Media
      - Download media
    * - :meth:`~WhatsApp.get_media_url`
      - Get media URL
+   * - :meth:`~WhatsApp.delete_media`
+     - Delete media from WhatsApp servers
 
 Templates
 ---------
