@@ -7,7 +7,7 @@ __all__ = [
     "URLButton",
     "ButtonUrl",  # Alias for URLButton for backward compatibility
     "VoiceCallButton",
-    "CallRequestButton",
+    "CallPermissionRequestButton",
     "SectionRow",
     "Section",
     "SectionList",
@@ -494,7 +494,7 @@ class VoiceCallButton:
 
 
 @dataclasses.dataclass(slots=True)
-class CallRequestButton:
+class CallPermissionRequestButton:
     """Represents a button that requests a call on WhatsApp."""
 
     @staticmethod

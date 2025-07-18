@@ -7,7 +7,7 @@ __all__ = [
     "URLButton",
     "ButtonUrl",  #
     "VoiceCallButton",
-    "CallRequestButton",
+    "CallPermissionRequestButton",
     "SectionRow",
     "Section",
     "SectionList",

@@ -30,7 +30,7 @@ from .types import (
     SectionList,
     FlowButton,
     Button,
-    CallRequestButton,
+    CallPermissionRequestButton,
 )
 from pywa.types.others import InteractiveType
 from .types.media import Media
@@ -44,7 +44,7 @@ def resolve_buttons_param(
         Iterable[Button]
         | URLButton
         | VoiceCallButton
-        | CallRequestButton
+        | CallPermissionRequestButton
         | FlowButton
         | SectionList
     ),
@@ -71,7 +71,7 @@ def resolve_buttons_param(
         return InteractiveType.CTA_URL, buttons.to_dict(), {}
     elif isinstance(buttons, VoiceCallButton):
         return InteractiveType.VOICE_CALL, buttons.to_dict(), {}
-    elif isinstance(buttons, CallRequestButton):
+    elif isinstance(buttons, CallPermissionRequestButton):
         return InteractiveType.CALL_PERMISSION_REQUEST, buttons.to_dict(), {}
     elif isinstance(buttons, FlowButton):
         return (

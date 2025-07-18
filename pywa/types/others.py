@@ -131,8 +131,8 @@ class MessageType(utils.StrEnum):
         SYSTEM: Only used in :class:`PhoneNumberChange` and :class:`IdentityChange`
     """
 
-    __check_value = str.islower
-    __modify_value = str.lower
+    _check_value = str.islower
+    _modify_value = str.lower
 
     TEXT = "text"
     IMAGE = "image"
@@ -161,8 +161,8 @@ class InteractiveType(utils.StrEnum):
 
     """
 
-    __check_value = str.islower
-    __modify_value = str.lower
+    _check_value = str.islower
+    _modify_value = str.lower
 
     BUTTON = "button"
     CTA_URL = "cta_url"

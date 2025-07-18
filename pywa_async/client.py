@@ -38,7 +38,7 @@ from .types import (
     Button,
     URLButton,
     VoiceCallButton,
-    CallRequestButton,
+    CallPermissionRequestButton,
     CommerceSettings,
     Contact,
     Industry,
@@ -314,7 +314,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             Iterable[Button]
             | URLButton
             | VoiceCallButton
-            | CallRequestButton
+            | CallPermissionRequestButton
             | SectionList
             | FlowButton
             | None

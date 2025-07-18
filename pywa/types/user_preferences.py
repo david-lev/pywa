@@ -89,8 +89,8 @@ class MarketingPreference(utils.StrEnum):
         RESUME: The user has requested to resume receiving marketing messages.
     """
 
-    __check_value = str.islower
-    __modify_value = str.lower
+    _check_value = str.islower
+    _modify_value = str.lower
 
     STOP = "stop"
     RESUME = "resume"
@@ -106,8 +106,8 @@ class UserPreferenceCategory(utils.StrEnum):
         MARKETING_MESSAGES: User preferences for marketing messages.
     """
 
-    __check_value = str.islower
-    __modify_value = str.lower
+    _check_value = str.islower
+    _modify_value = str.lower
 
     MARKETING_MESSAGES = "marketing_messages"
 

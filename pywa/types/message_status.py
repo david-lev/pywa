@@ -45,8 +45,8 @@ class MessageStatusType(utils.StrEnum):
         FAILED: The message failed to send (you can access the ``.error`` attribute for more information).
     """
 
-    __check_value = str.islower
-    __modify_value = str.lower
+    _check_value = str.islower
+    _modify_value = str.lower
 
     SENT = "sent"
     DELIVERED = "delivered"
@@ -69,8 +69,8 @@ class ConversationCategory(utils.StrEnum):
         UNKNOWN: The conversation category is unknown.
     """
 
-    __check_value = str.islower
-    __modify_value = str.lower
+    _check_value = str.islower
+    _modify_value = str.lower
 
     AUTHENTICATION = "authentication"
     MARKETING = "marketing"
@@ -236,8 +236,8 @@ class PricingType(utils.StrEnum):
         FREE_ENTRY_POINT: Indicates the message is free because it is part of a `free-entry point conversation <https://developers.facebook.com/docs/whatsapp/pricing#free-entry-point-conversations>`_.
     """
 
-    __check_value = str.islower
-    __modify_value = str.lower
+    _check_value = str.islower
+    _modify_value = str.lower
 
     REGULAR = "regular"
     FREE_CUSTOMER_SERVICE = "free_customer_service"
@@ -259,8 +259,8 @@ class PricingCategory(utils.StrEnum):
         REFERRAL_CONVERSION: Indicates the message is part of a `free entry point conversation <https://developers.facebook.com/docs/whatsapp/pricing#free-entry-point-conversations>`_.
     """
 
-    __check_value = str.islower
-    __modify_value = str.lower
+    _check_value = str.islower
+    _modify_value = str.lower
 
     AUTHENTICATION = "authentication"
     AUTHENTICATION_INTERNATIONAL = "authentication_international"

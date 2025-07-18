@@ -30,11 +30,13 @@ __all__ = [
     "FlowButton",
     "FlowButtonIcon",
     "PhoneNumberButton",
+    "VoiceCallButton",
     "QuickReplyButton",
     "URLButton",
     "CatalogButton",
     "MPMButton",
     "SPMButton",
+    "CallPermissionRequestButton",
     "CopyCodeOTPButton",
     "OneTapOTPButton",
     "ZeroTapOTPButton",
@@ -556,6 +558,12 @@ class TemplateCategory(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
+class TemplateSubCategory(utils.StrEnum):
+    CALL_PERMISSIONS_REQUEST = "CALL_PERMISSIONS_REQUEST"
+
+    UNKNOWN = "UNKNOWN"
+
+
 class ComponentType(utils.StrEnum):
     HEADER = "HEADER"
     BODY = "BODY"
@@ -574,6 +582,7 @@ class ComponentType(utils.StrEnum):
     FLOW = "FLOW"
     VOICE_CALL = "VOICE_CALL"
     APP = "APP"
+    CALL_PERMISSION_REQUEST = "CALL_PERMISSION_REQUEST"
 
     UNKNOWN = "UNKNOWN"
 
@@ -590,8 +599,8 @@ class HeaderFormatType(utils.StrEnum):
 
 
 class ParamType(utils.StrEnum):
-    __check_value = str.islower
-    __modify_value = str.lower
+    _check_value = str.islower
+    _modify_value = str.lower
 
     TEXT = "text"
     CURRENCY = "currency"
@@ -614,8 +623,8 @@ class TemplateLanguage(utils.StrEnum):
     <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/supported-languages>`_
     """
 
-    __check_value = None
-    __modify_value = None
+    _check_value = None
+    _modify_value = None
 
     AFRIKAANS = "af"
     ALBANIAN = "sq"
@@ -1229,18 +1238,6 @@ class FlowButton(BaseButtonComponent):
         self.navigate_screen = navigate_screen
         self.icon = icon
 
-        if self.flow_id is None and self.flow_name is None and self.flow_json is None:
-            raise ValueError(
-                "Either flow_id, flow_name, or flow_json must be provided."
-            )
-        if (
-            len([x is not None for x in (self.flow_id, self.flow_name, self.flow_json)])
-            > 1
-        ):
-            raise ValueError(
-                "Only one of flow_id, flow_name, or flow_json can be provided."
-            )
-
     def __repr__(self):
         return (
             f"FlowButton(text={self.text!r}, flow_id={self.flow_id!r}, "
@@ -1305,6 +1302,23 @@ class PhoneNumberButton(BaseButtonComponent):
     )
     text: str
     phone_number: str
+
+
+@dataclasses.dataclass(kw_only=True, slots=True)
+class VoiceCallButton(BaseButtonComponent):
+    """
+    Voice call button initiates a WhatsApp voice call to the business. Templates are limited to one voice call button.
+
+    Attributes:
+        text: Button label text. 25 characters maximum.
+    """
+
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.VOICE_CALL,
+        init=False,
+        repr=False,
+    )
+    text: str
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -1436,6 +1450,21 @@ class SPMButton(BaseButtonComponent):
         repr=False,
     )
     text: str
+
+
+@dataclasses.dataclass(kw_only=True, slots=True)
+class CallPermissionRequestButton(BaseButtonComponent):
+    """
+    Call permissions request buttons are used to request call permissions from the user. When tapped, they open a dialog that allows the user to grant or deny call permissions.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-call-permissions#create-and-send-call-permission-request-template-messages>`_.
+    """
+
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.CALL_PERMISSION_REQUEST,
+        init=False,
+        repr=False,
+    )
 
 
 class OtpType(utils.StrEnum):
@@ -1751,6 +1780,8 @@ _comp_types_to_component: dict[ComponentType, type[TemplateBaseComponent]] = {
     ComponentType.CATALOG: CatalogButton,
     ComponentType.COPY_CODE: CopyCodeOTPButton,
     ComponentType.FLOW: FlowButton,
+    ComponentType.CALL_PERMISSION_REQUEST: CallPermissionRequestButton,
+    ComponentType.VOICE_CALL: VoiceCallButton,
 }
 
 _header_formats_to_component: dict[HeaderFormatType, type[BaseHeaderComponent]] = {
@@ -1905,7 +1936,7 @@ class TemplateDetails:
     library_template_name: str | None
     quality_score: QualityScore | None
     cta_url_link_tracking_opted_out: bool | None
-    sub_category: TemplateCategory | None
+    sub_category: TemplateSubCategory | None
 
     @classmethod
     def from_dict(cls, data: dict, client: WhatsApp) -> TemplateDetails:
@@ -1937,7 +1968,7 @@ class TemplateDetails:
             if "quality_score" in data
             else None,
             cta_url_link_tracking_opted_out=data.get("cta_url_link_tracking_opted_out"),
-            sub_category=TemplateCategory(data["sub_category"])
+            sub_category=TemplateSubCategory(data["sub_category"])
             if "sub_category" in data
             else None,
         )

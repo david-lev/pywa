@@ -17,7 +17,7 @@ Keyboard
 
 .. autoclass:: VoiceCallButton()
 
-.. autoclass:: CallRequestButton()
+.. autoclass:: CallPermissionRequestButton()
 
 .. autoclass:: CallbackData()
 

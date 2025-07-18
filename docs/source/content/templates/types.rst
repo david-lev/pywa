@@ -24,6 +24,8 @@ Template Types
 
 .. autoclass:: TemplateCategory()
 
+.. autoclass:: TemplateSubCategory()
+
 .. autoclass:: TemplateLanguage()
 
 .. autoclass:: ParamFormat()
@@ -47,6 +49,8 @@ Template Types
 .. autoclass:: FlowButton()
 .. autoclass:: FlowButtonIcon()
 .. autoclass:: PhoneNumberButton()
+.. autoclass:: VoiceCallButton()
+.. autoclass:: CallPermissionRequestButton()
 .. autoclass:: QuickReplyButton()
 .. autoclass:: URLButton()
 .. autoclass:: CatalogButton()
