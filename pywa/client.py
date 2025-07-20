@@ -2313,7 +2313,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def send_template(
         self,
         to: str | int,
-        template: Template,
+        name: str,
+        language: TemplateLanguage,
+        params: list[TemplateBaseComponent.Params],
+        *,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
@@ -2325,87 +2328,32 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> from pywa.types import Template as Temp
+            >>> from pywa.types.template import *
             >>> wa = WhatsApp(...)
             >>> wa.send_template(
             ...     to='1234567890',
-            ...     template=Temp(
-            ...         name='buy_new_iphone_x',
-            ...         language=Temp.Language.ENGLISH_US,
-            ...         header=Temp.TextValue(value='15'),
-            ...         body=[
-            ...             Temp.TextValue(value='John Doe'),
-            ...             Temp.TextValue(value='WA_IPHONE_15'),
-            ...             Temp.TextValue(value='15%'),
-            ...         ],
-            ...         buttons=[
-            ...             Temp.UrlButtonValue(value='iphone15'),
-            ...             Temp.QuickReplyButtonData(data='unsubscribe_from_marketing_messages'),
-            ...             Temp.QuickReplyButtonData(data='unsubscribe_from_all_messages'),
-            ...         ],
-            ...     ),
+            ...     name='seasonal_promotion',
+            ...     language=TemplateLanguage.ENGLISH_US,
+            ...     params=[
+            ...         BodyText.Params(name='David', season='Summer', discount='25%'),
+            ...         CopyCodeButton.Params(coupon_code="25OFF", index=0)
+            ...     ],
             ... )
-
-        Example for Authentication Template:
-
-            >>> from pywa.types import Template as Temp
-            >>> wa = WhatsApp(...)
-            >>> wa.send_template(
-            ...     to='1234567890',
-            ...     template=Temp(
-            ...         name='auth_with_otp',
-            ...         language=Temp.Language.ENGLISH_US,
-            ...         buttons=Temp.OTPButtonCode(code='123456'),
-            ...     ),
-            ... )
-
-        Args:
-            to: The phone ID of the WhatsApp user.
-            template: The template to send.
-            reply_to_message_id: The message ID to reply to (optional).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
-            sender: The phone ID to send the message from (optional, overrides the client's phone ID).
-
-        Returns:
-            The sent template.
         """
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
-        is_url = None
-        match type(template.header):
-            case Template.Image:
-                is_url, template.header.image = helpers.resolve_media_param(
-                    wa=self,
-                    media=template.header.image,
-                    mime_type=template.header.mime_type,
-                    filename=None,
-                    media_type=MessageType.IMAGE,
-                    phone_id=sender,
-                )
-            case Template.Document:
-                is_url, template.header.document = helpers.resolve_media_param(
-                    wa=self,
-                    media=template.header.document,
-                    mime_type="application/pdf",
-                    filename=template.header.filename,
-                    media_type=None,
-                    phone_id=sender,
-                )
-            case Template.Video:
-                is_url, template.header.video = helpers.resolve_media_param(
-                    wa=self,
-                    media=template.header.video,
-                    mime_type=template.header.mime_type,
-                    filename=None,
-                    media_type=MessageType.VIDEO,
-                    phone_id=sender,
-                )
         return SentTemplate.from_sent_update(
             client=self,
             update=self.api.send_message(
                 sender=sender,
                 to=str(to),
                 typ="template",
-                msg=template.to_dict(is_header_url=is_url),
+                msg={
+                    "name": name,
+                    "language": language.value,
+                    "components": [
+                        param.to_dict(client=self, sender=sender) for param in params
+                    ],
+                },
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             ),

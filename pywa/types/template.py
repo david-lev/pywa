@@ -66,13 +66,16 @@ import json
 import pathlib
 import re
 
+from . import CallbackData
 from .base_update import BaseUpdate
 from .flows import FlowActionType, FlowJSON
 import abc
 import dataclasses
 import logging
 from typing import TYPE_CHECKING, Literal, Iterable, BinaryIO
-from .others import Result, SuccessResult
+
+from .media import Media
+from .others import Result, SuccessResult, ProductsSection
 from .. import utils
 from .. import _helpers as helpers
 
@@ -710,7 +713,7 @@ class ParamFormat(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class TemplateBaseComponent:
+class TemplateBaseComponent(abc.ABC):
     """Base class for all template components"""
 
     type: ComponentType
@@ -725,6 +728,15 @@ class TemplateBaseComponent:
                 if k in {f.name for f in dataclasses.fields(cls) if f.init}
             }
         )
+
+    class Params(abc.ABC):
+        """Base class for template component parameters."""
+
+        @abc.abstractmethod
+        def to_dict(self, client: WhatsApp, sender: str) -> dict: ...
+
+    @abc.abstractmethod
+    def params(self, *args, **kwargs) -> Params: ...
 
 
 # =========== HEADER ===========
@@ -851,6 +863,30 @@ class TemplateText:
         return f"TemplateText(text={self.text!r}, example={self.example!r}, param_format={self.param_format!r})"
 
 
+class _BaseTextParams(TemplateBaseComponent.Params, abc.ABC):
+    def __init__(self, *positionals: str, **named: str):
+        if positionals and named:
+            raise ValueError("You can't use both positional and named args!")
+        if not positionals and not named:
+            raise ValueError("At least one positional or named argument is required.")
+        self.positionals = positionals
+        self.named = named
+
+    def _to_dict(self, typ: ComponentType, client: WhatsApp, sender: str) -> dict:
+        return {
+            "type": typ.value,
+            "parameters": [
+                {"type": "text", "text": positional_param}
+                for positional_param in self.positionals
+            ]
+            if self.positionals
+            else [
+                {"type": "text", "text": named_param, "parameter_name": param_name}
+                for param_name, named_param in self.named.items()
+            ],
+        }
+
+
 class HeaderText(BaseHeaderComponent):
     """
     Represents a header text component in a template.
@@ -890,6 +926,42 @@ class HeaderText(BaseHeaderComponent):
         )
         return data
 
+    class Params(_BaseTextParams):
+        def __init__(self, *positionals: str, **named: str):
+            """
+            Fill the parameters for the header text component.
+
+            Args:
+                *positionals: Positional parameters to fill in the template text.
+                **named: Named parameters to fill in the template text.
+            """
+            super().__init__(*positionals, **named)
+
+        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+            return self._to_dict(ComponentType.HEADER, client, sender)
+
+    def params(self, *positionals: str, **named: str) -> Params:
+        """
+        Fill the parameters for the header text component.
+
+        Args:
+            *positionals: Positional parameters to fill in the template text.
+            **named: Named parameters to fill in the template text.
+        """
+        if isinstance(self.text, str):
+            raise ValueError(
+                "HeaderText does not support parameters when text is a string."
+            )
+        if self.text.param_format == ParamFormat.POSITIONAL and named:
+            raise ValueError(
+                "HeaderText does not support named parameters when text is positional."
+            )
+        if self.text.param_format == ParamFormat.NAMED and positionals:
+            raise ValueError(
+                "HeaderText does not support positional parameters when text is named."
+            )
+        return self.Params(*positionals, **named)
+
 
 class HeaderMediaExample:
     """
@@ -920,6 +992,34 @@ class HeaderMediaExample:
         return cls(handle=data["header_handle"][0])
 
 
+class _BaseMediaParams(TemplateBaseComponent.Params, abc.ABC):
+    def __init__(self, media: str | Media | pathlib.Path | bytes | BinaryIO):
+        self.media = media
+
+    def _to_dict(
+        self, format_type: HeaderFormatType, client: WhatsApp, sender: str
+    ) -> dict:
+        is_url, media = helpers.resolve_media_param(
+            wa=client,
+            media=self.media,
+            mime_type=None,
+            filename=None,
+            media_type=format_type.value,
+            phone_id=sender,
+        )
+        return {
+            "type": ComponentType.HEADER.value,
+            "parameters": [
+                {
+                    "type": format_type.value,
+                    format_type.value: {
+                        "link" if is_url else "id": media,
+                    },
+                }
+            ],
+        }
+
+
 @dataclasses.dataclass(kw_only=True, slots=True)
 class HeaderImage(BaseHeaderComponent):
     """
@@ -947,6 +1047,31 @@ class HeaderImage(BaseHeaderComponent):
     @classmethod
     def from_dict(cls, data: dict) -> HeaderImage:
         return cls(example=HeaderMediaExample.from_dict(data["example"]))
+
+    class Params(_BaseMediaParams):
+        def __init__(self, *, image: str | Media | pathlib.Path | bytes | BinaryIO):
+            """
+            Fill the parameters for the header image component.
+
+            Args:
+                image: The image media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
+            """
+            super().__init__(media=image)
+
+        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+            return self._to_dict(HeaderFormatType.IMAGE, client, sender)
+
+    def params(self, *, image: str | Media | pathlib.Path | bytes | BinaryIO) -> Params:
+        """
+        Fill the parameters for the header image component.
+
+        Args:
+            image: The image media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
+
+        Returns:
+            An instance of Params containing the media parameter.
+        """
+        return self.Params(image=image)
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -977,6 +1102,31 @@ class HeaderVideo(BaseHeaderComponent):
     def from_dict(cls, data: dict) -> HeaderVideo:
         return cls(example=HeaderMediaExample.from_dict(data["example"]))
 
+    class Params(_BaseMediaParams):
+        def __init__(self, *, video: str | Media | pathlib.Path | bytes | BinaryIO):
+            """
+            Fill the parameters for the header video component.
+
+            Args:
+                video: The video media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
+            """
+            super().__init__(media=video)
+
+        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+            return self._to_dict(HeaderFormatType.VIDEO, client, sender)
+
+    def params(self, *, video: str | Media | pathlib.Path | bytes | BinaryIO) -> Params:
+        """
+        Fill the parameters for the header video component.
+
+        Args:
+            video: The video media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
+
+        Returns:
+            An instance of Params containing the media parameter.
+        """
+        return self.Params(video=video)
+
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class HeaderDocument(BaseHeaderComponent):
@@ -1006,6 +1156,33 @@ class HeaderDocument(BaseHeaderComponent):
     def from_dict(cls, data: dict) -> HeaderDocument:
         return cls(example=HeaderMediaExample.from_dict(data["example"]))
 
+    class Params(_BaseMediaParams):
+        def __init__(self, *, document: str | Media | pathlib.Path | bytes | BinaryIO):
+            """
+            Fill the parameters for the header document component.
+
+            Args:
+                document: The document media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
+            """
+            super().__init__(media=document)
+
+        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+            return self._to_dict(HeaderFormatType.DOCUMENT, client, sender)
+
+    def params(
+        self, *, document: str | Media | pathlib.Path | bytes | BinaryIO
+    ) -> Params:
+        """
+        Fill the parameters for the header document component.
+
+        Args:
+            document: The document media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
+
+        Returns:
+            An instance of Params containing the media parameter.
+        """
+        return self.Params(document=document)
+
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class HeaderLocation(BaseHeaderComponent):
@@ -1027,6 +1204,53 @@ class HeaderLocation(BaseHeaderComponent):
         repr=False,
     )
 
+    class Params(TemplateBaseComponent.Params):
+        def __init__(self, *, lat: float, lon: float, name: str, address: str):
+            """
+            Fill the parameters for the header location component.
+
+            Args:
+                lat: Location latitude.
+                lon: Location longitude.
+                name: Text that will appear immediately below the generic map at the top of the message.
+                address: Address that will appear after the ``name`` value, below the generic map at the top of the message.
+            """
+            self.lat = lat
+            self.lon = lon
+            self.name = name
+            self.address = address
+
+        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+            return {
+                "type": ComponentType.HEADER.value,
+                "parameters": [
+                    {
+                        "type": HeaderFormatType.LOCATION.value,
+                        HeaderFormatType.LOCATION.value: {
+                            "latitude": self.lat,
+                            "longitude": self.lon,
+                            "name": self.name,
+                            "address": self.address,
+                        },
+                    }
+                ],
+            }
+
+    def params(self, *, lat: float, lon: float, name: str, address: str) -> Params:
+        """
+        Fill the parameters for the header location component.
+
+        Args:
+            lat: Location latitude.
+            lon: Location longitude.
+            name: Text that will appear immediately below the generic map at the top of the message.
+            address: Address that will appear after the ``name`` value, below the generic map at the top of the message.
+
+        Returns:
+            An instance of Params containing the location parameters.
+        """
+        return self.Params(lat=lat, lon=lon, name=name, address=address)
+
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class HeaderProduct(BaseHeaderComponent):
@@ -1040,6 +1264,45 @@ class HeaderProduct(BaseHeaderComponent):
         init=False,
         repr=False,
     )
+
+    class Params(TemplateBaseComponent.Params):
+        def __init__(self, *, catalog_id: str, sku: str):
+            """
+            Fill the parameters for the header product component.
+
+            Args:
+                catalog_id: ID of `connected ecommerce <https://www.facebook.com/business/help/158662536425974>`_ catalog containing the product.
+                sku: Unique identifier of the product in a catalog (also referred to as ``Content ID`` or ``Retailer ID``).
+            """
+            self.catalog_id = catalog_id
+            self.sku = sku
+
+        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+            return {
+                "type": ComponentType.HEADER.value,
+                "parameters": [
+                    {
+                        "type": HeaderFormatType.PRODUCT.value,
+                        HeaderFormatType.PRODUCT.value: {
+                            "catalog_id": self.catalog_id,
+                            "product_retailer_id": self.sku,
+                        },
+                    }
+                ],
+            }
+
+    def params(self, *, catalog_id: str, sku: str) -> Params:
+        """
+        Fill the parameters for the header product component.
+
+        Args:
+            catalog_id: ID of `connected ecommerce <https://www.facebook.com/business/help/158662536425974>`_ catalog containing the product.
+            sku: Unique identifier of the product in a catalog (also referred to as ``Content ID`` or ``Retailer ID``).
+
+        Returns:
+            An instance of Params containing the catalog ID and SKU.
+        """
+        return self.Params(catalog_id=catalog_id, sku=sku)
 
 
 # =========== BODY ===========
@@ -1088,6 +1351,42 @@ class BodyText(BaseBodyComponent):
             data.update(self.text.to_dict())
         return data
 
+    class Params(_BaseTextParams):
+        def __init__(self, *positionals: str, **named: str):
+            """
+            Fill the parameters for the body text component.
+
+            Args:
+                *positionals: Positional parameters to fill in the template text.
+                **named: Named parameters to fill in the template text.
+            """
+            super().__init__(*positionals, **named)
+
+        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+            return self._to_dict(ComponentType.BODY, client, sender)
+
+    def params(self, *positionals: str, **named: str) -> Params:
+        """
+        Fill the parameters for the body text component.
+
+        Args:
+            *positionals: Positional parameters to fill in the template text.
+            **named: Named parameters to fill in the template text.
+        """
+        if isinstance(self.text, str):
+            raise ValueError(
+                "BodyText does not support parameters when text is a string."
+            )
+        if self.text.param_format == ParamFormat.POSITIONAL and named:
+            raise ValueError(
+                "BodyText does not support named parameters when text is positional."
+            )
+        if self.text.param_format == ParamFormat.NAMED and positionals:
+            raise ValueError(
+                "BodyText does not support positional parameters when text is named."
+            )
+        return self.Params(*positionals, **named)
+
 
 # =========== FOOTER ===========
 
@@ -1101,8 +1400,30 @@ class BaseFooterComponent(TemplateBaseComponent, abc.ABC):
     )
 
 
+class _DoesNotSupportParams:
+    """
+    This class is used for components that do not support parameters.
+    It raises an error if instantiated.
+    """
+
+    class Params(TemplateBaseComponent.Params):
+        def __init__(self):
+            """
+            This class does not support parameters.
+            """
+            raise ValueError(f"{self.__class__.__name__} does not support parameters.")
+
+        def to_dict(self, client: WhatsApp, sender: str) -> dict: ...
+
+    def params(self, *args, **kwargs) -> Params:
+        """
+        This class does not support parameters.
+        """
+        return self.Params()
+
+
 @dataclasses.dataclass(kw_only=True, slots=True)
-class Footer(BaseFooterComponent):
+class Footer(_DoesNotSupportParams, BaseFooterComponent):
     """
     Footers are optional text-only components that appear immediately after the body component. Templates are limited to one footer component.
 
@@ -1122,7 +1443,7 @@ class BaseButtonComponent(TemplateBaseComponent, abc.ABC): ...
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class Buttons(TemplateBaseComponent):
+class Buttons(_DoesNotSupportParams, TemplateBaseComponent):
     """
     Buttons are optional interactive components that perform specific actions when tapped. Templates can have a mixture of up to 10 button components total, although there are limits to individual buttons of the same type as well as combination limits. These limits are described below.
 
@@ -1160,6 +1481,43 @@ class CopyCodeButton(BaseButtonComponent):
         repr=False,
     )
     example: str
+
+    class Params(TemplateBaseComponent.Params):
+        def __init__(self, *, coupon_code: str, index: int):
+            """
+            Fill the parameters for the copy code button component.
+
+            Args:
+                coupon_code: The coupon code to be copied when the customer taps the button. Only accepting alphanumeric characters.
+                index: Indicates order in which button should appear, if the template uses multiple buttons. Buttons are zero-indexed, so setting value to 0 will cause the button to appear first, and another button with an index of 1 will appear next, etc.
+            """
+            self.coupon_code = coupon_code
+            self.index = index
+
+        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+            return {
+                "type": "BUTTON",
+                "subtype": ComponentType.COPY_CODE.value,
+                "index": self.index,
+                "parameters": [
+                    {
+                        "type": "coupon_code",
+                        "coupon_code": self.coupon_code,
+                    }
+                ],
+            }
+
+    def params(self, *, coupon_code: str) -> Params:
+        """
+        Fill the parameters for the copy code button component.
+
+        Args:
+            coupon_code: The coupon code to be copied when the customer taps the button. Only accepting alphanumeric characters.
+
+        Returns:
+            An instance of Params containing the coupon code.
+        """
+        return self.Params(coupon_code=coupon_code)
 
 
 class FlowButtonIcon(utils.StrEnum):
@@ -1281,9 +1639,67 @@ class FlowButton(BaseButtonComponent):
             icon=FlowButtonIcon(data["icon"]) if "icon" in data else None,
         )
 
+    class Params(TemplateBaseComponent.Params):
+        def __init__(
+            self,
+            *,
+            index: int,
+            flow_token: str | None = None,
+            flow_action_data: dict | None = None,
+        ) -> None:
+            """
+            Fill the parameters for the Flow button component.
+
+            Args:
+                flow_token: optional, default is ``unused``.
+                flow_action_data: Optional data to be passed to the first screen.
+                index: Indicates order in which button should appear, if the template uses multiple buttons. Buttons are zero-indexed, so setting value to 0 will cause the button to appear first, and another button with an index of 1 will appear next, etc.
+            """
+            self.flow_token = flow_token
+            self.flow_action_data = flow_action_data
+            self.index = index
+
+        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+            return {
+                "type": "BUTTON",
+                "subtype": ComponentType.FLOW.value,
+                "index": self.index,
+                "parameters": [
+                    {
+                        "type": "action",
+                        "action": {
+                            "flow_token": self.flow_token,
+                            "flow_action_data": self.flow_action_data,
+                        },
+                    }
+                ],
+            }
+
+    def params(
+        self,
+        *,
+        index: int,
+        flow_token: str | None = None,
+        flow_action_data: dict | None = None,
+    ) -> Params:
+        """
+        Fill the parameters for the Flow button component.
+
+        Args:
+            index: Indicates order in which button should appear, if the template uses multiple buttons. Buttons are zero-indexed, so setting value to 0 will cause the button to appear first, and another button with an index of 1 will appear next, etc.
+            flow_token: Optional token to be passed to the Flow.
+            flow_action_data: Optional data to be passed to the first screen.
+
+        Returns:
+            An instance of Params containing the parameters for the Flow button.
+        """
+        return self.Params(
+            index=index, flow_token=flow_token, flow_action_data=flow_action_data
+        )
+
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class PhoneNumberButton(BaseButtonComponent):
+class PhoneNumberButton(_DoesNotSupportParams, BaseButtonComponent):
     """
     Phone number buttons call the specified business phone number when tapped by the app user. Templates are limited to one phone number button.
 
@@ -1305,7 +1721,7 @@ class PhoneNumberButton(BaseButtonComponent):
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class VoiceCallButton(BaseButtonComponent):
+class VoiceCallButton(_DoesNotSupportParams, BaseButtonComponent):
     """
     Voice call button initiates a WhatsApp voice call to the business. Templates are limited to one voice call button.
 
@@ -1347,6 +1763,31 @@ class QuickReplyButton(BaseButtonComponent):
         repr=False,
     )
     text: str
+
+    class Params(TemplateBaseComponent.Params):
+        def __init__(self, *, callback_data: str | CallbackData, index: int):
+            """
+               Fill the parameters for the quick reply button component.
+
+               Args:
+                   callback_data: The data to send when the user clicks on the button (up to 256 characters, for complex data
+            You can use :class:`CallbackData`).
+            """
+            self.callback_data = callback_data
+            self.index = index
+
+        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+            return {
+                "type": "BUTTON",
+                "subtype": ComponentType.QUICK_REPLY.value,
+                "index": self.index,
+                "parameters": [
+                    {
+                        "type": "payload",
+                        "payload": helpers.resolve_callback_data(self.callback_data),
+                    }
+                ],
+            }
 
 
 class URLButton(BaseButtonComponent):
@@ -1394,6 +1835,44 @@ class URLButton(BaseButtonComponent):
             example=data["example"][0] if "example" in data else None,
         )
 
+    class Params(TemplateBaseComponent.Params):
+        def __init__(self, *, url_variable: str, index: int):
+            """
+            Fill the parameters for the URL button component.
+
+            Args:
+                url_variable: The variable to be appended to the end of the URL string. Maximum 2000 characters.
+                index: Indicates order in which button should appear, if the template uses multiple buttons. Buttons are zero-indexed, so setting value to 0 will cause the button to appear first, and another button with an index of 1 will appear next, etc.
+            """
+            self.url_variable = url_variable
+            self.index = index
+
+        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+            return {
+                "type": "BUTTON",
+                "subtype": ComponentType.URL.value,
+                "index": self.index,
+                "parameters": [
+                    {
+                        "type": "text",
+                        "text": self.url_variable,
+                    }
+                ],
+            }
+
+    def params(self, *, url_variable: str, index: int) -> Params:
+        """
+        Fill the parameters for the URL button component.
+
+        Args:
+            url_variable: The variable to be appended to the end of the URL string. Maximum 2000 characters.
+            index: Indicates order in which button should appear, if the template uses multiple buttons. Buttons are zero-indexed, so setting value to 0 will cause the button to appear first, and another button with an index of 1 will appear next, etc.
+
+        Returns:
+            An instance of Params containing the URL variable and index.
+        """
+        return self.Params(url_variable=url_variable, index=index)
+
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class CatalogButton(BaseButtonComponent):
@@ -1412,6 +1891,52 @@ class CatalogButton(BaseButtonComponent):
         repr=False,
     )
     text: str
+
+    class Params(TemplateBaseComponent.Params):
+        def __init__(self, *, thumbnail_product_sku: str | None = None, index: int):
+            """
+            Fill the parameters for the catalog button component.
+
+            Args:
+                thumbnail_product_sku: The SKU of the product to be used as the thumbnail header image. If omitted, the product image of the first item in your catalog will be used.
+                index: Indicates order in which button should appear, if the template uses multiple buttons. Buttons are zero-indexed, so setting value to 0 will cause the button to appear first, and another button with an index of 1 will appear next, etc.
+            """
+            self.thumbnail_product_sku = thumbnail_product_sku
+            self.index = index
+
+        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+            return {
+                "type": "BUTTON",
+                "subtype": ComponentType.CATALOG.value,
+                "index": self.index,
+                **(
+                    {
+                        "parameters": [
+                            {
+                                "type": "action",
+                                "action": {
+                                    "thumbnail_product_retailer_id": self.thumbnail_product_sku,
+                                },
+                            }
+                        ],
+                    }
+                    if self.thumbnail_product_sku
+                    else {}
+                ),
+            }
+
+    def params(self, *, thumbnail_product_sku: str | None = None, index: int) -> Params:
+        """
+        Fill the parameters for the catalog button component.
+
+        Args:
+            thumbnail_product_sku: The SKU of the product to be used as the thumbnail header image. If omitted, the product image of the first item in your catalog will be used.
+            index: Indicates order in which button should appear, if the template uses multiple buttons. Buttons are zero-indexed, so setting value to 0 will cause the button to appear first, and another button with an index of 1 will appear next, etc.
+
+        Returns:
+            An instance of Params containing the thumbnail product SKU and index.
+        """
+        return self.Params(thumbnail_product_sku=thumbnail_product_sku, index=index)
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -1432,9 +1957,67 @@ class MPMButton(BaseButtonComponent):
     )
     text: str
 
+    class Params(TemplateBaseComponent.Params):
+        def __init__(
+            self,
+            *,
+            product_sections: list[ProductsSection],
+            thumbnail_product_sku: str,
+            index: int,
+        ):
+            """
+            Fill the parameters for the multi-product message button component.
+
+            Args:
+                product_sections: A list of product sections, each containing a list of products to be displayed in the button. Each section can contain up to 30 products, and there can be up to 10 sections in total.
+                thumbnail_product_sku: The SKU of the product to be used as the thumbnail header image.
+                index: Indicates order in which button should appear, if the template uses multiple buttons. Buttons are zero-indexed, so setting value to 0 will cause the button to appear first, and another button with an index of 1 will appear next, etc.
+            """
+            self.product_sections = product_sections
+            self.thumbnail_product_sku = thumbnail_product_sku
+            self.index = index
+
+        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+            return {
+                "type": "BUTTON",
+                "subtype": ComponentType.MPM.value,
+                "index": self.index,
+                "parameters": {
+                    "type": "action",
+                    "action": {
+                        "thumbnail_product_retailer_id": self.thumbnail_product_sku,
+                        "sections": [s.to_dict() for s in self.product_sections],
+                    },
+                },
+            }
+
+    def params(
+        self,
+        *,
+        product_sections: list[ProductsSection],
+        thumbnail_product_sku: str,
+        index: int,
+    ) -> Params:
+        """
+        Fill the parameters for the multi-product message button component.
+
+        Args:
+            product_sections: A list of product sections, each containing a list of products to be displayed in the button. Each section can contain up to 30 products, and there can be up to 10 sections in total.
+            thumbnail_product_sku: The SKU of the product to be used as the thumbnail header image.
+            index: Indicates order in which button should appear, if the template uses multiple buttons. Buttons are zero-indexed, so setting value to 0 will cause the button to appear first, and another button with an index of 1 will appear next, etc.
+
+        Returns:
+            An instance of Params containing the product sections, thumbnail product SKU, and index.
+        """
+        return self.Params(
+            product_sections=product_sections,
+            thumbnail_product_sku=thumbnail_product_sku,
+            index=index,
+        )
+
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class SPMButton(BaseButtonComponent):
+class SPMButton(_DoesNotSupportParams, BaseButtonComponent):
     """
     Single-product message (SPM) buttons are special, non-customizable buttons that can be mapped to a product in your product catalog. When tapped, they load details about the product, which it pulls from your catalog. Users can then add the product to their cart and place an order.
 
@@ -1453,7 +2036,7 @@ class SPMButton(BaseButtonComponent):
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class CallPermissionRequestButton(BaseButtonComponent):
+class CallPermissionRequestButton(_DoesNotSupportParams, BaseButtonComponent):
     """
     Call permissions request buttons are used to request call permissions from the user. When tapped, they open a dialog that allows the user to grant or deny call permissions.
 
@@ -1500,8 +2083,54 @@ class OTPSupportedApp:
     signature_hash: str
 
 
+class _BaseButtonParams:
+    """
+    Base class for button parameters.
+    """
+
+    class Params(TemplateBaseComponent.Params):
+        """
+        Base class for button parameters.
+        This class is not meant to be instantiated directly.
+        """
+
+        def __init__(self, otp: str):
+            """
+            Initialize the base button parameters.
+
+            Args:
+                otp: The one-time password or code to be used in the button. Maximum 15 characters.
+            """
+            self.otp = otp
+
+        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+            return {
+                "type": "BUTTON",
+                "subtype": ComponentType.URL,
+                "index": 0,
+                "parameters": [
+                    {
+                        "type": "text",
+                        "text": self.otp,
+                    }
+                ],
+            }
+
+    def params(self, otp: str) -> Params:
+        """
+        Fill the parameters for the button component.
+
+        Args:
+            otp: The one-time password or code to be used in the button. Maximum 15 characters.
+
+        Returns:
+            An instance of Params containing the OTP.
+        """
+        return self.Params(otp=otp)
+
+
 @dataclasses.dataclass(kw_only=True, slots=True)
-class OneTapOTPButton(BaseButtonComponent):
+class OneTapOTPButton(_BaseButtonParams, BaseButtonComponent):
     """
     One-tap autofill authentication templates allow you to send a one-time password or code along with an one-tap autofill button to your users. When a WhatsApp user taps the autofill button, the WhatsApp client triggers an activity which opens your app and delivers it the password or code.
 
@@ -1530,7 +2159,7 @@ class OneTapOTPButton(BaseButtonComponent):
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class ZeroTapOTPButton(BaseButtonComponent):
+class ZeroTapOTPButton(_BaseButtonParams, BaseButtonComponent):
     """
     Zero-tap authentication templates allow your users to receive one-time passwords or codes via WhatsApp without having to leave your app.
 
@@ -1566,7 +2195,7 @@ class ZeroTapOTPButton(BaseButtonComponent):
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class CopyCodeOTPButton(BaseButtonComponent):
+class CopyCodeOTPButton(_BaseButtonParams, BaseButtonComponent):
     """
     Copy code authentication templates allow you to send a one-time password or code along with a copy code button to your users. When a WhatsApp user taps the copy code button, the WhatsApp client copies the password or code to the device's clipboard. The user can then switch to your app and paste the password or code into your app.
 
@@ -1628,6 +2257,29 @@ class LimitedTimeOffer(TemplateBaseComponent):
     )
     limited_time_offer: LimitedTimeOfferConfig
 
+    class Params(TemplateBaseComponent.Params):
+        def __init__(self, *, expiration_time: datetime.datetime):
+            """
+            Fill the parameters for the limited-time offer component.
+
+            Args:
+                expiration_time: The time when the offer expires. This is used to calculate the countdown timer.
+            """
+            self.expiration_time = expiration_time
+
+        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+            return {
+                "type": ComponentType.LIMITED_TIME_OFFER.value,
+                "parameters": [
+                    {
+                        "type": ComponentType.LIMITED_TIME_OFFER.value,
+                        ComponentType.LIMITED_TIME_OFFER.value: {
+                            "expiration_time_ms": int(self.expiration_time.timestamp()),
+                        },
+                    }
+                ],
+            }
+
 
 # ========== CAROUSEL ==========
 
@@ -1653,6 +2305,34 @@ class Carousel(TemplateBaseComponent):
     )
     cards: list[CarouselMediaCard]
 
+    class Params(TemplateBaseComponent.Params):
+        def __init__(self, *, cards: list[CarouselMediaCardParam]):
+            """
+            Fill the parameters for the carousel component.
+
+            Args:
+                cards: A list of parameters for each media card in the carousel.
+            """
+            self.cards = cards
+
+        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+            return {
+                "type": ComponentType.CAROUSEL.value,
+                "cards": [card.to_dict(client, sender) for card in self.cards],
+            }
+
+    def params(self, *, cards: list[CarouselMediaCardParam]) -> Params:
+        """
+        Fill the parameters for the carousel component.
+
+        Args:
+            cards: A list of parameters for each media card in the carousel.
+
+        Returns:
+            An instance of Params containing the parameters for the carousel.
+        """
+        return self.Params(cards=cards)
+
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class CarouselMediaCard:
@@ -1664,6 +2344,25 @@ class CarouselMediaCard:
     """
 
     components: list[TemplateBaseComponent | dict]
+
+
+class CarouselMediaCardParam:
+    def __init__(self, *, params: list[TemplateBaseComponent.Params], index: int):
+        """
+        Fill the parameters for the carousel media card.
+
+        Args:
+            params: A list of parameters for the components in the media card.
+            index: The index of the media card in the carousel (0-based).
+        """
+        self.params = params
+        self.index = index
+
+    def to_dict(self, client: WhatsApp, sender: str) -> dict:
+        return {
+            "index": self.index,
+            "parameters": [param.to_dict(client, sender) for param in self.params],
+        }
 
 
 # ========== AUTHENTICATION ==========
@@ -1685,9 +2384,42 @@ class AuthenticationBody(BaseBodyComponent):
     )
     add_security_recommendation: bool | None = None
 
+    class Params(TemplateBaseComponent.Params):
+        def __init__(self, *, otp: str):
+            """
+            Fill the parameters for the authentication body component.
+
+            Args:
+                otp: The one-time password or code to be used in the body text. Maximum 15 characters.
+            """
+            self.otp = otp
+
+        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+            return {
+                "type": ComponentType.BODY.value,
+                "parameters": [
+                    {
+                        "type": "text",
+                        "text": self.otp,
+                    }
+                ],
+            }
+
+    def params(self, *, otp: str) -> Params:
+        """
+        Fill the parameters for the authentication body component.
+
+        Args:
+            otp: The one-time password or code to be used in the body text. Maximum 15 characters.
+
+        Returns:
+            An instance of Params containing the OTP.
+        """
+        return self.Params(otp=otp)
+
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class AuthenticationFooter(BaseFooterComponent):
+class AuthenticationFooter(_DoesNotSupportParams, BaseFooterComponent):
     """
     Authentication footer component for Authentication templates.
 
