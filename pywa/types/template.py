@@ -13,7 +13,6 @@ __all__ = [
     "TemplateLanguage",
     "ParamFormat",
     "TemplateBaseComponent",
-    "TemplateText",
     "HeaderText",
     "HeaderMediaExample",
     "HeaderImage",
@@ -81,7 +80,7 @@ from .. import _helpers as helpers
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
-    from .sent_message import SentTemplate
+    from .sent_update import SentTemplate
 
 _logger = logging.getLogger(__name__)
 
@@ -747,23 +746,54 @@ class BaseHeaderComponent(TemplateBaseComponent, abc.ABC):
     format: HeaderFormatType
 
 
-class TemplateText:
-    """
-    Represents a template text with examples for positional or named parameters.
+class _BaseTextParams(TemplateBaseComponent.Params, abc.ABC):
+    def __init__(self, *positionals: str, **named: str):
+        if positionals and named:
+            raise ValueError("You can't use both positional and named args!")
+        if not positionals and not named:
+            raise ValueError("At least one positional or named argument is required.")
+        self.positionals = positionals
+        self.named = named
 
-    >>> positionals = TemplateText("Hi {{1}}!, How are you? Get {{2}}% OFF!","David",15)
-    >>> named = TemplateText("Hi {{name}}!, How are you? Get {{discount}}% OFF!",name="David",discount=15)
-    >>> print(positionals.preview(), named.preview())
+    def _to_dict(
+        self,
+        typ: Literal[ComponentType.HEADER, ComponentType.BODY],
+        client: WhatsApp,
+        sender: str,
+    ) -> dict:
+        return {
+            "type": typ.value,
+            "parameters": [
+                {"type": "text", "text": positional_param}
+                for positional_param in self.positionals
+            ]
+            if self.positionals
+            else [
+                {"type": "text", "text": named_param, "parameter_name": param_name}
+                for param_name, named_param in self.named.items()
+            ],
+        }
 
-    Attributes:
-        text: The template text with placeholders for parameters.
-        example: A list of positional parameters or a dictionary of named parameters.
-        param_format: The format of the parameters (positional or named).
-    """
 
-    __slots__ = ("text", "example", "param_format", "_param_type")
+class _BaseTextComponent:
+    type: Literal[ComponentType.HEADER, ComponentType.BODY]
 
-    def __init__(self, text: str, *positionals_examples, **named_examples):
+    __slots__ = ("text", "example", "param_format")
+
+    def __init__(self, text, *positionals_examples, **named_examples):
+        """
+        Initializes a text component for a template.
+
+
+        >>> positionals = HeaderText("Hi {{1}}!, How are you? Get {{2}}% OFF!", "David", 15)
+        >>> named = BodyText("Hi {{name}}!, How are you? Get {{discount}}% OFF!", name="David", discount=15)
+        >>> print(positionals.preview(), named.preview())
+
+        Args:
+            text: The text of the component. Use ``{{1}}``, ``{{2}}``, etc. for positional parameters, or ``{{param_name}}`` for named parameters.
+            *positionals_examples: Positional examples for the text component. These will be used to fill in the template text.
+            **named_examples: Named examples for the text component. These will be used to fill in the template text.
+        """
         if positionals_examples and named_examples:
             raise ValueError("You can't use both positional and named args!")
         if positionals_examples:
@@ -779,17 +809,10 @@ class TemplateText:
             self.example = None
             self.text = text
 
-        self._param_type: Literal["header", "body", None] = None
-
-    @property
-    def param_type(self) -> Literal["header", "body"] | None:
-        return self._param_type
-
-    @param_type.setter
-    def param_type(self, value: Literal["header", "body"]):
-        if self._param_type is not None and self._param_type != value:
-            raise ValueError("TemplateText type cannot be changed once set.")
-        self._param_type = value
+    def __repr__(self):
+        return (
+            f"{self.__class__.__name__}(text={self.text!r}, example={self.example!r})"
+        )
 
     def preview(self) -> str:
         """
@@ -808,35 +831,33 @@ class TemplateText:
             return self.text
 
     def to_dict(self) -> dict:
-        if self.param_type is None:
-            raise ValueError(
-                "TemplateText must have a param_type set (either 'header' or 'body') before converting to dict."
-            )
         match self.param_format:
             case ParamFormat.POSITIONAL:
                 return {
+                    "type": self.type.value,
                     "text": self.text,
                     "example": {
-                        f"{self.param_type}_text": [list(map(str, self.example))]
-                        if self.param_type == "body"
+                        f"{self.type.lower()}_text": [list(map(str, self.example))]
+                        if self.type == ComponentType.BODY
                         else list(map(str, self.example))
                     },
                 }
             case ParamFormat.NAMED:
                 return {
+                    "type": self.type.value,
                     "text": self.text,
                     "example": {
-                        f"{self.param_type}_text_named_params": [
+                        f"{self.type.lower()}_text_named_params": [
                             {"param_name": k, "example": str(v)}
                             for k, v in self.example.items()
                         ]
                     },
                 }
             case _:
-                return {"text": self.text}
+                return {"type": self.type.value, "text": self.text}
 
     @classmethod
-    def from_dict(cls, data: dict) -> TemplateText | str:
+    def from_dict(cls, data: dict) -> _BaseTextComponent:
         if "example" in data:
             example = next(iter(data["example"].values()))
             if isinstance(example, list):
@@ -859,72 +880,54 @@ class TemplateText:
                 return cls(data["text"], example)
         return data["text"]
 
-    def __repr__(self):
-        return f"TemplateText(text={self.text!r}, example={self.example!r}, param_format={self.param_format!r})"
+    class Params: ...
+
+    def params(self, *positionals: str, **named: str) -> _BaseTextParams:
+        """
+        Fill the parameters for the header text component.
+
+        Args:
+            *positionals: Positional parameters to fill in the template text.
+            **named: Named parameters to fill in the template text.
+        """
+        if self.param_format == ParamFormat.POSITIONAL:
+            if named:
+                raise ValueError(
+                    f"{self.__class__.__name__} does not support named parameters when text is positional."
+                )
+            if len(positionals) != len(self.example):
+                raise ValueError(
+                    f"{self.__class__.__name__} requires {len(self.example)} positional parameters, got {len(positionals)}."
+                )
+        if self.param_format == ParamFormat.NAMED:
+            if positionals:
+                raise ValueError(
+                    f"{self.__class__.__name__} does not support positional parameters when text is named."
+                )
+            if set(named.keys()) != set(self.example.keys()):
+                raise ValueError(
+                    f"{self.__class__.__name__} requires parameters {set(self.example.keys())}, got {set(named.keys())}."
+                )
+
+        return self.Params(*positionals, **named)
 
 
-class _BaseTextParams(TemplateBaseComponent.Params, abc.ABC):
-    def __init__(self, *positionals: str, **named: str):
-        if positionals and named:
-            raise ValueError("You can't use both positional and named args!")
-        if not positionals and not named:
-            raise ValueError("At least one positional or named argument is required.")
-        self.positionals = positionals
-        self.named = named
-
-    def _to_dict(self, typ: ComponentType, client: WhatsApp, sender: str) -> dict:
-        return {
-            "type": typ.value,
-            "parameters": [
-                {"type": "text", "text": positional_param}
-                for positional_param in self.positionals
-            ]
-            if self.positionals
-            else [
-                {"type": "text", "text": named_param, "parameter_name": param_name}
-                for param_name, named_param in self.named.items()
-            ],
-        }
-
-
-class HeaderText(BaseHeaderComponent):
+class HeaderText(_BaseTextComponent, BaseHeaderComponent):
     """
     Represents a header text component in a template.
 
     - All templates are limited to one header component
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#text-headers>`_.
-
-    Attributes:
-        text: The header text. Can be a string or a :class:`TemplateText` object. 60 character maximum.
     """
 
-    __slots__ = ("type", "format", "text")
-
-    text: str | TemplateText
-
-    def __init__(self, *, text: str | TemplateText):
-        self.type = ComponentType.HEADER
-        self.format = HeaderFormatType.TEXT
-        self.text = text
-        if isinstance(self.text, TemplateText):
-            self.text.param_type = "header"
-
-    def __repr__(self):
-        return f"HeaderText(text={self.text})"
-
-    @classmethod
-    def from_dict(cls, data: dict) -> HeaderText:
-        return cls(text=TemplateText.from_dict(data))
+    type = ComponentType.HEADER
+    format = HeaderFormatType.TEXT
 
     def to_dict(self) -> dict[str, str | dict]:
-        data = {
-            "type": self.type.value,
+        return {
             "format": self.format.value,
+            **super().to_dict(),
         }
-        data.update(
-            {"text": self.text} if isinstance(self.text, str) else self.text.to_dict()
-        )
-        return data
 
     class Params(_BaseTextParams):
         def __init__(self, *positionals: str, **named: str):
@@ -939,28 +942,6 @@ class HeaderText(BaseHeaderComponent):
 
         def to_dict(self, client: WhatsApp, sender: str) -> dict:
             return self._to_dict(ComponentType.HEADER, client, sender)
-
-    def params(self, *positionals: str, **named: str) -> Params:
-        """
-        Fill the parameters for the header text component.
-
-        Args:
-            *positionals: Positional parameters to fill in the template text.
-            **named: Named parameters to fill in the template text.
-        """
-        if isinstance(self.text, str):
-            raise ValueError(
-                "HeaderText does not support parameters when text is a string."
-            )
-        if self.text.param_format == ParamFormat.POSITIONAL and named:
-            raise ValueError(
-                "HeaderText does not support named parameters when text is positional."
-            )
-        if self.text.param_format == ParamFormat.NAMED and positionals:
-            raise ValueError(
-                "HeaderText does not support positional parameters when text is named."
-            )
-        return self.Params(*positionals, **named)
 
 
 class HeaderMediaExample:
@@ -1312,44 +1293,15 @@ class BaseBodyComponent(TemplateBaseComponent, abc.ABC):
     type: ComponentType
 
 
-class BodyText(BaseBodyComponent):
+class BodyText(_BaseTextComponent):
     """
     The body component represents the core text of your message template and is a text-only template component. It is required for all templates.
 
     - All templates are limited to one body component.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#body>`_.
-
-    Attributes:
-        text: The body text. Can be a string or a :class:`TemplateText` object. 1024 characters maximum.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.BODY,
-        init=False,
-        repr=False,
-    )
-    text: str | TemplateText
-
-    def __init__(self, *, text: str | TemplateText):
-        self.type = ComponentType.BODY
-        self.text = text
-        if isinstance(self.text, TemplateText):
-            self.text.param_type = "body"
-
-    def __repr__(self):
-        return f"BodyText(text={self.text!r})"
-
-    @classmethod
-    def from_dict(cls, data: dict) -> BodyText:
-        return cls(text=TemplateText.from_dict(data))
-
-    def to_dict(self) -> dict[str, str | dict]:
-        data = {"type": self.type.value}
-        if isinstance(self.text, str):
-            data["text"] = self.text
-        else:
-            data.update(self.text.to_dict())
-        return data
+    type = ComponentType.BODY
 
     class Params(_BaseTextParams):
         def __init__(self, *positionals: str, **named: str):
@@ -1364,28 +1316,6 @@ class BodyText(BaseBodyComponent):
 
         def to_dict(self, client: WhatsApp, sender: str) -> dict:
             return self._to_dict(ComponentType.BODY, client, sender)
-
-    def params(self, *positionals: str, **named: str) -> Params:
-        """
-        Fill the parameters for the body text component.
-
-        Args:
-            *positionals: Positional parameters to fill in the template text.
-            **named: Named parameters to fill in the template text.
-        """
-        if isinstance(self.text, str):
-            raise ValueError(
-                "BodyText does not support parameters when text is a string."
-            )
-        if self.text.param_format == ParamFormat.POSITIONAL and named:
-            raise ValueError(
-                "BodyText does not support named parameters when text is positional."
-            )
-        if self.text.param_format == ParamFormat.NAMED and positionals:
-            raise ValueError(
-                "BodyText does not support positional parameters when text is named."
-            )
-        return self.Params(*positionals, **named)
 
 
 # =========== FOOTER ===========
@@ -1430,7 +1360,7 @@ class Footer(_DoesNotSupportParams, BaseFooterComponent):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#footer>`_.
 
     Attributes:
-        text: The footer text. Can be a string or a TemplateText object. 60 characters maximum.
+        text: The footer text. 60 characters maximum.
     """
 
     text: str
@@ -1507,17 +1437,18 @@ class CopyCodeButton(BaseButtonComponent):
                 ],
             }
 
-    def params(self, *, coupon_code: str) -> Params:
+    def params(self, *, coupon_code: str, index: int) -> Params:
         """
         Fill the parameters for the copy code button component.
 
         Args:
             coupon_code: The coupon code to be copied when the customer taps the button. Only accepting alphanumeric characters.
+            index: Indicates order in which button should appear, if the template uses multiple buttons. Buttons are zero-indexed, so setting value to 0 will cause the button to appear first, and another button with an index of 1 will appear next, etc.
 
         Returns:
-            An instance of Params containing the coupon code.
+            An instance of Params containing the coupon code and index.
         """
-        return self.Params(coupon_code=coupon_code)
+        return self.Params(coupon_code=coupon_code, index=index)
 
 
 class FlowButtonIcon(utils.StrEnum):
@@ -1788,6 +1719,20 @@ class QuickReplyButton(BaseButtonComponent):
                     }
                 ],
             }
+
+    def params(self, *, callback_data: str | CallbackData, index: int) -> Params:
+        """
+        Fill the parameters for the quick reply button component.
+
+        Args:
+            callback_data: The data to send when the user clicks on the button (up to 256 characters, for complex data
+            You can use :class:`CallbackData`).
+            index: Indicates order in which button should appear, if the template uses multiple buttons. Buttons are zero-indexed, so setting value to 0 will cause the button to appear first, and another button with an index of 1 will appear next, etc.
+
+        Returns:
+            An instance of Params containing the callback data and index.
+        """
+        return self.Params(callback_data=callback_data, index=index)
 
 
 class URLButton(BaseButtonComponent):
@@ -2258,7 +2203,7 @@ class LimitedTimeOffer(TemplateBaseComponent):
     limited_time_offer: LimitedTimeOfferConfig
 
     class Params(TemplateBaseComponent.Params):
-        def __init__(self, *, expiration_time: datetime.datetime):
+        def __init__(self, *, expiration_time: datetime.datetime | None = None):
             """
             Fill the parameters for the limited-time offer component.
 
@@ -2279,6 +2224,18 @@ class LimitedTimeOffer(TemplateBaseComponent):
                     }
                 ],
             }
+
+    def params(self, *, expiration_time: datetime.datetime) -> Params:
+        """
+        Fill the parameters for the limited-time offer component.
+
+        Args:
+            expiration_time: The time when the offer expires. This is used to calculate the countdown timer.
+
+        Returns:
+            An instance of Params containing the expiration time.
+        """
+        return self.Params(expiration_time=expiration_time)
 
 
 # ========== CAROUSEL ==========
@@ -2809,7 +2766,24 @@ class TemplateDetails:
             self.status = TemplateStatus.APPROVED
         return res
 
-    def send(self) -> SentTemplate: ...
+    def send(
+        self,
+        to: str | int,
+        params: list[TemplateBaseComponent.Params],
+        *,
+        reply_to_message_id: str | None = None,
+        tracker: str | CallbackData | None = None,
+        sender: str | int | None = None,
+    ) -> SentTemplate:
+        return self._client.send_template(
+            to=to,
+            name=self.name,
+            language=self.language,
+            params=params,
+            reply_to_message_id=reply_to_message_id,
+            tracker=tracker,
+            sender=sender,
+        )
 
 
 class TemplatesResult(Result[TemplateDetails]):

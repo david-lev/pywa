@@ -1980,9 +1980,8 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                     components=[
                         t.HeaderText(text='Our {{sale_name}} is on!', sale_name='Summer Sale'),
                         t.BodyText(
-                            text=t.TemplateText(
-                                text='Shop now through {{end_date}} and use code {{discount_code}} to get {{discount_amount}} off of all merchandise.',
-                                end_date='the end of August', discount_code='25OFF', discount_amount='25%')
+                            text='Shop now through {{end_date}} and use code {{discount_code}} to get {{discount_amount}} off of all merchandise.',
+                            end_date='the end of August', discount_code='25OFF', discount_amount='25%'
                         ),
                         t.Footer(text='Use the buttons below to manage your marketing subscriptions'),
                         t.Buttons(
@@ -1995,9 +1994,6 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 ),
 
                 print('Template created:', created.id, created.status)
-
-
-
 
         Args:
             template: The template to create.
@@ -2074,7 +2070,10 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def send_template(
         self,
         to: str | int,
-        template: Template,
+        name: str,
+        language: TemplateLanguage,
+        params: list[TemplateBaseComponent.Params],
+        *,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
@@ -2083,90 +2082,90 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Send a template to a WhatsApp user.
 
         - To create a template, use :py:func:`~pywa.client.WhatsApp.create_template`.
+        - Read more about `Template Messages <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-message-templates>`_.
 
-        Example:
+        Example::
 
-            >>> from pywa.types import Template as Temp
-            >>> wa = WhatsApp(...)
-            >>> wa.send_template(
-            ...     to='1234567890',
-            ...     template=Temp(
-            ...         name='buy_new_iphone_x',
-            ...         language=Temp.Language.ENGLISH_US,
-            ...         header=Temp.TextValue(value='15'),
-            ...         body=[
-            ...             Temp.TextValue(value='John Doe'),
-            ...             Temp.TextValue(value='WA_IPHONE_15'),
-            ...             Temp.TextValue(value='15%'),
-            ...         ],
-            ...         buttons=[
-            ...             Temp.UrlButtonValue(value='iphone15'),
-            ...             Temp.QuickReplyButtonData(data='unsubscribe_from_marketing_messages'),
-            ...             Temp.QuickReplyButtonData(data='unsubscribe_from_all_messages'),
-            ...         ],
-            ...     ),
-            ... )
+            from pywa.types.template import *
 
-        Example for Authentication Template:
+            wa = WhatsApp(...)
+            wa.send_template(
+                to='1234567890',
+                name='seasonal_promotion',
+                language=TemplateLanguage.ENGLISH_US,
+                params=[
+                    BodyText.Params(text='Our {{season}} sale is on!', season='Summer'),
+                    CopyCodeButton.Params(coupon_code="25OFF", index=0)
+                ],
+            )
 
-            >>> from pywa.types import Template as Temp
-            >>> wa = WhatsApp(...)
-            >>> wa.send_template(
-            ...     to='1234567890',
-            ...     template=Temp(
-            ...         name='auth_with_otp',
-            ...         language=Temp.Language.ENGLISH_US,
-            ...         buttons=Temp.OTPButtonCode(code='123456'),
-            ...     ),
-            ... )
+            from pywa.types.template import *
+
+            t = Template(
+                name='seasonal_promotion',
+                category=TemplateCategory.MARKETING,
+                language=TemplateLanguage.ENGLISH_US,
+                parameter_format=ParamFormat.NAMED,
+                components=[
+                    header := HeaderText(text='Our {{sale_name}} is on!', sale_name='Summer Sale'),
+                    body := BodyText(
+                        text='Shop now through {{end_date}} and use code {{discount_code}} to get {{discount_amount}} off of all merchandise.',
+                        end_date='the end of August', discount_code='25OFF', discount_amount='25%'
+                    ),
+                    Footer(text='Use the buttons below to manage your marketing subscriptions'),
+                    Buttons(
+                        buttons=[
+                            uns_from_promos := QuickReplyButton(text='Unsubscribe from Promos'),
+                            uns_from_all := QuickReplyButton(text='Unsubscribe from All'),
+                        ]
+                    ),
+                ],
+            )
+
+            wa.create_template(template=t)
+
+            wa.send_template(
+                to='1234567890',
+                name=t.name,
+                language=t.language,
+                params=[
+                    header.params(sale_name='Summer Sale'),
+                    body.params(
+                        end_date='the end of August',
+                        discount_code='25OFF',
+                        discount_amount='25%',
+                    ),
+                    uns_from_promos.params(callback_data='uns_from_promos'),
+                    uns_from_all.params(callback_data='uns_from_all'),
+                ],
+            )
 
         Args:
             to: The phone ID of the WhatsApp user.
-            template: The template to send.
-            reply_to_message_id: The message ID to reply to (optional).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
-            sender: The phone ID to send the message from (optional, overrides the client's phone ID).
-
-        Returns:
-            The sent template.
+            name: The name of the template to send.
+            language: The language of the template to send.
+            params: The parameters to fill in the template.
+            reply_to_message_id: The ID of the message to reply to (optional).
+            tracker: A callback data to track the message (optional, can be a string or a :class:`CallbackData` object).
+            sender: The phone ID to send the template from (optional, if not provided, the client's phone ID will be used).
         """
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
-        is_url = None
-        match type(template.header):
-            case Template.Image:
-                is_url, template.header.image = await helpers.resolve_media_param(
-                    wa=self,
-                    media=template.header.image,
-                    mime_type=template.header.mime_type,
-                    media_type=MessageType.IMAGE,
-                    filename=None,
-                    phone_id=sender,
-                )
-            case Template.Document:
-                is_url, template.header.document = await helpers.resolve_media_param(
-                    wa=self,
-                    media=template.header.document,
-                    mime_type="application/pdf",  # the only supported mime type in template's document header
-                    filename=template.header.filename,
-                    media_type=None,
-                    phone_id=sender,
-                )
-            case Template.Video:
-                is_url, template.header.video = await helpers.resolve_media_param(
-                    wa=self,
-                    media=template.header.video,
-                    mime_type=template.header.mime_type,
-                    media_type=MessageType.VIDEO,
-                    filename=None,
-                    phone_id=sender,
-                )
         return SentTemplate.from_sent_update(
             client=self,
             update=await self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ="template",  # TODO use MessageType.TEMPLATE when implemented
-                msg=template.to_dict(is_header_url=is_url),
+                typ="template",
+                msg={
+                    "name": name,
+                    "language": {"code": language.value},
+                    "components": [
+                        (await param.to_dict(client=self, sender=sender))
+                        if utils.is_async_callable(param.to_dict)
+                        else param.to_dict(client=self, sender=sender)
+                        for param in params
+                    ],
+                },
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             ),

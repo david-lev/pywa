@@ -6,15 +6,14 @@ seasonal_promotion = Template(
     category=TemplateCategory.MARKETING,
     components=[
         HeaderText(
-            text=TemplateText("Our {{1}} is on!", "Summer Sale"),
+            "Our {{1}} is on!",
+            "Summer Sale",
         ),
         BodyText(
-            text=TemplateText(
-                "Shop now through {{1}} and use code {{2}} to get {{3}} off of all merchandise.",
-                "the end of August",
-                "25OFF",
-                "25%",
-            ),
+            "Shop now through {{1}} and use code {{2}} to get {{3}} off of all merchandise.",
+            "the end of August",
+            "25OFF",
+            "25%",
         ),
         Footer(text="Use the buttons below to manage your MARKETING subscriptions"),
         Buttons(
@@ -35,11 +34,9 @@ order_confirmation = Template(
             example=HeaderMediaExample(handle="4::YX..."),
         ),
         BodyText(
-            text=TemplateText(
-                "Thank you for your order, {{1}}! Your order number is {{2}}. Tap the PDF linked above to view your receipt. If you have any questions, please use the buttons below to contact support. Thank you for being a customer!",
-                "Pablo",
-                "860198-230332",
-            )
+            "Thank you for your order, {{1}}! Your order number is {{2}}. Tap the PDF linked above to view your receipt. If you have any questions, please use the buttons below to contact support. Thank you for being a customer!",
+            "Pablo",
+            "860198-230332",
         ),
         Buttons(
             buttons=[
@@ -59,11 +56,9 @@ order_delivery_update = Template(
     components=[
         HeaderLocation(),
         BodyText(
-            text=TemplateText(
-                "Good news {{1}}! Your order #{{2}} is on its way to the location above. Thank you for your order!",
-                "Mark",
-                "566701",
-            )
+            "Good news {{1}}! Your order #{{2}} is on its way to the location above. Thank you for your order!",
+            "Mark",
+            "566701",
         ),
         Footer(text="To stop receiving delivery updates, tap the button below."),
         Buttons(
@@ -81,9 +76,7 @@ abandoned_cart_offer = Template(
     components=[
         HeaderProduct(),
         BodyText(
-            text=TemplateText(
-                "Use code {{1}} to get {{2}} off our newest succulent!", "25OFF", "25%"
-            )
+            "Use code {{1}} to get {{2}} off our newest succulent!", "25OFF", "25%"
         ),
         Footer(text="Offer ends September 30, 2024"),
         Buttons(
@@ -100,12 +93,10 @@ intro_catalog_offer = Template(
     category=TemplateCategory.MARKETING,
     components=[
         BodyText(
-            text=TemplateText(
-                "Now shop for your favourite products right here on WhatsApp! Get Rs {{1}} off on all orders above {{2}}Rs! Valid for your first {{3}} orders placed on WhatsApp!",
-                "100",
-                "400",
-                "3",
-            )
+            "Now shop for your favourite products right here on WhatsApp! Get Rs {{1}} off on all orders above {{2}}Rs! Valid for your first {{3}} orders placed on WhatsApp!",
+            "100",
+            "400",
+            "3",
         ),
         Footer(text="Best grocery deals on WhatsApp!"),
         Buttons(
@@ -121,13 +112,11 @@ coupon_code_fall2023_25off = Template(
     language=TemplateLanguage.ENGLISH_US,
     category=TemplateCategory.MARKETING,
     components=[
-        HeaderText(text=TemplateText("Our Fall Sale is on!")),
+        HeaderText(text="Our Fall Sale is on!"),
         BodyText(
-            text=TemplateText(
-                "Shop now through November and use code {{1}} to get {{2}} off of all merchandise!",
-                "25OFF",
-                "25%",
-            )
+            "Shop now through November and use code {{1}} to get {{2}} off of all merchandise!",
+            "25OFF",
+            "25%",
         ),
         Buttons(
             buttons=[
@@ -144,13 +133,12 @@ abandoned_cart = Template(
     category=TemplateCategory.MARKETING,
     components=[
         HeaderText(
-            text=TemplateText("Forget something, {{1}}?", "Pablo"),
+            "Forget something, {{1}}?",
+            "Pablo",
         ),
         BodyText(
-            text=TemplateText(
-                "Looks like you left these items in your cart, still interested? Use code {{1}} to get 10% off!",
-                "10OFF",
-            )
+            "Looks like you left these items in your cart, still interested? Use code {{1}} to get 10% off!",
+            "10OFF",
         ),
         Buttons(buttons=[MPMButton(text="View items")]),
     ],

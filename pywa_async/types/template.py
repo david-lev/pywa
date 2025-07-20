@@ -3,9 +3,11 @@ from __future__ import annotations
 import dataclasses
 import datetime
 import functools
-from typing import TYPE_CHECKING, Iterable
+import pathlib
+from typing import TYPE_CHECKING, Iterable, BinaryIO
 
-from pywa.types.template import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types import CallbackData
+from pywa.types.others import SuccessResult
 from pywa.types.template import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.template import (
     TemplateDetails as _TemplateDetails,
@@ -14,12 +16,94 @@ from pywa.types.template import (
     TemplateQualityUpdate as _TemplateQualityUpdate,
     TemplateCategoryUpdate as _TemplateCategoryUpdate,
     TemplateComponentsUpdate as _TemplateComponentsUpdate,
+    HeaderImage as _HeaderImage,
+    HeaderVideo as _HeaderVideo,
+    HeaderDocument as _HeaderDocument,
+    Carousel as _Carousel,
+    CarouselMediaCardParam as _CarouselMediaCardParam,
+    HeaderFormatType,
+    ComponentType,
 )  # noqa MUST BE IMPORTED FIRST
+from .media import Media
 from .others import Result
+from .. import _helpers as helpers, utils
 
 if TYPE_CHECKING:
-    from ..client import WhatsApp as WhatsAppAsync
-    from .sent_message import SentTemplate
+    from ..client import WhatsApp as WhatsAppAsync, WhatsApp
+    from .sent_update import SentTemplate
+
+
+class _BaseMediaParamsAsync:
+    def __init__(self, media: str | Media | pathlib.Path | bytes | BinaryIO):
+        self.media = media
+
+    async def _to_dict(
+        self, format_type: HeaderFormatType, client: WhatsApp, sender: str
+    ) -> dict:
+        is_url, media = await helpers.resolve_media_param(
+            wa=client,
+            media=self.media,
+            mime_type=None,
+            filename=None,
+            media_type=format_type.value,
+            phone_id=sender,
+        )
+        return {
+            "type": ComponentType.HEADER.value,
+            "parameters": [
+                {
+                    "type": format_type.value,
+                    format_type.value: {
+                        "link" if is_url else "id": media,
+                    },
+                }
+            ],
+        }
+
+
+class HeaderImage(_HeaderImage):
+    class Params(_BaseMediaParamsAsync, _HeaderImage.Params):
+        async def to_dict(self, client: WhatsApp, sender: str) -> dict:
+            return await self._to_dict(HeaderFormatType.IMAGE, client, sender)
+
+
+class HeaderVideo(_HeaderVideo):
+    class Params(_BaseMediaParamsAsync, _HeaderVideo.Params):
+        async def to_dict(self, client: WhatsApp, sender: str) -> dict:
+            return await self._to_dict(HeaderFormatType.VIDEO, client, sender)
+
+
+class HeaderDocument(_HeaderDocument):
+    class Params(_BaseMediaParamsAsync, _HeaderDocument.Params):
+        async def to_dict(self, client: WhatsApp, sender: str) -> dict:
+            return await self._to_dict(HeaderFormatType.DOCUMENT, client, sender)
+
+
+class Carousel(_Carousel):
+    class Params(_Carousel.Params):
+        cards: list[CarouselMediaCardParam]
+
+        async def to_dict(self, client: WhatsApp, sender: str) -> dict:
+            return {
+                "type": ComponentType.CAROUSEL.value,
+                "parameters": [
+                    await card.to_dict(client=client, sender=sender)
+                    for card in self.cards
+                ],
+            }
+
+
+class CarouselMediaCardParam(_CarouselMediaCardParam):
+    async def to_dict(self, client: WhatsApp, sender: str) -> dict:
+        return {
+            "index": self.index,
+            "parameters": [
+                (await param.to_dict(client, sender))
+                if utils.is_async_callable(param.to_dict)
+                else param.to_dict(client, sender)
+                for param in self.params
+            ],
+        }
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
@@ -176,7 +260,7 @@ class TemplateDetails(_TemplateDetails):
 
     _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)
 
-    async def delete(self) -> bool:
+    async def delete(self) -> SuccessResult:
         """
         Delete this template
 
@@ -275,7 +359,24 @@ class TemplateDetails(_TemplateDetails):
             self.status = TemplateStatus.APPROVED
         return res
 
-    async def send(self) -> SentTemplate: ...
+    async def send(
+        self,
+        to: str | int,
+        params: list[TemplateBaseComponent.Params],
+        *,
+        reply_to_message_id: str | None = None,
+        tracker: str | CallbackData | None = None,
+        sender: str | int | None = None,
+    ) -> SentTemplate:
+        return self._client.send_template(
+            to=to,
+            name=self.name,
+            language=self.language,
+            params=params,
+            reply_to_message_id=reply_to_message_id,
+            tracker=tracker,
+            sender=sender,
+        )
 
 
 class TemplatesResult(Result[TemplateDetails]):

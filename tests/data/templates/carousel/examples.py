@@ -6,12 +6,10 @@ carousel_template_media_cards_v1 = Template(
     category=TemplateCategory.MARKETING,
     components=[
         BodyText(
-            text=TemplateText(
-                "Rare succulents for sale! {{1}}, add these unique plants to your collection. Each of these rare succulents are {{2}} if you checkout using code {{3}}. Shop now and add some unique and beautiful plants to your collection!",
-                "Pablo",
-                "30%",
-                "30OFF",
-            )
+            "Rare succulents for sale! {{1}}, add these unique plants to your collection. Each of these rare succulents are {{2}} if you checkout using code {{3}}. Shop now and add some unique and beautiful plants to your collection!",
+            "Pablo",
+            "30%",
+            "30OFF",
         ),
         Carousel(
             cards=[
@@ -81,10 +79,8 @@ carousel_template_product_cards_v1 = Template(
     category=TemplateCategory.MARKETING,
     components=[
         BodyText(
-            text=TemplateText(
-                "Rare succulents for sale! {{1}}, add these unique plants to your collection. All three of these rare succulents are available for purchase on our website, and they come with a 100% satisfaction guarantee. Whether you're a seasoned succulent enthusiast or just starting your plant collection, these rare succulents are sure to impress. Shop now and add some unique and beautiful plants to your collection!",
-                "Pablo",
-            )
+            "Rare succulents for sale! {{1}}, add these unique plants to your collection. All three of these rare succulents are available for purchase on our website, and they come with a 100% satisfaction guarantee. Whether you're a seasoned succulent enthusiast or just starting your plant collection, these rare succulents are sure to impress. Shop now and add some unique and beautiful plants to your collection!",
+            "Pablo",
         ),
         Carousel(
             cards=[

@@ -2221,9 +2221,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     components=[
                         t.HeaderText(text='Our {{sale_name}} is on!', sale_name='Summer Sale'),
                         t.BodyText(
-                            text=t.TemplateText(
-                                text='Shop now through {{end_date}} and use code {{discount_code}} to get {{discount_amount}} off of all merchandise.',
-                                end_date='the end of August', discount_code='25OFF', discount_amount='25%')
+                            text='Shop now through {{end_date}} and use code {{discount_code}} to get {{discount_amount}} off of all merchandise.',
+                            end_date='the end of August', discount_code='25OFF', discount_amount='25%'
                         ),
                         t.Footer(text='Use the buttons below to manage your marketing subscriptions'),
                         t.Buttons(
@@ -2236,9 +2235,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 ),
 
                 print('Template created:', created.id, created.status)
-
-
-
 
         Args:
             template: The template to create.
@@ -2325,20 +2321,72 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Send a template to a WhatsApp user.
 
         - To create a template, use :py:func:`~pywa.client.WhatsApp.create_template`.
+        - Read more about `Template Messages <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-message-templates>`_.
 
-        Example:
+        Example::
 
-            >>> from pywa.types.template import *
-            >>> wa = WhatsApp(...)
-            >>> wa.send_template(
-            ...     to='1234567890',
-            ...     name='seasonal_promotion',
-            ...     language=TemplateLanguage.ENGLISH_US,
-            ...     params=[
-            ...         BodyText.Params(name='David', season='Summer', discount='25%'),
-            ...         CopyCodeButton.Params(coupon_code="25OFF", index=0)
-            ...     ],
-            ... )
+            from pywa.types.template import *
+
+            wa = WhatsApp(...)
+            wa.send_template(
+                to='1234567890',
+                name='seasonal_promotion',
+                language=TemplateLanguage.ENGLISH_US,
+                params=[
+                    BodyText.Params(text='Our {{season}} sale is on!', season='Summer'),
+                    CopyCodeButton.Params(coupon_code="25OFF", index=0)
+                ],
+            )
+
+            from pywa.types.template import *
+
+            t = Template(
+                name='seasonal_promotion',
+                category=TemplateCategory.MARKETING,
+                language=TemplateLanguage.ENGLISH_US,
+                parameter_format=ParamFormat.NAMED,
+                components=[
+                    header := HeaderText(text='Our {{sale_name}} is on!', sale_name='Summer Sale'),
+                    body := BodyText(
+                        text='Shop now through {{end_date}} and use code {{discount_code}} to get {{discount_amount}} off of all merchandise.',
+                        end_date='the end of August', discount_code='25OFF', discount_amount='25%'
+                    ),
+                    Footer(text='Use the buttons below to manage your marketing subscriptions'),
+                    Buttons(
+                        buttons=[
+                            uns_from_promos := QuickReplyButton(text='Unsubscribe from Promos'),
+                            uns_from_all := QuickReplyButton(text='Unsubscribe from All'),
+                        ]
+                    ),
+                ],
+            )
+
+            wa.create_template(template=t)
+
+            wa.send_template(
+                to='1234567890',
+                name=t.name,
+                language=t.language,
+                params=[
+                    header.params(sale_name='Summer Sale'),
+                    body.params(
+                        end_date='the end of August',
+                        discount_code='25OFF',
+                        discount_amount='25%',
+                    ),
+                    uns_from_promos.params(callback_data='uns_from_promos'),
+                    uns_from_all.params(callback_data='uns_from_all'),
+                ],
+            )
+
+        Args:
+            to: The phone ID of the WhatsApp user.
+            name: The name of the template to send.
+            language: The language of the template to send.
+            params: The parameters to fill in the template.
+            reply_to_message_id: The ID of the message to reply to (optional).
+            tracker: A callback data to track the message (optional, can be a string or a :class:`CallbackData` object).
+            sender: The phone ID to send the template from (optional, if not provided, the client's phone ID will be used).
         """
         sender = helpers.resolve_phone_id_param(self, sender, "sender")
         return SentTemplate.from_sent_update(
@@ -2349,7 +2397,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 typ="template",
                 msg={
                     "name": name,
-                    "language": language.value,
+                    "language": {"code": language.value},
                     "components": [
                         param.to_dict(client=self, sender=sender) for param in params
                     ],
