@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-__all__ = ["SentMessage", "SentTemplate", "SentTemplateStatus"]
+__all__ = ["SentMessage", "SentTemplate", "SentTemplateStatus", "InitiatedCall"]
 
+import abc
 import dataclasses
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable
 from pywa import filters as pywa_filters, utils
 from pywa.types import (
     CallbackButton,
@@ -13,15 +14,60 @@ from pywa.types import (
     MessageStatus,
     CallbackSelection,
     FlowCompletion,
+    Button,
+    URLButton,
+    VoiceCallButton,
+    SectionList,
+    FlowButton,
+    CallbackData,
 )
 from pywa.types.base_update import _ClientShortcuts
+from pywa.types.calls import _CallShortcuts
 
 if TYPE_CHECKING:
     from pywa import WhatsApp
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class SentMessage(_ClientShortcuts):
+class _SentUpdate(_ClientShortcuts, abc.ABC):
+    """
+    Base class for sent updates, providing common attributes and methods.
+    """
+
+    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
+    id: str
+    to_user: User
+    from_phone_id: str
+
+    @property
+    def recipient(self) -> str:
+        """
+        The recipient's WhatsApp ID.
+        """
+        return self._internal_sender
+
+    @property
+    def sender(self) -> str:
+        """
+        The sender's WhatsApp ID.
+        """
+        return self._internal_recipient
+
+    @property
+    def _internal_recipient(self) -> str:
+        return self.from_phone_id
+
+    @property
+    def _internal_sender(self) -> str:
+        return self.to_user.wa_id
+
+    @classmethod
+    @abc.abstractmethod
+    def from_sent_update(cls, *args, **kwargs) -> _SentUpdate: ...
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class SentMessage(_SentUpdate):
     """
     Represents a message that was sent to WhatsApp user.
 
@@ -31,40 +77,12 @@ class SentMessage(_ClientShortcuts):
         from_phone_id: The WhatsApp ID of the sender who sent the message.
     """
 
-    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
     _callback_options: set[str] | None = dataclasses.field(
         repr=False, hash=False, compare=False, default=None
     )  # TODO need this?
     _flow_token: str | None = dataclasses.field(
         repr=False, hash=False, compare=False, default=None
     )
-    id: str
-    to_user: User
-    from_phone_id: str
-
-    @property
-    def recipient(self) -> str:
-        """
-        The WhatsApp ID which the message was sent to.
-            - Shortcut for ``.to_user.wa_id``.
-        """
-        return self.to_user.wa_id
-
-    @property
-    def _internal_recipient(self) -> str:
-        return self.sender
-
-    @property
-    def sender(self) -> str:
-        """
-        The WhatsApp ID of the sender who sent the message.
-            - Same as ``.from_phone_id``.
-        """
-        return self.from_phone_id
-
-    @property
-    def _internal_sender(self) -> str:
-        return self.recipient
 
     @classmethod
     def from_sent_update(
@@ -429,4 +447,31 @@ class SentTemplate(SentMessage):
             to_user=user,
             from_phone_id=from_phone_id,
             **kwargs,
+        )
+
+
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+class InitiatedCall(_SentUpdate, _CallShortcuts):
+    """
+    Represents an outgoing call initiated by the business.
+
+    Attributes:
+        id: The call ID.
+        to_user: The user to whom the call was made.
+        from_phone_id: The WhatsApp ID of the business phone number that initiated the call.
+        success: Whether the call was successfully initiated.
+    """
+
+    success: bool
+
+    @classmethod
+    def from_sent_update(
+        cls, client: WhatsApp, update: dict, from_phone_id: str, to_wa_id: str
+    ) -> InitiatedCall:
+        return cls(
+            _client=client,
+            id=update["calls"][0]["id"],
+            to_user=client._usr_cls(_client=client, wa_id=to_wa_id, name=None),
+            from_phone_id=from_phone_id,
+            success=update["success"],
         )

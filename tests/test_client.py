@@ -7,7 +7,7 @@ from platform import system
 import pytest
 
 from pywa import WhatsApp, types, utils, _helpers as helpers, filters
-from pywa.types import sent_message, Contact
+from pywa.types import Contact
 from pywa.types.media import Media
 
 PHONE_ID = "123456789"

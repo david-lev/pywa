@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 
-class WhatsAppCloudApi:
+class GraphAPI:
     """Internal methods for the WhatsApp client. Do not use this class directly."""
 
     def __init__(
@@ -38,7 +38,7 @@ class WhatsAppCloudApi:
         self._session = session
 
     def __str__(self) -> str:
-        return f"WhatsAppCloudApi(session={self._session})"
+        return f"GraphAPI(session={self._session})"
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -1905,7 +1905,7 @@ class WhatsAppCloudApi:
         self,
         phone_id: str,
         to: str,
-        sdp: dict[str, str] | None = None,
+        sdp: dict[str, str],
         biz_opaque_callback_data: str | None = None,
     ) -> dict[str, str | bool]:
         """
@@ -1938,7 +1938,7 @@ class WhatsAppCloudApi:
                 "messaging_product": "whatsapp",
                 "to": to,
                 "action": "connect",
-                **({"session": sdp} if sdp else {}),
+                "session": sdp,
                 **(
                     {"biz_opaque_callback_data": biz_opaque_callback_data}
                     if biz_opaque_callback_data

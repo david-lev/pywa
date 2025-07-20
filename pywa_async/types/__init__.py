@@ -80,7 +80,9 @@ from .calls import (
     CallConnect,
     CallTerminate,
     CallStatus,
+    CallPermissionUpdate,
     CallingSettings,
     BusinessPhoneNumberSettings,
 )
 from .system import PhoneNumberChange, IdentityChange, Identity
+from .sent_update import SentMessage, SentTemplate, SentTemplateStatus, InitiatedCall

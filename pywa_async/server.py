@@ -224,7 +224,7 @@ class Server:
         """Call the handlers for the given update."""
         try:
             try:
-                handler_type = self._get_handler(update)
+                handler_type = self._get_handler_type(update)
             except (KeyError, ValueError, TypeError, IndexError):
                 (_logger.error if self._validate_updates else _logger.debug)(
                     "Webhook ('%s') received unexpected update%s: %s",

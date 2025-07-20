@@ -55,6 +55,7 @@ __all__ = [
     "CallConnectHandler",
     "CallTerminateHandler",
     "CallStatusHandler",
+    "CallPermissionUpdateHandler",
     "UserMarketingPreferencesHandler",
 ]
 
@@ -99,6 +100,7 @@ from .types import (
     CallStatus,
     PhoneNumberChange,
     IdentityChange,
+    CallPermissionUpdate,
 )
 from .types.flows import (
     FlowCompletion,
@@ -155,6 +157,10 @@ _CallTerminateCallback: TypeAlias = Callable[
 ]
 _CallStatusCallback: TypeAlias = Callable[
     ["WhatsApp", CallStatus], Any | Awaitable[Any]
+]
+_CallPermissionUpdateCallback: TypeAlias = Callable[
+    ["WhatsApp", "CallPermissionUpdate"],
+    Any | Awaitable[Any],
 ]
 _UserMarketingPreferencesCallback: TypeAlias = Callable[
     ["WhatsApp", "UserMarketingPreferences"],
@@ -838,6 +844,37 @@ class CallStatusHandler(_FactoryHandler[CallStatus]):
             factory=factory,
             priority=priority,
         )
+
+
+class CallPermissionUpdateHandler(Handler[CallPermissionUpdate]):
+    """
+    Handler for :class:`pywa.types.CallPermissionUpdate`
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_call_permission_update` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_call_permission_update = lambda _, perm: print(perm)
+        >>> wa.add_handlers(CallPermissionUpdateHandler(print_call_permission_update))
+
+    Args:
+        callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a
+            :class:`pywa.types.CallPermissionUpdate` as arguments)
+        filters: The filters to apply to the handler
+        priority: The priority of the handler (default: ``0``)
+    """
+
+    _update = CallPermissionUpdate
+
+    def __init__(
+        self,
+        callback: _CallPermissionUpdateCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
 
 
 class RawUpdateHandler(Handler[dict]):
@@ -2004,6 +2041,56 @@ class _HandlerDecorators:
                 filters=filters,
                 priority=priority,
                 factory=factory,
+            )
+
+        return deco
+
+    def on_call_permission_update(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_CallPermissionUpdateCallback], _CallPermissionUpdateCallback]
+        | _CallPermissionUpdateCallback
+    ):
+        """
+        Decorator to register a function as a callback for :class:`pywa.types.CallPermissionUpdate` updates (Call permission is granted or revoked).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`CallPermissionUpdateHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_call_permission_update
+            ... def call_permission_handler(client: WhatsApp, update: types.CallPermissionUpdate):
+            ...     if update: # Use boolean context to check if the call permission is granted
+            ...         update.reply("We will now be able to call you!")
+            ...         update.call(...)
+
+        Args:
+            filters: Filters to apply to the incoming call permission updates.
+            priority: The priority of the handler (default: ``0``).
+        """
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=CallPermissionUpdateHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(
+            callback: _CallPermissionUpdateCallback,
+        ) -> _CallPermissionUpdateCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=CallPermissionUpdateHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
             )
 
         return deco

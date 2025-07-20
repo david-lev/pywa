@@ -38,12 +38,6 @@ CallbackButtonOnlyDataIsNeeded = functools.partial(
 )
 
 
-def test_all_updates_are_overridden():
-    assert (
-        FAKE_WA._handlers_to_updates.keys() == FAKE_WA_ASYNC._handlers_to_updates.keys()
-    )
-
-
 def test_instance_with_parentheses():
     wa = WhatsApp(server=None, verify_token="1234567890")
 

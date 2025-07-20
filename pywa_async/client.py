@@ -30,7 +30,7 @@ from pywa.client import (
 from pywa.types.base_update import BaseUpdate
 from pywa_async import _helpers as helpers
 from . import utils
-from .api import WhatsAppCloudApiAsync
+from .api import GraphAPIAsync
 from .listeners import _AsyncListeners
 from .server import Server
 from .types import (
@@ -80,6 +80,7 @@ from .types import (
     TemplateComponentsUpdate,
     PhoneNumberChange,
     IdentityChange,
+    CallPermissionUpdate,
 )
 from .handlers import (
     Handler,
@@ -94,6 +95,7 @@ from .handlers import (
     CallConnectHandler,
     CallTerminateHandler,
     CallStatusHandler,
+    CallPermissionUpdateHandler,
     TemplateCategoryUpdateHandler,
     TemplateQualityUpdateHandler,
     TemplateComponentsUpdateHandler,
@@ -127,19 +129,19 @@ from .types.template import (
 )
 from .types.calls import CallPermissions, SDP
 from .types.others import InteractiveType, UsersBlockedResult, UsersUnblockedResult
-from .types.sent_message import SentMessage, SentTemplate
+from .types.sent_update import SentMessage, SentTemplate, InitiatedCall
 from .utils import FastAPI, Flask
 
 _logger = logging.getLogger(__name__)
 
 
 class WhatsApp(Server, _AsyncListeners, _WhatsApp):
-    _api_cls = WhatsAppCloudApiAsync
+    _api_cls = GraphAPIAsync
     _flow_req_cls = FlowRequest
     _usr_cls = User
     _httpx_client = httpx.AsyncClient
     _async_allowed = True
-    api: WhatsAppCloudApiAsync  # IDE type hinting
+    api: GraphAPIAsync  # IDE type hinting
 
     _handlers_to_updates: dict[type[Handler], BaseUpdate] = {
         MessageHandler: Message,
@@ -158,6 +160,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         CallConnectHandler: CallConnect,
         CallTerminateHandler: CallTerminate,
         CallStatusHandler: CallStatus,
+        CallPermissionUpdateHandler: CallPermissionUpdate,
     }
     """A dictionary that maps handler types to their respective update constructors."""
 
@@ -3225,11 +3228,40 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             ),
         )
 
+    async def initiate_call(
+            self,
+            to: str | int,
+            sdp: SDP,
+            *,
+            tracker: str | CallbackData | None = None,
+            phone_id: str | int | None = None
+    ) -> InitiatedCall:
+        """
+        Initiate a call to a WhatsApp user.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#initiate-call>`_.
+
+        Args:
+            to: The number being called (callee)
+            sdp: Contains the session description protocol (SDP) type and description language.
+            tracker: The data to track the call with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            phone_id: The phone ID to initiate the call from (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            An InitiatedCall object containing the details of the initiated call.
+        """
+        return InitiatedCall.from_sent_update(client=self, update=await self.api.initiate_call(
+            phone_id=(from_phone_id := helpers.resolve_phone_id_param(self, phone_id, "phone_id")),
+            to=(to_wa_id := str(to)),
+            sdp=sdp.to_dict(),
+            biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+        ), from_phone_id=from_phone_id, to_wa_id=to_wa_id)
+
 
     async def pre_accept_call(
             self,
             call_id: str,
-            sdp: SDP | None = None,
+            sdp: SDP,
             *,
             phone_id: str | int | None = None,
     ) -> SuccessResult:
@@ -3263,7 +3295,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def accept_call(
             self,
             call_id: str,
-            sdp: SDP | None = None,
+            sdp: SDP,
             *,
             tracker: str | CallbackData | None = None,
             phone_id: str | int | None = None,

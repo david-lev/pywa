@@ -22,7 +22,7 @@ from typing import BinaryIO, Iterable, Literal, Any, Callable
 import httpx
 
 from . import utils, _helpers as helpers
-from .api import WhatsAppCloudApi
+from .api import GraphAPI
 from .filters import Filter
 from .handlers import (
     Handler,
@@ -39,6 +39,7 @@ from .handlers import (
     CallConnectHandler,
     CallTerminateHandler,
     CallStatusHandler,
+    CallPermissionUpdateHandler,
     FlowRequestHandler,
     UserMarketingPreferencesHandler,
     FlowRequestCallbackWrapper,
@@ -93,12 +94,14 @@ from .types import (
     CallConnect,
     CallTerminate,
     CallStatus,
+    CallPermissionUpdate,
     UserMarketingPreferences,
     PhoneNumberChange,
     IdentityChange,
 )
 from .types.base_update import BaseUpdate
-from .types.calls import CallPermissions, SDP, InitiatedCall
+from .types.calls import CallPermissions, SDP
+from .types.sent_update import InitiatedCall
 from .types.flows import (
     FlowJSON,
     FlowDetails,
@@ -110,7 +113,7 @@ from .types.flows import (
     FlowJSONUpdateResult,
 )
 from .types.media import Media
-from .types.sent_message import SentMessage, SentTemplate
+from .types.sent_update import SentMessage, SentTemplate
 from .types.others import (
     InteractiveType,
     UsersBlockedResult,
@@ -146,7 +149,7 @@ _DEFAULT_VERIFY_DELAY_SEC = 3
 
 
 class WhatsApp(Server, _HandlerDecorators, _Listeners):
-    _api_cls = WhatsAppCloudApi
+    _api_cls = GraphAPI
     _flow_req_cls = FlowRequest
     _usr_cls = User
     _httpx_client = httpx.Client
@@ -168,6 +171,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         CallConnectHandler: CallConnect,
         CallTerminateHandler: CallTerminate,
         CallStatusHandler: CallStatus,
+        CallPermissionUpdateHandler: CallPermissionUpdate,
     }
     """A dictionary that maps handler types to their respective update constructors."""
     _msg_fields_to_objects_constructors = dict(
@@ -403,7 +407,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     self.add_flow_request_handler(obj)
 
     @property
-    def api(self) -> WhatsAppCloudApi:
+    def api(self) -> GraphAPI:
         if self._api is None:
             raise ValueError(
                 "To access the WhatsApp Cloud API, you must provide a `token` when initializing the WhatsApp client."
@@ -3443,8 +3447,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )
 
     def initiate_call(
-            self, to: str | int,
-            sdp: SDP | None = None,
+            self,
+            to: str | int,
+            sdp: SDP,
             *,
             tracker: str | CallbackData | None = None,
             phone_id: str | int | None = None
@@ -3463,22 +3468,17 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             An InitiatedCall object containing the details of the initiated call.
         """
-        return InitiatedCall.from_initiated_call(
-            client=self,
-            update=self.api.initiate_call(
-                phone_id=(from_phone_id :=helpers.resolve_phone_id_param(self, phone_id, "phone_id")),
-                to=(to_wa_id := str(to)),
-                sdp=sdp.to_dict() if sdp else None,
-                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-            ),
-            from_phone_id=from_phone_id,
-            to_wa_id=to_wa_id
-        )
+        return InitiatedCall.from_sent_update(client=self, update=self.api.initiate_call(
+            phone_id=(from_phone_id := helpers.resolve_phone_id_param(self, phone_id, "phone_id")),
+            to=(to_wa_id := str(to)),
+            sdp=sdp.to_dict(),
+            biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+        ), from_phone_id=from_phone_id, to_wa_id=to_wa_id)
 
     def pre_accept_call(
             self,
             call_id: str,
-            sdp: SDP | None = None,
+            sdp: SDP,
             *,
             phone_id: str | int | None = None,
     ) -> SuccessResult:
@@ -3512,7 +3512,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def accept_call(
             self,
             call_id: str,
-            sdp: SDP | None = None,
+            sdp: SDP,
             *,
             tracker: str | CallbackData | None = None,
             phone_id: str | int | None = None,

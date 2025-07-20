@@ -31,6 +31,8 @@ if TYPE_CHECKING:
 
 
 class Media:
+    """Base class for all media types."""
+
     _client: WhatsApp
     id: str
 
@@ -177,7 +179,7 @@ class Audio(BaseUserMedia, _Audio):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class MediaUrlResponse(_MediaUrlResponse):
+class MediaUrlResponse(Media, _MediaUrlResponse):
     """
     Represents a media response.
 

@@ -3,4 +3,4 @@ API Reference
 
 .. currentmodule:: pywa.api
 
-.. automethod:: WhatsAppCloudApi.send_raw_request
+.. automethod:: GraphAPI.send_raw_request

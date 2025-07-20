@@ -49,6 +49,7 @@ _INTERACTIVE_TYPES: dict[str, type[handlers.Handler]] = {
     "button_reply": handlers.CallbackButtonHandler,
     "list_reply": handlers.CallbackSelectionHandler,
     "nfm_reply": handlers.FlowCompletionHandler,
+    "call_permission_reply": handlers.CallPermissionUpdateHandler,
 }
 _CALL_EVENTS: dict[str, type[handlers.Handler]] = {
     "connect": handlers.CallConnectHandler,
@@ -352,7 +353,7 @@ class Server:
         """Call the handlers for the given update."""
         try:
             try:
-                handler_type = self._get_handler(update)
+                handler_type = self._get_handler_type(update)
             except (KeyError, ValueError, TypeError, IndexError):
                 (_logger.error if self._validate_updates else _logger.debug)(
                     "Webhook ('%s') received unexpected update%s: %s",
@@ -426,7 +427,9 @@ class Server:
 
         return not self._continue_handling
 
-    def _get_handler(self: "WhatsApp", update: dict) -> type[handlers.Handler] | None:
+    def _get_handler_type(
+        self: "WhatsApp", update: dict
+    ) -> type[handlers.Handler] | None:
         """Get the handler for the given update."""
         field = update["entry"][0]["changes"][0]["field"]
         value = update["entry"][0]["changes"][0]["value"]

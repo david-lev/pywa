@@ -5,7 +5,12 @@ from pywa.types import (
     MessageStatusType,
     MarketingPreference,
 )
-from pywa.types.calls import CallEvent, CallDirection
+from pywa.types.calls import (
+    CallEvent,
+    CallDirection,
+    CallPermissionResponse,
+    CallPermissionResponseSource,
+)
 from pywa.types.media import Image, Video, Document, Audio
 from pywa.types.system import SystemType
 from pywa.types.template import TemplateStatus, TemplateCategory
@@ -110,6 +115,18 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
     },
     "call_status": {
         "call_status": [lambda c: c.type is not None],
+    },
+    "call_permission_update": {
+        "accept": [
+            lambda c: c.response == CallPermissionResponse.ACCEPT
+            and c.response_source == CallPermissionResponseSource.USER_ACTION
+            and c.expiration_timestamp is not None,
+        ],
+        "reject": [
+            lambda c: c.response == CallPermissionResponse.REJECT
+            and c.response_source == CallPermissionResponseSource.USER_ACTION
+            and c.expiration_timestamp is None,
+        ],
     },
     "user_marketing_preferences": {
         "resume": [lambda u: u.value == MarketingPreference.RESUME],

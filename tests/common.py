@@ -21,7 +21,7 @@ for client, update_files in CLIENTS.items():
             update_name_to_raw_update = json.load(f)
         update_files[file] = {
             update_name: client._handlers_to_updates[
-                client._get_handler(raw_update)
+                client._get_handler_type(raw_update)
             ].from_update(client=client, update=raw_update)
             for update_name, raw_update in update_name_to_raw_update.items()
         }

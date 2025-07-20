@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from pywa.types.sent_message import *  # noqa MUST BE IMPORTED FIRST
-from pywa.types.sent_message import (
+
+from pywa.types.sent_update import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.sent_update import (
     SentMessage as _SentMessage,
     SentTemplate as _SentTemplate,
+    InitiatedCall as _InitiatedCall,
 )
 from pywa_async.types import (
     Message,
@@ -12,16 +14,16 @@ from pywa_async.types import (
     MessageStatus,
     FlowCompletion,
 )
-
+from .calls import _CallShortcutsAsync
 
 from .. import filters as pywa_filters
 
-__all__ = ["SentMessage", "SentTemplate", "SentTemplateStatus"]
+__all__ = ["SentMessage", "SentTemplate", "SentTemplateStatus", "InitiatedCall"]
 
-from pywa_async.types.base_update import _ClientShortcuts
+from pywa_async.types.base_update import _ClientShortcutsAsync
 
 
-class SentMessage(_ClientShortcuts, _SentMessage):
+class SentMessage(_ClientShortcutsAsync, _SentMessage):
     """
     Represents a message that was sent to WhatsApp user.
 
@@ -335,4 +337,16 @@ class SentTemplate(SentMessage, _SentTemplate):
         to_user: The user the message was sent to.
         from_phone_id: The WhatsApp ID of the sender who sent the message.
         status: The status of the sent template.
+    """
+
+
+class InitiatedCall(_CallShortcutsAsync, _ClientShortcutsAsync, _InitiatedCall):
+    """
+    Represents an outgoing call initiated by the business.
+
+    Attributes:
+        id: The call ID.
+        to_user: The user to whom the call was made.
+        from_phone_id: The WhatsApp ID of the business phone number that initiated the call.
+        success: Whether the call was successfully initiated.
     """

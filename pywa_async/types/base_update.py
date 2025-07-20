@@ -13,11 +13,14 @@ import pathlib
 import dataclasses
 from typing import TYPE_CHECKING, BinaryIO, Iterable
 
+
 from .others import Contact, ProductsSection, User, SuccessResult
 
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
+    from .calls import SDP
+    from pywa.types.sent_update import InitiatedCall
     from .sent_message import SentMessage, SentTemplate
     from .callback import (
         Button,
@@ -30,7 +33,7 @@ if TYPE_CHECKING:
     from .template import Template
 
 
-class _ClientShortcuts:
+class _ClientShortcutsAsync:
     """Async Base class for all user-related update types (message, callback, etc.)."""
 
     message_id_to_reply: str
@@ -735,9 +738,30 @@ class _ClientShortcuts:
             sender=self._internal_recipient, message_id=self.message_id_to_reply
         )
 
+    async def call(
+        self, sdp: SDP, *, tracker: str | CallbackData | None = None
+    ) -> InitiatedCall:
+        """
+        Initiate a call with the user.
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.call` with ``to`` and ``message_id``.
+
+        Args:
+            sdp: The SDP object containing the call information.
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+
+        Returns:
+            The ID of the sent call.
+        """
+        return await self._client.initiate_call(
+            to=self._internal_sender,
+            sdp=sdp,
+            tracker=tracker,
+            phone_id=self._internal_recipient,
+        )
+
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class BaseUserUpdateAsync(_ClientShortcuts):
+class BaseUserUpdateAsync(_ClientShortcutsAsync):
     """Async Base class for all user-related update types (message, callback, etc.)."""
 
     async def block_sender(self) -> bool:

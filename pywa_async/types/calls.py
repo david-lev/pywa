@@ -1,33 +1,36 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 """This module contains types related to WhatsApp calls, including call connection, termination, and status updates."""
+
 
 from pywa.types.calls import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.calls import (
     CallConnect as _CallConnect,
     CallTerminate as _CallTerminate,
     CallStatus as _CallStatus,
+    CallPermissionUpdate as _CallPermissionUpdate,
 )
+
+import dataclasses
+
 from .base_update import BaseUserUpdateAsync  # noqa
+from .callback import CallbackData
+from .others import SuccessResult
+
+if TYPE_CHECKING:
+    from .sent_update import InitiatedCall
+    from ..client import WhatsApp as WhatsAppAsync
 
 
-@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
-class CallConnect(BaseUserUpdateAsync, _CallConnect):
-    """
-    Represents a call connection event.
+class _CallShortcutsAsync:
+    """Base class for async call actions."""
 
-    - This update arrives when a call is initiated by the business or the user.
-
-    Attributes:
-        id: The call ID.
-        metadata: The metadata of the message (to which phone number this call was made).
-        from_user: The user who participated in the call, either as caller or callee.
-        timestamp: The timestamp when this call was made (in UTC).
-        event: The calling event (always "CONNECT").
-        direction: Whether the call was initiated by the business or the user.
-        session: The session information, including SDP type and SDP info.
-        shared_data: Shared data between handlers.
-    """
+    id: str
+    _client: WhatsAppAsync
+    sender: str
+    recipient: str
 
     async def pre_accept(self, *, sdp: SDP) -> SuccessResult:
         """
@@ -102,20 +105,39 @@ class CallConnect(BaseUserUpdateAsync, _CallConnect):
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
-class CallTerminate(BaseUserUpdateAsync, _CallTerminate):
+class CallConnect(BaseUserUpdateAsync, _CallShortcutsAsync, _CallConnect):
+    """
+    Represents a call connection event.
+
+    - This update arrives when a call is initiated by the business or the user.
+
+    Attributes:
+        id: The call ID.
+        metadata: The metadata of the call (to which phone number this call was made or received).
+        from_user: The user who participated in the call, either as caller or callee.
+        timestamp: The timestamp when this call was made (in UTC).
+        event: The calling event (always ``CONNECT``).
+        direction: Whether the call was initiated by the business or the user.
+        session: The session information, including SDP type and SDP info.
+        shared_data: Shared data between handlers.
+    """
+
+
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+class CallTerminate(BaseUserUpdateAsync, _CallShortcutsAsync, _CallTerminate):
     """
     Represents a call termination event.
 
     - This update arrives when a call is terminated, either by the business or the user.
 
     Attributes:
-        id: The message ID.
-        metadata: The metadata of the message (to which phone number this call was made).
-        from_user: The user who made the call.
-        timestamp: The timestamp when this call was made (in UTC).
-        event: The calling event (always "terminate").
-        direction: The direction of the call (either "BUSINESS_INITIATED" or "USER_INITIATED").
-        status: The status of the call (either "FAILED" or "COMPLETED").
+        id: The call ID.
+        metadata: The metadata of the call (to which phone number this call was made or received).
+        from_user: The user who participated in the call, either as caller or callee.
+        timestamp: The timestamp when this update is sent (in UTC).
+        event: The calling event (always ``TERMINATE``).
+        direction: Whether the call was initiated by the business or the user.
+        status: The status of the call (either ``FAILED`` or ``COMPLETED``).
         start_time: The start time of the call in UTC (Only if the call was picked up).
         end_time: The end time of the call in UTC (Only if the call was picked up).
         duration: The duration of the call in seconds (Only if the call was picked up).
@@ -123,20 +145,62 @@ class CallTerminate(BaseUserUpdateAsync, _CallTerminate):
         shared_data: Shared data between handlers.
     """
 
+    async def recall(
+        self, sdp: SDP, *, tracker: str | CallbackData | None = None
+    ) -> InitiatedCall:
+        """
+        Recall the call with the given SDP.
+
+        - This is useful if you want to re-initiate a call after it has been terminated.
+
+        Args:
+            sdp: Contains the session description protocol (SDP) type and description language.
+            tracker: The data to track the call with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+
+        Returns:
+            An InitiatedCall object containing the details of the initiated call.
+        """
+        return await self._client.initiate_call(
+            to=self._internal_sender,
+            sdp=sdp,
+            tracker=tracker,
+            phone_id=self._internal_recipient,
+        )
+
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
-class CallStatus(BaseUserUpdateAsync, _CallStatus):
+class CallStatus(BaseUserUpdateAsync, _CallShortcutsAsync, _CallStatus):
     """
     Represents a call status update.
 
-    This update arrives when during a business-initiated call, the user either accepts or rejects the call.
+    - This update arrives when during a business-initiated call, the user either accepts or rejects the call.
 
     Attributes:
-        id: The message ID.
-        metadata: The metadata of the message (to which phone number this call was made).
-        timestamp: The timestamp when this call was made (in UTC).
+        id: The call ID.
+        metadata: The metadata of the call (to which phone number this call was made or received).
+        timestamp: The timestamp when this status update is sent (in UTC).
         type: The type of the status update (always "call").
         status: The status of the call (either "RINGING", "ACCEPTED", or "REJECTED").
         tracker: The tracker that the call is initiated with.
         shared_data: Shared data between handlers.
+    """
+
+
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+class CallPermissionUpdate(BaseUserUpdateAsync, _CallPermissionUpdate):
+    """
+    Represents a call permission update.
+
+    - This update arrives when a call permission request is sent to the user, and the user responds with an action.
+
+    Attributes:
+        id: The message ID.
+        metadata: The metadata of the message (to which phone number this call permission request was sent).
+        type: The type of the message (always ``INTERACTIVE``).
+        reply_to_message: The message that this call permission request is replying to.
+        from_user: The user who acted on the call permission request.
+        timestamp: The timestamp when this update is sent (in UTC).
+        response: The response to the call permission request (either ``ACCEPT`` or ``REJECT``).
+        response_source: The source of the call permission response (either ``USER_ACTION`` or ``AUTOMATIC``).
+        expiration_timestamp: The timestamp when the call permission request expires (if applicable).
     """

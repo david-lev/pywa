@@ -172,7 +172,7 @@ class StrEnum(str, enum.Enum):
     @classmethod
     def _missing_(cls, value: str):
         """Handle missing values in the enum."""
-        if cls._check_value is not None and not cls._check_value(value):
+        if callable(cls._check_value) and not cls._check_value(value):
             return cls(cls._modify_value(value))
 
         _logger.warning(

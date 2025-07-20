@@ -1,6 +1,45 @@
 from __future__ import annotations
 
+from . import MessageType
+
 """This module contains types related to WhatsApp calls, including call connection, termination, and status updates."""
+
+__all__ = [
+    "CallPermissionUpdate",
+    "CallPermissionResponse",
+    "CallPermissionResponseSource",
+    "CallConnect",
+    "SDP",
+    "CallEvent",
+    "CallDirection",
+    "CallTerminate",
+    "CallTerminateStatus",
+    "CallStatus",
+    "CallStatusType",
+    "CallingSettingsStatus",
+    "CallIconVisibility",
+    "CallbackPermissionStatus",
+    "SIPStatus",
+    "SIPServer",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+    "HolidaySchedule",
+    "CallHours",
+    "CallingSettings",
+    "BusinessPhoneNumberSettings",
+    "CallPermissionStatus",
+    "CallPermissionActionLimit",
+    "CallPermissionAction",
+    "CallPermission",
+    "CallPermissionActionLimit",
+    "CallPermissionAction",
+    "CallPermissions",
+]
 
 import dataclasses
 import datetime
@@ -9,8 +48,8 @@ from typing import TYPE_CHECKING, Generic
 from .base_update import BaseUserUpdate, BaseUpdate, _ClientShortcuts  # noqa
 from .others import (
     Metadata,
-    User,
     SuccessResult,
+    ReplyToMessage,
 )
 from .callback import _CallbackDataT, CallbackData
 from .. import utils
@@ -18,13 +57,33 @@ from ..errors import WhatsAppError
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
+    from .sent_update import InitiatedCall
 
 
-class _CallActions:
+class _CallShortcuts:
     """Base class for call actions."""
 
     id: str
     _client: WhatsApp
+    _internal_sender: str
+    _internal_recipient: str
+
+    @property
+    def message_id_to_reply(self) -> str:
+        """Raises an error because call terminate updates cannot be replied."""
+        raise ValueError("You cannot use `message_id_to_reply` to quote a call update.")
+
+    @property
+    def caller(self) -> str:
+        """
+        The WhatsApp ID of the business phone number that initiated the call.
+        """
+        return self._internal_recipient
+
+    @property
+    def callee(self) -> str:
+        """The WhatsApp ID of the user that received the call."""
+        return self._internal_sender
 
     def pre_accept(self, *, sdp: SDP) -> SuccessResult:
         """
@@ -99,70 +158,7 @@ class _CallActions:
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
-class InitiatedCall(_CallActions, _ClientShortcuts):
-    """
-    Represents an outgoing call initiated by the business.
-
-    Attributes:
-        id: The call ID.
-        to_user: The user to whom the call was made.
-        from_phone_id: The WhatsApp ID of the business phone number that initiated the call.
-        success: Whether the call was successfully initiated.
-    """
-
-    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
-
-    id: str
-    to_user: User
-    from_phone_id: str
-    success: bool
-
-    @property
-    def callee(self) -> str:
-        """
-        The WhatsApp ID which the call was made to.
-            - Shortcut for ``.to_user.wa_id``.
-        """
-        return self.to_user.wa_id
-
-    @property
-    def message_id_to_reply(self) -> str:
-        """Raises an error because call terminate updates cannot be replied."""
-        raise ValueError(
-            "You cannot use `message_id_to_reply` to quote a call initiated update."
-        )
-
-    @property
-    def _internal_recipient(self) -> str:
-        return self.caller
-
-    @property
-    def caller(self) -> str:
-        """
-        The WhatsApp ID of the business phone number that initiated the call.
-            - Same as ``.from_phone_id``.
-        """
-        return self.from_phone_id
-
-    @property
-    def _internal_sender(self) -> str:
-        return self.callee
-
-    @classmethod
-    def from_initiated_call(
-        cls, client: WhatsApp, update: dict, from_phone_id: str, to_wa_id: str
-    ) -> InitiatedCall:
-        return cls(
-            _client=client,
-            id=update["calls"][0]["id"],
-            to_user=client._usr_cls(_client=client, wa_id=to_wa_id, name=None),
-            from_phone_id=from_phone_id,
-            success=update["success"],
-        )
-
-
-@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
-class CallConnect(BaseUserUpdate, _CallActions):
+class CallConnect(BaseUserUpdate, _CallShortcuts):
     """
     Represents a call connection event.
 
@@ -170,10 +166,10 @@ class CallConnect(BaseUserUpdate, _CallActions):
 
     Attributes:
         id: The call ID.
-        metadata: The metadata of the message (to which phone number this call was made).
+        metadata: The metadata of the call (to which phone number this call was made or received).
         from_user: The user who participated in the call, either as caller or callee.
         timestamp: The timestamp when this call was made (in UTC).
-        event: The calling event (always "CONNECT").
+        event: The calling event (always ``CONNECT``).
         direction: Whether the call was initiated by the business or the user.
         session: The session information, including SDP type and SDP info.
         shared_data: Shared data between handlers.
@@ -184,13 +180,6 @@ class CallConnect(BaseUserUpdate, _CallActions):
     session: SDP | None
 
     _webhook_field = "calls"
-
-    @property
-    def message_id_to_reply(self) -> str:
-        """Raises an error because call connect updates cannot be replied."""
-        raise ValueError(
-            "You cannot use `message_id_to_reply` to quote a call connect update."
-        )
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> CallConnect:
@@ -214,6 +203,110 @@ class CallConnect(BaseUserUpdate, _CallActions):
             direction=CallDirection(call["direction"]),
             session=SDP.from_dict(call["session"]) if "session" in call else None,
         )
+
+
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+class CallPermissionUpdate(BaseUserUpdate):
+    """
+    Represents a call permission update.
+
+    - This update arrives when a call permission request is sent to the user, and the user responds with an action.
+
+    Attributes:
+        id: The message ID.
+        metadata: The metadata of the message (to which phone number this call permission request was sent).
+        type: The type of the message (always ``INTERACTIVE``).
+        reply_to_message: The message that this call permission request is replying to.
+        from_user: The user who acted on the call permission request.
+        timestamp: The timestamp when this update is sent (in UTC).
+        response: The response to the call permission request (either ``ACCEPT`` or ``REJECT``).
+        response_source: The source of the call permission response (either ``USER_ACTION`` or ``AUTOMATIC``).
+        expiration_timestamp: The timestamp when the call permission request expires (if applicable).
+    """
+
+    type: MessageType
+    reply_to_message: ReplyToMessage
+    response: CallPermissionResponse
+    response_source: CallPermissionResponseSource
+    expiration_timestamp: datetime.datetime | None = None
+
+    _webhook_field = "messages"
+
+    def __bool__(self):
+        """
+        Returns True if the call permission request was accepted.
+        """
+        return self.response != CallPermissionResponse.REJECT
+
+    @classmethod
+    def from_update(cls, client: WhatsApp, update: dict) -> CallPermissionUpdate:
+        perm = (
+            msg := (value := (entry := update["entry"][0])["changes"][0]["value"])[
+                "messages"
+            ][0]
+        )["interactive"]["call_permission_reply"]
+        return cls(
+            _client=client,
+            raw=update,
+            waba_id=entry["id"],
+            id=msg["id"],
+            type=MessageType(msg["type"]),
+            metadata=Metadata.from_dict(value["metadata"]),
+            from_user=client._usr_cls(
+                _client=client,
+                wa_id=msg["from"],
+                name=None,
+            ),
+            timestamp=datetime.datetime.fromtimestamp(
+                int(msg["timestamp"]),
+                datetime.timezone.utc,
+            ),
+            reply_to_message=ReplyToMessage.from_dict(msg["context"]),
+            response=CallPermissionResponse(perm["response"]),
+            response_source=CallPermissionResponseSource(perm["response_source"]),
+            expiration_timestamp=datetime.datetime.fromtimestamp(
+                int(perm.get("expiration_timestamp", 0)),
+                datetime.timezone.utc,
+            )
+            if "expiration_timestamp" in perm
+            else None,
+        )
+
+
+class CallPermissionResponse(utils.StrEnum):
+    """
+    Represents the response to a call permission request.
+
+    Attributes:
+        ACCEPT: The user accepted the call permission request.
+        REJECT: The user rejected the call permission request.
+    """
+
+    _check_value = str.islower
+    _modify_value = str.lower
+
+    ACCEPT = "accept"
+    REJECT = "reject"
+
+    UNKNOWN = "UNKNOWN"
+
+
+class CallPermissionResponseSource(utils.StrEnum):
+    """
+    Represents the source of the call permission response.
+
+    Attributes:
+        USER_ACTION: User approved or rejected the permission
+        AUTOMATIC: An automatic permission approval due to the WhatsApp user initiating the call
+    """
+
+    _check_value = str.islower
+    _modify_value = str.lower
+
+    USER_ACTION = "user_action"
+    AUTOMATIC = "automatic"
+
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
@@ -259,7 +352,7 @@ class CallEvent(utils.StrEnum):
 
 class CallDirection(utils.StrEnum):
     """
-    Represents the direction of a call.
+    Represents the direction of a call (who initiated the call).
 
     Attributes:
         BUSINESS_INITIATED: The call was initiated by the business.
@@ -273,7 +366,7 @@ class CallDirection(utils.StrEnum):
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
-class CallTerminate(BaseUserUpdate, Generic[_CallbackDataT]):
+class CallTerminate(BaseUserUpdate, _CallShortcuts, Generic[_CallbackDataT]):
     """
     Represents a call termination event.
 
@@ -281,12 +374,12 @@ class CallTerminate(BaseUserUpdate, Generic[_CallbackDataT]):
 
     Attributes:
         id: The call ID.
-        metadata: The metadata of the message (to which phone number this call was made).
+        metadata: The metadata of the call (to which phone number this call was made or received).
         from_user: The user who participated in the call, either as caller or callee.
         timestamp: The timestamp when this update is sent (in UTC).
-        event: The calling event (always "terminate").
+        event: The calling event (always ``TERMINATE``).
         direction: Whether the call was initiated by the business or the user.
-        status: The status of the call (either "FAILED" or "COMPLETED").
+        status: The status of the call (either ``FAILED`` or ``COMPLETED``).
         start_time: The start time of the call in UTC (Only if the call was picked up).
         end_time: The end time of the call in UTC (Only if the call was picked up).
         duration: The duration of the call in seconds (Only if the call was picked up).
@@ -356,6 +449,28 @@ class CallTerminate(BaseUserUpdate, Generic[_CallbackDataT]):
             tracker=call.get("biz_opaque_callback_data"),
         )
 
+    def recall(
+        self, sdp: SDP, *, tracker: str | CallbackData | None = None
+    ) -> InitiatedCall:
+        """
+        Recall the call with the given SDP.
+
+        - This is useful if you want to re-initiate a call after it has been terminated.
+
+        Args:
+            sdp: Contains the session description protocol (SDP) type and description language.
+            tracker: The data to track the call with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+
+        Returns:
+            An InitiatedCall object containing the details of the initiated call.
+        """
+        return self._client.initiate_call(
+            to=self._internal_sender,
+            sdp=sdp,
+            tracker=tracker,
+            phone_id=self._internal_recipient,
+        )
+
 
 class CallTerminateStatus(utils.StrEnum):
     """
@@ -373,16 +488,16 @@ class CallTerminateStatus(utils.StrEnum):
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
-class CallStatus(BaseUserUpdate, _CallActions, Generic[_CallbackDataT]):
+class CallStatus(BaseUserUpdate, _CallShortcuts, Generic[_CallbackDataT]):
     """
     Represents a call status update.
 
     - This update arrives when during a business-initiated call, the user either accepts or rejects the call.
 
     Attributes:
-        id: The message ID.
-        metadata: The metadata of the message (to which phone number this call was made).
-        timestamp: The timestamp when this call was made (in UTC).
+        id: The call ID.
+        metadata: The metadata of the call (to which phone number this call was made or received).
+        timestamp: The timestamp when this status update is sent (in UTC).
         type: The type of the status update (always "call").
         status: The status of the call (either "RINGING", "ACCEPTED", or "REJECTED").
         tracker: The tracker that the call is initiated with.
@@ -394,13 +509,6 @@ class CallStatus(BaseUserUpdate, _CallActions, Generic[_CallbackDataT]):
     tracker: _CallbackDataT | None = None
 
     _webhook_field = "calls"
-
-    @property
-    def message_id_to_reply(self) -> str:
-        """Raises an error because call status updates cannot be replied."""
-        raise ValueError(
-            "You cannot use `message_id_to_reply` to quote a call status update."
-        )
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> CallStatus:

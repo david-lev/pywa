@@ -16,12 +16,14 @@ from typing import TYPE_CHECKING, BinaryIO, Iterable, ClassVar
 
 from pywa import utils
 
+
 from .others import Contact, Metadata, ProductsSection, User, SuccessResult
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
     from .sent_message import SentMessage, SentTemplate
-
+    from .calls import SDP
+    from .sent_update import InitiatedCall
     from .callback import (
         Button,
         URLButton,
@@ -93,11 +95,12 @@ class BaseUpdate(abc.ABC):
     https://developers.facebook.com/docs/graph-api/webhooks/reference/whatsapp-business-account
     """
     _is_user_update: ClassVar[bool] = False
-    """Is the update related to WhatsApp User"""
+    """Is the update came from a user? (e.g., message, callback, etc.)"""
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
+    """The WhatsApp client that received the update."""
     id: str
-    """The WhatsApp Business Account ID that the update was sent to."""
+    """The WhatsApp Business Account ID for the business that is subscribed to the webhook."""
     timestamp: datetime.datetime
     """Timestamp indicating when the WhatsApp server received the message from the customer (in UTC)."""
     raw: dict = dataclasses.field(repr=False, hash=False, compare=False)
@@ -872,6 +875,27 @@ class _ClientShortcuts(abc.ABC):
             sender=self._internal_recipient, message_id=self.message_id_to_reply
         )
 
+    def call(
+        self, sdp: SDP, *, tracker: str | CallbackData | None = None
+    ) -> InitiatedCall:
+        """
+        Initiate a call with the user.
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.call` with ``to`` and ``message_id``.
+
+        Args:
+            sdp: The SDP object containing the call information.
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+
+        Returns:
+            The ID of the sent call.
+        """
+        return self._client.initiate_call(
+            to=self._internal_sender,
+            sdp=sdp,
+            tracker=tracker,
+            phone_id=self._internal_recipient,
+        )
+
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
@@ -893,25 +917,23 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
     def sender(self) -> str:
         """
         The Phone Number ID which the update was sent from.
-            - Shortcut for ``.from_user.wa_id``.
         """
-        return self.from_user.wa_id
+        return self._internal_sender
 
     @property
     def _internal_sender(self) -> str:
-        return self.sender
+        return self.from_user.wa_id
 
     @property
     def recipient(self) -> str:
         """
         The Phone Number ID which the update was sent to.
-            - Shortcut for ``.metadata.phone_number_id``.
         """
-        return self.metadata.phone_number_id
+        return self._internal_recipient
 
     @property
     def _internal_recipient(self) -> str:
-        return self.recipient
+        return self.metadata.phone_number_id
 
     def block_sender(self) -> bool:
         """

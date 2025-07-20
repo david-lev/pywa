@@ -9,7 +9,7 @@ import httpx
 from .errors import WhatsAppError
 
 
-class WhatsAppCloudApiAsync(WhatsAppCloudApi):
+class GraphAPIAsync(GraphAPI):
     """Internal methods for the WhatsApp Async client. Do not use this class directly."""
 
     _session: httpx.AsyncClient
@@ -27,7 +27,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         )
 
     def __str__(self):
-        return f"WhatsAppCloudApiAsync(session={self._session!r})"
+        return f"GraphAPIAsync(session={self._session!r})"
 
     async def _make_request(self, method: str, endpoint: str, **kwargs) -> dict | list:
         """
@@ -1898,7 +1898,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         self,
         phone_id: str,
         to: str,
-        sdp: dict[str, str] | None = None,
+        sdp: dict[str, str],
         biz_opaque_callback_data: str | None = None,
     ) -> dict[str, str | bool]:
         """
@@ -1931,7 +1931,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
                 "messaging_product": "whatsapp",
                 "to": to,
                 "action": "connect",
-                **({"session": sdp} if sdp else {}),
+                "session": sdp,
                 **(
                     {"biz_opaque_callback_data": biz_opaque_callback_data}
                     if biz_opaque_callback_data
