@@ -70,7 +70,6 @@ __all__ = [
     "If",
     "Switch",
     "DataSource",
-    "Action",
     "DataExchangeAction",
     "NavigateAction",
     "CompleteAction",
@@ -80,8 +79,6 @@ __all__ = [
     "FlowRequestActionType",
     "Next",
     "NextType",
-    "ActionNext",  # Deprecated
-    "ActionNextType",  # Deprecated
 ]
 
 import httpx
