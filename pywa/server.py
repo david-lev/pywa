@@ -532,7 +532,6 @@ class Server:
         endpoint: str,
         callback: handlers._FlowRequestHandlerT,
         acknowledge_errors: bool = True,
-        handle_health_check: None = None,
         private_key: str | None = None,
         private_key_password: str | None = None,
         request_decryptor: utils.FlowRequestDecryptor | None = None,
@@ -553,7 +552,6 @@ class Server:
             private_key_password: The password to use to decrypt the private key (Override the global ``business_private_key_password``).
             request_decryptor: The function to use to decrypt the requests (Override the global ``flows_request_decryptor``)
             response_encryptor: The function to use to encrypt the responses (Override the global ``flows_response_encryptor``)
-            handle_health_check: Deprecated. health checks will be handled automatically by pywa.
 
         Returns:
             A function that handles the incoming flow request and returns (response, status_code).
@@ -563,7 +561,6 @@ class Server:
             endpoint=endpoint,
             callback=callback,
             acknowledge_errors=acknowledge_errors,
-            handle_health_check=handle_health_check,
             private_key=private_key,
             private_key_password=private_key_password,
             request_decryptor=request_decryptor,
@@ -579,7 +576,6 @@ class Server:
         private_key_password: str | None,
         request_decryptor: utils.FlowRequestDecryptor | None,
         response_encryptor: utils.FlowResponseEncryptor | None,
-        handle_health_check: None,
     ) -> handlers.FlowRequestCallbackWrapper:
         """Internal function to register a flow endpoint callback."""
         if self._server is None:
@@ -598,7 +594,6 @@ class Server:
                 endpoint=endpoint,
                 callback=callback,
                 acknowledge_errors=acknowledge_errors,
-                handle_health_check=handle_health_check,
                 private_key=private_key,
                 private_key_password=private_key_password,
                 request_decryptor=request_decryptor,

@@ -461,7 +461,7 @@ class ButtonUrl(URLButton):
 
     def __post_init__(self):
         warnings.warn(
-            "ButtonUrl is deprecated, use URLButton instead.",
+            "ButtonUrl is deprecated, use `URLButton` instead.",
             DeprecationWarning,
             stacklevel=2,
         )

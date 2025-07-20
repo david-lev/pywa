@@ -464,25 +464,6 @@ def rename_func(extended_with: str) -> Callable:
     return inner
 
 
-def deprecated_func(use_instead: str | None) -> Callable:
-    """Mark a function as deprecated."""
-
-    def decorator(func: Callable) -> Callable:
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            msg = (
-                f"Function `{func.__name__}` is deprecated and will be removed in a future version"
-                + (f". Use `{use_instead}` instead." if use_instead else ".")
-            )
-            warnings.simplefilter("always", DeprecationWarning)
-            warnings.warn(message=msg, category=DeprecationWarning, stacklevel=2)
-            return func(*args, **kwargs)
-
-        return wrapper
-
-    return decorator
-
-
 def listener_identifier(sender: str | int, recipient: str | int) -> tuple[str, str]:
     """Create a unique identifier for a listener."""
     return str(sender), str(recipient)

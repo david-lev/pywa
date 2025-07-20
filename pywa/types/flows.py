@@ -112,7 +112,6 @@ __all__ = [
     "If",
     "Switch",
     "DataSource",
-    "Action",
     "DataExchangeAction",
     "NavigateAction",
     "CompleteAction",
@@ -122,8 +121,6 @@ __all__ = [
     "FlowRequestActionType",
     "Next",
     "NextType",
-    "ActionNext",  # Deprecated
-    "ActionNextType",  # Deprecated
 ]
 
 
@@ -222,13 +219,11 @@ class FlowRequestActionType(utils.StrEnum):
         BACK: if the request is triggered when pressing back (The screen's ``refresh_on_back`` attr set to ``True``)
         DATA_EXCHANGE: if the request is triggered by :class:`DataExchangeAction`
         NAVIGATE: if the :class:`FlowButton` sent with ``FlowActionType.NAVIGATE`` and the ``screen`` is not in the ``routing_model`` (the request will contain an error)
-        PING: Deprecated. This request is handled automatically by pywa and not passed to the callback.
     """
 
     INIT = "INIT"
     BACK = "BACK"
     DATA_EXCHANGE = "data_exchange"
-    PING = "ping"
     NAVIGATE = "navigate"
 
     UNKNOWN = "UNKNOWN"
@@ -352,18 +347,6 @@ class FlowRequest:
                 for key in ("error", "error_message", "error_key")
             )
         )
-
-    @property
-    def is_health_check(self) -> bool:
-        """
-        Deprecated. Health check is handled automatically by pywa.
-        """
-        warnings.warn(
-            "This property is deprecated because the health check is handled automatically by pywa.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.action == FlowRequestActionType.PING
 
     def decrypt_media(
         self, key: str, index: int = 0, dl_session: httpx.Client | None = None
@@ -1618,7 +1601,7 @@ class Component(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def type(self) -> ComponentType: ...
+    def type(self) -> TemplateComponentType: ...
 
     @property
     @abc.abstractmethod
@@ -1631,7 +1614,7 @@ class Component(abc.ABC):
             )
 
 
-class ComponentType(utils.StrEnum):
+class TemplateComponentType(utils.StrEnum):
     """Internal component types"""
 
     _check_value = None
@@ -2084,8 +2067,8 @@ class Form(Component):
          the error message instead of setting this attribute. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#form-configuration>`_).
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.FORM, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.FORM, init=False, repr=False
     )
     visible: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
@@ -2268,8 +2251,8 @@ class TextHeading(TextComponent):
         visible: Whether the heading is visible or not. Default to ``True``,
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.TEXT_HEADING, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.TEXT_HEADING, init=False, repr=False
     )
     text: str | FlowStr | ScreenDataRef[str] | ComponentRef[str]
     visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
@@ -2291,8 +2274,8 @@ class TextSubheading(TextComponent):
         visible: Whether the subheading is visible or not. Default to ``True``,
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.TEXT_SUBHEADING, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.TEXT_SUBHEADING, init=False, repr=False
     )
     text: str | FlowStr | ScreenDataRef[str] | ComponentRef[str]
     visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
@@ -2322,8 +2305,8 @@ class TextBody(TextComponent):
         visible: Whether the body is visible or not. Default to ``True``,
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.TEXT_BODY, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.TEXT_BODY, init=False, repr=False
     )
     text: (
         str
@@ -2363,8 +2346,8 @@ class TextCaption(TextComponent):
         visible: Whether the caption is visible or not. Default to ``True``,
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.TEXT_CAPTION, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.TEXT_CAPTION, init=False, repr=False
     )
     text: (
         str
@@ -2420,8 +2403,8 @@ class RichText(TextComponent):
         visible: Whether the caption is visible or not. Default to ``True``,
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.RICH_TEXT, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.RICH_TEXT, init=False, repr=False
     )
     text: (
         str
@@ -2532,8 +2515,8 @@ class TextInput(TextEntryComponent):
         error_message: The error message of the text input.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.TEXT_INPUT, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.TEXT_INPUT, init=False, repr=False
     )
     name: str
     label: str | FlowStr | ScreenDataRef[str] | ComponentRef[str]
@@ -2583,8 +2566,8 @@ class TextArea(TextEntryComponent):
         error_message: The error message of the text area.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.TEXT_AREA, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.TEXT_AREA, init=False, repr=False
     )
     name: str
     label: str | FlowStr | ScreenDataRef[str] | ComponentRef[str]
@@ -2658,8 +2641,8 @@ class CheckboxGroup(FormComponent[list[str]]):
         on_unselect_action: The action to perform when an item is unselected. Added in v6.0.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.CHECKBOX_GROUP, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.CHECKBOX_GROUP, init=False, repr=False
     )
     name: str
     data_source: list[DataSource] | ScreenDataRef[list[DataSource]]
@@ -2712,8 +2695,8 @@ class RadioButtonsGroup(FormComponent[str]):
         on_unselect_action: The action to perform when an item is unselected. Added in v6.0.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.RADIO_BUTTONS_GROUP, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.RADIO_BUTTONS_GROUP, init=False, repr=False
     )
     name: str
     data_source: list[DataSource] | ScreenDataRef[list[DataSource]]
@@ -2762,8 +2745,8 @@ class Dropdown(FormComponent[str]):
         on_unselect_action: The action to perform when an item is unselected. Added in v6.0.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.DROPDOWN, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.DROPDOWN, init=False, repr=False
     )
     name: str
     label: str | FlowStr | ScreenDataRef[str] | ComponentRef[str]
@@ -2815,8 +2798,8 @@ class ChipsSelector(FormComponent[list[str]]):
         on_unselect_action: The action to perform when an item is unselected. if not set, the on_select_action will handle both selection and unselection events. Added in v7.1.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.CHIPS_SELECTOR, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.CHIPS_SELECTOR, init=False, repr=False
     )
     name: str
     data_source: list[DataSource] | ScreenDataRef[list[DataSource]]
@@ -2848,8 +2831,8 @@ class Footer(Component):
         enabled: Whether the footer is enabled or not. Default to ``True``.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.FOOTER, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.FOOTER, init=False, repr=False
     )
     visible: None = dataclasses.field(default=None, init=False, repr=False)
     label: str | FlowStr | ScreenDataRef[str] | ComponentRef[str]
@@ -2887,8 +2870,8 @@ class OptIn(FormComponent[bool]):
         on_click_action: The action to perform when the opt in is clicked.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.OPT_IN, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.OPT_IN, init=False, repr=False
     )
     enabled: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
@@ -2926,8 +2909,8 @@ class EmbeddedLink(Component):
         visible: Whether the embedded link is visible or not. Default to ``True``.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.EMBEDDED_LINK, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.EMBEDDED_LINK, init=False, repr=False
     )
     text: str | FlowStr | ScreenDataRef[str] | ComponentRef[str]
     on_click_action: (
@@ -2975,8 +2958,8 @@ class NavigationList(Component):
         on_click_action: The action to perform when an item is clicked (can be defined at the component level or in each :class:`NavigationItem`).
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.NAVIGATION_LIST, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.NAVIGATION_LIST, init=False, repr=False
     )
     visible: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
@@ -3112,8 +3095,8 @@ class DatePicker(FormComponent[str]):
         on_select_action: The action to perform when a date is selected.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.DATE_PICKER, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.DATE_PICKER, init=False, repr=False
     )
     name: str
     label: str | FlowStr | ScreenDataRef[str] | ComponentRef[str]
@@ -3265,8 +3248,8 @@ class CalendarPicker(FormComponent[str]):
         on_select_action: The action to perform when a date is selected.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.CALENDAR_PICKER, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.CALENDAR_PICKER, init=False, repr=False
     )
     name: str
     title: str | FlowStr | ScreenDataRef[str] | ComponentRef[str] | None = None
@@ -3393,8 +3376,8 @@ class Image(Component):
         visible: Whether the image is visible or not. Default to ``True``.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.IMAGE, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.IMAGE, init=False, repr=False
     )
     src: str | ScreenDataRef[str] | ComponentRef[str]
     width: int | ScreenDataRef[int] | None = None
@@ -3457,8 +3440,8 @@ class ImageCarousel(Component):
         visible: Whether the image carousel is visible or not. Default to ``True``.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.IMAGE_CAROUSEL, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.IMAGE_CAROUSEL, init=False, repr=False
     )
     images: list[ImageCarouselItem] | ScreenDataRef[list[ImageCarouselItem]]
     aspect_ratio: str | ScreenDataRef[str] | ComponentRef[str] | None = None
@@ -3523,8 +3506,8 @@ class PhotoPicker(FormComponent):
 
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.PHOTO_PICKER, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.PHOTO_PICKER, init=False, repr=False
     )
     required: None = dataclasses.field(default=None, init=False, repr=False)
     init_value: None = dataclasses.field(default=None, init=False, repr=False)
@@ -3578,8 +3561,8 @@ class DocumentPicker(FormComponent):
         error_message: The error message of the document picker.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.DOCUMENT_PICKER, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.DOCUMENT_PICKER, init=False, repr=False
     )
     required: None = dataclasses.field(default=None, init=False, repr=False)
     init_value: None = dataclasses.field(default=None, init=False, repr=False)
@@ -3635,8 +3618,8 @@ class If(Component):
 
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.IF, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.IF, init=False, repr=False
     )
     visible: None = dataclasses.field(default=None, init=False, repr=False)
     condition: Condition | str
@@ -3667,8 +3650,8 @@ class Switch(Component):
         cases: The components that will be rendered based on the value. {case: [components, ...], ...}.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.SWITCH, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.SWITCH, init=False, repr=False
     )
     visible: None = dataclasses.field(default=None, init=False, repr=False)
     value: str | ScreenDataRef | ComponentRef
@@ -3725,25 +3708,6 @@ class NextType(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class _DeprecatedNextType(type):
-    SCREEN = "screen"
-    PLUGIN = "plugin"
-
-    def __getattribute__(cls, item):
-        warnings.warn(
-            message="`ActionNextType` is deprecated. Use `NextType` instead",
-            category=DeprecationWarning,
-            stacklevel=2,
-        )
-        return getattr(NextType, item)
-
-
-class ActionNextType(metaclass=_DeprecatedNextType):
-    """
-    Deprecated. Use :class:`NextType` instead
-    """
-
-
 @dataclasses.dataclass(slots=True, kw_only=True)
 class Next:
     """
@@ -3756,72 +3720,6 @@ class Next:
 
     name: str
     type: NextType | str = NextType.SCREEN
-
-
-@dataclasses.dataclass(slots=True, kw_only=True)
-class ActionNext:
-    """Deprecated. Use :class:`Next` instead"""
-
-    name: str
-    type: NextType | str = NextType.SCREEN
-
-    def __post_init__(self):
-        warnings.warn(
-            message="ActionNext is deprecated. Use Next instead",
-            category=DeprecationWarning,
-            stacklevel=3,
-        )
-
-
-def _deprecate_action(action: FlowActionType, use_cls: type[BaseAction]) -> None:
-    warnings.warn(
-        message=f"Action(name='{action}', ...) is deprecated. Use {use_cls.__name__} instead",
-        category=DeprecationWarning,
-        stacklevel=3,
-    )
-
-
-@dataclasses.dataclass(slots=True, kw_only=True)
-class Action:
-    """
-    This class is deprecated and will be removed in future versions. Use one of the following classes instead:
-
-    - :class:`DataExchangeAction`
-    - :class:`NavigateAction`
-    - :class:`OpenUrlAction`
-    - :class:`UpdateDataAction`
-    - :class:`CompleteAction`
-
-    """
-
-    name: None
-    next: None = None
-    url: None = None
-    payload: None = None
-
-    def __post_init__(self):
-        if self.name == FlowActionType.NAVIGATE.value:
-            _deprecate_action(FlowActionType.NAVIGATE, NavigateAction)
-            if self.next is None:
-                raise ValueError("next is required for FlowActionType.NAVIGATE")
-        elif self.name == FlowActionType.OPEN_URL.value:
-            _deprecate_action(FlowActionType.OPEN_URL, OpenUrlAction)
-            if self.url is None:
-                raise ValueError("url is required for FlowActionType.OPEN_URL")
-        elif self.name == FlowActionType.COMPLETE.value:
-            _deprecate_action(FlowActionType.COMPLETE, CompleteAction)
-            if self.payload is None:
-                raise ValueError(
-                    "payload is required for FlowActionType.COMPLETE (use {} for empty payload)"
-                )
-        elif self.name == FlowActionType.UPDATE_DATA.value:
-            _deprecate_action(FlowActionType.UPDATE_DATA, UpdateDataAction)
-            if self.payload is None:
-                raise ValueError("payload is required for FlowActionType.UPDATE_DATA")
-        elif self.name == FlowActionType.DATA_EXCHANGE.value:
-            _deprecate_action(FlowActionType.DATA_EXCHANGE, DataExchangeAction)
-            if self.payload is None:
-                raise ValueError("payload is required for FlowActionType.DATA_EXCHANGE")
 
 
 class BaseAction(abc.ABC):

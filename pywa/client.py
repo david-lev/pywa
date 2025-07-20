@@ -462,7 +462,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             private_key_password=handler._private_key_password,
             request_decryptor=handler._request_decryptor,
             response_encryptor=handler._response_encryptor,
-            handle_health_check=None,
         )
         for (action, screen), callbacks in handler._handlers.items():
             for filters, callback in callbacks:

@@ -168,16 +168,6 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
             error=WhatsAppError.from_dict(error=error) if error else None,
         )
 
-    @property
-    def pricing_model(self) -> str | None:
-        """Deprecated: Use ``.pricing.model`` instead."""
-        warnings.warn(
-            "The `pricing_model` is deprecated. Use `pricing.model` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.pricing.model.value if self.pricing else None
-
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class Conversation:

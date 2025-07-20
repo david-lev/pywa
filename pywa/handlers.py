@@ -939,40 +939,6 @@ class _CallbackWrapperDecorators(abc.ABC):
         handler: FlowCompletionHandler,
     ) -> _CallbackWrapperDecorators: ...
 
-    def set_errors_handler(self, callback: None) -> None:
-        """Deprecated. Use ``.add_handler(...)`` with filter to check ``req.has_error``"""
-        warnings.warn(
-            "The `set_errors_handler` method is deprecated. Use `.add_handler(...)` with filter to check `req.has_error`",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        for action in FlowRequestActionType:
-            self.add_handler(
-                callback=callback,
-                action=action,
-                screen=None,
-                filters=_flow_req_has_error_filter,
-            )
-        return self
-
-    def on_errors(self=None, clb: None = None) -> None:
-        """Deprecated. Use ``.add_handler(...)`` with filter to check ``req.has_error``"""
-        warnings.warn(
-            "The `on_errors` decorator is deprecated. Use `on_data_exchange(call_on_error=True)` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        if clb:  # @main_callback.on_errors
-            self.set_errors_handler(callback=clb)
-            return clb
-
-        def decorator(callback: _FlowRequestHandlerT):  # @main_callback.on_errors()
-            self.set_errors_handler(callback)
-            return callback
-
-        return decorator
-
     def on(
         self,
         *,
@@ -1205,7 +1171,6 @@ class FlowRequestHandler(_CallbackWrapperDecorators):
         endpoint: The endpoint to listen to (The endpoint uri you set to the flow. e.g ``/feedback_flow``).
         acknowledge_errors: Whether to acknowledge errors (The return value of the callback will be ignored, and
          pywa will acknowledge the error automatically).
-        handle_health_check: Deprecated. health checks will be handled automatically by pywa.
         private_key: The private key to use to decrypt the requests (Override the global ``business_private_key``).
         private_key_password: The password to use to decrypt the private key (Override the global ``business_private_key_password``).
         request_decryptor: The function to use to decrypt the requests (Override the global ``flows_request_decryptor``)
@@ -1222,13 +1187,7 @@ class FlowRequestHandler(_CallbackWrapperDecorators):
         private_key_password: str | None = None,
         request_decryptor: utils.FlowRequestDecryptor | None = None,
         response_encryptor: utils.FlowResponseEncryptor | None = None,
-        handle_health_check: None = None,
     ):
-        if handle_health_check is not None:
-            warnings.warn(
-                "The `handle_health_check` argument is deprecated and will be removed in the future.",
-                DeprecationWarning,
-            )
         self._main_handler = callback
         self._handlers: dict[
             tuple[FlowRequestActionType | str, str | None],
@@ -2154,7 +2113,6 @@ class _HandlerDecorators:
         private_key_password: str | None = None,
         request_decryptor: utils.FlowRequestDecryptor | None = None,
         response_encryptor: utils.FlowResponseEncryptor | None = None,
-        handle_health_check: None = None,
     ) -> Callable[
         [_FlowRequestHandlerT],
         FlowRequestCallbackWrapper | FlowRequestHandler,
@@ -2182,7 +2140,6 @@ class _HandlerDecorators:
             private_key_password: The password to use to decrypt the private key (Override the global ``business_private_key_password``).
             request_decryptor: The function to use to decrypt the requests (Override the global ``flows_request_decryptor``)
             response_encryptor: The function to use to encrypt the responses (Override the global ``flows_response_encryptor``)
-            handle_health_check: Deprecated. health checks will be handled automatically by pywa.
         """
 
         def decorator(
@@ -2200,7 +2157,6 @@ class _HandlerDecorators:
                     private_key_password=private_key_password,
                     request_decryptor=request_decryptor,
                     response_encryptor=response_encryptor,
-                    handle_health_check=handle_health_check,
                 )
                 setattr(handler, _flow_request_handler_attr, None)
                 return handler
@@ -2209,7 +2165,6 @@ class _HandlerDecorators:
                 endpoint=endpoint,
                 callback=callback,
                 acknowledge_errors=acknowledge_errors,
-                handle_health_check=handle_health_check,
                 private_key=private_key,
                 private_key_password=private_key_password,
                 request_decryptor=request_decryptor,
@@ -2310,7 +2265,6 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         private_key_password: str | None = None,
         request_decryptor: utils.FlowRequestDecryptor | None = None,
         response_encryptor: utils.FlowResponseEncryptor | None = None,
-        handle_health_check: None = None,
     ):
         wa._check_for_async_callback(callback)
         self._wa = wa
@@ -2353,11 +2307,6 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
                 "The default decryptor/encryptor requires the `cryptography` package to be installed."
                 '\n>> Install it with `pip install cryptography` / pip install "pywa[cryptography]" or use a '
                 "custom decryptor/encryptor."
-            )
-        if handle_health_check is not None:
-            warnings.warn(
-                "The `handle_health_check` argument is deprecated and will be removed in the future.",
-                DeprecationWarning,
             )
 
     def add_handler(

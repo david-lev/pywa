@@ -195,12 +195,6 @@ class TooManyMessages(ThrottlingError):
     __error_codes__ = (131056,)
 
 
-class ToManyMessages(TooManyMessages):
-    """Deprecated, use :class:`TooManyMessages` instead."""
-
-    pass
-
-
 # ====================================================================================================
 
 

@@ -16,7 +16,6 @@ from pywa.types.flows import (
     Form,
     TextInput,
     InputType,
-    Action,
     FlowActionType,
     DataSource,
     ScreenDataRef,
@@ -32,8 +31,6 @@ from pywa.types.flows import (
     NavigationItem,
     NavigateAction,
     Next,
-    ActionNext,
-    ActionNextType,
     FlowStr,
     FlowPreview,
 )
@@ -68,26 +65,6 @@ def test_min_version():
 def test_empty_form():
     with pytest.raises(ValueError):
         Form(name="form", children=[])
-
-
-def test_action():
-    with pytest.warns(DeprecationWarning):
-        with pytest.raises(ValueError):  # no next action
-            Action(name=FlowActionType.NAVIGATE)
-
-        with pytest.raises(ValueError):  # no payload
-            Action(name=FlowActionType.COMPLETE)
-
-        with pytest.raises(ValueError):  # no url
-            Action(name=FlowActionType.OPEN_URL)
-
-
-def test_deprecations_warning():
-    with pytest.warns(DeprecationWarning):
-        ActionNext(name="NEXT_SCREEN")
-
-    with pytest.warns(DeprecationWarning):
-        _ = ActionNextType.SCREEN
 
 
 def test_component_ref():
@@ -733,25 +710,6 @@ def test_flow_callback_wrapper_on_completion():
     def on_completion(_, __): ...
 
     assert wrapper._wa._handlers[FlowCompletionHandler][0]._callback is on_completion
-
-
-def test_on_errors_deprecated(flow_request):
-    wrapper = get_flow_callback_wrapper(lambda _, __: ...)
-
-    with pytest.warns(DeprecationWarning):
-
-        @wrapper.on_errors
-        def on_error(_, __): ...
-
-
-def test_flow_callback_wrapper_set_errors_handler_deprecated(flow_request):
-    wrapper = get_flow_callback_wrapper(lambda _, __: ...)
-
-    with pytest.warns(DeprecationWarning):
-
-        def on_error(_, __): ...
-
-        wrapper.set_errors_handler(on_error)
 
 
 def test_flows_server():
