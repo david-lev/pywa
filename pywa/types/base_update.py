@@ -21,7 +21,7 @@ from .others import Contact, Metadata, ProductsSection, User, SuccessResult
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
-    from .sent_message import SentMessage, SentTemplate
+    from .sent_update import SentMessage, SentTemplate
     from .calls import SDP
     from .sent_update import InitiatedCall
     from .callback import (
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
         FlowButton,
         CallbackData,
     )
-    from .template import Template
+    from .template import TemplateLanguage, TemplateBaseComponent
 
 
 class StopHandling(Exception):
@@ -784,7 +784,10 @@ class _ClientShortcuts(abc.ABC):
 
     def reply_template(
         self,
-        template: Template,
+        name: str,
+        language: TemplateLanguage,
+        params: list[TemplateBaseComponent.Params],
+        *,
         quote: bool = False,
         tracker: str | CallbackData | None = None,
     ) -> SentTemplate:
@@ -793,57 +796,21 @@ class _ClientShortcuts(abc.ABC):
 
         -- Shortcut for :py:func:`~pywa.client.WhatsApp.send_template` with ``to`` and ``reply_to_message_id``.
 
-        Example:
-
-            >>> from pywa.types import Template as Temp
-            >>> wa = WhatsApp(...)
-            >>> wa.send_template(
-            ...     to='1234567890',
-            ...     template=Temp(
-            ...         name='buy_new_iphone_x',
-            ...         language=Temp.Language.ENGLISH_US,
-            ...         header=Temp.TextValue(value='15'),
-            ...         body=[
-            ...             Temp.TextValue(value='John Doe'),
-            ...             Temp.TextValue(value='WA_IPHONE_15'),
-            ...             Temp.TextValue(value='15%'),
-            ...         ],
-            ...         buttons=[
-            ...             Temp.UrlButtonValue(value='iphone15'),
-            ...             Temp.QuickReplyButtonData(data='unsubscribe_from_marketing_messages'),
-            ...             Temp.QuickReplyButtonData(data='unsubscribe_from_all_messages'),
-            ...         ],
-            ...     ),
-            ... )
-
-        Example for Authentication Template:
-
-            >>> from pywa.types import Template as Temp
-            >>> msg.reply_template(
-            ...     template=Temp(
-            ...         name='auth_with_otp',
-            ...         language=Temp.Language.ENGLISH_US,
-            ...         buttons=Temp.OTPButtonCode(code='123456'),
-            ...     ),
-            ...     quote=True
-            ... )
-
         Args:
-            template: The template to send.
+            name: The name of the template to send.
+            language: The language of the template to send.
+            params: The parameters to fill in the template.
             quote: Whether to quote the replied message (default: False).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
-
-        Returns:
-            The ID of the sent reply.
-
-        Raises:
-
+            tracker: A callback data to track the message (optional, can be a string or a :class:`CallbackData` object).
         """
+
         return self._client.send_template(
             sender=self._internal_recipient,
             to=self._internal_sender,
-            template=template,
-            reply_to_message_id=quote if quote else None,
+            name=name,
+            language=language,
+            params=params,
+            reply_to_message_id=self.message_id_to_reply if quote else None,
             tracker=tracker,
         )
 
