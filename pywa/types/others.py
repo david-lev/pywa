@@ -843,6 +843,7 @@ class BusinessPhoneNumber:
         code_verification_status: Indicates the phone number's one-time password (OTP) verification status. Values can be NOT_VERIFIED, VERIFIED, or EXPIRED.
          Only phone numbers with a VERIFIED status can be registered. See `Manage Phone Numbers and Certificates <https://developers.facebook.com/docs/whatsapp/embedded-signup/manage-accounts/phone-numbers#manage-phone-numbers-and-certificates>`_.
         account_mode: The account mode of the phone number. See `Filtering Phone Numbers <https://developers.facebook.com/docs/whatsapp/business-management-api/manage-phone-numbers#filter-phone-numbers>`_.
+        is_on_biz_app: Indicates if the customer's business phone number is registered for WhatsApp Business app.
         is_official_business_account: Indicates if phone number is associated with an Official Business Account.
         is_pin_enabled: Returns True if a pin for two-step verification is enabled.
         is_preverified_number: Returns true if the phone number was pre-verified
@@ -873,6 +874,7 @@ class BusinessPhoneNumber:
     new_name_status: str | None
     code_verification_status: str | None
     account_mode: str | None
+    is_on_biz_app: bool
     is_official_business_account: bool
     is_pin_enabled: bool
     is_preverified_number: bool
@@ -905,6 +907,7 @@ class BusinessPhoneNumber:
             new_name_status=data.get("new_name_status"),
             code_verification_status=data.get("code_verification_status"),
             account_mode=data.get("account_mode"),
+            is_on_biz_app=data.get("is_on_biz_app"),
             is_official_business_account=data.get(
                 "is_official_business_account", False
             ),
