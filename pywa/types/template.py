@@ -22,7 +22,7 @@ __all__ = [
     "HeaderProduct",
     "BodyText",
     "AuthenticationBody",
-    "Footer",
+    "FooterText",
     "AuthenticationFooter",
     "Buttons",
     "CopyCodeButton",
@@ -747,7 +747,7 @@ class BaseHeaderComponent(TemplateBaseComponent, abc.ABC):
 
 
 class _BaseTextParams(TemplateBaseComponent.Params, abc.ABC):
-    def __init__(self, *positionals: str, **named: str):
+    def __init__(self, *positionals, **named):
         if positionals and named:
             raise ValueError("You can't use both positional and named args!")
         if not positionals and not named:
@@ -764,12 +764,12 @@ class _BaseTextParams(TemplateBaseComponent.Params, abc.ABC):
         return {
             "type": typ.value,
             "parameters": [
-                {"type": "text", "text": positional_param}
+                {"type": "text", "text": str(positional_param)}
                 for positional_param in self.positionals
             ]
             if self.positionals
             else [
-                {"type": "text", "text": named_param, "parameter_name": param_name}
+                {"type": "text", "text": str(named_param), "parameter_name": param_name}
                 for param_name, named_param in self.named.items()
             ],
         }
@@ -882,7 +882,7 @@ class _BaseTextComponent:
 
     class Params: ...
 
-    def params(self, *positionals: str, **named: str) -> _BaseTextParams:
+    def params(self, *positionals, **named) -> _BaseTextParams:
         """
         Fill the parameters for the header text component.
 
@@ -890,6 +890,10 @@ class _BaseTextComponent:
             *positionals: Positional parameters to fill in the template text.
             **named: Named parameters to fill in the template text.
         """
+        if not self.param_format:
+            raise ValueError(
+                f"{self.__class__.__name__} does not support parameters, as it has no example."
+            )
         if self.param_format == ParamFormat.POSITIONAL:
             if named:
                 raise ValueError(
@@ -904,9 +908,15 @@ class _BaseTextComponent:
                 raise ValueError(
                     f"{self.__class__.__name__} does not support positional parameters when text is named."
                 )
-            if set(named.keys()) != set(self.example.keys()):
+            missing_params = set(self.example.keys()) - set(named.keys())
+            unexpected_params = set(named.keys()) - set(self.example.keys())
+            if missing_params:
                 raise ValueError(
-                    f"{self.__class__.__name__} requires parameters {set(self.example.keys())}, got {set(named.keys())}."
+                    f"{self.__class__.__name__} is missing parameters: {', '.join(missing_params)}."
+                )
+            if unexpected_params:
+                raise ValueError(
+                    f"{self.__class__.__name__} received unexpected parameters: {', '.join(unexpected_params)}."
                 )
 
         return self.Params(*positionals, **named)
@@ -918,6 +928,16 @@ class HeaderText(_BaseTextComponent, BaseHeaderComponent):
 
     - All templates are limited to one header component
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#text-headers>`_.
+
+    Example:
+
+        >>> header_text = HeaderText("Hi {{name}}! How are you? Get {{discount}}% OFF!", name="John", discount=15)
+        >>> header_text.params(name="David", discount=20)
+
+        >>> header_text = HeaderText("Hi {{1}}! How are you? Get {{2}}% OFF!", "John", 15)
+        >>> header_text.params("David", 20)
+
+        >>> print(header_text.preview())
     """
 
     type = ComponentType.HEADER
@@ -930,7 +950,7 @@ class HeaderText(_BaseTextComponent, BaseHeaderComponent):
         }
 
     class Params(_BaseTextParams):
-        def __init__(self, *positionals: str, **named: str):
+        def __init__(self, *positionals, **named):
             """
             Fill the parameters for the header text component.
 
@@ -1009,6 +1029,11 @@ class HeaderImage(BaseHeaderComponent):
     - All templates are limited to one header component.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#media-headers>`_.
 
+    Example:
+
+        >>> header_image = HeaderImage(example=HeaderMediaExample(handle="example_handle"))
+        >>> header_image.params(image="https://example.com/image.jpg")
+
     Attributes:
         example: An example of the header image media.
     """
@@ -1063,6 +1088,11 @@ class HeaderVideo(BaseHeaderComponent):
     - All templates are limited to one header component.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#media-headers>`_.
 
+    Example:
+
+        >>> header_video = HeaderVideo(example=HeaderMediaExample(handle="example_handle"))
+        >>> header_video.params(video="https://example.com/video.mp4")
+
     Attributes:
         example: An example of the header video media.
     """
@@ -1116,6 +1146,11 @@ class HeaderDocument(BaseHeaderComponent):
 
     - All templates are limited to one header component.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#media-headers>`_.
+
+    Example:
+
+        >>> header_document = HeaderDocument(example=HeaderMediaExample(handle="example_handle"))
+        >>> header_document.params(document="https://example.com/document.pdf")
 
     Attributes:
         example: An example of the header document media.
@@ -1172,6 +1207,11 @@ class HeaderLocation(BaseHeaderComponent):
 
     - All templates are limited to one header component.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#location-headers>`_.
+
+    Example:
+
+        >>> header_location = HeaderLocation()
+        >>> header_location.params(lat=37.7749, lon=-122.4194, name="San Francisco", address="California, USA")
     """
 
     type: ComponentType = dataclasses.field(
@@ -1235,6 +1275,18 @@ class HeaderLocation(BaseHeaderComponent):
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class HeaderProduct(BaseHeaderComponent):
+    """
+    Represents a header product component in a template.
+
+    - All templates are limited to one header component.
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/spm-templates>`_.
+
+    Example:
+
+        >>> header_product = HeaderProduct()
+        >>> header_product.params(catalog_id="1234567890", sku="SKU12345")
+    """
+
     type: ComponentType = dataclasses.field(
         default=ComponentType.HEADER,
         init=False,
@@ -1299,12 +1351,21 @@ class BodyText(_BaseTextComponent):
 
     - All templates are limited to one body component.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#body>`_.
+
+    Example:
+        >>> body_text = BodyText("Hi {{name}}! How are you? Get {{discount}}% OFF!", name="John", discount=15)
+        >>> body_text.params(name="David", discount=20)
+
+        >>> body_text = BodyText("Hi {{1}}! How are you? Get {{2}}% OFF!", "John", 15)
+        >>> body_text.params("David", 20)
+
+        >>> print(body_text.preview())
     """
 
     type = ComponentType.BODY
 
     class Params(_BaseTextParams):
-        def __init__(self, *positionals: str, **named: str):
+        def __init__(self, *positionals, **named):
             """
             Fill the parameters for the body text component.
 
@@ -1353,11 +1414,15 @@ class _DoesNotSupportParams:
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class Footer(_DoesNotSupportParams, BaseFooterComponent):
+class FooterText(_DoesNotSupportParams, BaseFooterComponent):
     """
     Footers are optional text-only components that appear immediately after the body component. Templates are limited to one footer component.
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#footer>`_.
+
+    Example:
+
+        >>> footer = FooterText(text="Thank you for using our service!")
 
     Attributes:
         text: The footer text. 60 characters maximum.
@@ -1380,6 +1445,14 @@ class Buttons(_DoesNotSupportParams, TemplateBaseComponent):
     - If a template has more than three buttons, two buttons will appear in the delivered message and the remaining buttons will be replaced with a See all options button. Tapping the See all options button reveals the remaining buttons.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#buttons>`_.
 
+    Example:
+
+        >>> button1 = CopyCodeButton(example="SAVE20")
+        >>> button2 = PhoneNumberButton(text="Call Us", phone_number="+1234567890")
+        >>> button3 = URLButton(text="Visit Website", url="https://example.com")
+
+        >>> buttons = Buttons(buttons=[button1, button2, button3])
+
     Attributes:
         buttons: A list of button components.
     """
@@ -1400,6 +1473,10 @@ class CopyCodeButton(BaseButtonComponent):
 
     - Templates are limited to one copy code button.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#copy-code-buttons>`_.
+
+    Example:
+        >>> copy_code_button = CopyCodeButton(example="SAVE20")
+        >>> copy_code_button.params(coupon_code="SAVE20", index=0)
 
     Attributes:
         example: String to be copied to device's clipboard when tapped by the app user. Maximum 15 characters.
@@ -1475,6 +1552,17 @@ class FlowButton(BaseButtonComponent):
     - Flows can quickly be built in the playground and attached as JSON, or an existing Flow ID can be specified.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#flows-buttons>`_.
 
+    Example:
+
+        >>> flow_button = FlowButton(
+        ...     text="Start Flow",
+        ...     flow_id="1234567890",
+        ...     flow_action=FlowActionType.NAVIGATE,
+        ...     navigate_screen="entry_screen_id",
+        ...     icon=FlowButtonIcon.DOCUMENT
+        ... )
+        >>> flow_button.params(index=0, flow_token="example_token", flow_action_data={"key": "value"})
+
     Attributes:
         text: Button label text. 25 characters maximum.
         flow_id: Unique identifier of the Flow provided by WhatsApp. The Flow must be published. Cannot be used with ``flow_name`` or ``flow_json``.
@@ -1483,14 +1571,9 @@ class FlowButton(BaseButtonComponent):
         flow_action: navigate or data_exchange. Use ``NAVIGATE`` to predefine the first screen as part of the template message. Use ``DATA_EXCHANGE`` for advanced use-cases where the first screen is provided by your endpoint. Defaults to ``NAVIGATE``.
         navigate_screen: Optional only if ``flow_action`` is ``NAVIGATE``. The id of the entry screen of the Flow. Defaults to the first screen of the Flow.
         icon: Optional icon for the button.
-
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.FLOW,
-        init=False,
-        repr=False,
-    )
+    type = ComponentType.FLOW
     text: str
     flow_id: str | None
     flow_name: str | None
@@ -1518,7 +1601,6 @@ class FlowButton(BaseButtonComponent):
         navigate_screen: str | None = None,
         icon: FlowButtonIcon | None = None,
     ):
-        self.type = ComponentType.FLOW
         self.text = text
         self.flow_id = flow_id
         self.flow_name = flow_name
@@ -1637,6 +1719,10 @@ class PhoneNumberButton(_DoesNotSupportParams, BaseButtonComponent):
     - Note that some countries have special phone numbers that have leading zeros after the country calling code (e.g., +55-0-955-585-95436). If you assign one of these numbers to the button, the leading zero will be stripped from the number. If your number will not work without the leading zero, assign an alternate number to the button, or add the number as message body text.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#phone-number-buttons>`_.
 
+    Example:
+
+        >>> phone_button = PhoneNumberButton(text="Call Us", phone_number="+1234567890")
+
     Attributes:
         text: Button label text. 25 characters maximum.
         phone_number: Alphanumeric string. Business phone number to be called when the user taps the button.
@@ -1656,6 +1742,10 @@ class VoiceCallButton(_DoesNotSupportParams, BaseButtonComponent):
     """
     Voice call button initiates a WhatsApp voice call to the business. Templates are limited to one voice call button.
 
+    Example:
+
+        >>> voice_call_button = VoiceCallButton(text="Call Us On WhatsApp")
+
     Attributes:
         text: Button label text. 25 characters maximum.
     """
@@ -1673,6 +1763,7 @@ class QuickReplyButton(BaseButtonComponent):
     """
     Quick reply buttons are custom text-only buttons that immediately message you with the specified text string when tapped by the app user. A common use case-case is a button that allows your customer to easily opt-out of any marketing messages.
 
+    - When this button is tapped, you will receive a :class:`CallbackButton` update with the text you specified in the button and the data you provided in the button parameters.
     - Templates are limited to 10 quick reply buttons. If using quick reply buttons with other buttons, buttons must be organized into two groups: quick reply buttons and non-quick reply buttons. If grouped incorrectly, the API will return an error indicating an invalid combination.
     - Examples of valid groupings:
         Quick Reply, Quick Reply
@@ -1683,6 +1774,11 @@ class QuickReplyButton(BaseButtonComponent):
         Quick Reply, URL, Quick Reply
         URL, Quick Reply, URL
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#quick-reply-buttons>`_.
+
+    Example:
+
+        >>> quick_reply_button = QuickReplyButton(text="Yes, I want to subscribe!")
+        >>> quick_reply_button.params(callback_data="subscribe_yes", index=0)
 
     Attributes:
         text: Button label text. 25 characters maximum.
@@ -1698,11 +1794,11 @@ class QuickReplyButton(BaseButtonComponent):
     class Params(TemplateBaseComponent.Params):
         def __init__(self, *, callback_data: str | CallbackData, index: int):
             """
-               Fill the parameters for the quick reply button component.
+            Fill the parameters for the quick reply button component.
 
-               Args:
-                   callback_data: The data to send when the user clicks on the button (up to 256 characters, for complex data
-            You can use :class:`CallbackData`).
+            Args:
+                callback_data: The data to send when the user clicks on the button (up to 256 characters, for complex data
+                 You can use :class:`CallbackData`).
             """
             self.callback_data = callback_data
             self.index = index
@@ -1726,7 +1822,7 @@ class QuickReplyButton(BaseButtonComponent):
 
         Args:
             callback_data: The data to send when the user clicks on the button (up to 256 characters, for complex data
-            You can use :class:`CallbackData`).
+             You can use :class:`CallbackData`).
             index: Indicates order in which button should appear, if the template uses multiple buttons. Buttons are zero-indexed, so setting value to 0 will cause the button to appear first, and another button with an index of 1 will appear next, etc.
 
         Returns:
@@ -1741,18 +1837,23 @@ class URLButton(BaseButtonComponent):
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#url-buttons>`_.
 
+    Example:
+
+        >>> url_button = URLButton(text="Visit Website", url="https://example.com?ref={{1}}", example="https://example.com?ref=template")
+        >>> url_button.params(url_variable="example_variable", index=0)
+
     Attributes:
         text: Button label text. 25 characters maximum.
         url: URL of website that loads in the device's default mobile web browser when the button is tapped by the app user. Supports 1 variable, appended to the end of the URL string. Maximum 2000 characters.
         example: Example URL to be used in the template. Maximum 2000 characters.
     """
 
+    type = ComponentType.URL
     text: str
     url: str
     example: str | None
 
     def __init__(self, *, text: str, url: str, example: str | None = None):
-        self.type = ComponentType.URL
         self.text = text
         self.url = url
         self.example = example
@@ -1826,6 +1927,11 @@ class CatalogButton(BaseButtonComponent):
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/catalog-templates>`_.
 
+    Example:
+
+        >>> catalog_button = CatalogButton(text="View Products")
+        >>> catalog_button.params(thumbnail_product_sku="SKU12345", index=0)
+
     Attributes:
         text: Button label text. 25 characters maximum.
     """
@@ -1890,6 +1996,31 @@ class MPMButton(BaseButtonComponent):
     Multi-product message (MPM) buttons are special, non-customizable buttons that, when tapped, display up to 30 products from your ecommerce catalog, organized in up to 10 sections, in a single message.
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/mpm-templates>`_.
+
+    Example:
+
+        >>> from pywa.types import ProductsSection, Product
+        >>> mpm_button = MPMButton(text="View Products")
+        >>> mpm_button.params(
+        ...     thumbnail_product_sku="SKU12345",
+        ...     index=0,
+        ...     product_sections=[
+        ...        ProductsSection(
+        ...            title="Section 1",
+        ...            products=[
+        ...                Product(sku="SKU12345", name="Product 1", price=100.0),
+        ...                Product(sku="SKU12346", name="Product 2", price=150.0),
+        ...            ]
+        ...        ),
+        ...        ProductsSection(
+        ...            title="Section 2",
+        ...            products=[
+        ...                Product(sku="SKU12347", name="Product 3", price=200.0),
+        ...                Product(sku="SKU12348", name="Product 4", price=250.0),
+        ...            ]
+        ...        ),
+        ...     ],
+        ... )
 
     Attributes:
         text: Button label text. 25 characters maximum.
@@ -1968,6 +2099,11 @@ class SPMButton(_DoesNotSupportParams, BaseButtonComponent):
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/spm-templates>`_.
 
+    Example:
+
+        >>> header_product = HeaderProduct()
+        >>> spm_button = SPMButton(text="View Product")
+
     Attributes:
         text: Button label text. 25 characters maximum.
     """
@@ -1986,6 +2122,10 @@ class CallPermissionRequestButton(_DoesNotSupportParams, BaseButtonComponent):
     Call permissions request buttons are used to request call permissions from the user. When tapped, they open a dialog that allows the user to grant or deny call permissions.
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-call-permissions#create-and-send-call-permission-request-template-messages>`_.
+
+    Example:
+
+        >>> call_permission_button = CallPermissionRequestButton(text="Request Call Permission")
     """
 
     type: ComponentType = dataclasses.field(
@@ -2019,6 +2159,13 @@ class OTPSupportedApp:
 
     - Read more about `Supported Apps <https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates/autofill-button-authentication-templates#supported-apps>`_.
 
+    Example:
+
+        >>> supported_app = OTPSupportedApp(
+        ...     package_name="com.example.myapp",
+        ...     signature_hash="12345678901"
+        ... )
+
     Attributes:
         package_name: Your Android app's package name. Maximum 224 characters.
         signature_hash: Your app signing key hash. See `App Signing Key Hash <https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates/autofill-button-authentication-templates#app-signing-key-hash>`_. Must be exactly 11 characters.
@@ -2028,9 +2175,9 @@ class OTPSupportedApp:
     signature_hash: str
 
 
-class _BaseButtonParams:
+class _BaseOTPButtonParams:
     """
-    Base class for button parameters.
+    Base class for one-time password (OTP) button parameters.
     """
 
     class Params(TemplateBaseComponent.Params):
@@ -2075,12 +2222,26 @@ class _BaseButtonParams:
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class OneTapOTPButton(_BaseButtonParams, BaseButtonComponent):
+class OneTapOTPButton(_BaseOTPButtonParams, BaseButtonComponent):
     """
     One-tap autofill authentication templates allow you to send a one-time password or code along with an one-tap autofill button to your users. When a WhatsApp user taps the autofill button, the WhatsApp client triggers an activity which opens your app and delivers it the password or code.
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates/autofill-button-authentication-templates>`_.
     - Read more about `Authentication Templates <https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates>`_.
+
+    Example:
+
+        >>> one_tap_button = OneTapOTPButton(
+        ...     text="Autofill Code",
+        ...     autofill_text="Autofill",
+        ...     supported_apps=[
+        ...         OTPSupportedApp(
+        ...             package_name="com.example.myapp",
+        ...             signature_hash="12345678901"
+        ...         )
+        ...     ]
+        ... )
+        >>> one_tap_button.params(otp="123456")
 
     Attributes:
         text: Copy code button label text. If omitted, the text will default to a pre-set value localized to the template's language. For example, ``Copy Code`` for English (US). Maximum 25 characters.
@@ -2104,7 +2265,7 @@ class OneTapOTPButton(_BaseButtonParams, BaseButtonComponent):
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class ZeroTapOTPButton(_BaseButtonParams, BaseButtonComponent):
+class ZeroTapOTPButton(_BaseOTPButtonParams, BaseButtonComponent):
     """
     Zero-tap authentication templates allow your users to receive one-time passwords or codes via WhatsApp without having to leave your app.
 
@@ -2115,6 +2276,21 @@ class ZeroTapOTPButton(_BaseButtonParams, BaseButtonComponent):
     - Zero-tap is only supported on Android. If you send a zero-tap authentication template to a WhatsApp user who is using a non-Android device, the WhatsApp client will display a copy code button instead.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates/zero-tap-authentication-templates>`_.
     - Read more about `Authentication Templates <https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates>`_.
+
+    Example:
+
+        >>> zero_tap_button = ZeroTapOTPButton(
+        ...     text="Autofill Code",
+        ...     autofill_text="Autofill",
+        ...     zero_tap_terms_accepted=True,
+        ...     supported_apps=[
+        ...         OTPSupportedApp(
+        ...             package_name="com.example.myapp",
+        ...             signature_hash="12345678901"
+        ...         )
+        ...    ]
+        ... )
+        >>> zero_tap_button.params(otp="123456")
 
     Attributes:
         text: Copy code button label text. If omitted, the text will default to a pre-set value localized to the template's language. For example, ``Copy Code`` for English (US). Maximum 25 characters.
@@ -2140,12 +2316,17 @@ class ZeroTapOTPButton(_BaseButtonParams, BaseButtonComponent):
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class CopyCodeOTPButton(_BaseButtonParams, BaseButtonComponent):
+class CopyCodeOTPButton(_BaseOTPButtonParams, BaseButtonComponent):
     """
     Copy code authentication templates allow you to send a one-time password or code along with a copy code button to your users. When a WhatsApp user taps the copy code button, the WhatsApp client copies the password or code to the device's clipboard. The user can then switch to your app and paste the password or code into your app.
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates/copy-code-button-authentication-templates>`_.
     - Read more about `Authentication Templates <https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates>`_.
+
+    Example:
+
+        >>> copy_code_button = CopyCodeOTPButton(text="Copy Code")
+        >>> copy_code_button.params(otp="123456")
 
     Attributes:
         text: Copy code button label text. If omitted, the text will default to a pre-set value localized to the template's language. For example, ``Copy Code`` for English (US). Maximum 25 characters.
@@ -2172,6 +2353,13 @@ class LimitedTimeOfferConfig:
     """
     Configuration for a limited-time offer in a WhatsApp template.
 
+    Example:
+
+        >>> limited_time_offer_config = LimitedTimeOfferConfig(
+        ...     text="20% off on all products",
+        ...     has_expiration=True
+        ... )
+
     Attributes:
         text: Offer details text. Maximum 16 characters.
         has_expiration: Set to ``True`` to have the `offer expiration details <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/limited-time-offer-templates#offer-expiration-details>`_ appear in the delivered message.
@@ -2187,9 +2375,19 @@ class LimitedTimeOffer(TemplateBaseComponent):
     Limited-time offer templates allow you to display expiration dates and running countdown timers for offer codes in template messages, making it easy for you to communicate time-bound offers and drive customer engagement.
 
     - Only templates categorized as MARKETING are supported.
-    - Footer components are not supported.
+    - FooterText components are not supported.
     - Users who view a limited-time offer template message using that WhatsApp web app or desktop app will not see the offer, but will instead see a message indicating that they have received a message but that it's not supported in the client they are using.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/limited-time-offer-templates>`_.
+
+    Example:
+
+        >>> limited_time_offer = LimitedTimeOffer(
+        ...     limited_time_offer=LimitedTimeOfferConfig(
+        ...         text="20% off on all products",
+        ...         has_expiration=True
+        ...     )
+        ... )
+        >>> limited_time_offer.params(expiration_time=datetime.datetime(2023, 12, 31, 23, 59, 59))
 
     Attributes:
         limited_time_offer: Configuration for the limited-time offer, including text and expiration settings.
@@ -2251,6 +2449,47 @@ class Carousel(TemplateBaseComponent):
     - All cards defined on a template must have the same components.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/media-card-carousel-templates>`_.
 
+    Example:
+
+        >>> carousel = Carousel(cards=[
+        ...     card1 := CarouselMediaCard(
+        ...         components=[
+        ...             hi := HeaderImage(example=HeaderMediaExample(handle="example_handle")),
+        ...             b1 := BodyText(text="Hi {{name}}, this is a first card!", name="John"),
+        ...             FooterText(text="Card 1"),
+        ...             qr := QuickReplyButton(text="Unsubscribe"),
+        ...         ]
+        ...     ),
+        ...     card2 := CarouselMediaCard(
+        ...         components=[
+        ...             hv := HeaderVideo(example=HeaderMediaExample(handle="example_handle")),
+        ...             b2 := BodyText(text="Hello {{name}}, this is the second card!", name="John"),
+        ...             FooterText(text="Card 2"),
+        ...             url := URLButton(text="Website", url="https://example.com?ref={{1}}", example="https://example.com?ref=template"),
+        ...         ]
+        ...     ),
+        ... ])
+
+        >>> carousel.params(cards=[
+        ...     card1.params(
+        ...         index=0,
+        ...         params=[
+        ...             hi.params(image="https://example.com/image.jpg"),
+        ...             b1.params(name="James"),
+        ...             qr.params(callback_data="unsubscribe", index=0),
+        ...         ],
+        ...     ),
+        ...     card2.params(
+        ...         index=1,
+        ...         params=[
+        ...             hv.params(video="https://example.com/video.mp4"),
+        ...             b2.params(name="James"),
+        ...             url.params(url_variable="example_variable", index=0),
+        ...         ],
+        ...     ),
+        ... ])
+
+
     Attributes:
         cards: A list of :class:`CarouselMediaCard` objects, each representing a media card in the carousel.
     """
@@ -2263,12 +2502,12 @@ class Carousel(TemplateBaseComponent):
     cards: list[CarouselMediaCard]
 
     class Params(TemplateBaseComponent.Params):
-        def __init__(self, *, cards: list[CarouselMediaCardParam]):
+        def __init__(self, *, cards: list[CarouselMediaCard.Params]):
             """
             Fill the parameters for the carousel component.
 
             Args:
-                cards: A list of parameters for each media card in the carousel.
+                cards: A list of card parameters, each representing a media card in the carousel.
             """
             self.cards = cards
 
@@ -2278,12 +2517,12 @@ class Carousel(TemplateBaseComponent):
                 "cards": [card.to_dict(client, sender) for card in self.cards],
             }
 
-    def params(self, *, cards: list[CarouselMediaCardParam]) -> Params:
+    def params(self, *, cards: list[CarouselMediaCard.Params]) -> Params:
         """
         Fill the parameters for the carousel component.
 
         Args:
-            cards: A list of parameters for each media card in the carousel.
+            cards: A list of card parameters, each representing a media card in the carousel.
 
         Returns:
             An instance of Params containing the parameters for the carousel.
@@ -2296,30 +2535,68 @@ class CarouselMediaCard:
     """
     Carousel templates are composed of message body text and up to 10 media cards. Each card in the template has an :class:`HeaderImage` or :class:`HeaderVideo` header asset, card :class:`BodyText`, and up to two buttons. Button combinations can be a mix of :class:`QuickReplyButton` buttons, :class:`PhoneNumberButton` buttons, and :class:`URLButton` buttons.
 
+    Example:
+
+        >>> carousel_media_card = CarouselMediaCard(
+        ...     components=[
+        ...         HeaderImage(example=HeaderMediaExample(handle="example_handle")),
+        ...         BodyText(text="Hi {{name}}, this is a first card!", name="John"),
+        ...         FooterText(text="Card 1"),
+        ...         QuickReplyButton(text="Unsubscribe"),
+        ...     ]
+        ... )
+        >>> carousel_media_card.params(
+        ...     index=0,
+        ...     params=[
+        ...         HeaderImage.Params(image="https://example.com/image.jpg"),
+        ...         BodyText.Params(name="James"),
+        ...         QuickReplyButton.Params(callback_data="unsubscribe", index=0),
+        ...     ],
+        ... )
+
     Attributes:
         components: A list of components that make up the media card, such as header, body, footer, and buttons.
     """
 
     components: list[TemplateBaseComponent | dict]
 
+    class Params(TemplateBaseComponent.Params):
+        """
+        Parameters for the carousel media card.
+        This class is not meant to be instantiated directly.
+        """
 
-class CarouselMediaCardParam:
-    def __init__(self, *, params: list[TemplateBaseComponent.Params], index: int):
+        def __init__(self, *, params: list[TemplateBaseComponent.Params], index: int):
+            """
+            Initialize the parameters for the carousel media card.
+
+            Args:
+                params: A list of parameters for the components in the media card.
+                index: The index of the media card in the carousel (0-based).
+            """
+            self.params = params
+            self.index = index
+
+        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+            return {
+                "index": self.index,
+                "parameters": [param.to_dict(client, sender) for param in self.params],
+            }
+
+    def params(
+        self, *, params: list[TemplateBaseComponent.Params], index: int
+    ) -> Params:
         """
         Fill the parameters for the carousel media card.
 
         Args:
             params: A list of parameters for the components in the media card.
             index: The index of the media card in the carousel (0-based).
-        """
-        self.params = params
-        self.index = index
 
-    def to_dict(self, client: WhatsApp, sender: str) -> dict:
-        return {
-            "index": self.index,
-            "parameters": [param.to_dict(client, sender) for param in self.params],
-        }
+        Returns:
+            An instance of Params containing the parameters for the media card.
+        """
+        return self.Params(params=params, index=index)
 
 
 # ========== AUTHENTICATION ==========
@@ -2329,6 +2606,11 @@ class CarouselMediaCardParam:
 class AuthenticationBody(BaseBodyComponent):
     """
     Authentication body component for Authentication templates.
+
+    Example:
+
+        >>> authentication_body = AuthenticationBody(add_security_recommendation=True)
+        >>> authentication_body.params(otp="123456")
 
     Attributes:
         add_security_recommendation: Set to ``True`` if you want the template to include the string `For your security, do not share this code`. Set to ``False`` to exclude the string.
@@ -2380,6 +2662,10 @@ class AuthenticationFooter(_DoesNotSupportParams, BaseFooterComponent):
     """
     Authentication footer component for Authentication templates.
 
+    Example:
+
+        >>> authentication_footer = AuthenticationFooter(code_expiration_minutes=5)
+
     Attributes:
         code_expiration_minutes: Indicates the number of minutes the password or code is valid.
          If included, the code expiration warning and this value will be displayed in the delivered message. The button will be disabled in the delivered message the indicated number of minutes from when the message was sent.
@@ -2400,11 +2686,31 @@ class Template:
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates>`_.
 
+    Example:
+
+        >>> template = Template(
+        ...     name="my_template",
+        ...     language=TemplateLanguage.ENGLISH_US,
+        ...     category=TemplateCategory.MARKETING,
+        ...     components=[
+        ...         HeaderText(text="Welcome to our service!"),
+        ...         BodyText(text="Hello {{name}}, thank you for joining us!"),
+        ...         FooterText(text="Best regards, The Team"),
+        ...         Buttons(
+        ...             buttons=[
+        ...                 QuickReplyButton(text="Get Started"),
+        ...                 URLButton(text="Visit Website", url="https://example.com?ref={{1}}")
+        ...             ]
+        ...         )
+        ...     ],
+        ...     parameter_format=ParamFormat.NAMED,
+        ... )
+
     Attributes:
         name: The name of the template (should be unique, maximum 512 characters).
         language: The language of the template (See `Supported Languages <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/supported-languages>`_).
         category: The category of the template (See `Template Categorization <https://developers.facebook.com/docs/whatsapp/updates-to-pricing/new-template-guidelines#template-categorization>`_).
-        components: Components that make up the template. Header, BodyText, Footer, Buttons, Cards, etc. (See `Template Components <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components>`_).
+        components: Components that make up the template. Header, BodyText, FooterText, Buttons, Cards, etc. (See `Template Components <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components>`_).
         parameter_format: The type of parameter formatting the :class:`HeaderText` and :class:`BodyText` components of the template will use. Defaults to ``POSITIONAL``.
         message_send_ttl_seconds: The time-to-live (TTL) for the template message in seconds. (See `Time-to-live (TTL) <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#time-to-live--ttl---customization--defaults--min-max-values--and-compatibility>`_).
     """
@@ -2456,7 +2762,7 @@ class AuthenticationTemplates(Template):
 _comp_types_to_component: dict[ComponentType, type[TemplateBaseComponent]] = {
     ComponentType.HEADER: BaseHeaderComponent,
     ComponentType.BODY: BodyText,
-    ComponentType.FOOTER: Footer,
+    ComponentType.FOOTER: FooterText,
     ComponentType.BUTTONS: Buttons,
     ComponentType.CAROUSEL: Carousel,
     ComponentType.LIMITED_TIME_OFFER: LimitedTimeOffer,
@@ -2527,7 +2833,7 @@ def _parse_component(component: dict) -> TemplateBaseComponent | dict:
         if "code_expiration_minutes" in component:
             return AuthenticationFooter.from_dict(component)
         elif "text" in component:
-            return Footer.from_dict(component)
+            return FooterText.from_dict(component)
         _logger.warning(
             "Unknown footer component: %s. Defaulting to dictionary representation.",
             component,
@@ -2598,7 +2904,7 @@ class TemplateDetails:
         status: The status of the template (See `Template Status <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#template-status>`_).
         category: The category of the template (See `Template Categorization <https://developers.facebook.com/docs/whatsapp/updates-to-pricing/new-template-guidelines#template-categorization>`_).
         language: The language of the template (See `Supported Languages <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/supported-languages>`_).
-        components: Components that make up the template. Header, BodyText, Footer, Buttons, Cards, etc. (See `Template Components <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components>`_).
+        components: Components that make up the template. Header, Body, Footer, Buttons, Cards, etc. (See `Template Components <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components>`_).
         parameter_format: The type of parameter formatting the Header and BodyText components of the template will use.
         message_send_ttl_seconds: The time-to-live (TTL) for the template message in seconds (See `Time-to-live (TTL) <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#time-to-live--ttl---customization--defaults--min-max-values--and-compatibility>`_).
         correct_category: The correct category of the template, if applicable.

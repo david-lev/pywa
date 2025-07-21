@@ -20,7 +20,7 @@ from pywa.types.template import (
     HeaderVideo as _HeaderVideo,
     HeaderDocument as _HeaderDocument,
     Carousel as _Carousel,
-    CarouselMediaCardParam as _CarouselMediaCardParam,
+    CarouselMediaCard as _CarouselMediaCard,
     HeaderFormatType,
     ComponentType,
 )  # noqa MUST BE IMPORTED FIRST
@@ -81,7 +81,7 @@ class HeaderDocument(_HeaderDocument):
 
 class Carousel(_Carousel):
     class Params(_Carousel.Params):
-        cards: list[CarouselMediaCardParam]
+        cards: list[CarouselMediaCard.Params]
 
         async def to_dict(self, client: WhatsApp, sender: str) -> dict:
             return {
@@ -93,17 +93,18 @@ class Carousel(_Carousel):
             }
 
 
-class CarouselMediaCardParam(_CarouselMediaCardParam):
-    async def to_dict(self, client: WhatsApp, sender: str) -> dict:
-        return {
-            "index": self.index,
-            "parameters": [
-                (await param.to_dict(client, sender))
-                if utils.is_async_callable(param.to_dict)
-                else param.to_dict(client, sender)
-                for param in self.params
-            ],
-        }
+class CarouselMediaCard(_CarouselMediaCard):
+    class Params(_CarouselMediaCard.Params):
+        async def to_dict(self, client: WhatsApp, sender: str) -> dict:
+            return {
+                "index": self.index,
+                "parameters": [
+                    (await param.to_dict(client, sender))
+                    if utils.is_async_callable(param.to_dict)
+                    else param.to_dict(client, sender)
+                    for param in self.params
+                ],
+            }
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
@@ -246,7 +247,7 @@ class TemplateDetails(_TemplateDetails):
         status: The status of the template (See `Template Status <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#template-status>`_).
         category: The category of the template (See `Template Categorization <https://developers.facebook.com/docs/whatsapp/updates-to-pricing/new-template-guidelines#template-categorization>`_).
         language: The language of the template (See `Supported Languages <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/supported-languages>`_).
-        components: Components that make up the template. Header, BodyText, Footer, Buttons, Cards, etc. (See `Template Components <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components>`_).
+        components: Components that make up the template. Header, BodyText, FooterText, Buttons, Cards, etc. (See `Template Components <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components>`_).
         parameter_format: The type of parameter formatting the class:`HeaderText` and BodyText components of the template will use.
         message_send_ttl_seconds: The time-to-live (TTL) for the template message in seconds (See `Time-to-live (TTL) <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#time-to-live--ttl---customization--defaults--min-max-values--and-compatibility>`_).
         correct_category: The correct category of the template, if applicable.

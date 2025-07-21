@@ -1591,7 +1591,9 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             data=await self.api.get_business_phone_number(
                 phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
                 fields=tuple(
-                    field.name for field in dataclasses.fields(BusinessPhoneNumber)
+                    field.name
+                    for field in dataclasses.fields(BusinessPhoneNumber)
+                    if not field.name.startswith("_")
                 ),
             )
         )
@@ -1623,7 +1625,9 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 waba_id=helpers.resolve_waba_id_param(self, waba_id),
                 pagination=pagination.to_dict() if pagination else None,
                 fields=tuple(
-                    field.name for field in dataclasses.fields(BusinessPhoneNumber)
+                    field.name
+                    for field in dataclasses.fields(BusinessPhoneNumber)
+                    if not field.name.startswith("_")
                 ),
             ),
             item_factory=BusinessPhoneNumber.from_dict,
@@ -1983,7 +1987,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                             text='Shop now through {{end_date}} and use code {{discount_code}} to get {{discount_amount}} off of all merchandise.',
                             end_date='the end of August', discount_code='25OFF', discount_amount='25%'
                         ),
-                        t.Footer(text='Use the buttons below to manage your marketing subscriptions'),
+                        t.FooterText(text='Use the buttons below to manage your marketing subscriptions'),
                         t.Buttons(
                             buttons=[
                                 t.QuickReplyButton(text='Unsubscribe from Promos'),
@@ -2072,7 +2076,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         to: str | int,
         name: str,
         language: TemplateLanguage,
-        params: list[TemplateBaseComponent.Params],
+        params: list[TemplateBaseComponent.Params | dict],
         *,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -2112,7 +2116,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                         text='Shop now through {{end_date}} and use code {{discount_code}} to get {{discount_amount}} off of all merchandise.',
                         end_date='the end of August', discount_code='25OFF', discount_amount='25%'
                     ),
-                    Footer(text='Use the buttons below to manage your marketing subscriptions'),
+                    FooterText(text='Use the buttons below to manage your marketing subscriptions'),
                     Buttons(
                         buttons=[
                             uns_from_promos := QuickReplyButton(text='Unsubscribe from Promos'),
@@ -2217,7 +2221,9 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             response=await self.api.get_templates(
                 waba_id=helpers.resolve_waba_id_param(self, waba_id),
                 fields=tuple(
-                    field.name for field in dataclasses.fields(TemplateDetails)
+                    field.name
+                    for field in dataclasses.fields(TemplateDetails)
+                    if not field.name.startswith("_")
                 ),
                 filters={
                     k: v
@@ -2255,7 +2261,15 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             A TemplateDetails object containing the template details.
         """
         return TemplateDetails.from_dict(
-            data=await self.api.get_template(template_id=str(template_id)), client=self
+            data=await self.api.get_template(
+                template_id=str(template_id),
+                fields=tuple(
+                    field.name
+                    for field in dataclasses.fields(TemplateDetails)
+                    if not field.name.startswith("_")
+                ),
+            ),
+            client=self,
         )
 
     async def update_template(

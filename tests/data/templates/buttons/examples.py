@@ -15,7 +15,7 @@ seasonal_promotion = Template(
             "25OFF",
             "25%",
         ),
-        Footer(text="Use the buttons below to manage your MARKETING subscriptions"),
+        FooterText(text="Use the buttons below to manage your MARKETING subscriptions"),
         Buttons(
             buttons=[
                 QuickReplyButton(text="Unsubscribe from Promos"),
@@ -60,7 +60,7 @@ order_delivery_update = Template(
             "Mark",
             "566701",
         ),
-        Footer(text="To stop receiving delivery updates, tap the button below."),
+        FooterText(text="To stop receiving delivery updates, tap the button below."),
         Buttons(
             buttons=[
                 QuickReplyButton(text="Stop Delivery Updates"),
@@ -78,7 +78,7 @@ abandoned_cart_offer = Template(
         BodyText(
             "Use code {{1}} to get {{2}} off our newest succulent!", "25OFF", "25%"
         ),
-        Footer(text="Offer ends September 30, 2024"),
+        FooterText(text="Offer ends September 30, 2024"),
         Buttons(
             buttons=[
                 SPMButton(text="View"),
@@ -98,7 +98,7 @@ intro_catalog_offer = Template(
             "400",
             "3",
         ),
-        Footer(text="Best grocery deals on WhatsApp!"),
+        FooterText(text="Best grocery deals on WhatsApp!"),
         Buttons(
             buttons=[
                 CatalogButton(text="View catalog"),
