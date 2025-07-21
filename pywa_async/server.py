@@ -243,8 +243,11 @@ class Server:
                     handler_type
                 ].from_update(client=self, update=update)
                 if constructed_update:
-                    if handler_type._is_user_update and await self._process_listener(
-                        cast(BaseUserUpdate, constructed_update)
+                    if (
+                        handler_type._update._is_user_update
+                        and await self._process_listener(
+                            cast(BaseUserUpdate, constructed_update)
+                        )
                     ):
                         return
                     await self._invoke_callbacks(handler_type, constructed_update)
