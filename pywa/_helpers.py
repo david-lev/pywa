@@ -4,8 +4,8 @@ __all__ = [
     "resolve_buttons_param",
     "resolve_media_param",
     "resolve_tracker_param",
-    "resolve_phone_id_param",
-    "resolve_waba_id_param",
+    "resolve_arg",
+    "upload_template_media_components",
     "resolve_flow_json_param",
     "get_interactive_msg",
     "get_media_msg",
@@ -16,8 +16,11 @@ __all__ = [
 
 import datetime
 import json
+import mimetypes
 import pathlib
 from typing import Any, BinaryIO, Literal, Iterable, TYPE_CHECKING
+
+import httpx
 
 from .types import (
     FlowMetricName,
@@ -34,6 +37,11 @@ from .types import (
 )
 from pywa.types.others import InteractiveType
 from .types.media import Media
+from .types.template import (
+    TemplateBaseComponent,
+    _BaseMediaHeaderComponent,
+    HeaderFormatType,
+)
 
 if TYPE_CHECKING:
     from pywa import WhatsApp
@@ -89,10 +97,20 @@ def resolve_buttons_param(
 
 
 _media_types_default_filenames = {
-    MessageType.IMAGE: "image.jpg",
-    MessageType.VIDEO: "video.mp4",
-    MessageType.AUDIO: "audio.mp3",
-    MessageType.STICKER: "sticker.webp",
+    "IMAGE": "pywa-image.jpg",
+    "VIDEO": "pywa-video.mp4",
+    "AUDIO": "pywa-audio.mp3",
+    "STICKER": "pywa-sticker.webp",
+}
+_template_header_formats_filename = {
+    HeaderFormatType.IMAGE: "pywa-template-header-image.jpg",
+    HeaderFormatType.VIDEO: "pywa-template-header-video.mp4",
+    HeaderFormatType.DOCUMENT: "pywa-template-header-document.pdf",
+}
+_template_header_formats_default_mime_types = {
+    HeaderFormatType.IMAGE: "image/jpeg",
+    HeaderFormatType.VIDEO: "video/mp4",
+    HeaderFormatType.DOCUMENT: "application/pdf",
 }
 
 
@@ -101,10 +119,7 @@ def resolve_media_param(
     media: str | Media | pathlib.Path | bytes | BinaryIO,
     mime_type: str | None,
     filename: str | None,
-    media_type: Literal[
-        MessageType.IMAGE, MessageType.VIDEO, MessageType.AUDIO, MessageType.STICKER
-    ]
-    | None,
+    media_type: str | None,
     phone_id: str,
 ) -> tuple[bool, str]:
     """
@@ -126,34 +141,95 @@ def resolve_media_param(
     ).id
 
 
+def upload_template_media_components(
+    wa: WhatsApp,
+    app_id: int | str | None,
+    components: list[TemplateBaseComponent | dict],
+) -> None:
+    """
+    Internal method to upload media components examples in a template.
+    """
+    for c in components:
+        if not isinstance(c, _BaseMediaHeaderComponent):
+            continue
+        if c._handle is not None:
+            # Already uploaded
+            continue
+
+        example = c.example
+        filename: str | None = None
+        mime_type: str | None = None
+        raw_bytes: bytes | None = None
+
+        if isinstance(example, (str, pathlib.Path, Media)):
+            if str(example).startswith(("https://", "http://")):  # URL
+                res = httpx.Client(follow_redirects=True).get(str(example))
+                res.raise_for_status()
+                raw_bytes = res.content
+                mime_type = res.headers.get("Content-Type")
+            elif (path := pathlib.Path(example)).is_file():  # File path
+                with open(path, "rb") as f:
+                    filename = path.name
+                    mime_type = mimetypes.guess_type(path)[0]
+                    raw_bytes = f.read()
+            elif str(example).isdigit() or isinstance(
+                example, Media
+            ):  # WhatsApp Media ID
+                url_res = wa.get_media_url(
+                    media_id=example.id if isinstance(example, Media) else example
+                )
+                mime_type = url_res.mime_type
+                raw_bytes = wa.download_media(url=url_res.url, in_memory=True)
+        elif isinstance(example, bytes):  # Raw bytes
+            raw_bytes = example
+
+        if not raw_bytes:
+            raise ValueError(
+                f"Invalid media example for component {c.__class__.__name__}: {example}. "
+                "It must be a URL, file path, WhatsApp Media, or bytes."
+            )
+        app_id = resolve_arg(
+            wa=wa,
+            value=app_id,
+            method_arg="app_id",
+            client_arg="app_id",
+        )
+        c._handle = wa.api.upload_file(
+            upload_session_id=wa.api.create_upload_session(
+                app_id=wa.app_id,
+                file_name=filename
+                or _template_header_formats_filename.get(
+                    c.format, "pywa-template-header"
+                ),
+                file_length=len(raw_bytes),
+                file_type=mime_type
+                or _template_header_formats_default_mime_types.get(
+                    c.format, "application/octet-stream"
+                ),
+            )["id"],
+            file=raw_bytes,
+            file_offset=0,
+        )["h"]
+
+
 def resolve_tracker_param(tracker: str | CallbackData | None) -> str | None:
     """Internal method to resolve the `tracker` parameter."""
     return tracker.to_str() if isinstance(tracker, CallbackData) else tracker
 
 
-def resolve_phone_id_param(
-    wa: WhatsApp, phone_id: str | int | None, arg_name: str
+def resolve_arg(
+    *,
+    wa: WhatsApp,
+    value: str | int | None,
+    method_arg: str,
+    client_arg: str,
 ) -> str:
-    """Internal method to resolve the `phone_id` parameter."""
-    if phone_id is not None:
-        return str(phone_id)
-    if wa.phone_id is not None:
-        return wa.phone_id
+    if value is not None:
+        return str(value)
+    if getattr(wa, client_arg, None) is not None:
+        return str(getattr(wa, client_arg))
     raise ValueError(
-        f"When initializing WhatsApp without `phone_id`, `{arg_name}` must be provided."
-    )
-
-
-def resolve_waba_id_param(
-    wa: WhatsApp, waba_id: str | int | None, arg_name: str = "waba_id"
-) -> str:
-    """Internal method to resolve the `waba_id` parameter."""
-    if waba_id is not None:
-        return str(waba_id)
-    if wa.business_account_id is not None:
-        return wa.business_account_id
-    raise ValueError(
-        f"When initializing WhatsApp without `business_account_id`, `{arg_name}` must be provided."
+        f"When initializing WhatsApp without `{client_arg}`, `{method_arg}` must be provided."
     )
 
 

@@ -13,7 +13,6 @@ import hashlib
 import json
 import logging
 import mimetypes
-import os
 import pathlib
 import warnings
 from types import NoneType, ModuleType
@@ -205,7 +204,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         callback_url: str | None = None,
         callback_url_scope: utils.CallbackURLScope = utils.CallbackURLScope.APP,
         webhook_fields: Iterable[str] | None = None,
-        app_id: int | None = None,
+        app_id: int | str | None = None,
         app_secret: str | None = None,
         webhook_challenge_delay: int = _DEFAULT_VERIFY_DELAY_SEC,
         business_private_key: str | None = None,
@@ -302,15 +301,15 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             )
 
         self.phone_id = str(phone_id) if phone_id is not None else None
+        self.business_account_id = (
+            str(business_account_id) if business_account_id is not None else None
+        )
+        self.app_id = str(app_id) if app_id is not None else None
         self.filter_updates = (
             filter_updates
             if (phone_id is not None or business_account_id is not None)
             else False
         )
-        self.business_account_id = (
-            str(business_account_id) if business_account_id is not None else None
-        )
-
         self._handlers: dict[
             type[Handler] | None,
             list[Handler],
@@ -607,7 +606,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The sent message.
         """
-        sender = helpers.resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_arg(
+            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
+        )
         if not buttons:
             return SentMessage.from_sent_update(
                 client=self,
@@ -695,7 +696,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The sent image message.
         """
-        sender = helpers.resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_arg(
+            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
+        )
         is_url, image = helpers.resolve_media_param(
             wa=self,
             media=image,
@@ -795,7 +798,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The sent video.
         """
-        sender = helpers.resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_arg(
+            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
+        )
         is_url, video = helpers.resolve_media_param(
             wa=self,
             media=video,
@@ -899,7 +904,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             The sent document.
         """
 
-        sender = helpers.resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_arg(
+            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
+        )
         is_url, document = helpers.resolve_media_param(
             wa=self,
             media=document,
@@ -993,7 +1000,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             The sent audio file.
         """
 
-        sender = helpers.resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_arg(
+            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
+        )
         is_url, audio = helpers.resolve_media_param(
             wa=self,
             media=audio,
@@ -1053,7 +1062,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             The sent message.
         """
 
-        sender = helpers.resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_arg(
+            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
+        )
         is_url, sticker = helpers.resolve_media_param(
             wa=self,
             media=sticker,
@@ -1114,7 +1125,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             The message ID of the reaction (You can't use this message id to remove the reaction or perform any other
             action on it. instead, use the message ID of the message you reacted to).
         """
-        sender = helpers.resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_arg(
+            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
+        )
         return SentMessage.from_sent_update(
             client=self,
             update=self.api.send_message(
@@ -1162,7 +1175,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             The message ID of the reaction (You can't use this message id to re-react or perform any other action on it.
             instead, use the message ID of the message you unreacted to).
         """
-        sender = helpers.resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_arg(
+            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
+        )
         return SentMessage.from_sent_update(
             client=self,
             update=self.api.send_message(
@@ -1215,7 +1230,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The sent location.
         """
-        sender = helpers.resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_arg(
+            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
+        )
         return SentMessage.from_sent_update(
             client=self,
             update=self.api.send_message(
@@ -1266,7 +1283,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The sent message.
         """
-        sender = helpers.resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_arg(
+            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
+        )
         return SentMessage.from_sent_update(
             client=self,
             update=self.api.send_message(
@@ -1324,7 +1343,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The sent message.
         """
-        sender = helpers.resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_arg(
+            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
+        )
         return SentMessage.from_sent_update(
             client=self,
             update=self.api.send_message(
@@ -1381,7 +1402,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The sent message.
         """
-        sender = helpers.resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_arg(
+            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
+        )
         return SentMessage.from_sent_update(
             client=self,
             update=self.api.send_message(
@@ -1454,7 +1477,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The sent message.
         """
-        sender = helpers.resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_arg(
+            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
+        )
         return SentMessage.from_sent_update(
             client=self,
             update=self.api.send_message(
@@ -1532,7 +1557,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The sent message.
         """
-        sender = helpers.resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_arg(
+            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
+        )
         return SentMessage.from_sent_update(
             client=self,
             update=self.api.send_message(
@@ -1584,7 +1611,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         return SuccessResult.from_dict(
             self.api.mark_message_as_read(
-                phone_id=helpers.resolve_phone_id_param(self, sender, "sender"),
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=sender,
+                    method_arg="sender",
+                    client_arg="phone_id",
+                ),
                 message_id=message_id,
             )
         )
@@ -1610,7 +1642,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         return SuccessResult.from_dict(
             self.api.set_indicator(
-                phone_id=helpers.resolve_phone_id_param(self, sender, "sender"),
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=sender,
+                    method_arg="sender",
+                    client_arg="phone_id",
+                ),
                 message_id=message_id,
                 typ="text",
             )
@@ -1657,7 +1694,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 - If provided ``media`` is URL and the URL is invalid or media cannot be downloaded.
                 - If provided ``media`` is bytes and ``filename`` or ``mime_type`` is not provided.
         """
-        phone_id = helpers.resolve_phone_id_param(self, phone_id, "phone_id")
+        phone_id = helpers.resolve_arg(
+            wa=self,
+            value=phone_id,
+            method_arg="phone_id",
+            client_arg="phone_id",
+        )
 
         if isinstance(media, (str, pathlib.Path)):
             if (path := pathlib.Path(media)).is_file():
@@ -1676,7 +1718,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     ) from e
                 file, filename, mime_type = (
                     res.content,
-                    filename or os.path.basename(media),
+                    filename or pathlib.Path(media).name,
                     mime_type or res.headers["Content-Type"],
                 )
             else:
@@ -1802,8 +1844,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return SuccessResult.from_dict(
             self.api.delete_media(
                 media_id=media_id,
-                phone_number_id=helpers.resolve_phone_id_param(
-                    self, phone_id, "phone_id"
+                phone_number_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
                 )
                 if phone_id is not utils.MISSING
                 else None,
@@ -1830,7 +1875,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         return BusinessPhoneNumber.from_dict(
             data=self.api.get_business_phone_number(
-                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
                 fields=tuple(
                     field.name
                     for field in dataclasses.fields(BusinessPhoneNumber)
@@ -1863,7 +1913,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return Result(
             wa=self,
             response=self.api.get_business_phone_numbers(
-                waba_id=helpers.resolve_waba_id_param(self, waba_id),
+                waba_id=helpers.resolve_arg(
+                    wa=self,
+                    value=waba_id,
+                    method_arg="waba_id",
+                    client_arg="business_account_id",
+                ),
                 pagination=pagination.to_dict() if pagination else None,
                 fields=tuple(
                     field.name
@@ -1897,7 +1952,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         return BusinessPhoneNumberSettings.from_dict(
             data=self.api.get_business_phone_number_settings(
-                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
                 include_sip_credentials=include_sip_credentials,
             )
         )
@@ -1928,7 +1988,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         return SuccessResult.from_dict(
             self.api.update_business_phone_number_settings(
-                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
                 settings=settings.to_dict(),
             )
         )
@@ -1961,7 +2026,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         return SuccessResult.from_dict(
             self.api.update_conversational_automation(
-                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
                 enable_welcome_message=enable_chat_opened,
                 prompts=tuple(ice_breakers) if ice_breakers else None,
                 commands=json.dumps([c.to_dict() for c in commands])
@@ -1995,7 +2065,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         return SuccessResult.from_dict(
             self.api.update_display_name(
-                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
                 new_display_name=new_display_name,
             )
         )
@@ -2020,7 +2095,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         return BusinessProfile.from_dict(
             data=self.api.get_business_profile(
-                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
                 fields=(
                     "about",
                     "address",
@@ -2058,7 +2138,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         return SuccessResult.from_dict(
             self.api.set_business_public_key(
-                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
                 public_key=public_key,
             )
         )
@@ -2126,7 +2211,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         }
         return SuccessResult.from_dict(
             self.api.update_business_profile(
-                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
                 data=data,
             )
         )
@@ -2148,7 +2238,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         return CommerceSettings.from_dict(
             data=self.api.get_commerce_settings(
-                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
             )["data"][0]
         )
 
@@ -2192,7 +2287,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             raise ValueError("At least one argument must be provided")
         return SuccessResult.from_dict(
             self.api.update_commerce_settings(
-                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
                 data=data,
             )
         )
@@ -2202,6 +2302,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         template: Template | LibraryTemplate,
         *,
         waba_id: str | int | None = None,
+        app_id: str | int | None = None,
     ) -> CreatedTemplate:
         """
         Create a template for the WhatsApp Business account.
@@ -2242,14 +2343,23 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Args:
             template: The template to create.
             waba_id: The WhatsApp Business account ID (Overrides the client's business account ID, optional).
+            app_id: The App ID to upload the template header example media to (optional, if not provided, the client's app ID will be used).
 
         Returns:
             The created template.
         """
+        helpers.upload_template_media_components(
+            wa=self, app_id=app_id, components=template.components
+        )
         return CreatedTemplate.from_dict(
             client=self,
             data=self.api.create_template(
-                waba_id=helpers.resolve_waba_id_param(self, waba_id),
+                waba_id=helpers.resolve_arg(
+                    wa=self,
+                    value=waba_id,
+                    method_arg="waba_id",
+                    client_arg="business_account_id",
+                ),
                 template=json.loads(template.to_json()),
             ),
         )
@@ -2304,7 +2414,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 data=res,
             )
             for res in self.api.upsert_message_templates(
-                waba_id=helpers.resolve_waba_id_param(self, waba_id),
+                waba_id=helpers.resolve_arg(
+                    wa=self,
+                    value=waba_id,
+                    method_arg="waba_id",
+                    client_arg="business_account_id",
+                ),
                 templates=json.loads(templates.to_json()),
             )["data"]
         )
@@ -2391,7 +2506,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             tracker: A callback data to track the message (optional, can be a string or a :class:`CallbackData` object).
             sender: The phone ID to send the template from (optional, if not provided, the client's phone ID will be used).
         """
-        sender = helpers.resolve_phone_id_param(self, sender, "sender")
+        sender = helpers.resolve_arg(
+            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
+        )
         return SentTemplate.from_sent_update(
             client=self,
             update=self.api.send_message(
@@ -2454,7 +2571,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return TemplatesResult(
             wa=self,
             response=self.api.get_templates(
-                waba_id=helpers.resolve_waba_id_param(self, waba_id),
+                waba_id=helpers.resolve_arg(
+                    wa=self,
+                    value=waba_id,
+                    method_arg="waba_id",
+                    client_arg="business_account_id",
+                ),
                 fields=tuple(
                     field.name
                     for field in dataclasses.fields(TemplateDetails)
@@ -2577,7 +2699,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         return SuccessResult.from_dict(
             self.api.delete_template(
-                waba_id=helpers.resolve_waba_id_param(self, waba_id),
+                waba_id=helpers.resolve_arg(
+                    wa=self,
+                    value=waba_id,
+                    method_arg="waba_id",
+                    client_arg="business_account_id",
+                ),
                 template_name=template_name,
                 template_id=template_id,
             )
@@ -2648,8 +2775,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return MigrateTemplatesResult.from_dict(
             data=self.api.migrate_templates(
                 source_waba_id=str(source_waba_id),
-                dest_waba_id=helpers.resolve_waba_id_param(
-                    self, destination_waba_id, "destination_waba_id"
+                dest_waba_id=helpers.resolve_arg(
+                    wa=self,
+                    value=destination_waba_id,
+                    method_arg="destination_waba_id",
+                    client_arg="business_account_id",
                 ),
                 page_number=page_number,
             )
@@ -2730,7 +2860,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 categories=tuple(map(str, categories)),
                 clone_flow_id=clone_flow_id,
                 endpoint_uri=endpoint_uri,
-                waba_id=helpers.resolve_waba_id_param(self, waba_id),
+                waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="business_account_id"),
                 flow_json=helpers.resolve_flow_json_param(flow_json)
                 if flow_json
                 else None,
@@ -2950,7 +3080,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return Result(
             wa=self,
             response=self.api.get_flows(
-                waba_id=helpers.resolve_waba_id_param(self, waba_id),
+                waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="business_account_id"),
                 fields=helpers.get_flow_fields(
                     invalidate_preview=invalidate_preview,
                     phone_number_id=phone_number_id,
@@ -3040,7 +3170,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         return MigrateFlowsResponse.from_dict(
             self.api.migrate_flows(
-                dest_waba_id=helpers.resolve_waba_id_param(self, destination_waba_id, "destination_waba_id"),
+                dest_waba_id=helpers.resolve_arg(
+                    wa=self,
+                    value=destination_waba_id,
+                    method_arg="destination_waba_id",
+                    client_arg="business_account_id",
+                ),
                 source_waba_id=str(source_waba_id),
                 source_flow_names=tuple(source_flow_names),
             )
@@ -3078,7 +3213,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             The success of the registration.
         """
         return SuccessResult.from_dict(self.api.register_phone_number(
-            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+            phone_id=helpers.resolve_arg(
+                wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"
+            ),
             pin=str(pin),
             data_localization_region=data_localization_region,
         ))
@@ -3104,7 +3241,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         return QRCode.from_dict(
             self.api.create_qr_code(
-                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
                 prefilled_message=prefilled_message,
                 generate_qr_image=image_type,
             )
@@ -3126,7 +3263,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             The QR code if found, otherwise None.
         """
         qrs = self.api.get_qr_code(
-            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
             code=code,
         )["data"]
         return QRCode.from_dict(qrs[0]) if qrs else None
@@ -3150,7 +3287,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return Result(
             wa=self,
             response=self.api.get_qr_codes(
-                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
                 pagination=pagination.to_dict() if pagination else None,
             ),
             item_factory=QRCode.from_dict,
@@ -3175,7 +3312,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         return QRCode.from_dict(
             self.api.update_qr_code(
-                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
                 code=code,
                 prefilled_message=prefilled_message,
             )
@@ -3197,7 +3334,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             Whether the QR code was deleted.
         """
         return SuccessResult.from_dict(self.api.delete_qr_code(
-            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
             code=code,
         ))
 
@@ -3269,7 +3406,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             Whether the callback URL was overridden.
         """
         return SuccessResult.from_dict(self.api.set_waba_alternate_callback_url(
-            waba_id=helpers.resolve_waba_id_param(self, waba_id),
+            waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="business_account_id"),
             callback_url=callback_url,
             verify_token=verify_token,
         ))
@@ -3287,7 +3424,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             Whether the callback URL was deleted.
         """
         return SuccessResult.from_dict(self.api.delete_waba_alternate_callback_url(
-            waba_id=helpers.resolve_waba_id_param(self, waba_id),
+            waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="business_account_id"),
         ))
 
     def override_phone_callback_url(
@@ -3310,7 +3447,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return SuccessResult.from_dict(self.api.set_phone_alternate_callback_url(
             callback_url=callback_url,
             verify_token=verify_token,
-            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
         ))
 
     def delete_phone_callback_url(self, phone_id: str | int | None = None) -> SuccessResult:
@@ -3326,7 +3463,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             Whether the callback URL was deleted.
         """
         return SuccessResult.from_dict(self.api.delete_phone_alternate_callback_url(
-            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
         ))
 
     def block_users(
@@ -3360,7 +3497,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         return UsersBlockedResult.from_dict(
             data=self.api.block_users(
-                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
                 users=tuple(str(phone_id) for phone_id in users),
             ),
             client=self,
@@ -3388,7 +3525,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         return UsersUnblockedResult.from_dict(
             data=self.api.unblock_users(
-                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
                 users=tuple(str(phone_id) for phone_id in users),
             ),
             client=self,
@@ -3418,7 +3555,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return Result(
             wa=self,
             response=self.api.get_blocked_users(
-                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
                 pagination=pagination.to_dict() if pagination else None,
             ),
             item_factory=functools.partial(self._usr_cls.from_dict, client=self)
@@ -3445,7 +3582,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return CallPermissions.from_dict(
             self.api.get_call_permissions(
                 user_wa_id=str(wa_id),
-                phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+                phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
             ),
         )
 
@@ -3472,7 +3609,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             An InitiatedCall object containing the details of the initiated call.
         """
         return InitiatedCall.from_sent_update(client=self, update=self.api.initiate_call(
-            phone_id=(from_phone_id := helpers.resolve_phone_id_param(self, phone_id, "phone_id")),
+            phone_id=(from_phone_id := helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id")),
             to=(to_wa_id := str(to)),
             sdp=sdp.to_dict(),
             biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
@@ -3507,7 +3644,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             Whether the call was pre-accepted.
         """
         return SuccessResult.from_dict(self.api.pre_accept_call(
-            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
             call_id=call_id,
             sdp=sdp.to_dict() if sdp else None,
         ))
@@ -3537,7 +3674,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             Whether the call was accepted.
         """
         return SuccessResult.from_dict(self.api.accept_call(
-            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
             call_id=call_id,
             sdp=sdp.to_dict() if sdp else None,
             biz_opaque_callback_data=helpers.resolve_tracker_param(tracker)
@@ -3564,7 +3701,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             Whether the call was rejected.
         """
         return SuccessResult.from_dict(self.api.reject_call(
-            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
             call_id=call_id,
         ))
 
@@ -3590,6 +3727,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             Whether the call was terminated.
         """
         return SuccessResult.from_dict(self.api.terminate_call(
-            phone_id=helpers.resolve_phone_id_param(self, phone_id, "phone_id"),
+            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
             call_id=call_id,
         ))

@@ -131,8 +131,11 @@ class _AsyncListeners:
             ListenerCanceled: If the listener was canceled by a filter
             ListenerStopped: If the listener was stopped manually
         """
-        recipient = helpers.resolve_phone_id_param(
-            self, sent_to_phone_id, "sent_to_phone_id"
+        recipient = helpers.resolve_arg(
+            wa=self,
+            value=sent_to_phone_id,
+            method_arg="sent_to_phone_id",
+            client_arg="phone_id",
         )
         listener = Listener(
             wa=self,

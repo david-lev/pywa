@@ -14,7 +14,6 @@ __all__ = [
     "ParamFormat",
     "TemplateBaseComponent",
     "HeaderText",
-    "HeaderMediaExample",
     "HeaderImage",
     "HeaderVideo",
     "HeaderDocument",
@@ -742,7 +741,7 @@ class TemplateBaseComponent(abc.ABC):
 
 
 class BaseHeaderComponent(TemplateBaseComponent, abc.ABC):
-    type: ComponentType
+    type = ComponentType.HEADER
     format: HeaderFormatType
 
 
@@ -964,33 +963,48 @@ class HeaderText(_BaseTextComponent, BaseHeaderComponent):
             return self._to_dict(ComponentType.HEADER, client, sender)
 
 
-class HeaderMediaExample:
+class _BaseMediaHeaderComponent(BaseHeaderComponent, abc.ABC):
     """
-    Represents an example of media used in a header component.
+    Base class for media components in templates.
 
     - Used in :class:`HeaderImage`, :class:`HeaderVideo`, and :class:`HeaderDocument` components.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#media-headers>`_.
-
-    Attributes:
-        handle: Uploaded media asset handle. Use the `Resumable Upload API <https://developers.facebook.com/docs/graph-api/guides/upload>`_ to generate an asset handle.
     """
 
-    __slots__ = ("handle",)
+    format: HeaderFormatType
+    example: str
 
-    handle: str
+    def __init__(self, example: str | Media | pathlib.Path | bytes | BinaryIO):
+        """
+        Initializes a media header component for a template.
 
-    def __init__(self, *, handle: str):
-        self.handle = handle
-
-    def __repr__(self):
-        return f"HeaderMediaExample(handle={self.handle!r})"
-
-    def to_dict(self) -> dict[str, list[str]]:
-        return {"header_handle": [self.handle]}
+        Args:
+            example: An example of the media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
+        """
+        self.example = example
+        if re.match(r"^\d:.*", str(example)):
+            # If the example is a file handle (e.g., "4:cGRmLnBkZg=="),
+            self._handle = str(example)
+        else:
+            self._handle: str | None = None
 
     @classmethod
-    def from_dict(cls, data: dict) -> HeaderMediaExample:
-        return cls(handle=data["header_handle"][0])
+    def from_dict(cls, data: dict) -> _BaseMediaHeaderComponent:
+        return cls(example=data["example"]["header_handle"][0])
+
+    def to_dict(self) -> dict:
+        if self._handle is None:
+            raise ValueError(
+                f"{self.__class__.__name__} media example not uploaded yet."
+            )
+        return {
+            "type": self.type.value,
+            "format": self.format.value,
+            "example": {"header_handle": [self._handle]},
+        }
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(example={self.example!r})"
 
 
 class _BaseMediaParams(TemplateBaseComponent.Params, abc.ABC):
@@ -1013,7 +1027,7 @@ class _BaseMediaParams(TemplateBaseComponent.Params, abc.ABC):
             "parameters": [
                 {
                     "type": format_type.value,
-                    format_type.value: {
+                    format_type.lower(): {
                         "link" if is_url else "id": media,
                     },
                 }
@@ -1021,8 +1035,7 @@ class _BaseMediaParams(TemplateBaseComponent.Params, abc.ABC):
         }
 
 
-@dataclasses.dataclass(kw_only=True, slots=True)
-class HeaderImage(BaseHeaderComponent):
+class HeaderImage(_BaseMediaHeaderComponent):
     """
     Represents a header image component in a template.
 
@@ -1031,28 +1044,14 @@ class HeaderImage(BaseHeaderComponent):
 
     Example:
 
-        >>> header_image = HeaderImage(example=HeaderMediaExample(handle="example_handle"))
-        >>> header_image.params(image="https://example.com/image.jpg")
+        >>> header_image = HeaderImage(example="https://example.com/image.jpg")
+        >>> header_image.params(image="https://cdn.com/image.jpg")
 
     Attributes:
         example: An example of the header image media.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.HEADER,
-        init=False,
-        repr=False,
-    )
-    format: HeaderFormatType = dataclasses.field(
-        default=HeaderFormatType.IMAGE,
-        init=False,
-        repr=False,
-    )
-    example: HeaderMediaExample
-
-    @classmethod
-    def from_dict(cls, data: dict) -> HeaderImage:
-        return cls(example=HeaderMediaExample.from_dict(data["example"]))
+    format = HeaderFormatType.IMAGE
 
     class Params(_BaseMediaParams):
         def __init__(self, *, image: str | Media | pathlib.Path | bytes | BinaryIO):
@@ -1080,8 +1079,7 @@ class HeaderImage(BaseHeaderComponent):
         return self.Params(image=image)
 
 
-@dataclasses.dataclass(kw_only=True, slots=True)
-class HeaderVideo(BaseHeaderComponent):
+class HeaderVideo(_BaseMediaHeaderComponent):
     """
     Represents a header video component in a template.
 
@@ -1090,28 +1088,14 @@ class HeaderVideo(BaseHeaderComponent):
 
     Example:
 
-        >>> header_video = HeaderVideo(example=HeaderMediaExample(handle="example_handle"))
-        >>> header_video.params(video="https://example.com/video.mp4")
+        >>> header_video = HeaderVideo(example="https://example.com/video.mp4")
+        >>> header_video.params(video="https://cdn.com/video.mp4")
 
     Attributes:
         example: An example of the header video media.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.HEADER,
-        init=False,
-        repr=False,
-    )
-    format: HeaderFormatType = dataclasses.field(
-        default=HeaderFormatType.VIDEO,
-        init=False,
-        repr=False,
-    )
-    example: HeaderMediaExample
-
-    @classmethod
-    def from_dict(cls, data: dict) -> HeaderVideo:
-        return cls(example=HeaderMediaExample.from_dict(data["example"]))
+    format = HeaderFormatType.VIDEO
 
     class Params(_BaseMediaParams):
         def __init__(self, *, video: str | Media | pathlib.Path | bytes | BinaryIO):
@@ -1139,8 +1123,7 @@ class HeaderVideo(BaseHeaderComponent):
         return self.Params(video=video)
 
 
-@dataclasses.dataclass(kw_only=True, slots=True)
-class HeaderDocument(BaseHeaderComponent):
+class HeaderDocument(_BaseMediaHeaderComponent):
     """
     Represents a header document component in a template.
 
@@ -1149,28 +1132,14 @@ class HeaderDocument(BaseHeaderComponent):
 
     Example:
 
-        >>> header_document = HeaderDocument(example=HeaderMediaExample(handle="example_handle"))
-        >>> header_document.params(document="https://example.com/document.pdf")
+        >>> header_document = HeaderDocument(example="https://example.com/document.pdf")
+        >>> header_document.params(document="https://cdn.com/document.pdf")
 
     Attributes:
         example: An example of the header document media.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.HEADER,
-        init=False,
-        repr=False,
-    )
-    format: HeaderFormatType = dataclasses.field(
-        default=HeaderFormatType.DOCUMENT,
-        init=False,
-        repr=False,
-    )
-    example: HeaderMediaExample
-
-    @classmethod
-    def from_dict(cls, data: dict) -> HeaderDocument:
-        return cls(example=HeaderMediaExample.from_dict(data["example"]))
+    format = HeaderFormatType.DOCUMENT
 
     class Params(_BaseMediaParams):
         def __init__(self, *, document: str | Media | pathlib.Path | bytes | BinaryIO):
@@ -1247,7 +1216,7 @@ class HeaderLocation(BaseHeaderComponent):
                 "parameters": [
                     {
                         "type": HeaderFormatType.LOCATION.value,
-                        HeaderFormatType.LOCATION.value: {
+                        HeaderFormatType.LOCATION.lower(): {
                             "latitude": self.lat,
                             "longitude": self.lon,
                             "name": self.name,
@@ -1316,7 +1285,7 @@ class HeaderProduct(BaseHeaderComponent):
                 "parameters": [
                     {
                         "type": HeaderFormatType.PRODUCT.value,
-                        HeaderFormatType.PRODUCT.value: {
+                        HeaderFormatType.PRODUCT.lower(): {
                             "catalog_id": self.catalog_id,
                             "product_retailer_id": self.sku,
                         },
@@ -1345,7 +1314,7 @@ class BaseBodyComponent(TemplateBaseComponent, abc.ABC):
     type: ComponentType
 
 
-class BodyText(_BaseTextComponent):
+class BodyText(_BaseTextComponent, TemplateBaseComponent):
     """
     The body component represents the core text of your message template and is a text-only template component. It is required for all templates.
 
@@ -1449,7 +1418,7 @@ class Buttons(_DoesNotSupportParams, TemplateBaseComponent):
 
         >>> button1 = CopyCodeButton(example="SAVE20")
         >>> button2 = PhoneNumberButton(text="Call Us", phone_number="+1234567890")
-        >>> button3 = URLButton(text="Visit Website", url="https://example.com")
+        >>> button3 = URLButton(text="Visit Website", url="https://website.com")
 
         >>> buttons = Buttons(buttons=[button1, button2, button3])
 
@@ -1504,7 +1473,7 @@ class CopyCodeButton(BaseButtonComponent):
         def to_dict(self, client: WhatsApp, sender: str) -> dict:
             return {
                 "type": "BUTTON",
-                "subtype": ComponentType.COPY_CODE.value,
+                "sub_type": ComponentType.COPY_CODE.value,
                 "index": self.index,
                 "parameters": [
                     {
@@ -1675,7 +1644,7 @@ class FlowButton(BaseButtonComponent):
         def to_dict(self, client: WhatsApp, sender: str) -> dict:
             return {
                 "type": "BUTTON",
-                "subtype": ComponentType.FLOW.value,
+                "sub_type": ComponentType.FLOW.value,
                 "index": self.index,
                 "parameters": [
                     {
@@ -1806,7 +1775,7 @@ class QuickReplyButton(BaseButtonComponent):
         def to_dict(self, client: WhatsApp, sender: str) -> dict:
             return {
                 "type": "BUTTON",
-                "subtype": ComponentType.QUICK_REPLY.value,
+                "sub_type": ComponentType.QUICK_REPLY.value,
                 "index": self.index,
                 "parameters": [
                     {
@@ -1839,7 +1808,7 @@ class URLButton(BaseButtonComponent):
 
     Example:
 
-        >>> url_button = URLButton(text="Visit Website", url="https://example.com?ref={{1}}", example="https://example.com?ref=template")
+        >>> url_button = URLButton(text="Visit Website", url="https://website.com?ref={{1}}", example="https://website.com?ref=template")
         >>> url_button.params(url_variable="example_variable", index=0)
 
     Attributes:
@@ -1896,7 +1865,7 @@ class URLButton(BaseButtonComponent):
         def to_dict(self, client: WhatsApp, sender: str) -> dict:
             return {
                 "type": "BUTTON",
-                "subtype": ComponentType.URL.value,
+                "sub_type": ComponentType.URL.value,
                 "index": self.index,
                 "parameters": [
                     {
@@ -1958,7 +1927,7 @@ class CatalogButton(BaseButtonComponent):
         def to_dict(self, client: WhatsApp, sender: str) -> dict:
             return {
                 "type": "BUTTON",
-                "subtype": ComponentType.CATALOG.value,
+                "sub_type": ComponentType.CATALOG.value,
                 "index": self.index,
                 **(
                     {
@@ -2056,7 +2025,7 @@ class MPMButton(BaseButtonComponent):
         def to_dict(self, client: WhatsApp, sender: str) -> dict:
             return {
                 "type": "BUTTON",
-                "subtype": ComponentType.MPM.value,
+                "sub_type": ComponentType.MPM.value,
                 "index": self.index,
                 "parameters": {
                     "type": "action",
@@ -2198,7 +2167,7 @@ class _BaseOTPButtonParams:
         def to_dict(self, client: WhatsApp, sender: str) -> dict:
             return {
                 "type": "BUTTON",
-                "subtype": ComponentType.URL,
+                "sub_type": ComponentType.URL,
                 "index": 0,
                 "parameters": [
                     {
@@ -2416,7 +2385,7 @@ class LimitedTimeOffer(TemplateBaseComponent):
                 "parameters": [
                     {
                         "type": ComponentType.LIMITED_TIME_OFFER.value,
-                        ComponentType.LIMITED_TIME_OFFER.value: {
+                        ComponentType.LIMITED_TIME_OFFER.lower(): {
                             "expiration_time_ms": int(self.expiration_time.timestamp()),
                         },
                     }
@@ -2454,7 +2423,7 @@ class Carousel(TemplateBaseComponent):
         >>> carousel = Carousel(cards=[
         ...     card1 := CarouselMediaCard(
         ...         components=[
-        ...             hi := HeaderImage(example=HeaderMediaExample(handle="example_handle")),
+        ...             hi := HeaderImage(example="https://example.com/image.jpg"),
         ...             b1 := BodyText(text="Hi {{name}}, this is a first card!", name="John"),
         ...             FooterText(text="Card 1"),
         ...             qr := QuickReplyButton(text="Unsubscribe"),
@@ -2462,10 +2431,10 @@ class Carousel(TemplateBaseComponent):
         ...     ),
         ...     card2 := CarouselMediaCard(
         ...         components=[
-        ...             hv := HeaderVideo(example=HeaderMediaExample(handle="example_handle")),
+        ...             hv := HeaderVideo(example="https://example.com/video.mp4"),
         ...             b2 := BodyText(text="Hello {{name}}, this is the second card!", name="John"),
         ...             FooterText(text="Card 2"),
-        ...             url := URLButton(text="Website", url="https://example.com?ref={{1}}", example="https://example.com?ref=template"),
+        ...             url := URLButton(text="Website", url="https://website.com?ref={{1}}", example="https://website.com?ref=template"),
         ...         ]
         ...     ),
         ... ])
@@ -2474,7 +2443,7 @@ class Carousel(TemplateBaseComponent):
         ...     card1.params(
         ...         index=0,
         ...         params=[
-        ...             hi.params(image="https://example.com/image.jpg"),
+        ...             hi.params(image="https://cdn.com/image.jpg"),
         ...             b1.params(name="James"),
         ...             qr.params(callback_data="unsubscribe", index=0),
         ...         ],
@@ -2482,7 +2451,7 @@ class Carousel(TemplateBaseComponent):
         ...     card2.params(
         ...         index=1,
         ...         params=[
-        ...             hv.params(video="https://example.com/video.mp4"),
+        ...             hv.params(video="https://cdn.com/video.mp4"),
         ...             b2.params(name="James"),
         ...             url.params(url_variable="example_variable", index=0),
         ...         ],
@@ -2539,7 +2508,7 @@ class CarouselMediaCard:
 
         >>> carousel_media_card = CarouselMediaCard(
         ...     components=[
-        ...         HeaderImage(example=HeaderMediaExample(handle="example_handle")),
+        ...         HeaderImage(example="https://example.com/image.jpg"),
         ...         BodyText(text="Hi {{name}}, this is a first card!", name="John"),
         ...         FooterText(text="Card 1"),
         ...         QuickReplyButton(text="Unsubscribe"),
@@ -2548,7 +2517,7 @@ class CarouselMediaCard:
         >>> carousel_media_card.params(
         ...     index=0,
         ...     params=[
-        ...         HeaderImage.Params(image="https://example.com/image.jpg"),
+        ...         HeaderImage.Params(image="https://cdn.com/image.jpg"),
         ...         BodyText.Params(name="James"),
         ...         QuickReplyButton.Params(callback_data="unsubscribe", index=0),
         ...     ],
@@ -2699,7 +2668,7 @@ class Template:
         ...         Buttons(
         ...             buttons=[
         ...                 QuickReplyButton(text="Get Started"),
-        ...                 URLButton(text="Visit Website", url="https://example.com?ref={{1}}")
+        ...                 URLButton(text="Visit Website", url="https://website.com?ref={{1}}")
         ...             ]
         ...         )
         ...     ],

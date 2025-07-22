@@ -1850,8 +1850,8 @@ class GraphAPIAsync(GraphAPI):
         Args:
             app_id: The ID of the app to create the upload session for.
             file_name: The name of the file to upload.
-            file_length: The length of the file to upload in bytes.
-            file_type: The type of the file to upload (e.g., "image/jpeg", "video/mp4").
+            file_length: File size in bytes
+            file_type: The file's MIME type. Valid values are: ``application/pdf``, ``image/jpeg``, ``image/jpg``, ``image/png``, and ``video/mp4``.
 
         Returns:
             The ID of the upload session

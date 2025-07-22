@@ -15,7 +15,7 @@ carousel_template_media_cards_v1 = Template(
             cards=[
                 CarouselMediaCard(
                     components=[
-                        HeaderImage(example=HeaderMediaExample(handle="4::an...")),
+                        HeaderImage(example="4::an..."),
                         BodyText(
                             text="Add a touch of elegance to your collection with the beautiful Aloe 'Blue Elf' succulent. Its deep blue-green leaves have a hint of pink around the edges."
                         ),
@@ -33,7 +33,7 @@ carousel_template_media_cards_v1 = Template(
                 ),
                 CarouselMediaCard(
                     components=[
-                        HeaderImage(example=HeaderMediaExample(handle="4::an...")),
+                        HeaderImage(example="4::an..."),
                         BodyText(
                             text="The Crassula Buddha's Temple is sure to be a conversation starter with its tiny temple shaped leaves, intricate details, and lacy texture."
                         ),
@@ -51,7 +51,7 @@ carousel_template_media_cards_v1 = Template(
                 ),
                 CarouselMediaCard(
                     components=[
-                        HeaderImage(example=HeaderMediaExample(handle="4::an...")),
+                        HeaderImage(example="4::an..."),
                         BodyText(
                             text="The Echeveria 'Black Prince' is a stunning succulent, with near-black leaves, adorned with a hint of green around the edges, giving it its striking appearance."
                         ),

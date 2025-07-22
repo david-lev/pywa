@@ -5,7 +5,7 @@ limited_time_offer_caribbean_pkg_2023 = Template(
     language=TemplateLanguage.ENGLISH_US,
     category=TemplateCategory.MARKETING,
     components=[
-        HeaderImage(example=HeaderMediaExample(handle="4::aW...")),
+        HeaderImage(example="4::aW..."),
         LimitedTimeOffer(
             limited_time_offer=LimitedTimeOfferConfig(
                 text="Expiring offer!", has_expiration=True

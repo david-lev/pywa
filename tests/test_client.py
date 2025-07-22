@@ -35,10 +35,10 @@ def wa():
 
 def test_api_usage_without_token():
     with pytest.raises(ValueError):
-        WhatsApp(phone_id="123", token="").api
+        _ = WhatsApp(phone_id="123", token="").api
 
     with pytest.raises(ValueError):
-        WhatsApp(token=None).api
+        _ = WhatsApp(token=None).api
 
 
 def test_warning_when_version_lower_than_min():
@@ -367,29 +367,54 @@ def test_resolve_flow_json_param():
 def test_resolve_waba_id_param():
     client = WhatsApp(business_account_id=WABA_ID)
 
-    assert helpers.resolve_waba_id_param(client, waba_id=None) == WABA_ID
-    assert helpers.resolve_waba_id_param(client, waba_id="987654321") == "987654321"
+    assert (
+        helpers.resolve_arg(
+            wa=client,
+            value=None,
+            method_arg="waba_id",
+            client_arg="business_account_id",
+        )
+        == WABA_ID
+    )
+    assert (
+        helpers.resolve_arg(
+            wa=client,
+            value=987654321,
+            method_arg="waba_id",
+            client_arg="business_account_id",
+        )
+        == "987654321"
+    )
 
     with pytest.raises(ValueError):
-        helpers.resolve_waba_id_param(WhatsApp(), waba_id=None)
+        helpers.resolve_arg(
+            wa=WhatsApp(),
+            value=None,
+            method_arg="waba_id",
+            client_arg="business_account_id",
+        )
 
 
 def test_resolve_phone_id_param():
     client = WhatsApp(phone_id=PHONE_ID)
 
     assert (
-        helpers.resolve_phone_id_param(client, phone_id=None, arg_name="phone_id")
+        helpers.resolve_arg(
+            wa=client, value=None, method_arg="phone_id", client_arg="phone_id"
+        )
         == PHONE_ID
     )
     assert (
-        helpers.resolve_phone_id_param(
-            client, phone_id="123456789", arg_name="phone_id"
+        helpers.resolve_arg(
+            wa=client, value="1234567890", method_arg="phone_id", client_arg="phone_id"
         )
-        == "123456789"
+        == "1234567890"
     )
 
     with pytest.raises(ValueError):
-        helpers.resolve_phone_id_param(WhatsApp(), phone_id=None, arg_name="phone_id")
+        helpers.resolve_arg(
+            wa=WhatsApp(), value=None, method_arg="phone_id", client_arg="phone_id"
+        )
 
 
 def test_resolve_media_param_with_url():

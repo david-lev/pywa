@@ -200,8 +200,11 @@ class _Listeners:
             ListenerCanceled: If the listener was canceled by a filter
             ListenerStopped: If the listener was stopped manually
         """
-        recipient = helpers.resolve_phone_id_param(
-            self, sent_to_phone_id, "sent_to_phone_id"
+        recipient = helpers.resolve_arg(
+            wa=self,
+            value=sent_to_phone_id,
+            method_arg="sent_to_phone_id",
+            client_arg="phone_id",
         )
         identifier = utils.listener_identifier(sender=to, recipient=recipient)
         listener = Listener(
@@ -238,7 +241,11 @@ class _Listeners:
             ValueError: If the listener does not exist
         """
 
-        recipient = helpers.resolve_phone_id_param(self, phone_id, "phone_id")
+        recipient = helpers.resolve_arg(
+            self,
+            phone_id,
+            "phone_id",
+        )
         try:
             listener = self._listeners[
                 utils.listener_identifier(sender=to, recipient=recipient)
@@ -251,7 +258,11 @@ class _Listeners:
     def _remove_listener(
         self: WhatsApp, from_user: str | int, phone_id: str | int | None = None
     ) -> None:
-        recipient = helpers.resolve_phone_id_param(self, phone_id, "phone_id")
+        recipient = helpers.resolve_arg(
+            self,
+            phone_id,
+            "phone_id",
+        )
         try:
             del self._listeners[
                 utils.listener_identifier(sender=from_user, recipient=recipient)

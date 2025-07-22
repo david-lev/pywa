@@ -31,7 +31,7 @@ order_confirmation = Template(
     category=TemplateCategory.UTILITY,
     components=[
         HeaderDocument(
-            example=HeaderMediaExample(handle="4::YX..."),
+            example="4::YX...",
         ),
         BodyText(
             "Thank you for your order, {{1}}! Your order number is {{2}}. Tap the PDF linked above to view your receipt. If you have any questions, please use the buttons below to contact support. Thank you for being a customer!",
