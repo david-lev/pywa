@@ -2548,11 +2548,6 @@ class CarouselMediaCard:
     components: list[TemplateBaseComponent | dict]
 
     class Params(TemplateBaseComponent.Params):
-        """
-        Parameters for the carousel media card.
-        This class is not meant to be instantiated directly.
-        """
-
         def __init__(self, *, params: list[TemplateBaseComponent.Params], index: int):
             """
             Initialize the parameters for the carousel media card.

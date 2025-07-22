@@ -33,8 +33,9 @@ if TYPE_CHECKING:
 class Media:
     """Base class for all media types."""
 
-    _client: WhatsApp
-    id: str
+    def __init__(self, _client: WhatsApp, id: str):
+        self._client = _client
+        self.id = id
 
     async def get_media_url(self) -> str:
         """Gets the URL of the media. (expires after 5 minutes)"""

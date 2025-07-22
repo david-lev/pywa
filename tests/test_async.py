@@ -11,6 +11,26 @@ from pywa.api import GraphAPI as WhatsAppCloudApiSync
 from pywa_async.api import GraphAPIAsync
 from pywa.server import Server as ServerSync
 from pywa.listeners import _Listeners as ListenersSync
+from pywa.types.template import (
+    TemplateDetails as TemplateDetailsSync,
+    HeaderImage as HeaderImageSync,
+    HeaderVideo as HeaderVideoSync,
+    HeaderDocument as HeaderDocumentSync,
+    Carousel as CarouselSync,
+    CarouselMediaCard as CarouselMediaCardSync,
+    TemplatesResult as TemplatesResultSync,
+    CreatedTemplate as CreatedTemplateSync,
+)
+from pywa_async.types.template import (
+    TemplateDetails as TemplateDetailsAsync,
+    HeaderImage as HeaderImageAsync,
+    HeaderVideo as HeaderVideoAsync,
+    HeaderDocument as HeaderDocumentAsync,
+    Carousel as CarouselAsync,
+    CarouselMediaCard as CarouselMediaCardAsync,
+    TemplatesResult as TemplatesResultAsync,
+    CreatedTemplate as CreatedTemplateAsync,
+)
 
 
 from pywa.types import (
@@ -113,6 +133,14 @@ def overrides() -> list[tuple[type, type]]:
         (WhatsAppCloudApiSync, GraphAPIAsync),
         (UserSync, UserAsync),
         (ResultSync, ResultAsync),
+        (TemplateDetailsSync, TemplateDetailsAsync),
+        (HeaderImageSync.Params, HeaderImageAsync.Params),
+        (HeaderVideoSync.Params, HeaderVideoAsync.Params),
+        (HeaderDocumentSync.Params, HeaderDocumentAsync.Params),
+        (CarouselSync.Params, CarouselAsync.Params),
+        (CarouselMediaCardSync.Params, CarouselMediaCardAsync.Params),
+        (TemplatesResultSync, TemplatesResultAsync),
+        (CreatedTemplateSync, CreatedTemplateAsync),
     ]
 
 
@@ -172,6 +200,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
             FlowResponseSync.to_dict,
             FlowCompletionSync.get_media,
             UserSync.as_vcard,
+            TemplateDetailsSync.to_json,
         }
     ]
     non_async = {

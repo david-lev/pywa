@@ -53,7 +53,7 @@ class _BaseMediaParamsAsync:
             "parameters": [
                 {
                     "type": format_type.value,
-                    format_type.value: {
+                    format_type.lower(): {
                         "link" if is_url else "id": media,
                     },
                 }
@@ -62,24 +62,149 @@ class _BaseMediaParamsAsync:
 
 
 class HeaderImage(_HeaderImage):
+    """
+    Represents a header image component in a template.
+
+    - All templates are limited to one header component.
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#media-headers>`_.
+
+    Example:
+
+        >>> header_image = HeaderImage(example="https://example.com/image.jpg")
+        >>> header_image.params(image="https://cdn.com/image.jpg")
+
+    Attributes:
+        example: An example of the header image media.
+    """
+
     class Params(_BaseMediaParamsAsync, _HeaderImage.Params):
+        def __init__(self, *, image: str | Media | pathlib.Path | bytes | BinaryIO):
+            """
+            Fill the parameters for the header image component.
+
+            Args:
+                image: The image media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
+            """
+            super().__init__(media=image)
+
         async def to_dict(self, client: WhatsApp, sender: str) -> dict:
             return await self._to_dict(HeaderFormatType.IMAGE, client, sender)
 
 
 class HeaderVideo(_HeaderVideo):
+    """
+    Represents a header video component in a template.
+
+    - All templates are limited to one header component.
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#media-headers>`_.
+
+    Example:
+
+        >>> header_video = HeaderVideo(example="https://example.com/video.mp4")
+        >>> header_video.params(video="https://cdn.com/video.mp4")
+
+    Attributes:
+        example: An example of the header video media.
+    """
+
     class Params(_BaseMediaParamsAsync, _HeaderVideo.Params):
+        def __init__(self, *, video: str | Media | pathlib.Path | bytes | BinaryIO):
+            """
+            Fill the parameters for the header video component.
+
+            Args:
+                video: The video media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
+            """
+            super().__init__(media=video)
+
         async def to_dict(self, client: WhatsApp, sender: str) -> dict:
             return await self._to_dict(HeaderFormatType.VIDEO, client, sender)
 
 
 class HeaderDocument(_HeaderDocument):
+    """
+    Represents a header document component in a template.
+
+    - All templates are limited to one header component.
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#media-headers>`_.
+
+    Example:
+
+        >>> header_document = HeaderDocument(example="https://example.com/document.pdf")
+        >>> header_document.params(document="https://cdn.com/document.pdf")
+
+    Attributes:
+        example: An example of the header document media.
+    """
+
     class Params(_BaseMediaParamsAsync, _HeaderDocument.Params):
+        def __init__(self, *, document: str | Media | pathlib.Path | bytes | BinaryIO):
+            """
+            Fill the parameters for the header document component.
+
+            Args:
+                document: The document media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
+            """
+            super().__init__(media=document)
+
         async def to_dict(self, client: WhatsApp, sender: str) -> dict:
             return await self._to_dict(HeaderFormatType.DOCUMENT, client, sender)
 
 
 class Carousel(_Carousel):
+    """
+    Media card carousel templates allow you to send a single text message accompanied by a set of up to 10 media cards in a horizontally scrollable view:
+
+    Carousel templates are composed of message body text and up to 10 media cards. Each card in the template has an :class:`HeaderImage` or :class:`HeaderVideo` header asset, card :class:`BodyText`, and up to two buttons. Button combinations can be a mix of :class:`QuickReplyButton` buttons, :class:`PhoneNumberButton` buttons, and :class:`URLButton` buttons.
+
+    - All cards defined on a template must have the same components.
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/media-card-carousel-templates>`_.
+
+    Example:
+
+        >>> carousel = Carousel(cards=[
+        ...     card1 := CarouselMediaCard(
+        ...         components=[
+        ...             hi := HeaderImage(example="https://example.com/image.jpg"),
+        ...             b1 := BodyText(text="Hi {{name}}, this is a first card!", name="John"),
+        ...             FooterText(text="Card 1"),
+        ...             qr := QuickReplyButton(text="Unsubscribe"),
+        ...         ]
+        ...     ),
+        ...     card2 := CarouselMediaCard(
+        ...         components=[
+        ...             hv := HeaderVideo(example="https://example.com/video.mp4"),
+        ...             b2 := BodyText(text="Hello {{name}}, this is the second card!", name="John"),
+        ...             FooterText(text="Card 2"),
+        ...             url := URLButton(text="Website", url="https://website.com?ref={{1}}", example="https://website.com?ref=template"),
+        ...         ]
+        ...     ),
+        ... ])
+
+        >>> carousel.params(cards=[
+        ...     card1.params(
+        ...         index=0,
+        ...         params=[
+        ...             hi.params(image="https://cdn.com/image.jpg"),
+        ...             b1.params(name="James"),
+        ...             qr.params(callback_data="unsubscribe", index=0),
+        ...         ],
+        ...     ),
+        ...     card2.params(
+        ...         index=1,
+        ...         params=[
+        ...             hv.params(video="https://cdn.com/video.mp4"),
+        ...             b2.params(name="James"),
+        ...             url.params(url_variable="example_variable", index=0),
+        ...         ],
+        ...     ),
+        ... ])
+
+
+    Attributes:
+        cards: A list of :class:`CarouselMediaCard` objects, each representing a media card in the carousel.
+    """
+
     class Params(_Carousel.Params):
         cards: list[CarouselMediaCard.Params]
 
@@ -94,6 +219,32 @@ class Carousel(_Carousel):
 
 
 class CarouselMediaCard(_CarouselMediaCard):
+    """
+    Carousel templates are composed of message body text and up to 10 media cards. Each card in the template has an :class:`HeaderImage` or :class:`HeaderVideo` header asset, card :class:`BodyText`, and up to two buttons. Button combinations can be a mix of :class:`QuickReplyButton` buttons, :class:`PhoneNumberButton` buttons, and :class:`URLButton` buttons.
+
+    Example:
+
+        >>> carousel_media_card = CarouselMediaCard(
+        ...     components=[
+        ...         HeaderImage(example="https://example.com/image.jpg"),
+        ...         BodyText(text="Hi {{name}}, this is a first card!", name="John"),
+        ...         FooterText(text="Card 1"),
+        ...         QuickReplyButton(text="Unsubscribe"),
+        ...     ]
+        ... )
+        >>> carousel_media_card.params(
+        ...     index=0,
+        ...     params=[
+        ...         HeaderImage.Params(image="https://cdn.com/image.jpg"),
+        ...         BodyText.Params(name="James"),
+        ...         QuickReplyButton.Params(callback_data="unsubscribe", index=0),
+        ...     ],
+        ... )
+
+    Attributes:
+        components: A list of components that make up the media card, such as header, body, footer, and buttons.
+    """
+
     class Params(_CarouselMediaCard.Params):
         async def to_dict(self, client: WhatsApp, sender: str) -> dict:
             return {
@@ -279,7 +430,7 @@ class TemplateDetails(_TemplateDetails):
         new_components: list[TemplateBaseComponent] | None = None,
         new_message_send_ttl_seconds: int | None = None,
         new_parameter_format: ParamFormat | None = None,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Update this template.
 
@@ -299,7 +450,7 @@ class TemplateDetails(_TemplateDetails):
         Returns:
             Whether the template was updated successfully.
         """
-        if await self._client.update_template(
+        if res := await self._client.update_template(
             template_id=self.id,
             new_category=new_category,
             new_components=new_components,
@@ -314,8 +465,7 @@ class TemplateDetails(_TemplateDetails):
                 self.message_send_ttl_seconds = new_message_send_ttl_seconds
             if new_parameter_format is not None:
                 self.parameter_format = new_parameter_format
-            return True
-        return False
+        return res
 
     async def compare(
         self,
@@ -369,7 +519,7 @@ class TemplateDetails(_TemplateDetails):
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> SentTemplate:
-        return self._client.send_template(
+        return await self._client.send_template(
             to=to,
             name=self.name,
             language=self.language,
