@@ -77,7 +77,6 @@ Template Types
 
 .. autoclass:: LimitedTimeOffer()
     :members: params, Params
-.. autoclass:: LimitedTimeOfferConfig()
 
 .. autoclass:: Carousel()
     :members: params, Params

@@ -6,11 +6,7 @@ limited_time_offer_caribbean_pkg_2023 = Template(
     category=TemplateCategory.MARKETING,
     components=[
         HeaderImage(example="4::aW..."),
-        LimitedTimeOffer(
-            limited_time_offer=LimitedTimeOfferConfig(
-                text="Expiring offer!", has_expiration=True
-            )
-        ),
+        LimitedTimeOffer(text="Expiring offer!", has_expiration=True),
         BodyText(
             "Good news, {{1}}! Use code {{2}} to get 25% off all Caribbean Destination packages!",
             "Pablo",

@@ -40,7 +40,6 @@ __all__ = [
     "ZeroTapOTPButton",
     "OTPSupportedApp",
     "LimitedTimeOffer",
-    "LimitedTimeOfferConfig",
     "Carousel",
     "CarouselMediaCard",
     "Template",
@@ -1433,6 +1432,10 @@ class Buttons(_DoesNotSupportParams, TemplateBaseComponent):
     )
     buttons: list[BaseButtonComponent | dict]
 
+    @classmethod
+    def from_dict(cls, data: dict) -> Buttons:
+        return cls(buttons=[_parse_component(button) for button in data["buttons"]])
+
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class CopyCodeButton(BaseButtonComponent):
@@ -2317,57 +2320,58 @@ class CopyCodeOTPButton(_BaseOTPButtonParams, BaseButtonComponent):
 # ========== LIMITED TIME OFFER ==========
 
 
-@dataclasses.dataclass(kw_only=True, slots=True)
-class LimitedTimeOfferConfig:
-    """
-    Configuration for a limited-time offer in a WhatsApp template.
-
-    Example:
-
-        >>> limited_time_offer_config = LimitedTimeOfferConfig(
-        ...     text="20% off on all products",
-        ...     has_expiration=True
-        ... )
-
-    Attributes:
-        text: Offer details text. Maximum 16 characters.
-        has_expiration: Set to ``True`` to have the `offer expiration details <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/limited-time-offer-templates#offer-expiration-details>`_ appear in the delivered message.
-    """
-
-    text: str
-    has_expiration: bool | None = None
-
-
-@dataclasses.dataclass(kw_only=True, slots=True)
 class LimitedTimeOffer(TemplateBaseComponent):
     """
     Limited-time offer templates allow you to display expiration dates and running countdown timers for offer codes in template messages, making it easy for you to communicate time-bound offers and drive customer engagement.
 
-    - Only templates categorized as MARKETING are supported.
-    - FooterText components are not supported.
+    - Only templates categorized as ``MARKETING`` are supported.
+    - :class:`FooterText` components are not supported.
     - Users who view a limited-time offer template message using that WhatsApp web app or desktop app will not see the offer, but will instead see a message indicating that they have received a message but that it's not supported in the client they are using.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/limited-time-offer-templates>`_.
 
     Example:
 
         >>> limited_time_offer = LimitedTimeOffer(
-        ...     limited_time_offer=LimitedTimeOfferConfig(
-        ...         text="20% off on all products",
-        ...         has_expiration=True
-        ...     )
+        ...     text="Limited Time Offer!",
+        ...     has_expiration=True
         ... )
-        >>> limited_time_offer.params(expiration_time=datetime.datetime(2023, 12, 31, 23, 59, 59))
+        >>> limited_time_offer.params(expiration_time=datetime.datetime.now() + datetime.timedelta(days=7))
 
     Attributes:
-        limited_time_offer: Configuration for the limited-time offer, including text and expiration settings.
+        text: Offer details text. Maximum 16 characters.
+        has_expiration: Set to ``True`` to have the `offer expiration details <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/limited-time-offer-templates#offer-expiration-details>`_ appear in the delivered message.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.LIMITED_TIME_OFFER,
-        init=False,
-        repr=False,
-    )
-    limited_time_offer: LimitedTimeOfferConfig
+    type = ComponentType.LIMITED_TIME_OFFER
+    text: str
+    has_expiration: bool | None = None
+
+    def __init__(self, *, text: str, has_expiration: bool | None = None):
+        self.text = text
+        self.has_expiration = has_expiration
+
+    def __repr__(self):
+        return f"LimitedTimeOffer(text={self.text!r}, has_expiration={self.has_expiration!r})"
+
+    def to_dict(self) -> dict:
+        return {
+            "type": self.type.value,
+            "limited_time_offer": {
+                "text": self.text,
+                **(
+                    {"has_expiration": self.has_expiration}
+                    if self.has_expiration is not None
+                    else {}
+                ),
+            },
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> LimitedTimeOffer:
+        return cls(
+            text=data["limited_time_offer"]["text"],
+            has_expiration=data["limited_time_offer"].get("has_expiration", None),
+        )
 
     class Params(TemplateBaseComponent.Params):
         def __init__(self, *, expiration_time: datetime.datetime | None = None):
@@ -2469,6 +2473,20 @@ class Carousel(TemplateBaseComponent):
         repr=False,
     )
     cards: list[CarouselMediaCard]
+
+    @classmethod
+    def from_dict(cls, data: dict) -> Carousel:
+        return cls(
+            cards=[
+                CarouselMediaCard(
+                    components=[
+                        _parse_component(card_component)
+                        for card_component in card["components"]
+                    ]
+                )
+                for card in data["cards"]
+            ]
+        )
 
     class Params(TemplateBaseComponent.Params):
         def __init__(self, *, cards: list[CarouselMediaCard.Params]):
@@ -2785,53 +2803,31 @@ def _parse_component(component: dict) -> TemplateBaseComponent | dict:
                 component["format"],
             )
             return component
-        return header_cls.from_dict(component)
+        component_cls = header_cls
 
     elif issubclass(component_cls, BaseBodyComponent):
         if "add_security_recommendation" in component:
             return AuthenticationBody.from_dict(component)
         elif "text" in component:
-            return BodyText.from_dict(component)
-        _logger.warning(
-            "Unknown body component: %s. Defaulting to dictionary representation.",
-            component,
-        )
-        return component
+            component_cls = BodyText
+        else:
+            _logger.warning(
+                "Unknown body component: %s. Defaulting to dictionary representation.",
+                component,
+            )
+            return component
 
     elif issubclass(component_cls, BaseFooterComponent):
         if "code_expiration_minutes" in component:
             return AuthenticationFooter.from_dict(component)
         elif "text" in component:
-            return FooterText.from_dict(component)
-        _logger.warning(
-            "Unknown footer component: %s. Defaulting to dictionary representation.",
-            component,
-        )
-        return component
-
-    elif issubclass(component_cls, Buttons):
-        return Buttons(
-            buttons=[_parse_component(button) for button in component["buttons"]]
-        )
-    elif issubclass(component_cls, Carousel):
-        return Carousel(
-            cards=[
-                CarouselMediaCard(
-                    components=[
-                        _parse_component(card_component)
-                        for card_component in card["components"]
-                    ]
-                )
-                for card in component["cards"]
-            ]
-        )
-    elif issubclass(component_cls, LimitedTimeOffer):
-        return LimitedTimeOffer(
-            limited_time_offer=LimitedTimeOfferConfig(
-                text=component["limited_time_offer"]["text"],
-                has_expiration=component["limited_time_offer"]["has_expiration"],
+            component_cls = FooterText
+        else:
+            _logger.warning(
+                "Unknown footer component: %s. Defaulting to dictionary representation.",
+                component,
             )
-        )
+            return component
 
     try:
         return component_cls.from_dict(component)
