@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from pywa.types.flows import FlowJSONUpdateResult
-from pywa.types.others import SuccessResult
-from .types.media import Media
 
 """The WhatsApp Async client."""
 
@@ -26,7 +23,7 @@ from pywa.client import (
     _DEFAULT_VERIFY_DELAY_SEC,
 )  # noqa MUST BE IMPORTED FIRST
 from pywa.types.base_update import BaseUpdate
-from pywa_async import _helpers as helpers
+from . import _helpers as helpers
 from . import utils
 from .api import GraphAPIAsync
 from .listeners import _AsyncListeners
@@ -125,8 +122,15 @@ from .types.template import (
     TemplateUnpauseResult,
     AuthenticationTemplates,
 )
+from .types.media import Media
+from .types.flows import FlowJSONUpdateResult
 from .types.calls import CallPermissions, SDP
-from .types.others import InteractiveType, UsersBlockedResult, UsersUnblockedResult
+from .types.others import (
+    InteractiveType,
+    UsersBlockedResult,
+    UsersUnblockedResult,
+    SuccessResult,
+)
 from .types.sent_update import SentMessage, SentTemplate, InitiatedCall
 from .utils import FastAPI, Flask
 

@@ -1837,7 +1837,7 @@ class GraphAPIAsync(GraphAPI):
 
     async def create_upload_session(
         self,
-        app_id: int,
+        app_id: str,
         file_name: str,
         file_length: int,
         file_type: str,

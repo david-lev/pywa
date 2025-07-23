@@ -41,6 +41,7 @@ from .types.template import (
     TemplateBaseComponent,
     _BaseMediaHeaderComponent,
     HeaderFormatType,
+    Carousel,
 )
 
 if TYPE_CHECKING:
@@ -149,67 +150,75 @@ def upload_template_media_components(
     """
     Internal method to upload media components examples in a template.
     """
-    for c in components:
-        if not isinstance(c, _BaseMediaHeaderComponent):
-            continue
-        if c._handle is not None:
-            # Already uploaded
-            continue
+    not_uploaded = []
+    for comp in components:
+        if isinstance(comp, _BaseMediaHeaderComponent) and comp._handle is None:
+            not_uploaded.append(comp)
+        elif isinstance(comp, Carousel):
+            for card in comp.cards:
+                for cc in card.components:
+                    if isinstance(cc, _BaseMediaHeaderComponent) and cc._handle is None:
+                        not_uploaded.append(cc)
 
-        example = c.example
-        filename: str | None = None
-        mime_type: str | None = None
-        raw_bytes: bytes | None = None
-
-        if isinstance(example, (str, pathlib.Path, Media)):
-            if str(example).startswith(("https://", "http://")):  # URL
-                res = httpx.Client(follow_redirects=True).get(str(example))
-                res.raise_for_status()
-                raw_bytes = res.content
-                mime_type = res.headers.get("Content-Type")
-            elif (path := pathlib.Path(example)).is_file():  # File path
-                with open(path, "rb") as f:
-                    filename = path.name
-                    mime_type = mimetypes.guess_type(path)[0]
-                    raw_bytes = f.read()
-            elif str(example).isdigit() or isinstance(
-                example, Media
-            ):  # WhatsApp Media ID
-                url_res = wa.get_media_url(
-                    media_id=example.id if isinstance(example, Media) else example
-                )
-                mime_type = url_res.mime_type
-                raw_bytes = wa.download_media(url=url_res.url, in_memory=True)
-        elif isinstance(example, bytes):  # Raw bytes
-            raw_bytes = example
-
-        if not raw_bytes:
-            raise ValueError(
-                f"Invalid media example for component {c.__class__.__name__}: {example}. "
-                "It must be a URL, file path, WhatsApp Media, or bytes."
-            )
-        app_id = resolve_arg(
+    for c in not_uploaded:
+        _upload_comp(
             wa=wa,
-            value=app_id,
-            method_arg="app_id",
-            client_arg="app_id",
+            c=c,
+            app_id=app_id,
         )
-        c._handle = wa.api.upload_file(
-            upload_session_id=wa.api.create_upload_session(
-                app_id=wa.app_id,
-                file_name=filename
-                or _template_header_formats_filename.get(
-                    c.format, "pywa-template-header"
-                ),
-                file_length=len(raw_bytes),
-                file_type=mime_type
-                or _template_header_formats_default_mime_types.get(
-                    c.format, "application/octet-stream"
-                ),
-            )["id"],
-            file=raw_bytes,
-            file_offset=0,
-        )["h"]
+
+
+def _upload_comp(
+    *, wa: WhatsApp, c: _BaseMediaHeaderComponent, app_id: int | str | None
+) -> None:
+    example = c.example
+    filename: str | None = None
+    mime_type: str | None = None
+    raw_bytes: bytes | None = None
+    if isinstance(example, (str, pathlib.Path, Media)):
+        if str(example).startswith(("https://", "http://")):  # URL
+            res = httpx.Client(follow_redirects=True).get(str(example))
+            res.raise_for_status()
+            raw_bytes = res.content
+            mime_type = res.headers.get("Content-Type")
+        elif (path := pathlib.Path(example)).is_file():  # File path
+            with open(path, "rb") as f:
+                filename = path.name
+                mime_type = mimetypes.guess_type(path)[0]
+                raw_bytes = f.read()
+        elif str(example).isdigit() or isinstance(example, Media):  # WhatsApp Media ID
+            url_res = wa.get_media_url(
+                media_id=example.id if isinstance(example, Media) else example
+            )
+            mime_type = url_res.mime_type
+            raw_bytes = wa.download_media(url=url_res.url, in_memory=True)
+    elif isinstance(example, bytes):  # Raw bytes
+        raw_bytes = example
+    if not raw_bytes:
+        raise ValueError(
+            f"Invalid media example for component {c.__class__.__name__}: {example}. "
+            "It must be a URL, file path, WhatsApp Media, or bytes."
+        )
+    app_id = resolve_arg(
+        wa=wa,
+        value=app_id,
+        method_arg="app_id",
+        client_arg="app_id",
+    )
+    c._handle = wa.api.upload_file(
+        upload_session_id=wa.api.create_upload_session(
+            app_id=app_id,
+            file_name=filename
+            or _template_header_formats_filename.get(c.format, "pywa-template-header"),
+            file_length=len(raw_bytes),
+            file_type=mime_type
+            or _template_header_formats_default_mime_types.get(
+                c.format, "application/octet-stream"
+            ),
+        )["id"],
+        file=raw_bytes,
+        file_offset=0,
+    )["h"]
 
 
 def resolve_tracker_param(tracker: str | CallbackData | None) -> str | None:
