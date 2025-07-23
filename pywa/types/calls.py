@@ -238,6 +238,16 @@ class CallPermissionUpdate(BaseUserUpdate):
         """
         return self.response != CallPermissionResponse.REJECT
 
+    @property
+    def is_expired(self) -> bool:
+        """
+        Whether the call permission request has expired.
+        """
+        return (
+            self.expiration_timestamp is not None
+            and self.expiration_timestamp < datetime.datetime.now(datetime.timezone.utc)
+        )
+
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> CallPermissionUpdate:
         perm = (
