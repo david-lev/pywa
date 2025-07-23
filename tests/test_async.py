@@ -20,6 +20,7 @@ from pywa.types.template import (
     CarouselMediaCard as CarouselMediaCardSync,
     TemplatesResult as TemplatesResultSync,
     CreatedTemplate as CreatedTemplateSync,
+    TemplateBaseComponent,
 )
 from pywa_async.types.template import (
     TemplateDetails as TemplateDetailsAsync,
@@ -134,10 +135,15 @@ def overrides() -> list[tuple[type, type]]:
         (UserSync, UserAsync),
         (ResultSync, ResultAsync),
         (TemplateDetailsSync, TemplateDetailsAsync),
+        (HeaderImageSync, HeaderImageAsync),
         (HeaderImageSync.Params, HeaderImageAsync.Params),
+        (HeaderVideoSync, HeaderVideoAsync),
         (HeaderVideoSync.Params, HeaderVideoAsync.Params),
+        (HeaderDocumentSync, HeaderDocumentAsync),
         (HeaderDocumentSync.Params, HeaderDocumentAsync.Params),
+        (CarouselSync, CarouselAsync),
         (CarouselSync.Params, CarouselAsync.Params),
+        (CarouselMediaCardSync, CarouselMediaCardAsync),
         (CarouselMediaCardSync.Params, CarouselMediaCardAsync.Params),
         (TemplatesResultSync, TemplatesResultAsync),
         (CreatedTemplateSync, CreatedTemplateAsync),
@@ -201,6 +207,8 @@ def test_all_methods_are_overwritten_in_async(overrides):
             FlowCompletionSync.get_media,
             UserSync.as_vcard,
             TemplateDetailsSync.to_json,
+            TemplateBaseComponent.params,
+            TemplateBaseComponent.Params,
         }
     ]
     non_async = {

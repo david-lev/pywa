@@ -2425,18 +2425,16 @@ class Carousel(TemplateBaseComponent):
         >>> carousel = Carousel(cards=[
         ...     card1 := CarouselMediaCard(
         ...         components=[
-        ...             hi := HeaderImage(example="https://example.com/image.jpg"),
-        ...             b1 := BodyText(text="Hi {{name}}, this is a first card!", name="John"),
-        ...             FooterText(text="Card 1"),
-        ...             qr := QuickReplyButton(text="Unsubscribe"),
+        ...             hi1 := HeaderImage(example="https://example.com/card1.jpg"),
+        ...             qr1 := QuickReplyButton(text="Unsubscribe"),
+        ...             u1 := URLButton(text="Website", url="https://website.com?ref={{1}}", example="https://website.com?ref=card1"),
         ...         ]
         ...     ),
         ...     card2 := CarouselMediaCard(
         ...         components=[
-        ...             hv := HeaderVideo(example="https://example.com/video.mp4"),
-        ...             b2 := BodyText(text="Hello {{name}}, this is the second card!", name="John"),
-        ...             FooterText(text="Card 2"),
-        ...             url := URLButton(text="Website", url="https://website.com?ref={{1}}", example="https://website.com?ref=template"),
+        ...             hi2 := HeaderImage(example="https://example.com/card2.jpg"),
+        ...             qr2 := QuickReplyButton(text="Unsubscribe"),
+        ...             u2 := URLButton(text="Website", url="https://website.com?ref={{1}}", example="https://website.com?ref=card2"),
         ...         ]
         ...     ),
         ... ])
@@ -2445,17 +2443,17 @@ class Carousel(TemplateBaseComponent):
         ...     card1.params(
         ...         index=0,
         ...         params=[
-        ...             hi.params(image="https://cdn.com/image.jpg"),
-        ...             b1.params(name="James"),
-        ...             qr.params(callback_data="unsubscribe", index=0),
+        ...             hi1.params(image="https://cdn.com/card1.jpg"),
+        ...             qr1.params(callback_data="unsubscribe_card1", index=0),
+        ...             u1.params(url_variable="card1", index=0),
         ...         ],
         ...     ),
         ...     card2.params(
         ...         index=1,
         ...         params=[
-        ...             hv.params(video="https://cdn.com/video.mp4"),
-        ...             b2.params(name="James"),
-        ...             url.params(url_variable="example_variable", index=0),
+        ...             hi2.params(image="https://cdn.com/card2.jpg"),
+        ...             qr2.params(callback_data="unsubscribe_card2", index=0),
+        ...             u2.params(url_variable="card2", index=0),
         ...         ],
         ...     ),
         ... ])
@@ -2525,8 +2523,6 @@ class CarouselMediaCard:
         >>> carousel_media_card = CarouselMediaCard(
         ...     components=[
         ...         HeaderImage(example="https://example.com/image.jpg"),
-        ...         BodyText(text="Hi {{name}}, this is a first card!", name="John"),
-        ...         FooterText(text="Card 1"),
         ...         QuickReplyButton(text="Unsubscribe"),
         ...     ]
         ... )
@@ -2534,7 +2530,6 @@ class CarouselMediaCard:
         ...     index=0,
         ...     params=[
         ...         HeaderImage.Params(image="https://cdn.com/image.jpg"),
-        ...         BodyText.Params(name="James"),
         ...         QuickReplyButton.Params(callback_data="unsubscribe", index=0),
         ...     ],
         ... )
