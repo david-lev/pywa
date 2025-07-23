@@ -1672,7 +1672,10 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             wa=self,
             response=await self.api.get_business_phone_numbers(
                 waba_id=helpers.resolve_arg(
-                    wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"
+                    wa=self,
+                    value=waba_id,
+                    method_arg="waba_id",
+                    client_arg="business_account_id",
                 ),
                 pagination=pagination.to_dict() if pagination else None,
                 fields=tuple(
@@ -2111,7 +2114,10 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             client=self,
             data=await self.api.create_template(
                 waba_id=helpers.resolve_arg(
-                    wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"
+                    wa=self,
+                    value=waba_id,
+                    method_arg="waba_id",
+                    client_arg="business_account_id",
                 ),
                 template=json.loads(template.to_json()),
             ),
@@ -2172,7 +2178,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                         wa=self,
                         value=waba_id,
                         method_arg="waba_id",
-                        client_arg="waba_id",
+                        client_arg="business_account_id",
                     ),
                     templates=json.loads(templates.to_json()),
                 )
@@ -2330,7 +2336,10 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             wa=self,
             response=await self.api.get_templates(
                 waba_id=helpers.resolve_arg(
-                    wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"
+                    wa=self,
+                    value=waba_id,
+                    method_arg="waba_id",
+                    client_arg="business_account_id",
                 ),
                 fields=tuple(
                     field.name
@@ -2455,7 +2464,10 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         return SuccessResult.from_dict(
             await self.api.delete_template(
                 waba_id=helpers.resolve_arg(
-                    wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"
+                    wa=self,
+                    value=waba_id,
+                    method_arg="waba_id",
+                    client_arg="business_account_id",
                 ),
                 template_name=template_name,
                 template_id=template_id,
@@ -2612,7 +2624,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 categories=tuple(map(str, categories)),
                 clone_flow_id=clone_flow_id,
                 endpoint_uri=endpoint_uri,
-                waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"),
+                waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="business_account_id"),
                 flow_json=helpers.resolve_flow_json_param(flow_json)
                 if flow_json
                 else None,
@@ -2837,7 +2849,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         return Result(
             wa=self,
             response=await self.api.get_flows(
-                waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"),
+                waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="business_account_id"),
                 fields=helpers.get_flow_fields(
                     invalidate_preview=invalidate_preview,
                     phone_number_id=phone_number_id,
@@ -3173,7 +3185,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         """
         return SuccessResult.from_dict(
             await self.api.set_waba_alternate_callback_url(
-                waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"),
+                waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="business_account_id"),
                 callback_url=callback_url,
                 verify_token=verify_token,
             )
@@ -3193,7 +3205,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         """
         return SuccessResult.from_dict(
             await self.api.delete_waba_alternate_callback_url(
-                waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"),
+                waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="business_account_id"),
             )
         )
 
