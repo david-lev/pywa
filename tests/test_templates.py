@@ -6,7 +6,7 @@ import json
 import pathlib
 
 
-def test_templates_to_json():
+def test_templates_to_json(caplog):
     for templates_dir in pathlib.Path("tests/data/templates").iterdir():
         with open(
             pathlib.Path(templates_dir, "examples.json"), "r", encoding="utf-8"
@@ -16,10 +16,19 @@ def test_templates_to_json():
                 f"tests.data.templates.{templates_dir.name}.examples"
             )
             for template_name, template_json in json_examples.items():
-                obj_dict = json.loads(getattr(obj_examples, template_name).to_json())
-                example_dict = json_examples[template_name]
-                assert obj_dict == example_dict, (
-                    f"Template {templates_dir.name=} {template_name=} does not match example"
+                example_obj: Template = getattr(obj_examples, template_name)
+                example_dict: dict = json_examples[template_name]
+
+                assert (
+                    json.loads(
+                        Template.from_dict(json.loads(example_obj.to_json())).to_json()
+                    )
+                    == example_dict
+                ), (
+                    f"Template {templates_dir.name=} {template_name=} does not match example JSON."
+                )
+                assert not caplog.records, (
+                    f"Template {templates_dir.name=} {template_name=} has warnings: {' '.join(record.message for record in caplog.records)}"
                 )
 
 

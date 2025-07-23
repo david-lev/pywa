@@ -778,7 +778,7 @@ class _BaseTextComponent:
 
     __slots__ = ("text", "example", "param_format")
 
-    def __init__(self, text, *positionals_examples, **named_examples):
+    def __init__(self, text: str, *positionals_examples, **named_examples):
         """
         Initializes a text component for a template.
 
@@ -871,12 +871,12 @@ class _BaseTextComponent:
                     example[0], dict
                 ):  # {"example": {"body_text_named_params": [{"param_name": "name", "example": "John"}]}}
                     return cls(
-                        data["text"],
+                        text=data["text"],
                         **{item["param_name"]: item["example"] for item in example},
                     )
             elif isinstance(example, str):  # {"example": "example"}
                 return cls(data["text"], example)
-        return data["text"]
+        return cls(text=data["text"])
 
     class Params: ...
 
@@ -2194,7 +2194,23 @@ class _BaseOTPButtonParams:
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class OneTapOTPButton(_BaseOTPButtonParams, BaseButtonComponent):
+class BaseOTPButtonComponent(_BaseOTPButtonParams, BaseButtonComponent):
+    """
+    Base class for one-time password (OTP) button components.
+    This class is not meant to be instantiated directly.
+    """
+
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.OTP,
+        init=False,
+        repr=False,
+    )
+    otp_type: OtpType
+    text: str | None = None
+
+
+@dataclasses.dataclass(kw_only=True, slots=True)
+class OneTapOTPButton(BaseOTPButtonComponent):
     """
     One-tap autofill authentication templates allow you to send a one-time password or code along with an one-tap autofill button to your users. When a WhatsApp user taps the autofill button, the WhatsApp client triggers an activity which opens your app and delivers it the password or code.
 
@@ -2221,23 +2237,17 @@ class OneTapOTPButton(_BaseOTPButtonParams, BaseButtonComponent):
         supported_apps: The supported_apps array allows you define pairs of app package names and signing key hashes for up to 5 apps. This can be useful if you have different app builds and want each of them to be able to initiate the handshake. Read more about `Supported Apps <https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates/autofill-button-authentication-templates#supported-apps>`_.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.OTP,
-        init=False,
-        repr=False,
-    )
     otp_type: OtpType = dataclasses.field(
         default=OtpType.ONE_TAP,
         init=False,
         repr=False,
     )
-    text: str | None = None
     autofill_text: str | None = None
     supported_apps: list[OTPSupportedApp]
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class ZeroTapOTPButton(_BaseOTPButtonParams, BaseButtonComponent):
+class ZeroTapOTPButton(BaseOTPButtonComponent):
     """
     Zero-tap authentication templates allow your users to receive one-time passwords or codes via WhatsApp without having to leave your app.
 
@@ -2271,24 +2281,18 @@ class ZeroTapOTPButton(_BaseOTPButtonParams, BaseButtonComponent):
         supported_apps: The supported_apps array allows you define pairs of app package names and signing key hashes for up to 5 apps. This can be useful if you have different app builds and want each of them to be able to initiate the handshake. Read more about `Supported Apps <https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates/zero-tap-authentication-templates#supported-apps>`_.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.OTP,
-        init=False,
-        repr=False,
-    )
     otp_type: OtpType = dataclasses.field(
         default=OtpType.ZERO_TAP,
         init=False,
         repr=False,
     )
-    text: str | None = None
     autofill_text: str | None = None
     zero_tap_terms_accepted: bool
     supported_apps: list[OTPSupportedApp]
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class CopyCodeOTPButton(_BaseOTPButtonParams, BaseButtonComponent):
+class CopyCodeOTPButton(BaseOTPButtonComponent):
     """
     Copy code authentication templates allow you to send a one-time password or code along with a copy code button to your users. When a WhatsApp user taps the copy code button, the WhatsApp client copies the password or code to the device's clipboard. The user can then switch to your app and paste the password or code into your app.
 
@@ -2304,17 +2308,11 @@ class CopyCodeOTPButton(_BaseOTPButtonParams, BaseButtonComponent):
         text: Copy code button label text. If omitted, the text will default to a pre-set value localized to the template's language. For example, ``Copy Code`` for English (US). Maximum 25 characters.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.OTP,
-        init=False,
-        repr=False,
-    )
     otp_type: OtpType = dataclasses.field(
         default=OtpType.COPY_CODE,
         init=False,
         repr=False,
     )
-    text: str | None = None
 
 
 # ========== LIMITED TIME OFFER ==========
@@ -2710,6 +2708,21 @@ class Template:
         """
         return _template_to_json(self)
 
+    @classmethod
+    def from_dict(cls, data: dict) -> Template:
+        return cls(
+            name=data["name"],
+            language=TemplateLanguage(data["language"]),
+            category=TemplateCategory(data["category"]),
+            components=[
+                _parse_component(component) for component in data["components"]
+            ],
+            parameter_format=ParamFormat(data["parameter_format"])
+            if "parameter_format" in data
+            else None,
+            message_send_ttl_seconds=data.get("message_send_ttl_seconds"),
+        )
+
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class AuthenticationTemplates(Template):
@@ -2743,7 +2756,8 @@ class AuthenticationTemplates(Template):
 
 _comp_types_to_component: dict[ComponentType, type[TemplateBaseComponent]] = {
     ComponentType.HEADER: BaseHeaderComponent,
-    ComponentType.BODY: BodyText,
+    ComponentType.BODY: BaseBodyComponent,
+    ComponentType.OTP: BaseOTPButtonComponent,
     ComponentType.FOOTER: FooterText,
     ComponentType.BUTTONS: Buttons,
     ComponentType.CAROUSEL: Carousel,
@@ -2751,11 +2765,10 @@ _comp_types_to_component: dict[ComponentType, type[TemplateBaseComponent]] = {
     ComponentType.PHONE_NUMBER: PhoneNumberButton,
     ComponentType.URL: URLButton,
     ComponentType.QUICK_REPLY: QuickReplyButton,
-    ComponentType.OTP: OneTapOTPButton,
     ComponentType.MPM: MPMButton,
     ComponentType.SPM: SPMButton,
     ComponentType.CATALOG: CatalogButton,
-    ComponentType.COPY_CODE: CopyCodeOTPButton,
+    ComponentType.COPY_CODE: CopyCodeButton,
     ComponentType.FLOW: FlowButton,
     ComponentType.CALL_PERMISSION_REQUEST: CallPermissionRequestButton,
     ComponentType.VOICE_CALL: VoiceCallButton,
@@ -2768,6 +2781,12 @@ _header_formats_to_component: dict[HeaderFormatType, type[BaseHeaderComponent]] 
     HeaderFormatType.DOCUMENT: HeaderDocument,
     HeaderFormatType.LOCATION: HeaderLocation,
     HeaderFormatType.PRODUCT: HeaderProduct,
+}
+
+_otp_types_to_component: dict[OtpType, type[BaseOTPButtonComponent]] = {
+    OtpType.COPY_CODE: CopyCodeOTPButton,
+    OtpType.ONE_TAP: OneTapOTPButton,
+    OtpType.ZERO_TAP: ZeroTapOTPButton,
 }
 
 
@@ -2802,7 +2821,7 @@ def _parse_component(component: dict) -> TemplateBaseComponent | dict:
 
     elif issubclass(component_cls, BaseBodyComponent):
         if "add_security_recommendation" in component:
-            return AuthenticationBody.from_dict(component)
+            component_cls = AuthenticationBody
         elif "text" in component:
             component_cls = BodyText
         else:
@@ -2814,7 +2833,7 @@ def _parse_component(component: dict) -> TemplateBaseComponent | dict:
 
     elif issubclass(component_cls, BaseFooterComponent):
         if "code_expiration_minutes" in component:
-            return AuthenticationFooter.from_dict(component)
+            component_cls = AuthenticationFooter
         elif "text" in component:
             component_cls = FooterText
         else:
@@ -2823,6 +2842,17 @@ def _parse_component(component: dict) -> TemplateBaseComponent | dict:
                 component,
             )
             return component
+
+    elif issubclass(component_cls, BaseOTPButtonComponent):
+        otp_type = OtpType(component["otp_type"])
+        otp_cls = _otp_types_to_component.get(otp_type)
+        if otp_cls is None:
+            _logger.warning(
+                "Unknown OTP type: %s. Defaulting to dictionary representation.",
+                component["otp_type"],
+            )
+            return component
+        component_cls = otp_cls
 
     try:
         return component_cls.from_dict(component)
