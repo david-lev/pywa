@@ -18,6 +18,7 @@ import datetime
 import json
 import mimetypes
 import pathlib
+from concurrent import futures
 from typing import Any, BinaryIO, Literal, Iterable, TYPE_CHECKING
 
 import httpx
@@ -159,13 +160,22 @@ def upload_template_media_components(
                 for cc in card.components:
                     if isinstance(cc, _BaseMediaHeaderComponent) and cc._handle is None:
                         not_uploaded.append(cc)
-
-    for c in not_uploaded:
-        _upload_comp(
-            wa=wa,
-            c=c,
-            app_id=app_id,
-        )
+    if not not_uploaded:
+        return
+    with futures.ThreadPoolExecutor(
+        thread_name_prefix="pywa-upload-template-media"
+    ) as executor:
+        tasks = [
+            executor.submit(
+                _upload_comp,
+                wa=wa,
+                c=c,
+                app_id=app_id,
+            )
+            for c in not_uploaded
+        ]
+        for task in futures.wait(tasks)[0]:
+            task.result()  # Raise any exceptions that occurred during upload
 
 
 def _upload_comp(
