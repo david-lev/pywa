@@ -2555,7 +2555,7 @@ class CarouselMediaCard:
         def to_dict(self, client: WhatsApp, sender: str) -> dict:
             return {
                 "card_index": self.index,
-                "parameters": [param.to_dict(client, sender) for param in self.params],
+                "components": [param.to_dict(client, sender) for param in self.params],
             }
 
     def params(

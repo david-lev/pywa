@@ -244,7 +244,7 @@ class CarouselMediaCard(_CarouselMediaCard):
         async def to_dict(self, client: WhatsApp, sender: str) -> dict:
             return {
                 "card_index": self.index,
-                "parameters": [
+                "components": [
                     (await param.to_dict(client, sender))
                     if utils.is_async_callable(param.to_dict)
                     else param.to_dict(client, sender)
