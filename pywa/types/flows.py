@@ -5,6 +5,7 @@ from __future__ import annotations
 import abc
 import dataclasses
 import datetime
+import functools
 import json
 import logging
 import pathlib
@@ -726,7 +727,7 @@ class FlowPreview:
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
-class FlowDetails:
+class FlowDetails(utils.APIObject):
     """
     Represents the details of a flow.
 
@@ -762,6 +763,22 @@ class FlowDetails:
     application: FacebookApplication | None
     updated_at: datetime.datetime | None = None
     health_status: dict | None = None
+
+    @classmethod
+    @functools.cache
+    def _api_fields(
+        cls, invalidate_preview: bool | None, phone_number_id: str | None
+    ) -> tuple[str, ...]:
+        fields = list(super()._api_fields())
+        if invalidate_preview is not None:
+            fields[fields.index("preview")] = (
+                f"preview.invalidate({'true' if invalidate_preview else 'false'})"
+            )
+        if phone_number_id is not None:
+            fields[fields.index("health_status")] = (
+                f"health_status.phone_number({phone_number_id})"
+            )
+        return tuple(fields)
 
     @classmethod
     def from_dict(cls, data: dict, client: WhatsApp) -> FlowDetails:

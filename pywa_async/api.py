@@ -830,7 +830,9 @@ class GraphAPIAsync(GraphAPI):
             json=data,
         )
 
-    async def get_commerce_settings(self, phone_id: str) -> dict[str, list[dict]]:
+    async def get_commerce_settings(
+        self, phone_id: str, fields: tuple[str, ...] | None = None
+    ) -> dict:
         """
         Get the commerce settings of the business catalog.
 
@@ -850,6 +852,7 @@ class GraphAPIAsync(GraphAPI):
 
         Args:
             phone_id: The ID of the phone number to get.
+            fields: The fields to get. If None, all fields will be returned.
 
         Returns:
             The commerce settings of the business catalog.
@@ -857,6 +860,7 @@ class GraphAPIAsync(GraphAPI):
         return await self._make_request(
             method="GET",
             endpoint=f"/{phone_id}/whatsapp_commerce_settings",
+            params={"fields": ",".join(fields)} if fields else None,
         )
 
     async def update_commerce_settings(
@@ -1575,6 +1579,7 @@ class GraphAPIAsync(GraphAPI):
         self,
         phone_id: str,
         code: str,
+        fields: tuple[str, ...] | None = None,
     ) -> dict:
         """
         Get a QR code.
@@ -1584,6 +1589,7 @@ class GraphAPIAsync(GraphAPI):
         Args:
             phone_id: The ID of the phone number to get the QR code from.
             code: The code of the QR code.
+            fields: The fields to get. If None, default fields will be returned.
 
         Return example::
 
@@ -1600,11 +1606,13 @@ class GraphAPIAsync(GraphAPI):
         return await self._make_request(
             method="GET",
             endpoint=f"/{phone_id}/message_qrdls/{code}",
+            params={"fields": ",".join(fields)} if fields else None,
         )
 
     async def get_qr_codes(
         self,
         phone_id: str,
+        fields: tuple[str, ...] | None = None,
         pagination: dict[str, str] | None = None,
     ) -> dict:
         """
@@ -1633,12 +1641,20 @@ class GraphAPIAsync(GraphAPI):
 
         Args:
             phone_id: The ID of the phone number to get the QR codes from.
+            fields: The fields to get. If None, default fields will be returned.
             pagination: The pagination parameters.
         """
         return await self._make_request(
             method="GET",
             endpoint=f"/{phone_id}/message_qrdls",
-            params=pagination,
+            params={
+                k: v
+                for k, v in {
+                    "fields": ",".join(fields) if fields else None,
+                    **(pagination or {}),
+                }.items()
+                if v is not None
+            },
         )
 
     async def update_qr_code(

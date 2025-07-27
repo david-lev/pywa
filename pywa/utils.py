@@ -11,7 +11,7 @@ import enum
 import importlib
 import warnings
 import logging
-from typing import Any, Callable, Protocol, TypeAlias
+from typing import Any, Callable, Protocol, TypeAlias, ClassVar
 
 import httpx
 
@@ -198,6 +198,22 @@ class FromDict:
                 for k, v in (data | kwargs).items()
                 if k in (f.name for f in dataclasses.fields(cls))
             }
+        )
+
+
+class APIObject:
+    """Base class for API objects that allows overriding field names."""
+
+    _override_api_fields: ClassVar[dict[str, str]] = {}
+    """Override API field names for this object."""
+
+    @classmethod
+    @functools.cache
+    def _api_fields(cls, *args, **kwargs) -> tuple[str, ...]:
+        return tuple(
+            cls._override_api_fields.get(f.name, f.name)
+            for f in dataclasses.fields(cls)
+            if not f.name.startswith("_")
         )
 
 

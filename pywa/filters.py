@@ -115,6 +115,7 @@ from .types.base_update import (
     BaseUpdate as _BaseUpdate,
 )  # noqa
 from .types.calls import CallDirection, CallPermissionResponse, CallStatusType
+from .types.template import TemplateStatus
 
 if TYPE_CHECKING:
     from pywa import WhatsApp as _Wa
@@ -762,6 +763,14 @@ with_tracker = new(lambda _, s: s.tracker is not None, name="with_tracker")
 
 template_status = new(lambda _, s: isinstance(s, _Ts), name="template_status")
 """Filters for template status updates."""
+
+template_status_approved = new(
+    lambda _, s: s.status == TemplateStatus.APPROVED, name="template_status_approved"
+)
+
+template_status_rejected = new(
+    lambda _, s: s.status == TemplateStatus.REJECTED, name="template_status_rejected"
+)
 
 template_quality = new(lambda _, s: isinstance(s, _Tq), name="template_quality")
 """Filters for template quality updates."""

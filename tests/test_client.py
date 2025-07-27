@@ -236,27 +236,6 @@ def test_get_media_msg():
     }
 
 
-def test_get_flow_fields():
-    assert helpers.get_flow_fields(
-        invalidate_preview=True,
-        phone_number_id="1234",
-    ) == (
-        "id",
-        "name",
-        "status",
-        "updated_at",
-        "categories",
-        "validation_errors",
-        "json_version",
-        "data_api_version",
-        "endpoint_uri",
-        "preview.invalidate(true)",
-        "whatsapp_business_account",
-        "application",
-        "health_status.phone_number(1234)",
-    )
-
-
 def test_get_flow_metric_field():
     assert (
         helpers.get_flow_metric_field(

@@ -1643,11 +1643,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                     method_arg="phone_id",
                     client_arg="phone_id",
                 ),
-                fields=tuple(
-                    field.name
-                    for field in dataclasses.fields(BusinessPhoneNumber)
-                    if not field.name.startswith("_")
-                ),
+                fields=BusinessPhoneNumber._api_fields(),
             )
         )
 
@@ -1682,11 +1678,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                     client_arg="business_account_id",
                 ),
                 pagination=pagination.to_dict() if pagination else None,
-                fields=tuple(
-                    field.name
-                    for field in dataclasses.fields(BusinessPhoneNumber)
-                    if not field.name.startswith("_")
-                ),
+                fields=BusinessPhoneNumber._api_fields(),
             ),
             item_factory=BusinessPhoneNumber.from_dict,
         )
@@ -1861,15 +1853,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                         method_arg="phone_id",
                         client_arg="phone_id",
                     ),
-                    fields=(
-                        "about",
-                        "address",
-                        "description",
-                        "email",
-                        "profile_picture_url",
-                        "websites",
-                        "vertical",
-                    ),
+                    fields=BusinessProfile._api_fields(),
                 )
             )["data"][0]
         )
@@ -2006,6 +1990,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                         method_arg="phone_id",
                         client_arg="phone_id",
                     ),
+                    fields=CommerceSettings._api_fields(),
                 )
             )["data"][0]
         )
@@ -2345,11 +2330,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                     method_arg="waba_id",
                     client_arg="business_account_id",
                 ),
-                fields=tuple(
-                    field.name
-                    for field in dataclasses.fields(TemplateDetails)
-                    if not field.name.startswith("_")
-                ),
+                fields=TemplateDetails._api_fields(),
                 filters={
                     k: v
                     for k, v in {
@@ -2388,11 +2369,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         return TemplateDetails.from_dict(
             data=await self.api.get_template(
                 template_id=str(template_id),
-                fields=tuple(
-                    field.name
-                    for field in dataclasses.fields(TemplateDetails)
-                    if not field.name.startswith("_")
-                ),
+                fields=TemplateDetails._api_fields(),
             ),
             client=self,
         )
@@ -2819,7 +2796,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             data=(
                 await self.api.get_flow(
                     flow_id=str(flow_id),
-                    fields=helpers.get_flow_fields(
+                    fields=FlowDetails._api_fields(
                         invalidate_preview=invalidate_preview,
                         phone_number_id=phone_number_id,
                     ),
@@ -2854,7 +2831,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             wa=self,
             response=await self.api.get_flows(
                 waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="business_account_id"),
-                fields=helpers.get_flow_fields(
+                fields=FlowDetails._api_fields(
                     invalidate_preview=invalidate_preview,
                     phone_number_id=phone_number_id,
                 ),
@@ -2958,8 +2935,10 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def register_phone_number(
         self,
         pin: int | str,
-        data_localization_region: str | None = None,
-        phone_id: str | int | None = None,
+            *,
+
+            data_localization_region: str | None = None,
+            phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
         Register a Business Phone Number
@@ -2998,6 +2977,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         self,
         prefilled_message: str,
         image_type: Literal["PNG", "SVG"] = "PNG",
+        *,
         phone_id: str | int | None = None,
     ) -> QRCode:
         """
@@ -3023,14 +3003,17 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
     async def get_qr_code(
         self,
-        code: str,
-        phone_id: str | int | None = None,
+            code: str,
+            *,
+            image_type: Literal["PNG", "SVG"] | None = None,
+            phone_id: str | int | None = None,
     ) -> QRCode | None:
         """
         Get a QR code.
 
         Args:
             code: The QR code.
+            image_type: The type of the image. if not provided, the image URL will not be returned (faster response).
             phone_id: The phone ID to get the QR code for (optional, if not provided, the client's phone ID will be used).
 
         Returns:
@@ -3040,20 +3023,23 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             await self.api.get_qr_code(
                 phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
                 code=code,
+                fields=QRCode._api_fields(image_type)
             )
         )["data"]
         return QRCode.from_dict(qrs[0]) if qrs else None
 
     async def get_qr_codes(
-        self,
-        phone_id: str | int | None = None,
-        *,
-        pagination: Pagination | None = None,
+            self,
+            *,
+            image_type: Literal["PNG", "SVG"] | None = None,
+            phone_id: str | int | None = None,
+            pagination: Pagination | None = None,
     ) -> Result[QRCode]:
         """
         Get QR codes associated with the WhatsApp Phone Number.
 
         Args:
+            image_type: The type of the image. If not provided, the image URL will not be returned (faster response).
             phone_id: The phone ID to get the QR codes for (optional, if not provided, the client's phone ID will be used).
             pagination: The pagination parameters (optional).
 
@@ -3064,6 +3050,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             wa=self,
             response=await self.api.get_qr_codes(
                 phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
+                fields=QRCode._api_fields(image_type),
                 pagination=pagination.to_dict() if pagination else None,
             ),
             item_factory=QRCode.from_dict,

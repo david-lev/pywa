@@ -9,7 +9,6 @@ __all__ = [
     "resolve_flow_json_param",
     "get_interactive_msg",
     "get_media_msg",
-    "get_flow_fields",
     "get_flow_metric_field",
     "resolve_callback_data",
 ]
@@ -311,29 +310,6 @@ def get_media_msg(
         **({"caption": caption} if caption else {}),
         **({"filename": filename} if filename else {}),
     }
-
-
-def get_flow_fields(
-    invalidate_preview: bool, phone_number_id: str | None
-) -> tuple[str, ...]:
-    """Internal method to get the fields of a flow."""
-    return (
-        "id",
-        "name",
-        "status",
-        "updated_at",
-        "categories",
-        "validation_errors",
-        "json_version",
-        "data_api_version",
-        "endpoint_uri",
-        f"preview.invalidate({'true' if invalidate_preview else 'false'})",
-        "whatsapp_business_account",
-        "application",
-        "health_status"
-        if not phone_number_id
-        else f"health_status.phone_number({phone_number_id})",
-    )
 
 
 def get_flow_metric_field(

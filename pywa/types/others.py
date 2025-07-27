@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import time
 
 from ..errors import WhatsAppError
@@ -11,7 +12,16 @@ import math
 import logging
 import datetime
 
-from typing import TYPE_CHECKING, Any, Iterable, TypeVar, Protocol, Generic, Iterator
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Iterable,
+    TypeVar,
+    Protocol,
+    Generic,
+    Iterator,
+    ClassVar,
+)
 
 from .. import utils
 
@@ -682,7 +692,7 @@ class Industry(utils.StrEnum):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class BusinessProfile:
+class BusinessProfile(utils.APIObject):
     """
     Represents a business profile.
 
@@ -696,6 +706,8 @@ class BusinessProfile:
         websites: The URLs associated with the business. For instance, a website, Facebook Page, or Instagram.
          There is a maximum of 2 websites with a maximum of 256 characters each.
     """
+
+    _override_api_fields: ClassVar = {"industry": "vertical"}
 
     about: str
     address: str | None
@@ -719,7 +731,7 @@ class BusinessProfile:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class CommerceSettings:
+class CommerceSettings(utils.APIObject):
     """
     Represents the WhatsApp commerce settings.
 
@@ -838,7 +850,7 @@ class ConversationalAutomation:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class BusinessPhoneNumber:
+class BusinessPhoneNumber(utils.APIObject):
     """
     Represents a WhatsApp Business Phone Number.
 
@@ -944,7 +956,7 @@ class BusinessPhoneNumber:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class QRCode:
+class QRCode(utils.APIObject):
     """
     Customers can scan a QR code from their phone to quickly begin a conversation with your business.
     The WhatsApp Business Management API allows you to create and access these QR codes and associated short links.
@@ -964,11 +976,19 @@ class QRCode:
     @classmethod
     def from_dict(cls, data: dict):
         return cls(
-            code=data.get("code"),
-            prefilled_message=data.get("prefilled_message"),
-            deep_link_url=data.get("deep_link_url"),
+            code=data["code"],
+            prefilled_message=data["prefilled_message"],
+            deep_link_url=data["deep_link_url"],
             qr_image_url=data.get("qr_image_url"),
         )
+
+    @classmethod
+    @functools.cache
+    def _api_fields(cls, image_type: str | None) -> tuple[str, ...]:
+        fields = list(super()._api_fields())
+        if image_type is not None:
+            fields[fields.index("qr_image_url")] = f"qr_image_url.format({image_type})"
+        return tuple(fields)
 
 
 @dataclasses.dataclass(slots=True, frozen=True)

@@ -839,7 +839,9 @@ class GraphAPI:
             json=data,
         )
 
-    def get_commerce_settings(self, phone_id: str) -> dict[str, list[dict]]:
+    def get_commerce_settings(
+        self, phone_id: str, fields: tuple[str, ...] | None = None
+    ) -> dict:
         """
         Get the commerce settings of the business catalog.
 
@@ -859,6 +861,7 @@ class GraphAPI:
 
         Args:
             phone_id: The ID of the phone number to get.
+            fields: The fields to get. If None, all fields will be returned.
 
         Returns:
             The commerce settings of the business catalog.
@@ -866,6 +869,7 @@ class GraphAPI:
         return self._make_request(
             method="GET",
             endpoint=f"/{phone_id}/whatsapp_commerce_settings",
+            params={"fields": ",".join(fields)} if fields else None,
         )
 
     def update_commerce_settings(
@@ -1584,6 +1588,7 @@ class GraphAPI:
         self,
         phone_id: str,
         code: str,
+        fields: tuple[str, ...] | None = None,
     ) -> dict:
         """
         Get a QR code.
@@ -1593,6 +1598,7 @@ class GraphAPI:
         Args:
             phone_id: The ID of the phone number to get the QR code from.
             code: The code of the QR code.
+            fields: The fields to get. If None, default fields will be returned.
 
         Return example::
 
@@ -1609,11 +1615,13 @@ class GraphAPI:
         return self._make_request(
             method="GET",
             endpoint=f"/{phone_id}/message_qrdls/{code}",
+            params={"fields": ",".join(fields)} if fields else None,
         )
 
     def get_qr_codes(
         self,
         phone_id: str,
+        fields: tuple[str, ...] | None = None,
         pagination: dict[str, str] | None = None,
     ) -> dict:
         """
@@ -1642,12 +1650,20 @@ class GraphAPI:
 
         Args:
             phone_id: The ID of the phone number to get the QR codes from.
+            fields: The fields to get. If None, default fields will be returned.
             pagination: The pagination parameters.
         """
         return self._make_request(
             method="GET",
             endpoint=f"/{phone_id}/message_qrdls",
-            params=pagination,
+            params={
+                k: v
+                for k, v in {
+                    "fields": ",".join(fields) if fields else None,
+                    **(pagination or {}),
+                }.items()
+                if v is not None
+            },
         )
 
     def update_qr_code(

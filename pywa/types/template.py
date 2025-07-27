@@ -2908,7 +2908,7 @@ def _template_to_json(template: Template | LibraryTemplate) -> str:
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class TemplateDetails:
+class TemplateDetails(utils.APIObject):
     """
     Represents the details of an existing WhatsApp Template.
 
