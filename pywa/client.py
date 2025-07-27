@@ -48,7 +48,7 @@ from .handlers import (
     PhoneNumberChangeHandler,
     IdentityChangeHandler,
 )  # noqa
-from .listeners import _Listeners, Listener
+from .listeners import _Listeners, Listener, BaseListenerIdentifier
 from .types import (
     BusinessProfile,
     Button,
@@ -138,6 +138,8 @@ from .types.template import (
     CreatedTemplate,
     TemplateUnpauseResult,
     AuthenticationTemplates,
+    BaseButtonComponent,
+    BaseOTPButtonComponent,
 )
 from .utils import FastAPI, Flask
 from .server import Server
@@ -314,7 +316,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             type[Handler] | None,
             list[Handler],
         ] = collections.defaultdict(list)
-        self._listeners = dict[tuple[str, str], Listener]()
+        self._listeners = dict[BaseListenerIdentifier, Listener]()
 
         if not token:
             self._api = None

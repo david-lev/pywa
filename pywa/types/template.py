@@ -155,7 +155,7 @@ class TemplateRejectionReason(utils.StrEnum):
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
-class _BaseTemplateUpdate(BaseUpdate, abc.ABC):
+class BaseTemplateUpdate(BaseUpdate, abc.ABC):
     """Base class for template updates."""
 
     template_id: str
@@ -175,7 +175,7 @@ class _BaseTemplateUpdate(BaseUpdate, abc.ABC):
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
-class TemplateStatusUpdate(_BaseTemplateUpdate):
+class TemplateStatusUpdate(BaseTemplateUpdate):
     """
     Represents status change of a template.
 
@@ -278,7 +278,7 @@ class TemplateUnpauseResult:
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
-class TemplateCategoryUpdate(_BaseTemplateUpdate):
+class TemplateCategoryUpdate(BaseTemplateUpdate):
     """
     Represents a template category update.
 
@@ -331,7 +331,7 @@ class TemplateCategoryUpdate(_BaseTemplateUpdate):
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
-class TemplateComponentsUpdate(_BaseTemplateUpdate):
+class TemplateComponentsUpdate(BaseTemplateUpdate):
     """
     Represents a template components update.
 
@@ -382,7 +382,7 @@ class TemplateComponentsUpdate(_BaseTemplateUpdate):
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
-class TemplateQualityUpdate(_BaseTemplateUpdate):
+class TemplateQualityUpdate(BaseTemplateUpdate):
     """
     Represents a template quality update.
 
@@ -2661,25 +2661,54 @@ class Template:
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates>`_.
 
-    Example:
+    Example::
 
-        >>> template = Template(
-        ...     name="my_template",
-        ...     language=TemplateLanguage.ENGLISH_US,
-        ...     category=TemplateCategory.MARKETING,
-        ...     components=[
-        ...         HeaderText(text="Welcome to our service!"),
-        ...         BodyText(text="Hello {{name}}, thank you for joining us!"),
-        ...         FooterText(text="Best regards, The Team"),
-        ...         Buttons(
-        ...             buttons=[
-        ...                 QuickReplyButton(text="Get Started"),
-        ...                 URLButton(text="Visit Website", url="https://website.com?ref={{1}}")
-        ...             ]
-        ...         )
-        ...     ],
-        ...     parameter_format=ParamFormat.NAMED,
-        ... )
+
+        from pywa.types.template import *
+
+        my_template = Template(
+            name="my_template",
+            language=TemplateLanguage.ENGLISH_US,
+            category=TemplateCategory.MARKETING,
+            components=[
+                HeaderText(text="Welcome to our service!"),
+                BodyText(text="Hello {{name}}, thank you for joining us!", name="John"),
+                FooterText(text="Best regards, The Team"),
+                Buttons(
+                    buttons=[
+                        QuickReplyButton(text="Get Started"),
+                        URLButton(text="Visit Website", url="https://website.com?ref={{1}}")
+                    ]
+                )
+            ],
+            parameter_format=ParamFormat.NAMED,
+        )
+
+        auth_template = Template(
+            name="auth_template",
+            language=TemplateLanguage.ENGLISH_US,
+            category=TemplateCategory.AUTHENTICATION,
+            components=[
+                AuthenticationBody(add_security_recommendation=True),
+                AuthenticationFooter(code_expiration_minutes=5),
+                Buttons(
+                    buttons=[
+                        OneTapOTPButton(
+                            text="Autofill Code",
+                            autofill_text="Autofill",
+                            supported_apps=[
+                                OTPSupportedApp(
+                                    package_name="com.example.myapp",
+                                    signature_hash="12345678901"
+                                )
+                            ]
+                        ),
+                    ]
+                )
+            ],
+        )
+
+
 
     Attributes:
         name: The name of the template (should be unique, maximum 512 characters).

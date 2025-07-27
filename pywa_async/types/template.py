@@ -254,7 +254,7 @@ class CarouselMediaCard(_CarouselMediaCard):
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
-class _BaseTemplateUpdateAsync:
+class BaseTemplateUpdateAsync:
     """Base class for template updates."""
 
     _client: WhatsAppAsync
@@ -273,7 +273,7 @@ class _BaseTemplateUpdateAsync:
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
-class TemplateStatusUpdate(_BaseTemplateUpdateAsync, _TemplateStatusUpdate):
+class TemplateStatusUpdate(BaseTemplateUpdateAsync, _TemplateStatusUpdate):
     """
     Represents status change of a template.
 
@@ -313,7 +313,7 @@ class TemplateStatusUpdate(_BaseTemplateUpdateAsync, _TemplateStatusUpdate):
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
-class TemplateCategoryUpdate(_BaseTemplateUpdateAsync, _TemplateCategoryUpdate):
+class TemplateCategoryUpdate(BaseTemplateUpdateAsync, _TemplateCategoryUpdate):
     """
     Represents a template category update.
 
@@ -337,7 +337,7 @@ class TemplateCategoryUpdate(_BaseTemplateUpdateAsync, _TemplateCategoryUpdate):
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
-class TemplateComponentsUpdate(_BaseTemplateUpdateAsync, _TemplateComponentsUpdate):
+class TemplateComponentsUpdate(BaseTemplateUpdateAsync, _TemplateComponentsUpdate):
     """
     Represents a template components update.
 
@@ -361,7 +361,7 @@ class TemplateComponentsUpdate(_BaseTemplateUpdateAsync, _TemplateComponentsUpda
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
-class TemplateQualityUpdate(_BaseTemplateUpdateAsync, _TemplateQualityUpdate):
+class TemplateQualityUpdate(BaseTemplateUpdateAsync, _TemplateQualityUpdate):
     """
     Represents a template quality update.
 

@@ -368,15 +368,12 @@ class Server:
             if handler_type is None:
                 return
             try:
-                constructed_update = self._handlers_to_updates[
+                constructed_update: BaseUpdate = self._handlers_to_updates[
                     handler_type
                 ].from_update(client=self, update=update)
-                if constructed_update:
-                    if handler_type._update._is_user_update and self._process_listener(
-                        cast(BaseUserUpdate, constructed_update)
-                    ):
-                        return
-                    self._invoke_callbacks(handler_type, constructed_update)
+                if self._process_listener(constructed_update):
+                    return
+                self._invoke_callbacks(handler_type, constructed_update)
             except Exception:
                 _logger.exception("Failed to construct update: %s", update)
         finally:
@@ -409,7 +406,7 @@ class Server:
             if handled and not self._continue_handling:
                 break
 
-    def _process_listener(self: "WhatsApp", update: BaseUserUpdate) -> bool:
+    def _process_listener(self: "WhatsApp", update: BaseUpdate) -> bool:
         """Process and answer a listener if present."""
         listener = self._listeners.get(update.listener_identifier)
         if not listener:
@@ -422,6 +419,10 @@ class Server:
             elif listener.apply_cancelers(self, update):
                 listener.cancel(update)
                 return True
+        except ContinueHandling:
+            return False
+        except StopHandling:
+            return True
         except Exception as e:
             listener.set_exception(e)
 

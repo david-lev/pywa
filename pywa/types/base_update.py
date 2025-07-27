@@ -14,10 +14,9 @@ import dataclasses
 import datetime
 from typing import TYPE_CHECKING, BinaryIO, Iterable, ClassVar
 
-from pywa import utils
-
 
 from .others import Contact, Metadata, ProductsSection, User, SuccessResult
+from ..listeners import BaseListenerIdentifier, UserUpdateListenerIdentifier
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
@@ -107,6 +106,12 @@ class BaseUpdate(abc.ABC):
     """The raw update dict from WhatsApp."""
     shared_data: dict = dataclasses.field(hash=False, default_factory=dict)
     """Shared data for the update. This data is shared between all handlers for the same update."""
+
+    @property
+    @abc.abstractmethod
+    def listener_identifier(self) -> BaseListenerIdentifier:
+        """The identifier for the listener that this update is for."""
+        ...
 
     @classmethod
     @abc.abstractmethod
@@ -917,11 +922,13 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
         return self.from_user.unblock()
 
     @property
-    def listener_identifier(self) -> tuple[str, str]:
+    def listener_identifier(self) -> UserUpdateListenerIdentifier:
         """
         The listener identifier of the update.
         """
-        return utils.listener_identifier(sender=self.sender, recipient=self.recipient)
+        return UserUpdateListenerIdentifier(
+            sender=self.sender, recipient=self.recipient
+        )
 
     @property
     def message_id_to_reply(self) -> str:
