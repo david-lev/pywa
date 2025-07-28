@@ -45,6 +45,7 @@ __all__ = [
     "CarouselMediaCard",
     "Template",
     "CreatedTemplate",
+    "UpdatedTemplate",
     "CreatedTemplates",
     "TemplateDetails",
     "TemplatesResult",
@@ -2788,6 +2789,20 @@ class _AuthenticationTemplates(Template):
     components: list[AuthenticationBody | AuthenticationFooter | Buttons | dict]
 
 
+@dataclasses.dataclass(kw_only=True, slots=True)
+class _TemplateUpdate(Template):
+    name: None = dataclasses.field(
+        default=None,
+        init=False,
+        repr=False,
+    )
+    language: None = dataclasses.field(
+        default=None,
+        init=False,
+        repr=False,
+    )
+
+
 _comp_types_to_component: dict[ComponentType, type[TemplateBaseComponent]] = {
     ComponentType.HEADER: BaseHeaderComponent,
     ComponentType.BODY: BaseBodyComponent,
@@ -3016,7 +3031,7 @@ class TemplateDetails(utils.APIObject):
         new_components: list[TemplateBaseComponent] | None = None,
         new_message_send_ttl_seconds: int | None = None,
         new_parameter_format: ParamFormat | None = None,
-    ) -> SuccessResult:
+    ) -> UpdatedTemplate:
         """
         Update this template.
 
@@ -3250,47 +3265,21 @@ class MigratedTemplateError(Exception):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class CreatedTemplate:
+class _CreatedAndUpdatedTemplateActions:
     """
-    Represents a created WhatsApp Template.
-
-    Attributes:
-        id: the template ID.
-        status: the template status.
-        category: the template category.
+    Internal class for WhatsApp Template actions.
     """
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
-
     id: str
-    status: TemplateStatus
     category: TemplateCategory
-
-    @classmethod
-    def from_dict(cls, data: dict, client: WhatsApp) -> CreatedTemplate:
-        """
-        Create a CreatedTemplate instance from a dictionary.
-
-        Args:
-            data (dict): The dictionary containing template data.
-            client (WhatsApp): The WhatsApp client instance.
-
-        Returns:
-            CreatedTemplate: An instance of CreatedTemplate.
-        """
-        return cls(
-            _client=client,
-            id=data["id"],
-            status=TemplateStatus(data["status"]),
-            category=TemplateCategory(data["category"]),
-        )
 
     def get(self) -> TemplateDetails:
         """
-        Retrieve the details of the created template.
+        Retrieve the details of the created or updated template.
 
         Returns:
-            TemplateDetails: The details of the created template.
+            TemplateDetails: The details of the created or updated template.
         """
         return self._client.get_template(template_id=self.id)
 
@@ -3331,6 +3320,71 @@ class CreatedTemplate:
                 timeout=timeout,
             ),
         )
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class CreatedTemplate(_CreatedAndUpdatedTemplateActions):
+    """
+    Represents a created WhatsApp Template.
+
+    Attributes:
+        id: the template ID.
+        status: the template status.
+        category: the template category.
+    """
+
+    status: TemplateStatus
+
+    @classmethod
+    def from_dict(cls, data: dict, client: WhatsApp) -> CreatedTemplate:
+        """
+        Create a CreatedTemplate instance from a dictionary.
+
+        Args:
+            data (dict): The dictionary containing template data.
+            client (WhatsApp): The WhatsApp client instance.
+
+        Returns:
+            CreatedTemplate: An instance of CreatedTemplate.
+        """
+        return cls(
+            _client=client,
+            id=data["id"],
+            status=TemplateStatus(data["status"]),
+            category=TemplateCategory(data["category"]),
+        )
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class UpdatedTemplate(_CreatedAndUpdatedTemplateActions):
+    """
+    Represents the result of a template update operation.
+
+    Attributes:
+        id: The unique identifier of the updated template.
+        name: The name of the updated template.
+        category: The category of the updated template.
+        success: Indicates whether the template update was successful.
+    """
+
+    name: str
+    success: bool
+
+    @classmethod
+    def from_dict(cls, data: dict, client: WhatsApp) -> UpdatedTemplate:
+        return cls(
+            _client=client,
+            success=data["success"],
+            id=data["id"],
+            name=data["name"],
+            category=TemplateCategory(data["category"]),
+        )
+
+    def __bool__(self) -> bool:
+        """
+        Returns True if the template update was successful, False otherwise.
+        """
+        return self.success
 
 
 @dataclasses.dataclass(frozen=True, slots=True)

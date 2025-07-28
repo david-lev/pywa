@@ -21,6 +21,7 @@ from pywa.client import (
     WhatsApp as _WhatsApp,
     _DEFAULT_VERIFY_DELAY_SEC,
     _AuthenticationTemplates,
+    _TemplateUpdate,
 )  # noqa MUST BE IMPORTED FIRST
 from pywa.types.base_update import BaseUpdate
 from . import _helpers as helpers
@@ -125,6 +126,7 @@ from .types.template import (
     AuthenticationBody,
     AuthenticationFooter,
     Buttons,
+    UpdatedTemplate,
 )
 from .types.media import Media
 from .types.flows import FlowJSONUpdateResult
@@ -2397,7 +2399,8 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         new_components: list[TemplateBaseComponent] | None = None,
         new_message_send_ttl_seconds: int | None = None,
         new_parameter_format: ParamFormat | None = None,
-    ) -> SuccessResult:
+        app_id: str | int | None = None,
+    ) -> UpdatedTemplate:
         """
         Update an existing template.
 
@@ -2413,24 +2416,30 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             new_components: The new components of the template (optional, if not provided, the existing components will be used).
             new_message_send_ttl_seconds: The new message send TTL in seconds (optional, if not provided, the existing TTL will be used).
             new_parameter_format: The new parameter format (optional, if not provided, the existing format will be used).
+            app_id: The App ID to upload the template header example media to (optional, if not provided, the client's app ID will be used).
 
         Returns:
             Whether the template was updated successfully.
         """
-        return SuccessResult.from_dict(
-            await self.api.update_template(
-                template_id=template_id,
-                template={
-                    k: v
-                    for k, v in {
-                        "category": new_category,
-                        "components": new_components,
-                        "message_send_ttl_seconds": new_message_send_ttl_seconds,
-                        "parameter_format": new_parameter_format,
-                    }.items()
-                    if v is not None
-                },
+        if new_components:
+            await helpers.upload_template_media_components(
+                wa=self,
+                app_id=app_id,
+                components=new_components,
             )
+        return UpdatedTemplate.from_dict(
+            data=await self.api.update_template(
+                template_id=template_id,
+                template=json.loads(
+                    _TemplateUpdate(
+                        category=new_category,
+                        components=new_components,
+                        message_send_ttl_seconds=new_message_send_ttl_seconds,
+                        parameter_format=new_parameter_format,
+                    ).to_json()
+                ),
+            ),
+            client=self,
         )
 
     async def delete_template(

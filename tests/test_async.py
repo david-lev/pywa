@@ -20,6 +20,8 @@ from pywa.types.template import (
     CarouselMediaCard as CarouselMediaCardSync,
     TemplatesResult as TemplatesResultSync,
     CreatedTemplate as CreatedTemplateSync,
+    CreatedTemplates as CreatedTemplatesSync,
+    UpdatedTemplate as UpdatedTemplateSync,
     TemplateBaseComponent,
 )
 from pywa_async.types.template import (
@@ -31,6 +33,8 @@ from pywa_async.types.template import (
     CarouselMediaCard as CarouselMediaCardAsync,
     TemplatesResult as TemplatesResultAsync,
     CreatedTemplate as CreatedTemplateAsync,
+    CreatedTemplates as CreatedTemplatesAsync,
+    UpdatedTemplate as UpdatedTemplateAsync,
 )
 
 
@@ -147,6 +151,8 @@ def overrides() -> list[tuple[type, type]]:
         (CarouselMediaCardSync.Params, CarouselMediaCardAsync.Params),
         (TemplatesResultSync, TemplatesResultAsync),
         (CreatedTemplateSync, CreatedTemplateAsync),
+        (CreatedTemplatesSync, CreatedTemplatesAsync),
+        (UpdatedTemplateSync, UpdatedTemplateAsync),
     ]
 
 
