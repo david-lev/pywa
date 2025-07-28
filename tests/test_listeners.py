@@ -22,12 +22,12 @@ class DummyUpdate:
 
 @pytest.fixture
 def wa_sync():
-    return WhatsAppSync()
+    return WhatsAppSync(server=None, verify_token="xyz")
 
 
 @pytest.fixture
 def wa_async():
-    return WhatsAppAsync()
+    return WhatsAppAsync(server=None, verify_token="xyz")
 
 
 def test_listener_success_sync(wa_sync: WhatsAppSync):

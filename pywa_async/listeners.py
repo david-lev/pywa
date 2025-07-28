@@ -116,6 +116,11 @@ class _AsyncListeners:
             ListenerCanceled: If the listener was canceled by a filter
             ListenerStopped: If the listener was stopped manually
         """
+        if self._server is utils.MISSING:
+            raise ValueError(
+                "You must initialize the WhatsApp client with an web app"
+                " (Flask or FastAPI or custom server by setting `server` to None) in order to listen to incoming updates."
+            )
         listener = Listener(
             wa=self,
             identifier=to,
