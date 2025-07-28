@@ -4,8 +4,9 @@ import dataclasses
 import datetime
 import functools
 import pathlib
-from typing import TYPE_CHECKING, Iterable, BinaryIO
+from typing import TYPE_CHECKING, Iterable, BinaryIO, cast
 
+from pywa.listeners import TemplateUpdateListenerIdentifier
 from pywa.types import CallbackData
 from pywa.types.others import SuccessResult
 from pywa.types.template import *  # noqa MUST BE IMPORTED FIRST
@@ -27,6 +28,7 @@ from pywa.types.template import (
 from .media import Media
 from .others import Result
 from .. import _helpers as helpers, utils
+from .. import filters as pywa_filters
 
 if TYPE_CHECKING:
     from ..client import WhatsApp as WhatsAppAsync, WhatsApp
@@ -583,3 +585,41 @@ class CreatedTemplate(_CreatedTemplate):
             TemplateDetails: The details of the created template.
         """
         return await self._client.get_template(template_id=self.id)
+
+    async def wait_until_approved(
+        self,
+        *,
+        cancelers: pywa_filters.Filter | None = None,
+        timeout: float | None = None,
+    ) -> TemplateStatusUpdate:
+        """
+        Wait until the template is approved.
+
+        Example usage:
+
+            >>> from pywa import WhatsApp, filters
+            >>> wa = WhatsApp(...)
+            >>> created_template = wa.create_template(...)
+            >>> status = created_template.wait_until_approved(cancelers=filters.template_status & filters.template_status_rejected)
+            >>> print(f"Template {created_template.id} is approved with status: {status.new_status}")
+
+
+        Args:
+            cancelers: A filter to cancel the waiting process.
+            timeout: The maximum time to wait for the template to be approved.
+
+        Returns:
+            TemplateStatusUpdate: An update containing the status of the template once it is approved.
+        """
+        return cast(
+            TemplateStatusUpdate,
+            self._client.listen(
+                to=TemplateUpdateListenerIdentifier(
+                    waba_id=self._client.business_account_id, template_id=self.id
+                ),
+                filters=pywa_filters.template_status
+                & pywa_filters.template_status_approved,
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
+        )

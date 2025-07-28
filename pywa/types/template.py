@@ -35,6 +35,7 @@ __all__ = [
     "MPMButton",
     "SPMButton",
     "CallPermissionRequestButton",
+    "BaseOTPButton",
     "CopyCodeOTPButton",
     "OneTapOTPButton",
     "ZeroTapOTPButton",
@@ -44,8 +45,8 @@ __all__ = [
     "CarouselMediaCard",
     "Template",
     "CreatedTemplate",
+    "CreatedTemplates",
     "TemplateDetails",
-    "AuthenticationTemplates",
     "TemplatesResult",
     "TemplatesCompareResult",
     "TemplateUnpauseResult",
@@ -69,14 +70,16 @@ from .flows import FlowActionType, FlowJSON
 import abc
 import dataclasses
 import logging
-from typing import TYPE_CHECKING, Literal, Iterable, BinaryIO
+from typing import TYPE_CHECKING, Literal, Iterable, BinaryIO, cast, Iterator
 
 from .media import Media
 from .others import Result, SuccessResult, ProductsSection
 from .. import utils
 from .. import _helpers as helpers
+from ..listeners import TemplateUpdateListenerIdentifier
 
 if TYPE_CHECKING:
+    from pywa import filters as pywa_filters
     from ..client import WhatsApp
     from .sent_update import SentTemplate
 
@@ -161,6 +164,13 @@ class BaseTemplateUpdate(BaseUpdate, abc.ABC):
     template_id: str
     template_name: str
     template_language: TemplateLanguage
+
+    @property
+    def listener_identifier(self) -> TemplateUpdateListenerIdentifier:
+        return TemplateUpdateListenerIdentifier(
+            waba_id=self.id,
+            template_id=self.template_id,
+        )
 
     def get_template(self) -> TemplateDetails:
         """
@@ -724,6 +734,18 @@ class TemplateBaseComponent(abc.ABC):
                 for k, v in data.items()
                 if k in {f.name for f in dataclasses.fields(cls) if f.init}
             }
+        )
+
+    def to_dict(self) -> dict:
+        """
+        Converts the component to a dictionary representation.
+
+        Returns:
+            dict: The dictionary representation of the component.
+        """
+        return dataclasses.asdict(
+            obj=self,
+            dict_factory=lambda d: {k: v for (k, v) in d if v is not None},
         )
 
     class Params(abc.ABC):
@@ -2194,7 +2216,7 @@ class _BaseOTPButtonParams:
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class BaseOTPButtonComponent(_BaseOTPButtonParams, BaseButtonComponent):
+class BaseOTPButton(_BaseOTPButtonParams, BaseButtonComponent, abc.ABC):
     """
     Base class for one-time password (OTP) button components.
     This class is not meant to be instantiated directly.
@@ -2210,7 +2232,7 @@ class BaseOTPButtonComponent(_BaseOTPButtonParams, BaseButtonComponent):
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class OneTapOTPButton(BaseOTPButtonComponent):
+class OneTapOTPButton(BaseOTPButton):
     """
     One-tap autofill authentication templates allow you to send a one-time password or code along with an one-tap autofill button to your users. When a WhatsApp user taps the autofill button, the WhatsApp client triggers an activity which opens your app and delivers it the password or code.
 
@@ -2247,7 +2269,7 @@ class OneTapOTPButton(BaseOTPButtonComponent):
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class ZeroTapOTPButton(BaseOTPButtonComponent):
+class ZeroTapOTPButton(BaseOTPButton):
     """
     Zero-tap authentication templates allow your users to receive one-time passwords or codes via WhatsApp without having to leave your app.
 
@@ -2292,7 +2314,7 @@ class ZeroTapOTPButton(BaseOTPButtonComponent):
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class CopyCodeOTPButton(BaseOTPButtonComponent):
+class CopyCodeOTPButton(BaseOTPButton):
     """
     Copy code authentication templates allow you to send a one-time password or code along with a copy code button to your users. When a WhatsApp user taps the copy code button, the WhatsApp client copies the password or code to the device's clipboard. The user can then switch to your app and paste the password or code into your app.
 
@@ -2749,20 +2771,8 @@ class Template:
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class AuthenticationTemplates(Template):
-    """
-    Bulk update or create authentication templates in multiple languages that include or exclude the optional security and expiration warnings.
-
-    - If a template already exists with a matching name and language, the template will be updated with the contents of the request, otherwise, a new template will be created.
-    - You can't provide the ``text`` or ``autofill_text`` properties for the OTP Buttons. It will be automatically set to a pre-set value localized to the template's language. For example, `Copy Code` for English (US) and `Autofill` for English (US).
-    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates#bulk-management>`_.
-
-    Attributes:
-        name: The name of the template (should be unique, maximum 512 characters).
-        languages: A list of languages and locale codes to create or update the template in (See `Supported Languages <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/supported-languages>`_).
-        components: Components that make up the authentication template. :class:`AuthenticationBody`, :class:`AuthenticationFooter` and  :class:`Buttons` with :class:`OneTapOTPButton`, :class:`ZeroTapOTPButton`, or :class:`CopyCodeOTPButton` buttons.
-        message_send_ttl_seconds: The time-to-live (TTL) for the template message in seconds. (See `Time-to-live (TTL) <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#time-to-live--ttl---customization--defaults--min-max-values--and-compatibility>`_).
-    """
+class _AuthenticationTemplates(Template):
+    """Internal class for upserting authentication templates."""
 
     language: None = dataclasses.field(
         default=None,
@@ -2781,7 +2791,7 @@ class AuthenticationTemplates(Template):
 _comp_types_to_component: dict[ComponentType, type[TemplateBaseComponent]] = {
     ComponentType.HEADER: BaseHeaderComponent,
     ComponentType.BODY: BaseBodyComponent,
-    ComponentType.OTP: BaseOTPButtonComponent,
+    ComponentType.OTP: BaseOTPButton,
     ComponentType.FOOTER: FooterText,
     ComponentType.BUTTONS: Buttons,
     ComponentType.CAROUSEL: Carousel,
@@ -2807,7 +2817,7 @@ _header_formats_to_component: dict[HeaderFormatType, type[BaseHeaderComponent]] 
     HeaderFormatType.PRODUCT: HeaderProduct,
 }
 
-_otp_types_to_component: dict[OtpType, type[BaseOTPButtonComponent]] = {
+_otp_types_to_component: dict[OtpType, type[BaseOTPButton]] = {
     OtpType.COPY_CODE: CopyCodeOTPButton,
     OtpType.ONE_TAP: OneTapOTPButton,
     OtpType.ZERO_TAP: ZeroTapOTPButton,
@@ -2867,7 +2877,7 @@ def _parse_component(component: dict) -> TemplateBaseComponent | dict:
             )
             return component
 
-    elif issubclass(component_cls, BaseOTPButtonComponent):
+    elif issubclass(component_cls, BaseOTPButton):
         otp_type = OtpType(component["otp_type"])
         otp_cls = _otp_types_to_component.get(otp_type)
         if otp_cls is None:
@@ -3283,3 +3293,80 @@ class CreatedTemplate:
             TemplateDetails: The details of the created template.
         """
         return self._client.get_template(template_id=self.id)
+
+    def wait_until_approved(
+        self,
+        *,
+        cancelers: pywa_filters.Filter | None = None,
+        timeout: float | None = None,
+    ) -> TemplateStatusUpdate:
+        """
+        Wait until the template is approved.
+
+        Example usage:
+
+            >>> from pywa import WhatsApp, filters
+            >>> wa = WhatsApp(...)
+            >>> created_template = wa.create_template(...)
+            >>> status = created_template.wait_until_approved(cancelers=filters.template_status & filters.template_status_rejected)
+            >>> print(f"Template {created_template.id} is approved with status: {status.new_status}")
+
+
+        Args:
+            cancelers: A filter to cancel the waiting process.
+            timeout: The maximum time to wait for the template to be approved.
+
+        Returns:
+            TemplateStatusUpdate: An update containing the status of the template once it is approved.
+        """
+        return cast(
+            TemplateStatusUpdate,
+            self._client.listen(
+                to=TemplateUpdateListenerIdentifier(
+                    waba_id=self._client.business_account_id, template_id=self.id
+                ),
+                filters=pywa_filters.template_status
+                & pywa_filters.template_status_approved,
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
+        )
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class CreatedTemplates:
+    """
+    Represents a collection of created WhatsApp Templates.
+
+    Attributes:
+        templates: A list of CreatedTemplate instances.
+    """
+
+    templates: tuple[CreatedTemplate, ...]
+
+    @classmethod
+    def from_dict(cls, data: dict, client: WhatsApp) -> CreatedTemplates:
+        """
+        Create a CreatedTemplates instance from a dictionary.
+
+        Args:
+            data (dict): The dictionary containing template data.
+            client (WhatsApp): The WhatsApp client instance.
+
+        Returns:
+            CreatedTemplates: An instance of CreatedTemplates.
+        """
+        return cls(
+            templates=tuple(
+                CreatedTemplate.from_dict(item, client) for item in data["data"]
+            )
+        )
+
+    def __iter__(self) -> Iterator[CreatedTemplate]:
+        """
+        Iterate over the created templates.
+
+        Returns:
+            Iterator[CreatedTemplate]: An iterator over the CreatedTemplate instances.
+        """
+        return iter(self.templates)

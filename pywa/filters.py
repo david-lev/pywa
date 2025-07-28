@@ -68,6 +68,8 @@ __all__ = [
     "with_tracker",
     "flow_completion",
     "template_status",
+    "template_status_approved",
+    "template_status_rejected",
     "template_quality",
     "template_category",
     "template_components",

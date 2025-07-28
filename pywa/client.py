@@ -6,7 +6,6 @@ __all__ = ["WhatsApp"]
 
 import bisect
 import collections
-import dataclasses
 import datetime
 import functools
 import hashlib
@@ -137,9 +136,12 @@ from .types.template import (
     Template,
     CreatedTemplate,
     TemplateUnpauseResult,
-    AuthenticationTemplates,
-    BaseButtonComponent,
-    BaseOTPButtonComponent,
+    BaseOTPButton,
+    Buttons,
+    AuthenticationFooter,
+    AuthenticationBody,
+    CreatedTemplates,
+    _AuthenticationTemplates,
 )
 from .utils import FastAPI, Flask
 from .server import Server
@@ -2352,8 +2354,16 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )
 
     def upsert_authentication_template(
-        self, templates: AuthenticationTemplates, *, waba_id: str | int | None = None
-    ) -> tuple[CreatedTemplate, ...]:
+        self,
+        *,
+        name: str,
+        languages: Iterable[TemplateLanguage],
+        otp_button: BaseOTPButton,
+        add_security_recommendation: bool | None = None,
+        code_expiration_minutes: int | None = None,
+        message_send_ttl_seconds: int | None = None,
+        waba_id: str | int | None = None,
+    ) -> CreatedTemplates:
         """
         Bulk update or create authentication templates in multiple languages that include or exclude the optional security and expiration warnings.
 
@@ -2362,53 +2372,58 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates#bulk-management>`_.
         - Read more about `Authentication Templates <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/authentication-templates>`_.
 
-        Example::
 
-            from pywa.types import template as t
+        Example:
 
-            wa = WhatsApp(...)
-            created = wa.upsert_authentication_template(
-                templates=t.AuthenticationTemplates(
-                    name='auth_with_otp',
-                    languages=[
-                        t.TemplateLanguage.ENGLISH_US,
-                        t.TemplateLanguage.SPANISH,
-                    ],
-                    components=[
-                        t.AuthenticationBody(add_security_recommendation=True),
-                        t.AuthenticationFooter(code_expiration_minutes=5),
-                        t.Buttons(
-                            buttons=[
-                                t.CopyCodeOTPButton(),
-                            ]
-                        ),
-                    ],
-                ),
-            )
-            for template in created:
-                print('Template created:', template.id, template.status)
+            >>> from pywa.types.template import *
+            >>> wa = WhatsApp(...)
+            >>> templates = wa.upsert_authentication_template(
+            ...     name='one_tap_authentication',
+            ...     languages=[TemplateLanguage.ENGLISH_US, TemplateLanguage.FRENCH, TemplateLanguage.SPANISH],
+            ...     otp_button=OneTapOTPButton(supported_apps=...),
+            ...     add_security_recommendation=True,
+            ...     code_expiration_minutes=5,
+            ... )
+            ... for template in templates:
+            ...     print(f'Template {template.id} created with status {template.status}')
 
         Args:
-            templates: The authentication templates to upsert.
+            name: The name of the template (should be unique, maximum 512 characters).
+            languages: A list of languages and locale codes to create or update the template in (See `Supported Languages <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/supported-languages>`_).
+            otp_button: A :class:`OneTapOTPButton`, :class:`ZeroTapOTPButton`, or :class:`CopyCodeOTPButton` button.
+            add_security_recommendation: Boolean value to add information to the template about not sharing authentication codes with anyone.
+            code_expiration_minutes: Integer value to add information to the template on when the code will expire.
+            message_send_ttl_seconds: The time-to-live (TTL) for the template message in seconds. (See `Time-to-live (TTL) <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#time-to-live--ttl---customization--defaults--min-max-values--and-compatibility>`_).
             waba_id: The WhatsApp Business account ID (Overrides the client's business account ID, optional).
 
         Returns:
-            A tuple of created/updated templates.
+            A :class:`CreatedTemplates` object containing the created or updated templates.
         """
-        return tuple(
-            CreatedTemplate.from_dict(
-                client=self,
-                data=res,
-            )
-            for res in self.api.upsert_message_templates(
+        return CreatedTemplates.from_dict(
+            data=self.api.upsert_message_templates(
                 waba_id=helpers.resolve_arg(
                     wa=self,
                     value=waba_id,
                     method_arg="waba_id",
                     client_arg="business_account_id",
                 ),
-                templates=json.loads(templates.to_json()),
-            )["data"]
+                template=json.loads(
+                    _AuthenticationTemplates(
+                        name=name,
+                        languages=list(languages),
+                        components=[
+                            AuthenticationBody(
+                                add_security_recommendation=add_security_recommendation
+                            ),
+                            AuthenticationFooter(
+                                code_expiration_minutes=code_expiration_minutes
+                            ),
+                            Buttons(buttons=[otp_button]),
+                        ],
+                    ).to_json()
+                ),
+            ),
+            client=self,
         )
 
     def send_template(

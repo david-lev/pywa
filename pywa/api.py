@@ -1120,7 +1120,7 @@ class GraphAPI:
     def upsert_message_templates(
         self,
         waba_id: str,
-        templates: dict,
+        template: dict,
     ) -> dict:
         """
         Bulk update or create authentication templates in multiple languages that include or exclude the optional security and expiration warnings.
@@ -1143,12 +1143,12 @@ class GraphAPI:
 
         Args:
             waba_id: The ID of the WhatsApp Business Account.
-            templates: A dict containing the template to create or update to all languages listed in the template.
+            template: A dict containing the template to create or update to all languages listed in the template.
         """
         return self._make_request(
             method="POST",
             endpoint=f"/{waba_id}/upsert_message_templates",
-            json=templates,
+            json=template,
         )
 
     def create_flow(
