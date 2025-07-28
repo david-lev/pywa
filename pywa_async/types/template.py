@@ -466,6 +466,35 @@ class TemplateDetails(_TemplateDetails):
                 self.parameter_format = new_parameter_format
         return res
 
+    async def duplicate(self, **overrides) -> CreatedTemplate:
+        """
+        Duplicate this template.
+
+        - WhatsApp Cloud API does not support duplicating templates, this method creates a new template with the same components and properties as this one. It is useful for creating variations of existing templates with minor changes.
+
+        Example:
+            >>> wa = WhatsApp(...)
+            >>> template = wa.get_template("my_template_id")
+            >>> new_template = template.duplicate(language=TemplateLanguage.ENGLISH)
+
+        Args:
+            overrides: Optional overrides for the template properties.
+        """
+        return await self._client.create_template(
+            Template(
+                name=overrides.get("name", self.name),
+                language=overrides.get("language", self.language),
+                category=overrides.get("category", self.category),
+                components=overrides.get("components", self.components),
+                parameter_format=overrides.get(
+                    "parameter_format", self.parameter_format
+                ),
+                message_send_ttl_seconds=overrides.get(
+                    "message_send_ttl_seconds", self.message_send_ttl_seconds
+                ),
+            )
+        )
+
     async def compare(
         self,
         to: Iterable[int | str],
@@ -518,6 +547,16 @@ class TemplateDetails(_TemplateDetails):
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> SentTemplate:
+        """
+        A shortcut to send a template message to WhatsApp users.
+
+        Args:
+            to: The phone ID of the WhatsApp user.
+            params: The parameters to fill in the template.
+            reply_to_message_id: The ID of the message to reply to (optional).
+            tracker: A callback data to track the message (optional, can be a string or a :class:`CallbackData` object).
+            sender: The phone ID to send the template from (optional, if not provided, the client's phone ID will be used).
+        """
         return await self._client.send_template(
             to=to,
             name=self.name,
