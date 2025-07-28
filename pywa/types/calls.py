@@ -9,7 +9,7 @@ __all__ = [
     "CallPermissionResponse",
     "CallPermissionResponseSource",
     "CallConnect",
-    "SDP",
+    "SessionDescription",
     "CallEvent",
     "CallDirection",
     "CallTerminate",
@@ -85,7 +85,7 @@ class _CallShortcuts:
         """The WhatsApp ID of the user that received the call."""
         return self._internal_sender
 
-    def pre_accept(self, *, sdp: SDP) -> SuccessResult:
+    def pre_accept(self, *, sdp: SessionDescription) -> SuccessResult:
         """
         Pre-accept the call.
 
@@ -109,7 +109,7 @@ class _CallShortcuts:
 
     def accept(
         self,
-        sdp: SDP,
+        sdp: SessionDescription,
         *,
         tracker: str | CallbackData | None = None,
     ) -> SuccessResult:
@@ -177,7 +177,7 @@ class CallConnect(BaseUserUpdate, _CallShortcuts):
 
     event: CallEvent
     direction: CallDirection
-    session: SDP | None
+    session: SessionDescription | None
 
     _webhook_field = "calls"
 
@@ -201,7 +201,9 @@ class CallConnect(BaseUserUpdate, _CallShortcuts):
             ),
             event=CallEvent(call["event"]),
             direction=CallDirection(call["direction"]),
-            session=SDP.from_dict(call["session"]) if "session" in call else None,
+            session=SessionDescription.from_dict(call["session"])
+            if "session" in call
+            else None,
         )
 
 
@@ -320,7 +322,7 @@ class CallPermissionResponseSource(utils.StrEnum):
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
-class SDP(utils.FromDict):
+class SessionDescription(utils.FromDict):
     """
     Contains the Session Description Protocol (SDP) type and description language.
 
@@ -460,7 +462,7 @@ class CallTerminate(BaseUserUpdate, _CallShortcuts, Generic[_CallbackDataT]):
         )
 
     def recall(
-        self, sdp: SDP, *, tracker: str | CallbackData | None = None
+        self, sdp: SessionDescription, *, tracker: str | CallbackData | None = None
     ) -> InitiatedCall:
         """
         Recall the call with the given SDP.

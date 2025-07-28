@@ -32,7 +32,7 @@ class _CallShortcutsAsync:
     sender: str
     recipient: str
 
-    async def pre_accept(self, *, sdp: SDP) -> SuccessResult:
+    async def pre_accept(self, *, sdp: SessionDescription) -> SuccessResult:
         """
         Pre-accept the call.
 
@@ -56,7 +56,7 @@ class _CallShortcutsAsync:
 
     async def accept(
         self,
-        sdp: SDP,
+        sdp: SessionDescription,
         *,
         tracker: str | CallbackData | None = None,
     ) -> SuccessResult:
@@ -146,7 +146,7 @@ class CallTerminate(BaseUserUpdateAsync, _CallShortcutsAsync, _CallTerminate):
     """
 
     async def recall(
-        self, sdp: SDP, *, tracker: str | CallbackData | None = None
+        self, sdp: SessionDescription, *, tracker: str | CallbackData | None = None
     ) -> InitiatedCall:
         """
         Recall the call with the given SDP.

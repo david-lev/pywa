@@ -128,7 +128,7 @@ from .types.template import (
 )
 from .types.media import Media
 from .types.flows import FlowJSONUpdateResult
-from .types.calls import CallPermissions, SDP
+from .types.calls import CallPermissions, SessionDescription
 from .types.others import (
     InteractiveType,
     UsersBlockedResult,
@@ -3383,7 +3383,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def initiate_call(
             self,
             to: str | int,
-            sdp: SDP,
+            sdp: SessionDescription,
             *,
             tracker: str | CallbackData | None = None,
             phone_id: str | int | None = None
@@ -3413,7 +3413,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def pre_accept_call(
             self,
             call_id: str,
-            sdp: SDP,
+            sdp: SessionDescription,
             *,
             phone_id: str | int | None = None,
     ) -> SuccessResult:
@@ -3447,7 +3447,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def accept_call(
             self,
             call_id: str,
-            sdp: SDP,
+            sdp: SessionDescription,
             *,
             tracker: str | CallbackData | None = None,
             phone_id: str | int | None = None,

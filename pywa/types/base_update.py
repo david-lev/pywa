@@ -21,7 +21,7 @@ from ..listeners import BaseListenerIdentifier, UserUpdateListenerIdentifier
 if TYPE_CHECKING:
     from ..client import WhatsApp
     from .sent_update import SentMessage, SentTemplate
-    from .calls import SDP
+    from .calls import SessionDescription
     from .sent_update import InitiatedCall
     from .callback import (
         Button,
@@ -848,7 +848,7 @@ class _ClientShortcuts(abc.ABC):
         )
 
     def call(
-        self, sdp: SDP, *, tracker: str | CallbackData | None = None
+        self, sdp: SessionDescription, *, tracker: str | CallbackData | None = None
     ) -> InitiatedCall:
         """
         Initiate a call with the user.

@@ -18,7 +18,7 @@ from .others import Contact, ProductsSection, User, SuccessResult
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
-    from .calls import SDP
+    from .calls import SessionDescription
     from pywa.types.sent_update import InitiatedCall
     from .sent_update import SentMessage, SentTemplate
     from .callback import (
@@ -705,7 +705,7 @@ class _ClientShortcutsAsync:
         )
 
     async def call(
-        self, sdp: SDP, *, tracker: str | CallbackData | None = None
+        self, sdp: SessionDescription, *, tracker: str | CallbackData | None = None
     ) -> InitiatedCall:
         """
         Initiate a call with the user.

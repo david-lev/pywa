@@ -98,7 +98,7 @@ from .types import (
     IdentityChange,
 )
 from .types.base_update import BaseUpdate
-from .types.calls import CallPermissions, SDP
+from .types.calls import CallPermissions, SessionDescription
 from .types.sent_update import InitiatedCall
 from .types.flows import (
     FlowJSON,
@@ -3592,7 +3592,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def initiate_call(
             self,
             to: str | int,
-            sdp: SDP,
+            sdp: SessionDescription,
             *,
             tracker: str | CallbackData | None = None,
             phone_id: str | int | None = None
@@ -3621,7 +3621,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def pre_accept_call(
             self,
             call_id: str,
-            sdp: SDP,
+            sdp: SessionDescription,
             *,
             phone_id: str | int | None = None,
     ) -> SuccessResult:
@@ -3655,7 +3655,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def accept_call(
             self,
             call_id: str,
-            sdp: SDP,
+            sdp: SessionDescription,
             *,
             tracker: str | CallbackData | None = None,
             phone_id: str | int | None = None,
