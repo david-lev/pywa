@@ -2276,6 +2276,11 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
+        await helpers.upload_template_media_params(
+            wa=self,
+            sender=sender,
+            params=params,
+        )
         return SentTemplate.from_sent_update(
             client=self,
             update=await self.api.send_message(
@@ -2285,12 +2290,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 msg={
                     "name": name,
                     "language": {"code": language.value},
-                    "components": [
-                        (await param.to_dict(client=self, sender=sender))
-                        if utils.is_async_callable(param.to_dict)
-                        else param.to_dict(client=self, sender=sender)
-                        for param in params
-                    ],
+                    "components": [param.to_dict() for param in params],
                 },
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),

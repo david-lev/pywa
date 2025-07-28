@@ -54,7 +54,7 @@ def test_template_text_examples_positionals():
     assert h.text == "Hi {{1}}, this is a text template number {{2}}"
     assert h.example == ("David", 1)
     assert h.preview() == "Hi David, this is a text template number 1"
-    assert h.params("John", 100).to_dict(client=None, sender=None) == {
+    assert h.params("John", 100).to_dict() == {
         "type": "HEADER",
         "parameters": [
             {"type": "text", "text": "John"},
@@ -99,7 +99,7 @@ def test_template_text_examples_named():
     assert b.text == "Hi {{name}}, this is a text template number {{number}}"
     assert b.example == {"name": "David", "number": 1}
     assert b.preview() == "Hi David, this is a text template number 1"
-    assert b.params(name="John", number=100).to_dict(client=None, sender=None) == {
+    assert b.params(name="John", number=100).to_dict() == {
         "type": "BODY",
         "parameters": [
             {"type": "text", "text": "John", "parameter_name": "name"},

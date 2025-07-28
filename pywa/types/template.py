@@ -753,7 +753,7 @@ class TemplateBaseComponent(abc.ABC):
         """Base class for template component parameters."""
 
         @abc.abstractmethod
-        def to_dict(self, client: WhatsApp, sender: str) -> dict: ...
+        def to_dict(self) -> dict: ...
 
     @abc.abstractmethod
     def params(self, *args, **kwargs) -> Params: ...
@@ -765,35 +765,6 @@ class TemplateBaseComponent(abc.ABC):
 class BaseHeaderComponent(TemplateBaseComponent, abc.ABC):
     type = ComponentType.HEADER
     format: HeaderFormatType
-
-
-class _BaseTextParams(TemplateBaseComponent.Params, abc.ABC):
-    def __init__(self, *positionals, **named):
-        if positionals and named:
-            raise ValueError("You can't use both positional and named args!")
-        if not positionals and not named:
-            raise ValueError("At least one positional or named argument is required.")
-        self.positionals = positionals
-        self.named = named
-
-    def _to_dict(
-        self,
-        typ: Literal[ComponentType.HEADER, ComponentType.BODY],
-        client: WhatsApp,
-        sender: str,
-    ) -> dict:
-        return {
-            "type": typ.value,
-            "parameters": [
-                {"type": "text", "text": str(positional_param)}
-                for positional_param in self.positionals
-            ]
-            if self.positionals
-            else [
-                {"type": "text", "text": str(named_param), "parameter_name": param_name}
-                for param_name, named_param in self.named.items()
-            ],
-        }
 
 
 class _BaseTextComponent:
@@ -901,15 +872,44 @@ class _BaseTextComponent:
                 return cls(data["text"], example)
         return cls(text=data["text"])
 
-    class Params: ...
+    class Params(TemplateBaseComponent.Params):
+        typ: Literal[ComponentType.HEADER, ComponentType.BODY]
 
-    def params(self, *positionals, **named) -> _BaseTextParams:
+        def __init__(self, *positionals, **named):
+            if positionals and named:
+                raise ValueError("You can't use both positional and named args!")
+            if not positionals and not named:
+                raise ValueError(
+                    "At least one positional or named argument is required."
+                )
+            self.positionals = positionals
+            self.named = named
+
+        def to_dict(self) -> dict:
+            return {
+                "type": self.typ.value,
+                "parameters": [
+                    {"type": "text", "text": str(positional_param)}
+                    for positional_param in self.positionals
+                ]
+                if self.positionals
+                else [
+                    {
+                        "type": "text",
+                        "text": str(named_param),
+                        "parameter_name": param_name,
+                    }
+                    for param_name, named_param in self.named.items()
+                ],
+            }
+
+    def params(self, *positionals, **named) -> _BaseTextComponent.Params:
         """
-        Fill the parameters for the header text component.
+        Fill the parameters for the header/body text component.
 
         Args:
-            *positionals: Positional parameters to fill in the template text.
-            **named: Named parameters to fill in the template text.
+            *positionals: Positional parameters to fill in the template text. e.g. for `"Hi {{1}}!"`, you would pass ``"John"`` as the first positional argument.
+            **named: Named parameters to fill in the template text. e.g. for `"Hi {{name}}!"`, you would pass ``name="John"`` as a named argument.
         """
         if not self.param_format:
             raise ValueError(
@@ -961,28 +961,16 @@ class HeaderText(_BaseTextComponent, BaseHeaderComponent):
         >>> print(header_text.preview())
     """
 
-    type = ComponentType.HEADER
     format = HeaderFormatType.TEXT
 
-    def to_dict(self) -> dict[str, str | dict]:
+    def to_dict(self) -> dict:
         return {
             "format": self.format.value,
             **super().to_dict(),
         }
 
-    class Params(_BaseTextParams):
-        def __init__(self, *positionals, **named):
-            """
-            Fill the parameters for the header text component.
-
-            Args:
-                *positionals: Positional parameters to fill in the template text.
-                **named: Named parameters to fill in the template text.
-            """
-            super().__init__(*positionals, **named)
-
-        def to_dict(self, client: WhatsApp, sender: str) -> dict:
-            return self._to_dict(ComponentType.HEADER, client, sender)
+    class Params(_BaseTextComponent.Params):
+        typ = ComponentType.HEADER
 
 
 class _BaseMediaHeaderComponent(BaseHeaderComponent, abc.ABC):
@@ -1030,27 +1018,25 @@ class _BaseMediaHeaderComponent(BaseHeaderComponent, abc.ABC):
 
 
 class _BaseMediaParams(TemplateBaseComponent.Params, abc.ABC):
+    format: HeaderFormatType
+
     def __init__(self, media: str | Media | pathlib.Path | bytes | BinaryIO):
         self.media = media
+        self._resolved_media: str | None = None
+        self._is_url: bool | None = None
 
-    def _to_dict(
-        self, format_type: HeaderFormatType, client: WhatsApp, sender: str
+    def to_dict(
+        self,
     ) -> dict:
-        is_url, media = helpers.resolve_media_param(
-            wa=client,
-            media=self.media,
-            mime_type=None,
-            filename=None,
-            media_type=format_type.value,
-            phone_id=sender,
-        )
+        if self._resolved_media is None:
+            raise ValueError(f"{self.__class__.__name__} media not resolved yet")
         return {
             "type": ComponentType.HEADER.value,
             "parameters": [
                 {
-                    "type": format_type.value,
-                    format_type.lower(): {
-                        "link" if is_url else "id": media,
+                    "type": self.format.value,
+                    self.format.lower(): {
+                        "link" if self._is_url else "id": self._resolved_media,
                     },
                 }
             ],
@@ -1076,6 +1062,8 @@ class HeaderImage(_BaseMediaHeaderComponent):
     format = HeaderFormatType.IMAGE
 
     class Params(_BaseMediaParams):
+        format = HeaderFormatType.IMAGE
+
         def __init__(self, *, image: str | Media | pathlib.Path | bytes | BinaryIO):
             """
             Fill the parameters for the header image component.
@@ -1084,9 +1072,6 @@ class HeaderImage(_BaseMediaHeaderComponent):
                 image: The image media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
             """
             super().__init__(media=image)
-
-        def to_dict(self, client: WhatsApp, sender: str) -> dict:
-            return self._to_dict(HeaderFormatType.IMAGE, client, sender)
 
     def params(self, *, image: str | Media | pathlib.Path | bytes | BinaryIO) -> Params:
         """
@@ -1120,6 +1105,8 @@ class HeaderVideo(_BaseMediaHeaderComponent):
     format = HeaderFormatType.VIDEO
 
     class Params(_BaseMediaParams):
+        format = HeaderFormatType.VIDEO
+
         def __init__(self, *, video: str | Media | pathlib.Path | bytes | BinaryIO):
             """
             Fill the parameters for the header video component.
@@ -1128,9 +1115,6 @@ class HeaderVideo(_BaseMediaHeaderComponent):
                 video: The video media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
             """
             super().__init__(media=video)
-
-        def to_dict(self, client: WhatsApp, sender: str) -> dict:
-            return self._to_dict(HeaderFormatType.VIDEO, client, sender)
 
     def params(self, *, video: str | Media | pathlib.Path | bytes | BinaryIO) -> Params:
         """
@@ -1164,6 +1148,8 @@ class HeaderDocument(_BaseMediaHeaderComponent):
     format = HeaderFormatType.DOCUMENT
 
     class Params(_BaseMediaParams):
+        format = HeaderFormatType.DOCUMENT
+
         def __init__(self, *, document: str | Media | pathlib.Path | bytes | BinaryIO):
             """
             Fill the parameters for the header document component.
@@ -1172,9 +1158,6 @@ class HeaderDocument(_BaseMediaHeaderComponent):
                 document: The document media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
             """
             super().__init__(media=document)
-
-        def to_dict(self, client: WhatsApp, sender: str) -> dict:
-            return self._to_dict(HeaderFormatType.DOCUMENT, client, sender)
 
     def params(
         self, *, document: str | Media | pathlib.Path | bytes | BinaryIO
@@ -1232,7 +1215,7 @@ class HeaderLocation(BaseHeaderComponent):
             self.name = name
             self.address = address
 
-        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+        def to_dict(self) -> dict:
             return {
                 "type": ComponentType.HEADER.value,
                 "parameters": [
@@ -1301,7 +1284,7 @@ class HeaderProduct(BaseHeaderComponent):
             self.catalog_id = catalog_id
             self.sku = sku
 
-        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+        def to_dict(self) -> dict:
             return {
                 "type": ComponentType.HEADER.value,
                 "parameters": [
@@ -1336,7 +1319,7 @@ class BaseBodyComponent(TemplateBaseComponent, abc.ABC):
     type: ComponentType
 
 
-class BodyText(_BaseTextComponent, TemplateBaseComponent):
+class BodyText(_BaseTextComponent):
     """
     The body component represents the core text of your message template and is a text-only template component. It is required for all templates.
 
@@ -1355,19 +1338,8 @@ class BodyText(_BaseTextComponent, TemplateBaseComponent):
 
     type = ComponentType.BODY
 
-    class Params(_BaseTextParams):
-        def __init__(self, *positionals, **named):
-            """
-            Fill the parameters for the body text component.
-
-            Args:
-                *positionals: Positional parameters to fill in the template text.
-                **named: Named parameters to fill in the template text.
-            """
-            super().__init__(*positionals, **named)
-
-        def to_dict(self, client: WhatsApp, sender: str) -> dict:
-            return self._to_dict(ComponentType.BODY, client, sender)
+    class Params(_BaseTextComponent.Params):
+        typ = ComponentType.BODY
 
 
 # =========== FOOTER ===========
@@ -1395,7 +1367,7 @@ class _DoesNotSupportParams:
             """
             raise ValueError(f"{self.__class__.__name__} does not support parameters.")
 
-        def to_dict(self, client: WhatsApp, sender: str) -> dict: ...
+        def to_dict(self) -> dict: ...
 
     def params(self, *args, **kwargs) -> Params:
         """
@@ -1496,7 +1468,7 @@ class CopyCodeButton(BaseButtonComponent):
             self.coupon_code = coupon_code
             self.index = index
 
-        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+        def to_dict(self) -> dict:
             return {
                 "type": "BUTTON",
                 "sub_type": ComponentType.COPY_CODE.value,
@@ -1667,7 +1639,7 @@ class FlowButton(BaseButtonComponent):
             self.flow_action_data = flow_action_data
             self.index = index
 
-        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+        def to_dict(self) -> dict:
             return {
                 "type": "BUTTON",
                 "sub_type": ComponentType.FLOW.value,
@@ -1798,7 +1770,7 @@ class QuickReplyButton(BaseButtonComponent):
             self.callback_data = callback_data
             self.index = index
 
-        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+        def to_dict(self) -> dict:
             return {
                 "type": "BUTTON",
                 "sub_type": ComponentType.QUICK_REPLY.value,
@@ -1888,7 +1860,7 @@ class URLButton(BaseButtonComponent):
             self.url_variable = url_variable
             self.index = index
 
-        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+        def to_dict(self) -> dict:
             return {
                 "type": "BUTTON",
                 "sub_type": ComponentType.URL.value,
@@ -1950,7 +1922,7 @@ class CatalogButton(BaseButtonComponent):
             self.thumbnail_product_sku = thumbnail_product_sku
             self.index = index
 
-        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+        def to_dict(self) -> dict:
             return {
                 "type": "BUTTON",
                 "sub_type": ComponentType.CATALOG.value,
@@ -2048,7 +2020,7 @@ class MPMButton(BaseButtonComponent):
             self.thumbnail_product_sku = thumbnail_product_sku
             self.index = index
 
-        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+        def to_dict(self) -> dict:
             return {
                 "type": "BUTTON",
                 "sub_type": ComponentType.MPM.value,
@@ -2190,7 +2162,7 @@ class _BaseOTPButtonParams:
             """
             self.otp = otp
 
-        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+        def to_dict(self) -> dict:
             return {
                 "type": "BUTTON",
                 "sub_type": ComponentType.URL,
@@ -2404,7 +2376,7 @@ class LimitedTimeOffer(TemplateBaseComponent):
             """
             self.expiration_time = expiration_time
 
-        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+        def to_dict(self) -> dict:
             return {
                 "type": ComponentType.LIMITED_TIME_OFFER.value,
                 "parameters": [
@@ -2508,6 +2480,8 @@ class Carousel(TemplateBaseComponent):
         )
 
     class Params(TemplateBaseComponent.Params):
+        cards: list[CarouselMediaCard.Params]
+
         def __init__(self, *, cards: list[CarouselMediaCard.Params]):
             """
             Fill the parameters for the carousel component.
@@ -2517,13 +2491,13 @@ class Carousel(TemplateBaseComponent):
             """
             self.cards = cards
 
-        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+        def to_dict(self) -> dict:
             return {
                 "type": ComponentType.CAROUSEL.value,
-                "cards": [card.to_dict(client, sender) for card in self.cards],
+                "cards": [card.to_dict() for card in self.cards],
             }
 
-    def params(self, *, cards: list[CarouselMediaCard.Params]) -> Params:
+    def params(self, *, cards: list[CarouselMediaCard.Params]) -> Carousel.Params:
         """
         Fill the parameters for the carousel component.
 
@@ -2575,10 +2549,10 @@ class CarouselMediaCard:
             self.params = params
             self.index = index
 
-        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+        def to_dict(self) -> dict:
             return {
                 "card_index": self.index,
-                "components": [param.to_dict(client, sender) for param in self.params],
+                "components": [param.to_dict() for param in self.params],
             }
 
     def params(
@@ -2631,7 +2605,7 @@ class AuthenticationBody(BaseBodyComponent):
             """
             self.otp = otp
 
-        def to_dict(self, client: WhatsApp, sender: str) -> dict:
+        def to_dict(self) -> dict:
             return {
                 "type": ComponentType.BODY.value,
                 "parameters": [

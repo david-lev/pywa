@@ -6,7 +6,7 @@ Template Types
 .. autoclass:: Template()
 
 .. autoclass:: TemplateDetails()
-    :members: update, delete, compare, migrate, send, unpause
+    :members: update, duplicate, delete, compare, migrate, send, unpause
 
 .. autoclass:: TemplateStatus()
 
@@ -46,7 +46,7 @@ Template Types
 .. autoclass:: BodyText()
     :members: preview, params, Params
 
-.. autoclass:: Footer()
+.. autoclass:: FooterText()
 
 .. autoclass:: Buttons()
 .. autoclass:: CopyCodeButton()
@@ -80,8 +80,9 @@ Template Types
 
 .. autoclass:: Carousel()
     :members: params, Params
+
 .. autoclass:: CarouselMediaCard()
-.. autoclass:: CarouselMediaCardParam()
+    :members: params, Params
 
 .. autoclass:: AuthenticationBody()
     :members: params, Params

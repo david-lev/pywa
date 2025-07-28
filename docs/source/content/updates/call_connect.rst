@@ -9,6 +9,6 @@ Call Connect
 
 .. autoclass:: CallEvent()
 
-.. autoclass:: SDP()
+.. autoclass:: SessionDescription()
 
 .. autoclass:: CallDirection()

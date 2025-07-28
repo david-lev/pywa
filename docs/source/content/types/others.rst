@@ -1,7 +1,7 @@
 Others
 ======
 
-.. currentmodule:: pywa.types.sent_message
+.. currentmodule:: pywa.types.sent
 
 .. autoclass:: SentMessage()
 

@@ -20,8 +20,6 @@ Message Fields
 
 .. autoclass:: ReferredProduct()
 
-.. autoclass:: System()
-
 .. autoclass:: User()
     :members: block, unblock
 

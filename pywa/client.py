@@ -2513,6 +2513,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
+        helpers.upload_template_media_params(
+            wa=self,
+            sender=sender,
+            params=params,
+        )
         return SentTemplate.from_sent_update(
             client=self,
             update=self.api.send_message(
@@ -2522,9 +2527,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 msg={
                     "name": name,
                     "language": {"code": language.value},
-                    "components": [
-                        param.to_dict(client=self, sender=sender) for param in params
-                    ],
+                    "components": [param.to_dict() for param in params],
                 },
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
