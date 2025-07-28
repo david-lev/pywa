@@ -213,7 +213,7 @@ class Carousel(_Carousel):
         async def to_dict(self, client: WhatsApp, sender: str) -> dict:
             return {
                 "type": ComponentType.CAROUSEL.value,
-                "parameters": [
+                "cards": [
                     await card.to_dict(client=client, sender=sender)
                     for card in self.cards
                 ],
