@@ -284,10 +284,12 @@ class Server:
         try:
             if await listener.apply_filters(self, update):
                 listener.set_result(update)
-                return True
+                return not self._continue_handling
             elif await listener.apply_cancelers(self, update):
                 listener.cancel(update)
-                return True
+                return not self._continue_handling
+            else:
+                return False  # if no filters or cancelers matched, continue handling
         except ContinueHandling:
             return False
         except StopHandling:
