@@ -159,7 +159,9 @@ class Message(BaseUserUpdate):
             forwarded=context.get("forwarded", False)
             or context.get("frequently_forwarded", False),
             forwarded_many_times=context.get("frequently_forwarded", False),
-            reply_to_message=ReplyToMessage.from_dict(context),
+            reply_to_message=ReplyToMessage.from_dict(msg["context"])
+            if context.get("id")
+            else None,
             caption=msg.get(msg_type, {}).get("caption")
             if msg_type in cls._media_fields
             else None,

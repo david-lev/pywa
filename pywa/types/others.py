@@ -471,14 +471,10 @@ class ReferredProduct:
     sku: str
 
     @classmethod
-    def from_dict(cls, data: dict | None) -> ReferredProduct | None:
-        return (
-            cls(
-                catalog_id=data["catalog_id"],
-                sku=data["product_retailer_id"],
-            )
-            if data
-            else None
+    def from_dict(cls, data: dict) -> ReferredProduct:
+        return cls(
+            catalog_id=data["catalog_id"],
+            sku=data["product_retailer_id"],
         )
 
 
@@ -498,17 +494,13 @@ class ReplyToMessage:
     referred_product: ReferredProduct | None
 
     @classmethod
-    def from_dict(cls, data: dict | None) -> ReplyToMessage | None:
-        return (
-            cls(
-                message_id=data["id"],
-                from_user_id=data["from"],
-                referred_product=ReferredProduct.from_dict(
-                    data.get("referred_product")
-                ),
-            )
-            if (data and "id" in data)
-            else None
+    def from_dict(cls, data: dict) -> ReplyToMessage:
+        return cls(
+            message_id=data["id"],
+            from_user_id=data["from"],
+            referred_product=ReferredProduct.from_dict(data["referred_product"])
+            if "referred_product" in data
+            else None,
         )
 
 

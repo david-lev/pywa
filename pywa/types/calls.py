@@ -273,7 +273,9 @@ class CallPermissionUpdate(BaseUserUpdate):
                 int(msg["timestamp"]),
                 datetime.timezone.utc,
             ),
-            reply_to_message=ReplyToMessage.from_dict(msg.get("context", {})),
+            reply_to_message=ReplyToMessage.from_dict(msg["context"])
+            if msg.get("context", {}).get("id")
+            else None,
             response=CallPermissionResponse(perm["response"]),
             response_source=CallPermissionResponseSource(perm["response_source"]),
             expiration_timestamp=datetime.datetime.fromtimestamp(

@@ -180,7 +180,9 @@ class FlowCompletion(BaseUserUpdate):
                 int(msg["timestamp"]),
                 datetime.timezone.utc,
             ),
-            reply_to_message=ReplyToMessage.from_dict(msg["context"]),
+            reply_to_message=ReplyToMessage.from_dict(msg["context"])
+            if msg.get("context", {}).get("id")
+            else None,
             body=msg["interactive"]["nfm_reply"]["body"],
             token=flow_token,
             response=response,
