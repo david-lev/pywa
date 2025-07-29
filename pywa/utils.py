@@ -163,7 +163,9 @@ class StrEnum(str, enum.Enum):
 
     def __init_subclass__(cls, *args, **kwargs):
         """Ensure that the enum has an 'UNKNOWN' member to handle missing values."""
-        if not hasattr(cls, "UNKNOWN"):
+        if list(cls) and not hasattr(
+            cls, "UNKNOWN"
+        ):  # in python3.10 __init_subclass__ does not have access to enum members
             raise TypeError(
                 f"Enum {cls.__name__} must have an 'UNKNOWN' member to handle missing values."
             )
