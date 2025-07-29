@@ -20,6 +20,8 @@ __all__ = [
     "HeaderLocation",
     "HeaderProduct",
     "BodyText",
+    "DateTime",
+    "Currency",
     "AuthenticationBody",
     "FooterText",
     "AuthenticationFooter",
@@ -610,6 +612,12 @@ class HeaderFormatType(utils.StrEnum):
 
 
 class ParamType(utils.StrEnum):
+    """
+    Parameter types for template parameters
+
+    `'Parameter object' on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages#parameter-object>`_
+    """
+
     _check_value = str.islower
     _modify_value = str.lower
 
@@ -621,6 +629,11 @@ class ParamType(utils.StrEnum):
     VIDEO = "video"
     LOCATION = "location"
     BUTTON = "button"
+    PRODUCT = "product"
+    COUPON_CODE = "coupon_code"
+    ACTION = "action"
+    PAYLOAD = "payload"
+    LIMITED_TIME_OFFER = "limited_time_offer"
 
     UNKNOWN = "UNKNOWN"
 
@@ -767,6 +780,57 @@ class BaseHeaderComponent(TemplateBaseComponent, abc.ABC):
     format: HeaderFormatType
 
 
+class _TextParam(abc.ABC):
+    @abc.abstractmethod
+    def to_dict(self) -> dict: ...
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class Currency(_TextParam):
+    """
+    Represents a currency parameter for a text component in a template.
+
+    Attributes:
+        fallback_value: A human-readable default value shown if the client's app doesn't support localization.
+        code: Currency code (ISO 4217), e.g., ``USD``, ``EUR``, ``ILS``.
+        amount_1000: The amount multiplied by 1000. For example, `$19.99 → 19990`.
+    """
+
+    fallback_value: str
+    code: str
+    amount_1000: int
+
+    def to_dict(self) -> dict:
+        return {
+            "type": ParamType.CURRENCY.value,
+            ParamType.CURRENCY.value: {
+                "fallback_value": self.fallback_value,
+                "code": self.code,
+                "amount_1000": self.amount_1000,
+            },
+        }
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class DateTime(_TextParam):
+    """
+    Represents a date and time parameter for a text component in a template.
+
+    Attributes:
+        fallback_value: A human-readable date string to display to the user, e.g., `August 5, 2025`.
+    """
+
+    fallback_value: str
+
+    def to_dict(self) -> dict:
+        return {
+            "type": ParamType.DATE_TIME.value,
+            ParamType.DATE_TIME.value: {
+                "fallback_value": self.fallback_value,
+            },
+        }
+
+
 class _BaseTextComponent:
     type: Literal[ComponentType.HEADER, ComponentType.BODY]
 
@@ -889,16 +953,23 @@ class _BaseTextComponent:
             return {
                 "type": self.typ.value,
                 "parameters": [
-                    {"type": "text", "text": str(positional_param)}
+                    {
+                        "type": ParamType.TEXT.value,
+                        ParamType.TEXT.value: str(positional_param),
+                    }
+                    if not isinstance(positional_param, _TextParam)
+                    else positional_param.to_dict()
                     for positional_param in self.positionals
                 ]
                 if self.positionals
                 else [
                     {
-                        "type": "text",
-                        "text": str(named_param),
+                        "type": ParamType.TEXT.value,
+                        ParamType.TEXT.value: str(named_param),
                         "parameter_name": param_name,
                     }
+                    if not isinstance(named_param, _TextParam)
+                    else named_param.to_dict()
                     for param_name, named_param in self.named.items()
                 ],
             }
@@ -1019,6 +1090,7 @@ class _BaseMediaHeaderComponent(BaseHeaderComponent, abc.ABC):
 
 class _BaseMediaParams(TemplateBaseComponent.Params, abc.ABC):
     format: HeaderFormatType
+    param_type: Literal[ParamType.IMAGE, ParamType.VIDEO, ParamType.DOCUMENT]
 
     def __init__(self, media: str | Media | pathlib.Path | bytes | BinaryIO):
         self.media = media
@@ -1034,8 +1106,8 @@ class _BaseMediaParams(TemplateBaseComponent.Params, abc.ABC):
             "type": ComponentType.HEADER.value,
             "parameters": [
                 {
-                    "type": self.format.value,
-                    self.format.lower(): {
+                    "type": self.param_type.value,
+                    self.param_type.value: {
                         "link" if self._is_url else "id": self._resolved_media,
                     },
                 }
@@ -1063,6 +1135,7 @@ class HeaderImage(_BaseMediaHeaderComponent):
 
     class Params(_BaseMediaParams):
         format = HeaderFormatType.IMAGE
+        param_type = ParamType.IMAGE
 
         def __init__(self, *, image: str | Media | pathlib.Path | bytes | BinaryIO):
             """
@@ -1106,6 +1179,7 @@ class HeaderVideo(_BaseMediaHeaderComponent):
 
     class Params(_BaseMediaParams):
         format = HeaderFormatType.VIDEO
+        param_type = ParamType.VIDEO
 
         def __init__(self, *, video: str | Media | pathlib.Path | bytes | BinaryIO):
             """
@@ -1149,6 +1223,7 @@ class HeaderDocument(_BaseMediaHeaderComponent):
 
     class Params(_BaseMediaParams):
         format = HeaderFormatType.DOCUMENT
+        param_type = ParamType.DOCUMENT
 
         def __init__(self, *, document: str | Media | pathlib.Path | bytes | BinaryIO):
             """
@@ -1220,8 +1295,8 @@ class HeaderLocation(BaseHeaderComponent):
                 "type": ComponentType.HEADER.value,
                 "parameters": [
                     {
-                        "type": HeaderFormatType.LOCATION.value,
-                        HeaderFormatType.LOCATION.lower(): {
+                        "type": ParamType.LOCATION.value,
+                        ParamType.LOCATION.value: {
                             "latitude": self.lat,
                             "longitude": self.lon,
                             "name": self.name,
@@ -1289,8 +1364,8 @@ class HeaderProduct(BaseHeaderComponent):
                 "type": ComponentType.HEADER.value,
                 "parameters": [
                     {
-                        "type": HeaderFormatType.PRODUCT.value,
-                        HeaderFormatType.PRODUCT.lower(): {
+                        "type": ParamType.PRODUCT.value,
+                        ParamType.PRODUCT.value: {
                             "catalog_id": self.catalog_id,
                             "product_retailer_id": self.sku,
                         },
@@ -1470,13 +1545,13 @@ class CopyCodeButton(BaseButtonComponent):
 
         def to_dict(self) -> dict:
             return {
-                "type": "BUTTON",
+                "type": ParamType.BUTTON.value,
                 "sub_type": ComponentType.COPY_CODE.value,
                 "index": self.index,
                 "parameters": [
                     {
-                        "type": "coupon_code",
-                        "coupon_code": self.coupon_code,
+                        "type": ParamType.COUPON_CODE.value,
+                        ParamType.COUPON_CODE.value: self.coupon_code,
                     }
                 ],
             }
@@ -1641,13 +1716,13 @@ class FlowButton(BaseButtonComponent):
 
         def to_dict(self) -> dict:
             return {
-                "type": "BUTTON",
+                "type": ParamType.BUTTON.value,
                 "sub_type": ComponentType.FLOW.value,
                 "index": self.index,
                 "parameters": [
                     {
-                        "type": "action",
-                        "action": {
+                        "type": ParamType.ACTION.value,
+                        ParamType.ACTION.value: {
                             "flow_token": self.flow_token,
                             "flow_action_data": self.flow_action_data,
                         },
@@ -1772,13 +1847,15 @@ class QuickReplyButton(BaseButtonComponent):
 
         def to_dict(self) -> dict:
             return {
-                "type": "BUTTON",
+                "type": ParamType.BUTTON.value,
                 "sub_type": ComponentType.QUICK_REPLY.value,
                 "index": self.index,
                 "parameters": [
                     {
-                        "type": "payload",
-                        "payload": helpers.resolve_callback_data(self.callback_data),
+                        "type": ParamType.PAYLOAD.value,
+                        ParamType.PAYLOAD.value: helpers.resolve_callback_data(
+                            self.callback_data
+                        ),
                     }
                 ],
             }
@@ -1862,13 +1939,13 @@ class URLButton(BaseButtonComponent):
 
         def to_dict(self) -> dict:
             return {
-                "type": "BUTTON",
+                "type": ParamType.BUTTON.value,
                 "sub_type": ComponentType.URL.value,
                 "index": self.index,
                 "parameters": [
                     {
-                        "type": "text",
-                        "text": self.url_variable,
+                        "type": ParamType.TEXT.value,
+                        ParamType.TEXT.value: self.url_variable,
                     }
                 ],
             }
@@ -1924,15 +2001,15 @@ class CatalogButton(BaseButtonComponent):
 
         def to_dict(self) -> dict:
             return {
-                "type": "BUTTON",
+                "type": ParamType.BUTTON.value,
                 "sub_type": ComponentType.CATALOG.value,
                 "index": self.index,
                 **(
                     {
                         "parameters": [
                             {
-                                "type": "action",
-                                "action": {
+                                "type": ParamType.ACTION.value,
+                                ParamType.ACTION.value: {
                                     "thumbnail_product_retailer_id": self.thumbnail_product_sku,
                                 },
                             }
@@ -2022,12 +2099,12 @@ class MPMButton(BaseButtonComponent):
 
         def to_dict(self) -> dict:
             return {
-                "type": "BUTTON",
+                "type": ParamType.BUTTON.value,
                 "sub_type": ComponentType.MPM.value,
                 "index": self.index,
                 "parameters": {
-                    "type": "action",
-                    "action": {
+                    "type": ParamType.ACTION.value,
+                    ParamType.ACTION.value: {
                         "thumbnail_product_retailer_id": self.thumbnail_product_sku,
                         "sections": [s.to_dict() for s in self.product_sections],
                     },
@@ -2164,13 +2241,13 @@ class _BaseOTPButtonParams:
 
         def to_dict(self) -> dict:
             return {
-                "type": "BUTTON",
+                "type": ParamType.BUTTON.value,
                 "sub_type": ComponentType.URL,
                 "index": 0,
                 "parameters": [
                     {
-                        "type": "text",
-                        "text": self.otp,
+                        "type": ParamType.TEXT.value,
+                        ParamType.TEXT.value: self.otp,
                     }
                 ],
             }
@@ -2381,8 +2458,8 @@ class LimitedTimeOffer(TemplateBaseComponent):
                 "type": ComponentType.LIMITED_TIME_OFFER.value,
                 "parameters": [
                     {
-                        "type": ComponentType.LIMITED_TIME_OFFER.value,
-                        ComponentType.LIMITED_TIME_OFFER.lower(): {
+                        "type": ParamType.LIMITED_TIME_OFFER.value,
+                        ParamType.LIMITED_TIME_OFFER.lower(): {
                             "expiration_time_ms": int(self.expiration_time.timestamp()),
                         },
                     }
@@ -2610,8 +2687,8 @@ class AuthenticationBody(BaseBodyComponent):
                 "type": ComponentType.BODY.value,
                 "parameters": [
                     {
-                        "type": "text",
-                        "text": self.otp,
+                        "type": ParamType.TEXT.value,
+                        ParamType.TEXT.value: self.otp,
                     }
                 ],
             }

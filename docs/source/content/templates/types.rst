@@ -46,6 +46,9 @@ Template Types
 .. autoclass:: BodyText()
     :members: preview, params, Params
 
+.. autoclass:: DateTime()
+.. autoclass:: Currency()
+
 .. autoclass:: FooterText()
 
 .. autoclass:: Buttons()
