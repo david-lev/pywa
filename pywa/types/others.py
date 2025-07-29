@@ -988,6 +988,8 @@ class QRCode(utils.APIObject):
         fields = list(super()._api_fields())
         if image_type is not None:
             fields[fields.index("qr_image_url")] = f"qr_image_url.format({image_type})"
+        else:
+            fields.remove("qr_image_url")
         return tuple(fields)
 
 
