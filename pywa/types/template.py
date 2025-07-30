@@ -1053,8 +1053,9 @@ class _BaseMediaHeaderComponent(BaseHeaderComponent, abc.ABC):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#media-headers>`_.
     """
 
+    __slots__ = ("_example", "_handle")
+
     format: HeaderFormatType
-    example: str
 
     def __init__(self, example: str | Media | pathlib.Path | bytes | BinaryIO):
         """
@@ -1064,11 +1065,25 @@ class _BaseMediaHeaderComponent(BaseHeaderComponent, abc.ABC):
             example: An example of the media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
         """
         self.example = example
-        if re.match(r"^\d:.*", str(example)):
+
+    @property
+    def example(self) -> str | Media | pathlib.Path | bytes | BinaryIO:
+        """
+        Returns the example media for the header component.
+        """
+        return self._example
+
+    @example.setter
+    def example(self, value: str | Media | pathlib.Path | bytes | BinaryIO):
+        """
+        Sets the example media for the header component (and resets the handle).
+        """
+        self._example = value
+        if re.match(r"^\d:.*", str(value)):
             # If the example is a file handle (e.g., "4:cGRmLnBkZg=="),
-            self._handle = str(example)
+            self._handle = str(value)
         else:
-            self._handle: str | None = None
+            self._handle = None
 
     @classmethod
     def from_dict(cls, data: dict) -> _BaseMediaHeaderComponent:
@@ -1114,6 +1129,13 @@ class _BaseMediaParams(TemplateBaseComponent.Params, abc.ABC):
                 }
             ],
         }
+
+    def clear_media_cache(self):
+        """
+        Clears the cached media for this media param (if you using the same params object more than 30 days, the media ID will be expired, so you need to reupload the media).
+        """
+        self._resolved_media = None
+        self._is_url = None
 
 
 class HeaderImage(_BaseMediaHeaderComponent):
@@ -2576,6 +2598,13 @@ class Carousel(TemplateBaseComponent):
                 "cards": [card.to_dict() for card in self.cards],
             }
 
+        def clear_media_cache(self):
+            """
+            Clear the media cache for the params in the carousel (if you using the same params object more than 30 days, the media ID will be expired, so you need to reupload the media).
+            """
+            for card in self.cards:
+                card.clear_media_cache()
+
     def params(self, *, cards: list[CarouselCard.Params]) -> Carousel.Params:
         """
         Fill the parameters for the carousel component.
@@ -2633,6 +2662,14 @@ class CarouselCard:
                 "card_index": self.index,
                 "components": [param.to_dict() for param in self.params],
             }
+
+        def clear_media_cache(self):
+            """
+            Clear the media cache for the params in the card (if you using the same params object more than 30 days, the media ID will be expired, so you need to reupload the media).
+            """
+            for param in self.params:
+                if hasattr(param, "clear_media_cache"):
+                    param.clear_media_cache()
 
     def params(
         self, *, params: list[TemplateBaseComponent.Params], index: int

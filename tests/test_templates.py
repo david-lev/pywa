@@ -133,3 +133,12 @@ def test_components_that_does_not_get_params():
         FooterText(
             text="This is a footer text template",
         ).params("John")
+
+
+def test_media_header_handle_reset():
+    media_header = HeaderImage(example="https://example.com/image.jpg")
+    media_header._handle = "1:handle"
+    media_header.example = "https://example2.com/image.jpg"
+    assert media_header._handle is None, (
+        "Handle should be reset to None after example change"
+    )
