@@ -13,7 +13,7 @@ carousel_template_media_cards_v1 = Template(
         ),
         Carousel(
             cards=[
-                CarouselMediaCard(
+                CarouselCard(
                     components=[
                         HeaderImage(example="4::an..."),
                         BodyText(
@@ -31,7 +31,7 @@ carousel_template_media_cards_v1 = Template(
                         ),
                     ]
                 ),
-                CarouselMediaCard(
+                CarouselCard(
                     components=[
                         HeaderImage(example="4::an..."),
                         BodyText(
@@ -49,7 +49,7 @@ carousel_template_media_cards_v1 = Template(
                         ),
                     ]
                 ),
-                CarouselMediaCard(
+                CarouselCard(
                     components=[
                         HeaderImage(example="4::an..."),
                         BodyText(
@@ -84,13 +84,13 @@ carousel_template_product_cards_v1 = Template(
         ),
         Carousel(
             cards=[
-                CarouselMediaCard(
+                CarouselCard(
                     components=[
                         HeaderProduct(),
                         Buttons(buttons=[SPMButton(text="View")]),
                     ]
                 ),
-                CarouselMediaCard(
+                CarouselCard(
                     components=[
                         HeaderProduct(),
                         Buttons(buttons=[SPMButton(text="View")]),

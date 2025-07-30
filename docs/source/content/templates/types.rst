@@ -84,7 +84,7 @@ Template Types
 .. autoclass:: Carousel()
     :members: params, Params
 
-.. autoclass:: CarouselMediaCard()
+.. autoclass:: CarouselCard()
     :members: params, Params
 
 .. autoclass:: AuthenticationBody()

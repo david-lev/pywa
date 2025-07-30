@@ -44,7 +44,7 @@ __all__ = [
     "OTPSupportedApp",
     "LimitedTimeOffer",
     "Carousel",
-    "CarouselMediaCard",
+    "CarouselCard",
     "Template",
     "CreatedTemplate",
     "UpdatedTemplate",
@@ -634,6 +634,7 @@ class ParamType(utils.StrEnum):
     ACTION = "action"
     PAYLOAD = "payload"
     LIMITED_TIME_OFFER = "limited_time_offer"
+    CAROUSEL = "carousel"
 
     UNKNOWN = "UNKNOWN"
 
@@ -1902,8 +1903,8 @@ class URLButton(BaseButtonComponent):
         self.url = url
         self.example = example
 
-    def to_dict(self) -> dict[str, str | list[str]]:
-        data: dict[str, str | list[str]] = {
+    def to_dict(self) -> dict:
+        data = {
             "type": self.type.value,
             "text": self.text,
             "url": self.url,
@@ -2485,24 +2486,25 @@ class LimitedTimeOffer(TemplateBaseComponent):
 @dataclasses.dataclass(kw_only=True, slots=True)
 class Carousel(TemplateBaseComponent):
     """
-    Media card carousel templates allow you to send a single text message accompanied by a set of up to 10 media cards in a horizontally scrollable view:
+    Media card carousel templates allow you to send a single text message accompanied by a set of up to 10 media cards in a horizontally scrollable view.
+    Read more about `Media Card Carousel Templates <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/media-card-carousel-templates>`_.
 
-    Carousel templates are composed of message body text and up to 10 media cards. Each card in the template has an :class:`HeaderImage` or :class:`HeaderVideo` header asset, card :class:`BodyText`, and up to two buttons. Button combinations can be a mix of :class:`QuickReplyButton` buttons, :class:`PhoneNumberButton` buttons, and :class:`URLButton` buttons.
+    Product card carousel templates allow you to send a single text message accompanied by a set of up to 10 product cards in a horizontally scrollable view.
+    Read more about `Product Card Carousel Templates <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/product-card-carousel-templates>`_.
 
     - All cards defined on a template must have the same components.
-    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/media-card-carousel-templates>`_.
 
     Example:
 
         >>> carousel = Carousel(cards=[
-        ...     card1 := CarouselMediaCard(
+        ...     card1 := CarouselCard(
         ...         components=[
         ...             hi1 := HeaderImage(example="https://example.com/card1.jpg"),
         ...             qr1 := QuickReplyButton(text="Unsubscribe"),
         ...             u1 := URLButton(text="Website", url="https://website.com?ref={{1}}", example="https://website.com?ref=card1"),
         ...         ]
         ...     ),
-        ...     card2 := CarouselMediaCard(
+        ...     card2 := CarouselCard(
         ...         components=[
         ...             hi2 := HeaderImage(example="https://example.com/card2.jpg"),
         ...             qr2 := QuickReplyButton(text="Unsubscribe"),
@@ -2540,13 +2542,13 @@ class Carousel(TemplateBaseComponent):
         init=False,
         repr=False,
     )
-    cards: list[CarouselMediaCard]
+    cards: list[CarouselCard]
 
     @classmethod
     def from_dict(cls, data: dict) -> Carousel:
         return cls(
             cards=[
-                CarouselMediaCard(
+                CarouselCard(
                     components=[
                         _parse_component(card_component)
                         for card_component in card["components"]
@@ -2557,9 +2559,9 @@ class Carousel(TemplateBaseComponent):
         )
 
     class Params(TemplateBaseComponent.Params):
-        cards: list[CarouselMediaCard.Params]
+        cards: list[CarouselCard.Params]
 
-        def __init__(self, *, cards: list[CarouselMediaCard.Params]):
+        def __init__(self, *, cards: list[CarouselCard.Params]):
             """
             Fill the parameters for the carousel component.
 
@@ -2570,11 +2572,11 @@ class Carousel(TemplateBaseComponent):
 
         def to_dict(self) -> dict:
             return {
-                "type": ComponentType.CAROUSEL.value,
+                "type": ParamType.CAROUSEL.value,
                 "cards": [card.to_dict() for card in self.cards],
             }
 
-    def params(self, *, cards: list[CarouselMediaCard.Params]) -> Carousel.Params:
+    def params(self, *, cards: list[CarouselCard.Params]) -> Carousel.Params:
         """
         Fill the parameters for the carousel component.
 
@@ -2588,13 +2590,13 @@ class Carousel(TemplateBaseComponent):
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class CarouselMediaCard:
+class CarouselCard:
     """
-    Carousel templates are composed of message body text and up to 10 media cards. Each card in the template has an :class:`HeaderImage` or :class:`HeaderVideo` header asset, card :class:`BodyText`, and up to two buttons. Button combinations can be a mix of :class:`QuickReplyButton` buttons, :class:`PhoneNumberButton` buttons, and :class:`URLButton` buttons.
+    Represents a card in a carousel template.
 
     Example:
 
-        >>> carousel_media_card = CarouselMediaCard(
+        >>> carousel_media_card = CarouselCard(
         ...     components=[
         ...         HeaderImage(example="https://example.com/image.jpg"),
         ...         QuickReplyButton(text="Unsubscribe"),
@@ -2609,7 +2611,7 @@ class CarouselMediaCard:
         ... )
 
     Attributes:
-        components: A list of components that make up the media card, such as header, body, footer, and buttons.
+        components: A list of components that make up the card, such as header, body, footer, and buttons.
     """
 
     components: list[TemplateBaseComponent | dict]
@@ -2617,7 +2619,7 @@ class CarouselMediaCard:
     class Params(TemplateBaseComponent.Params):
         def __init__(self, *, params: list[TemplateBaseComponent.Params], index: int):
             """
-            Initialize the parameters for the carousel media card.
+            Initialize the parameters for the carousel card.
 
             Args:
                 params: A list of parameters for the components in the media card.
@@ -2636,14 +2638,14 @@ class CarouselMediaCard:
         self, *, params: list[TemplateBaseComponent.Params], index: int
     ) -> Params:
         """
-        Fill the parameters for the carousel media card.
+        Fill the parameters for the carousel card.
 
         Args:
             params: A list of parameters for the components in the media card.
             index: The index of the media card in the carousel (0-based).
 
         Returns:
-            An instance of Params containing the parameters for the media card.
+            An instance of Params containing the parameters for the card.
         """
         return self.Params(params=params, index=index)
 
