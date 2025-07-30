@@ -575,6 +575,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             | FlowButton
             | None
         ) = None,
+        *,
         preview_url: bool = False,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -663,6 +664,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
+        *,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -765,8 +767,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
-        reply_to_message_id: str | None = None,
+        *,
         mime_type: str | None = None,
+        reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> SentMessage:
@@ -868,8 +871,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
-        reply_to_message_id: str | None = None,
+        *,
         mime_type: str | None = None,
+        reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> SentMessage:
@@ -974,6 +978,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         self,
         to: str | int,
         audio: str | Media | pathlib.Path | bytes | BinaryIO,
+        *,
         mime_type: str | None = None,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -1034,6 +1039,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         self,
         to: str | int,
         sticker: str | Media | pathlib.Path | bytes | BinaryIO,
+        *,
         mime_type: str | None = None,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -1097,6 +1103,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         to: str | int,
         emoji: str,
         message_id: str,
+        *,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> SentMessage:
@@ -1150,6 +1157,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         self,
         to: str | int,
         message_id: str,
+        *,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> SentMessage:
@@ -1203,6 +1211,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         longitude: float,
         name: str | None = None,
         address: str | None = None,
+        *,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
@@ -1261,6 +1270,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         self,
         to: str | int,
         text: str,
+        *,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
@@ -1313,6 +1323,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         self,
         to: str | int,
         contact: Contact | Iterable[Contact],
+        *,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
@@ -1372,6 +1383,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         to: str | int,
         body: str,
         footer: str | None = None,
+        *,
         thumbnail_product_sku: str | None = None,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -1447,6 +1459,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sku: str,
         body: str | None = None,
         footer: str | None = None,
+        *,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
@@ -1515,6 +1528,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         title: str,
         body: str,
         footer: str | None = None,
+        *,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
@@ -1594,6 +1608,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def mark_message_as_read(
         self,
         message_id: str,
+        *,
         sender: str | int | None = None,
     ) -> SuccessResult:
         """
@@ -1630,6 +1645,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def indicate_typing(
         self,
         message_id: str,
+        *,
         sender: str | int | None = None,
     ) -> SuccessResult:
         """
@@ -1665,6 +1681,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         mime_type: str | None = None,
         filename: str | None = None,
         dl_session: httpx.Client | None = None,
+        *,
         phone_id: str | int | None = None,
     ) -> Media:
         """
@@ -1863,6 +1880,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
     def get_business_phone_number(
         self,
+        *,
         phone_id: str | int | None = None,
     ) -> BusinessPhoneNumber:
         """
@@ -2001,6 +2019,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         enable_chat_opened: bool,
         ice_breakers: Iterable[str] | None = None,
         commands: Iterable[Command] | None = None,
+        *,
         phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
@@ -2075,6 +2094,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
     def get_business_profile(
         self,
+        *,
         phone_id: str | int | None = None,
     ) -> BusinessProfile:
         """
@@ -2106,6 +2126,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def set_business_public_key(
         self,
         public_key: str,
+        *,
         phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
@@ -2147,6 +2168,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         profile_picture_handle: str | None = utils.MISSING,
         industry: Industry | None = utils.MISSING,
         websites: Iterable[str] | None = utils.MISSING,
+        *,
         phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
@@ -2213,6 +2235,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
     def get_commerce_settings(
         self,
+        *,
         phone_id: str | int | None = None,
     ) -> CommerceSettings:
         """
@@ -2242,6 +2265,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         self,
         is_catalog_visible: bool = None,
         is_cart_enabled: bool = None,
+        *,
         phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
@@ -2825,9 +2849,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         *,
         clone_flow_id: str | None = None,
         endpoint_uri: str | None = None,
-        waba_id: str | int | None = None,
         flow_json: FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO | None = None,
         publish: bool | None = None,
+        waba_id: str | int | None = None,
     ) -> CreatedFlow:
         """
         Create a flow.
@@ -3040,6 +3064,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def get_flow(
             self,
             flow_id: str | int,
+            *,
             invalidate_preview: bool = True,
             phone_number_id: str | int | None = None,
     ) -> FlowDetails:
@@ -3067,11 +3092,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
     def get_flows(
             self,
-            invalidate_preview: bool = True,
-            waba_id: str | int | None = None,
-            phone_number_id: str | int | None = None,
             *,
+            invalidate_preview: bool = True,
+            phone_number_id: str | int | None = None,
             pagination: Pagination | None = None,
+            waba_id: str | int | None = None,
     ) -> Result[FlowDetails]:
         """
         Get the flows associated with the WhatsApp Business account.
@@ -3105,6 +3130,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             flow_id: str | int,
             metric_name: FlowMetricName,
             granularity: FlowMetricGranularity,
+            *,
             since: datetime.date | str | None = None,
             until: datetime.date | str | None = None,
     ) -> dict:
@@ -3316,6 +3342,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             self,
             code: str,
             prefilled_message: str,
+            *,
             phone_id: str | int | None = None,
     ) -> QRCode:
         """
@@ -3340,6 +3367,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def delete_qr_code(
             self,
             code: str,
+            *,
             phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
@@ -3409,7 +3437,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         ))
 
     def override_waba_callback_url(
-            self, callback_url: str, verify_token: str, waba_id: str | int | None = None
+            self, callback_url: str, verify_token: str, *, waba_id: str | int | None = None
     ) -> SuccessResult:
         """
         Override the callback URL for the WhatsApp Business account.
@@ -3430,7 +3458,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             verify_token=verify_token,
         ))
 
-    def delete_waba_callback_url(self, waba_id: str | int | None = None) -> SuccessResult:
+    def delete_waba_callback_url(self, *,waba_id: str | int | None = None) -> SuccessResult:
         """
         Delete the callback URL for the WhatsApp Business account.
 
@@ -3447,7 +3475,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         ))
 
     def override_phone_callback_url(
-            self, callback_url: str, verify_token: str, phone_id: str | int | None = None
+            self, callback_url: str, verify_token: str, *, phone_id: str | int | None = None
     ) -> SuccessResult:
         """
         Override the callback URL for the phone.
@@ -3469,7 +3497,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
         ))
 
-    def delete_phone_callback_url(self, phone_id: str | int | None = None) -> SuccessResult:
+    def delete_phone_callback_url(self, *,phone_id: str | int | None = None) -> SuccessResult:
         """
         Delete the callback URL for the phone.
 

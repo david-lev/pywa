@@ -330,6 +330,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             | FlowButton
             | None
         ) = None,
+        *,
         preview_url: bool = False,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -418,6 +419,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
+        *,
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -521,8 +523,9 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
-        reply_to_message_id: str | None = None,
+        *,
         mime_type: str | None = None,
+        reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> SentMessage:
@@ -624,8 +627,9 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
-        reply_to_message_id: str | None = None,
+        *,
         mime_type: str | None = None,
+        reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> SentMessage:
@@ -730,6 +734,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         self,
         to: str | int,
         audio: str | Media | pathlib.Path | bytes | BinaryIO,
+        *,
         mime_type: str | None = None,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -790,6 +795,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         self,
         to: str | int,
         sticker: str | Media | pathlib.Path | bytes | BinaryIO,
+        *,
         mime_type: str | None = None,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -853,6 +859,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         to: str | int,
         emoji: str,
         message_id: str,
+        *,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> SentMessage:
@@ -906,6 +913,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         self,
         to: str | int,
         message_id: str,
+        *,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
     ) -> SentMessage:
@@ -959,6 +967,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         longitude: float,
         name: str | None = None,
         address: str | None = None,
+        *,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
@@ -1017,6 +1026,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         self,
         to: str | int,
         text: str,
+        *,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
@@ -1069,6 +1079,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         self,
         to: str | int,
         contact: Contact | Iterable[Contact],
+        *,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
@@ -1128,6 +1139,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         to: str | int,
         body: str,
         footer: str | None = None,
+        *,
         thumbnail_product_sku: str | None = None,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -1203,6 +1215,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sku: str,
         body: str | None = None,
         footer: str | None = None,
+        *,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
@@ -1271,6 +1284,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         title: str,
         body: str,
         footer: str | None = None,
+        *,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
@@ -1350,6 +1364,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def mark_message_as_read(
         self,
         message_id: str,
+        *,
         sender: str | int | None = None,
     ) -> SuccessResult:
         """
@@ -1386,6 +1401,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def indicate_typing(
         self,
         message_id: str,
+        *,
         sender: str | int | None = None,
     ) -> SuccessResult:
         """
@@ -1421,6 +1437,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         mime_type: str | None = None,
         filename: str | None = None,
         dl_session: httpx.AsyncClient | None = None,
+        *,
         phone_id: str | int | None = None,
     ) -> Media:
         """
@@ -1625,6 +1642,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
     async def get_business_phone_number(
         self,
+        *,
         phone_id: str | int | None = None,
     ) -> BusinessPhoneNumber:
         """
@@ -1763,6 +1781,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         enable_chat_opened: bool,
         ice_breakers: Iterable[str] | None = None,
         commands: Iterable[Command] | None = None,
+        *,
         phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
@@ -1834,6 +1853,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
     async def get_business_profile(
         self,
+        *,
         phone_id: str | int | None = None,
     ) -> BusinessProfile:
         """
@@ -1867,6 +1887,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def set_business_public_key(
         self,
         public_key: str,
+        *,
         phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
@@ -1908,6 +1929,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         profile_picture_handle: str | None = utils.MISSING,
         industry: Industry | None = utils.MISSING,
         websites: Iterable[str] | None = utils.MISSING,
+        *,
         phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
@@ -1974,6 +1996,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
     async def get_commerce_settings(
         self,
+        *,
         phone_id: str | int | None = None,
     ) -> CommerceSettings:
         """
@@ -2005,6 +2028,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         self,
         is_catalog_visible: bool = None,
         is_cart_enabled: bool = None,
+        *,
         phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
@@ -2583,14 +2607,14 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     # fmt: off
     async def create_flow(
         self,
-            name: str,
-            categories: Iterable[FlowCategory | str],
-            *,
-            clone_flow_id: str | None = None,
-            endpoint_uri: str | None = None,
-            waba_id: str | int | None = None,
-            flow_json: FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO | None = None,
-            publish: bool | None = None,
+        name: str,
+        categories: Iterable[FlowCategory | str],
+        *,
+        clone_flow_id: str | None = None,
+        endpoint_uri: str | None = None,
+        flow_json: FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO | None = None,
+        publish: bool | None = None,
+        waba_id: str | int | None = None,
     ) -> CreatedFlow:
         """
         Create a flow.
@@ -2804,10 +2828,11 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         return SuccessResult.from_dict(await self.api.deprecate_flow(flow_id=str(flow_id)))
 
     async def get_flow(
-        self,
-        flow_id: str | int,
-        invalidate_preview: bool = True,
-        phone_number_id: str | int | None = None,
+            self,
+            flow_id: str | int,
+            *,
+            invalidate_preview: bool = True,
+            phone_number_id: str | int | None = None,
     ) -> FlowDetails:
         """
         Get the details of a flow.
@@ -2834,12 +2859,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         )
 
     async def get_flows(
-        self,
-        invalidate_preview: bool = True,
-        waba_id: str | int | None = None,
-        phone_number_id: str | int | None = None,
-        *,
-        pagination: Pagination | None = None,
+            self,
+            *,
+            invalidate_preview: bool = True,
+            phone_number_id: str | int | None = None,
+            pagination: Pagination | None = None,
+            waba_id: str | int | None = None,
     ) -> Result[FlowDetails]:
         """
         Get the flows associated with the WhatsApp Business account.
@@ -2873,6 +2898,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         flow_id: str | int,
         metric_name: FlowMetricName,
         granularity: FlowMetricGranularity,
+            *,
         since: datetime.date | str | None = None,
         until: datetime.date | str | None = None,
     ) -> dict:
@@ -3085,10 +3111,11 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         )
 
     async def update_qr_code(
-        self,
-        code: str,
-        prefilled_message: str,
-        phone_id: str | int | None = None,
+            self,
+            code: str,
+            prefilled_message: str,
+            *,
+            phone_id: str | int | None = None,
     ) -> QRCode:
         """
         Update a QR code.
@@ -3111,7 +3138,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
     async def delete_qr_code(
         self,
-        code: str,
+        code: str,*,
         phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
@@ -3187,7 +3214,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         )
 
     async def override_waba_callback_url(
-        self, callback_url: str, verify_token: str, waba_id: str | int | None = None
+        self, callback_url: str, verify_token: str, *,waba_id: str | int | None = None
     ) -> SuccessResult:
         """
         Override the callback URL for the WhatsApp Business account.
@@ -3210,7 +3237,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             )
         )
 
-    async def delete_waba_callback_url(self, waba_id: str | int | None = None) -> SuccessResult:
+    async def delete_waba_callback_url(self, *,waba_id: str | int | None = None) -> SuccessResult:
         """
         Delete the callback URL for the WhatsApp Business account.
 
@@ -3229,7 +3256,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         )
 
     async def override_phone_callback_url(
-        self, callback_url: str, verify_token: str, phone_id: str | int | None = None
+        self, callback_url: str, verify_token: str, *,phone_id: str | int | None = None
     ) -> SuccessResult:
         """
         Override the callback URL for the phone.
@@ -3254,7 +3281,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         )
 
     async def delete_phone_callback_url(
-        self, phone_id: str | int | None = None
+        self, *,phone_id: str | int | None = None
     ) -> SuccessResult:
         """
         Delete the callback URL for the phone.

@@ -61,6 +61,7 @@ class _ClientShortcutsAsync:
             | FlowButton
             | None
         ) = None,
+        *,
         quote: bool = False,
         preview_url: bool = False,
         tracker: str | CallbackData | None = None,
@@ -110,6 +111,7 @@ class _ClientShortcutsAsync:
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
+        *,
         quote: bool = False,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -161,6 +163,7 @@ class _ClientShortcutsAsync:
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
+        *,
         quote: bool = False,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -214,6 +217,7 @@ class _ClientShortcutsAsync:
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
+        *,
         quote: bool = False,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -266,6 +270,7 @@ class _ClientShortcutsAsync:
     async def reply_audio(
         self,
         audio: str | pathlib.Path | bytes | BinaryIO,
+        *,
         quote: bool = False,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -302,6 +307,7 @@ class _ClientShortcutsAsync:
     async def reply_sticker(
         self,
         sticker: str | pathlib.Path | bytes | BinaryIO,
+        *,
         quote: bool = False,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -343,6 +349,7 @@ class _ClientShortcutsAsync:
         longitude: float,
         name: str | None = None,
         address: str | None = None,
+        *,
         quote: bool = False,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
@@ -385,6 +392,7 @@ class _ClientShortcutsAsync:
     async def reply_location_request(
         self,
         text: str,
+        *,
         quote: bool = False,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
@@ -418,6 +426,7 @@ class _ClientShortcutsAsync:
     async def reply_contact(
         self,
         contact: Contact | Iterable[Contact],
+        *,
         quote: bool = False,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
@@ -456,7 +465,7 @@ class _ClientShortcutsAsync:
         )
 
     async def react(
-        self, emoji: str, tracker: str | CallbackData | None = None
+        self, emoji: str, *, tracker: str | CallbackData | None = None
     ) -> SentMessage:
         """
         React to the message with an emoji.
@@ -481,7 +490,9 @@ class _ClientShortcutsAsync:
             tracker=tracker,
         )
 
-    async def unreact(self, tracker: str | CallbackData | None = None) -> SentMessage:
+    async def unreact(
+        self, *, tracker: str | CallbackData | None = None
+    ) -> SentMessage:
         """
         Remove the reaction from the message.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.remove_reaction` with ``to`` and ``message_id``.
@@ -507,6 +518,7 @@ class _ClientShortcutsAsync:
         self,
         body: str,
         footer: str | None = None,
+        *,
         thumbnail_product_sku: str | None = None,
         quote: bool = False,
         tracker: str | CallbackData | None = None,
@@ -550,6 +562,7 @@ class _ClientShortcutsAsync:
         sku: str,
         body: str | None = None,
         footer: str | None = None,
+        *,
         quote: bool = False,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
@@ -589,6 +602,7 @@ class _ClientShortcutsAsync:
         title: str,
         body: str,
         footer: str | None = None,
+        *,
         quote: bool = False,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
