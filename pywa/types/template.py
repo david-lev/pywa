@@ -541,7 +541,7 @@ class QualityScore:
     date: datetime.datetime
 
     @classmethod
-    def from_dict(cls, data: dict[str, str | int]):
+    def from_dict(cls, data: dict):
         return cls(
             score=QualityScoreType(data["score"]),
             date=datetime.datetime.fromtimestamp(
@@ -867,9 +867,11 @@ class _BaseTextComponent:
             self.text = text
 
     def __repr__(self):
-        return (
-            f"{self.__class__.__name__}(text={self.text!r}, example={self.example!r})"
-        )
+        if self.param_format == ParamFormat.POSITIONAL:
+            return f"{self.__class__.__name__}(text={self.text!r}, {', '.join(map(repr, self.example))})"
+        elif self.param_format == ParamFormat.NAMED:
+            return f"{self.__class__.__name__}(text={self.text!r}, {', '.join(f'{k}={v!r}' for k, v in self.example.items())})"
+        return f"{self.__class__.__name__}(text={self.text!r})"
 
     def preview(self) -> str:
         """
@@ -1682,7 +1684,7 @@ class FlowButton(BaseButtonComponent):
             f"icon={self.icon!r})"
         )
 
-    def to_dict(self) -> dict[str, str | dict | None]:
+    def to_dict(self) -> dict:
         return {
             k: v
             for k, v in {
