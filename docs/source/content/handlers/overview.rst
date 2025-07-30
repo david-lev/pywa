@@ -358,6 +358,12 @@ __________________
    * - :meth:`~pywa.client.WhatsApp.on_chat_opened`
      - :class:`ChatOpenedHandler`
      - :class:`~pywa.types.chat_opened.ChatOpened`
+   * - :meth:`~pywa.client.WhatsApp.on_phone_number_change`
+     - :class:`PhoneNumberChangeHandler`
+     - :class:`~pywa.types.system.PhoneNumberChange`
+   * - :meth:`~pywa.client.WhatsApp.on_identity_change`
+     - :class:`IdentityChangeHandler`
+     - :class:`~pywa.types.system.IdentityChange`
    * - :meth:`~pywa.client.WhatsApp.on_call_connect`
      - :class:`CallConnectHandler`
      - :class:`~pywa.types.calls.CallConnect`
@@ -367,6 +373,9 @@ __________________
    * - :meth:`~pywa.client.WhatsApp.on_call_status`
      - :class:`CallStatusHandler`
      - :class:`~pywa.types.calls.CallStatus`
+   * - :meth:`~pywa.client.WhatsApp.on_call_permission_update`
+     - :class:`CallPermissionUpdateHandler`
+     - :class:`~pywa.types.calls.CallPermissionUpdate`
    * - :meth:`~pywa.client.WhatsApp.on_user_marketing_preferences`
      - :class:`UserMarketingPreferencesHandler`
      - :class:`~pywa.types.user_preferences.UserMarketingPreferences`

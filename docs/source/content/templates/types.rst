@@ -94,3 +94,9 @@ Template Types
 
 .. autoclass:: TemplatesResult()
     :show-inheritance:
+
+.. autoclass:: CreatedTemplate()
+
+.. autoclass:: UpdatedTemplate()
+
+.. autoclass:: TemplateUnpauseResult()

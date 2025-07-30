@@ -62,12 +62,18 @@ User related updates:
      - A message status update (e.g. delivered, seen, etc.)
    * - :py:class:`~pywa.types.chat_opened.ChatOpened`
      - A chat opened by a user
-   * - :py:class:`~pywa.types.call.CallConnect`
+   * - :py:class:`~pywa.types.system.PhoneNumberChange`
+     - A user's phone number changed
+   * - :py:class:`~pywa.types.system.IdentityChange`
+     - A user's identity changed
+   * - :py:class:`~pywa.types.calls.CallConnect`
      - A call connected by a user
-   * - :py:class:`~pywa.types.call.CallTerminate`
+   * - :py:class:`~pywa.types.calls.CallTerminate`
      - A call terminated by a user
-   * - :py:class:`~pywa.types.call.CallStatus`
+   * - :py:class:`~pywa.types.calls.CallStatus`
      - A call status update (e.g. ringing, busy, etc.)
+   * - :py:class:`~pywa.types.calls.CallPermissionUpdate`
+     - A call permission update (e.g. permission granted or denied)
    * - :py:class:`~pywa.types.user_preferences.UserMarketingPreferences`
      - A user marketing preferences update (e.g. opted in, opted out)
 
@@ -161,6 +167,8 @@ All user-related-updates have common methods and properties:
      - Block the sender
    * - :meth:`~BaseUserUpdate.unblock_sender`
      - Unblock the sender
+   * - :meth:`~BaseUserUpdate.call`
+     - Start a call with the sender
 
 .. toctree::
     message
@@ -169,9 +177,12 @@ All user-related-updates have common methods and properties:
     flow_completion
     message_status
     chat_opened
+    phone_number_change
+    identity_change
     call_connect
     call_terminate
     call_status
+    call_permission_update
     user_marketing_preferences
     template_status_update
     template_category_update

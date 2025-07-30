@@ -18,9 +18,12 @@ Handler Objects
 .. autoclass:: FlowRequestHandler
 .. autoclass:: MessageStatusHandler
 .. autoclass:: ChatOpenedHandler
+.. autoclass:: PhoneNumberChangeHandler
+.. autoclass:: IdentityChangeHandler
 .. autoclass:: CallConnectHandler
 .. autoclass:: CallTerminateHandler
 .. autoclass:: CallStatusHandler
+.. autoclass:: CallPermissionUpdateHandler
 .. autoclass:: UserMarketingPreferencesHandler
 .. autoclass:: TemplateStatusUpdateHandler
 .. autoclass:: TemplateCategoryUpdateHandler
