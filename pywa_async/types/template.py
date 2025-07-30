@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import dataclasses
 import datetime
-import functools
 from typing import TYPE_CHECKING, Iterable, cast
 
 from pywa.listeners import TemplateUpdateListenerIdentifier
 from pywa.types import CallbackData
-from pywa.types.others import SuccessResult
+from pywa.types.others import _ItemFactory
 from pywa.types.template import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.template import (
     TemplateDetails as _TemplateDetails,
@@ -19,7 +18,7 @@ from pywa.types.template import (
     TemplateCategoryUpdate as _TemplateCategoryUpdate,
     TemplateComponentsUpdate as _TemplateComponentsUpdate,
 )  # noqa MUST BE IMPORTED FIRST
-from .others import Result
+from .others import Result, SuccessResult
 from .. import filters as pywa_filters
 
 if TYPE_CHECKING:
@@ -356,16 +355,14 @@ class TemplatesResult(Result[TemplateDetails]):
 
     def __init__(
         self,
-        wa: WhatsAppAsync,
+        wa: WhatsApp,
         response: dict,
+        item_factory: _ItemFactory,
     ):
         super().__init__(
             wa=wa,
             response=response,
-            item_factory=functools.partial(
-                TemplateDetails.from_dict,
-                client=wa,
-            ),
+            item_factory=item_factory,
         )
         self.total_count = response["summary"]["total_count"]
         self.message_template_count = response["summary"]["message_template_count"]
@@ -373,6 +370,15 @@ class TemplatesResult(Result[TemplateDetails]):
         self.are_translations_complete = response["summary"][
             "are_translations_complete"
         ]
+
+    def __repr__(self) -> str:
+        return (
+            f"TemplatesResult({self._data!r}, has_next={self.has_next!r}, has_previous={self.has_previous!r}, "
+            f"total_count={self.total_count!r}, "
+            f"message_template_count={self.message_template_count!r}, "
+            f"message_template_limit={self.message_template_limit!r}, "
+            f"are_translations_complete={self.are_translations_complete!r})"
+        )
 
 
 class _CreatedAndUpdatedTemplateActionsAsync:

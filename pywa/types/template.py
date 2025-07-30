@@ -76,7 +76,7 @@ import logging
 from typing import TYPE_CHECKING, Literal, Iterable, BinaryIO, cast, Iterator
 
 from .media import Media
-from .others import Result, SuccessResult, ProductsSection
+from .others import Result, SuccessResult, ProductsSection, _ItemFactory
 from .. import utils
 from .. import _helpers as helpers
 from ..listeners import TemplateUpdateListenerIdentifier
@@ -3241,14 +3241,12 @@ class TemplatesResult(Result[TemplateDetails]):
         self,
         wa: WhatsApp,
         response: dict,
+        item_factory: _ItemFactory,
     ):
         super().__init__(
             wa=wa,
             response=response,
-            item_factory=functools.partial(
-                TemplateDetails.from_dict,
-                client=wa,
-            ),
+            item_factory=item_factory,
         )
         self.total_count = response["summary"]["total_count"]
         self.message_template_count = response["summary"]["message_template_count"]
@@ -3256,6 +3254,15 @@ class TemplatesResult(Result[TemplateDetails]):
         self.are_translations_complete = response["summary"][
             "are_translations_complete"
         ]
+
+    def __repr__(self) -> str:
+        return (
+            f"TemplatesResult({self._data!r}, has_next={self.has_next!r}, has_previous={self.has_previous!r}, "
+            f"total_count={self.total_count!r}, "
+            f"message_template_count={self.message_template_count!r}, "
+            f"message_template_limit={self.message_template_limit!r}, "
+            f"are_translations_complete={self.are_translations_complete!r})"
+        )
 
 
 @dataclasses.dataclass(kw_only=True, slots=True, frozen=True)

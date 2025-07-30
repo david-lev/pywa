@@ -1236,7 +1236,7 @@ class Result(Generic[_T]):
         if self.has_next:
             # noinspection PyProtectedMember
             response = self._wa.api._make_request(method="GET", endpoint=self._next_url)
-            return Result(
+            return self.__class__(
                 wa=self._wa, response=response, item_factory=self._item_factory
             )
         return self.empty
@@ -1252,7 +1252,7 @@ class Result(Generic[_T]):
             response = self._wa.api._make_request(
                 method="GET", endpoint=self._previous_url
             )
-            return Result(
+            return self.__class__(
                 wa=self._wa, response=response, item_factory=self._item_factory
             )
         return self.empty
@@ -1306,7 +1306,7 @@ class Result(Generic[_T]):
         return bool(self._data)
 
     def __repr__(self) -> str:
-        return f"Result({self._data!r}, has_next={self.has_next}, has_previous={self.has_previous})"
+        return f"Result({self._data!r}, has_next={self.has_next!r}, has_previous={self.has_previous!r})"
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
