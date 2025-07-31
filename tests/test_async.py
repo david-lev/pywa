@@ -195,6 +195,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
             TemplateDetailsSync.to_json,
             TemplateBaseComponent.params,
             TemplateBaseComponent.Params,
+            CallbackButtonSync.is_quick_reply,
         }
     ]
     non_async = {

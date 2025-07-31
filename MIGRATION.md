@@ -44,7 +44,259 @@
 
 ### Migration steps
 
-IN PROGRESS
+1. If you are using the templates system, you need to update your code to use the new templates system. You can find the documentation for the new templates system [here](https://pywa.readthedocs.io/en/latest/content/templates/overview.html).
+
+```python
+########################## OLD CODE ##########################
+
+from pywa import WhatsApp, types
+
+# Create a WhatsApp client
+wa = WhatsApp(..., business_account_id=123456)
+
+# Create a template
+created = wa.create_template(
+    template=types.NewTemplate(
+        name="buy_new_iphone_x",
+        category=types.NewTemplate.Category.MARKETING,
+        language=types.NewTemplate.Language.ENGLISH_US,
+        header=types.NewTemplate.Text(text="The New iPhone {15} is here!"),
+        body=types.NewTemplate.Body(text="Buy now and use the code {WA_IPHONE_15} to get {15%} off!"),
+        footer=types.NewTemplate.Footer(text="Powered by PyWa"),
+        buttons=[
+            types.NewTemplate.UrlButton(title="Buy Now", url="https://example.com/shop/{iphone15}"),
+            types.NewTemplate.PhoneNumberButton(title="Call Us", phone_number='1234567890'),
+            types.NewTemplate.QuickReplyButton(text="Unsubscribe from marketing messages"),
+            types.NewTemplate.QuickReplyButton(text="Unsubscribe from all messages"),
+        ],
+    ),
+)
+
+# Send the template message
+wa.send_template(
+    to="9876543210",
+    template=types.Template(
+        name="buy_new_iphone_x",
+        language=types.Template.Language.ENGLISH_US,
+        header=types.Template.TextValue(value="15"),
+        body=[
+            types.Template.TextValue(value="John Doe"),
+            types.Template.TextValue(value="WA_IPHONE_15"),
+            types.Template.TextValue(value="15%"),
+        ],
+        buttons=[
+            types.Template.UrlButtonValue(value="iphone15"),
+            types.Template.QuickReplyButtonData(data="unsubscribe_from_marketing_messages"),
+            types.Template.QuickReplyButtonData(data="unsubscribe_from_all_messages"),
+        ],
+    ),
+)
+
+
+########################## NEW CODE ##########################
+
+from pywa import WhatsApp
+from pywa.types.template import *
+
+# Create a WhatsApp client
+wa = WhatsApp(..., business_account_id=123456)
+
+wa.create_template(
+    template=Template(
+        name="buy_new_iphone_x",
+        category=TemplateCategory.MARKETING,
+        language=TemplateLanguage.ENGLISH_US,
+        parameter_format=ParamFormat.NAMED,
+        components=[
+            ht := HeaderText("The New iPhone {{iphone_num}} is here!", iphone_num=15),
+            bt := BodyText("Buy now and use the code {{code}} to get {{per}}% off!", code="WA_IPHONE_15", per=15),
+            FooterText(text="Powered by PyWa"),
+            Buttons(
+                buttons=[
+                    url := URLButton(text="Buy Now", url="https://example.com/shop/{{1}}", example="iphone15"),
+                    PhoneNumberButton(text="Call Us", phone_number="1234567890"),
+                    qrb1 := QuickReplyButton(text="Unsubscribe from marketing messages"),
+                    qrb2 := QuickReplyButton(text="Unsubscribe from all messages"),
+                ]
+            ),
+
+        ]
+    ),
+)
+
+# Send the template message
+wa.send_template(
+    to="9876543210",
+    name="buy_new_iphone_x",
+    language=TemplateLanguage.ENGLISH_US,
+    params=[
+        ht.params(iphone_num=30),
+        bt.params(code="WA_IPHONE_30", per=30),
+        url.params(url_variable="iphone30", index=0),
+        qrb1.params(callback_data="unsubscribe_from_marketing_messages", index=1),
+        qrb2.params(callback_data="unsubscribe_from_all_messages", index=2),
+    ]
+)
+```
+
+2. If you are using the `upload_media` method, you need to update your code to use the `Media` object instead of a string (media ID):
+
+```python
+########################## OLD CODE ##########################
+
+from pywa import WhatsApp, types
+
+wa = WhatsApp(...)
+
+media_id = wa.upload_media(file="path/to/file.jpg")
+
+# running sql query to store media_id
+cursor.execute("CREATE TABLE IF NOT EXISTS media (id INTEGER PRIMARY KEY AUTOINCREMENT, media_id VARCHAR UNIQUE NOT NULL)")
+cursor.execute("INSERT INTO media (media_id) VALUES (?)", (media_id,))
+
+
+########################## NEW CODE ##########################
+
+from pywa import WhatsApp, types
+
+wa = WhatsApp(...)
+
+media = wa.upload_media(file="path/to/file.jpg")
+
+# running sql query to store media.id
+cursor.execute("CREATE TABLE IF NOT EXISTS media (id INTEGER PRIMARY KEY AUTOINCREMENT, media_id VARCHAR UNIQUE NOT NULL)")
+cursor.execute("INSERT INTO media (media_id) VALUES (?)", (media.id,))
+```
+
+3. If you are using the `send_message`, `send_image`, or other `send_...` methods, you need to update your code to use keyword-only arguments for context:
+
+```python
+########################## OLD CODE ##########################
+
+from pywa import WhatsApp, types
+
+wa = WhatsApp(...)
+
+wa.send_message(
+    "97234567890",
+    "Hello, World!",
+    "header text",
+    "footer text",
+    [types.Button(title="x", callback_data="y")],
+    True, # preview_url
+    "message_id", # reply_to_message_id
+    "phone_id", # sender
+)
+
+########################## NEW CODE ##########################
+
+from pywa import WhatsApp, types
+
+wa = WhatsApp(...)
+
+wa.send_message(
+    "97234567890",
+    "Hello, World!",
+    "header text",
+    "footer text",
+    [types.Button(title="x", callback_data="y")],
+    preview_url=True,  # kw only argument
+    reply_to_message_id="message_id",  # kw only argument
+    sender="phone_id",  # kw only argument
+)
+```
+
+4. If you are using the `SuccessResult` object, you need to update your code to use the `SuccessResult.success` attribute instead of a boolean value:
+
+```python
+########################## OLD CODE ##########################
+
+from pywa import WhatsApp, types
+
+wa = WhatsApp(...)
+
+result = wa.mark_as_read("97234567890", "message_id")
+
+# running sql query to store result
+cursor.execute("CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, message_id VARCHAR UNIQUE NOT NULL, is_read BOOLEAN NOT NULL)")
+cursor.execute("INSERT INTO messages (message_id, is_read) VALUES (?, ?)", ("msg_id", result))
+
+########################## NEW CODE ##########################
+
+from pywa import WhatsApp, types
+
+wa = WhatsApp(...)
+
+result = wa.mark_as_read("97234567890", "message_id")
+
+# running sql query to store result.success
+cursor.execute("CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, message_id VARCHAR UNIQUE NOT NULL, is_read BOOLEAN NOT NULL)")
+cursor.execute("INSERT INTO messages (message_id, is_read) VALUES (?, ?)", ("msg_id", result.success))
+```
+
+5. If you are using the `system` messages, you need to update your code to start listening to the `PhoneNumberChange` and `IdentityChange` updates instead:
+
+```python
+########################## OLD CODE ##########################
+
+from pywa import WhatsApp, types, filters
+
+wa = WhatsApp(...)
+
+@wa.on_message(filters=filters.new(lambda _, m: m.system and m.system.type == "customer_changed_number"))
+def on_phone_number_change(_: WhatsApp, msg: types.Message):
+    repository.update_phone_number(old=msg.system.wa_id, new=msg.system.new_wa_id)
+
+@wa.on_message(filters=filters.new(lambda _, m: m.system and m.system.type == "customer_changed_identity"))
+def on_identity_change(_: WhatsApp, msg: types.Message):
+    repository.log_out_user(wa_id=msg.sender) # secure the user account
+
+
+########################## NEW CODE ##########################
+
+from pywa import WhatsApp, types, filters
+
+wa = WhatsApp(...)
+
+@wa.on_phone_number_change
+def on_phone_number_change(_: WhatsApp, update: types.PhoneNumberChange):
+    repository.update_phone_number(old=update.old_wa_id, new=update.new_wa_id)
+
+@wa.on_identity_change
+def on_identity_change(_: WhatsApp, update: types.IdentityChange):
+    repository.log_out_user(wa_id=update.sender)  # secure the user
+```
+
+6. If you are using the `FlowRequestDecryptedMedia` object, you need to update your code to use the `FlowRequestDecryptedMedia` object instead of a tuple:
+
+```python
+########################## OLD CODE ##########################
+
+from pywa import WhatsApp, types
+
+wa = WhatsApp(...)
+
+@wa.on_flow_request("/my-flow-endpoint")
+def my_flow_endpoint(_: WhatsApp, req: types.FlowRequest):
+    media_id, filename, decrypted_data = req.decrypt_media(key="driver_license", index=0)
+    with open(filename, "wb") as file:
+        file.write(decrypted_data)
+    return req.respond(...)
+
+########################## NEW CODE ##########################
+
+from pywa import WhatsApp, types
+
+wa = WhatsApp(...)
+
+@wa.on_flow_request("/my-flow-endpoint")
+def my_flow_endpoint(_: WhatsApp, req: types.FlowRequest):
+    decrypted_media = req.decrypt_media(key="driver_license", index=0)
+    with open(decrypted_media.filename, "wb") as file:
+        file.write(decrypted_media.data)
+    return req.respond(...)
+```
+
 
 ## Migration from 1.x to 2.x
 

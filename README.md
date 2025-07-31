@@ -228,47 +228,46 @@ def handle_flow_response(_: WhatsApp, flow: types.FlowCompletion):
 - **Create and send template messages**
 
 ```python
-from pywa import WhatsApp, types
+from pywa import WhatsApp
+from pywa.types.template import *
 
-# Create a WhatsApp client
 wa = WhatsApp(..., business_account_id=123456)
 
-# Create a template
-created = wa.create_template(
-    template=types.NewTemplate(
+wa.create_template(
+    template=Template(
         name="buy_new_iphone_x",
-        category=types.NewTemplate.Category.MARKETING,
-        language=types.NewTemplate.Language.ENGLISH_US,
-        header=types.NewTemplate.Text(text="The New iPhone {15} is here!"),
-        body=types.NewTemplate.Body(text="Buy now and use the code {WA_IPHONE_15} to get {15%} off!"),
-        footer=types.NewTemplate.Footer(text="Powered by PyWa"),
-        buttons=[
-            types.NewTemplate.UrlButton(title="Buy Now", url="https://example.com/shop/{iphone15}"),
-            types.NewTemplate.PhoneNumberButton(title="Call Us", phone_number='1234567890'),
-            types.NewTemplate.QuickReplyButton(text="Unsubscribe from marketing messages"),
-            types.NewTemplate.QuickReplyButton(text="Unsubscribe from all messages"),
-        ],
+        category=TemplateCategory.MARKETING,
+        language=TemplateLanguage.ENGLISH_US,
+        parameter_format=ParamFormat.NAMED,
+        components=[
+            ht := HeaderText("The New iPhone {{iphone_num}} is here!", iphone_num=15),
+            bt := BodyText("Buy now and use the code {{code}} to get {{per}}% off!", code="WA_IPHONE_15", per=15),
+            FooterText(text="Powered by PyWa"),
+            Buttons(
+                buttons=[
+                    url := URLButton(text="Buy Now", url="https://example.com/shop/{{1}}", example="iphone15"),
+                    PhoneNumberButton(text="Call Us", phone_number="1234567890"),
+                    qrb1 := QuickReplyButton(text="Unsubscribe from marketing messages"),
+                    qrb2 := QuickReplyButton(text="Unsubscribe from all messages"),
+                ]
+            ),
+
+        ]
     ),
 )
 
 # Send the template message
 wa.send_template(
     to="9876543210",
-    template=types.Template(
-        name="buy_new_iphone_x",
-        language=types.Template.Language.ENGLISH_US,
-        header=types.Template.TextValue(value="15"),
-        body=[
-            types.Template.TextValue(value="John Doe"),
-            types.Template.TextValue(value="WA_IPHONE_15"),
-            types.Template.TextValue(value="15%"),
-        ],
-        buttons=[
-            types.Template.UrlButtonValue(value="iphone15"),
-            types.Template.QuickReplyButtonData(data="unsubscribe_from_marketing_messages"),
-            types.Template.QuickReplyButtonData(data="unsubscribe_from_all_messages"),
-        ],
-    ),
+    name="buy_new_iphone_x",
+    language=TemplateLanguage.ENGLISH_US,
+    params=[
+        ht.params(iphone_num=30),
+        bt.params(code="WA_IPHONE_30", per=30),
+        url.params(url_variable="iphone30", index=0),
+        qrb1.params(callback_data="unsubscribe_from_marketing_messages", index=1),
+        qrb2.params(callback_data="unsubscribe_from_all_messages", index=2),
+    ]
 )
 ```
 
