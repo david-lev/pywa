@@ -195,7 +195,6 @@ def test_all_methods_are_overwritten_in_async(overrides):
             TemplateDetailsSync.to_json,
             TemplateBaseComponent.params,
             TemplateBaseComponent.Params,
-            CallbackButtonSync.is_quick_reply,
         }
     ]
     non_async = {
@@ -207,6 +206,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
         "_httpx_client",
         "_flow_req_cls",
         "_api_fields",
+        "is_quick_reply",
     }
     for sync_obj, async_obj in overrides:
         for method_name in filter(
