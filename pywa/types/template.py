@@ -1830,16 +1830,18 @@ class QuickReplyButton(BaseButtonComponent):
     """
     Quick reply buttons are custom text-only buttons that immediately message you with the specified text string when tapped by the app user. A common use case-case is a button that allows your customer to easily opt-out of any marketing messages.
 
-    - When this button is tapped, you will receive a :class:`CallbackButton` update with the text you specified in the button and the data you provided in the button parameters.
+    - When this button is tapped, you will receive a :class:`~pywa.types.callback.CallbackButton` update with the text you specified in the button and the data you provided in the button parameters (You can use :attr:`~pywa.types.callback.CallbackButton.is_quick_reply` to check if the update is a quick reply button).
     - Templates are limited to 10 quick reply buttons. If using quick reply buttons with other buttons, buttons must be organized into two groups: quick reply buttons and non-quick reply buttons. If grouped incorrectly, the API will return an error indicating an invalid combination.
+
     - Examples of valid groupings:
-        Quick Reply, Quick Reply
-        Quick Reply, Quick Reply, URL, Phone
-        URL, Phone, Quick Reply, Quick Reply
+        - Quick Reply, Quick Reply
+        - Quick Reply, Quick Reply, URL, Phone
+        - URL, Phone, Quick Reply, Quick Reply
 
     - Examples of invalid groupings:
-        Quick Reply, URL, Quick Reply
-        URL, Quick Reply, URL
+        - Quick Reply, URL, Quick Reply
+        - URL, Quick Reply, URL
+
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#quick-reply-buttons>`_.
 
     Example:
