@@ -276,9 +276,7 @@ class CallbackButton(BaseUserUpdate, Generic[_CallbackDataT]):
     Attributes:
         id: The ID of the message.
         metadata: The metadata of the message (to which phone number it was sent).
-        type: The message type (:class:`MessageType.INTERACTIVE` for :class:`Button` presses or
-        type: The message type (:class:`MessageType.INTERACTIVE` for :class:`Button` presses or
-         :class:`MessageType.BUTTON` for :class:`Template.QuickReplyButtonData` choices).
+        type: The message type (:class:`MessageType.INTERACTIVE` for :class:`~pywa.types.callback.Button` presses or :class:`MessageType.BUTTON` for :class:`~pywa.types.template.QuickReplyButton` clicks).
         from_user: The user who sent the message.
         timestamp: The timestamp when the message was sent (in UTC).
         reply_to_message: The message to which this callback button is a reply to.
@@ -326,6 +324,15 @@ class CallbackButton(BaseUserUpdate, Generic[_CallbackDataT]):
             data=data,
             title=title,
         )
+
+    def is_quick_reply(self) -> bool:
+        """
+        Check if the callback button is click at :class:`~pywa.types.template.QuickReplyButton` (template button).
+
+        Returns:
+            bool: True if the callback button is a quick reply button, False otherwise.
+        """
+        return self.type == MessageType.BUTTON
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
