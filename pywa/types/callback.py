@@ -138,7 +138,9 @@ class CallbackData:
             raise TypeError(
                 f"Callback data class `{cls.__name__}` must have at least one field."
             )
-        if dataclasses.is_dataclass(cls) and cls.__dataclass_params__.kw_only:
+        if dataclasses.is_dataclass(cls) and getattr(
+            getattr(cls, "__dataclass_params__", None), "kw_only", False
+        ):
             raise TypeError(
                 f"Callback data class `{cls.__name__}` cannot be a dataclass with `kw_only=True`. "
                 "Use positional arguments instead."
