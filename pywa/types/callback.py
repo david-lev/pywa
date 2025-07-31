@@ -325,6 +325,7 @@ class CallbackButton(BaseUserUpdate, Generic[_CallbackDataT]):
             title=title,
         )
 
+    @property
     def is_quick_reply(self) -> bool:
         """
         Check if the callback button is click at :class:`~pywa.types.template.QuickReplyButton` (template button).
