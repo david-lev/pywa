@@ -30,7 +30,8 @@ class PhoneNumberChange(BaseUserUpdate):
         id: The message ID.
         metadata: The metadata of the message (to which phone number it was sent).
         type: The type of the message (always ``MessageType.SYSTEM``).
-        from_user: The user who changed their phone number.
+        sys_type: The type of the system message (always ``SystemType.USER_CHANGED_NUMBER``).
+        from_user: The user who changed their phone number. THIS IS THE OLD WA ID!
         timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
         old_wa_id: The old WhatsApp ID of the user.
         new_wa_id: The new WhatsApp ID of the user.
@@ -64,8 +65,8 @@ class PhoneNumberChange(BaseUserUpdate):
             metadata=Metadata.from_dict(value["metadata"]),
             type=MessageType(msg["type"]),
             sys_type=SystemType(sys["type"]),
-            from_user=client._usr_cls.from_dict(value["contacts"][0], client=client),
-            old_wa_id=sys["customer"],
+            from_user=client._usr_cls(_client=client, wa_id=msg["from"], name=None),
+            old_wa_id=sys.get("customer", msg["from"]),  # v12^ from
             new_wa_id=sys.get("new_wa_id", sys["wa_id"]),  # v12^ wa_id
             body=sys["body"],
         )
@@ -76,11 +77,11 @@ class SystemType(utils.StrEnum):
     The type of the system message.
 
     Attributes:
-        CUSTOMER_CHANGED_NUMBER: A customer changed their phone number.
-        CUSTOMER_IDENTITY_CHANGED: A customer changed their profile information.
+        USER_CHANGED_NUMBER: A user changed their phone number.
+        CUSTOMER_IDENTITY_CHANGED: A user changed their profile information.
     """
 
-    CUSTOMER_CHANGED_NUMBER = "customer_changed_number"
+    USER_CHANGED_NUMBER = "user_changed_number"
     CUSTOMER_IDENTITY_CHANGED = "customer_identity_changed"
 
     UNKNOWN = "UNKNOWN"

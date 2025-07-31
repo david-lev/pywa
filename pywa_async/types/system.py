@@ -23,7 +23,8 @@ class PhoneNumberChange(BaseUserUpdateAsync, _UserChangedNumber):
         id: The message ID.
         metadata: The metadata of the message (to which phone number it was sent).
         type: The type of the message (always ``MessageType.SYSTEM``).
-        from_user: The user who changed their phone number.
+        sys_type: The type of the system message (always ``SystemType.USER_CHANGED_NUMBER``).
+        from_user: The user who changed their phone number. THIS IS THE OLD WA ID!
         timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
         old_wa_id: The old WhatsApp ID of the user.
         new_wa_id: The new WhatsApp ID of the user.

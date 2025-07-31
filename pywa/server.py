@@ -26,7 +26,7 @@ _MESSAGE_TYPES: dict[MessageType, type[handlers.Handler]] = {
     MessageType.REQUEST_WELCOME: handlers.ChatOpenedHandler,
 }
 _SYSTEM_TYPES: dict[SystemType, type[handlers.Handler]] = {
-    SystemType.CUSTOMER_CHANGED_NUMBER: handlers.PhoneNumberChangeHandler,
+    SystemType.USER_CHANGED_NUMBER: handlers.PhoneNumberChangeHandler,
     SystemType.CUSTOMER_IDENTITY_CHANGED: handlers.IdentityChangeHandler,
 }
 _INTERACTIVE_TYPES: dict[str, type[handlers.Handler]] = {
