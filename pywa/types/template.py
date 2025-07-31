@@ -472,16 +472,16 @@ class LibraryTemplate:
         library_template_name: The exact name of the Template Library template.
         category: The category of the template.
         language: The language of the template.
-        body_inputs: Optional inputs for the body of the template.
-        button_inputs: Optional inputs for the buttons of the template.
+        library_template_body_inputs: Optional inputs for the body of the template.
+        library_template_button_inputs: Optional inputs for the buttons of the template.
     """
 
     name: str
     library_template_name: str
     category: TemplateCategory
     language: TemplateLanguage
-    body_inputs: LibraryTemplateBodyInputs | None = None
-    button_inputs: LibraryTemplateButtonInputs | None = None
+    library_template_body_inputs: list[LibraryTemplateBodyInputs] | None = None
+    library_template_button_inputs: list[LibraryTemplateButtonInputs] | None = None
 
     def to_json(self) -> str:
         return _template_to_json(self)
@@ -514,13 +514,13 @@ class LibraryTemplateButtonInputs:
 
     Attributes:
         type: The button type
-        url: A dictionary with base_url and url_suffix_example
+        url: A dictionary with ``base_url`` and ``url_suffix_example``
         otp_type: The type of OTP button, if applicable.
         zero_tap_terms_accepted: Weather the zero tap terms were accepted by the user or not.
         supported_apps: A list of supported apps for the OTP button.
     """
 
-    type: ComponentType | None = None
+    type: ComponentType
     url: dict | None = None
     otp_type: OtpType | None = None
     zero_tap_terms_accepted: bool | None = None

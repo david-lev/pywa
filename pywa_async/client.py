@@ -244,7 +244,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             ... async def new_message(_: WhatsApp, msg: Message):
             ...     await msg.reply("Hello from PyWa!")
 
-            ``$ fastapi dev wa.py`` see uvicorn docs for more options (port, host, reload, etc.)
+            ``$ fastapi dev wa.py`` see `uvicorn docs <https://www.uvicorn.org/#command-line-options>`_ for more options (port, host, reload, etc.)
 
         Args:
             phone_id: The Phone number ID to send messages from (if you manage multiple WhatsApp business accounts
@@ -2126,9 +2126,10 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             The created template.
         """
-        await helpers.upload_template_media_components(
-            wa=self, app_id=app_id, components=template.components
-        )
+        if isinstance(template, Template):
+            await helpers.upload_template_media_components(
+                wa=self, app_id=app_id, components=template.components
+            )
         return CreatedTemplate.from_dict(
             client=self,
             data=await self.api.create_template(
@@ -2314,7 +2315,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 msg={
                     "name": name,
                     "language": {"code": language.value},
-                    "components": [param.to_dict() for param in params],
+                    "components": [
+                        param.to_dict()
+                        if isinstance(param, TemplateBaseComponent.Params)
+                        else param
+                        for param in params
+                    ],
                 },
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),

@@ -7,7 +7,7 @@ from pywa import WhatsApp as WhatsAppSync
 from pywa.handlers import _HandlerDecorators
 from pywa.types.base_update import BaseUpdate
 from pywa_async import WhatsApp as WhatsAppAsync
-from pywa.api import GraphAPI as WhatsAppCloudApiSync
+from pywa.api import GraphAPI as GraphAPISync
 from pywa_async.api import GraphAPIAsync
 from pywa.server import Server as ServerSync
 from pywa.listeners import _Listeners as ListenersSync
@@ -124,8 +124,7 @@ def overrides() -> list[tuple[type, type]]:
         (SentMessageSync, SentMessageAsync),
         (SentTemplateSync, SentTemplateAsync),
         (InitiatedCallSync, InitiatedCallAsync),
-        (WhatsAppCloudApiSync, GraphAPIAsync),
-        (WhatsAppCloudApiSync, GraphAPIAsync),
+        (GraphAPISync, GraphAPIAsync),
         (UserSync, UserAsync),
         (ResultSync, ResultAsync),
         (TemplateDetailsSync, TemplateDetailsAsync),

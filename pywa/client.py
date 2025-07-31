@@ -154,6 +154,12 @@ _DEFAULT_VERIFY_DELAY_SEC = 3
 
 
 class WhatsApp(Server, _HandlerDecorators, _Listeners):
+    phone_id: str | int | None
+    business_account_id: str | int | None
+    app_id: str | int | None
+    filter_updates: bool
+    api: GraphAPI
+
     _api_cls = GraphAPI
     _flow_req_cls = FlowRequest
     _usr_cls = User
@@ -254,7 +260,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             ... def new_message(_: WhatsApp, msg: Message):
             ...     msg.reply("Hello from PyWa!")
 
-            ``$ fastapi dev wa.py`` see uvicorn docs for more options (port, host, reload, etc.)
+            ``$ fastapi dev wa.py`` see `uvicorn docs <https://www.uvicorn.org/#command-line-options>`_ for more options (port, host, reload, etc.)
 
         Args:
             phone_id: The Phone number ID to send messages from (if you manage multiple WhatsApp business accounts
@@ -2363,9 +2369,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The created template.
         """
-        helpers.upload_template_media_components(
-            wa=self, app_id=app_id, components=template.components
-        )
+        if isinstance(template, Template):
+            helpers.upload_template_media_components(
+                wa=self, app_id=app_id, components=template.components
+            )
         return CreatedTemplate.from_dict(
             client=self,
             data=self.api.create_template(
@@ -2551,7 +2558,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 msg={
                     "name": name,
                     "language": {"code": language.value},
-                    "components": [param.to_dict() for param in params],
+                    "components": [
+                        param.to_dict()
+                        if isinstance(param, TemplateBaseComponent.Params)
+                        else param
+                        for param in params
+                    ],
                 },
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
