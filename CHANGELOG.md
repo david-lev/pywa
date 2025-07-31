@@ -3,6 +3,33 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+#### 3.0.0-rc.1 (2025-07-31)
+
+- [templates] refactored and improved templates support
+- [calls] added full support for calls
+- [user_preferences] added full support for user preferences
+- [server] continued handling if listener is not using the update
+- [system] moved `system` messages to `PhoneNumberChange` and `IdentityChange` updates
+- [client] forced keyword-only for context args in `send_message`, `send_image`, and other `send_...` methods
+- [types] returned `SuccessResult` instead of `bool` to allow future extension with other attributes
+- [client] `upload_media` returns `Media` object
+- [client] added `get_business_phone_number_settings` and `update_business_phone_number_settings` to get and update calling settings
+- [client] added `update_display_name` method to update the WhatsApp display name
+- [security] fixed XSS vulnerability
+- [api] suggest to provide custom `httpx.Client` on `httpx.RequestError`
+- [handlers] added `on_completion` decorator to flow request callback wrapper
+- [errors] show more descriptive error messages
+- [base_update] added `waba_id` for all user updates
+- [message] added `referral` field
+- [types] support `is_on_biz_app` in `BusinessPhoneNumber`
+- [client] added `delete_media` method
+- [listeners] check if `server` exists before starting to listen
+- [utils] handled enum values case-sensitively
+- [utils] returned `FlowRequestDecryptedMedia` instead of `(media_id, filename, data)` tuple
+- [utils] new `APIObject` to get fields from datacls
+- [deprecations] removed attrs and types marked as deprecated
+
+
 ### 2.11.0 (2025-06-17) **Latest**
 
 - [flows] adding support for `ImageCarousel`

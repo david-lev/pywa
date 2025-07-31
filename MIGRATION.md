@@ -2,10 +2,49 @@
 ----------------
 
 - [Migration](#migration)
+  - [Migration from 2.x to 3.x](#migration-from-2x-to-3x)
+    - [New features](#new-features)
+    - [Breaking changes](#breaking-changes)
+    - [Migration steps](#migration-steps)
   - [Migration from 1.x to 2.x](#migration-from-1x-to-2x)
     - [New features](#new-features)
     - [Breaking changes](#breaking-changes)
     - [Migration steps](#migration-steps)
+
+## Migration from 2.x to 3.x
+
+
+### New features
+
+- [templates] Refactored and improved templates support. The templates are now flexible, reusable, extensible, easier to use and more powerful.
+- [calls] Added full support for calls. You can now make and receive calls, manage calls, handle call events, configure call settings, and more.
+- [user_preferences] Added full support for user preferences. You can now listen to user marketing preferences - if the user has opted in or out of marketing messages, and act accordingly.
+- [server] Continued handling if listener is not using the update. If a listener does not use the update (not filtered or not cancelled), the server will continue to handle the update and pass it to the handlers.
+- [system] Moved `system` messages to `PhoneNumberChange` and `IdentityChange` updates. The `system` messages are now handled as separate updates, allowing you to focus on real user messages and events.
+- [client] Forced keyword-only for context args in `send_message`, `send_image`, and other `send_...` methods. This change improves readability and consistency of the API.
+- [types] Returned `SuccessResult` instead of `bool` to allow future extension with other attributes. The `SuccessResult` object acts as boolean, but can also contain additional information about the success of the operation.
+- [client] `upload_media` returns `Media` object. The `Media` object contains the media ID so you can use it later to send the media or perform other operations.
+- [client] Added `update_display_name` method to update the WhatsApp display name. This method allows you to change the display name of your WhatsApp account.
+- [handlers] Added `on_completion` decorator to flow request callback wrapper. This decorator allows you to register a callback that will be called when the flow request is completed.
+- [errors] Show more descriptive error messages. The error messages now provide more context and information about the error, making it easier to debug and fix issues.
+- [base_update] Added `waba_id` for all user updates. The `waba_id` is the WhatsApp Business Account ID that received the update, allowing you to identify the account that the update belongs to.
+- [message] Added `referral` field. When a customer clicks an ad that redirects to WhatsApp and starts a chat, the `referral` field contains information about the ad that was clicked.
+- [client] Added `delete_media` method. This method allows you to delete media files from WhatsApp servers.
+
+
+### Breaking changes
+
+- [templates] The templates system has been completely redesigned. The old templates are no longer supported, and you need to update your code to use the new templates system (create and send)
+- [server] The server now continues to handle updates even if the listener does not use the update. This means that if a listener does not filter or cancel the update, the server will pass it to the handlers (unless you call `update.stop_handling()` inside the listener filters/cancelers).
+- [client] The `upload_media` method now returns a `Media` object instead of a string (media ID). The `Media` object contains the media ID and allows you to perform actions on the media, such as downloading or deleting it. If you using the media ID directly to send media - you don't need to change anything, just use the `Media` object instead of the string. if you stored the media ID in a database or somewhere else, you will need to update your code to use the `Media.id` attribute instead of the string media ID.
+- [client] The `send_message`, `send_image`, and other `send_...` methods now require keyword-only arguments for context. This change improves readability and consistency of the API. This context arguments are `reply_to_message_id`, `sender` etc. Most of users don't need to change anything, but if you are using positional arguments for these context args (they are located at the end of the method signature, so the chance for breaking is low), you will need to update your code to use keyword arguments.
+- [types] The `SuccessResult` object is now returned instead of a boolean value. This change allows for future extension of the `SuccessResult` object with additional attributes, such as error messages or additional information about the success of the operation. If you are using the return value of methods like `mark_as_read`, `indicate_typing`, etc., if you just checking if the operation was successful, you can continue to use it as a boolean. but if you storing the result in a database or forcing the result to be a boolean, you will need to update your code to use the `SuccessResult.success` attribute instead of the boolean value.
+- [system] The `system` messages are now handled as separate updates, and the `PhoneNumberChange` and `IdentityChange` updates are used instead. This change allows you to focus on real user messages and events, and handle system messages separately. If you were accessing the `system` attribute of the `Message` object, you will need to update your code to start listening to the `PhoneNumberChange` and `IdentityChange` updates instead.
+- [utils] The `FlowRequestDecryptedMedia` object is now returned instead of a tuple `(media_id, filename, data)`. This change allows you to access the media ID, filename, and data in a more structured way. If you were using the tuple to access the media ID, filename, and data, you will need to update your code to use the `FlowRequestDecryptedMedia` object instead.
+
+### Migration steps
+
+IN PROGRESS
 
 ## Migration from 1.x to 2.x
 

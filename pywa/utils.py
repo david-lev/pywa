@@ -482,11 +482,6 @@ def rename_func(extended_with: str) -> Callable:
     return inner
 
 
-def listener_identifier(sender: str | int, recipient: str | int) -> tuple[str, str]:
-    """Create a unique identifier for a listener."""
-    return str(sender), str(recipient)
-
-
 def is_async_callable(obj: Any) -> bool:
     """Check if an object is an async callable."""
     while isinstance(obj, functools.partial):

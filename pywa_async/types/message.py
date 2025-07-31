@@ -57,7 +57,7 @@ class Message(BaseUserUpdateAsync, _Message):
         location: The location of the message.
         contacts: The contacts of the message.
         order: The order of the message.
-        referral: The referral information of the message (if any).
+        referral: The referral information of the message (When a customer clicks an ad that redirects to WhatsApp).
         error: The error of the message.
         shared_data: Shared data between handlers.
     """
