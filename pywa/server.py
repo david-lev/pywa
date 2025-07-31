@@ -3,32 +3,16 @@
 import json
 import logging
 import threading
-from typing import TYPE_CHECKING, cast, Callable
+from typing import TYPE_CHECKING, Callable
 
 from . import utils, handlers, errors
 
-# from .handlers import (
-# Handler,
-#     EncryptedFlowRequestType,
-#     CallStatusHandler,
-#     CallConnectHandler,
-#     CallTerminateHandler, PhoneNumberChangeHandler, IdentityChangeHandler,
-#     CallbackButtonHandler,
-#     CallbackSelectionHandler,
-#     MessageHandler,
-#     MessageStatusHandler,
-#     RawUpdateHandler,
-#     FlowCompletionHandler,
-#     UserMarketingPreferencesHandler,
-#     ChatOpenedHandler,
-# )
 from .types import MessageType, UserPreferenceCategory
 from .types.base_update import (
     BaseUpdate,
     StopHandling,
     ContinueHandling,
-    BaseUserUpdate,
-)  # noqa
+)
 from .types.system import SystemType
 
 from .utils import FastAPI, Flask

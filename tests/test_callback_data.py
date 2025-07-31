@@ -30,11 +30,12 @@ def test_callback_id_override():
     @dataclasses.dataclass(slots=True, frozen=True)
     class User(CallbackData):
         __callback_id__ = "user"
+        __callback_data_sep__ = "~"
         id: str
         name: str
         is_admin: bool
 
-    assert User.__callback_id__ == "user"
+    assert User(id="1234", name="xxx", is_admin=True).to_str().startswith("user~")
 
 
 def test_callback_class_not_empty():
@@ -78,23 +79,24 @@ def test_data():
 
     @dataclasses.dataclass(slots=True, frozen=True)
     class User(CallbackData):
+        __callback_id__ = "x"
         id: int
         name: str
         is_admin: bool
 
-    assert User(id=1234, name="xxx", is_admin=True).to_str() == "3~1234~xxx~§"
-    assert User(id=3456, name="yyy", is_admin=False).to_str() == "3~3456~yyy~"
-    assert User.from_str("1~1234~xxx~§") == User(id=1234, name="xxx", is_admin=True)
-    assert User.from_str("1~3456~yyy~") == User(id=3456, name="yyy", is_admin=False)
+    assert User(id=1234, name="xxx", is_admin=True).to_str() == "x~1234~xxx~§"
+    assert User(id=3456, name="yyy", is_admin=False).to_str() == "x~3456~yyy~"
+    assert User.from_str("x~1234~xxx~§") == User(id=1234, name="xxx", is_admin=True)
+    assert User.from_str("x~3456~yyy~") == User(id=3456, name="yyy", is_admin=False)
 
     with pytest.raises(ValueError):  # too few fields
-        User.from_str("1~3456")
+        User.from_str("x~3456")
 
     with pytest.raises(ValueError):  # too many fields
-        User.from_str("1~3456~yyy~§~")
+        User.from_str("x~3456~yyy~§~")
 
     with pytest.raises(ValueError):  # invalid type
-        User.from_str("1~x~yyy~§")
+        User.from_str("x~x~yyy~§")
 
 
 def test_data_sep():
@@ -102,18 +104,19 @@ def test_data_sep():
 
     @dataclasses.dataclass(slots=True, frozen=True)
     class User(CallbackData):
+        __callback_id__ = "x"
         __callback_data_sep__ = "*"
         id: int
         name: str
         is_admin: bool
 
-    assert User(id=1234, name="xxx", is_admin=True).to_str() == "4*1234*xxx*§"
-    assert User(id=3456, name="yyy", is_admin=False).to_str() == "4*3456*yyy*"
+    assert User(id=1234, name="xxx", is_admin=True).to_str() == "x*1234*xxx*§"
+    assert User(id=3456, name="yyy", is_admin=False).to_str() == "x*3456*yyy*"
 
     with pytest.raises(ValueError):
-        User.from_str("1*3456*David*Lev*")
+        User.from_str("x*3456*David*Lev*")
 
     try:
-        User.from_str("1*3456*David~Lev*")
+        User.from_str("x*3456*David~Lev*")
     except ValueError:
         pytest.fail("The data separator override does not work.")

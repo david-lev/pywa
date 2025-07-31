@@ -138,6 +138,11 @@ class CallbackData:
             raise TypeError(
                 f"Callback data class `{cls.__name__}` must have at least one field."
             )
+        if dataclasses.is_dataclass(cls) and cls.__dataclass_params__.kw_only:
+            raise TypeError(
+                f"Callback data class `{cls.__name__}` cannot be a dataclass with `kw_only=True`. "
+                "Use positional arguments instead."
+            )
         unsupported_fields = set[tuple[str, type]]()
         for field_name, field_type in cls.__annotations__.items():
             if get_origin(field_type) in (types.UnionType, Union):
