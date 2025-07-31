@@ -18,6 +18,8 @@ Message Fields
 .. autoclass:: Order()
     :members: total_price
 
+.. autoclass:: Referral()
+
 .. autoclass:: ReferredProduct()
 
 .. autoclass:: User()

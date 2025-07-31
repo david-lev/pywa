@@ -632,7 +632,7 @@ class WeekDay:
     """
     Represents a day of the week with its opening and closing times.
 
-    - You can use the subclasses for specific days (e.g., ``Monday``, ``Tuesday``, etc.) to create instances with predefined day names.
+    - You can use the subclasses for specific days (e.g., :class:`Monday`, ``Tuesday``, etc.) to create instances with predefined day names.
 
     Attributes:
         day_of_week: The day of the week (e.g., "MONDAY", "TUESDAY").
