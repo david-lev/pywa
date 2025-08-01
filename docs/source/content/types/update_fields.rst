@@ -18,9 +18,9 @@ Message Fields
 .. autoclass:: Order()
     :members: total_price
 
-.. autoclass:: ReferredProduct()
+.. autoclass:: Referral()
 
-.. autoclass:: System()
+.. autoclass:: ReferredProduct()
 
 .. autoclass:: User()
     :members: block, unblock

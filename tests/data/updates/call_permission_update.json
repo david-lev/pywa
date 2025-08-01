@@ -1,0 +1,97 @@
+{
+  "accept": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "1234567890987654321",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "972123456789",
+                "phone_number_id": "1122334455667"
+              },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321"
+                }
+              ],
+              "messages": [
+                {
+                  "context": {
+                    "from": "1122334455667",
+                    "id": "wamid.y=="
+                  },
+                  "from": "972987654321",
+                  "id": "wamid.x",
+                  "timestamp": "1752582182",
+                  "type": "interactive",
+                  "interactive": {
+                    "type": "call_permission_reply",
+                    "call_permission_reply": {
+                      "response": "accept",
+                      "expiration_timestamp": 1753186982,
+                      "response_source": "user_action"
+                    }
+                  }
+                }
+              ]
+            },
+            "field": "messages"
+          }
+        ]
+      }
+    ]
+  },
+  "reject": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "1234567890987654321",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "972123456789",
+                "phone_number_id": "1122334455667"
+              },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321"
+                }
+              ],
+              "messages": [
+                {
+                  "context": {
+                    "from": "1122334455667",
+                    "id": "wamid.y=="
+                  },
+                  "from": "972987654321",
+                  "id": "wamid.x",
+                  "timestamp": "1752582182",
+                  "type": "interactive",
+                  "interactive": {
+                    "type": "call_permission_reply",
+                    "call_permission_reply": {
+                      "response": "reject",
+                      "response_source": "user_action"
+                    }
+                  }
+                }
+              ]
+            },
+            "field": "messages"
+          }
+        ]
+      }
+    ]
+  }
+}

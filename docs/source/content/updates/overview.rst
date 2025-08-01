@@ -12,7 +12,12 @@ In WhatsApp Cloud API, the updates called ``fields`` and need to be subscribed t
 The currently supported fields by PyWa are:
 
 - ``messages`` (all user related updates: messages, callbacks and message status updates)
+- ``calls`` (call connect, terminate and status updates)
 - ``message_template_status_update`` (template got approved, rejected, etc.)
+- ``message_template_quality_update`` (template quality score got changed)
+- ``message_template_components_update`` (template components got changed, e.g. header, body, footer or buttons)
+- ``template_category_update`` (template category got changed)
+- ``user_preferences`` (user marketing preferences)
 
 .. important::
 
@@ -57,6 +62,20 @@ User related updates:
      - A message status update (e.g. delivered, seen, etc.)
    * - :py:class:`~pywa.types.chat_opened.ChatOpened`
      - A chat opened by a user
+   * - :py:class:`~pywa.types.system.PhoneNumberChange`
+     - A user's phone number changed
+   * - :py:class:`~pywa.types.system.IdentityChange`
+     - A user's identity changed
+   * - :py:class:`~pywa.types.calls.CallConnect`
+     - A call connected by a user
+   * - :py:class:`~pywa.types.calls.CallTerminate`
+     - A call terminated by a user
+   * - :py:class:`~pywa.types.calls.CallStatus`
+     - A call status update (e.g. ringing, busy, etc.)
+   * - :py:class:`~pywa.types.calls.CallPermissionUpdate`
+     - A call permission update (e.g. permission granted or denied)
+   * - :py:class:`~pywa.types.user_preferences.UserMarketingPreferences`
+     - A user marketing preferences update (e.g. opted in, opted out)
 
 Account related updates:
 
@@ -66,9 +85,14 @@ Account related updates:
 
    * - Type
      - Description
-   * - :py:class:`~pywa.types.template.TemplateStatus`
+   * - :py:class:`~pywa.types.template.TemplateStatusUpdate`
      - A template status update (e.g. approved, rejected, etc.)
-
+   * - :py:class:`~pywa.types.template.TemplateCategoryUpdate`
+     - A template category update (e.g. category changed)
+   * - :py:class:`~pywa.types.template.TemplateQualityUpdate`
+     - A template quality update (e.g. quality score changed)
+   * - :py:class:`~pywa.types.template.TemplateComponentsUpdate`
+     - A template components update (e.g. header, body, footer or buttons changed)
 
 .. currentmodule:: pywa.types.base_update
 
@@ -143,6 +167,8 @@ All user-related-updates have common methods and properties:
      - Block the sender
    * - :meth:`~BaseUserUpdate.unblock_sender`
      - Unblock the sender
+   * - :meth:`~BaseUserUpdate.call`
+     - Start a call with the sender
 
 .. toctree::
     message
@@ -151,5 +177,15 @@ All user-related-updates have common methods and properties:
     flow_completion
     message_status
     chat_opened
-    template_status
+    phone_number_change
+    identity_change
+    call_connect
+    call_terminate
+    call_status
+    call_permission_update
+    user_marketing_preferences
+    template_status_update
+    template_category_update
+    template_quality_update
+    template_components_update
     common_methods

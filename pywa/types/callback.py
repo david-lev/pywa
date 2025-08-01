@@ -4,7 +4,10 @@ __all__ = [
     "CallbackButton",
     "CallbackSelection",
     "Button",
-    "ButtonUrl",
+    "URLButton",
+    "ButtonUrl",  # Alias for URLButton for backward compatibility
+    "VoiceCallButton",
+    "CallPermissionRequestButton",
     "SectionRow",
     "Section",
     "SectionList",
@@ -16,6 +19,7 @@ import dataclasses
 import datetime
 import enum
 import types
+import warnings
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -133,6 +137,13 @@ class CallbackData:
         if not cls.__annotations__.items():
             raise TypeError(
                 f"Callback data class `{cls.__name__}` must have at least one field."
+            )
+        if dataclasses.is_dataclass(cls) and getattr(
+            getattr(cls, "__dataclass_params__", None), "kw_only", False
+        ):
+            raise TypeError(
+                f"Callback data class `{cls.__name__}` cannot be a dataclass with `kw_only=True`. "
+                "Use positional arguments instead."
             )
         unsupported_fields = set[tuple[str, type]]()
         for field_name, field_type in cls.__annotations__.items():
@@ -272,9 +283,7 @@ class CallbackButton(BaseUserUpdate, Generic[_CallbackDataT]):
     Attributes:
         id: The ID of the message.
         metadata: The metadata of the message (to which phone number it was sent).
-        type: The message type (:class:`MessageType.INTERACTIVE` for :class:`Button` presses or
-        type: The message type (:class:`MessageType.INTERACTIVE` for :class:`Button` presses or
-         :class:`MessageType.BUTTON` for :class:`Template.QuickReplyButtonData` choices).
+        type: The message type (:class:`MessageType.INTERACTIVE` for :class:`~pywa.types.callback.Button` presses or :class:`MessageType.BUTTON` for :class:`~pywa.types.template.QuickReplyButton` clicks).
         from_user: The user who sent the message.
         timestamp: The timestamp when the message was sent (in UTC).
         reply_to_message: The message to which this callback button is a reply to.
@@ -290,10 +299,13 @@ class CallbackButton(BaseUserUpdate, Generic[_CallbackDataT]):
     title: str
 
     _txt_fields = ("data",)
+    _webhook_field = "messages"
 
     @classmethod
     def from_update(cls, client: "WhatsApp", update: dict) -> "CallbackButton":
-        msg = (value := update["entry"][0]["changes"][0]["value"])["messages"][0]
+        msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
+            "messages"
+        ][0]
         match msg_type := msg["type"]:
             case MessageType.INTERACTIVE:
                 title = msg["interactive"]["button_reply"]["title"]
@@ -306,6 +318,7 @@ class CallbackButton(BaseUserUpdate, Generic[_CallbackDataT]):
         return cls(
             _client=client,
             raw=update,
+            waba_id=entry["id"],
             id=msg["id"],
             metadata=Metadata.from_dict(value["metadata"]),
             type=MessageType(msg_type),
@@ -318,6 +331,16 @@ class CallbackButton(BaseUserUpdate, Generic[_CallbackDataT]):
             data=data,
             title=title,
         )
+
+    @property
+    def is_quick_reply(self) -> bool:
+        """
+        Check if the callback button is click at :class:`~pywa.types.template.QuickReplyButton` (template button).
+
+        Returns:
+            bool: True if the callback button is a quick reply button, False otherwise.
+        """
+        return self.type == MessageType.BUTTON
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -376,13 +399,17 @@ class CallbackSelection(BaseUserUpdate, Generic[_CallbackDataT]):
     description: str | None
 
     _txt_fields = ("data",)
+    _webhook_field = "messages"
 
     @classmethod
     def from_update(cls, client: "WhatsApp", update: dict) -> "CallbackSelection":
-        msg = (value := update["entry"][0]["changes"][0]["value"])["messages"][0]
+        msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
+            "messages"
+        ][0]
         return cls(
             _client=client,
             raw=update,
+            waba_id=entry["id"],
             id=msg["id"],
             metadata=Metadata.from_dict(value["metadata"]),
             type=MessageType(msg["type"]),
@@ -401,7 +428,8 @@ class CallbackSelection(BaseUserUpdate, Generic[_CallbackDataT]):
 @dataclasses.dataclass(slots=True)
 class Button:
     """
-    Represents a button in the button list.
+    Interactive reply buttons messages allow you to send up to three predefined replies for users to choose from.
+    Users can respond to a message by selecting one of the predefined buttons, which triggers an :class:`CallbackButton` update.
 
     Attributes:
         title: The title of the button (up to 20 characters).
@@ -423,7 +451,7 @@ class Button:
 
 
 @dataclasses.dataclass(slots=True)
-class ButtonUrl:
+class URLButton:
     """
     Represents a button in the bottom of the message that opens a URL.
 
@@ -439,6 +467,55 @@ class ButtonUrl:
         return {
             "name": InteractiveType.CTA_URL,
             "parameters": {"display_text": self.title, "url": self.url},
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class ButtonUrl(URLButton):
+    """Deprecated. Use :class:`URLButton` instead."""
+
+    def __post_init__(self):
+        warnings.warn(
+            "ButtonUrl is deprecated, use `URLButton` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
+
+@dataclasses.dataclass(slots=True)
+class VoiceCallButton:
+    """
+    Represents a button that initiates a voice call on WhatsApp.
+
+    Attributes:
+        title: The text to display on the button (up to 20 characters) default is `Call Now`.
+        ttl_minutes: The time-to-live for the call in minutes (up to ``43200`` minutes (30 days)), default is ``10080``  minutes (7 days).
+    """
+
+    title: str | None = None
+    ttl_minutes: int | None = None
+
+    def to_dict(self) -> dict:
+        params = {}
+        if self.title:
+            params["display_text"] = self.title
+        if self.ttl_minutes:
+            params["ttl_minutes"] = self.ttl_minutes
+
+        return {
+            "name": InteractiveType.VOICE_CALL,
+            "parameters": params,
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class CallPermissionRequestButton:
+    """Represents a button that requests a call on WhatsApp."""
+
+    @staticmethod
+    def to_dict() -> dict:
+        return {
+            "name": InteractiveType.CALL_PERMISSION_REQUEST,
         }
 
 
@@ -491,7 +568,12 @@ class Section:
 @dataclasses.dataclass(slots=True)
 class SectionList:
     """
-    Represents a section list in an interactive message.
+    Interactive list messages allow you to present WhatsApp users with a list of options to choose from.
+    When a user taps the button in the message, it displays a modal that lists the options available.
+
+    - Users can then choose one option and their selection will be sent as a reply. When a user selects an option, a :class:`CallbackSelection` update is triggered.
+    - Interactive list messages support up to 10 sections, with up to 10 rows for all sections combined, and can include an optional header and footer.
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/interactive-list-messages>`_.
 
     Attributes:
         button_title: The title of the button that opens the section list (up to 20 characters).
@@ -516,13 +598,13 @@ class FlowButton:
     Attributes:
         title: Text on the CTA button. e.g ``SignUp``, Up to 20 characters, no emojis)
         flow_id: Unique ID of the Flow provided by WhatsApp (You can provide either ``flow_id`` or ``flow_name``).
+        flow_name: Name of the Flow provided by WhatsApp (You can provide either ``flow_id`` or ``flow_name``).
         flow_token: Flow token generated by the business to serve as an identifier (Default value: ``unused``)
         flow_message_version: Version of the flow message. Default is the latest version.
         flow_action_type: Type of action to be performed when the user clicks on the button.
         flow_action_screen: The ID of the screen to navigate to. Required when ``flow_action_type`` is ``FlowActionType.NAVIGATE`` (default).
         flow_action_payload: The data to provide to the navigation screen, if the screen requires it.
         mode: The mode of the flow. ``FlowStatus.PUBLISHED`` (default) or ``FlowStatus.DRAFT`` (for testing).
-        flow_name: Name of the Flow provided by WhatsApp (You can provide either ``flow_id`` or ``flow_name``).
     """
 
     title: str

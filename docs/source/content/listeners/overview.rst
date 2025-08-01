@@ -30,7 +30,7 @@ In the example above, we are waiting for the user to send their age. The `client
 
 .. tip::
 
-    You can use one of the `shortcuts <#id1>`_ in order to create a listener when sending a message. For example, you can use the :meth:`~pywa.types.sent_message.SentMessage.wait_for_reply` method to create a listener that waits for a *Message* reply from the user.
+    You can use one of the `shortcuts <#id1>`_ in order to create a listener when sending a message. For example, you can use the :meth:`~pywa.types.sent.SentMessage.wait_for_reply` method to create a listener that waits for a *Message* reply from the user.
 
 Cancel
 ______
@@ -113,7 +113,7 @@ PyWa also provides a few shortcuts to create listeners when sending messages. Le
         age: types.Message = m.reply("Hello! How old are you?").wait_for_reply(filters.text)
         m.reply(f"You are {age.text} years old")
 
-In the example above, we used the :meth:`~pywa.types.sent_message.SentMessage.wait_for_reply` method to create a listener that waits for a text reply from the user.
+In the example above, we used the :meth:`~pywa.types.sent.SentMessage.wait_for_reply` method to create a listener that waits for a text reply from the user.
 
 .. code-block:: python
     :linenos:
@@ -128,9 +128,9 @@ In the example above, we used the :meth:`~pywa.types.sent_message.SentMessage.wa
         msg.reply(f"Hello {msg.from_user.name}!").wait_until_delivered()
         msg.reply("How can I help you?")
 
-In the example above, we used the :meth:`~pywa.types.sent_message.SentMessage.wait_until_delivered` method to create a listener that waits until the message is delivered to the user.
+In the example above, we used the :meth:`~pywa.types.sent.SentMessage.wait_until_delivered` method to create a listener that waits until the message is delivered to the user.
 
-Other shortcuts are available, such as :meth:`~pywa.types.sent_message.SentMessage.wait_for_click`, :meth:`~pywa.types.sent_message.SentMessage.wait_for_selection`, :meth:`~pywa.types.sent_message.SentMessage.wait_until_read`, and more.
+Other shortcuts are available, such as :meth:`~pywa.types.sent.SentMessage.wait_for_click`, :meth:`~pywa.types.sent.SentMessage.wait_for_selection`, :meth:`~pywa.types.sent.SentMessage.wait_until_read`, and more.
 
 .. toctree::
 

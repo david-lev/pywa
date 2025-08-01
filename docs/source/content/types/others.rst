@@ -1,7 +1,7 @@
 Others
 ======
 
-.. currentmodule:: pywa.types.sent_message
+.. currentmodule:: pywa.types.sent
 
 .. autoclass:: SentMessage()
 
@@ -12,6 +12,8 @@ Others
 
 .. currentmodule:: pywa.types.others
 
+.. autoclass:: SuccessResult()
+
 .. autoclass:: Result()
     :members: has_next, next, has_previous, previous, all, before, after, empty
 
@@ -20,6 +22,12 @@ Others
 .. autoclass:: BusinessProfile()
 
 .. autoclass:: BusinessPhoneNumber()
+
+.. currentmodule:: pywa.types.calls
+
+.. autoclass:: BusinessPhoneNumberSettings()
+
+.. currentmodule:: pywa.types.others
 
 .. autoclass:: ConversationalAutomation()
 

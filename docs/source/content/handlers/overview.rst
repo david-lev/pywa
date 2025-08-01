@@ -152,8 +152,13 @@ and the verify token that you used when initializing the WhatsApp client.
     Then, subscribe to the fields you want to receive.
 
     The current supported fields are:
-        - ``messages`` (all user related updates)
+        - ``messages`` (all user related updates: messages, callbacks and message status updates)
+        - ``calls`` (call connect, terminate and status updates)
         - ``message_template_status_update`` (template got approved, rejected, etc.)
+        - ``message_template_quality_update`` (template quality score got changed)
+        - ``message_template_components_update`` (template components got changed, e.g. header, body, footer or buttons)
+        - ``template_category_update`` (template category got changed)
+        - ``user_preferences`` (user marketing preferences)
 
     You can subscribe to all the other fields, but they will not be handled by pywa, they can still be handled manually by
     registering a callback for the :meth:`~pywa.client.WhatsApp.on_raw_update` decorator (or the :class:`RawUpdateHandler` handler).
@@ -338,12 +343,42 @@ __________________
    * - :meth:`~pywa.client.WhatsApp.on_message_status`
      - :class:`MessageStatusHandler`
      - :class:`~pywa.types.message_status.MessageStatus`
-   * - :meth:`~pywa.client.WhatsApp.on_template_status`
-     - :class:`TemplateStatusHandler`
-     - :class:`~pywa.types.template.TemplateStatus`
+   * - :meth:`~pywa.client.WhatsApp.on_template_status_update`
+     - :class:`TemplateStatusUpdateHandler`
+     - :class:`~pywa.types.template.TemplateStatusUpdate`
+   * - :meth:`~pywa.client.WhatsApp.on_template_category_update`
+     - :class:`TemplateCategoryUpdateHandler`
+     - :class:`~pywa.types.template.TemplateCategoryUpdate`
+   * - :meth:`~pywa.client.WhatsApp.on_template_quality_update`
+     - :class:`TemplateQualityUpdateHandler`
+     - :class:`~pywa.types.template.TemplateQualityUpdate`
+   * - :meth:`~pywa.client.WhatsApp.on_template_components_update`
+     - :class:`TemplateComponentsUpdateHandler`
+     - :class:`~pywa.types.template.TemplateComponentsUpdate`
    * - :meth:`~pywa.client.WhatsApp.on_chat_opened`
      - :class:`ChatOpenedHandler`
      - :class:`~pywa.types.chat_opened.ChatOpened`
+   * - :meth:`~pywa.client.WhatsApp.on_phone_number_change`
+     - :class:`PhoneNumberChangeHandler`
+     - :class:`~pywa.types.system.PhoneNumberChange`
+   * - :meth:`~pywa.client.WhatsApp.on_identity_change`
+     - :class:`IdentityChangeHandler`
+     - :class:`~pywa.types.system.IdentityChange`
+   * - :meth:`~pywa.client.WhatsApp.on_call_connect`
+     - :class:`CallConnectHandler`
+     - :class:`~pywa.types.calls.CallConnect`
+   * - :meth:`~pywa.client.WhatsApp.on_call_terminate`
+     - :class:`CallTerminateHandler`
+     - :class:`~pywa.types.calls.CallTerminate`
+   * - :meth:`~pywa.client.WhatsApp.on_call_status`
+     - :class:`CallStatusHandler`
+     - :class:`~pywa.types.calls.CallStatus`
+   * - :meth:`~pywa.client.WhatsApp.on_call_permission_update`
+     - :class:`CallPermissionUpdateHandler`
+     - :class:`~pywa.types.calls.CallPermissionUpdate`
+   * - :meth:`~pywa.client.WhatsApp.on_user_marketing_preferences`
+     - :class:`UserMarketingPreferencesHandler`
+     - :class:`~pywa.types.user_preferences.UserMarketingPreferences`
    * - :meth:`~pywa.client.WhatsApp.on_raw_update`
      - :class:`RawUpdateHandler`
      - :class:`dict`

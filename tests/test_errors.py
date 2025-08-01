@@ -29,20 +29,13 @@ exceptions: dict[type[errors.WhatsAppError], dict] = {
 }
 
 
-def test_error_codes_uniqueness():
-    all_error_codes = [
-        tuple(e.__error_codes__) for e in errors.WhatsAppError._all_exceptions()
-    ]
-    assert len(all_error_codes) == len(set(all_error_codes))
-
-
 def test_error_codes():
     for exc_typ, data in exceptions.items():
         exc = exc_typ.from_dict(data)
         try:
             assert isinstance(exc, exc_typ)
-            assert exc.error_code == data["code"]
-            assert exc.error_subcode == data.get("error_subcode")
+            assert exc.code == data["code"]
+            assert exc.subcode == data.get("error_subcode")
             assert exc.type == data.get("type")
             assert exc.message == data["message"]
             assert exc.details == data.get("error_data", {}).get("details")

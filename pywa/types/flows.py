@@ -5,6 +5,7 @@ from __future__ import annotations
 import abc
 import dataclasses
 import datetime
+import functools
 import json
 import logging
 import pathlib
@@ -25,7 +26,7 @@ from typing import (
 
 import httpx
 
-from .media import BaseMedia
+from .media import BaseUserMedia
 from .. import utils
 from .base_update import BaseUserUpdate  # noqa
 from .others import (
@@ -35,6 +36,7 @@ from .others import (
     Metadata,
     ReplyToMessage,
     Result,
+    SuccessResult,
 )
 
 if TYPE_CHECKING:
@@ -57,6 +59,7 @@ __all__ = [
     "FlowMetricGranularity",
     "FlowStatus",
     "FlowPreview",
+    "FlowJSONUpdateResult",
     "FlowValidationError",
     "FlowAsset",
     "CreatedFlow",
@@ -110,7 +113,6 @@ __all__ = [
     "If",
     "Switch",
     "DataSource",
-    "Action",
     "DataExchangeAction",
     "NavigateAction",
     "CompleteAction",
@@ -120,8 +122,6 @@ __all__ = [
     "FlowRequestActionType",
     "Next",
     "NextType",
-    "ActionNext",  # Deprecated
-    "ActionNextType",  # Deprecated
 ]
 
 
@@ -152,10 +152,13 @@ class FlowCompletion(BaseUserUpdate):
     response: dict[str, Any]
 
     _txt_fields = ("token", "body")
+    _webhook_field = "messages"
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> FlowCompletion:
-        msg = (value := update["entry"][0]["changes"][0]["value"])["messages"][0]
+        msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
+            "messages"
+        ][0]
         response: dict = json.loads(msg["interactive"]["nfm_reply"]["response_json"])
         try:
             flow_token = response.pop("flow_token")
@@ -168,6 +171,7 @@ class FlowCompletion(BaseUserUpdate):
         return cls(
             _client=client,
             raw=update,
+            waba_id=entry["id"],
             id=msg["id"],
             type=MessageType(msg["type"]),
             metadata=Metadata.from_dict(value["metadata"]),
@@ -176,13 +180,15 @@ class FlowCompletion(BaseUserUpdate):
                 int(msg["timestamp"]),
                 datetime.timezone.utc,
             ),
-            reply_to_message=ReplyToMessage.from_dict(msg["context"]),
+            reply_to_message=ReplyToMessage.from_dict(msg["context"])
+            if msg.get("context", {}).get("id")
+            else None,
             body=msg["interactive"]["nfm_reply"]["body"],
             token=flow_token,
             response=response,
         )
 
-    def get_media(self, media_cls: Type[BaseMedia], key: str) -> BaseMedia:
+    def get_media(self, media_cls: Type[BaseUserMedia], key: str) -> BaseUserMedia:
         """
         Get the media object from the response.
 
@@ -216,22 +222,14 @@ class FlowRequestActionType(utils.StrEnum):
         BACK: if the request is triggered when pressing back (The screen's ``refresh_on_back`` attr set to ``True``)
         DATA_EXCHANGE: if the request is triggered by :class:`DataExchangeAction`
         NAVIGATE: if the :class:`FlowButton` sent with ``FlowActionType.NAVIGATE`` and the ``screen`` is not in the ``routing_model`` (the request will contain an error)
-        PING: Deprecated. This request is handled automatically by pywa and not passed to the callback.
     """
 
     INIT = "INIT"
     BACK = "BACK"
     DATA_EXCHANGE = "data_exchange"
-    PING = "ping"
     NAVIGATE = "navigate"
-    UNKNOWN = "UNKNOWN"
 
-    @classmethod
-    def _missing_(cls, value):
-        _logger.warning(
-            "Unknown flow request action type: %s. Defaulting to UNKNOWN.", value
-        )
-        return cls.UNKNOWN
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
@@ -353,21 +351,9 @@ class FlowRequest:
             )
         )
 
-    @property
-    def is_health_check(self) -> bool:
-        """
-        Deprecated. Health check is handled automatically by pywa.
-        """
-        warnings.warn(
-            "This property is deprecated because the health check is handled automatically by pywa.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.action == FlowRequestActionType.PING
-
     def decrypt_media(
         self, key: str, index: int = 0, dl_session: httpx.Client | None = None
-    ) -> tuple[str, str, bytes]:
+    ) -> utils.FlowRequestDecryptedMedia:
         """
         Decrypt the encrypted media file from the flow request.
 
@@ -580,12 +566,8 @@ class FlowStatus(utils.StrEnum):
     DEPRECATED = "DEPRECATED"
     BLOCKED = "BLOCKED"
     THROTTLED = "THROTTLED"
-    UNKNOWN = "UNKNOWN"
 
-    @classmethod
-    def _missing_(cls, value):
-        _logger.warning("Unknown flow status: %s. Defaulting to UNKNOWN.", value)
-        return cls.UNKNOWN
+    UNKNOWN = "UNKNOWN"
 
 
 class FlowCategory(utils.StrEnum):
@@ -612,10 +594,38 @@ class FlowCategory(utils.StrEnum):
     SURVEY = "SURVEY"
     OTHER = "OTHER"
 
+    UNKNOWN = "UNKNOWN"
+
+
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+class FlowJSONUpdateResult(SuccessResult):
+    """
+    Represents the result of updating a flow JSON.
+
+    Attributes:
+        success: Whether the operation was successful.
+        validation_errors: The validation errors of the flow, if any.
+    """
+
+    validation_errors: tuple[FlowValidationError, ...]
+
+    def __iter__(self):
+        warnings.warn(
+            "WhatsApp.update_flow_json() is no longer return (success, validation_errors) tuple, but FlowJSONUpdateResult object.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return iter((self.success, self.validation_errors))
+
     @classmethod
-    def _missing_(cls, value):
-        _logger.warning("Unknown flow category: %s. Defaulting to OTHER.", value)
-        return cls.OTHER
+    def from_dict(cls, data: dict, **kwargs):
+        return cls(
+            success=data["success"],
+            validation_errors=tuple(
+                FlowValidationError.from_dict(e)
+                for e in data.get("validation_errors", [])
+            ),
+        )
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
@@ -719,7 +729,7 @@ class FlowPreview:
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
-class FlowDetails:
+class FlowDetails(utils.APIObject):
     """
     Represents the details of a flow.
 
@@ -757,6 +767,22 @@ class FlowDetails:
     health_status: dict | None = None
 
     @classmethod
+    @functools.cache
+    def _api_fields(
+        cls, invalidate_preview: bool | None, phone_number_id: str | None
+    ) -> tuple[str, ...]:
+        fields = list(super()._api_fields())
+        if invalidate_preview is not None:
+            fields[fields.index("preview")] = (
+                f"preview.invalidate({'true' if invalidate_preview else 'false'})"
+            )
+        if phone_number_id is not None:
+            fields[fields.index("health_status")] = (
+                f"health_status.phone_number({phone_number_id})"
+            )
+        return tuple(fields)
+
+    @classmethod
     def from_dict(cls, data: dict, client: WhatsApp) -> FlowDetails:
         return cls(
             _client=client,
@@ -789,7 +815,7 @@ class FlowDetails:
             health_status=data.get("health_status"),
         )
 
-    def publish(self) -> bool:
+    def publish(self) -> SuccessResult:
         """
         Update the status of this flow to ``FlowStatus.PUBLISHED``.
             - A shortcut for :meth:`pywa.client.WhatsApp.publish_flow`.
@@ -810,12 +836,11 @@ class FlowDetails:
         Raises:
             FlowPublishingError: If this flow has validation errors or not all publishing checks have been resolved.
         """
-        if self._client.publish_flow(self.id):
+        if res := self._client.publish_flow(self.id):
             self.status = FlowStatus.PUBLISHED
-            return True
-        return False
+        return res
 
-    def delete(self) -> bool:
+    def delete(self) -> SuccessResult:
         """
         When the flow is in ``FlowStatus.DRAFT`` status, you can delete it.
             - A shortcut for :meth:`pywa.client.WhatsApp.delete_flow`.
@@ -826,12 +851,11 @@ class FlowDetails:
         Raises:
             FlowDeletingError: If this flow is already published.
         """
-        if self._client.delete_flow(self.id):
+        if res := self._client.delete_flow(self.id):
             self.status = FlowStatus.DEPRECATED  # there is no `DELETED` status
-            return True
-        return False
+        return res
 
-    def deprecate(self) -> bool:
+    def deprecate(self) -> SuccessResult:
         """
         When the flow is in ``FlowStatus.PUBLISHED`` status, you can only deprecate it.
             - A shortcut for :meth:`pywa.client.WhatsApp.deprecate_flow`.
@@ -842,10 +866,9 @@ class FlowDetails:
         Raises:
             FlowDeprecatingError: If this flow is not published or already deprecated.
         """
-        if self._client.deprecate_flow(self.id):
+        if res := self._client.deprecate_flow(self.id):
             self.status = FlowStatus.DEPRECATED
-            return True
-        return False
+        return res
 
     def get_assets(self) -> Result[FlowAsset]:
         """
@@ -863,7 +886,7 @@ class FlowDetails:
         categories: Iterable[FlowCategory | str] | None = None,
         endpoint_uri: str | None = None,
         application_id: int | None = None,
-    ) -> bool:
+    ) -> SuccessResult:
         """
         Update the metadata of this flow.
             - A shortcut for :meth:`pywa.client.WhatsApp.update_flow_metadata`.
@@ -910,7 +933,7 @@ class FlowDetails:
 
     def update_json(
         self, flow_json: FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO
-    ) -> bool:
+    ) -> FlowJSONUpdateResult:
         """
         Update the json of this flow.
             - A shortcut for :meth:`pywa.client.WhatsApp.update_flow_json`.
@@ -925,12 +948,12 @@ class FlowDetails:
         Raises:
             FlowUpdatingError: If the flow json is invalid or this flow is already published.
         """
-        is_success, errors = self._client.update_flow_json(
+        res = self._client.update_flow_json(
             flow_id=self.id,
             flow_json=flow_json,
         )
-        self.validation_errors = errors or None
-        return is_success
+        self.validation_errors = res.validation_errors or None
+        return res
 
 
 class FlowMetricName(utils.StrEnum):
@@ -953,6 +976,8 @@ class FlowMetricName(utils.StrEnum):
     ENDPOINT_REQUEST_LATENCY_SECONDS_CEIL = "ENDPOINT_REQUEST_LATENCY_SECONDS_CEIL"
     ENDPOINT_AVAILABILITY = "ENDPOINT_AVAILABILITY"
 
+    UNKNOWN = "UNKNOWN"
+
 
 class FlowMetricGranularity(utils.StrEnum):
     """
@@ -967,6 +992,8 @@ class FlowMetricGranularity(utils.StrEnum):
     DAY = "DAY"
     HOUR = "HOUR"
     LIFETIME = "LIFETIME"
+
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
@@ -1563,7 +1590,12 @@ class LayoutType(utils.StrEnum):
         SINGLE_COLUMN: A vertical flexbox container that stacks the components in a single column.
     """
 
+    _check_value = None
+    _modify_value = None
+
     SINGLE_COLUMN = "SingleColumnLayout"
+
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1588,7 +1620,7 @@ class Component(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def type(self) -> ComponentType: ...
+    def type(self) -> TemplateComponentType: ...
 
     @property
     @abc.abstractmethod
@@ -1601,8 +1633,11 @@ class Component(abc.ABC):
             )
 
 
-class ComponentType(utils.StrEnum):
+class TemplateComponentType(utils.StrEnum):
     """Internal component types"""
+
+    _check_value = None
+    _modify_value = None
 
     FORM = "Form"
     TEXT_HEADING = "TextHeading"
@@ -1628,6 +1663,8 @@ class ComponentType(utils.StrEnum):
     SWITCH = "Switch"
     NAVIGATION_LIST = "NavigationList"
     CHIPS_SELECTOR = "ChipsSelector"
+
+    UNKNOWN = "UNKNOWN"
 
 
 class _Expr(abc.ABC):
@@ -2049,8 +2086,8 @@ class Form(Component):
          the error message instead of setting this attribute. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#form-configuration>`_).
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.FORM, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.FORM, init=False, repr=False
     )
     visible: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
@@ -2206,10 +2243,15 @@ class FontWeight(utils.StrEnum):
         NORMAL: Normal text
     """
 
+    _check_value = str.islower
+    _modify_value = str.lower
+
     BOLD = "bold"
     ITALIC = "italic"
     BOLD_ITALIC = "bold_italic"
     NORMAL = "normal"
+
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -2228,8 +2270,8 @@ class TextHeading(TextComponent):
         visible: Whether the heading is visible or not. Default to ``True``,
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.TEXT_HEADING, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.TEXT_HEADING, init=False, repr=False
     )
     text: str | FlowStr | ScreenDataRef[str] | ComponentRef[str]
     visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
@@ -2251,8 +2293,8 @@ class TextSubheading(TextComponent):
         visible: Whether the subheading is visible or not. Default to ``True``,
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.TEXT_SUBHEADING, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.TEXT_SUBHEADING, init=False, repr=False
     )
     text: str | FlowStr | ScreenDataRef[str] | ComponentRef[str]
     visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
@@ -2282,8 +2324,8 @@ class TextBody(TextComponent):
         visible: Whether the body is visible or not. Default to ``True``,
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.TEXT_BODY, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.TEXT_BODY, init=False, repr=False
     )
     text: (
         str
@@ -2323,8 +2365,8 @@ class TextCaption(TextComponent):
         visible: Whether the caption is visible or not. Default to ``True``,
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.TEXT_CAPTION, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.TEXT_CAPTION, init=False, repr=False
     )
     text: (
         str
@@ -2380,8 +2422,8 @@ class RichText(TextComponent):
         visible: Whether the caption is visible or not. Default to ``True``,
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.RICH_TEXT, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.RICH_TEXT, init=False, repr=False
     )
     text: (
         str
@@ -2427,12 +2469,17 @@ class InputType(utils.StrEnum):
         PHONE: A phone number (keyboard layout is numeric, with a special character for the + symbol).
     """
 
+    _check_value = str.islower
+    _modify_value = str.lower
+
     TEXT = "text"
     NUMBER = "number"
     EMAIL = "email"
     PASSWORD = "password"
     PASSCODE = "passcode"
     PHONE = "phone"
+
+    UNKNOWN = "UNKNOWN"
 
 
 class LabelVariant(utils.StrEnum):
@@ -2443,7 +2490,12 @@ class LabelVariant(utils.StrEnum):
         LARGE: Label will have a more prominent style and will be displayed across multiple lines if needed.
     """
 
+    _check_value = str.islower
+    _modify_value = str.lower
+
     LARGE = "large"
+
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -2482,8 +2534,8 @@ class TextInput(TextEntryComponent):
         error_message: The error message of the text input.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.TEXT_INPUT, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.TEXT_INPUT, init=False, repr=False
     )
     name: str
     label: str | FlowStr | ScreenDataRef[str] | ComponentRef[str]
@@ -2533,8 +2585,8 @@ class TextArea(TextEntryComponent):
         error_message: The error message of the text area.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.TEXT_AREA, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.TEXT_AREA, init=False, repr=False
     )
     name: str
     label: str | FlowStr | ScreenDataRef[str] | ComponentRef[str]
@@ -2559,8 +2611,13 @@ class MediaSize(utils.StrEnum):
         LARGE: Large size
     """
 
+    _check_value = str.islower
+    _modify_value = str.lower
+
     REGULAR = "regular"
     LARGE = "large"
+
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -2603,8 +2660,8 @@ class CheckboxGroup(FormComponent[list[str]]):
         on_unselect_action: The action to perform when an item is unselected. Added in v6.0.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.CHECKBOX_GROUP, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.CHECKBOX_GROUP, init=False, repr=False
     )
     name: str
     data_source: list[DataSource] | ScreenDataRef[list[DataSource]]
@@ -2657,8 +2714,8 @@ class RadioButtonsGroup(FormComponent[str]):
         on_unselect_action: The action to perform when an item is unselected. Added in v6.0.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.RADIO_BUTTONS_GROUP, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.RADIO_BUTTONS_GROUP, init=False, repr=False
     )
     name: str
     data_source: list[DataSource] | ScreenDataRef[list[DataSource]]
@@ -2707,8 +2764,8 @@ class Dropdown(FormComponent[str]):
         on_unselect_action: The action to perform when an item is unselected. Added in v6.0.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.DROPDOWN, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.DROPDOWN, init=False, repr=False
     )
     name: str
     label: str | FlowStr | ScreenDataRef[str] | ComponentRef[str]
@@ -2760,8 +2817,8 @@ class ChipsSelector(FormComponent[list[str]]):
         on_unselect_action: The action to perform when an item is unselected. if not set, the on_select_action will handle both selection and unselection events. Added in v7.1.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.CHIPS_SELECTOR, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.CHIPS_SELECTOR, init=False, repr=False
     )
     name: str
     data_source: list[DataSource] | ScreenDataRef[list[DataSource]]
@@ -2793,8 +2850,8 @@ class Footer(Component):
         enabled: Whether the footer is enabled or not. Default to ``True``.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.FOOTER, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.FOOTER, init=False, repr=False
     )
     visible: None = dataclasses.field(default=None, init=False, repr=False)
     label: str | FlowStr | ScreenDataRef[str] | ComponentRef[str]
@@ -2832,8 +2889,8 @@ class OptIn(FormComponent[bool]):
         on_click_action: The action to perform when the opt in is clicked.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.OPT_IN, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.OPT_IN, init=False, repr=False
     )
     enabled: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
@@ -2871,8 +2928,8 @@ class EmbeddedLink(Component):
         visible: Whether the embedded link is visible or not. Default to ``True``.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.EMBEDDED_LINK, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.EMBEDDED_LINK, init=False, repr=False
     )
     text: str | FlowStr | ScreenDataRef[str] | ComponentRef[str]
     on_click_action: (
@@ -2920,8 +2977,8 @@ class NavigationList(Component):
         on_click_action: The action to perform when an item is clicked (can be defined at the component level or in each :class:`NavigationItem`).
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.NAVIGATION_LIST, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.NAVIGATION_LIST, init=False, repr=False
     )
     visible: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
@@ -3057,8 +3114,8 @@ class DatePicker(FormComponent[str]):
         on_select_action: The action to perform when a date is selected.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.DATE_PICKER, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.DATE_PICKER, init=False, repr=False
     )
     name: str
     label: str | FlowStr | ScreenDataRef[str] | ComponentRef[str]
@@ -3110,8 +3167,13 @@ class CalendarPickerMode(utils.StrEnum):
         RANGE: Allows to select start and end dates.
     """
 
+    _check_value = str.islower
+    _modify_value = str.lower
+
     SINGLE = "single"
     RANGE = "range"
+
+    UNKNOWN = "UNKNOWN"
 
 
 class CalendarDay(utils.StrEnum):
@@ -3128,6 +3190,9 @@ class CalendarDay(utils.StrEnum):
         SUN: Sunday
     """
 
+    _check_value = str.istitle
+    _modify_value = str.title
+
     MON = "Mon"
     TUE = "Tue"
     WED = "Wed"
@@ -3135,6 +3200,8 @@ class CalendarDay(utils.StrEnum):
     FRI = "Fri"
     SAT = "Sat"
     SUN = "Sun"
+
+    UNKNOWN = "UNKNOWN"
 
 
 _StartEndTypeVar = TypeVar("_StartEndTypeVar", bound=datetime.date | str | bool)
@@ -3200,8 +3267,8 @@ class CalendarPicker(FormComponent[str]):
         on_select_action: The action to perform when a date is selected.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.CALENDAR_PICKER, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.CALENDAR_PICKER, init=False, repr=False
     )
     name: str
     title: str | FlowStr | ScreenDataRef[str] | ComponentRef[str] | None = None
@@ -3288,8 +3355,13 @@ class ScaleType(utils.StrEnum):
         CONTAIN: Image is contained within the image container with the original aspect ratio.
     """
 
+    _check_value = str.islower
+    _modify_value = str.lower
+
     COVER = "cover"
     CONTAIN = "contain"
+
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -3323,8 +3395,8 @@ class Image(Component):
         visible: Whether the image is visible or not. Default to ``True``.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.IMAGE, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.IMAGE, init=False, repr=False
     )
     src: str | ScreenDataRef[str] | ComponentRef[str]
     width: int | ScreenDataRef[int] | None = None
@@ -3387,8 +3459,8 @@ class ImageCarousel(Component):
         visible: Whether the image carousel is visible or not. Default to ``True``.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.IMAGE_CAROUSEL, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.IMAGE_CAROUSEL, init=False, repr=False
     )
     images: list[ImageCarouselItem] | ScreenDataRef[list[ImageCarouselItem]]
     aspect_ratio: str | ScreenDataRef[str] | ComponentRef[str] | None = None
@@ -3406,9 +3478,14 @@ class PhotoSource(utils.StrEnum):
         GALLERY: User can only take a photo
     """
 
+    _check_value = str.islower
+    _modify_value = str.lower
+
     CAMERA_GALLERY = "camera_gallery"
     CAMERA = "camera"
     GALLERY = "gallery"
+
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -3448,8 +3525,8 @@ class PhotoPicker(FormComponent):
 
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.PHOTO_PICKER, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.PHOTO_PICKER, init=False, repr=False
     )
     required: None = dataclasses.field(default=None, init=False, repr=False)
     init_value: None = dataclasses.field(default=None, init=False, repr=False)
@@ -3503,8 +3580,8 @@ class DocumentPicker(FormComponent):
         error_message: The error message of the document picker.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.DOCUMENT_PICKER, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.DOCUMENT_PICKER, init=False, repr=False
     )
     required: None = dataclasses.field(default=None, init=False, repr=False)
     init_value: None = dataclasses.field(default=None, init=False, repr=False)
@@ -3560,8 +3637,8 @@ class If(Component):
 
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.IF, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.IF, init=False, repr=False
     )
     visible: None = dataclasses.field(default=None, init=False, repr=False)
     condition: Condition | str
@@ -3592,8 +3669,8 @@ class Switch(Component):
         cases: The components that will be rendered based on the value. {case: [components, ...], ...}.
     """
 
-    type: ComponentType = dataclasses.field(
-        default=ComponentType.SWITCH, init=False, repr=False
+    type: TemplateComponentType = dataclasses.field(
+        default=TemplateComponentType.SWITCH, init=False, repr=False
     )
     visible: None = dataclasses.field(default=None, init=False, repr=False)
     value: str | ScreenDataRef | ComponentRef
@@ -3620,11 +3697,16 @@ class FlowActionType(utils.StrEnum):
          (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#update-data-action>`_).
     """
 
+    _check_value = str.islower
+    _modify_value = str.lower
+
     COMPLETE = "complete"
     DATA_EXCHANGE = "data_exchange"
     NAVIGATE = "navigate"
     OPEN_URL = "open_url"
     UPDATE_DATA = "update_data"
+
+    UNKNOWN = "UNKNOWN"
 
 
 class NextType(utils.StrEnum):
@@ -3636,27 +3718,13 @@ class NextType(utils.StrEnum):
         PLUGIN: Trigger a plugin
     """
 
+    _check_value = str.islower
+    _modify_value = str.lower
+
     SCREEN = "screen"
     PLUGIN = "plugin"
 
-
-class _DeprecatedNextType(type):
-    SCREEN = "screen"
-    PLUGIN = "plugin"
-
-    def __getattribute__(cls, item):
-        warnings.warn(
-            message="`ActionNextType` is deprecated. Use `NextType` instead",
-            category=DeprecationWarning,
-            stacklevel=2,
-        )
-        return getattr(NextType, item)
-
-
-class ActionNextType(metaclass=_DeprecatedNextType):
-    """
-    Deprecated. Use :class:`NextType` instead
-    """
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -3671,72 +3739,6 @@ class Next:
 
     name: str
     type: NextType | str = NextType.SCREEN
-
-
-@dataclasses.dataclass(slots=True, kw_only=True)
-class ActionNext:
-    """Deprecated. Use :class:`Next` instead"""
-
-    name: str
-    type: NextType | str = NextType.SCREEN
-
-    def __post_init__(self):
-        warnings.warn(
-            message="ActionNext is deprecated. Use Next instead",
-            category=DeprecationWarning,
-            stacklevel=3,
-        )
-
-
-def _deprecate_action(action: FlowActionType, use_cls: type[BaseAction]) -> None:
-    warnings.warn(
-        message=f"Action(name='{action}', ...) is deprecated. Use {use_cls.__name__} instead",
-        category=DeprecationWarning,
-        stacklevel=3,
-    )
-
-
-@dataclasses.dataclass(slots=True, kw_only=True)
-class Action:
-    """
-    This class is deprecated and will be removed in future versions. Use one of the following classes instead:
-
-    - :class:`DataExchangeAction`
-    - :class:`NavigateAction`
-    - :class:`OpenUrlAction`
-    - :class:`UpdateDataAction`
-    - :class:`CompleteAction`
-
-    """
-
-    name: None
-    next: None = None
-    url: None = None
-    payload: None = None
-
-    def __post_init__(self):
-        if self.name == FlowActionType.NAVIGATE.value:
-            _deprecate_action(FlowActionType.NAVIGATE, NavigateAction)
-            if self.next is None:
-                raise ValueError("next is required for FlowActionType.NAVIGATE")
-        elif self.name == FlowActionType.OPEN_URL.value:
-            _deprecate_action(FlowActionType.OPEN_URL, OpenUrlAction)
-            if self.url is None:
-                raise ValueError("url is required for FlowActionType.OPEN_URL")
-        elif self.name == FlowActionType.COMPLETE.value:
-            _deprecate_action(FlowActionType.COMPLETE, CompleteAction)
-            if self.payload is None:
-                raise ValueError(
-                    "payload is required for FlowActionType.COMPLETE (use {} for empty payload)"
-                )
-        elif self.name == FlowActionType.UPDATE_DATA.value:
-            _deprecate_action(FlowActionType.UPDATE_DATA, UpdateDataAction)
-            if self.payload is None:
-                raise ValueError("payload is required for FlowActionType.UPDATE_DATA")
-        elif self.name == FlowActionType.DATA_EXCHANGE.value:
-            _deprecate_action(FlowActionType.DATA_EXCHANGE, DataExchangeAction)
-            if self.payload is None:
-                raise ValueError("payload is required for FlowActionType.DATA_EXCHANGE")
 
 
 class BaseAction(abc.ABC):

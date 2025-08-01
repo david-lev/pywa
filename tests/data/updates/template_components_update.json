@@ -1,19 +1,18 @@
 {
-  "approved": {
+  "element": {
     "entry": [
       {
-        "id": "0",
-        "time": 1698268000,
+        "id": "57438975935",
+        "time": 1751483772,
         "changes": [
           {
-            "field": "message_template_status_update",
             "value": {
-              "event": "APPROVED",
               "message_template_id": 12345678,
               "message_template_name": "my_message_template",
-              "message_template_language": "pt-BR",
-              "reason": null
-            }
+              "message_template_language": "he",
+              "message_template_element": "Hi {{1}}! Welcome to our service."
+            },
+            "field": "message_template_components_update"
           }
         ]
       }

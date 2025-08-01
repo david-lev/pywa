@@ -20,6 +20,8 @@ Flow Types
 .. autoclass:: FlowPreview()
     :members: with_params
 
+.. autoclass:: FlowJSONUpdateResult()
+
 .. autoclass:: FlowValidationError()
 
 .. autoclass:: FlowAsset()
@@ -46,6 +48,8 @@ Flow Types
     :show-inheritance:
 
 .. currentmodule:: pywa.utils
+
+.. autoclass:: FlowRequestDecryptedMedia()
 
 .. autoclass:: FlowRequestDecryptor()
 

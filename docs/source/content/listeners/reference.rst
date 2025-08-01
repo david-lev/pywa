@@ -8,7 +8,7 @@ Listeners reference
 .. automethod:: WhatsApp.stop_listening
     :noindex:
 
-.. currentmodule:: pywa.types.sent_message
+.. currentmodule:: pywa.types.sent
 
 .. automethod:: SentMessage.wait_for_reply
 .. automethod:: SentMessage.wait_for_click

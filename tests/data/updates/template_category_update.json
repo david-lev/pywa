@@ -1,0 +1,22 @@
+{
+  "marketing": {
+    "entry": [
+      {
+        "id": "57438975935",
+        "time": 1750344882,
+        "changes": [
+          {
+            "value": {
+              "message_template_id": 12345678,
+              "message_template_name": "my_message_template",
+              "message_template_language": "he",
+              "new_category": "MARKETING"
+            },
+            "field": "template_category_update"
+          }
+        ]
+      }
+    ],
+    "object": "whatsapp_business_account"
+  }
+}

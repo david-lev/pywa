@@ -1,12 +1,18 @@
 import datetime
+
 from pywa import types, WhatsApp
 from pywa.types import Result
 from pywa.types.flows import FlowDetails
-from pywa.types.sent_message import SentMessage, SentTemplate, SentTemplateStatus
+from pywa.types.sent_update import (
+    SentMessage,
+    SentTemplate,
+    SentTemplateStatus,
+    InitiatedCall,
+)
 import pytest
 from unittest.mock import MagicMock, call
 
-wa = WhatsApp(token="token")
+wa = WhatsApp(phone_id="123456789", token="token")
 
 
 def test_flow_details():
@@ -227,7 +233,7 @@ def test_business_phone_number():
 
 
 def test_sent_message():
-    assert SentMessage.from_sent_update(
+    sm = SentMessage.from_sent_update(
         client=wa,
         update={
             "messaging_product": "whatsapp",
@@ -237,7 +243,8 @@ def test_sent_message():
             ],
         },
         from_phone_id=wa.phone_id,
-    ) == SentMessage(
+    )
+    assert sm == SentMessage(
         _client=wa,
         _callback_options=None,
         _flow_token=None,
@@ -245,6 +252,8 @@ def test_sent_message():
         to_user=types.User(wa_id="16505555555", name=None, _client=wa),
         from_phone_id=wa.phone_id,
     )
+    assert sm.sender == wa.phone_id
+    assert sm.recipient == sm.to_user.wa_id
 
     assert SentTemplate.from_sent_update(
         client=wa,
@@ -267,6 +276,28 @@ def test_sent_message():
         to_user=types.User(wa_id="16505555555", name=None, _client=wa),
         from_phone_id=wa.phone_id,
         status=SentTemplateStatus.ACCEPTED,
+    )
+
+
+def test_initiated_call():
+    c = InitiatedCall.from_sent_update(
+        client=wa,
+        update={
+            "messaging_product": "whatsapp",
+            "calls": [{"id": "wacid.fiurefh8e="}],
+            "success": True,
+        },
+        from_phone_id=wa.phone_id,
+        to_wa_id="16506666666",
+    )
+    assert c.caller == wa.phone_id
+    assert c.callee == "16506666666"
+    assert c == InitiatedCall(
+        _client=wa,
+        id="wacid.fiurefh8e=",
+        to_user=types.User(wa_id="16506666666", name=None, _client=wa),
+        from_phone_id=wa.phone_id,
+        success=True,
     )
 
 

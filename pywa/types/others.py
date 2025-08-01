@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import time
 
 from ..errors import WhatsAppError
@@ -11,7 +12,16 @@ import math
 import logging
 import datetime
 
-from typing import TYPE_CHECKING, Any, Iterable, TypeVar, Protocol, Generic, Iterator
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Iterable,
+    TypeVar,
+    Protocol,
+    Generic,
+    Iterator,
+    ClassVar,
+)
 
 from .. import utils
 
@@ -20,6 +30,7 @@ if TYPE_CHECKING:
     from .chat_opened import ChatOpened
     from .media import Image, Video, Document, Audio, Sticker
     from .callback import CallbackButton, CallbackSelection
+    from .calls import CallPermissions, CallingSettings
     from ..client import WhatsApp
 
 _logger = logging.getLogger(__name__)
@@ -83,6 +94,17 @@ class User:
             u.input for u in self._client.unblock_users((self.wa_id,)).removed_users
         }
 
+    def get_call_permissions(self) -> CallPermissions:
+        """
+        Get the call permissions of the user.
+
+        - Shortcut for :meth:`~pywa.client.WhatsApp.get_call_permissions` with the user wa_id.
+
+        Returns:
+            CallPermissions: The call permissions of the user.
+        """
+        return self._client.get_call_permissions(wa_id=self.wa_id)
+
     def as_vcard(self) -> str:
         """Get the user as a vCard."""
         return "\n".join(
@@ -111,13 +133,16 @@ class MessageType(utils.StrEnum):
         LOCATION: Message.location -> :class:`Location`.
         CONTACTS: Message.contacts -> tuple[:class:`Contact`].
         ORDER: Message.order -> :class:`Order`.
-        SYSTEM: Message.system -> :class:`System`.
         UNKNOWN: An unknown message (Warning with the actual type will be logged).
         UNSUPPORTED: An unsupported message (message type not supported by WhatsApp Cloud API).
-        INTERACTIVE: Only used in :class:`CallbackButton` and :class:`CallbackSelection`.
+        INTERACTIVE: Only used in :class:`CallbackButton`, :class:`CallbackSelection` and :class:`CallPermissionUpdate`.
         BUTTON: Only used in :class:`CallbackButton`.
         REQUEST_WELCOME: Only used in :class:`ChatOpened`.
+        SYSTEM: Only used in :class:`PhoneNumberChange` and :class:`IdentityChange`
     """
+
+    _check_value = str.islower
+    _modify_value = str.lower
 
     TEXT = "text"
     IMAGE = "image"
@@ -129,18 +154,13 @@ class MessageType(utils.StrEnum):
     LOCATION = "location"
     CONTACTS = "contacts"
     ORDER = "order"
-    SYSTEM = "system"
     UNKNOWN = "unknown"
     UNSUPPORTED = "unsupported"
 
     INTERACTIVE = "interactive"
     BUTTON = "button"
     REQUEST_WELCOME = "request_welcome"
-
-    @classmethod
-    def _missing_(cls, value: str) -> MessageType:
-        _logger.warning("Unknown message type: %s. Defaulting to UNKNOWN.", value)
-        return cls.UNKNOWN
+    SYSTEM = "system"
 
 
 class InteractiveType(utils.StrEnum):
@@ -151,6 +171,9 @@ class InteractiveType(utils.StrEnum):
 
     """
 
+    _check_value = str.islower
+    _modify_value = str.lower
+
     BUTTON = "button"
     CTA_URL = "cta_url"
     CATALOG_MESSAGE = "catalog_message"
@@ -159,6 +182,10 @@ class InteractiveType(utils.StrEnum):
     PRODUCT_LIST = "product_list"
     FLOW = "flow"
     LOCATION_REQUEST_MESSAGE = "location_request_message"
+    VOICE_CALL = "voice_call"
+    CALL_PERMISSION_REQUEST = "call_permission_request"
+
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -444,14 +471,10 @@ class ReferredProduct:
     sku: str
 
     @classmethod
-    def from_dict(cls, data: dict | None) -> ReferredProduct | None:
-        return (
-            cls(
-                catalog_id=data["catalog_id"],
-                sku=data["product_retailer_id"],
-            )
-            if data
-            else None
+    def from_dict(cls, data: dict) -> ReferredProduct:
+        return cls(
+            catalog_id=data["catalog_id"],
+            sku=data["product_retailer_id"],
         )
 
 
@@ -471,17 +494,13 @@ class ReplyToMessage:
     referred_product: ReferredProduct | None
 
     @classmethod
-    def from_dict(cls, data: dict | None) -> ReplyToMessage | None:
-        return (
-            cls(
-                message_id=data["id"],
-                from_user_id=data["from"],
-                referred_product=ReferredProduct.from_dict(
-                    data.get("referred_product")
-                ),
-            )
-            if (data and "id" in data)
-            else None
+    def from_dict(cls, data: dict) -> ReplyToMessage:
+        return cls(
+            message_id=data["id"],
+            from_user_id=data["from"],
+            referred_product=ReferredProduct.from_dict(data["referred_product"])
+            if "referred_product" in data
+            else None,
         )
 
 
@@ -564,33 +583,35 @@ class Order:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class System:
+class Referral(utils.FromDict):
     """
-    Represents a system update (A customer has updated their phone number or profile information).
+    Represents a referral object in a message.
+
+    - This object is included in the messages object when a customer clicks an ad that redirects to WhatsApp.
 
     Attributes:
-        type: The type of the system update (``customer_changed_number`` or ``customer_identity_changed``).
-        body: Describes the change to the customer's identity or phone number.
-        identity: Hash for the identity fetched from server.
-        wa_id: The WhatsApp ID for the customer prior to the update.
-        new_wa_id: New WhatsApp ID for the customer when their phone number is updated.
+        source_url: The Meta URL that leads to the ad or post clicked by the customer.
+        source_type: The type of the ad’s source; ``ad`` or ``post``.
+        source_id: Meta ID for an ad or a post.
+        headline: Headline used in the ad or post.
+        body: Body for the ad or post.
+        media_type: Media present in the ad or post; ``image`` or ``video``.
+        image_url: URL of the image, when ``media_type`` is an ``image``.
+        video_url: URL of the video, when ``media_type`` is a ``video``.
+        thumbnail_url: URL for the thumbnail, when media_type is a video.
+        ctwa_clid: Click ID generated by Meta for ads that click to WhatsApp.
     """
 
-    type: str | None
-    body: str | None
-    identity: str | None
-    wa_id: str | None
-    new_wa_id: str | None
-
-    @classmethod
-    def from_dict(cls, data: dict, _client: WhatsApp) -> System:
-        return cls(
-            type=data.get("type"),
-            body=data.get("body"),
-            identity=data.get("identity"),
-            wa_id=data.get("customer"),
-            new_wa_id=data.get("wa_id"),
-        )
+    source_url: str | None = None
+    source_type: str | None = None
+    source_id: str | None = None
+    headline: str | None = None
+    body: str | None = None
+    media_type: str | None = None
+    image_url: str | None = None
+    video_url: str | None = None
+    thumbnail_url: str | None = None
+    ctwa_clid: str | None = None
 
 
 @dataclasses.dataclass(slots=True)
@@ -659,14 +680,11 @@ class Industry(utils.StrEnum):
     RESTAURANT = "RESTAURANT"
     NOT_A_BIZ = "NOT_A_BIZ"
 
-    @classmethod
-    def _missing_(cls, value: str) -> Industry:
-        _logger.warning("Unknown industry: %s. Defaulting to UNDEFINED.", value)
-        return cls.UNDEFINED
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class BusinessProfile:
+class BusinessProfile(utils.APIObject):
     """
     Represents a business profile.
 
@@ -680,6 +698,8 @@ class BusinessProfile:
         websites: The URLs associated with the business. For instance, a website, Facebook Page, or Instagram.
          There is a maximum of 2 websites with a maximum of 256 characters each.
     """
+
+    _override_api_fields: ClassVar = {"industry": "vertical"}
 
     about: str
     address: str | None
@@ -703,7 +723,7 @@ class BusinessProfile:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class CommerceSettings:
+class CommerceSettings(utils.APIObject):
     """
     Represents the WhatsApp commerce settings.
 
@@ -821,8 +841,8 @@ class ConversationalAutomation:
         )
 
 
-@dataclasses.dataclass
-class BusinessPhoneNumber:
+@dataclasses.dataclass(frozen=True, slots=True)
+class BusinessPhoneNumber(utils.APIObject):
     """
     Represents a WhatsApp Business Phone Number.
 
@@ -928,7 +948,7 @@ class BusinessPhoneNumber:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class QRCode:
+class QRCode(utils.APIObject):
     """
     Customers can scan a QR code from their phone to quickly begin a conversation with your business.
     The WhatsApp Business Management API allows you to create and access these QR codes and associated short links.
@@ -948,11 +968,21 @@ class QRCode:
     @classmethod
     def from_dict(cls, data: dict):
         return cls(
-            code=data.get("code"),
-            prefilled_message=data.get("prefilled_message"),
-            deep_link_url=data.get("deep_link_url"),
+            code=data["code"],
+            prefilled_message=data["prefilled_message"],
+            deep_link_url=data["deep_link_url"],
             qr_image_url=data.get("qr_image_url"),
         )
+
+    @classmethod
+    @functools.cache
+    def _api_fields(cls, image_type: str | None) -> tuple[str, ...]:
+        fields = list(super()._api_fields())
+        if image_type is not None:
+            fields[fields.index("qr_image_url")] = f"qr_image_url.format({image_type})"
+        else:
+            fields.remove("qr_image_url")
+        return tuple(fields)
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -1206,7 +1236,7 @@ class Result(Generic[_T]):
         if self.has_next:
             # noinspection PyProtectedMember
             response = self._wa.api._make_request(method="GET", endpoint=self._next_url)
-            return Result(
+            return self.__class__(
                 wa=self._wa, response=response, item_factory=self._item_factory
             )
         return self.empty
@@ -1222,7 +1252,7 @@ class Result(Generic[_T]):
             response = self._wa.api._make_request(
                 method="GET", endpoint=self._previous_url
             )
-            return Result(
+            return self.__class__(
                 wa=self._wa, response=response, item_factory=self._item_factory
             )
         return self.empty
@@ -1276,4 +1306,28 @@ class Result(Generic[_T]):
         return bool(self._data)
 
     def __repr__(self) -> str:
-        return f"Result({self._data!r}, has_next={self.has_next}, has_previous={self.has_previous})"
+        return f"Result({self._data!r}, has_next={self.has_next!r}, has_previous={self.has_previous!r})"
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class SuccessResult(utils.FromDict):
+    """
+    Represents a simple success result.
+
+    - This is used for operations that do not return any data, but only indicate success or failure.
+
+    You can use *this* class to check if an operation was successful or not::
+
+        >>> wa = WhatsApp(...)
+        >>> if wa.update_template(...): # update_template returns SuccessResult so we can check it directly
+        ...     print("Template updated successfully")
+
+    Attributes:
+        success: Whether the operation was successful.
+    """
+
+    success: bool
+
+    def __bool__(self) -> bool:
+        """Returns True if the operation was successful."""
+        return self.success

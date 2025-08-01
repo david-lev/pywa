@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-__all__ = ["SentMessage", "SentTemplate", "SentTemplateStatus"]
+__all__ = ["SentMessage", "SentTemplate", "SentTemplateStatus", "InitiatedCall"]
 
+import abc
 import dataclasses
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from pywa import filters as pywa_filters, utils
+from pywa.listeners import UserUpdateListenerIdentifier
 from pywa.types import (
     CallbackButton,
     User,
@@ -13,15 +15,67 @@ from pywa.types import (
     MessageStatus,
     CallbackSelection,
     FlowCompletion,
+    Button,
+    URLButton,
+    VoiceCallButton,
+    SectionList,
+    FlowButton,
+    CallbackData,
+    CallStatus,
 )
-from pywa.types.base_update import _ClientShortcuts
+from pywa.types.base_update import _ClientShortcuts, BaseUpdate, BaseUserUpdate
+from pywa.types.calls import _CallShortcuts
 
 if TYPE_CHECKING:
     from pywa import WhatsApp
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class SentMessage(_ClientShortcuts):
+class _SentUpdate(_ClientShortcuts, abc.ABC):
+    """
+    Base class for sent updates, providing common attributes and methods.
+    """
+
+    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
+    id: str
+    to_user: User
+    from_phone_id: str
+
+    @property
+    def recipient(self) -> str:
+        """
+        The recipient's WhatsApp ID.
+        """
+        return self._internal_sender
+
+    @property
+    def sender(self) -> str:
+        """
+        The sender's WhatsApp ID.
+        """
+        return self._internal_recipient
+
+    @property
+    def _internal_recipient(self) -> str:
+        return self.from_phone_id
+
+    @property
+    def _internal_sender(self) -> str:
+        return self.to_user.wa_id
+
+    @classmethod
+    @abc.abstractmethod
+    def from_sent_update(cls, *args, **kwargs) -> _SentUpdate: ...
+
+    @property
+    def listener_identifier(self) -> UserUpdateListenerIdentifier:
+        return UserUpdateListenerIdentifier(
+            sender=self.sender, recipient=self.recipient
+        )
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class SentMessage(_SentUpdate):
     """
     Represents a message that was sent to WhatsApp user.
 
@@ -31,40 +85,12 @@ class SentMessage(_ClientShortcuts):
         from_phone_id: The WhatsApp ID of the sender who sent the message.
     """
 
-    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
     _callback_options: set[str] | None = dataclasses.field(
         repr=False, hash=False, compare=False, default=None
     )  # TODO need this?
     _flow_token: str | None = dataclasses.field(
         repr=False, hash=False, compare=False, default=None
     )
-    id: str
-    to_user: User
-    from_phone_id: str
-
-    @property
-    def recipient(self) -> str:
-        """
-        The WhatsApp ID which the message was sent to.
-            - Shortcut for ``.to_user.wa_id``.
-        """
-        return self.to_user.wa_id
-
-    @property
-    def _internal_recipient(self) -> str:
-        return self.sender
-
-    @property
-    def sender(self) -> str:
-        """
-        The WhatsApp ID of the sender who sent the message.
-            - Same as ``.from_phone_id``.
-        """
-        return self.from_phone_id
-
-    @property
-    def _internal_sender(self) -> str:
-        return self.recipient
 
     @classmethod
     def from_sent_update(
@@ -84,10 +110,11 @@ class SentMessage(_ClientShortcuts):
 
     def wait_for_reply(
         self,
+        *,
         force_quote: bool = False,
         filters: pywa_filters.Filter = None,
         cancelers: pywa_filters.Filter = None,
-        timeout: int | None = None,
+        timeout: float | None = None,
     ) -> Message:
         """
         Wait for a message reply to the sent message.
@@ -104,7 +131,7 @@ class SentMessage(_ClientShortcuts):
                         text=f"Hi {m.from_user.name}! Please enter your ID",
                         buttons=[Button(title="Cancel", callback_data="cancel")],
                     ).wait_for_reply(
-                        filters=filters.text,
+                        filters=filters.text & filters.new(lambda _, m: m.text.isdigit()),
                         cancelers=filters.callback_button & filters.matches("cancel"),
                     ).text
                     ...
@@ -126,19 +153,22 @@ class SentMessage(_ClientShortcuts):
             reply_filter = pywa_filters.replays_to(self.id)
             filters = (reply_filter & filters) if filters else reply_filter
         filters = (pywa_filters.message & filters) if filters else pywa_filters.message
-        return self._client.listen(
-            to=self.recipient,
-            sent_to_phone_id=self.sender,
-            filters=filters,
-            cancelers=cancelers,
-            timeout=timeout,
+        return cast(
+            Message,
+            self._client.listen(
+                to=self.listener_identifier,
+                filters=filters,
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
         )
 
     def wait_until_read(
         self,
+        *,
         cancel_on_new_update: bool = False,
         cancelers: pywa_filters.Filter = None,
-        timeout: int | None = None,
+        timeout: float | None = None,
     ) -> MessageStatus:
         """
         Wait for the message to be read by the recipient.
@@ -163,7 +193,7 @@ class SentMessage(_ClientShortcuts):
                     r.reply("You read this message", quote=True)
 
         Args:
-            cancel_on_new_update: Whether to cancel when another user update arrives (which may indicate the previous message was read).
+            cancel_on_new_update: Whether to cancel when another message/button click arrives (which may indicate the previous message was read).
             cancelers: The filters to cancel the listening.
             timeout: The time to wait for the message to be read.
 
@@ -176,22 +206,29 @@ class SentMessage(_ClientShortcuts):
             ListenerStopped: If the listener was stopped manually.
         """
         if cancel_on_new_update:
-            new_update_canceler = ~pywa_filters.update_id(self.id)
+            new_update_canceler = ~pywa_filters.update_id(self.id) & (
+                pywa_filters.message
+                | pywa_filters.callback_button
+                | pywa_filters.callback_selection
+            )
             cancelers = (
                 (new_update_canceler & cancelers) if cancelers else new_update_canceler
             )
-        return self._client.listen(
-            to=self.recipient,
-            sent_to_phone_id=self.sender,
-            filters=pywa_filters.update_id(self.id) & pywa_filters.read,
-            cancelers=cancelers,
-            timeout=timeout,
+        return cast(
+            MessageStatus,
+            self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.message_status & pywa_filters.read,
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
         )
 
     def wait_until_delivered(
         self,
+        *,
         cancelers: pywa_filters.Filter = None,
-        timeout: int | None = None,
+        timeout: float | None = None,
     ) -> MessageStatus:
         """
         Wait for the message to be delivered to the recipient.
@@ -219,20 +256,22 @@ class SentMessage(_ClientShortcuts):
             ListenerStopped: If the listener was stopped manually.
         """
 
-        return self._client.listen(
-            to=self.recipient,
-            sent_to_phone_id=self.sender,
-            filters=pywa_filters.update_id(self.id) & pywa_filters.delivered,
-            cancelers=cancelers,
-            timeout=timeout,
+        return cast(
+            MessageStatus,
+            self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.message_status & pywa_filters.delivered,
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
         )
 
     def wait_for_click(
         self,
-        force_options: bool = True,
+        *,
         filters: pywa_filters.Filter = None,
         cancelers: pywa_filters.Filter = None,
-        timeout: int | None = None,
+        timeout: float | None = None,
     ) -> CallbackButton:
         """
         Wait for a button click.
@@ -254,7 +293,6 @@ class SentMessage(_ClientShortcuts):
                     r.reply(f"You clicked: {option.title}", quote=True)
 
         Args:
-            force_options: Whether to force the button to be one of the sent buttons.
             filters: The filters to apply to the button click.
             cancelers: The filters to cancel the listening.
             timeout: The time to wait for the button click.
@@ -267,35 +305,28 @@ class SentMessage(_ClientShortcuts):
             ListenerCanceled: If the listener was canceled by a filter.
             ListenerStopped: If the listener was stopped manually.
         """
-        if force_options:
-            reply_filter = pywa_filters.replays_to(self.id)
-            filters = (reply_filter & filters) if filters else reply_filter
-        filters = (
-            (pywa_filters.callback_button & filters)
-            if filters
-            else pywa_filters.callback_button
-        )
-
-        return self._client.listen(
-            to=self.recipient,
-            sent_to_phone_id=self.sender,
-            filters=filters,
-            cancelers=cancelers,
-            timeout=timeout,
+        return cast(
+            CallbackButton,
+            self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.callback_button
+                & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
         )
 
     def wait_for_selection(
         self,
-        force_options: bool = True,
+        *,
         filters: pywa_filters.Filter = None,
         cancelers: pywa_filters.Filter = None,
-        timeout: int | None = None,
+        timeout: float | None = None,
     ) -> CallbackSelection:
         """
         Wait for a callback selection.
 
         Args:
-            force_options: Whether to force the selection to be one of the sent rows.
             filters: The filters to apply to the selection.
             cancelers: The filters to cancel the listening.
             timeout: The time to wait for the selection.
@@ -308,28 +339,24 @@ class SentMessage(_ClientShortcuts):
             ListenerCanceled: If the listener was canceled by a filter.
             ListenerStopped: If the listener was stopped manually.
         """
-        if force_options:
-            reply_filter = pywa_filters.replays_to(self.id)
-            filters = (reply_filter & filters) if filters else reply_filter
-        filters = (
-            (pywa_filters.callback_selection & filters)
-            if filters
-            else pywa_filters.callback_selection
-        )
-        return self._client.listen(
-            to=self.recipient,
-            sent_to_phone_id=self.sender,
-            filters=filters,
-            cancelers=cancelers,
-            timeout=timeout,
+
+        return cast(
+            CallbackSelection,
+            self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.callback_selection
+                & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
         )
 
     def wait_for_completion(
         self,
-        force_token: bool = True,
+        *,
         filters: pywa_filters.Filter = None,
         cancelers: pywa_filters.Filter = None,
-        timeout: int | None = None,
+        timeout: float | None = None,
     ) -> FlowCompletion:
         """
         Wait for a flow completion.
@@ -346,7 +373,6 @@ class SentMessage(_ClientShortcuts):
                     ).wait_for_completion()
 
         Args:
-            force_token: Whether to force the completion to have the sent token.
             filters: The filters to apply to the completion.
             cancelers: The filters to cancel the listening.
             timeout: The time to wait for the completion.
@@ -359,22 +385,15 @@ class SentMessage(_ClientShortcuts):
             ListenerCanceled: If the listener was canceled by a filter.
             ListenerStopped: If the listener was stopped manually.
         """
-        if force_token:
-            if not self._flow_token:
-                raise ValueError("No flow token available to wait for")
-            token_filter = pywa_filters.new(lambda _, c: c.token == self._flow_token)
-            filters = (token_filter & filters) if filters else token_filter
-        filters = (
-            (pywa_filters.flow_completion & filters)
-            if filters
-            else pywa_filters.flow_completion
-        )
-        return self._client.listen(
-            to=self.recipient,
-            sent_to_phone_id=self.sender,
-            filters=filters,
-            cancelers=cancelers,
-            timeout=timeout,
+        return cast(
+            FlowCompletion,
+            self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.flow_completion
+                & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
         )
 
 
@@ -389,8 +408,13 @@ class SentTemplateStatus(utils.StrEnum):
         HELD_FOR_QUALITY_ASSESSMENT: The template was held for quality assessment.
     """
 
+    _check_value = str.islower
+    _modify_value = str.lower
+
     ACCEPTED = "accepted"
     HELD_FOR_QUALITY_ASSESSMENT = "held_for_quality_assessment"
+
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -424,4 +448,31 @@ class SentTemplate(SentMessage):
             to_user=user,
             from_phone_id=from_phone_id,
             **kwargs,
+        )
+
+
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+class InitiatedCall(_SentUpdate, _CallShortcuts):
+    """
+    Represents an outgoing call initiated by the business.
+
+    Attributes:
+        id: The call ID.
+        to_user: The user to whom the call was made.
+        from_phone_id: The WhatsApp ID of the business phone number that initiated the call.
+        success: Whether the call was successfully initiated.
+    """
+
+    success: bool
+
+    @classmethod
+    def from_sent_update(
+        cls, client: WhatsApp, update: dict, from_phone_id: str, to_wa_id: str
+    ) -> InitiatedCall:
+        return cls(
+            _client=client,
+            id=update["calls"][0]["id"],
+            to_user=client._usr_cls(_client=client, wa_id=to_wa_id, name=None),
+            from_phone_id=from_phone_id,
+            success=update["success"],
         )

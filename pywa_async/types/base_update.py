@@ -13,23 +13,26 @@ import pathlib
 import dataclasses
 from typing import TYPE_CHECKING, BinaryIO, Iterable
 
-from .others import Contact, ProductsSection, User
+from .others import Contact, ProductsSection, User, SuccessResult
 
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
-    from .sent_message import SentMessage, SentTemplate
+    from .calls import SessionDescription
+    from pywa.types.sent_update import InitiatedCall
+    from .sent_update import SentMessage, SentTemplate
     from .callback import (
         Button,
-        ButtonUrl,
+        URLButton,
+        VoiceCallButton,
         SectionList,
         FlowButton,
         CallbackData,
     )
-    from .template import Template
+    from .template import TemplateLanguage, TemplateBaseComponent
 
 
-class _ClientShortcuts:
+class _ClientShortcutsAsync:
     """Async Base class for all user-related update types (message, callback, etc.)."""
 
     message_id_to_reply: str
@@ -50,7 +53,15 @@ class _ClientShortcuts:
         text: str,
         header: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | FlowButton | SectionList | None = None,
+        buttons: (
+            Iterable[Button]
+            | URLButton
+            | VoiceCallButton
+            | SectionList
+            | FlowButton
+            | None
+        ) = None,
+        *,
         quote: bool = False,
         preview_url: bool = False,
         tracker: str | CallbackData | None = None,
@@ -99,7 +110,8 @@ class _ClientShortcuts:
         image: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
+        buttons: Iterable[Button] | URLButton | FlowButton | None = None,
+        *,
         quote: bool = False,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -150,7 +162,8 @@ class _ClientShortcuts:
         video: str | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
+        buttons: Iterable[Button] | URLButton | FlowButton | None = None,
+        *,
         quote: bool = False,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -203,7 +216,8 @@ class _ClientShortcuts:
         filename: str | None = None,
         caption: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | FlowButton | None = None,
+        buttons: Iterable[Button] | URLButton | FlowButton | None = None,
+        *,
         quote: bool = False,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -256,6 +270,7 @@ class _ClientShortcuts:
     async def reply_audio(
         self,
         audio: str | pathlib.Path | bytes | BinaryIO,
+        *,
         quote: bool = False,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -292,6 +307,7 @@ class _ClientShortcuts:
     async def reply_sticker(
         self,
         sticker: str | pathlib.Path | bytes | BinaryIO,
+        *,
         quote: bool = False,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -333,6 +349,7 @@ class _ClientShortcuts:
         longitude: float,
         name: str | None = None,
         address: str | None = None,
+        *,
         quote: bool = False,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
@@ -375,6 +392,7 @@ class _ClientShortcuts:
     async def reply_location_request(
         self,
         text: str,
+        *,
         quote: bool = False,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
@@ -408,6 +426,7 @@ class _ClientShortcuts:
     async def reply_contact(
         self,
         contact: Contact | Iterable[Contact],
+        *,
         quote: bool = False,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
@@ -446,7 +465,7 @@ class _ClientShortcuts:
         )
 
     async def react(
-        self, emoji: str, tracker: str | CallbackData | None = None
+        self, emoji: str, *, tracker: str | CallbackData | None = None
     ) -> SentMessage:
         """
         React to the message with an emoji.
@@ -471,7 +490,9 @@ class _ClientShortcuts:
             tracker=tracker,
         )
 
-    async def unreact(self, tracker: str | CallbackData | None = None) -> SentMessage:
+    async def unreact(
+        self, *, tracker: str | CallbackData | None = None
+    ) -> SentMessage:
         """
         Remove the reaction from the message.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.remove_reaction` with ``to`` and ``message_id``.
@@ -497,6 +518,7 @@ class _ClientShortcuts:
         self,
         body: str,
         footer: str | None = None,
+        *,
         thumbnail_product_sku: str | None = None,
         quote: bool = False,
         tracker: str | CallbackData | None = None,
@@ -540,6 +562,7 @@ class _ClientShortcuts:
         sku: str,
         body: str | None = None,
         footer: str | None = None,
+        *,
         quote: bool = False,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
@@ -579,6 +602,7 @@ class _ClientShortcuts:
         title: str,
         body: str,
         footer: str | None = None,
+        *,
         quote: bool = False,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
@@ -636,7 +660,10 @@ class _ClientShortcuts:
 
     async def reply_template(
         self,
-        template: Template,
+        name: str,
+        language: TemplateLanguage,
+        params: list[TemplateBaseComponent.Params],
+        *,
         quote: bool = False,
         tracker: str | CallbackData | None = None,
     ) -> SentTemplate:
@@ -645,61 +672,25 @@ class _ClientShortcuts:
 
         -- Shortcut for :py:func:`~pywa.client.WhatsApp.send_template` with ``to`` and ``reply_to_message_id``.
 
-        Example:
-
-            >>> from pywa.types import Template as Temp
-            >>> wa = WhatsApp(...)
-            >>> wa.send_template(
-            ...     to='1234567890',
-            ...     template=Temp(
-            ...         name='buy_new_iphone_x',
-            ...         language=Temp.Language.ENGLISH_US,
-            ...         header=Temp.TextValue(value='15'),
-            ...         body=[
-            ...             Temp.TextValue(value='John Doe'),
-            ...             Temp.TextValue(value='WA_IPHONE_15'),
-            ...             Temp.TextValue(value='15%'),
-            ...         ],
-            ...         buttons=[
-            ...             Temp.UrlButtonValue(value='iphone15'),
-            ...             Temp.QuickReplyButtonData(data='unsubscribe_from_marketing_messages'),
-            ...             Temp.QuickReplyButtonData(data='unsubscribe_from_all_messages'),
-            ...         ],
-            ...     ),
-            ... )
-
-        Example for Authentication Template:
-
-            >>> from pywa.types import Template as Temp
-            >>> msg.reply_template(
-            ...     template=Temp(
-            ...         name='auth_with_otp',
-            ...         language=Temp.Language.ENGLISH_US,
-            ...         buttons=Temp.OTPButtonCode(code='123456'),
-            ...     ),
-            ...     quote=True
-            ... )
-
         Args:
-            template: The template to send.
+            name: The name of the template to send.
+            language: The language of the template to send.
+            params: The parameters to fill in the template.
             quote: Whether to quote the replied message (default: False).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
-
-        Returns:
-            The ID of the sent reply.
-
-        Raises:
-
+            tracker: A callback data to track the message (optional, can be a string or a :class:`CallbackData` object).
         """
+
         return await self._client.send_template(
             sender=self._internal_recipient,
             to=self._internal_sender,
-            template=template,
-            reply_to_message_id=quote if quote else None,
+            name=name,
+            language=language,
+            params=params,
+            reply_to_message_id=self.message_id_to_reply if quote else None,
             tracker=tracker,
         )
 
-    async def mark_as_read(self) -> bool:
+    async def mark_as_read(self) -> SuccessResult:
         """
         Mark the message as read.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.mark_message_as_read` with ``message_id``.
@@ -711,7 +702,7 @@ class _ClientShortcuts:
             sender=self._internal_recipient, message_id=self.message_id_to_reply
         )
 
-    async def indicate_typing(self) -> bool:
+    async def indicate_typing(self) -> SuccessResult:
         """
         Mark the message as read and display a typing indicator so the WhatsApp user knows you are preparing a response.
         This is good practice if it will take you a few seconds to respond.
@@ -727,21 +718,42 @@ class _ClientShortcuts:
             sender=self._internal_recipient, message_id=self.message_id_to_reply
         )
 
+    async def call(
+        self, sdp: SessionDescription, *, tracker: str | CallbackData | None = None
+    ) -> InitiatedCall:
+        """
+        Initiate a call with the user.
+            - Shortcut for :py:func:`~pywa.client.WhatsApp.call` with ``to`` and ``message_id``.
+
+        Args:
+            sdp: The SDP object containing the call information.
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+
+        Returns:
+            The ID of the sent call.
+        """
+        return await self._client.initiate_call(
+            to=self._internal_sender,
+            sdp=sdp,
+            tracker=tracker,
+            phone_id=self._internal_recipient,
+        )
+
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class BaseUserUpdateAsync(_ClientShortcuts):
+class BaseUserUpdateAsync(_ClientShortcutsAsync):
     """Async Base class for all user-related update types (message, callback, etc.)."""
 
     async def block_sender(self) -> bool:
         """
-        Block the sender of the message.
+        Block the sender of the update.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.block_users` with ``sender``.
         """
         return await self.from_user.block()
 
     async def unblock_sender(self) -> bool:
         """
-        Unblock the sender of the message.
+        Unblock the sender of the update.
             - Shortcut for :py:func:`~pywa.client.WhatsApp.unblock_users` with ``sender``.
         """
         return await self.from_user.unblock()

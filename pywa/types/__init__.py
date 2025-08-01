@@ -5,7 +5,10 @@ This package contains all the types used in the library.
 from .base_update import StopHandling, ContinueHandling
 from .callback import (
     Button,
-    ButtonUrl,
+    URLButton,
+    ButtonUrl,  # Alias for URLButton for backward compatibility
+    VoiceCallButton,
+    CallPermissionRequestButton,
     CallbackButton,
     CallbackData,
     CallbackSelection,
@@ -37,7 +40,7 @@ from .others import (
     Reaction,
     ReplyToMessage,
     ReferredProduct,
-    System,
+    Referral,
     User,
     Command,
     ConversationalAutomation,
@@ -46,10 +49,11 @@ from .others import (
     Pagination,
 )
 from .template import (
-    NewTemplate,
     Template,
-    TemplateResponse,
-    TemplateStatus,
+    TemplateStatusUpdate,
+    TemplateQualityUpdate,
+    TemplateCategoryUpdate,
+    TemplateComponentsUpdate,
 )
 
 from .flows import (
@@ -65,4 +69,19 @@ from .flows import (
     FlowMetricGranularity,
 )
 from .chat_opened import ChatOpened
+from .user_preferences import (
+    UserMarketingPreferences,
+    UserPreferenceCategory,
+    MarketingPreference,
+)
 from ..listeners import ListenerCanceled, ListenerTimeout, ListenerStopped
+from .calls import (
+    CallConnect,
+    CallTerminate,
+    CallStatus,
+    CallPermissionUpdate,
+    CallingSettings,
+    BusinessPhoneNumberSettings,
+)
+from .system import PhoneNumberChange, IdentityChange, Identity
+from .sent_update import SentMessage, SentTemplate, SentTemplateStatus, InitiatedCall

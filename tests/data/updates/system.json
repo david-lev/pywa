@@ -1,0 +1,80 @@
+{
+  "phone_number_change": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "1234567890987654321",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "972123456789",
+                "phone_number_id": "1122334455667"
+              },
+              "messages": [
+                {
+                  "from": "972987654321",
+                  "id": "wamid.xyzxyz==",
+                  "timestamp": "1753851315",
+                  "system": {
+                    "body": "User A changed from 972987654321 to 972912345678",
+                    "wa_id": "972912345678",
+                    "type": "user_changed_number"
+                  },
+                  "type": "system"
+                }
+              ]
+            },
+            "field": "messages"
+          }
+        ]
+      }
+    ]
+  },
+  "identity_change": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "1234567890987654321",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "972123456789",
+                "phone_number_id": "1122334455667"
+              },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "User A"
+                  },
+                  "wa_id": "972987654321"
+                }
+              ],
+              "messages": [
+                {
+                  "from": "972987654321",
+                  "id": "wamid.xyzxyz",
+                  "timestamp": "1697044706",
+                  "identity": {
+                    "acknowledged": true,
+                    "created_timestamp": "1697044706",
+                    "hash": "xyzxyz"
+                  },
+                  "system": {
+                    "body": "User identity changed",
+                    "type": "customer_identity_changed"
+                  },
+                  "type": "system"
+                }
+              ]
+            },
+            "field": "messages"
+          }
+        ]
+      }
+    ]
+  }
+}

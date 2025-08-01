@@ -1,0 +1,47 @@
+{
+  "call_terminate": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "47389759353",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "16315553602",
+                "phone_number_id": "37489742"
+              },
+              "calls": [
+                {
+                  "id": "wacid.ABGGFjFVU2AfAgo6V-Hc5eCgK5Gh",
+                  "to": "16315553601",
+                  "from": "16315553602",
+                  "event": "terminate",
+                  "direction": "BUSINESS_INITIATED",
+                  "biz_opaque_callback_data": "random_string",
+                  "timestamp": "1671644824",
+                  "status": "COMPLETED",
+                  "start_time": "1671644824",
+                  "end_time": "1671644944",
+                  "duration": 120
+                }
+              ],
+              "errors": [
+                {
+                  "code": 12455,
+                  "message": "ERROR_TITLE",
+                  "href": "ERROR_HREF",
+                  "error_data": {
+                    "details": "ERROR_DETAILS"
+                  }
+                }
+              ]
+            },
+            "field": "calls"
+          }
+        ]
+      }
+    ]
+  }
+}
