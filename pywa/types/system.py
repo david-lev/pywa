@@ -86,6 +86,15 @@ class SystemType(utils.StrEnum):
 
     UNKNOWN = "UNKNOWN"
 
+    @classmethod
+    def _missing_(cls, value: str):
+        # the documentation very confusing about the values of system types
+        if (
+            value == "customer_changed_number"
+        ):  # https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/components#messages-object
+            return cls.USER_CHANGED_NUMBER  # https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/payload-examples#user-changed-number-notification
+        return super()._missing_(value)
+
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class IdentityChange(BaseUserUpdate):

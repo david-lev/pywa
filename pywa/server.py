@@ -25,8 +25,9 @@ _MESSAGE_TYPES: dict[MessageType, type[handlers.Handler]] = {
     MessageType.BUTTON: handlers.CallbackButtonHandler,
     MessageType.REQUEST_WELCOME: handlers.ChatOpenedHandler,
 }
-_SYSTEM_TYPES: dict[SystemType, type[handlers.Handler]] = {
+_SYSTEM_TYPES: dict[SystemType | str, type[handlers.Handler]] = {
     SystemType.USER_CHANGED_NUMBER: handlers.PhoneNumberChangeHandler,
+    "customer_changed_number": handlers.PhoneNumberChangeHandler,  # https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/components#messages-object
     SystemType.CUSTOMER_IDENTITY_CHANGED: handlers.IdentityChangeHandler,
 }
 _INTERACTIVE_TYPES: dict[str, type[handlers.Handler]] = {
