@@ -1,3 +1,4 @@
+[//]: # (Logo design by @nyatitilkesh https://github.com/nyatitilkesh | Telegram: @nyatitilkesh)
 <img alt="PyWa Logo" height="250" src="https://pywa.readthedocs.io/en/latest/_static/pywa-logo.png" width="250"/>
 
 ________________________
