@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 class BaseTemplateUpdateAsync:
     """Base class for template updates."""
 
-    _client: WhatsAppAsync
+    _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)
     template_id: str
 
     async def get_template(self) -> TemplateDetails:
@@ -418,7 +418,7 @@ class _CreatedAndUpdatedTemplateActionsAsync:
         """
         return cast(
             TemplateStatusUpdate,
-            self._client.listen(
+            await self._client.listen(
                 to=TemplateUpdateListenerIdentifier(
                     waba_id=self._client.business_account_id, template_id=self.id
                 ),
