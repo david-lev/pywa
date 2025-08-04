@@ -47,6 +47,7 @@ from .others import (
     QRCode,
     Result,
     Pagination,
+    StorageConfiguration,
 )
 from .templates import (
     Template,

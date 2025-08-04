@@ -50,6 +50,7 @@ from .others import (
     Metadata,
     SuccessResult,
     ReplyToMessage,
+    StorageConfiguration,
 )
 from .callback import _CallbackDataT, CallbackData
 from .. import utils
@@ -901,23 +902,28 @@ class CallingSettings:
         )
 
 
-@dataclasses.dataclass(slots=True)
-class BusinessPhoneNumberSettings:
+@dataclasses.dataclass(slots=True, kw_only=True)
+class BusinessPhoneNumberSettings(utils.APIObject):
     """
     Represents the settings of a WhatsApp Business Phone Number.
 
     Attributes:
         calling: The calling settings of the phone number.
+        storage_configuration: The storage configuration for the phone number.
     """
 
     calling: CallingSettings | None = None
+    storage_configuration: StorageConfiguration
 
     @classmethod
     def from_dict(cls, data: dict) -> BusinessPhoneNumberSettings:
         return cls(
             calling=CallingSettings.from_dict(data.get("calling"))
             if data.get("calling")
-            else None
+            else None,
+            storage_configuration=StorageConfiguration.from_dict(
+                data["storage_configuration"]
+            ),
         )
 
     def to_dict(self) -> dict:

@@ -924,6 +924,63 @@ class FacebookApplication(utils.FromDict, utils.APIObject):
     link: str
 
 
+class StorageStatus(utils.StrEnum):
+    """
+    Represents the storage status of a WhatsApp Business Phone Number.
+
+    Attributes:
+        DEFAULT: Default storage status.
+        IN_COUNTRY_STORAGE_ENABLED: In-country storage is enabled.
+    """
+
+    DEFAULT = "DEFAULT"
+    IN_COUNTRY_STORAGE_ENABLED = "IN_COUNTRY_STORAGE_ENABLED"
+
+    UNKNOWN = "UNKNOWN"
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class StorageConfiguration:
+    """
+    Local storage offers an additional layer of data management control, by giving you the option to specify where your message data is stored at rest. If your company is in a regulated industry such as finance, government, or healthcare, you may prefer to have your message data stored in a specific country when at rest because of regulatory or company policies.
+
+    Local storage is controlled by a setting enabled or disabled at a WhatsApp business phone number level. Both Cloud API and MM Lite API support local storage, and the setting will apply to any messages sent via either API if enabled.
+
+    **How local storage works**
+
+    When Local storage is enabled, the following constraints are applied to message content for a business phone number:
+
+    - Data-in-use: When message content is sent or received by Cloud API or MM Lite API, message content may be stored on Meta data centers internationally while being processed.
+    - Data-at-rest: After the data-in-use period, message content is deleted from Meta data centers outside of the specified local storage region, and persisted only in data centers within the local storage region selected. Note that the data-in-use period differs between Cloud API and MM Lite API as specified below:
+        - When using local storage for Cloud API, the data-in-use period is up to 60 minutes.
+        - When using local storage for MM Lite API, the data-in-use period is up to 90 minutes.
+    The local storage feature supplements other WhatsApp Business Platform privacy and security controls, and allows customers to ensure a higher level of compliance with local data protection regulations.
+
+    **Data in scope**
+
+    Local storage applies to message content (text and media) sent and/or received via Cloud API and MM Lite API. The following message content are in scope of the local storage feature:
+
+    - Text messages: text payload (message body)
+    - Media messages: media payload (audio, document, image or video)
+    - Template messages (static template + parameters passed at message send time): components with text / media payload
+    In addition, a limited set of metadata attributes is included with the locally stored message content, in order to correctly associate the encrypted message payload with the originally processed message, and to audit the fact of localization. The stored metadata is protected with tokenization and encryption.
+
+    **Available Regions**
+
+    To see what regions are supported by local storage, see the ``data_localization_region`` parameter in the documentation on phone number registration.
+    """
+
+    status: str
+    data_localization_region: str | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict) -> StorageConfiguration:
+        return cls(
+            status=StorageStatus(data["status"]),
+            data_localization_region=data.get("data_localization_region"),
+        )
+
+
 @dataclasses.dataclass(frozen=True, slots=True)
 class Command:
     """

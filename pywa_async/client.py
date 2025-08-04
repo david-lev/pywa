@@ -1762,6 +1762,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                     method_arg="phone_id",
                     client_arg="phone_id",
                 ),
+                fields=BusinessPhoneNumberSettings._api_fields(),
                 include_sip_credentials=include_sip_credentials,
             )
         )

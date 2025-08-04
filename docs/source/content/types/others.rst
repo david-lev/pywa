@@ -31,6 +31,8 @@ Others
 
 .. currentmodule:: pywa.types.others
 
+.. autoclass:: StorageConfiguration()
+
 .. autoclass:: ConversationalAutomation()
 
 .. autoclass:: QRCode()

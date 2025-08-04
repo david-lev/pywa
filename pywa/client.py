@@ -2007,6 +2007,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     method_arg="phone_id",
                     client_arg="phone_id",
                 ),
+                fields=BusinessPhoneNumberSettings._api_fields(),
                 include_sip_credentials=include_sip_credentials,
             )
         )

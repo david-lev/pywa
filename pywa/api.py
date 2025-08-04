@@ -688,24 +688,29 @@ class GraphAPI:
     def get_business_phone_number_settings(
         self,
         phone_id: str,
+        fields: tuple[str, ...] | None = None,
         include_sip_credentials: bool | None = None,
     ) -> dict[str, Any]:
         """
         Get the business phone number settings.
 
         Args:
-            include_sip_credentials: Whether to include SIP credentials in the response.
             phone_id: The ID of the phone number to get.
+            include_sip_credentials: Whether to include SIP credentials in the response.
+            fields: The fields to get. If None, all available fields will be returned.
 
         Returns:
             The business phone number settings.
         """
+        params = {
+            "fields": ",".join(fields) if fields else None,
+        }
+        if include_sip_credentials is not None:
+            params["include_sip_credentials"] = include_sip_credentials
         return self._make_request(
             method="GET",
             endpoint=f"/{phone_id}/settings",
-            params={"include_sip_credentials": include_sip_credentials}
-            if include_sip_credentials is not None
-            else None,
+            params=params,
         )
 
     def update_business_phone_number_settings(
