@@ -546,6 +546,32 @@ class GraphAPI:
             },
         )
 
+    def deregister_phone_number(
+        self,
+        phone_id: str,
+    ) -> dict[str, bool]:
+        """
+        Deregister a phone number.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/registration/#deregister>`_.
+
+        Return example::
+
+            {
+                'success': True
+            }
+
+        Args:
+            phone_id: The ID of the phone number to deregister.
+
+        Returns:
+            The success of the operation.
+        """
+        return self._make_request(
+            method="POST",
+            endpoint=f"/{phone_id}/deregister",
+        )
+
     def mark_message_as_read(
         self,
         phone_id: str,

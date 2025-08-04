@@ -3064,6 +3064,26 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             )
         )
 
+    async def deregister_phone_number(
+            self,
+            *,
+            phone_id: str | int | None = None,
+    ) -> SuccessResult:
+        """
+        Deregister a Business Phone Number.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/registration/#deregister>`_
+
+        Args:
+            phone_id: The phone ID to deregister (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            The success of the deregistration.
+        """
+        return SuccessResult.from_dict(await self.api.deregister_phone_number(
+            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
+        ))
+
     async def create_qr_code(
         self,
         prefilled_message: str,

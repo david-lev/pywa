@@ -231,6 +231,8 @@ Business
      - Get business phone number
    * - :meth:`~WhatsApp.update_business_profile`
      - Update business profile details (name, description, picture etc.)
+   * - :meth:`~WhatsApp.update_display_name`
+     - Update display name of the phone number
    * - :meth:`~WhatsApp.update_conversational_automation`
      - Update commands and ice breakers
    * - :meth:`~WhatsApp.set_business_public_key`
@@ -241,8 +243,8 @@ Business
      - Update business phone number settings
    * - :meth:`~WhatsApp.register_phone_number`
      - Register new phone number
-   * - :meth:`~WhatsApp.update_display_name`
-     - Update display name of the phone number
+   * - :meth:`~WhatsApp.deregister_phone_number`
+     - Deregister a phone number
 
 Managing users
 ----------------
