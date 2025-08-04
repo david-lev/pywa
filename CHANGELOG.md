@@ -3,6 +3,22 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+
+#### 3.0.0-rc.2 (2025-08-04)
+
+- [client] allowing to use mm-lite-api when sending a template
+- [templates] allowing to set app-depplinks in `URLButton`'s
+- [templates] adding `TopBlockReasonType` enum
+- [client] adding `get_business_account` method
+- [client] adding `deregister_phone_number` method
+- [client] allowing to get and set `StorageConfiguration`
+- [callback] adding `is_quick_reply` to `CallbackButton`
+- [callback] validate not `kw_only` in dataclasses
+- [client] fix creating `LibraryTemplate`
+- [system] support old `customer_changed_number` sys type
+- [docs] new logo for pywa!
+
+
 #### 3.0.0-rc.1 (2025-07-31)
 
 - [templates] refactored and improved templates support
