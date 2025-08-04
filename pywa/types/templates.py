@@ -1969,6 +1969,7 @@ class URLButton(BaseButtonComponent):
         self.text = text
         self.url = url
         self.example = example
+        self.app_deep_link = app_deep_link
 
     def to_dict(self) -> dict:
         data = {
@@ -1987,7 +1988,6 @@ class URLButton(BaseButtonComponent):
 
     @classmethod
     def from_dict(cls, data: dict) -> URLButton:
-        print(data)
         return cls(
             text=data["text"],
             url=data["url"],
