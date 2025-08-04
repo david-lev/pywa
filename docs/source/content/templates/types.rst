@@ -64,6 +64,7 @@ Template Types
     :members: params, Params
 .. autoclass:: URLButton()
     :members: params, Params
+.. autoclass:: AppDeepLink()
 .. autoclass:: CatalogButton()
     :members: params, Params
 .. autoclass:: MPMButton()

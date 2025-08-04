@@ -36,6 +36,7 @@ __all__ = [
     "VoiceCallButton",
     "QuickReplyButton",
     "URLButton",
+    "AppDeepLink",
     "CatalogButton",
     "MPMButton",
     "SPMButton",
@@ -1904,6 +1905,35 @@ class QuickReplyButton(BaseButtonComponent):
         return self.Params(callback_data=callback_data, index=index)
 
 
+@dataclasses.dataclass(kw_only=True, slots=True)
+class AppDeepLink:
+    """
+    Track app conversions (Marketing Messages Lite API only)
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/guides/deep-links>`_.
+
+    Attributes:
+        meta_app_id: Your Meta app ID.
+        android_deep_link: `Android deep link URI <https://developer.android.com/training/app-links/deep-linking>`_. The WhatsApp client will attempt to load this URI if the WhatsApp user taps the button on an Android device.
+        android_fallback_playstore_url: Enter the Android fallback URL, such as your app's Google Play Store page, to redirect users if the deep link cannot be opened.
+    """
+
+    meta_app_id: int
+    android_deep_link: str
+    android_fallback_playstore_url: str | None = None
+
+    def to_dict(self) -> dict:
+        return dataclasses.asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> AppDeepLink:
+        return cls(
+            meta_app_id=data["meta_app_id"],
+            android_deep_link=data["android_deep_link"],
+            android_fallback_playstore_url=data.get("android_fallback_playstore_url"),
+        )
+
+
 class URLButton(BaseButtonComponent):
     """
     URL buttons load the specified URL in the device's default web browser when tapped by the app user. Templates are limited to two URL buttons.
@@ -1919,14 +1949,23 @@ class URLButton(BaseButtonComponent):
         text: Button label text. 25 characters maximum.
         url: URL of website that loads in the device's default mobile web browser when the button is tapped by the app user. Supports 1 variable, appended to the end of the URL string. Maximum 2000 characters.
         example: Example URL to be used in the template. Maximum 2000 characters.
+        app_deep_link: Optional `app deep link <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/guides/deep-links>`_ to track conversions (Marketing Messages Lite API only).
     """
 
     type = ComponentType.URL
     text: str
     url: str
     example: str | None
+    app_deep_link: AppDeepLink | None = None
 
-    def __init__(self, *, text: str, url: str, example: str | None = None):
+    def __init__(
+        self,
+        *,
+        text: str,
+        url: str,
+        example: str | None = None,
+        app_deep_link: AppDeepLink | None = None,
+    ):
         self.text = text
         self.url = url
         self.example = example
@@ -1939,19 +1978,23 @@ class URLButton(BaseButtonComponent):
         }
         if self.example:
             data["example"] = [self.example]
+        if self.app_deep_link:
+            data["app_deep_link"] = self.app_deep_link.to_dict()
         return data
 
     def __repr__(self):
-        return (
-            f"URLButton(text={self.text!r}, url={self.url!r}, example={self.example!r})"
-        )
+        return f"URLButton(text={self.text!r}, url={self.url!r}, example={self.example!r}, app_deep_link={self.app_deep_link!r})"
 
     @classmethod
     def from_dict(cls, data: dict) -> URLButton:
+        print(data)
         return cls(
             text=data["text"],
             url=data["url"],
             example=data["example"][0] if "example" in data else None,
+            app_deep_link=AppDeepLink.from_dict(data["app_deep_link"])
+            if "app_deep_link" in data
+            else None,
         )
 
     class Params(TemplateBaseComponent.Params):
