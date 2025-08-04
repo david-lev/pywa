@@ -135,6 +135,7 @@ from .types.others import (
     UsersBlockedResult,
     UsersUnblockedResult,
     SuccessResult,
+    WhatsAppBusinessAccount,
 )
 from .types.sent_update import SentMessage, SentTemplate, InitiatedCall
 from .utils import FastAPI, Flask
@@ -1636,6 +1637,32 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 )
                 if phone_id is not utils.MISSING
                 else None,
+            )
+        )
+
+    async def get_business_account(
+        self,
+        *,
+        waba_id: str | int | None = None,
+    ) -> WhatsAppBusinessAccount:
+        """
+        Get the WhatsApp Business Account (WABA) information.
+
+        Args:
+            waba_id: The WABA ID to get the information from (optional, if not provided, the client's WABA ID will be used).
+
+        Returns:
+            The WhatsApp Business Account object.
+        """
+        return WhatsAppBusinessAccount.from_dict(
+            data=await self.api.get_waba_info(
+                waba_id=helpers.resolve_arg(
+                    wa=self,
+                    value=waba_id,
+                    method_arg="waba_id",
+                    client_arg="business_account_id",
+                ),
+                fields=WhatsAppBusinessAccount._api_fields(),
             )
         )
 

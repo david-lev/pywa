@@ -746,26 +746,170 @@ class CommerceSettings(utils.APIObject):
         )
 
 
+class BusinessVerificationStatus(utils.StrEnum):
+    """
+    Represents the business verification status.
+
+    Attributes:
+        EXPIRED: The business verification has expired.
+        FAILED: The business verification has failed.
+        INELIGIBLE: The business is not eligible for verification.
+        NOT_VERIFIED: The business is not verified.
+        PENDING: The business verification is pending.
+        PENDING_NEED_MORE_INFO: The business verification is pending and needs more information.
+        PENDING_SUBMISSION: The business verification is pending submission.
+        REJECTED: The business verification has been rejected.
+        REVOKED: The business verification has been revoked.
+        VERIFIED: The business is verified.
+    """
+
+    EXPIRED = "expired"
+    FAILED = "failed"
+    INELIGIBLE = "ineligible"
+    NOT_VERIFIED = "not_verified"
+    PENDING = "pending"
+    PENDING_NEED_MORE_INFO = "pending_need_more_info"
+    PENDING_SUBMISSION = "pending_submission"
+    REJECTED = "rejected"
+    REVOKED = "revoked"
+    VERIFIED = "verified"
+
+    UNKNOWN = "UNKNOWN"
+
+
+class MarketingMessagesLiteAPIStatus(utils.StrEnum):
+    """
+    Represents the WhatsApp Business Account's status for onboarding onto Marketing Messages Lite.
+
+    Attributes:
+        INELIGIBLE: The WABA has not met all eligibility requirements.
+        ELIGIBLE: The WABA has met all eligibility requirements.
+        ONBOARDED: The WABA is eligible to use MM Lite API and has signed MM Lite Terms of Service, has a valid payment method attached, and is linked to an Ad account.
+        UNKNOWN: An unknown status. Please contact support for assistance.
+    """
+
+    INELIGIBLE = "INELIGIBLE"
+    ELIGIBLE = "ELIGIBLE"
+    ONBOARDED = "ONBOARDED"
+    UNKNOWN = "UNKNOWN"
+
+
+class MarketingMessagesOnboardingStatus(utils.StrEnum):
+    """
+    Represents the WhatsApp Business Account's status for onboarding onto Marketing Messages Lite API.
+
+    Attributes:
+        INELIGIBLE_ON_BEHALF_OF_WABA: The WhatsApp Business Account (“WABA”) uses the “OBO” model which is not supported. You must either first transfer ownership of the WABA to the customer or onboard using the Intent API.
+        INELIGIBLE_INACTIVE_OR_RESTRICTED: The WhatsApp Business Account is inactive or is restricted from messaging due to a policy enforcement issue.
+        INELIGIBLE_COUNTRY_NOT_SUPPORTED: The WhatsApp Business Account is in a region that does not support the MM Lite API.
+        INELIGIBLE_USING_WHATSAPP_BUSINESS_APP: The WhatsApp Business phone number is being used within the WhatsApp Business app.
+        ELIGIBLE: WhatsApp Business Account is eligible to onboard and use the MM Lite API.
+        PENDING_VALID_PAYMENT_METHOD: The WhatsApp Business Account requires setting up a valid payment method.
+        PENDING_INTERNAL_SETUP: WhatsApp Business Account is in the configuration process of using the MM Lite API and requires no further action from the business customer or partner.
+        ONBOARDED: The WhatsApp Business Account has successfully onboarded and is ready to use the MM Lite API.
+    """
+
+    INELIGIBLE_ON_BEHALF_OF_WABA = "INELIGIBLE_ON_BEHALF_OF_WABA"
+    INELIGIBLE_INACTIVE_OR_RESTRICTED = "INELIGIBLE_INACTIVE_OR_RESTRICTED"
+    INELIGIBLE_COUNTRY_NOT_SUPPORTED = "INELIGIBLE_COUNTRY_NOT_SUPPORTED"
+    INELIGIBLE_USING_WHATSAPP_BUSINESS_APP = "INELIGIBLE_USING_WHATSAPP_BUSINESS_APP"
+    ELIGIBLE = "ELIGIBLE"
+    PENDING_VALID_PAYMENT_METHOD = "PENDING_VALID_PAYMENT_METHOD"
+    PENDING_INTERNAL_SETUP = "PENDING_INTERNAL_SETUP"
+    ONBOARDED = "ONBOARDED"
+
+    UNKNOWN = "UNKNOWN"
+
+
 @dataclasses.dataclass(frozen=True, slots=True)
-class WhatsAppBusinessAccount(utils.FromDict):
+class BusinessInfo(utils.APIObject, utils.FromDict):
+    id: str
+    name: str
+    status: str
+    type: str
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class WhatsAppBusinessAccount(utils.APIObject):
     """
     Represents a WhatsApp Business Account.
 
     Attributes:
         id: The ID of the account.
-        message_template_namespace: The namespace of the message templates.
-        name: The name of the account.
-        timezone_id: The timezone ID of the account.
+        status: The status of the WhatsApp Business Account (e.g. ACTIVE).
+        message_template_namespace: Namespace string for the message templates that belong to the WhatsApp Business Account
+        name: User-friendly name to differentiate WhatsApp Business Accounts.
+        timezone_id: The timezone of the WhatsApp Business Account (See `Timezone IDs <https://developers.facebook.com/docs/marketing-api/reference/ad-account/timezone-ids/>`_).
+        business_verification_status: Current status of business verification of Meta Business Account which owns this WhatsApp Business Account
+        is_enabled_for_insights: If true, indicates the WhatsApp Business Account enabled template analytics. See `Analytics <https://developers.facebook.com/docs/whatsapp/business-management-api/analytics>`_.
+        marketing_messages_lite_api_status: WhatsApp Business Account's status for onboarding onto Marketing Messages Lite.
+        marketing_messages_onboarding_status: Onboarding status of the WhatsApp Business account into Marketing Messages Lite API.
+        ownership_type: Ownership type of the WhatsApp Business Account.
+        currency: The currency in which the payment transactions for the WhatsApp Business Account will be processed
+        country: country of the WhatsApp Business Account's owning Meta Business account
+
     """
 
     id: str
-    message_template_namespace: str
     name: str
     timezone_id: str
+    message_template_namespace: str
+    status: str | None
+    business_verification_status: BusinessVerificationStatus | None
+    is_enabled_for_insights: bool | None
+    marketing_messages_lite_api_status: MarketingMessagesLiteAPIStatus | None
+    marketing_messages_onboarding_status: MarketingMessagesOnboardingStatus | None
+    on_behalf_of_business_info: BusinessInfo | None
+    ownership_type: str | None
+    health_status: dict | None
+    currency: str | None
+    country: str | None
+    subscribed_apps: tuple[FacebookApplication, ...] | None
+
+    @classmethod
+    def from_dict(cls, data: dict) -> WhatsAppBusinessAccount:
+        return cls(
+            id=data["id"],
+            status=data.get("status"),
+            name=data["name"],
+            timezone_id=data["timezone_id"],
+            message_template_namespace=data.get("message_template_namespace"),
+            business_verification_status=BusinessVerificationStatus(
+                data["business_verification_status"]
+            )
+            if "business_verification_status" in data
+            else None,
+            is_enabled_for_insights=data.get("is_enabled_for_insights"),
+            marketing_messages_lite_api_status=MarketingMessagesLiteAPIStatus(
+                data["marketing_messages_lite_api_status"]
+            )
+            if "marketing_messages_lite_api_status" in data
+            else None,
+            marketing_messages_onboarding_status=MarketingMessagesOnboardingStatus(
+                data["marketing_messages_onboarding_status"]
+            )
+            if "marketing_messages_onboarding_status" in data
+            else None,
+            on_behalf_of_business_info=BusinessInfo.from_dict(
+                data["on_behalf_of_business_info"]
+            )
+            if "on_behalf_of_business_info" in data
+            else None,
+            ownership_type=data.get("ownership_type"),
+            health_status=data.get("health_status"),
+            currency=data.get("currency"),
+            country=data.get("country"),
+            subscribed_apps=tuple(
+                FacebookApplication.from_dict(app["whatsapp_business_api_data"])
+                for app in data["subscribed_apps"]["data"]
+            )
+            if "subscribed_apps" in data
+            else None,
+        )
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class FacebookApplication(utils.FromDict):
+class FacebookApplication(utils.FromDict, utils.APIObject):
     """
     Represents a Facebook Application.
 
@@ -903,7 +1047,7 @@ class BusinessPhoneNumber(utils.APIObject):
     platform_type: str | None
     throughput: dict[str, str] | None
     eligibility_for_api_business_global_search: str | None
-    health_status: dict[str, str] | None
+    health_status: dict | None
     certificate: str | None
     new_certificate: str | None
     last_onboarded_time: str | None
@@ -977,7 +1121,7 @@ class QRCode(utils.APIObject):
     @classmethod
     @functools.cache
     def _api_fields(cls, image_type: str | None) -> tuple[str, ...]:
-        fields = list(super()._api_fields())
+        fields = list(super(QRCode, cls)._api_fields())
         if image_type is not None:
             fields[fields.index("qr_image_url")] = f"qr_image_url.format({image_type})"
         else:

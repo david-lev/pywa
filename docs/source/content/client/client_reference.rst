@@ -26,6 +26,7 @@ Client Reference
 .. automethod:: WhatsApp.download_media
 .. automethod:: WhatsApp.get_media_url
 .. automethod:: WhatsApp.delete_media
+.. automethod:: WhatsApp.get_business_account
 .. automethod:: WhatsApp.get_business_profile
 .. automethod:: WhatsApp.get_business_phone_numbers
 .. automethod:: WhatsApp.get_business_phone_number

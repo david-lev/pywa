@@ -569,6 +569,29 @@ class GraphAPIAsync(GraphAPI):
             },
         )
 
+    async def get_waba_info(
+        self,
+        waba_id: str,
+        fields: tuple[str, ...] | None = None,
+    ) -> dict[str, Any]:
+        """
+        Get the WhatsApp Business Account information.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/graph-api/reference/whats-app-business-account>`_.
+
+        Args:
+            waba_id: The ID of the WhatsApp Business Account.
+            fields: The fields to get. If None, all available fields will be returned.
+
+        Returns:
+            The WhatsApp Business Account information.
+        """
+        return await self._make_request(
+            method="GET",
+            endpoint=f"/{waba_id}",
+            params={"fields": ",".join(fields)} if fields else None,
+        )
+
     async def get_business_phone_number(
         self,
         phone_id: str,

@@ -771,7 +771,7 @@ class FlowDetails(utils.APIObject):
     def _api_fields(
         cls, invalidate_preview: bool | None, phone_number_id: str | None
     ) -> tuple[str, ...]:
-        fields = list(super()._api_fields())
+        fields = list(super(FlowDetails, cls)._api_fields())
         if invalidate_preview is not None:
             fields[fields.index("preview")] = (
                 f"preview.invalidate({'true' if invalidate_preview else 'false'})"

@@ -63,11 +63,22 @@ def test_flow_details():
                 2024, 12, 31, 18, 45, 52, tzinfo=datetime.timezone.utc
             ),
         ),
-        whatsapp_business_account=types.flows.WhatsAppBusinessAccount(
+        whatsapp_business_account=types.others.WhatsAppBusinessAccount(
             id="124578",
             name="Test WhatsApp Business Account",
             timezone_id="1",
             message_template_namespace="1acaxyzfec",
+            status=None,
+            business_verification_status=None,
+            is_enabled_for_insights=None,
+            marketing_messages_onboarding_status=None,
+            marketing_messages_lite_api_status=None,
+            on_behalf_of_business_info=None,
+            ownership_type=None,
+            health_status=None,
+            country=None,
+            currency=None,
+            subscribed_apps=None,
         ),
         application=types.flows.FacebookApplication(
             link="https://www.facebook.com/games/?app_id=12345",

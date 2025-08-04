@@ -19,6 +19,8 @@ Others
 
 .. autoclass:: Pagination()
 
+.. autoclass:: WhatsAppBusinessAccount()
+
 .. autoclass:: BusinessProfile()
 
 .. autoclass:: BusinessPhoneNumber()

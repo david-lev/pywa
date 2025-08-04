@@ -212,8 +212,8 @@ Flows
    * - :meth:`~WhatsApp.migrate_flows`
      - Migrate flows from one WABA to another
 
-Business profile
-----------------
+Business
+--------
 
 .. list-table::
    :widths: 40 60
@@ -221,6 +221,8 @@ Business profile
 
    * - Method
      - Description
+   * - :meth:`~WhatsApp.get_business_account`
+     - Get business account details
    * - :meth:`~WhatsApp.get_business_profile`
      - Get business profile
    * - :meth:`~WhatsApp.get_business_phone_numbers`
