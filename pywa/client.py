@@ -2492,8 +2492,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         to: str | int,
         name: str,
         language: TemplateLanguage,
-        params: list[TemplateBaseComponent.Params | dict],
+        params: list[TemplateBaseComponent.Params | dict] | None = None,
         *,
+        use_mm_lite_api: bool = False,
+        message_activity_sharing: bool | None = None,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
@@ -2565,6 +2567,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             name: The name of the template to send.
             language: The language of the template to send.
             params: The parameters to fill in the template.
+            use_mm_lite_api: Whether to use `Marketing Messages Lite API <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api>`_ (optional, default: False).
+            message_activity_sharing: Whether to share message activities (e.g. message read) for that specific marketing message to Meta to help optimize marketing messages (optional, only if ``use_mm_lite_api`` is True).
             reply_to_message_id: The ID of the message to reply to (optional).
             tracker: A callback data to track the message (optional, can be a string or a :class:`CallbackData` object).
             sender: The phone ID to send the template from (optional, if not provided, the client's phone ID will be used).
@@ -2572,27 +2576,44 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
-        helpers.upload_template_media_params(
-            wa=self,
-            sender=sender,
-            params=params,
-        )
+        if params is not None:
+            helpers.upload_template_media_params(
+                wa=self,
+                sender=sender,
+                params=params,
+            )
+        template = {
+            "name": name,
+            "language": {"code": language.value},
+            **(
+                {
+                    "components": [
+                        param.to_dict()
+                        if isinstance(param, TemplateBaseComponent.Params)
+                        else param
+                        for param in params
+                    ]
+                }
+                if params is not None
+                else {}
+            ),
+        }
         return SentTemplate.from_sent_update(
             client=self,
             update=self.api.send_message(
                 sender=sender,
                 to=str(to),
                 typ="template",
-                msg={
-                    "name": name,
-                    "language": {"code": language.value},
-                    "components": [
-                        param.to_dict()
-                        if isinstance(param, TemplateBaseComponent.Params)
-                        else param
-                        for param in params
-                    ],
-                },
+                msg=template,
+                reply_to_message_id=reply_to_message_id,
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+            )
+            if not use_mm_lite_api
+            else self.api.send_marketing_message(
+                sender=sender,
+                to=str(to),
+                template=template,
+                message_activity_sharing=message_activity_sharing,
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             ),

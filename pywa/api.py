@@ -507,6 +507,51 @@ class GraphAPI:
             json=data,
         )
 
+    def send_marketing_message(
+        self,
+        sender: str,
+        to: str,
+        template: dict[str, str | list[str]],
+        reply_to_message_id: str | None = None,
+        message_activity_sharing: bool | None = None,
+        biz_opaque_callback_data: str | None = None,
+    ) -> dict[str, dict | list]:
+        """
+        Send marketing template messages via MM Lite API.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#sending-messages>`_.
+
+
+        Args:
+            sender: The phone id to send the message from.
+            to: The phone number to send the message to.
+            template: The template object to send.
+            reply_to_message_id: The ID of the message to reply to.
+            message_activity_sharing: Toggles on / off sharing message activities (e.g. message read) for that specific marketing message to Meta to help optimize marketing messages.
+            biz_opaque_callback_data: The tracker to send with the message.
+
+        Returns:
+            The response from the WhatsApp Cloud API.
+        """
+        body = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": to,
+            "type": "template",
+            "template": template,
+        }
+        if reply_to_message_id:
+            body["context"] = {"message_id": reply_to_message_id}
+        if message_activity_sharing is not None:
+            body["message_activity_sharing"] = message_activity_sharing
+        if biz_opaque_callback_data:
+            body["biz_opaque_callback_data"] = biz_opaque_callback_data
+        return self._make_request(
+            method="POST",
+            endpoint=f"/{sender}/marketing_messages",
+            json=body,
+        )
+
     def register_phone_number(
         self,
         phone_id: str,

@@ -429,7 +429,7 @@ class SentTemplate(SentMessage):
         status: The status of the sent template.
     """
 
-    status: SentTemplateStatus
+    status: SentTemplateStatus | None
 
     @classmethod
     def from_sent_update(

@@ -63,6 +63,7 @@ class ConversationCategory(utils.StrEnum):
     Attributes:
         AUTHENTICATION: The conversation is related to authentication.
         MARKETING: The conversation is related to marketing.
+        MARKETING_LITE: The conversation is related to marketing lite.
         UTILITY: The conversation is related to utility.
         SERVICE: The conversation is related to service.
         REFERRAL_CONVERSION: The conversation is related to referral conversion.
@@ -74,6 +75,7 @@ class ConversationCategory(utils.StrEnum):
 
     AUTHENTICATION = "authentication"
     MARKETING = "marketing"
+    MARKETING_LITE = "marketing_lite"
     UTILITY = "utility"
     SERVICE = "service"
     REFERRAL_CONVERSION = "referral_conversion"
@@ -244,6 +246,7 @@ class PricingCategory(utils.StrEnum):
         AUTHENTICATION: Indicates an authentication template message.
         AUTHENTICATION_INTERNATIONAL: Indicates an authentication template message sent to a WhatsApp user in a country or region that has authentication-international rates.
         MARKETING: Indicates a marketing template message.
+        MARKETING_LITE: Indicates a marketing template message sent via MM Lite API.
         UTILITY: Indicates a utility template message.
         SERVICE: Indicates a non-template message.
         REFERRAL_CONVERSION: Indicates the message is part of a `free entry point conversation <https://developers.facebook.com/docs/whatsapp/pricing#free-entry-point-conversations>`_.
@@ -255,6 +258,7 @@ class PricingCategory(utils.StrEnum):
     AUTHENTICATION = "authentication"
     AUTHENTICATION_INTERNATIONAL = "authentication_international"
     MARKETING = "marketing"
+    MARKETING_LITE = "marketing_lite"
     UTILITY = "utility"
     SERVICE = "service"
     REFERRAL_CONVERSION = "referral_conversion"
