@@ -3193,7 +3193,7 @@ class TemplateDetails(utils.APIObject):
 
     def compare(
         self,
-        to: Iterable[int | str],
+        *to: int | str,
         start: datetime.datetime | int,
         end: datetime.datetime | int,
     ) -> TemplatesCompareResult:
@@ -3215,7 +3215,7 @@ class TemplateDetails(utils.APIObject):
             A TemplatesCompareResult object containing the comparison results.
         """
         return self._client.compare_templates(
-            template_id=self.id, template_ids=to, start=start, end=end
+            template_id=self.id, *to, start=start, end=end
         )
 
     def unpause(self) -> TemplateUnpauseResult:
@@ -3308,6 +3308,37 @@ class TemplatesResult(Result[TemplateDetails]):
         )
 
 
+class TopBlockReasonType(utils.StrEnum):
+    """
+    The top reason that customers reported when they blocked your WhatsApp phone number after receiving one of your message templates. The reasons include: Spam, Didn’t sign up, No longer needed, Offensive messages. Note that Top block reason is only visible when a significant number of customers block your number.
+
+    - Read more at `facebook.com <https://www.facebook.com/business/help/511126334359303/>`_.
+
+    Attributes:
+        NO_LONGER_NEEDED: If a customer indicated they no longer needed the message, they may not need that service or product anymore. Make sure your audience is still in need of your service or product by regularly reviewing your audience lists.
+        NO_REASON: A customer blocked your number but did not indicate why. Selecting a reason for blocking a message is not required.
+        NO_REASON_GIVEN: A customer blocked your number but did not indicate why. Selecting a reason for blocking a message is not required.
+        NO_SIGN_UP: If a customer indicated that they didn’t sign up, they may not have opted in to receiving messages. Make sure you have obtained permission from users to receive messages on WhatsApp.
+        OFFENSIVE_MESSAGES: If a customer indicated the message was offensive, they may have found it inappropriate. Check your messages to ensure that they don’t contain rude, foul or harassing language, adult content, or prohibited or illegal activity.
+        OTHER: A customer may choose Other as a reason for blocking your number. When the top reason for blocking has been determined to be Other, then Unknown block reason will be shown. It may also be the top block reason in cases where there is an insufficient amount of data.
+        OTP_DID_NOT_REQUEST: If a customer indicated that they did not request an OTP, they may have received an OTP without requesting it. Make sure you are only sending OTPs to users who have requested them.
+        SPAM: If a customer indicated that spam is the reason for blocking, they may have received too many messages in a short period of time. Try being more selective about the frequency of messages.
+        UNKNOWN_BLOCK_REASON: A customer may choose Other as a reason for blocking your number. When the top reason for blocking has been determined to be Other, then Unknown block reason will be shown. It may also be the top block reason in cases where there is an insufficient amount of data.
+    """
+
+    NO_LONGER_NEEDED = "NO_LONGER_NEEDED"
+    NO_REASON = "NO_REASON"
+    NO_REASON_GIVEN = "NO_REASON_GIVEN"
+    NO_SIGN_UP = "NO_SIGN_UP"
+    OFFENSIVE_MESSAGES = "OFFENSIVE_MESSAGES"
+    OTHER = "OTHER"
+    OTP_DID_NOT_REQUEST = "OTP_DID_NOT_REQUEST"
+    SPAM = "SPAM"
+    UNKNOWN_BLOCK_REASON = "UNKNOWN_BLOCK_REASON"
+
+    UNKNOWN = "UNKNOWN"
+
+
 @dataclasses.dataclass(kw_only=True, slots=True, frozen=True)
 class TemplatesCompareResult:
     """
@@ -3321,7 +3352,7 @@ class TemplatesCompareResult:
 
     block_rate: list[str] | None = None
     times_sent: dict[str, int] | None = None
-    top_block_reason: dict[str, str] | None = None
+    top_block_reason: dict[str, TopBlockReasonType] | None = None
 
     @classmethod
     def from_dict(
@@ -3339,7 +3370,7 @@ class TemplatesCompareResult:
                 }
             elif metric["metric"] == "TOP_BLOCK_REASON":
                 top_block_reason = {
-                    item["key"]: item["value"]
+                    item["key"]: TopBlockReasonType(item["value"])
                     for item in metric.get("string_values", [])
                 }
 

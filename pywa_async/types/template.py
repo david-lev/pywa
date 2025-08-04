@@ -266,7 +266,7 @@ class TemplateDetails(_TemplateDetails):
 
     async def compare(
         self,
-        to: Iterable[int | str],
+        *to: int | str,
         start: datetime.datetime | int,
         end: datetime.datetime | int,
     ) -> TemplatesCompareResult:
@@ -288,7 +288,7 @@ class TemplateDetails(_TemplateDetails):
             A TemplatesCompareResult object containing the comparison results.
         """
         return await self._client.compare_templates(
-            template_id=self.id, template_ids=to, start=start, end=end
+            template_id=self.id, *to, start=start, end=end
         )
 
     async def unpause(self) -> TemplateUnpauseResult:

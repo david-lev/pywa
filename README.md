@@ -234,6 +234,7 @@ from pywa.types.template import *
 
 wa = WhatsApp(..., business_account_id=123456)
 
+# Create a template
 wa.create_template(
     template=Template(
         name="buy_new_iphone_x",

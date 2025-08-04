@@ -2516,7 +2516,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def compare_templates(
         self,
         template_id: int | str,
-        template_ids: Iterable[int | str],
+        *template_ids: int | str,
         start: datetime.datetime | int,
         end: datetime.datetime | int,
     ) -> TemplatesCompareResult:
@@ -2538,6 +2538,10 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             A TemplatesCompareResult object containing the comparison results.
         """
+        if not template_ids:
+            raise ValueError(
+                "At least one template ID must be provided for comparison."
+            )
         return TemplatesCompareResult.from_dict(
             data=await self.api.compare_templates(
                 template_id=template_id,
@@ -2564,7 +2568,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Migrate templates from one WhatsApp Business account to another.
 
         - Templates can only be migrated between WABAs owned by the same Meta business.
-        - Only templates with a status of APPROVED and a quality_score of either GREEN or UNKNOWN are eligible for migration.
+        - Only templates with a status of ``APPROVED`` and a quality_score of either ``GREEN`` or ``UNKNOWN`` are eligible for migration.
         - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/template-migration>`_.
 
         Args:

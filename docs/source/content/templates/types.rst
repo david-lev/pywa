@@ -96,7 +96,15 @@ Template Types
     :show-inheritance:
 
 .. autoclass:: CreatedTemplate()
+.. autoclass:: CreatedTemplates()
 
 .. autoclass:: UpdatedTemplate()
 
 .. autoclass:: TemplateUnpauseResult()
+
+.. autoclass:: TemplatesCompareResult()
+.. autoclass:: TopBlockReasonType()
+
+.. autoclass:: MigrateTemplatesResult()
+.. autoclass:: MigratedTemplate()
+.. autoclass:: MigratedTemplateError()
