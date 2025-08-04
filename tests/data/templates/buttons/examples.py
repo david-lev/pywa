@@ -1,4 +1,4 @@
-from pywa.types.template import *  # noqa: F403
+from pywa.types.templates import *  # noqa: F403
 
 seasonal_promotion = Template(
     name="seasonal_promotion",

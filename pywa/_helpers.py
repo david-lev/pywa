@@ -38,7 +38,7 @@ from .types import (
 )
 from pywa.types.others import InteractiveType
 from .types.media import Media
-from .types.template import (
+from .types.templates import (
     TemplateBaseComponent,
     _BaseMediaHeaderComponent,
     HeaderFormatType,

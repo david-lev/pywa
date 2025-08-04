@@ -85,13 +85,13 @@ Account related updates:
 
    * - Type
      - Description
-   * - :py:class:`~pywa.types.template.TemplateStatusUpdate`
+   * - :py:class:`~pywa.types.templates.TemplateStatusUpdate`
      - A template status update (e.g. approved, rejected, etc.)
-   * - :py:class:`~pywa.types.template.TemplateCategoryUpdate`
+   * - :py:class:`~pywa.types.templates.TemplateCategoryUpdate`
      - A template category update (e.g. category changed)
-   * - :py:class:`~pywa.types.template.TemplateQualityUpdate`
+   * - :py:class:`~pywa.types.templates.TemplateQualityUpdate`
      - A template quality update (e.g. quality score changed)
-   * - :py:class:`~pywa.types.template.TemplateComponentsUpdate`
+   * - :py:class:`~pywa.types.templates.TemplateComponentsUpdate`
      - A template components update (e.g. header, body, footer or buttons changed)
 
 .. currentmodule:: pywa.types.base_update

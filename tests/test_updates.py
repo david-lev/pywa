@@ -13,7 +13,7 @@ from pywa.types.calls import (
 )
 from pywa.types.media import Image, Video, Document, Audio
 from pywa.types.system import SystemType
-from pywa.types.template import TemplateStatus, TemplateCategory
+from pywa.types.templates import TemplateStatus, TemplateCategory
 from .common import CLIENTS
 
 # {update_file: {update_name: [test_funcs]}}

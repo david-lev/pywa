@@ -1,7 +1,7 @@
 📄 Templates
 ==============
 
-.. currentmodule:: pywa.types.template
+.. currentmodule:: pywa.types.templates
 
 .. list-table::
    :widths: 10 60

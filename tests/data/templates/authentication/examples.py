@@ -1,4 +1,4 @@
-from pywa.types.template import *  # noqa: F403
+from pywa.types.templates import *  # noqa: F403
 
 authentication_code_autofill_button = Template(
     name="authentication_code_autofill_button",

@@ -14,7 +14,7 @@ from pywa._helpers import (
     _template_header_formats_filename,
     _template_header_formats_default_mime_types,
 )
-from pywa.types.template import (
+from pywa.types.templates import (
     TemplateBaseComponent,
     _BaseMediaHeaderComponent,
     Carousel,

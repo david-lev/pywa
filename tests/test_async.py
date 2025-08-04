@@ -11,7 +11,7 @@ from pywa.api import GraphAPI as GraphAPISync
 from pywa_async.api import GraphAPIAsync
 from pywa.server import Server as ServerSync
 from pywa.listeners import _Listeners as ListenersSync
-from pywa.types.template import (
+from pywa.types.templates import (
     TemplateDetails as TemplateDetailsSync,
     TemplatesResult as TemplatesResultSync,
     CreatedTemplate as CreatedTemplateSync,
@@ -19,7 +19,7 @@ from pywa.types.template import (
     UpdatedTemplate as UpdatedTemplateSync,
     TemplateBaseComponent,
 )
-from pywa_async.types.template import (
+from pywa_async.types.templates import (
     TemplateDetails as TemplateDetailsAsync,
     TemplatesResult as TemplatesResultAsync,
     CreatedTemplate as CreatedTemplateAsync,

@@ -117,7 +117,7 @@ from .types.base_update import (
     BaseUpdate as _BaseUpdate,
 )  # noqa
 from .types.calls import CallDirection, CallPermissionResponse, CallStatusType
-from .types.template import TemplateStatus
+from .types.templates import TemplateStatus
 
 if TYPE_CHECKING:
     from pywa import WhatsApp as _Wa

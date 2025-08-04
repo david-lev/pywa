@@ -48,7 +48,7 @@ from .others import (
     Result,
     Pagination,
 )
-from .template import (
+from .templates import (
     Template,
     TemplateStatusUpdate,
     TemplateQualityUpdate,

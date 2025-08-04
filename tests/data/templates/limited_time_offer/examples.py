@@ -1,4 +1,4 @@
-from pywa.types.template import *  # noqa: F403
+from pywa.types.templates import *  # noqa: F403
 
 limited_time_offer_caribbean_pkg_2023 = Template(
     name="limited_time_offer_caribbean_pkg_2023",

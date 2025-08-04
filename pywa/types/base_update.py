@@ -31,7 +31,7 @@ if TYPE_CHECKING:
         FlowButton,
         CallbackData,
     )
-    from .template import TemplateLanguage, TemplateBaseComponent
+    from .templates import TemplateLanguage, TemplateBaseComponent
 
 
 class StopHandling(Exception):

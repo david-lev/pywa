@@ -1,7 +1,7 @@
 Template Status Update
 ======================
 
-.. currentmodule:: pywa.types.template
+.. currentmodule:: pywa.types.templates
 
 .. autoclass:: TemplateStatusUpdate()
 

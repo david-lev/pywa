@@ -345,16 +345,16 @@ __________________
      - :class:`~pywa.types.message_status.MessageStatus`
    * - :meth:`~pywa.client.WhatsApp.on_template_status_update`
      - :class:`TemplateStatusUpdateHandler`
-     - :class:`~pywa.types.template.TemplateStatusUpdate`
+     - :class:`~pywa.types.templates.TemplateStatusUpdate`
    * - :meth:`~pywa.client.WhatsApp.on_template_category_update`
      - :class:`TemplateCategoryUpdateHandler`
-     - :class:`~pywa.types.template.TemplateCategoryUpdate`
+     - :class:`~pywa.types.templates.TemplateCategoryUpdate`
    * - :meth:`~pywa.client.WhatsApp.on_template_quality_update`
      - :class:`TemplateQualityUpdateHandler`
-     - :class:`~pywa.types.template.TemplateQualityUpdate`
+     - :class:`~pywa.types.templates.TemplateQualityUpdate`
    * - :meth:`~pywa.client.WhatsApp.on_template_components_update`
      - :class:`TemplateComponentsUpdateHandler`
-     - :class:`~pywa.types.template.TemplateComponentsUpdate`
+     - :class:`~pywa.types.templates.TemplateComponentsUpdate`
    * - :meth:`~pywa.client.WhatsApp.on_chat_opened`
      - :class:`ChatOpenedHandler`
      - :class:`~pywa.types.chat_opened.ChatOpened`

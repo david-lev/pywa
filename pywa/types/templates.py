@@ -1,4 +1,7 @@
+"""This module contains classes and functions related to WhatsApp message templates."""
+
 from __future__ import annotations
+
 
 __all__ = [
     "TemplateStatusUpdate",
@@ -62,7 +65,6 @@ __all__ = [
 ]
 
 import datetime
-import functools
 import json
 import pathlib
 import re
@@ -73,7 +75,7 @@ from .flows import FlowActionType, FlowJSON
 import abc
 import dataclasses
 import logging
-from typing import TYPE_CHECKING, Literal, Iterable, BinaryIO, cast, Iterator
+from typing import TYPE_CHECKING, Literal, BinaryIO, cast, Iterator
 
 from .media import Media
 from .others import Result, SuccessResult, ProductsSection, _ItemFactory
@@ -104,7 +106,7 @@ class TemplateStatus(utils.StrEnum):
         IN_APPEAL: Indicates the template is in the `appeal <https://developers.facebook.com/docs/whatsapp/message-templates/guidelines/#appeals>`_ process.
         PENDING: Indicates the template is undergoing template review.
         REINSTATED: Indicates the template is no longer flagged or disabled and can be sent in template messages again.
-        REJECTED: Indicates the template has been rejected. You can :meth:`~pywa.types.template.Template.update` the template to have it undergo template review again or `appeal <https://developers.facebook.com/docs/whatsapp/message-templates/guidelines/#appeals>`_ the rejection.
+        REJECTED: Indicates the template has been rejected. You can :meth:`~pywa.types.templates.Template.update` the template to have it undergo template review again or `appeal <https://developers.facebook.com/docs/whatsapp/message-templates/guidelines/#appeals>`_ the rejection.
         PENDING_DELETION: Indicates template has been deleted via WhatsApp Manager.
         FLAGGED: Indicates the template has received negative feedback and is at risk of being disabled.
         PAUSED: Indicates the template has been `paused <https://developers.facebook.com/docs/whatsapp/message-templates/guidelines/#template-pausing>`_.
@@ -2781,7 +2783,7 @@ class Template:
     Example::
 
 
-        from pywa.types.template import *
+        from pywa.types.templates import *
 
         my_template = Template(
             name="my_template",

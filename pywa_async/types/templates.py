@@ -1,14 +1,16 @@
+"""This module contains classes and functions related to WhatsApp message templates."""
+
 from __future__ import annotations
 
 import dataclasses
 import datetime
-from typing import TYPE_CHECKING, Iterable, cast
+from typing import TYPE_CHECKING, cast
 
 from pywa.listeners import TemplateUpdateListenerIdentifier
 from pywa.types import CallbackData
 from pywa.types.others import _ItemFactory
-from pywa.types.template import *  # noqa MUST BE IMPORTED FIRST
-from pywa.types.template import (
+from pywa.types.templates import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.templates import (
     TemplateDetails as _TemplateDetails,
     CreatedTemplate as _CreatedTemplate,
     CreatedTemplates as _CreatedTemplates,

@@ -68,7 +68,7 @@ class CallbackButton(BaseUserUpdateAsync, _CallbackButton[_CallbackDataT]):
     Attributes:
         id: The ID of the message.
         metadata: The metadata of the message (to which phone number it was sent).
-        type: The message type (:class:`MessageType.INTERACTIVE` for :class:`~pywa.types.callback.Button` presses or :class:`MessageType.BUTTON` for :class:`~pywa.types.template.QuickReplyButton` clicks).
+        type: The message type (:class:`MessageType.INTERACTIVE` for :class:`~pywa.types.callback.Button` presses or :class:`MessageType.BUTTON` for :class:`~pywa.types.templates.QuickReplyButton` clicks).
         from_user: The user who sent the message.
         timestamp: The timestamp when the message was sent (in UTC).
         reply_to_message: The message to which this callback button is a reply to.

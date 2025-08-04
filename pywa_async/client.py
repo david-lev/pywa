@@ -102,12 +102,11 @@ from .types.flows import (
     FlowCategory,
     FlowJSON,
     FlowDetails,
-    FlowValidationError,
     FlowAsset,
     CreatedFlow,
     MigrateFlowsResponse,
 )
-from .types.template import (
+from .types.templates import (
     TemplatesResult,
     TemplateDetails,
     TemplateCategory,
@@ -2165,7 +2164,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Example:
 
-            >>> from pywa.types.template import *
+            >>> from pywa.types.templates import *
             >>> wa = WhatsApp(...)
             >>> templates = await wa.upsert_authentication_template(
             ...     name='one_tap_authentication',
@@ -2235,7 +2234,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Example::
 
-            from pywa.types.template import *
+            from pywa.types.templates import *
 
             wa = WhatsApp(...)
             wa.send_template(
@@ -2248,7 +2247,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 ],
             )
 
-            from pywa.types.template import *
+            from pywa.types.templates import *
 
             t = Template(
                 name='seasonal_promotion',

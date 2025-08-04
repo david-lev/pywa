@@ -27,7 +27,7 @@ Most of the exceptions are raised when you try to do something like sending a me
 But there are also errors that are not raised, but can be returned in a message status.
 
 For example, you can sometimes try to :meth:`~pywa.client.WhatsApp.send_message` to a user that the last time you sent a message to him was less than 24 hours ago,
-if this message is not a :class:`~pywa.types.template.Template` message, you will not get an exception,
+if this message is not a :class:`~pywa.types.templates.Template` message, you will not get an exception,
 but you will get :class:`~pywa.types.message_status.MessageStatus` on :class:`~pywa.types.message_status.MessageStatusType.FAILED`
 status with .error attribute with value of :class:`~pywa.errors.ReEngagementMessage`.
 

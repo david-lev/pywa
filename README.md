@@ -230,7 +230,7 @@ def handle_flow_response(_: WhatsApp, flow: types.FlowCompletion):
 
 ```python
 from pywa import WhatsApp
-from pywa.types.template import *
+from pywa.types.templates import *
 
 wa = WhatsApp(..., business_account_id=123456)
 

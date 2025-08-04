@@ -120,7 +120,7 @@ pywa/
 │   ├── message_status.py
 │   ├── others.py
 │   ├── sent_message.py
-│   └── template.py
+│   └── templates.py
 └── utils.py
 ```
 

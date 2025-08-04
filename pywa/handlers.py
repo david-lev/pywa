@@ -340,7 +340,7 @@ class _FactoryHandler(Generic[_UpdateType], Handler[_UpdateType]):
 
 class CallbackButtonHandler(_FactoryHandler[CallbackButton]):
     """
-    Handler for :class:`~pywa.types.CallbackButton` updates (user clicks on a :class:`~pywa.types.callback.Button` or :class:`~pywa.types.template.QuickReplyButton`).
+    Handler for :class:`~pywa.types.CallbackButton` updates (user clicks on a :class:`~pywa.types.callback.Button` or :class:`~pywa.types.templates.QuickReplyButton`).
 
     - You can use the :func:`~pywa.client.WhatsApp.on_callback_button` decorator to register a handler for this type.
 
@@ -546,7 +546,7 @@ class IdentityChangeHandler(Handler[PhoneNumberChange]):
 
 class TemplateStatusUpdateHandler(Handler[TemplateStatusUpdate]):
     """
-    Handler for :class:`~pywa.types.template.TemplateStatusUpdate` updates (Template status updates, e.g. ``approved``, ``rejected`` etc.).
+    Handler for :class:`~pywa.types.templates.TemplateStatusUpdate` updates (Template status updates, e.g. ``approved``, ``rejected`` etc.).
 
     - You can use the :func:`~pywa.client.WhatsApp.on_template_status_update` decorator to register a handler for this type.
 
@@ -558,7 +558,7 @@ class TemplateStatusUpdateHandler(Handler[TemplateStatusUpdate]):
         >>> wa.add_handlers(TemplateStatusUpdateHandler(print_template_status_update))
 
     Args:
-        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.template.TemplateStatusUpdate` as positional arguments)
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.templates.TemplateStatusUpdate` as positional arguments)
         filters: The filters to apply to the handler
         priority: The priority of the handler (default: ``0``)
 
@@ -577,7 +577,7 @@ class TemplateStatusUpdateHandler(Handler[TemplateStatusUpdate]):
 
 class TemplateCategoryUpdateHandler(Handler[TemplateCategoryUpdate]):
     """
-    Handler for :class:`~pywa.types.template.TemplateCategoryUpdate` updates (Template category updates, e.g. from ``UTILITY`` to ``MARKETING``).
+    Handler for :class:`~pywa.types.templates.TemplateCategoryUpdate` updates (Template category updates, e.g. from ``UTILITY`` to ``MARKETING``).
 
     - You can use the :func:`~pywa.client.WhatsApp.on_template_category_update` decorator to register a handler for this type.
 
@@ -589,7 +589,7 @@ class TemplateCategoryUpdateHandler(Handler[TemplateCategoryUpdate]):
         >>> wa.add_handlers(TemplateCategoryUpdateHandler(print_template_category_update))
 
     Args:
-        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.template.TemplateCategoryUpdate` as positional arguments)
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.templates.TemplateCategoryUpdate` as positional arguments)
         filters: The filters to apply to the handler
         priority: The priority of the handler (default: ``0``)
 
@@ -608,7 +608,7 @@ class TemplateCategoryUpdateHandler(Handler[TemplateCategoryUpdate]):
 
 class TemplateQualityUpdateHandler(Handler[TemplateQualityUpdate]):
     """
-    Handler for :class:`~pywa.types.template.TemplateQualityUpdate` updates (Template quality updates, e.g. ``GREEN`` to ``RED``).
+    Handler for :class:`~pywa.types.templates.TemplateQualityUpdate` updates (Template quality updates, e.g. ``GREEN`` to ``RED``).
 
     - You can use the :func:`~pywa.client.WhatsApp.on_template_quality_update` decorator to register a handler for this type.
 
@@ -620,7 +620,7 @@ class TemplateQualityUpdateHandler(Handler[TemplateQualityUpdate]):
         >>> wa.add_handlers(TemplateQualityUpdateHandler(print_template_quality_update))
 
     Args:
-        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.template.TemplateQualityUpdate` as positional arguments)
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.templates.TemplateQualityUpdate` as positional arguments)
         filters: The filters to apply to the handler
         priority: The priority of the handler (default: ``0``)
     """
@@ -638,7 +638,7 @@ class TemplateQualityUpdateHandler(Handler[TemplateQualityUpdate]):
 
 class TemplateComponentsUpdateHandler(Handler[TemplateComponentsUpdate]):
     """
-    Handler for :class:`~pywa.types.template.TemplateComponentsUpdate` updates (Template components updates, e.g. when a template component is added or removed).
+    Handler for :class:`~pywa.types.templates.TemplateComponentsUpdate` updates (Template components updates, e.g. when a template component is added or removed).
 
     - You can use the :func:`~pywa.client.WhatsApp.on_template_components_update` decorator to register a handler for this type.
 
@@ -650,7 +650,7 @@ class TemplateComponentsUpdateHandler(Handler[TemplateComponentsUpdate]):
         >>> wa.add_handlers(TemplateComponentsUpdateHandler(print_template_components_update))
 
     Args:
-        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.template.TemplateComponentsUpdate` as positional arguments)
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.templates.TemplateComponentsUpdate` as positional arguments)
         filters: The filters to apply to the handler
         priority: The priority of the handler (default: ``0``)
     """
@@ -1310,7 +1310,7 @@ class _HandlerDecorators:
         | _CallbackButtonCallback
     ):
         """
-        Decorator to register a function as a callback for incoming :class:`~pywa.types.CallbackButton` (when a user clicks on a :class:`~pywa.types.callback.Button` or :class:`~pywa.types.template.QuickReplyButton`).
+        Decorator to register a function as a callback for incoming :class:`~pywa.types.CallbackButton` (when a user clicks on a :class:`~pywa.types.callback.Button` or :class:`~pywa.types.templates.QuickReplyButton`).
 
         - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.CallbackButtonHandler`.
 
@@ -1603,7 +1603,7 @@ class _HandlerDecorators:
         | _TemplateStatusUpdateCallback
     ):
         """
-        Decorator to register a function as a callback for :class:`~pywa.types.template.TemplateStatusUpdate` updates (Template status changed, e.g. ``approved``, ``rejected``, etc.).
+        Decorator to register a function as a callback for :class:`~pywa.types.templates.TemplateStatusUpdate` updates (Template status changed, e.g. ``approved``, ``rejected``, etc.).
 
         - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.TemplateStatusUpdateHandler`.
 
@@ -1652,7 +1652,7 @@ class _HandlerDecorators:
         | _TemplateCategoryUpdateCallback
     ):
         """
-        Decorator to register a function as a callback for :class:`~pywa.types.TemplateCategoryUpdate` updates (Template category changed, e.g. from ``UTILITY`` to ``MARKETING``).
+        Decorator to register a function as a callback for :class:`~pywa.types.templatesCategoryUpdate` updates (Template category changed, e.g. from ``UTILITY`` to ``MARKETING``).
 
         - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.TemplateCategoryUpdateHandler`.
 
@@ -1701,7 +1701,7 @@ class _HandlerDecorators:
         | _TemplateQualityUpdateCallback
     ):
         """
-        Decorator to register a function as a callback for :class:`~pywa.types.template.TemplateQualityUpdate` updates (Template quality changed).
+        Decorator to register a function as a callback for :class:`~pywa.types.templates.TemplateQualityUpdate` updates (Template quality changed).
 
         - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.TemplateQualityUpdateHandler`.
 
@@ -1750,7 +1750,7 @@ class _HandlerDecorators:
         | _TemplateComponentsUpdateCallback
     ):
         """
-        Decorator to register a function as a callback for :class:`pywa.types.template.TemplateComponentsUpdate` updates (Template components changed).
+        Decorator to register a function as a callback for :class:`pywa.types.templates.TemplateComponentsUpdate` updates (Template components changed).
 
         - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.TemplateComponentsUpdateHandler`.
 
@@ -2037,7 +2037,7 @@ class _HandlerDecorators:
         | _UserMarketingPreferencesCallback
     ):
         """
-        Decorator to register a function as a callback for :class:`~pywa.types.user_preferences.UserMarketingPreferences` updates (User wants to stop or resume receiving marketing :class:`~pywa.types.template.Template` 's).
+        Decorator to register a function as a callback for :class:`~pywa.types.user_preferences.UserMarketingPreferences` updates (User wants to stop or resume receiving marketing :class:`~pywa.types.templates.Template` 's).
 
         - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.UserMarketingPreferencesHandler`.
 

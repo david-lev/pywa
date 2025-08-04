@@ -121,7 +121,7 @@ from .types.others import (
     Order,
     SuccessResult,
 )
-from .types.template import (
+from .types.templates import (
     TemplatesResult,
     TemplateDetails,
     TemplateCategory,
@@ -2408,7 +2408,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> from pywa.types.template import *
+            >>> from pywa.types.templates import *
             >>> wa = WhatsApp(...)
             >>> templates = wa.upsert_authentication_template(
             ...     name='one_tap_authentication',
@@ -2478,7 +2478,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example::
 
-            from pywa.types.template import *
+            from pywa.types.templates import *
 
             wa = WhatsApp(...)
             wa.send_template(
@@ -2491,7 +2491,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 ],
             )
 
-            from pywa.types.template import *
+            from pywa.types.templates import *
 
             t = Template(
                 name='seasonal_promotion',
