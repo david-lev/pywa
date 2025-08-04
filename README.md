@@ -1,24 +1,38 @@
 [//]: # (Logo design by @nyatitilkesh https://github.com/nyatitilkesh | Telegram: @nyatitilkesh)
-<img alt="PyWa Logo" height="250" src="https://pywa.readthedocs.io/en/latest/_static/pywa-logo.png" width="250"/>
+<p align="center">
+  <a href="https://github.com/david-lev/pywa">
+    <img src="https://pywa.readthedocs.io/en/latest/_static/pywa-logo.png" width="200" height="200" alt="PyWa Logo"/>
+  </a>
+</p>
 
-________________________
+<p align="center">
+  <strong>🚀 Build WhatsApp Bots in Python • Fast. Effortless. Powerful.</strong>
+</p>
 
-# [PyWa](https://github.com/david-lev/pywa) • Build WhatsApp Bots in Python • Fast, Effortless, Powerful 🚀
+<p align="center">
+  <small><em>🤖 Hey there! I am using PyWa.</em></small>
+</p>
 
-[![PyPi Downloads](https://img.shields.io/pypi/dm/pywa)](https://pypi.org/project/pywa/)
-[![PyPI Version](https://badge.fury.io/py/pywa.svg)](https://pypi.org/project/pywa/)
-[![Tests](https://img.shields.io/github/actions/workflow/status/david-lev/pywa/tests.yml?label=Tests)](https://github.com/david-lev/pywa/actions/workflows/tests.yml)
-[![Coverage](https://img.shields.io/codecov/c/github/david-lev/pywa)](https://codecov.io/gh/david-lev/pywa)
-[![Docs](https://readthedocs.org/projects/pywa/badge/?version=latest&)](https://pywa.readthedocs.io)
-[![License](https://img.shields.io/github/license/david-lev/pywa)](https://github.com/david-lev/pywa/blob/master/LICENSE)
-[![CodeFactor](https://www.codefactor.io/repository/github/david-lev/pywa/badge/master)](https://www.codefactor.io/repository/github/david-lev/pywa/overview/master)
-[![Telegram](https://badges.aleen42.com/src/telegram.svg)](https://t.me/py_wa)
 
-________________________
+<p align="center">
+  <a href="https://pypi.org/project/pywa/"><img src="https://img.shields.io/pypi/v/pywa.svg" /></a>
+  <a href="https://pypi.org/project/pywa/"><img src="https://img.shields.io/pypi/dm/pywa" /></a>
+  <a href="https://github.com/david-lev/pywa/actions/workflows/tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/david-lev/pywa/tests.yml?label=Tests" /></a>
+  <a href="https://codecov.io/gh/david-lev/pywa"><img src="https://img.shields.io/codecov/c/github/david-lev/pywa" /></a>
+  <a href="https://pywa.readthedocs.io"><img src="https://readthedocs.org/projects/pywa/badge/?version=latest&" /></a>
+  <a href="https://github.com/david-lev/pywa/blob/master/LICENSE"><img src="https://img.shields.io/github/license/david-lev/pywa" /></a>
+  <a href="https://www.codefactor.io/repository/github/david-lev/pywa/overview/master"><img src="https://www.codefactor.io/repository/github/david-lev/pywa/badge/master" /></a>
+  <a href="https://t.me/py_wa"><img src="https://badges.aleen42.com/src/telegram.svg" /></a>
+</p>
 
-**💫 PyWa is the all-in-one Python framework for the WhatsApp Cloud API**
+---
 
-**Send rich messages with media and interactive buttons, Listen to user events in real time, Build and send flows, Create and send template messages, Enjoy blazing-fast async support and seamless integration with FastAPI, Flask, and more. Fully typed, documented, and production-ready. Build powerful WhatsApp bots in minutes.**
+**💫 PyWa is an all-in-one Python framework for the WhatsApp Cloud API.**
+
+Send **rich media messages**, use **interactive buttons**, listen to **real-time events**, build and send **flows**, design and send **template messages**, and enjoy **blazing-fast async support** with full integration for **FastAPI, Flask**, and more.
+Fully **typed**, **documented**, and **production-ready** — build powerful bots in minutes.
+
+---
 
 📄 **Quick Documentation Index**
 --------------------------------
