@@ -65,7 +65,10 @@ def test_listener_timeout_sync(wa_sync: WhatsAppSync):
     identifier = DummyUpdate().listener_identifier
     with pytest.raises(ListenerTimeout):
         wa_sync.listen(
-            to=identifier, filters=filters.true, cancelers=filters.false, timeout=0.1
+            to=identifier,
+            filters=filters.true,
+            cancelers=filters.false,
+            timeout=0.000001,
         )
 
 
@@ -74,7 +77,10 @@ async def test_listener_timeout_async(wa_async: WhatsAppAsync):
     identifier = DummyUpdate().listener_identifier
     with pytest.raises(ListenerTimeout):
         await wa_async.listen(
-            to=identifier, filters=filters.true, cancelers=filters.false, timeout=0.1
+            to=identifier,
+            filters=filters.true,
+            cancelers=filters.false,
+            timeout=0.000001,
         )
 
 
@@ -89,7 +95,7 @@ def test_listener_canceled_sync(wa_sync: WhatsAppSync):
     threading.Thread(target=emit_update).start()
     with pytest.raises(ListenerCanceled):
         wa_sync.listen(
-            to=identifier, filters=filters.false, cancelers=filters.true, timeout=0.2
+            to=identifier, filters=filters.false, cancelers=filters.true, timeout=0.3
         )
 
 
@@ -105,7 +111,7 @@ async def test_listener_canceled_async(wa_async: WhatsAppAsync):
     asyncio.create_task(emit_update())
     with pytest.raises(ListenerCanceled):
         await wa_async.listen(
-            to=identifier, filters=filters.false, cancelers=filters.true, timeout=0.2
+            to=identifier, filters=filters.false, cancelers=filters.true, timeout=0.3
         )
 
 
@@ -119,7 +125,7 @@ def test_listener_stopped_sync(wa_sync: WhatsAppSync):
     threading.Thread(target=stop_listener).start()
     with pytest.raises(ListenerStopped) as exc_info:
         wa_sync.listen(
-            to=identifier, filters=filters.true, cancelers=filters.false, timeout=1
+            to=identifier, filters=filters.true, cancelers=filters.false, timeout=0.3
         )
     assert exc_info.value.reason == "manual"
 
@@ -135,6 +141,6 @@ async def test_listener_stopped_async(wa_async: WhatsAppAsync):
     asyncio.create_task(stop_listener())
     with pytest.raises(ListenerStopped) as exc_info:
         await wa_async.listen(
-            to=identifier, filters=filters.true, cancelers=filters.false, timeout=1
+            to=identifier, filters=filters.true, cancelers=filters.false, timeout=0.3
         )
     assert exc_info.value.reason == "manual"
