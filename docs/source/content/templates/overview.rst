@@ -49,7 +49,7 @@ In the example below, we create a simple Order Confirmation template with a head
                     ),
                 ]
             ),
-            FooterText(text="⚡ Powered by Pywa"),
+            FooterText(text="Powered by Pywa"),
         ],
     )
 
@@ -218,7 +218,7 @@ The best practice is to use the Template object you created earlier as a referen
                     ),
                 ]
             ),
-            FooterText(text="⚡ Powered by Pywa"),
+            FooterText(text="Powered by Pywa"),
         ],
     )
 

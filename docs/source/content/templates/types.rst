@@ -109,3 +109,6 @@ Template Types
 .. autoclass:: MigrateTemplatesResult()
 .. autoclass:: MigratedTemplate()
 .. autoclass:: MigratedTemplateError()
+
+.. autoclass:: DegreesOfFreedomSpec()
+.. autoclass:: CreativeFeaturesSpec()

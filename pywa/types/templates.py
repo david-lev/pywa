@@ -63,6 +63,8 @@ __all__ = [
     "LibraryTemplate",
     "LibraryTemplateBodyInputs",
     "LibraryTemplateButtonInputs",
+    "DegreesOfFreedomSpec",
+    "CreativeFeaturesSpec",
 ]
 
 import datetime
@@ -730,12 +732,102 @@ class TemplateLanguage(utils.StrEnum):
 
 
 class ParamFormat(utils.StrEnum):
-    """The type of parameter formatting the HEADER and BODY components of the template will use."""
+    """
+    The type of parameter formatting the HEADER and BODY components of the template will use.
+
+    Attributes:
+        POSITIONAL: The component uses positional parameters, e.g. ``{{1}}``, ``{{2}}``, etc.
+        NAMED: The component uses named parameters, e.g. ``{{param_name}}``.
+    """
 
     POSITIONAL = "POSITIONAL"
     NAMED = "NAMED"
 
     UNKNOWN = "UNKNOWN"
+
+
+class CreativeFeaturesSpec:
+    """
+    Automatic Creative Optimizations enhance the visual appeal and engagement of Marketing template messages.
+
+    This capability tests minor variations of your existing image header with different crop orientations or color filters, and automatically selects the variant which is getting the highest click-through rate over time with no input needed from you. These creative enhancements are designed to help improve performance and visual appeal of marketing messages, while maintaining the fidelity of the message. These optimizations are similar to `Advantage+ creative <https://www.facebook.com/business/help/297506218282224?id=649869995454285>`_.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#automatic-creative-optimizations>`_.
+
+    .. note::
+
+        Automatic Creative Optimizations are currently only available to businesses participating in early access. It will be made available to all businesses on a future date.
+
+    Attributes:
+        image_brightness_and_contrast: Whether to apply brightness and contrast adjustments to images.
+        image_touchups: Whether to apply touch-ups to images.
+        add_text_overlay: Whether to add text overlays to images.
+        image_animation: Whether to apply animations to images.
+    """
+
+    image_brightness_and_contrast: bool
+    image_touchups: bool
+    add_text_overlay: bool
+    image_animation: bool
+
+    def __init__(
+        self,
+        image_brightness_and_contrast: bool,
+        image_touchups: bool,
+        add_text_overlay: bool,
+        image_animation: bool,
+    ):
+        """
+        Initializes the creative features specification.
+
+        Args:
+            image_brightness_and_contrast: Whether to apply brightness and contrast adjustments to images.
+            image_touchups: Whether to apply touch-ups to images.
+            add_text_overlay: Whether to add text overlays to images.
+            image_animation: Whether to apply animations to images.
+        """
+        self.image_brightness_and_contrast = image_brightness_and_contrast
+        self.image_touchups = image_touchups
+        self.add_text_overlay = add_text_overlay
+        self.image_animation = image_animation
+
+    def to_dict(self) -> dict:
+        return {
+            "image_brightness_and_contrast": {
+                "enroll_status": "OPT_IN"
+                if self.image_brightness_and_contrast
+                else "OPT_OUT"
+            },
+            "image_touchups": {
+                "enroll_status": "OPT_IN" if self.image_touchups else "OPT_OUT"
+            },
+            "add_text_overlay": {
+                "enroll_status": "OPT_IN" if self.add_text_overlay else "OPT_OUT"
+            },
+            "image_animation": {
+                "enroll_status": "OPT_IN" if self.image_animation else "OPT_OUT"
+            },
+        }
+
+    def __repr__(self) -> str:
+        return (
+            f"CreativeFeaturesSpec(image_brightness_and_contrast={self.image_brightness_and_contrast}, "
+            f"image_touchups={self.image_touchups}, "
+            f"add_text_overlay={self.add_text_overlay}, "
+            f"image_animation={self.image_animation})"
+        )
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class DegreesOfFreedomSpec:
+    """
+    Represents the degrees of freedom specification for a template.
+
+    Attributes:
+        creative_features_spec: The creative features specification for the template.
+    """
+
+    creative_features_spec: CreativeFeaturesSpec
 
 
 class TemplateBaseComponent(abc.ABC):
@@ -2887,6 +2979,7 @@ class Template:
     components: list[TemplateBaseComponent | dict]
     parameter_format: ParamFormat | None = None
     message_send_ttl_seconds: int | None = None
+    degrees_of_freedom_spec: DegreesOfFreedomSpec | None = None
 
     def to_json(self) -> str:
         """
