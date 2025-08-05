@@ -188,7 +188,7 @@ The best practice is to use the Template object you created earlier as a referen
 .. code-block:: python
     :caption: send_template_with_object.py
     :linenos:
-    :emphasize-lines: 11, 19, 22, 40-42
+    :emphasize-lines: 11, 19, 22, 37-38, 40-42
 
     from pywa import WhatsApp
     from pywa.types.templates import *
@@ -273,6 +273,7 @@ When creating templates that include media, such as images, videos, or documents
 .. code-block:: python
     :caption: media_template.py
     :linenos:
+    :emphasize-lines: 8
 
     from pywa.types.templates import *
 
@@ -297,6 +298,7 @@ The ``example`` parameter can be a URL, file path, :class:`~pywa.types.media.Med
     .. code-block:: python
         :caption: media_template_with_cache.py
         :linenos:
+        :emphasize-lines: 8, 16
 
         from pywa import WhatsApp
         from pywa.types.media import Media
@@ -330,6 +332,7 @@ When sending a media template, you can use the same approach as before, but now 
 .. code-block:: python
     :caption: send_media_template.py
     :linenos:
+    :emphasize-lines: 6, 17
 
     media_template = Template(
         name="media_template",
@@ -358,7 +361,7 @@ When sending a media template, you can use the same approach as before, but now 
     .. code-block:: python
         :caption: send_media_template_with_cache.py
         :linenos:
-        :emphasize-lines: 11, 24
+        :emphasize-lines: 11, 17, 24
 
         from pywa import WhatsApp
         from pywa.types.templates import *
@@ -397,6 +400,7 @@ Creating an authentication template is similar to creating a regular template, b
 .. code-block:: python
     :caption: authentication_template.py
     :linenos:
+    :emphasize-lines: 6-15
 
     from pywa.types.templates import *
 
@@ -472,6 +476,7 @@ When sending an authentication template, you can use the same approach as before
 .. code-block:: python
     :caption: send_authentication_template.py
     :linenos:
+    :emphasize-lines: 11-12
 
     from pywa import WhatsApp
     from pywa.types.templates import *
