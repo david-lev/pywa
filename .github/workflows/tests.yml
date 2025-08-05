@@ -26,10 +26,10 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Run tests
-        run: pytest
-#        run: pytest --cov --cov-report=xml
-#
-#      - name: Upload results to Codecov
-#        uses: codecov/codecov-action@v5
-#        with:
-#          token: ${{ secrets.CODECOV_TOKEN }}
+#        run: pytest
+        run: pytest --cov --cov-report=xml
+
+      - name: Upload results to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}

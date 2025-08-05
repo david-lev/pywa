@@ -1000,7 +1000,7 @@ class GraphAPI:
     def create_template(
         self,
         waba_id: str,
-        template: dict,
+        template: str,
     ) -> dict:
         """
         Create a message template.
@@ -1022,7 +1022,8 @@ class GraphAPI:
         return self._make_request(
             method="POST",
             endpoint=f"/{waba_id}/message_templates",
-            json=template,
+            data=template,
+            headers={"Content-Type": "application/json"},
         )
 
     def get_template(
@@ -1092,7 +1093,7 @@ class GraphAPI:
     def update_template(
         self,
         template_id: str,
-        template: dict,
+        template: str,
     ) -> dict[str, bool]:
         """
         Update a message template.
@@ -1109,7 +1110,8 @@ class GraphAPI:
         return self._make_request(
             method="POST",
             endpoint=f"/{template_id}",
-            json=template,
+            data=template,
+            headers={"Content-Type": "application/json"},
         )
 
     def delete_template(
@@ -1219,7 +1221,7 @@ class GraphAPI:
     def upsert_message_templates(
         self,
         waba_id: str,
-        template: dict,
+        template: str,
     ) -> dict:
         """
         Bulk update or create authentication templates in multiple languages that include or exclude the optional security and expiration warnings.
