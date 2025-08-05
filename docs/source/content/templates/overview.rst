@@ -105,7 +105,7 @@ Template Components
        :class:`LimitedTimeOffer`
 
 
-Create Template
+Creating Template
 -----------------
 
 After defining your template, you can create it using the :meth:`~pywa.client.WhatsApp.create_template` method:

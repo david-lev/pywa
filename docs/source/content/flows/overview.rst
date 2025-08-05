@@ -720,9 +720,9 @@ what screen to open next or complete the flow.
 
         @wa.on_flow_request(endpoint="/flow")
         def on_support_request(_: WhatsApp, req: FlowRequest) -> FlowResponse:
-            media_id, filename, decrypted_data = req.decrypt_media(key="driver_license", index=0)
-            with open(f"media/{filename}", "wb") as f:
-                f.write(decrypted_data)
+            decrypted_data = req.decrypt_media(key="driver_license", index=0)
+            with open(f"media/{decrypted_data.filename}", "wb") as f:
+                f.write(decrypted_data.data)
             ...
 
 Getting Flow Completion message

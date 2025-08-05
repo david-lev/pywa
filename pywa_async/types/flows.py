@@ -132,9 +132,9 @@ class FlowRequest(_FlowRequest):
             >>> wa = WhatsApp(...)
             >>> @wa.on_flow_request("/my-flow-endpoint")
             ... async def my_flow_endpoint(_: WhatsApp, req: types.FlowRequest):
-            ...     media_id, filename, decrypted_data = await req.decrypt_media(key="driver_license", index=0)
-            ...     with open(filename, "wb") as file:
-            ...         file.write(decrypted_data)
+            ...     decrypted_data = await req.decrypt_media(key="driver_license", index=0)
+            ...     with open(decrypted_data.filename, "wb") as file:
+            ...         file.write(decrypted_data.data)
             ...     return req.respond(...)
 
         Args:

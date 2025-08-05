@@ -1019,7 +1019,7 @@ class ConversationalAutomation:
 
     Attributes:
         id: The ID of the WhatsApp Business Phone Number.
-        chat_opened_enabled: Whether the welcome message is enabled (if so, you can listen to the :class:`ChatOpened` event).
+        chat_opened_enabled: Whether the welcome message is enabled (if so, you can listen to the :class:`~pywa.types.chat_opened.ChatOpened` event).
         ice_breakers: See `Ice Breakers <https://developers.facebook.com/docs/whatsapp/cloud-api/phone-numbers/conversational-components/#ice-breakers>`_.
         commands: The `commands <https://developers.facebook.com/docs/whatsapp/cloud-api/phone-numbers/conversational-components/#commands>`_.
     """

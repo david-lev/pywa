@@ -21,6 +21,10 @@ Others
 
 .. autoclass:: WhatsAppBusinessAccount()
 
+.. autoclass:: BusinessVerificationStatus()
+.. autoclass:: MarketingMessagesLiteAPIStatus()
+.. autoclass:: MarketingMessagesOnboardingStatus()
+
 .. autoclass:: BusinessProfile()
 
 .. autoclass:: BusinessPhoneNumber()
@@ -62,12 +66,6 @@ Others
 .. autoclass:: StopHandling()
 
 .. autoclass:: ContinueHandling()
-
-.. autoclass:: ListenerTimeout()
-
-.. autoclass:: ListenerCanceled()
-
-.. autoclass:: ListenerStopped()
 
 .. currentmodule:: pywa.utils
 

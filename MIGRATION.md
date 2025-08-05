@@ -35,6 +35,7 @@
 ### Breaking changes
 
 - [templates] The templates system has been completely redesigned. The old templates are no longer supported, and you need to update your code to use the new templates system (create and send)
+- [listeners] Listeners can now be used to handle any update, not just user updates. This means that you can now use listeners to wait for template to be approved and to other account related upadtes. If you are using `wa.listen` directly (and not using one of the shortcuts like `wait_for_reply`, `wait_for_click` etc.), you will need to update your code to use the new listeners system.
 - [server] The server now continues to handle updates even if the listener does not use the update. This means that if a listener does not filter or cancel the update, the server will pass it to the handlers (unless you call `update.stop_handling()` inside the listener filters/cancelers).
 - [client] The `upload_media` method now returns a `Media` object instead of a string (media ID). The `Media` object contains the media ID and allows you to perform actions on the media, such as downloading or deleting it. If you using the media ID directly to send media - you don't need to change anything, just use the `Media` object instead of the string. if you stored the media ID in a database or somewhere else, you will need to update your code to use the `Media.id` attribute instead of the string media ID.
 - [client] The `send_message`, `send_image`, and other `send_...` methods now require keyword-only arguments for context. This change improves readability and consistency of the API. This context arguments are `reply_to_message_id`, `sender` etc. Most of users don't need to change anything, but if you are using positional arguments for these context args (they are located at the end of the method signature, so the chance for breaking is low), you will need to update your code to use keyword arguments.
@@ -138,7 +139,57 @@ wa.send_template(
 )
 ```
 
-2. If you are using the `upload_media` method, you need to update your code to use the `Media` object instead of a string (media ID):
+2. If you are using the listeners system, you need to update your code to use the new listeners system. You can find the documentation for the new listeners system [here](https://pywa.readthedocs.io/en/latest/content/listeners/overview.html).
+
+```python
+########################## OLD CODE ##########################
+
+from pywa import WhatsApp, types, filters
+
+wa = WhatsApp(...)
+
+@wa.on_message(filters.text)
+def on_first_message(_: WhatsApp, msg: types.Message):
+    age = msg.reply(f"Hi {msg.from_user.name}! What's your age?").wait_for_reply(
+        # In the old code, if the update is not filtered, it will NOT be passed to the handlers (another_text_handler)
+        filters=filters.text & filters.new(lambda _, m: m.text.isdigit())
+    )
+    msg.reply(f"You are {age.text} years old!")
+
+
+@wa.on_message(filters.text)
+def another_text_handler(_: WhatsApp, msg: types.Message):
+    update = wa.listen(to="123456789", ...) # listen for updates from the user
+    ...
+
+########################## NEW CODE ##########################
+
+from pywa import WhatsApp, types, filters, listeners
+
+wa = WhatsApp(...)
+
+def filter_age(_: WhatsApp, msg: types.Message) -> bool:
+    if msg.text.isdigit():
+      return True # the update is filtered
+    msg.reply("Please enter a valid age (number).")
+    msg.stop_handling() # stop handling this update (will not be passed to the handlers)
+
+
+@wa.on_message(filters.text)
+def on_first_message(_: WhatsApp, msg: types.Message):
+    age = msg.reply(f"Hi {msg.from_user.name}! What's your age?").wait_for_reply(
+        # In the new code, if the update is not filtered, it will be passed to the handlers (another_text_handler), so we need to stop handling it if the age is not valid
+        filters=filters.text & filters.new(filter_age)
+    )
+    msg.reply(f"You are {age.text} years old!")
+
+@wa.on_message(filters.text)
+def another_text_handler(_: WhatsApp, msg: types.Message):
+    update = wa.listen(to=listeners.UserUpdateListenerIdentifier(sender="123456789", recipient="your_phone_id"), ...)  # listen for updates from the user
+    ...
+```
+
+3. If you are using the `upload_media` method, you need to update your code to use the `Media` object instead of a string (media ID):
 
 ```python
 ########################## OLD CODE ##########################
@@ -167,7 +218,7 @@ cursor.execute("CREATE TABLE IF NOT EXISTS media (id INTEGER PRIMARY KEY AUTOINC
 cursor.execute("INSERT INTO media (media_id) VALUES (?)", (media.id,))
 ```
 
-3. If you are using the `send_message`, `send_image`, or other `send_...` methods, you need to update your code to use keyword-only arguments for context:
+4. If you are using the `send_message`, `send_image`, or other `send_...` methods, you need to update your code to use keyword-only arguments for context:
 
 ```python
 ########################## OLD CODE ##########################
@@ -205,7 +256,7 @@ wa.send_message(
 )
 ```
 
-4. If you are using the `SuccessResult` object, you need to update your code to use the `SuccessResult.success` attribute instead of a boolean value:
+5. If you are using the `SuccessResult` object, you need to update your code to use the `SuccessResult.success` attribute instead of a boolean value:
 
 ```python
 ########################## OLD CODE ##########################
@@ -233,7 +284,7 @@ cursor.execute("CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTO
 cursor.execute("INSERT INTO messages (message_id, is_read) VALUES (?, ?)", ("msg_id", result.success))
 ```
 
-5. If you are using the `system` messages, you need to update your code to start listening to the `PhoneNumberChange` and `IdentityChange` updates instead:
+6. If you are using the `system` messages, you need to update your code to start listening to the `PhoneNumberChange` and `IdentityChange` updates instead:
 
 ```python
 ########################## OLD CODE ##########################
@@ -266,7 +317,7 @@ def on_identity_change(_: WhatsApp, update: types.IdentityChange):
     repository.log_out_user(wa_id=update.sender)  # secure the user
 ```
 
-6. If you are using the `FlowRequestDecryptedMedia` object, you need to update your code to use the `FlowRequestDecryptedMedia` object instead of a tuple:
+7. If you are using the `FlowRequestDecryptedMedia` object, you need to update your code to use the `FlowRequestDecryptedMedia` object instead of a tuple:
 
 ```python
 ########################## OLD CODE ##########################

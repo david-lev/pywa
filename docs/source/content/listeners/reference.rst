@@ -20,3 +20,11 @@ Listeners reference
 .. currentmodule:: pywa.types.templates
 
 .. automethod:: CreatedTemplate.wait_until_approved
+
+.. currentmodule:: pywa.listeners
+
+.. autoclass:: ListenerTimeout()
+
+.. autoclass:: ListenerCanceled()
+
+.. autoclass:: ListenerStopped()
