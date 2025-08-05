@@ -488,5 +488,74 @@ When sending an authentication template, you can use the same approach as before
         ],
     )
 
+
+Library Templates
+-------------------
+
+PyWa also provides an easy way to create templates from the Template Library. The library contains a collection of pre-defined templates that you can use to quickly create and send messages without having to define them from scratch.
+
+From `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-message-templates/template-library>`_:
+
+    Template Library makes it faster and easier for businesses to create utility templates for common use cases, like payment reminders, delivery updates — and authentication templates for common identity verification use cases.
+
+    These pre-written templates have already been categorized as utility or authentication. Library templates contain fixed content that cannot be edited and parameters you can adapt for business or user-specific information.
+
+    You can browse and create templates using Template Library in WhatsApp Manager, or programmatically via the API.
+
+To create a template from the library, you need to get the template library name and pass it to the :meth:`~pywa.client.WhatsApp.create_template` method:
+
+.. code-block:: python
+    :caption: create_template_from_library.py
+    :linenos:
+
+    from pywa import WhatsApp
+
+    wa = WhatsApp(business_account_id=..., token=...)
+
+    # Define the template
+    order_update = LibraryTemplate(
+        name="order_update",
+        library_template_name="order_update_no_cta_1",
+        category=TemplateCategory.UTILITY,
+        language=TemplateLanguage.ENGLISH_US,
+    )
+
+    # Create the template
+    wa.create_template(order_update)
+    # CreatedTemplate(id='...', category=TemplateCategory.UTILITY, status=TemplateStatus.PENDING)
+
+
+If the library template requires parameters, you need to provide them when creating the template. The parameters should match the ones defined in the library template:
+
+.. code-block:: python
+    :caption: create_template_from_library_with_params.py
+    :linenos:
+
+    from pywa import WhatsApp
+    from pywa.types.templates import *
+
+    wa = WhatsApp(business_account_id=..., token=...)
+
+    # Define the template with parameters
+    order_update = LibraryTemplate(
+        name="order_update",
+        library_template_name="order_update_1",
+        category=TemplateCategory.UTILITY,
+        language=TemplateLanguage.ENGLISH_US,
+        library_template_button_inputs=[
+            LibraryTemplateButtonInputs(
+                type=ComponentType.URL,
+                url={
+                    "base_url": "https://www.mywebsite.com/order/{{1}}",
+                    "url_suffix_example": "https://www.mywebsite.com/order/12345",
+                },
+            )
+        ]
+    )
+
+    # Create the template
+    wa.create_template(order_update)
+    # CreatedTemplate(id='...', category=TemplateCategory.UTILITY, status=TemplateStatus.PENDING)
+
 .. toctree::
     types
