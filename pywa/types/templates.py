@@ -3284,6 +3284,8 @@ class TemplateDetails(utils.APIObject):
         to: str | int,
         params: list[TemplateBaseComponent.Params],
         *,
+        use_mm_lite_api: bool = False,
+        message_activity_sharing: bool | None = None,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
         sender: str | int | None = None,
@@ -3294,6 +3296,8 @@ class TemplateDetails(utils.APIObject):
         Args:
             to: The phone ID of the WhatsApp user.
             params: The parameters to fill in the template.
+            use_mm_lite_api: Whether to use `Marketing Messages Lite API <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api>`_ (optional, default: False).
+            message_activity_sharing: Whether to share message activities (e.g. message read) for that specific marketing message to Meta to help optimize marketing messages (optional, only if ``use_mm_lite_api`` is True).
             reply_to_message_id: The ID of the message to reply to (optional).
             tracker: A callback data to track the message (optional, can be a string or a :class:`CallbackData` object).
             sender: The phone ID to send the template from (optional, if not provided, the client's phone ID will be used).
@@ -3303,6 +3307,8 @@ class TemplateDetails(utils.APIObject):
             name=self.name,
             language=self.language,
             params=params,
+            use_mm_lite_api=use_mm_lite_api,
+            message_activity_sharing=message_activity_sharing,
             reply_to_message_id=reply_to_message_id,
             tracker=tracker,
             sender=sender,

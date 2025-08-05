@@ -271,6 +271,7 @@ class FlowDetails(_FlowDetails):
 
     async def update_metadata(
         self,
+        *,
         name: str | None = None,
         categories: Iterable[FlowCategory | str] | None = None,
         endpoint_uri: str | None = None,

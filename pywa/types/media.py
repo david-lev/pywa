@@ -37,6 +37,7 @@ class Media:
 
     def download(
         self,
+        *,
         path: str | None = None,
         filename: str | None = None,
         in_memory: bool = False,

@@ -1555,6 +1555,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
     async def download_media(
         self,
+        *,
         url: str,
         path: str | pathlib.Path | None = None,
         filename: str | None = None,

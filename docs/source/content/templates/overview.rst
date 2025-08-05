@@ -63,6 +63,48 @@ The template includes a header with text, a body with dynamic parameters, button
 
     This is how the template will look in WhatsApp once sent.
 
+
+Template Components
+--------------------
+
+.. list-table::
+   :widths: 10 60
+   :header-rows: 1
+
+   * - Category
+     - Types
+   * - Headers
+     - :class:`HeaderText`,
+       :class:`HeaderImage`,
+       :class:`HeaderVideo`,
+       :class:`HeaderDocument`,
+       :class:`HeaderLocation`,
+       :class:`HeaderProduct`
+   * - Bodies
+     - :class:`BodyText`,
+       :class:`AuthenticationBody`
+   * - Footers
+     - :class:`FooterText`,
+       :class:`AuthenticationFooter`
+   * - Buttons
+     - :class:`Buttons`,
+       :class:`QuickReplyButton`,
+       :class:`URLButton`,
+       :class:`CopyCodeButton`,
+       :class:`CatalogButton`,
+       :class:`FlowButton`,
+       :class:`CallPermissionRequestButton`,
+       :class:`VoiceCallButton`,
+       :class:`MPMButton`,
+       :class:`SPMButton`,
+       :class:`OneTapOTPButton`,
+       :class:`ZeroTapOTPButton`,
+       :class:`CopyCodeOTPButton`
+   * - Others
+     - :class:`Carousel`,
+       :class:`LimitedTimeOffer`
+
+
 Create Template
 -----------------
 
@@ -115,47 +157,6 @@ Or you can handle the template status using the :meth:`~pywa.client.WhatsApp.on_
             print(f"Template {update.template_id} approved!")
         elif update.new_status == TemplateStatus.REJECTED:
             print(f"Template {update.template_id} rejected: {update.reason}")
-
-
-Template Components
---------------------
-
-.. list-table::
-   :widths: 10 60
-   :header-rows: 1
-
-   * - Category
-     - Types
-   * - Headers
-     - :class:`HeaderText`,
-       :class:`HeaderImage`,
-       :class:`HeaderVideo`,
-       :class:`HeaderDocument`,
-       :class:`HeaderLocation`,
-       :class:`HeaderProduct`
-   * - Bodies
-     - :class:`BodyText`,
-       :class:`AuthenticationBody`
-   * - Footers
-     - :class:`FooterText`,
-       :class:`AuthenticationFooter`
-   * - Buttons
-     - :class:`Buttons`,
-       :class:`QuickReplyButton`,
-       :class:`URLButton`,
-       :class:`CopyCodeButton`,
-       :class:`CatalogButton`,
-       :class:`FlowButton`,
-       :class:`CallPermissionRequestButton`,
-       :class:`VoiceCallButton`,
-       :class:`MPMButton`,
-       :class:`SPMButton`,
-       :class:`OneTapOTPButton`,
-       :class:`ZeroTapOTPButton`,
-       :class:`CopyCodeOTPButton`
-   * - Others
-     - :class:`Carousel`,
-       :class:`LimitedTimeOffer`
 
 
 Sending Template
@@ -385,6 +386,107 @@ When sending a media template, you can use the same approach as before, but now 
                 params=[hi_param],  # Reuse the same header image parameter
             )
 
+
+Authentication Templates
+----------------------------
+
+Authentication templates are a special type of template used for sending authentication codes to users. If you need to send OTPs (One-Time Passwords) to users so they can verify their identity or complete a transaction in another app, you can use authentication templates.
+
+Creating an authentication template is similar to creating a regular template, but it includes specific components for authentication, such as the :class:`AuthenticationBody` and :class:`AuthenticationFooter`.
+
+.. code-block:: python
+    :caption: authentication_template.py
+    :linenos:
+
+    from pywa.types.templates import *
+
+    auth_template = Template(
+        name="auth_code",
+        language=TemplateLanguage.ENGLISH_US,
+        category=TemplateCategory.AUTHENTICATION,
+        components=[
+            AuthenticationBody(add_security_recommendation=True),
+            AuthenticationFooter(code_expiration_minutes=5),
+            Buttons(
+                buttons=[
+                    # An OTP Button
+                ],
+            ),
+        ],
+    )
+
+The OTP button can be one of the following types:
+
+- :class:`OneTapOTPButton`: A button that allows the user to tap and automatically fill in the OTP code in the app:
+
+    .. code-block:: python
+        :caption: one_tap_otp_button.py
+        :linenos:
+
+        from pywa.types.templates import *
+
+        otp_button = OneTapOTPButton(
+            text="Autofill Code",
+            autofill_text="Autofill",
+            supported_apps=[
+                OTPSupportedApp(
+                    package_name="com.example.myapp",
+                    signature_hash="12345678901"
+                ),
+            ],
+        )
+
+- :class:`ZeroTapOTPButton`: A button that allows the user to receive the OTP code without any interaction.
+
+    .. code-block:: python
+        :caption: zero_tap_otp_button.py
+        :linenos:
+
+        from pywa.types.templates import *
+
+        otp_button = ZeroTapOTPButton(
+            text="Autofill Code",
+            autofill_text="Autofill",
+            zero_tap_terms_accepted=5,
+            supported_apps=[
+                OTPSupportedApp(
+                    package_name="com.example.myapp",
+                    signature_hash="12345678901"
+                ),
+            ],
+        )
+
+- :class:`CopyCodeOTPButton`: A button that allows the user to copy the OTP code to the clipboard and use it in another app.
+
+    .. code-block:: python
+        :caption: copy_code_otp_button.py
+        :linenos:
+
+        from pywa.types.templates import *
+
+        otp_button = CopyCodeOTPButton()
+
+
+When sending an authentication template, you can use the same approach as before, but now you need to provide the OTP button in the template:
+
+.. code-block:: python
+    :caption: send_authentication_template.py
+    :linenos:
+
+    from pywa import WhatsApp
+    from pywa.types.templates import *
+
+    wa = WhatsApp(phone_id=..., token=...)
+
+    wa.send_template(
+        to="972123456789",
+        name="auth_code",
+        language=TemplateLanguage.ENGLISH_US,
+        params=[
+            AuthenticationBody.Params(otp="123456"),
+            OneTapOTPButton.Params(otp="123456"),
+        ],
+    )
 
 .. toctree::
     types

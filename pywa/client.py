@@ -1802,6 +1802,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
     def download_media(
         self,
+        *,
         url: str,
         path: str | pathlib.Path | None = None,
         filename: str | None = None,

@@ -805,6 +805,8 @@ class _ClientShortcuts(abc.ABC):
         language: TemplateLanguage,
         params: list[TemplateBaseComponent.Params],
         *,
+        use_mm_lite_api: bool = False,
+        message_activity_sharing: bool | None = None,
         quote: bool = False,
         tracker: str | CallbackData | None = None,
     ) -> SentTemplate:
@@ -817,6 +819,8 @@ class _ClientShortcuts(abc.ABC):
             name: The name of the template to send.
             language: The language of the template to send.
             params: The parameters to fill in the template.
+            use_mm_lite_api: Whether to use `Marketing Messages Lite API <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api>`_ (optional, default: False).
+            message_activity_sharing: Whether to share message activities (e.g. message read) for that specific marketing message to Meta to help optimize marketing messages (optional, only if ``use_mm_lite_api`` is True).
             quote: Whether to quote the replied message (default: False).
             tracker: A callback data to track the message (optional, can be a string or a :class:`CallbackData` object).
         """
@@ -827,6 +831,8 @@ class _ClientShortcuts(abc.ABC):
             name=name,
             language=language,
             params=params,
+            use_mm_lite_api=use_mm_lite_api,
+            message_activity_sharing=message_activity_sharing,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             tracker=tracker,
         )

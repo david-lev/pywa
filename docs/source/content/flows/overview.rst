@@ -40,11 +40,11 @@ First you need to create the flow, give it a name and set the categories by call
     # WhatsApp Business Account ID (WABA) is required
     wa = WhatsApp(..., business_account_id="1234567890123456")
 
-    flow_id = wa.create_flow(
+    created = wa.create_flow(
         name="My New Flow",
         categories=[FlowCategory.CUSTOMER_SUPPORT, FlowCategory.SURVEY]
     )
-    print(wa.get_flow(flow_id))
+    print(wa.get_flow(created.id))
 
     # FlowDetails(id='1234567890123456', name='My New Flow', status=FlowStatus.DRAFT, ...)
 
@@ -425,12 +425,12 @@ After you have the flow json, you can update the flow with :meth:`~pywa.client.W
 
     if __name__ == "__main__":
         wa = WhatsApp(..., business_account_id="1234567890123456")
-        flow_id = "123456789" # wa.create_flow(name="My New Flow") # run this only once
+        flow_id = "123456789" # wa.create_flow(name="My New Flow").id # run this only once
 
-        success, validation_errors = wa.update_flow_json(flow_id, flow_json=your_flow_json)
-        if not success:
+        res = wa.update_flow_json(flow_id, flow_json=your_flow_json)
+        if not res.success:
             print("Validation errors:")
-            for error in validation_errors:
+            for error in res.validation_errors:
                 print(error)
 
 
