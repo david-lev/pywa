@@ -9,6 +9,6 @@ Build WhatsApp Bots in Python • Fast, Effortless, Powerful 🚀
 from pywa.client import WhatsApp
 from pywa.utils import Version
 
-__version__ = "3.0.0-rc.2"
+__version__ = "3.0.0-rc.3"
 __author__ = "David Lev"
 __license__ = "MIT"

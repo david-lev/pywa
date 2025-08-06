@@ -3,6 +3,12 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+#### 3.0.0-rc.3 (2025-08-06)
+
+- [templates] `params` is now can be called on class level
+- [templates] adding support for `library_input` when creating library templates
+- [templates] adding support for `degrees_of_freedom_spec` when creating template
+- [listeners] handling old `to` parameter in `listen` and update migration guide
 
 #### 3.0.0-rc.2 (2025-08-04)
 
