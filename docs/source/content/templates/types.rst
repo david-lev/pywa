@@ -31,20 +31,20 @@ Template Types
 .. autoclass:: ParamFormat()
 
 .. autoclass:: HeaderText()
-    :members: preview, params, Params
+    :members: preview, params
 .. autoclass:: HeaderImage()
-    :members: params, Params
+    :members: params
 .. autoclass:: HeaderVideo()
-    :members: params, Params
+    :members: params
 .. autoclass:: HeaderDocument()
-    :members: params, Params
+    :members: params
 .. autoclass:: HeaderLocation()
-    :members: params, Params
+    :members: params
 .. autoclass:: HeaderProduct()
-    :members: params, Params
+    :members: params
 
 .. autoclass:: BodyText()
-    :members: preview, params, Params
+    :members: preview, params, library_input
 
 .. autoclass:: DateTime()
 .. autoclass:: Currency()
@@ -53,43 +53,44 @@ Template Types
 
 .. autoclass:: Buttons()
 .. autoclass:: CopyCodeButton()
-    :members: params, Params
+    :members: params
 .. autoclass:: FlowButton()
-    :members: params, Params
+    :members: params
 .. autoclass:: FlowButtonIcon()
 .. autoclass:: PhoneNumberButton()
+    :members: params, library_input
 .. autoclass:: VoiceCallButton()
 .. autoclass:: CallPermissionRequestButton()
 .. autoclass:: QuickReplyButton()
-    :members: params, Params
+    :members: params
 .. autoclass:: URLButton()
-    :members: params, Params
+    :members: params, library_input
 .. autoclass:: AppDeepLink()
 .. autoclass:: CatalogButton()
-    :members: params, Params
+    :members: params
 .. autoclass:: MPMButton()
-    :members: params, Params
+    :members: params
 .. autoclass:: SPMButton()
-    :members: params, Params
+    :members: params
 .. autoclass:: OneTapOTPButton()
-    :members: params, Params
+    :members: params, library_input
 .. autoclass:: ZeroTapOTPButton()
-    :members: params, Params
+    :members: params, library_input
 .. autoclass:: CopyCodeOTPButton()
-    :members: params, Params
+    :members: params, library_input
 .. autoclass:: OTPSupportedApp()
 
 .. autoclass:: LimitedTimeOffer()
-    :members: params, Params
+    :members: params
 
 .. autoclass:: Carousel()
-    :members: params, Params
+    :members: params
 
 .. autoclass:: CarouselCard()
-    :members: params, Params
+    :members: params
 
 .. autoclass:: AuthenticationBody()
-    :members: params, Params
+    :members: params, library_input
 
 .. autoclass:: AuthenticationFooter()
 

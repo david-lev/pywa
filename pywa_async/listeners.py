@@ -73,12 +73,13 @@ class _AsyncListeners:
         Listen to an update.
 
         - You can use one of the shortcuts to listen to a specific update type:
-            - :meth:`~pywa_async.types.sent_message.SentMessage.wait_for_reply`
-            - :meth:`~pywa_async.types.sent_message.SentMessage.wait_for_click`
-            - :meth:`~pywa_async.types.sent_message.SentMessage.wait_for_selection`
-            - :meth:`~pywa_async.types.sent_message.SentMessage.wait_for_completion`
-            - :meth:`~pywa_async.types.sent_message.SentMessage.wait_until_read`
-            - :meth:`~pywa_async.types.sent_message.SentMessage.wait_until_delivered`
+            - :meth:`~pywa.types.sent_update.SentMessage.wait_for_reply`
+            - :meth:`~pywa.types.sent_update.SentMessage.wait_for_click`
+            - :meth:`~pywa.types.sent_update.SentMessage.wait_for_selection`
+            - :meth:`~pywa.types.sent_update.SentMessage.wait_for_completion`
+            - :meth:`~pywa.types.sent_update.SentMessage.wait_until_read`
+            - :meth:`~pywa.types.sent_update.SentMessage.wait_until_delivered`
+            - :meth:`~pywa.types.template.CreatedTemplate.wait_until_approved`
 
         Example:
 

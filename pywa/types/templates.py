@@ -61,8 +61,6 @@ __all__ = [
     "MigratedTemplate",
     "MigratedTemplateError",
     "LibraryTemplate",
-    "LibraryTemplateBodyInputs",
-    "LibraryTemplateButtonInputs",
     "DegreesOfFreedomSpec",
     "CreativeFeaturesSpec",
 ]
@@ -78,7 +76,7 @@ from .flows import FlowActionType, FlowJSON
 import abc
 import dataclasses
 import logging
-from typing import TYPE_CHECKING, Literal, BinaryIO, cast, Iterator
+from typing import TYPE_CHECKING, Literal, BinaryIO, cast, Iterator, Any
 
 from .media import Media
 from .others import Result, SuccessResult, ProductsSection, _ItemFactory
@@ -485,51 +483,18 @@ class LibraryTemplate:
     library_template_name: str
     category: TemplateCategory
     language: TemplateLanguage
-    library_template_body_inputs: list[LibraryTemplateBodyInputs] | None = None
-    library_template_button_inputs: list[LibraryTemplateButtonInputs] | None = None
+    library_template_body_inputs: list[BaseLibraryBodyInput] | None = None
+    library_template_button_inputs: list[BaseLibraryButtonInput] | None = None
 
     def to_json(self) -> str:
         return _template_to_json(self)
 
 
-@dataclasses.dataclass(slots=True, kw_only=True)
-class LibraryTemplateBodyInputs:
-    """
-    Optional data during creation of a template from Template Library. These are optional fields for the body component.
-
-    Attributes:
-        add_contact_number: Boolean value to add information to the template about contacting business on their phone number.
-        add_learn_more_link: Boolean value to add information to the template about learning more information with a url link.
-        add_security_recommendation: Boolean value to add information to the template about not sharing authentication codes with anyone.
-        add_track_package_link: Boolean value to add information to the template to track delivery packages.
-        code_expiration_minutes: Integer value to add information to the template on when the code will expire.
-    """
-
-    add_contact_number: bool | None = None
-    add_learn_more_link: bool | None = None
-    add_security_recommendation: bool | None = None
-    add_track_package_link: bool | None = None
-    code_expiration_minutes: int | None = None
-
-
-@dataclasses.dataclass(slots=True, kw_only=True)
-class LibraryTemplateButtonInputs:
-    """
-    Optional data during creation of a template from Template Library. These are optional fields for the button component.
-
-    Attributes:
-        type: The button type
-        url: A dictionary with ``base_url`` and ``url_suffix_example``
-        otp_type: The type of OTP button, if applicable.
-        zero_tap_terms_accepted: Weather the zero tap terms were accepted by the user or not.
-        supported_apps: A list of supported apps for the OTP button.
-    """
-
+class BaseLibraryButtonInput(abc.ABC):
     type: ComponentType
-    url: dict | None = None
-    otp_type: OtpType | None = None
-    zero_tap_terms_accepted: bool | None = None
-    supported_apps: list[OTPSupportedApp] | None = None
+
+
+class BaseLibraryBodyInput(abc.ABC): ...
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -538,7 +503,7 @@ class QualityScore:
     Represents the quality score of a template.
 
     Attributes:
-        score: The quality score type (GREEN, YELLOW, RED).
+        score: The quality score type (``GREEN``, ``YELLOW``, ``RED``).
         date: The date when the score was last updated.
     """
 
@@ -858,14 +823,12 @@ class TemplateBaseComponent(abc.ABC):
             dict_factory=lambda d: {k: v for (k, v) in d if v is not None},
         )
 
-    class Params(abc.ABC):
-        """Base class for template component parameters."""
 
-        @abc.abstractmethod
-        def to_dict(self) -> dict: ...
+class BaseParams(abc.ABC):
+    """Base class for template component parameters."""
 
     @abc.abstractmethod
-    def params(self, *args, **kwargs) -> Params: ...
+    def to_dict(self) -> dict: ...
 
 
 # =========== HEADER ===========
@@ -1034,7 +997,7 @@ class _BaseTextComponent:
                 return cls(data["text"], example)
         return cls(text=data["text"])
 
-    class Params(TemplateBaseComponent.Params):
+    class _Params(BaseParams):
         typ: Literal[ComponentType.HEADER, ComponentType.BODY]
 
         def __init__(self, *positionals, **named):
@@ -1072,7 +1035,11 @@ class _BaseTextComponent:
                 ],
             }
 
-    def params(self, *positionals, **named) -> _BaseTextComponent.Params:
+    def _params(
+        *positionals,
+        _params_cls: type[_BaseTextComponent],
+        **named,
+    ) -> _BaseTextComponent._Params:
         """
         Fill the parameters for the header/body text component.
 
@@ -1080,6 +1047,13 @@ class _BaseTextComponent:
             *positionals: Positional parameters to fill in the template text. e.g. for `"Hi {{1}}!"`, you would pass ``"John"`` as the first positional argument.
             **named: Named parameters to fill in the template text. e.g. for `"Hi {{name}}!"`, you would pass ``name="John"`` as a named argument.
         """
+        if positionals and isinstance(
+            positionals[0], _BaseTextComponent
+        ):  # BodyText(...).params("David")
+            self, *positionals = positionals
+        else:  # BodyText.params("David")
+            return _params_cls(*positionals, **named)
+
         if not self.param_format:
             raise ValueError(
                 f"{self.__class__.__name__} does not support parameters, as it has no example."
@@ -1109,7 +1083,7 @@ class _BaseTextComponent:
                     f"{self.__class__.__name__} received unexpected parameters: {', '.join(unexpected_params)}."
                 )
 
-        return self.Params(*positionals, **named)
+        return self._Params(*positionals, **named)
 
 
 class HeaderText(_BaseTextComponent, BaseHeaderComponent):
@@ -1138,8 +1112,21 @@ class HeaderText(_BaseTextComponent, BaseHeaderComponent):
             **super().to_dict(),
         }
 
-    class Params(_BaseTextComponent.Params):
+    class _Params(_BaseTextComponent._Params):
         typ = ComponentType.HEADER
+
+    def params(
+        *positionals,
+        **named,
+    ) -> HeaderText._Params:
+        """
+        Fill the parameters for the header text component.
+
+        Args:
+            *positionals: Positional parameters to fill in the template text. e.g. for `"Hi {{1}}!"`, you would pass ``"John"`` as the first positional argument.
+            **named: Named parameters to fill in the template text. e.g. for `"Hi {{name}}!"`, you would pass ``name="John"`` as a named argument.
+        """
+        return HeaderText._params(*positionals, _params_cls=HeaderText._Params, **named)
 
 
 class _BaseMediaHeaderComponent(BaseHeaderComponent, abc.ABC):
@@ -1201,7 +1188,7 @@ class _BaseMediaHeaderComponent(BaseHeaderComponent, abc.ABC):
         return f"{self.__class__.__name__}(example={self.example!r})"
 
 
-class _BaseMediaParams(TemplateBaseComponent.Params, abc.ABC):
+class _BaseMediaParams(BaseParams, abc.ABC):
     format: HeaderFormatType
     param_type: Literal[ParamType.IMAGE, ParamType.VIDEO, ParamType.DOCUMENT]
 
@@ -1253,20 +1240,16 @@ class HeaderImage(_BaseMediaHeaderComponent):
 
     format = HeaderFormatType.IMAGE
 
-    class Params(_BaseMediaParams):
+    class _Params(_BaseMediaParams):
         format = HeaderFormatType.IMAGE
         param_type = ParamType.IMAGE
 
         def __init__(self, *, image: str | Media | pathlib.Path | bytes | BinaryIO):
-            """
-            Fill the parameters for the header image component.
-
-            Args:
-                image: The image media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
-            """
             super().__init__(media=image)
 
-    def params(self, *, image: str | Media | pathlib.Path | bytes | BinaryIO) -> Params:
+    def params(
+        self=None, *, image: str | Media | pathlib.Path | bytes | BinaryIO
+    ) -> HeaderImage._Params:
         """
         Fill the parameters for the header image component.
 
@@ -1274,9 +1257,9 @@ class HeaderImage(_BaseMediaHeaderComponent):
             image: The image media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
 
         Returns:
-            An instance of Params containing the media parameter.
+            An instance of BaseParams containing the media parameter.
         """
-        return self.Params(image=image)
+        return (HeaderImage._Params if self is None else self._Params)(image=image)
 
 
 class HeaderVideo(_BaseMediaHeaderComponent):
@@ -1297,20 +1280,16 @@ class HeaderVideo(_BaseMediaHeaderComponent):
 
     format = HeaderFormatType.VIDEO
 
-    class Params(_BaseMediaParams):
+    class _Params(_BaseMediaParams):
         format = HeaderFormatType.VIDEO
         param_type = ParamType.VIDEO
 
         def __init__(self, *, video: str | Media | pathlib.Path | bytes | BinaryIO):
-            """
-            Fill the parameters for the header video component.
-
-            Args:
-                video: The video media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
-            """
             super().__init__(media=video)
 
-    def params(self, *, video: str | Media | pathlib.Path | bytes | BinaryIO) -> Params:
+    def params(
+        self=None, *, video: str | Media | pathlib.Path | bytes | BinaryIO
+    ) -> HeaderVideo._Params:
         """
         Fill the parameters for the header video component.
 
@@ -1318,9 +1297,9 @@ class HeaderVideo(_BaseMediaHeaderComponent):
             video: The video media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
 
         Returns:
-            An instance of Params containing the media parameter.
+            An instance of BaseParams containing the media parameter.
         """
-        return self.Params(video=video)
+        return (HeaderVideo._Params if self is None else self._Params)(video=video)
 
 
 class HeaderDocument(_BaseMediaHeaderComponent):
@@ -1341,22 +1320,16 @@ class HeaderDocument(_BaseMediaHeaderComponent):
 
     format = HeaderFormatType.DOCUMENT
 
-    class Params(_BaseMediaParams):
+    class _Params(_BaseMediaParams):
         format = HeaderFormatType.DOCUMENT
         param_type = ParamType.DOCUMENT
 
         def __init__(self, *, document: str | Media | pathlib.Path | bytes | BinaryIO):
-            """
-            Fill the parameters for the header document component.
-
-            Args:
-                document: The document media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
-            """
             super().__init__(media=document)
 
     def params(
-        self, *, document: str | Media | pathlib.Path | bytes | BinaryIO
-    ) -> Params:
+        self=None, *, document: str | Media | pathlib.Path | bytes | BinaryIO
+    ) -> HeaderDocument._Params:
         """
         Fill the parameters for the header document component.
 
@@ -1364,9 +1337,11 @@ class HeaderDocument(_BaseMediaHeaderComponent):
             document: The document media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
 
         Returns:
-            An instance of Params containing the media parameter.
+            An instance of BaseParams containing the media parameter.
         """
-        return self.Params(document=document)
+        return (HeaderDocument._Params if self is None else self._Params)(
+            document=document
+        )
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -1394,17 +1369,8 @@ class HeaderLocation(BaseHeaderComponent):
         repr=False,
     )
 
-    class Params(TemplateBaseComponent.Params):
+    class _Params(BaseParams):
         def __init__(self, *, lat: float, lon: float, name: str, address: str):
-            """
-            Fill the parameters for the header location component.
-
-            Args:
-                lat: Location latitude.
-                lon: Location longitude.
-                name: Text that will appear immediately below the generic map at the top of the message.
-                address: Address that will appear after the ``name`` value, below the generic map at the top of the message.
-            """
             self.lat = lat
             self.lon = lon
             self.name = name
@@ -1426,7 +1392,9 @@ class HeaderLocation(BaseHeaderComponent):
                 ],
             }
 
-    def params(self, *, lat: float, lon: float, name: str, address: str) -> Params:
+    def params(
+        self=None, *, lat: float, lon: float, name: str, address: str
+    ) -> HeaderLocation._Params:
         """
         Fill the parameters for the header location component.
 
@@ -1437,9 +1405,11 @@ class HeaderLocation(BaseHeaderComponent):
             address: Address that will appear after the ``name`` value, below the generic map at the top of the message.
 
         Returns:
-            An instance of Params containing the location parameters.
+            An instance of BaseParams containing the location parameters.
         """
-        return self.Params(lat=lat, lon=lon, name=name, address=address)
+        return (HeaderLocation._Params if self is None else self._Params)(
+            lat=lat, lon=lon, name=name, address=address
+        )
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -1467,15 +1437,8 @@ class HeaderProduct(BaseHeaderComponent):
         repr=False,
     )
 
-    class Params(TemplateBaseComponent.Params):
+    class _Params(BaseParams):
         def __init__(self, *, catalog_id: str, sku: str):
-            """
-            Fill the parameters for the header product component.
-
-            Args:
-                catalog_id: ID of `connected ecommerce <https://www.facebook.com/business/help/158662536425974>`_ catalog containing the product.
-                sku: Unique identifier of the product in a catalog (also referred to as ``Content ID`` or ``Retailer ID``).
-            """
             self.catalog_id = catalog_id
             self.sku = sku
 
@@ -1493,7 +1456,7 @@ class HeaderProduct(BaseHeaderComponent):
                 ],
             }
 
-    def params(self, *, catalog_id: str, sku: str) -> Params:
+    def params(self=None, *, catalog_id: str, sku: str) -> HeaderProduct._Params:
         """
         Fill the parameters for the header product component.
 
@@ -1502,9 +1465,11 @@ class HeaderProduct(BaseHeaderComponent):
             sku: Unique identifier of the product in a catalog (also referred to as ``Content ID`` or ``Retailer ID``).
 
         Returns:
-            An instance of Params containing the catalog ID and SKU.
+            An instance of BaseParams containing the catalog ID and SKU.
         """
-        return self.Params(catalog_id=catalog_id, sku=sku)
+        return (HeaderProduct._Params if self is None else self._Params)(
+            catalog_id=catalog_id, sku=sku
+        )
 
 
 # =========== BODY ===========
@@ -1533,8 +1498,62 @@ class BodyText(_BaseTextComponent):
 
     type = ComponentType.BODY
 
-    class Params(_BaseTextComponent.Params):
+    class _Params(_BaseTextComponent._Params):
         typ = ComponentType.BODY
+
+    def params(
+        *positionals,
+        **named,
+    ) -> BodyText._Params:
+        """
+        Fill the parameters for the body text component.
+
+        Args:
+            *positionals: Positional parameters to fill in the template text. e.g. for `"Hi {{1}}!"`, you would pass ``"John"`` as the first positional argument.
+            **named: Named parameters to fill in the template text. e.g. for `"Hi {{name}}!"`, you would pass ``name="John"`` as a named argument.
+        """
+        return BodyText._params(*positionals, _params_cls=BodyText._Params, **named)
+
+    class _LibraryInput(BaseLibraryBodyInput):
+        def __init__(
+            self,
+            *,
+            add_track_package_link: bool | None = None,
+            add_learn_more_link: bool | None = None,
+        ):
+            self.add_track_package_link = add_track_package_link
+            self.add_learn_more_link = add_learn_more_link
+
+        def to_dict(self) -> dict:
+            return {
+                k: v
+                for k, v in {
+                    "add_track_package_link": self.add_track_package_link,
+                    "add_learn_more_link": self.add_learn_more_link,
+                }
+                if v is not None
+            }
+
+    @staticmethod
+    def library_input(
+        *,
+        add_track_package_link: bool | None = None,
+        add_learn_more_link: bool | None = None,
+    ) -> BodyText._LibraryInput:
+        """
+        Fill the library input for the body text component.
+
+        Args:
+            add_track_package_link: Whether to add a link to track a package.
+            add_learn_more_link: Whether to add a "Learn more" link.
+
+        Returns:
+            An instance of BaseLibraryBodyInput containing the library input parameters.
+        """
+        return BodyText._LibraryInput(
+            add_track_package_link=add_track_package_link,
+            add_learn_more_link=add_learn_more_link,
+        )
 
 
 # =========== FOOTER ===========
@@ -1549,30 +1568,8 @@ class BaseFooterComponent(TemplateBaseComponent, abc.ABC):
     )
 
 
-class _DoesNotSupportParams:
-    """
-    This class is used for components that do not support parameters.
-    It raises an error if instantiated.
-    """
-
-    class Params(TemplateBaseComponent.Params):
-        def __init__(self):
-            """
-            This class does not support parameters.
-            """
-            raise ValueError(f"{self.__class__.__name__} does not support parameters.")
-
-        def to_dict(self) -> dict: ...
-
-    def params(self, *args, **kwargs) -> Params:
-        """
-        This class does not support parameters.
-        """
-        return self.Params()
-
-
 @dataclasses.dataclass(kw_only=True, slots=True)
-class FooterText(_DoesNotSupportParams, BaseFooterComponent):
+class FooterText(BaseFooterComponent):
     """
     Footers are optional text-only components that appear immediately after the body component. Templates are limited to one footer component.
 
@@ -1596,7 +1593,7 @@ class BaseButtonComponent(TemplateBaseComponent, abc.ABC): ...
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class Buttons(_DoesNotSupportParams, TemplateBaseComponent):
+class Buttons(TemplateBaseComponent):
     """
     Buttons are optional interactive components that perform specific actions when tapped. Templates can have a mixture of up to 10 button components total, although there are limits to individual buttons of the same type as well as combination limits. These limits are described below.
 
@@ -1651,15 +1648,8 @@ class CopyCodeButton(BaseButtonComponent):
     )
     example: str
 
-    class Params(TemplateBaseComponent.Params):
+    class _Params(BaseParams):
         def __init__(self, *, coupon_code: str, index: int):
-            """
-            Fill the parameters for the copy code button component.
-
-            Args:
-                coupon_code: The coupon code to be copied when the customer taps the button. Only accepting alphanumeric characters.
-                index: Indicates order in which button should appear, if the template uses multiple buttons. Buttons are zero-indexed, so setting value to 0 will cause the button to appear first, and another button with an index of 1 will appear next, etc.
-            """
             self.coupon_code = coupon_code
             self.index = index
 
@@ -1676,7 +1666,7 @@ class CopyCodeButton(BaseButtonComponent):
                 ],
             }
 
-    def params(self, *, coupon_code: str, index: int) -> Params:
+    def params(self=None, *, coupon_code: str, index: int) -> CopyCodeButton._Params:
         """
         Fill the parameters for the copy code button component.
 
@@ -1685,9 +1675,11 @@ class CopyCodeButton(BaseButtonComponent):
             index: Indicates order in which button should appear, if the template uses multiple buttons. Buttons are zero-indexed, so setting value to 0 will cause the button to appear first, and another button with an index of 1 will appear next, etc.
 
         Returns:
-            An instance of Params containing the coupon code and index.
+            An instance of BaseParams containing the coupon code and index.
         """
-        return self.Params(coupon_code=coupon_code, index=index)
+        if self is None:
+            return CopyCodeButton._Params(coupon_code=coupon_code, index=index)
+        return self._Params(coupon_code=coupon_code, index=index)
 
 
 class FlowButtonIcon(utils.StrEnum):
@@ -1814,7 +1806,7 @@ class FlowButton(BaseButtonComponent):
             icon=FlowButtonIcon(data["icon"]) if "icon" in data else None,
         )
 
-    class Params(TemplateBaseComponent.Params):
+    class _Params(BaseParams):
         def __init__(
             self,
             *,
@@ -1822,14 +1814,6 @@ class FlowButton(BaseButtonComponent):
             flow_token: str | None = None,
             flow_action_data: dict | None = None,
         ) -> None:
-            """
-            Fill the parameters for the Flow button component.
-
-            Args:
-                flow_token: optional, default is ``unused``.
-                flow_action_data: Optional data to be passed to the first screen.
-                index: Indicates order in which button should appear, if the template uses multiple buttons. Buttons are zero-indexed, so setting value to 0 will cause the button to appear first, and another button with an index of 1 will appear next, etc.
-            """
             self.flow_token = flow_token
             self.flow_action_data = flow_action_data
             self.index = index
@@ -1851,12 +1835,12 @@ class FlowButton(BaseButtonComponent):
             }
 
     def params(
-        self,
+        self=None,
         *,
         index: int,
         flow_token: str | None = None,
         flow_action_data: dict | None = None,
-    ) -> Params:
+    ) -> FlowButton._Params:
         """
         Fill the parameters for the Flow button component.
 
@@ -1866,15 +1850,19 @@ class FlowButton(BaseButtonComponent):
             flow_action_data: Optional data to be passed to the first screen.
 
         Returns:
-            An instance of Params containing the parameters for the Flow button.
+            An instance of BaseParams containing the parameters for the Flow button.
         """
-        return self.Params(
+        if self is None:
+            return FlowButton._Params(
+                index=index, flow_token=flow_token, flow_action_data=flow_action_data
+            )
+        return self._Params(
             index=index, flow_token=flow_token, flow_action_data=flow_action_data
         )
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class PhoneNumberButton(_DoesNotSupportParams, BaseButtonComponent):
+class PhoneNumberButton(BaseButtonComponent):
     """
     Phone number buttons call the specified business phone number when tapped by the app user. Templates are limited to one phone number button.
 
@@ -1898,9 +1886,32 @@ class PhoneNumberButton(_DoesNotSupportParams, BaseButtonComponent):
     text: str
     phone_number: str
 
+    class _LibraryInput(BaseLibraryButtonInput):
+        def __init__(self, *, phone_number: str):
+            self.phone_number = phone_number
+
+        def to_dict(self) -> dict:
+            return {
+                "type": ComponentType.PHONE_NUMBER.value,
+                "phone_number": self.phone_number,
+            }
+
+    @staticmethod
+    def library_input(*, phone_number: str) -> PhoneNumberButton._LibraryInput:
+        """
+        Fill the library button input for the phone number button component.
+
+        Args:
+            phone_number: The phone number to be called when the user taps the button.
+
+        Returns:
+            An instance of BaseLibraryButtonInput containing the phone number.
+        """
+        return PhoneNumberButton._LibraryInput(phone_number=phone_number)
+
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class VoiceCallButton(_DoesNotSupportParams, BaseButtonComponent):
+class VoiceCallButton(BaseButtonComponent):
     """
     Voice call button initiates a WhatsApp voice call to the business. Templates are limited to one voice call button.
 
@@ -1955,15 +1966,8 @@ class QuickReplyButton(BaseButtonComponent):
     )
     text: str
 
-    class Params(TemplateBaseComponent.Params):
+    class _Params(BaseParams):
         def __init__(self, *, callback_data: str | CallbackData, index: int):
-            """
-            Fill the parameters for the quick reply button component.
-
-            Args:
-                callback_data: The data to send when the user clicks on the button (up to 256 characters, for complex data
-                 You can use :class:`CallbackData`).
-            """
             self.callback_data = callback_data
             self.index = index
 
@@ -1982,7 +1986,9 @@ class QuickReplyButton(BaseButtonComponent):
                 ],
             }
 
-    def params(self, *, callback_data: str | CallbackData, index: int) -> Params:
+    def params(
+        self=None, *, callback_data: str | CallbackData, index: int
+    ) -> QuickReplyButton._Params:
         """
         Fill the parameters for the quick reply button component.
 
@@ -1992,9 +1998,11 @@ class QuickReplyButton(BaseButtonComponent):
             index: Indicates order in which button should appear, if the template uses multiple buttons. Buttons are zero-indexed, so setting value to 0 will cause the button to appear first, and another button with an index of 1 will appear next, etc.
 
         Returns:
-            An instance of Params containing the callback data and index.
+            An instance of BaseParams containing the callback data and index.
         """
-        return self.Params(callback_data=callback_data, index=index)
+        return (QuickReplyButton._Params if self is None else self._Params)(
+            callback_data=callback_data, index=index
+        )
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -2089,15 +2097,8 @@ class URLButton(BaseButtonComponent):
             else None,
         )
 
-    class Params(TemplateBaseComponent.Params):
+    class _Params(BaseParams):
         def __init__(self, *, url_variable: str, index: int):
-            """
-            Fill the parameters for the URL button component.
-
-            Args:
-                url_variable: The variable to be appended to the end of the URL string. Maximum 2000 characters.
-                index: Indicates order in which button should appear, if the template uses multiple buttons. Buttons are zero-indexed, so setting value to 0 will cause the button to appear first, and another button with an index of 1 will appear next, etc.
-            """
             self.url_variable = url_variable
             self.index = index
 
@@ -2114,7 +2115,7 @@ class URLButton(BaseButtonComponent):
                 ],
             }
 
-    def params(self, *, url_variable: str, index: int) -> Params:
+    def params(self=None, *, url_variable: str, index: int) -> URLButton._Params:
         """
         Fill the parameters for the URL button component.
 
@@ -2123,9 +2124,54 @@ class URLButton(BaseButtonComponent):
             index: Indicates order in which button should appear, if the template uses multiple buttons. Buttons are zero-indexed, so setting value to 0 will cause the button to appear first, and another button with an index of 1 will appear next, etc.
 
         Returns:
-            An instance of Params containing the URL variable and index.
+            An instance of BaseParams containing the URL variable and index.
         """
-        return self.Params(url_variable=url_variable, index=index)
+        return (URLButton._Params if self is None else self._Params)(
+            url_variable=url_variable, index=index
+        )
+
+    class _LibraryInput(BaseLibraryButtonInput):
+        def __init__(
+            self,
+            *,
+            base_url: str,
+            url_suffix_example: str | None = None,
+        ):
+            self.base_url = base_url
+            self.url_suffix_example = url_suffix_example
+
+        def to_dict(self) -> dict:
+            return {
+                "type": ComponentType.URL.value,
+                "url": {
+                    "base_url": self.base_url,
+                    **(
+                        {"url_suffix_example": self.url_suffix_example}
+                        if self.url_suffix_example
+                        else {}
+                    ),
+                },
+            }
+
+    @staticmethod
+    def library_input(
+        *,
+        base_url: str,
+        url_suffix_example: str | None = None,
+    ) -> URLButton._LibraryInput:
+        """
+        Fill the library button input for the URL button component.
+
+        Args:
+            base_url: The base URL of the website that loads in the device's default mobile web browser when the button is tapped by the app user.
+            url_suffix_example: Optional example URL suffix to be used in the template.
+
+        Returns:
+            An instance of BaseLibraryButtonInput containing the base URL and optional URL suffix example.
+        """
+        return URLButton._LibraryInput(
+            base_url=base_url, url_suffix_example=url_suffix_example
+        )
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -2151,7 +2197,7 @@ class CatalogButton(BaseButtonComponent):
     )
     text: str
 
-    class Params(TemplateBaseComponent.Params):
+    class _Params(BaseParams):
         def __init__(self, *, thumbnail_product_sku: str | None = None, index: int):
             """
             Fill the parameters for the catalog button component.
@@ -2184,7 +2230,9 @@ class CatalogButton(BaseButtonComponent):
                 ),
             }
 
-    def params(self, *, thumbnail_product_sku: str | None = None, index: int) -> Params:
+    def params(
+        self=None, *, thumbnail_product_sku: str | None = None, index: int
+    ) -> CatalogButton._Params:
         """
         Fill the parameters for the catalog button component.
 
@@ -2193,9 +2241,11 @@ class CatalogButton(BaseButtonComponent):
             index: Indicates order in which button should appear, if the template uses multiple buttons. Buttons are zero-indexed, so setting value to 0 will cause the button to appear first, and another button with an index of 1 will appear next, etc.
 
         Returns:
-            An instance of Params containing the thumbnail product SKU and index.
+            An instance of BaseParams containing the thumbnail product SKU and index.
         """
-        return self.Params(thumbnail_product_sku=thumbnail_product_sku, index=index)
+        return (CatalogButton._Params if self is None else self._Params)(
+            thumbnail_product_sku=thumbnail_product_sku, index=index
+        )
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -2241,7 +2291,7 @@ class MPMButton(BaseButtonComponent):
     )
     text: str
 
-    class Params(TemplateBaseComponent.Params):
+    class _Params(BaseParams):
         def __init__(
             self,
             *,
@@ -2276,12 +2326,12 @@ class MPMButton(BaseButtonComponent):
             }
 
     def params(
-        self,
+        self=None,
         *,
         product_sections: list[ProductsSection],
         thumbnail_product_sku: str,
         index: int,
-    ) -> Params:
+    ) -> MPMButton._Params:
         """
         Fill the parameters for the multi-product message button component.
 
@@ -2291,9 +2341,9 @@ class MPMButton(BaseButtonComponent):
             index: Indicates order in which button should appear, if the template uses multiple buttons. Buttons are zero-indexed, so setting value to 0 will cause the button to appear first, and another button with an index of 1 will appear next, etc.
 
         Returns:
-            An instance of Params containing the product sections, thumbnail product SKU, and index.
+            An instance of BaseParams containing the product sections, thumbnail product SKU, and index.
         """
-        return self.Params(
+        return (MPMButton._Params if self is None else self._Params)(
             product_sections=product_sections,
             thumbnail_product_sku=thumbnail_product_sku,
             index=index,
@@ -2301,7 +2351,7 @@ class MPMButton(BaseButtonComponent):
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class SPMButton(_DoesNotSupportParams, BaseButtonComponent):
+class SPMButton(BaseButtonComponent):
     """
     Single-product message (SPM) buttons are special, non-customizable buttons that can be mapped to a product in your product catalog. When tapped, they load details about the product, which it pulls from your catalog. Users can then add the product to their cart and place an order.
 
@@ -2325,7 +2375,7 @@ class SPMButton(_DoesNotSupportParams, BaseButtonComponent):
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class CallPermissionRequestButton(_DoesNotSupportParams, BaseButtonComponent):
+class CallPermissionRequestButton(BaseButtonComponent):
     """
     Call permissions request buttons are used to request call permissions from the user. When tapped, they open a dialog that allows the user to grant or deny call permissions.
 
@@ -2382,25 +2432,20 @@ class OTPSupportedApp:
     package_name: str
     signature_hash: str
 
+    def to_dict(self) -> dict:
+        return {
+            "package_name": self.package_name,
+            "signature_hash": self.signature_hash,
+        }
+
 
 class _BaseOTPButtonParams:
     """
     Base class for one-time password (OTP) button parameters.
     """
 
-    class Params(TemplateBaseComponent.Params):
-        """
-        Base class for button parameters.
-        This class is not meant to be instantiated directly.
-        """
-
+    class _Params(BaseParams):
         def __init__(self, otp: str):
-            """
-            Initialize the base button parameters.
-
-            Args:
-                otp: The one-time password or code to be used in the button. Maximum 15 characters.
-            """
             self.otp = otp
 
         def to_dict(self) -> dict:
@@ -2416,7 +2461,7 @@ class _BaseOTPButtonParams:
                 ],
             }
 
-    def params(self, otp: str) -> Params:
+    def params(self=None, *, otp: str) -> _BaseOTPButtonParams._Params:
         """
         Fill the parameters for the button component.
 
@@ -2424,9 +2469,9 @@ class _BaseOTPButtonParams:
             otp: The one-time password or code to be used in the button. Maximum 15 characters.
 
         Returns:
-            An instance of Params containing the OTP.
+            An instance of BaseParams containing the OTP.
         """
-        return self.Params(otp=otp)
+        return (_BaseOTPButtonParams._Params if self is None else self._Params)(otp=otp)
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -2481,6 +2526,36 @@ class OneTapOTPButton(BaseOTPButton):
     autofill_text: str | None = None
     supported_apps: list[OTPSupportedApp]
 
+    class _LibraryInput(BaseLibraryButtonInput):
+        def __init__(
+            self,
+            *,
+            supported_apps: list[OTPSupportedApp],
+        ):
+            self.supported_apps = supported_apps
+
+        def to_dict(self) -> dict:
+            return {
+                "type": ComponentType.OTP.value,
+                "otp_type": OtpType.ONE_TAP.value,
+                "supported_apps": [app.to_dict() for app in self.supported_apps],
+            }
+
+    @staticmethod
+    def library_input(
+        *, supported_apps: list[OTPSupportedApp]
+    ) -> OneTapOTPButton._LibraryInput:
+        """
+        Fill the library button input for the one-tap autofill button component.
+
+        Args:
+            supported_apps: A list of supported apps, each defined by its package name and signature hash.
+
+        Returns:
+            An instance of BaseLibraryButtonInput containing the supported apps.
+        """
+        return OneTapOTPButton._LibraryInput(supported_apps=supported_apps)
+
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class ZeroTapOTPButton(BaseOTPButton):
@@ -2526,6 +2601,45 @@ class ZeroTapOTPButton(BaseOTPButton):
     zero_tap_terms_accepted: bool
     supported_apps: list[OTPSupportedApp]
 
+    class _LibraryInput(BaseLibraryButtonInput):
+        def __init__(
+            self,
+            *,
+            supported_apps: list[OTPSupportedApp],
+            zero_tap_terms_accepted: bool,
+        ):
+            self.supported_apps = supported_apps
+            self.zero_tap_terms_accepted = zero_tap_terms_accepted
+
+        def to_dict(self) -> dict:
+            return {
+                "type": ComponentType.OTP.value,
+                "otp_type": OtpType.ZERO_TAP.value,
+                "supported_apps": [app.to_dict() for app in self.supported_apps],
+                "zero_tap_terms_accepted": self.zero_tap_terms_accepted,
+            }
+
+    @staticmethod
+    def library_input(
+        *,
+        supported_apps: list[OTPSupportedApp],
+        zero_tap_terms_accepted: bool,
+    ) -> ZeroTapOTPButton._LibraryInput:
+        """
+        Fill the library button input for the zero-tap autofill button component.
+
+        Args:
+            supported_apps: A list of supported apps, each defined by its package name and signature hash.
+            zero_tap_terms_accepted: Set to ``True`` to indicate that you understand that your use of zero-tap authentication is subject to the WhatsApp Business Terms of Service, and that it's your responsibility to ensure your customers expect that the code will be automatically filled in on their behalf when they choose to receive the zero-tap code through WhatsApp.
+
+        Returns:
+            An instance of BaseLibraryButtonInput containing the supported apps and zero-tap terms acceptance.
+        """
+        return ZeroTapOTPButton._LibraryInput(
+            supported_apps=supported_apps,
+            zero_tap_terms_accepted=zero_tap_terms_accepted,
+        )
+
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class CopyCodeOTPButton(BaseOTPButton):
@@ -2549,6 +2663,24 @@ class CopyCodeOTPButton(BaseOTPButton):
         init=False,
         repr=False,
     )
+
+    class _LibraryInput(BaseLibraryButtonInput):
+        @staticmethod
+        def to_dict() -> dict:
+            return {
+                "type": ComponentType.OTP.value,
+                "otp_type": OtpType.COPY_CODE.value,
+            }
+
+    @staticmethod
+    def library_input() -> CopyCodeOTPButton._LibraryInput:
+        """
+        Fill the library button input for the copy code button component.
+
+        Returns:
+            An instance of BaseLibraryButtonInput for the copy code button.
+        """
+        return CopyCodeOTPButton._LibraryInput()
 
 
 # ========== LIMITED TIME OFFER ==========
@@ -2607,14 +2739,8 @@ class LimitedTimeOffer(TemplateBaseComponent):
             has_expiration=data["limited_time_offer"].get("has_expiration", None),
         )
 
-    class Params(TemplateBaseComponent.Params):
+    class _Params(BaseParams):
         def __init__(self, *, expiration_time: datetime.datetime | None = None):
-            """
-            Fill the parameters for the limited-time offer component.
-
-            Args:
-                expiration_time: The time when the offer expires. This is used to calculate the countdown timer.
-            """
             self.expiration_time = expiration_time
 
         def to_dict(self) -> dict:
@@ -2630,7 +2756,9 @@ class LimitedTimeOffer(TemplateBaseComponent):
                 ],
             }
 
-    def params(self, *, expiration_time: datetime.datetime) -> Params:
+    def params(
+        self=None, *, expiration_time: datetime.datetime
+    ) -> LimitedTimeOffer._Params:
         """
         Fill the parameters for the limited-time offer component.
 
@@ -2638,9 +2766,11 @@ class LimitedTimeOffer(TemplateBaseComponent):
             expiration_time: The time when the offer expires. This is used to calculate the countdown timer.
 
         Returns:
-            An instance of Params containing the expiration time.
+            An instance of BaseParams containing the expiration time.
         """
-        return self.Params(expiration_time=expiration_time)
+        return (LimitedTimeOffer._Params if self is None else self._Params)(
+            expiration_time=expiration_time
+        )
 
 
 # ========== CAROUSEL ==========
@@ -2721,16 +2851,10 @@ class Carousel(TemplateBaseComponent):
             ]
         )
 
-    class Params(TemplateBaseComponent.Params):
-        cards: list[CarouselCard.Params]
+    class _Params(BaseParams):
+        cards: list[CarouselCard._Params]
 
-        def __init__(self, *, cards: list[CarouselCard.Params]):
-            """
-            Fill the parameters for the carousel component.
-
-            Args:
-                cards: A list of card parameters, each representing a media card in the carousel.
-            """
+        def __init__(self, *, cards: list[CarouselCard._Params]):
             self.cards = cards
 
         def to_dict(self) -> dict:
@@ -2746,7 +2870,7 @@ class Carousel(TemplateBaseComponent):
             for card in self.cards:
                 card.clear_media_cache()
 
-    def params(self, *, cards: list[CarouselCard.Params]) -> Carousel.Params:
+    def params(self=None, *, cards: list[CarouselCard._Params]) -> Carousel._Params:
         """
         Fill the parameters for the carousel component.
 
@@ -2754,9 +2878,9 @@ class Carousel(TemplateBaseComponent):
             cards: A list of card parameters, each representing a media card in the carousel.
 
         Returns:
-            An instance of Params containing the parameters for the carousel.
+            An instance of BaseParams containing the parameters for the carousel.
         """
-        return self.Params(cards=cards)
+        return (Carousel._Params if self is None else self._Params)(cards=cards)
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -2775,8 +2899,8 @@ class CarouselCard:
         >>> carousel_media_card.params(
         ...     index=0,
         ...     params=[
-        ...         HeaderImage.Params(image="https://cdn.com/image.jpg"),
-        ...         QuickReplyButton.Params(callback_data="unsubscribe", index=0),
+        ...         HeaderImage.BaseParams(image="https://cdn.com/image.jpg"),
+        ...         QuickReplyButton.BaseParams(callback_data="unsubscribe", index=0),
         ...     ],
         ... )
 
@@ -2786,15 +2910,8 @@ class CarouselCard:
 
     components: list[TemplateBaseComponent | dict]
 
-    class Params(TemplateBaseComponent.Params):
-        def __init__(self, *, params: list[TemplateBaseComponent.Params], index: int):
-            """
-            Initialize the parameters for the carousel card.
-
-            Args:
-                params: A list of parameters for the components in the media card.
-                index: The index of the media card in the carousel (0-based).
-            """
+    class _Params(BaseParams):
+        def __init__(self, *, params: list[BaseParams], index: int):
             self.params = params
             self.index = index
 
@@ -2813,8 +2930,8 @@ class CarouselCard:
                     param.clear_media_cache()
 
     def params(
-        self, *, params: list[TemplateBaseComponent.Params], index: int
-    ) -> Params:
+        self=None, *, params: list[BaseParams], index: int
+    ) -> CarouselCard._Params:
         """
         Fill the parameters for the carousel card.
 
@@ -2823,9 +2940,12 @@ class CarouselCard:
             index: The index of the media card in the carousel (0-based).
 
         Returns:
-            An instance of Params containing the parameters for the card.
+            An instance of BaseParams containing the parameters for the card.
         """
-        return self.Params(params=params, index=index)
+        return (CarouselCard._Params if self is None else self._Params)(
+            params=params,
+            index=index,
+        )
 
 
 # ========== AUTHENTICATION ==========
@@ -2852,14 +2972,8 @@ class AuthenticationBody(BaseBodyComponent):
     )
     add_security_recommendation: bool | None = None
 
-    class Params(TemplateBaseComponent.Params):
+    class _Params(BaseParams):
         def __init__(self, *, otp: str):
-            """
-            Fill the parameters for the authentication body component.
-
-            Args:
-                otp: The one-time password or code to be used in the body text. Maximum 15 characters.
-            """
             self.otp = otp
 
         def to_dict(self) -> dict:
@@ -2873,7 +2987,7 @@ class AuthenticationBody(BaseBodyComponent):
                 ],
             }
 
-    def params(self, *, otp: str) -> Params:
+    def params(self=None, *, otp: str) -> AuthenticationBody._Params:
         """
         Fill the parameters for the authentication body component.
 
@@ -2881,13 +2995,60 @@ class AuthenticationBody(BaseBodyComponent):
             otp: The one-time password or code to be used in the body text. Maximum 15 characters.
 
         Returns:
-            An instance of Params containing the OTP.
+            An instance of BaseParams containing the OTP.
         """
-        return self.Params(otp=otp)
+        return (AuthenticationBody._Params if self is None else self._Params)(otp=otp)
+
+    class _LibraryInput(BaseLibraryBodyInput):
+        def __init__(
+            self,
+            *,
+            add_contact_number: bool | None = None,
+            add_security_recommendation: bool | None = None,
+            code_expiration_minutes: bool | None = None,
+        ):
+            self.add_contact_number = add_contact_number
+            self.add_security_recommendation = add_security_recommendation
+            self.code_expiration_minutes = code_expiration_minutes
+
+        def to_dict(self) -> dict:
+            return {
+                k: v
+                for k, v in {
+                    "add_contact_number": self.add_contact_number,
+                    "add_security_recommendation": self.add_security_recommendation,
+                    "code_expiration_minutes": self.code_expiration_minutes,
+                }
+                if v is not None
+            }
+
+    @staticmethod
+    def library_input(
+        *,
+        add_contact_number: bool | None = None,
+        add_security_recommendation: bool | None = None,
+        code_expiration_minutes: bool | None = None,
+    ) -> AuthenticationBody._LibraryInput:
+        """
+        Fill the library body input for the authentication body component.
+
+        Args:
+            add_contact_number: Set to ``True`` to include the user's contact number in the body text.
+            add_security_recommendation: Set to ``True`` to include the security recommendation in the body text.
+            code_expiration_minutes: Set to ``True`` to include the code expiration minutes in the body text.
+
+        Returns:
+            An instance of BaseLibraryBodyInput containing the parameters for the authentication body.
+        """
+        return AuthenticationBody._LibraryInput(
+            add_contact_number=add_contact_number,
+            add_security_recommendation=add_security_recommendation,
+            code_expiration_minutes=code_expiration_minutes,
+        )
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class AuthenticationFooter(_DoesNotSupportParams, BaseFooterComponent):
+class AuthenticationFooter(BaseFooterComponent):
     """
     Authentication footer component for Authentication templates.
 

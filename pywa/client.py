@@ -145,6 +145,7 @@ from .types.templates import (
     _AuthenticationTemplates,
     _TemplateUpdate,
     UpdatedTemplate,
+    BaseParams,
 )
 from .utils import FastAPI, Flask
 from .server import Server
@@ -2491,7 +2492,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         to: str | int,
         name: str,
         language: TemplateLanguage,
-        params: list[TemplateBaseComponent.Params | dict] | None = None,
+        params: list[BaseParams | dict] | None = None,
         *,
         use_mm_lite_api: bool = False,
         message_activity_sharing: bool | None = None,
@@ -2515,8 +2516,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 name='seasonal_promotion',
                 language=TemplateLanguage.ENGLISH_US,
                 params=[
-                    BodyText.Params(text='Our {{season}} sale is on!', season='Summer'),
-                    CopyCodeButton.Params(coupon_code="25OFF", index=0)
+                    BodyText.params(text='Our {{season}} sale is on!', season='Summer'),
+                    CopyCodeButton.params(coupon_code="25OFF", index=0)
                 ],
             )
 
@@ -2587,9 +2588,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             **(
                 {
                     "components": [
-                        param.to_dict()
-                        if isinstance(param, TemplateBaseComponent.Params)
-                        else param
+                        param.to_dict() if isinstance(param, BaseParams) else param
                         for param in params
                     ]
                 }

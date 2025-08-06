@@ -44,6 +44,7 @@ from .types.templates import (
     HeaderFormatType,
     Carousel,
     _BaseMediaParams,
+    BaseParams,
 )
 
 if TYPE_CHECKING:
@@ -259,7 +260,7 @@ def upload_template_media_params(
     *,
     wa: WhatsApp,
     sender: str,
-    params: list[TemplateBaseComponent.Params | dict],
+    params: list[BaseParams | dict],
 ) -> None:
     """
     Internal method to upload media parameters when sending a template message.
@@ -268,7 +269,7 @@ def upload_template_media_params(
     for param in params:
         if isinstance(param, _BaseMediaParams) and param._resolved_media is None:
             not_uploaded.append(param)
-        elif isinstance(param, Carousel.Params):
+        elif isinstance(param, Carousel._Params):
             for card_params in param.cards:
                 for p in card_params.params:
                     if isinstance(p, _BaseMediaParams) and p._resolved_media is None:

@@ -237,7 +237,7 @@ The best practice is to use the Template object you created earlier as a referen
 
 As you can see, we use the `params` method of each component to generate the parameters needed for the template.
 
-Using ``params`` ensures that the parameters are correctly formatted and match the expected types, reducing the risk of errors when sending the template. But sometimes, you don't have access to the template object (e.g when creating using WhatsApp Manager Dashboard), and you need to create the parameters manually. In that case, you can use the ``Params`` class of each component to create the parameters:
+Using ``params`` ensures that the parameters are correctly formatted and match the expected types, reducing the risk of errors when sending the template. But sometimes, you don't have access to the template object (e.g when creating using WhatsApp Manager Dashboard), and you need to create the parameters manually. In that case, you can use the ``params`` method of each component to create the parameters directly, as shown below:
 
 .. code-block:: python
     :caption: send_template_without_object.py
@@ -254,9 +254,9 @@ Using ``params`` ensures that the parameters are correctly formatted and match t
         name="order_confirmation",
         language=TemplateLanguage.ENGLISH_US,
         params=[
-            BodyText.Params(name="Jane Doe", order_id=67890, delivery_date=DateTime(fallback_value="September 10, 2025")),
-            QuickReplyButton.Params(callback_data="contact-support", index=0),
-            URLButton.Params(url_variable="67890", index=1),
+            BodyText.params(name="Jane Doe", order_id=67890, delivery_date=DateTime(fallback_value="September 10, 2025")),
+            QuickReplyButton.params(callback_data="contact-support", index=0),
+            URLButton.params(url_variable="67890", index=1),
         ],
     )
 
@@ -488,8 +488,8 @@ When sending an authentication template, you can use the same approach as before
         name="auth_code",
         language=TemplateLanguage.ENGLISH_US,
         params=[
-            AuthenticationBody.Params(otp="123456"),
-            OneTapOTPButton.Params(otp="123456"),
+            AuthenticationBody.params(otp="123456"),
+            OneTapOTPButton.params(otp="123456"),
         ],
     )
 
@@ -548,13 +548,10 @@ If the library template requires parameters, you need to provide them when creat
         category=TemplateCategory.UTILITY,
         language=TemplateLanguage.ENGLISH_US,
         library_template_button_inputs=[
-            LibraryTemplateButtonInputs(
-                type=ComponentType.URL,
-                url={
-                    "base_url": "https://www.mywebsite.com/order/{{1}}",
-                    "url_suffix_example": "https://www.mywebsite.com/order/12345",
-                },
-            )
+            URLButton.library_input(
+                base_url="https://www.example.com/track-order/{{1}}",
+                url_suffix_example="https://www.example.com/track-order/12345",
+            ),
         ]
     )
 

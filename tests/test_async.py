@@ -17,7 +17,6 @@ from pywa.types.templates import (
     CreatedTemplate as CreatedTemplateSync,
     CreatedTemplates as CreatedTemplatesSync,
     UpdatedTemplate as UpdatedTemplateSync,
-    TemplateBaseComponent,
 )
 from pywa_async.types.templates import (
     TemplateDetails as TemplateDetailsAsync,
@@ -192,8 +191,6 @@ def test_all_methods_are_overwritten_in_async(overrides):
             FlowCompletionSync.get_media,
             UserSync.as_vcard,
             TemplateDetailsSync.to_json,
-            TemplateBaseComponent.params,
-            TemplateBaseComponent.Params,
         }
     ]
     non_async = {

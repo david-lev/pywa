@@ -34,7 +34,7 @@ def test_templates_to_json(caplog):
 
 def test_template_text_examples_params():
     with pytest.raises(ValueError):
-        HeaderText.Params("pos", named="named")
+        HeaderText.params("pos", named="named")
 
 
 def test_template_text_examples_positionals():
@@ -126,13 +126,6 @@ def test_template_text_examples_named():
         match="BodyText does not support parameters, as it has no example.",
     ):
         BodyText("Hi").params(name="John")
-
-
-def test_components_that_does_not_get_params():
-    with pytest.raises(ValueError):
-        FooterText(
-            text="This is a footer text template",
-        ).params("John")
 
 
 def test_media_header_handle_reset():
