@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import itertools
 import mimetypes
 
 import httpx
@@ -23,7 +24,7 @@ from pywa.types.templates import (
 )
 from .types import MessageType
 
-from typing import BinaryIO, Literal, TYPE_CHECKING
+from typing import BinaryIO, Literal, TYPE_CHECKING, Coroutine
 
 from .types.media import Media
 
@@ -84,17 +85,20 @@ async def upload_template_media_components(
     if not_uploaded:
         await _run_all_and_cancel_on_exception(
             *[
-                _upload_comp(
+                _upload_comps_example(
                     wa=wa,
-                    c=c,
+                    example=example,
+                    comps=list(comps),
                     app_id=app_id,
                 )
-                for c in not_uploaded
+                for example, comps in itertools.groupby(
+                    not_uploaded, key=lambda x: x.example
+                )
             ]
         )
 
 
-async def _run_all_and_cancel_on_exception(*coros):
+async def _run_all_and_cancel_on_exception(*coros: Coroutine):
     tasks = [asyncio.create_task(c) for c in coros]
 
     try:
@@ -107,10 +111,14 @@ async def _run_all_and_cancel_on_exception(*coros):
         raise e
 
 
-async def _upload_comp(
-    *, wa: WhatsApp, c: _BaseMediaHeaderComponent, app_id: int | str | None
+async def _upload_comps_example(
+    *,
+    wa: WhatsApp,
+    example: str | Media | pathlib.Path | bytes | BinaryIO,
+    comps: list[_BaseMediaHeaderComponent],
+    app_id: int | str | None,
 ) -> None:
-    example = c.example
+    first_comp = comps[0]
     filename: str | None = None
     mime_type: str | None = None
     raw_bytes: bytes | None = None
@@ -138,7 +146,7 @@ async def _upload_comp(
             raw_bytes = example
         if not raw_bytes:
             raise ValueError(
-                f"Invalid media example for component {c.__class__.__name__}: {example}. "
+                f"Invalid media example for component {first_comp.__class__.__name__}: {example}. "
                 "It must be a URL, file path, WhatsApp Media, or bytes."
             )
         app_id = resolve_arg(
@@ -147,19 +155,19 @@ async def _upload_comp(
             method_arg="app_id",
             client_arg="app_id",
         )
-        c._handle = (
+        handle = (
             await wa.api.upload_file(
                 upload_session_id=(
                     await wa.api.create_upload_session(
                         app_id=app_id,
                         file_name=filename
                         or _template_header_formats_filename.get(
-                            c.format, "pywa-template-header"
+                            first_comp.format, "pywa-template-header"
                         ),
                         file_length=len(raw_bytes),
                         file_type=mime_type
                         or _template_header_formats_default_mime_types.get(
-                            c.format, "application/octet-stream"
+                            first_comp.format, "application/octet-stream"
                         ),
                     )
                 )["id"],
@@ -167,9 +175,13 @@ async def _upload_comp(
                 file_offset=0,
             )
         )["h"]
+
+        for comp in comps:
+            comp._handle = handle
+
     except Exception as e:
         e.add_note(
-            f"Failed to upload media for component {c.__class__.__name__} with example: {example}"
+            f"Failed to upload media for component {first_comp.__class__.__name__} with example: {example if not isinstance(example, bytes) else '<bytes>'}"
         )
         raise
 
@@ -198,26 +210,39 @@ async def upload_template_media_params(
 
     await _run_all_and_cancel_on_exception(
         *[
-            _upload_param(
+            _upload_params_media(
                 wa=wa,
                 sender=sender,
-                p=p,
+                media=media,
+                params=list(params),
             )
-            for p in not_uploaded
+            for media, params in itertools.groupby(not_uploaded, key=lambda x: x.media)
         ]
     )
 
 
-async def _upload_param(*, wa: WhatsApp, sender: str, p: _BaseMediaParams) -> None:
+async def _upload_params_media(
+    *,
+    wa: WhatsApp,
+    sender: str,
+    media: str | Media | pathlib.Path | bytes | BinaryIO,
+    params: list[_BaseMediaParams],
+) -> None:
+    first_param = params[0]
     try:
-        p._is_url, p._resolved_media = await resolve_media_param(
+        is_url, media_id_or_url = await resolve_media_param(
             wa=wa,
-            media=p.media,
+            media=media,
             mime_type=None,
             filename=None,
-            media_type=p.format.value,
+            media_type=first_param.format.value,
             phone_id=sender,
         )
+        for p in params:
+            p._is_url = is_url
+            p._resolved_media = media_id_or_url
     except Exception as e:
-        e.add_note(f"Failed to upload media parameter with media: {p.media}")
+        e.add_note(
+            f"Failed to upload media for parameter {first_param} with media: {media if not isinstance(media, bytes) else '<bytes>'}"
+        )
         raise e
