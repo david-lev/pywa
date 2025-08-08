@@ -76,7 +76,7 @@ from .flows import FlowActionType, FlowJSON
 import abc
 import dataclasses
 import logging
-from typing import TYPE_CHECKING, Literal, BinaryIO, cast, Iterator, Any
+from typing import TYPE_CHECKING, Literal, BinaryIO, cast, Iterator
 
 from .media import Media
 from .others import Result, SuccessResult, ProductsSection, _ItemFactory
@@ -1040,13 +1040,6 @@ class _BaseTextComponent:
         _params_cls: type[_BaseTextComponent],
         **named,
     ) -> _BaseTextComponent._Params:
-        """
-        Fill the parameters for the header/body text component.
-
-        Args:
-            *positionals: Positional parameters to fill in the template text. e.g. for `"Hi {{1}}!"`, you would pass ``"John"`` as the first positional argument.
-            **named: Named parameters to fill in the template text. e.g. for `"Hi {{name}}!"`, you would pass ``name="John"`` as a named argument.
-        """
         if positionals and isinstance(
             positionals[0], _BaseTextComponent
         ):  # BodyText(...).params("David")
@@ -1247,8 +1240,9 @@ class HeaderImage(_BaseMediaHeaderComponent):
         def __init__(self, *, image: str | Media | pathlib.Path | bytes | BinaryIO):
             super().__init__(media=image)
 
+    @staticmethod
     def params(
-        self=None, *, image: str | Media | pathlib.Path | bytes | BinaryIO
+        *, image: str | Media | pathlib.Path | bytes | BinaryIO
     ) -> HeaderImage._Params:
         """
         Fill the parameters for the header image component.
@@ -1259,7 +1253,7 @@ class HeaderImage(_BaseMediaHeaderComponent):
         Returns:
             An instance of BaseParams containing the media parameter.
         """
-        return (HeaderImage._Params if self is None else self._Params)(image=image)
+        return HeaderImage._Params(image=image)
 
 
 class HeaderVideo(_BaseMediaHeaderComponent):
@@ -1287,8 +1281,9 @@ class HeaderVideo(_BaseMediaHeaderComponent):
         def __init__(self, *, video: str | Media | pathlib.Path | bytes | BinaryIO):
             super().__init__(media=video)
 
+    @staticmethod
     def params(
-        self=None, *, video: str | Media | pathlib.Path | bytes | BinaryIO
+        *, video: str | Media | pathlib.Path | bytes | BinaryIO
     ) -> HeaderVideo._Params:
         """
         Fill the parameters for the header video component.
@@ -1299,7 +1294,7 @@ class HeaderVideo(_BaseMediaHeaderComponent):
         Returns:
             An instance of BaseParams containing the media parameter.
         """
-        return (HeaderVideo._Params if self is None else self._Params)(video=video)
+        return HeaderVideo._Params(video=video)
 
 
 class HeaderDocument(_BaseMediaHeaderComponent):
@@ -1327,8 +1322,9 @@ class HeaderDocument(_BaseMediaHeaderComponent):
         def __init__(self, *, document: str | Media | pathlib.Path | bytes | BinaryIO):
             super().__init__(media=document)
 
+    @staticmethod
     def params(
-        self=None, *, document: str | Media | pathlib.Path | bytes | BinaryIO
+        *, document: str | Media | pathlib.Path | bytes | BinaryIO
     ) -> HeaderDocument._Params:
         """
         Fill the parameters for the header document component.
@@ -1339,9 +1335,7 @@ class HeaderDocument(_BaseMediaHeaderComponent):
         Returns:
             An instance of BaseParams containing the media parameter.
         """
-        return (HeaderDocument._Params if self is None else self._Params)(
-            document=document
-        )
+        return HeaderDocument._Params(document=document)
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -1392,8 +1386,9 @@ class HeaderLocation(BaseHeaderComponent):
                 ],
             }
 
+    @staticmethod
     def params(
-        self=None, *, lat: float, lon: float, name: str, address: str
+        *, lat: float, lon: float, name: str, address: str
     ) -> HeaderLocation._Params:
         """
         Fill the parameters for the header location component.
@@ -1407,9 +1402,7 @@ class HeaderLocation(BaseHeaderComponent):
         Returns:
             An instance of BaseParams containing the location parameters.
         """
-        return (HeaderLocation._Params if self is None else self._Params)(
-            lat=lat, lon=lon, name=name, address=address
-        )
+        return HeaderLocation._Params(lat=lat, lon=lon, name=name, address=address)
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -1456,7 +1449,8 @@ class HeaderProduct(BaseHeaderComponent):
                 ],
             }
 
-    def params(self=None, *, catalog_id: str, sku: str) -> HeaderProduct._Params:
+    @staticmethod
+    def params(*, catalog_id: str, sku: str) -> HeaderProduct._Params:
         """
         Fill the parameters for the header product component.
 
@@ -1467,9 +1461,7 @@ class HeaderProduct(BaseHeaderComponent):
         Returns:
             An instance of BaseParams containing the catalog ID and SKU.
         """
-        return (HeaderProduct._Params if self is None else self._Params)(
-            catalog_id=catalog_id, sku=sku
-        )
+        return HeaderProduct._Params(catalog_id=catalog_id, sku=sku)
 
 
 # =========== BODY ===========
@@ -1666,7 +1658,8 @@ class CopyCodeButton(BaseButtonComponent):
                 ],
             }
 
-    def params(self=None, *, coupon_code: str, index: int) -> CopyCodeButton._Params:
+    @staticmethod
+    def params(*, coupon_code: str, index: int) -> CopyCodeButton._Params:
         """
         Fill the parameters for the copy code button component.
 
@@ -1677,9 +1670,7 @@ class CopyCodeButton(BaseButtonComponent):
         Returns:
             An instance of BaseParams containing the coupon code and index.
         """
-        if self is None:
-            return CopyCodeButton._Params(coupon_code=coupon_code, index=index)
-        return self._Params(coupon_code=coupon_code, index=index)
+        return CopyCodeButton._Params(coupon_code=coupon_code, index=index)
 
 
 class FlowButtonIcon(utils.StrEnum):
@@ -1834,8 +1825,8 @@ class FlowButton(BaseButtonComponent):
                 ],
             }
 
+    @staticmethod
     def params(
-        self=None,
         *,
         index: int,
         flow_token: str | None = None,
@@ -1852,11 +1843,7 @@ class FlowButton(BaseButtonComponent):
         Returns:
             An instance of BaseParams containing the parameters for the Flow button.
         """
-        if self is None:
-            return FlowButton._Params(
-                index=index, flow_token=flow_token, flow_action_data=flow_action_data
-            )
-        return self._Params(
+        return FlowButton._Params(
             index=index, flow_token=flow_token, flow_action_data=flow_action_data
         )
 
@@ -1866,7 +1853,7 @@ class PhoneNumberButton(BaseButtonComponent):
     """
     Phone number buttons call the specified business phone number when tapped by the app user. Templates are limited to one phone number button.
 
-    - Note that some countries have special phone numbers that have leading zeros after the country calling code (e.g., +55-0-955-585-95436). If you assign one of these numbers to the button, the leading zero will be stripped from the number. If your number will not work without the leading zero, assign an alternate number to the button, or add the number as message body text.
+    - Note that some countries have special phone numbers that have leading zeros after the country calling code (e.g., ``+55-0-955-585-95436``). If you assign one of these numbers to the button, the leading zero will be stripped from the number. If your number will not work without the leading zero, assign an alternate number to the button, or add the number as message body text.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#phone-number-buttons>`_.
 
     Example:
@@ -1986,8 +1973,9 @@ class QuickReplyButton(BaseButtonComponent):
                 ],
             }
 
+    @staticmethod
     def params(
-        self=None, *, callback_data: str | CallbackData, index: int
+        *, callback_data: str | CallbackData, index: int
     ) -> QuickReplyButton._Params:
         """
         Fill the parameters for the quick reply button component.
@@ -2000,9 +1988,7 @@ class QuickReplyButton(BaseButtonComponent):
         Returns:
             An instance of BaseParams containing the callback data and index.
         """
-        return (QuickReplyButton._Params if self is None else self._Params)(
-            callback_data=callback_data, index=index
-        )
+        return QuickReplyButton._Params(callback_data=callback_data, index=index)
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -2115,7 +2101,8 @@ class URLButton(BaseButtonComponent):
                 ],
             }
 
-    def params(self=None, *, url_variable: str, index: int) -> URLButton._Params:
+    @staticmethod
+    def params(*, url_variable: str, index: int) -> URLButton._Params:
         """
         Fill the parameters for the URL button component.
 
@@ -2126,9 +2113,7 @@ class URLButton(BaseButtonComponent):
         Returns:
             An instance of BaseParams containing the URL variable and index.
         """
-        return (URLButton._Params if self is None else self._Params)(
-            url_variable=url_variable, index=index
-        )
+        return URLButton._Params(url_variable=url_variable, index=index)
 
     class _LibraryInput(BaseLibraryButtonInput):
         def __init__(
@@ -2230,8 +2215,9 @@ class CatalogButton(BaseButtonComponent):
                 ),
             }
 
+    @staticmethod
     def params(
-        self=None, *, thumbnail_product_sku: str | None = None, index: int
+        *, thumbnail_product_sku: str | None = None, index: int
     ) -> CatalogButton._Params:
         """
         Fill the parameters for the catalog button component.
@@ -2243,7 +2229,7 @@ class CatalogButton(BaseButtonComponent):
         Returns:
             An instance of BaseParams containing the thumbnail product SKU and index.
         """
-        return (CatalogButton._Params if self is None else self._Params)(
+        return CatalogButton._Params(
             thumbnail_product_sku=thumbnail_product_sku, index=index
         )
 
@@ -2325,8 +2311,8 @@ class MPMButton(BaseButtonComponent):
                 },
             }
 
+    @staticmethod
     def params(
-        self=None,
         *,
         product_sections: list[ProductsSection],
         thumbnail_product_sku: str,
@@ -2343,7 +2329,7 @@ class MPMButton(BaseButtonComponent):
         Returns:
             An instance of BaseParams containing the product sections, thumbnail product SKU, and index.
         """
-        return (MPMButton._Params if self is None else self._Params)(
+        return MPMButton._Params(
             product_sections=product_sections,
             thumbnail_product_sku=thumbnail_product_sku,
             index=index,
@@ -2461,7 +2447,8 @@ class _BaseOTPButtonParams:
                 ],
             }
 
-    def params(self=None, *, otp: str) -> _BaseOTPButtonParams._Params:
+    @staticmethod
+    def params(*, otp: str) -> _BaseOTPButtonParams._Params:
         """
         Fill the parameters for the button component.
 
@@ -2471,7 +2458,7 @@ class _BaseOTPButtonParams:
         Returns:
             An instance of BaseParams containing the OTP.
         """
-        return (_BaseOTPButtonParams._Params if self is None else self._Params)(otp=otp)
+        return _BaseOTPButtonParams._Params(otp=otp)
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -2756,9 +2743,8 @@ class LimitedTimeOffer(TemplateBaseComponent):
                 ],
             }
 
-    def params(
-        self=None, *, expiration_time: datetime.datetime
-    ) -> LimitedTimeOffer._Params:
+    @staticmethod
+    def params(*, expiration_time: datetime.datetime) -> LimitedTimeOffer._Params:
         """
         Fill the parameters for the limited-time offer component.
 
@@ -2768,9 +2754,7 @@ class LimitedTimeOffer(TemplateBaseComponent):
         Returns:
             An instance of BaseParams containing the expiration time.
         """
-        return (LimitedTimeOffer._Params if self is None else self._Params)(
-            expiration_time=expiration_time
-        )
+        return LimitedTimeOffer._Params(expiration_time=expiration_time)
 
 
 # ========== CAROUSEL ==========
@@ -2880,7 +2864,14 @@ class Carousel(TemplateBaseComponent):
         Returns:
             An instance of BaseParams containing the parameters for the carousel.
         """
-        return (Carousel._Params if self is None else self._Params)(cards=cards)
+        if self is None:
+            return Carousel._Params(cards=cards)
+        cards_len, params_len = len(self.cards), len(cards)
+        if cards_len != params_len:
+            raise ValueError(
+                f"Expected {cards_len} card parameters, but got {params_len}."
+            )
+        return self._Params(cards=cards)
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -2892,15 +2883,15 @@ class CarouselCard:
 
         >>> carousel_media_card = CarouselCard(
         ...     components=[
-        ...         HeaderImage(example="https://example.com/image.jpg"),
-        ...         QuickReplyButton(text="Unsubscribe"),
+        ...         hi := HeaderImage(example="https://example.com/image.jpg"),
+        ...         qrb := QuickReplyButton(text="Unsubscribe"),
         ...     ]
         ... )
         >>> carousel_media_card.params(
         ...     index=0,
         ...     params=[
-        ...         HeaderImage.BaseParams(image="https://cdn.com/image.jpg"),
-        ...         QuickReplyButton.BaseParams(callback_data="unsubscribe", index=0),
+        ...         hi.params(image="https://cdn.com/image.jpg"),
+        ...         qrb.params(callback_data="unsubscribe", index=0),
         ...     ],
         ... )
 
@@ -2929,9 +2920,8 @@ class CarouselCard:
                 if hasattr(param, "clear_media_cache"):
                     param.clear_media_cache()
 
-    def params(
-        self=None, *, params: list[BaseParams], index: int
-    ) -> CarouselCard._Params:
+    @staticmethod
+    def params(*, params: list[BaseParams], index: int) -> CarouselCard._Params:
         """
         Fill the parameters for the carousel card.
 
@@ -2942,7 +2932,7 @@ class CarouselCard:
         Returns:
             An instance of BaseParams containing the parameters for the card.
         """
-        return (CarouselCard._Params if self is None else self._Params)(
+        return CarouselCard._Params(
             params=params,
             index=index,
         )
@@ -2987,7 +2977,8 @@ class AuthenticationBody(BaseBodyComponent):
                 ],
             }
 
-    def params(self=None, *, otp: str) -> AuthenticationBody._Params:
+    @staticmethod
+    def params(*, otp: str) -> AuthenticationBody._Params:
         """
         Fill the parameters for the authentication body component.
 
@@ -2997,7 +2988,7 @@ class AuthenticationBody(BaseBodyComponent):
         Returns:
             An instance of BaseParams containing the OTP.
         """
-        return (AuthenticationBody._Params if self is None else self._Params)(otp=otp)
+        return AuthenticationBody._Params(otp=otp)
 
     class _LibraryInput(BaseLibraryBodyInput):
         def __init__(
@@ -3299,8 +3290,8 @@ def _parse_component(component: dict) -> TemplateBaseComponent | dict:
     try:
         return component_cls.from_dict(component)
     except Exception:
-        _logger.warning(
-            "Failed to parse component: %s. Defaulting to dictionary representation.",
+        _logger.exception(
+            "Failed to parse component: %s. Defaulting to dictionary representation. please update pywa or report this issue.",
             component,
         )
         return component
@@ -3536,7 +3527,7 @@ class TemplateDetails(utils.APIObject):
     def send(
         self,
         to: str | int,
-        params: list[TemplateBaseComponent.Params],
+        params: list[BaseParams],
         *,
         use_mm_lite_api: bool = False,
         message_activity_sharing: bool | None = None,

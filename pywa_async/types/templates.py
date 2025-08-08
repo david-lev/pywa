@@ -19,6 +19,7 @@ from pywa.types.templates import (
     TemplateQualityUpdate as _TemplateQualityUpdate,
     TemplateCategoryUpdate as _TemplateCategoryUpdate,
     TemplateComponentsUpdate as _TemplateComponentsUpdate,
+    BaseParams,
 )  # noqa MUST BE IMPORTED FIRST
 from .others import Result, SuccessResult
 from .. import filters as pywa_filters
@@ -312,7 +313,7 @@ class TemplateDetails(_TemplateDetails):
     async def send(
         self,
         to: str | int,
-        params: list[TemplateBaseComponent.Params],
+        params: list[BaseParams],
         *,
         use_mm_lite_api: bool = False,
         message_activity_sharing: bool | None = None,

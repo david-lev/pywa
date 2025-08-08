@@ -31,7 +31,7 @@ if TYPE_CHECKING:
         FlowButton,
         CallbackData,
     )
-    from .templates import TemplateLanguage, TemplateBaseComponent
+    from .templates import TemplateLanguage, BaseParams
 
 
 class StopHandling(Exception):
@@ -803,7 +803,7 @@ class _ClientShortcuts(abc.ABC):
         self,
         name: str,
         language: TemplateLanguage,
-        params: list[TemplateBaseComponent.Params],
+        params: list[BaseParams],
         *,
         use_mm_lite_api: bool = False,
         message_activity_sharing: bool | None = None,

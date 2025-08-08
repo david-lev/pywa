@@ -13,6 +13,7 @@ import pathlib
 import dataclasses
 from typing import TYPE_CHECKING, BinaryIO, Iterable
 
+from pywa.types.templates import BaseParams
 from .others import Contact, ProductsSection, User, SuccessResult
 
 
@@ -29,7 +30,7 @@ if TYPE_CHECKING:
         FlowButton,
         CallbackData,
     )
-    from .templates import TemplateLanguage, TemplateBaseComponent
+    from .templates import TemplateLanguage
 
 
 class _ClientShortcutsAsync:
@@ -662,7 +663,7 @@ class _ClientShortcutsAsync:
         self,
         name: str,
         language: TemplateLanguage,
-        params: list[TemplateBaseComponent.Params],
+        params: list[BaseParams],
         *,
         use_mm_lite_api: bool = False,
         message_activity_sharing: bool | None = None,
