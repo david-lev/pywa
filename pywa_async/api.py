@@ -8,6 +8,8 @@ import httpx
 
 from .errors import WhatsAppError
 
+_logger = logging.getLogger(__name__)
+
 
 class GraphAPIAsync(GraphAPI):
     """Internal methods for the WhatsApp Async client. Do not use this class directly."""
@@ -29,13 +31,16 @@ class GraphAPIAsync(GraphAPI):
     def __str__(self):
         return f"GraphAPIAsync(session={self._session!r})"
 
-    async def _make_request(self, method: str, endpoint: str, **kwargs) -> dict | list:
+    async def _make_request(
+        self, method: str, endpoint: str, log_kwargs: bool = True, **kwargs
+    ) -> dict:
         """
         Internal method to make a request to the WhatsApp Cloud API.
 
         Args:
             method: The HTTP method to use.
             endpoint: The endpoint to request.
+            log_kwargs: Whether to log the kwargs or not (in debug mode).
             **kwargs: Additional arguments to pass to the request.
 
         Returns:
@@ -44,6 +49,12 @@ class GraphAPIAsync(GraphAPI):
         Raises:
             WhatsAppError: If the request failed.
         """
+        _logger.debug(
+            "Making request: %s %s with kwargs: %s",
+            method,
+            endpoint,
+            kwargs if log_kwargs else "OMITTED",
+        )
         try:
             res = await self._session.request(method=method, url=endpoint, **kwargs)
         except httpx.RequestError as e:
@@ -87,6 +98,7 @@ class GraphAPIAsync(GraphAPI):
                 "client_id": app_id,
                 "client_secret": app_secret,
             },
+            log_kwargs=False,
         )
 
     async def set_app_callback_url(
@@ -347,6 +359,7 @@ class GraphAPIAsync(GraphAPI):
                 "messaging_product": (None, "whatsapp"),
                 "type": (None, mime_type),
             },
+            log_kwargs=False,
         )
 
     async def get_media_url(self, media_id: str) -> dict:
@@ -420,7 +433,9 @@ class GraphAPIAsync(GraphAPI):
             method="DELETE", endpoint=f"/{media_id}", params=params
         )
 
-    async def send_raw_request(self, method: str, endpoint: str, **kwargs) -> Any:
+    async def send_raw_request(
+        self, method: str, endpoint: str, log_kwargs: bool = True, **kwargs
+    ) -> Any:
         """
         Send a raw request to WhatsApp Cloud API.
 
@@ -430,6 +445,7 @@ class GraphAPIAsync(GraphAPI):
         Args:
             method: The HTTP method to use (e.g. ``POST``, ``GET``, etc.).
             endpoint: The endpoint to send the message to (e.g. ``/{phone_id}/messages/``).
+            log_kwargs: Whether to log the kwargs or not (in debug mode).
             **kwargs: Additional arguments to send with the request (e.g. ``json={...}, headers={...}``).
 
         Example:
@@ -452,6 +468,7 @@ class GraphAPIAsync(GraphAPI):
         return await self._make_request(
             method=method,
             endpoint=endpoint,
+            log_kwargs=log_kwargs,
             **kwargs,
         )
 
@@ -1389,6 +1406,7 @@ class GraphAPIAsync(GraphAPI):
                 "asset_type": (None, "FLOW_JSON"),
                 "messaging_product": (None, "whatsapp"),
             },
+            log_kwargs=False,
         )
 
     async def publish_flow(
@@ -2005,6 +2023,7 @@ class GraphAPIAsync(GraphAPI):
                 "file_offset": str(file_offset),
             },
             data=file,
+            log_kwargs=False,
         )
 
     async def get_upload_session(

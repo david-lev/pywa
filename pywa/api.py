@@ -43,13 +43,16 @@ class GraphAPI:
     def __repr__(self) -> str:
         return self.__str__()
 
-    def _make_request(self, method: str, endpoint: str, **kwargs) -> dict | list:
+    def _make_request(
+        self, method: str, endpoint: str, log_kwargs: bool = True, **kwargs
+    ) -> dict:
         """
         Internal method to make a request to the WhatsApp Cloud API.
 
         Args:
             method: The HTTP method to use.
             endpoint: The endpoint to request.
+            log_kwargs: Whether to log the kwargs or not (in debug mode).
             **kwargs: Additional arguments to pass to the request.
 
         Returns:
@@ -58,6 +61,12 @@ class GraphAPI:
         Raises:
             WhatsAppError: If the request failed.
         """
+        _logger.debug(
+            "Making request: %s %s with kwargs: %s",
+            method,
+            endpoint,
+            kwargs if log_kwargs else "OMITTED",
+        )
         try:
             res = self._session.request(method=method, url=endpoint, **kwargs)
         except httpx.RequestError as e:
@@ -99,6 +108,7 @@ class GraphAPI:
                 "client_id": app_id,
                 "client_secret": app_secret,
             },
+            log_kwargs=False,
         )
 
     def set_app_callback_url(
@@ -357,6 +367,7 @@ class GraphAPI:
                 "messaging_product": (None, "whatsapp"),
                 "type": (None, mime_type),
             },
+            log_kwargs=False,
         )
 
     def get_media_url(self, media_id: str) -> dict:
@@ -430,7 +441,9 @@ class GraphAPI:
             method="DELETE", endpoint=f"/{media_id}", params=params
         )
 
-    def send_raw_request(self, method: str, endpoint: str, **kwargs) -> Any:
+    def send_raw_request(
+        self, method: str, endpoint: str, log_kwargs: bool = True, **kwargs
+    ) -> Any:
         """
         Send a raw request to WhatsApp Cloud API.
 
@@ -440,6 +453,7 @@ class GraphAPI:
         Args:
             method: The HTTP method to use (e.g. ``POST``, ``GET``, etc.).
             endpoint: The endpoint to send the message to (e.g. ``/{phone_id}/messages/``).
+            log_kwargs: Whether to log the kwargs or not (in debug mode).
             **kwargs: Additional arguments to send with the request (e.g. ``json={...}, headers={...}``).
 
         Example:
@@ -462,6 +476,7 @@ class GraphAPI:
         return self._make_request(
             method=method,
             endpoint=endpoint,
+            log_kwargs=log_kwargs,
             **kwargs,
         )
 
@@ -1397,6 +1412,7 @@ class GraphAPI:
                 "asset_type": (None, "FLOW_JSON"),
                 "messaging_product": (None, "whatsapp"),
             },
+            log_kwargs=False,
         )
 
     def publish_flow(
@@ -2011,6 +2027,7 @@ class GraphAPI:
                 "file_offset": str(file_offset),
             },
             data=file,
+            log_kwargs=False,
         )
 
     def get_upload_session(
