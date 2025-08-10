@@ -12,8 +12,7 @@ import abc
 import pathlib
 import dataclasses
 import datetime
-from typing import TYPE_CHECKING, BinaryIO, Iterable, ClassVar
-
+from typing import TYPE_CHECKING, BinaryIO, Iterable, ClassVar, NoReturn
 
 from .others import Contact, Metadata, ProductsSection, User, SuccessResult
 from ..listeners import BaseListenerIdentifier, UserUpdateListenerIdentifier
@@ -119,7 +118,7 @@ class BaseUpdate(abc.ABC):
         """Create an update object from a raw update dict."""
         ...
 
-    def stop_handling(self) -> None:
+    def stop_handling(self) -> NoReturn:
         """
         Call this method to break out of the handler loop. other handlers will not be called.
 
@@ -144,7 +143,7 @@ class BaseUpdate(abc.ABC):
         """
         raise StopHandling
 
-    def continue_handling(self) -> None:
+    def continue_handling(self) -> NoReturn:
         """
         Call this method to continue to the next handler in the handlers loop.
 
