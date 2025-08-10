@@ -471,7 +471,7 @@ The OTP button can be one of the following types:
         otp_button = CopyCodeOTPButton()
 
 
-When sending an authentication template, you can use the same approach as before, but now you need to provide the OTP button in the template:
+When sending an authentication template you need to provide the OTP code as a parameter to the :class:`AuthenticationBody` and to the OTP button you are using.
 
 .. code-block:: python
     :caption: send_authentication_template.py
@@ -493,6 +493,30 @@ When sending an authentication template, you can use the same approach as before
         ],
     )
 
+.. tip::
+
+    Authentication templates texts are fixed and cannot be edited (except the button title), So WhatsApp allows you to create and update multiple authentication templates with the same name. This means you can create multiple authentication templates with the same name, but for different languages.
+
+    To create an authentication template for multiple languages, you can use the :meth:`~pywa.client.WhatsApp.upsert_authentication_template` method, which allows you to create or update an authentication template for multiple languages at once.
+
+    .. code-block:: python
+        :caption: create_authentication_template_multiple_languages.py
+        :linenos:
+
+        from pywa import WhatsApp
+        from pywa.types.templates import *
+
+        wa = WhatsApp(business_account_id=..., token=...)
+
+        templates = wa.upsert_authentication_template(
+            name='one_tap_authentication',
+            languages=[TemplateLanguage.ENGLISH_US, TemplateLanguage.FRENCH, TemplateLanguage.SPANISH],
+            otp_button=OneTapOTPButton(supported_apps=...),
+            add_security_recommendation=True,
+            code_expiration_minutes=5,
+        )
+        for template in templates:
+            print(f'Template {template.id} created with status {template.status}')
 
 Library Templates
 -------------------

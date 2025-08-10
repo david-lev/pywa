@@ -18,10 +18,6 @@ Template Types
 
 .. autoclass:: LibraryTemplate()
 
-.. autoclass:: LibraryTemplateBodyInputs()
-
-.. autoclass:: LibraryTemplateButtonInputs()
-
 .. autoclass:: TemplateCategory()
 
 .. autoclass:: TemplateSubCategory()

@@ -87,6 +87,9 @@ __all__ = [
     "call_terminate",
     "phone_number_change",
     "identity_change",
+    "user_marketing_preferences",
+    "user_marketing_preferences_stop",
+    "user_marketing_preferences_resume",
 ]
 
 import re
@@ -112,6 +115,7 @@ from .types import CallPermissionUpdate as _Cpu
 from .types import CallTerminate as _Ct
 from .types import PhoneNumberChange as _Pnc
 from .types import IdentityChange as _Ic
+from .types import UserMarketingPreferences as _Mup
 
 from .types.base_update import (
     BaseUpdate as _BaseUpdate,
@@ -836,3 +840,19 @@ phone_number_change = new(lambda _, c: isinstance(c, _Pnc), name="phone_number_c
 
 identity_change = new(lambda _, c: isinstance(c, _Ic), name="identity_change")
 """Filter for identity change updates."""
+
+user_marketing_preferences = new(
+    lambda _, m: isinstance(m, _Mup), name="user_marketing_preferences"
+)
+"""Filter for user marketing preferences updates."""
+
+user_marketing_preferences_stop = new(
+    lambda _, m: bool(m),
+    name="user_marketing_preferences_stop",
+)
+"""Filter for user marketing preferences updates that indicate the user has requested to stop receiving marketing messages."""
+user_marketing_preferences_resume = new(
+    lambda _, m: not bool(m),
+    name="user_marketing_preferences_resume",
+)
+"""Filter for user marketing preferences updates that indicate the user has requested to resume receiving marketing messages."""

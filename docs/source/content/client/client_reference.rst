@@ -45,7 +45,7 @@ Client Reference
 .. automethod:: WhatsApp.get_templates
 .. automethod:: WhatsApp.delete_template
 .. automethod:: WhatsApp.unpause_template
-.. automethod:: WhatsApp.complete_templates
+.. automethod:: WhatsApp.compare_templates
 .. automethod:: WhatsApp.migrate_templates
 .. automethod:: WhatsApp.create_flow
 .. automethod:: WhatsApp.update_flow_metadata
