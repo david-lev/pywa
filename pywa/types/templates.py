@@ -2251,17 +2251,11 @@ class MPMButton(BaseButtonComponent):
         ...     product_sections=[
         ...        ProductsSection(
         ...            title="Section 1",
-        ...            products=[
-        ...                Product(sku="SKU12345", name="Product 1", price=100.0),
-        ...                Product(sku="SKU12346", name="Product 2", price=150.0),
-        ...            ]
+        ...            skus=["SKU12345", "SKU12346"],
         ...        ),
         ...        ProductsSection(
         ...            title="Section 2",
-        ...            products=[
-        ...                Product(sku="SKU12347", name="Product 3", price=200.0),
-        ...                Product(sku="SKU12348", name="Product 4", price=250.0),
-        ...            ]
+        ...            skus=["SKU12347", "SKU12348"],
         ...        ),
         ...     ],
         ... )
@@ -2302,13 +2296,15 @@ class MPMButton(BaseButtonComponent):
                 "type": ParamType.BUTTON.value,
                 "sub_type": ComponentType.MPM.value,
                 "index": self.index,
-                "parameters": {
-                    "type": ParamType.ACTION.value,
-                    ParamType.ACTION.value: {
-                        "thumbnail_product_retailer_id": self.thumbnail_product_sku,
-                        "sections": [s.to_dict() for s in self.product_sections],
-                    },
-                },
+                "parameters": [
+                    {
+                        "type": ParamType.ACTION.value,
+                        ParamType.ACTION.value: {
+                            "thumbnail_product_retailer_id": self.thumbnail_product_sku,
+                            "sections": [s.to_dict() for s in self.product_sections],
+                        },
+                    }
+                ],
             }
 
     @staticmethod
