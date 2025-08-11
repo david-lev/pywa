@@ -79,6 +79,10 @@ Template Types
 .. autoclass:: LimitedTimeOffer()
     :members: params
 
+.. figure:: ../../../../_static/examples/lto-template.webp
+    :align: center
+    :width: 50%
+
 .. autoclass:: Carousel()
     :members: params
 

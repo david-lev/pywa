@@ -12,9 +12,7 @@ PyWa offers a comprehensive and intuitive interface to create, manage, and send 
 Defining Template
 ------------------
 
-To create a template, you can use the :class:`Template` class.
-
-You need to define the template details, including the header, body, footer, and buttons. Each component can be customized to fit your messaging needs.
+To create a template, you need to define its structure using the :class:`Template` class from the :mod:`pywa.types.templates` module. This involves specifying the template's name, language, category, parameter format, and the components that make up the template.
 
 In the example below, we create a simple Order Confirmation template with a header, body, footer, and buttons.
 
@@ -237,28 +235,30 @@ The best practice is to use the Template object you created earlier as a referen
 
 As you can see, we use the `params` method of each component to generate the parameters needed for the template.
 
-Using ``params`` ensures that the parameters are correctly formatted and match the expected types, reducing the risk of errors when sending the template. But sometimes, you don't have access to the template object (e.g when creating using WhatsApp Manager Dashboard), and you need to create the parameters manually. In that case, you can use the ``params`` method of each component to create the parameters directly, as shown below:
+.. tip::
 
-.. code-block:: python
-    :caption: send_template_without_object.py
-    :linenos:
-    :emphasize-lines: 11-13
+    Using ``params`` on the instance ensures that the parameters are correctly formatted and match the expected types, reducing the risk of errors when sending the template. But sometimes, you don't have access to the template components instances (e.g when creating using WhatsApp Manager Dashboard), and you need to create the parameters manually. In that case, you can still use the ``params`` method on each component to create the parameters directly, as shown below:
 
-    from pywa import WhatsApp
-    from pywa.types.templates import *
+    .. code-block:: python
+        :caption: send_template_without_object.py
+        :linenos:
+        :emphasize-lines: 11-13
 
-    wa = WhatsApp(phone_id=..., token=...)
+        from pywa import WhatsApp
+        from pywa.types.templates import *
 
-    wa.send_template(
-        to="972123456789",
-        name="order_confirmation",
-        language=TemplateLanguage.ENGLISH_US,
-        params=[
-            BodyText.params(name="Jane Doe", order_id=67890, delivery_date=DateTime(fallback_value="September 10, 2025")),
-            QuickReplyButton.params(callback_data="contact-support", index=0),
-            URLButton.params(url_variable="67890", index=1),
-        ],
-    )
+        wa = WhatsApp(phone_id=..., token=...)
+
+        wa.send_template(
+            to="972123456789",
+            name="order_confirmation",
+            language=TemplateLanguage.ENGLISH_US,
+            params=[
+                BodyText.params(name="Jane Doe", order_id=67890, delivery_date=DateTime(fallback_value="September 10, 2025")),
+                QuickReplyButton.params(callback_data="contact-support", index=0),
+                URLButton.params(url_variable="67890", index=1),
+            ],
+        )
 
 
 Media Templates
@@ -440,6 +440,13 @@ The OTP button can be one of the following types:
             ],
         )
 
+.. figure:: ../../../../_static/examples/one-tap-auth-template.webp
+    :align: center
+    :width: 50%
+
+
+--
+
 - :class:`ZeroTapOTPButton`: A button that allows the user to receive the OTP code without any interaction.
 
     .. code-block:: python
@@ -460,6 +467,12 @@ The OTP button can be one of the following types:
             ],
         )
 
+.. figure:: ../../../../_static/examples/zero-tap-auth-template.png
+    :align: center
+    :width: 50%
+
+--
+
 - :class:`CopyCodeOTPButton`: A button that allows the user to copy the OTP code to the clipboard and use it in another app.
 
     .. code-block:: python
@@ -470,6 +483,12 @@ The OTP button can be one of the following types:
 
         otp_button = CopyCodeOTPButton()
 
+
+.. figure:: ../../../../_static/examples/copy-code-auth-template.webp
+    :align: center
+    :width: 50%
+
+--
 
 When sending an authentication template you need to provide the OTP code as a parameter to the :class:`AuthenticationBody` and to the OTP button you are using.
 
@@ -518,12 +537,16 @@ When sending an authentication template you need to provide the OTP code as a pa
         for template in templates:
             print(f'Template {template.id} created with status {template.status}')
 
-Library Templates
+Template Library
 -------------------
 
 PyWa also provides an easy way to create templates from the Template Library. The library contains a collection of pre-defined templates that you can use to quickly create and send messages without having to define them from scratch.
 
 From `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-message-templates/template-library>`_:
+
+    .. image:: ../../../../_static/guides/template-library.webp
+        :alt: Template Library
+        :width: 100%
 
     Template Library makes it faster and easier for businesses to create utility templates for common use cases, like payment reminders, delivery updates — and authentication templates for common identity verification use cases.
 
