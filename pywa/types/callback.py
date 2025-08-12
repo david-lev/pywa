@@ -5,7 +5,7 @@ __all__ = [
     "CallbackSelection",
     "Button",
     "URLButton",
-    "ButtonUrl",  # Alias for URLButton for backward compatibility
+    "ButtonUrl",  # Deprecated, use URLButton instead
     "VoiceCallButton",
     "CallPermissionRequestButton",
     "SectionRow",
@@ -471,15 +471,24 @@ class URLButton:
 
 
 @dataclasses.dataclass(slots=True)
-class ButtonUrl(URLButton):
+class ButtonUrl:
     """Deprecated. Use :class:`URLButton` instead."""
+
+    title: str
+    url: str
 
     def __post_init__(self):
         warnings.warn(
-            "ButtonUrl is deprecated, use `URLButton` instead.",
+            "`ButtonUrl` is deprecated, use `URLButton` instead.",
             DeprecationWarning,
             stacklevel=2,
         )
+
+    def to_dict(self) -> dict:
+        return {
+            "name": InteractiveType.CTA_URL,
+            "parameters": {"display_text": self.title, "url": self.url},
+        }
 
 
 @dataclasses.dataclass(slots=True)

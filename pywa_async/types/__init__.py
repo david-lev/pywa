@@ -6,7 +6,7 @@ from .base_update import StopHandling, ContinueHandling
 from .callback import (
     Button,
     URLButton,
-    ButtonUrl,  # Alias for URLButton for backward compatibility
+    ButtonUrl,  # Deprecated, use URLButton instead
     VoiceCallButton,
     CallPermissionRequestButton,
     CallbackButton,

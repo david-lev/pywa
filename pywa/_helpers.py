@@ -35,6 +35,7 @@ from .types import (
     FlowButton,
     Button,
     CallPermissionRequestButton,
+    ButtonUrl,
 )
 from pywa.types.others import InteractiveType
 from .types.media import Media
@@ -79,7 +80,7 @@ def resolve_buttons_param(
                 }
             },
         )
-    elif isinstance(buttons, URLButton):
+    elif isinstance(buttons, (URLButton, ButtonUrl)):
         return InteractiveType.CTA_URL, buttons.to_dict(), {}
     elif isinstance(buttons, VoiceCallButton):
         return InteractiveType.VOICE_CALL, buttons.to_dict(), {}
