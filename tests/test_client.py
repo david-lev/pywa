@@ -90,7 +90,6 @@ def test_resolve_buttons_param():
                 {"type": "reply", "reply": {"id": "button2", "title": "Button 2"}},
             )
         },
-        {"_callback_options": {"button2", "button1"}},
     )
 
     assert helpers.resolve_buttons_param(
@@ -104,7 +103,6 @@ def test_resolve_buttons_param():
                 "url": "https://pywa.readthedocs.io",
             },
         },
-        {},
     )
 
     assert helpers.resolve_buttons_param(
@@ -121,7 +119,6 @@ def test_resolve_buttons_param():
                 "ttl_minutes": 50,
             },
         },
-        {},
     )
 
     assert helpers.resolve_buttons_param(
@@ -151,7 +148,6 @@ def test_resolve_buttons_param():
                 },
             },
         },
-        {"_flow_token": "flow_token"},
     )
 
     assert helpers.resolve_buttons_param(
@@ -187,7 +183,6 @@ def test_resolve_buttons_param():
                 },
             ),
         },
-        {"_callback_options": {"row1"}},
     )
 
 

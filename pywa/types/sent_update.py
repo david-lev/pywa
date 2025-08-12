@@ -85,16 +85,9 @@ class SentMessage(_SentUpdate):
         from_phone_id: The WhatsApp ID of the sender who sent the message.
     """
 
-    _callback_options: set[str] | None = dataclasses.field(
-        repr=False, hash=False, compare=False, default=None
-    )  # TODO need this?
-    _flow_token: str | None = dataclasses.field(
-        repr=False, hash=False, compare=False, default=None
-    )
-
     @classmethod
     def from_sent_update(
-        cls, *, client: WhatsApp, update: dict, from_phone_id: str, **kwargs
+        cls, *, client: WhatsApp, update: dict, from_phone_id: str
     ) -> SentMessage:
         msg_id, user = (
             update["messages"][0]["id"],
@@ -105,7 +98,6 @@ class SentMessage(_SentUpdate):
             id=msg_id,
             to_user=user,
             from_phone_id=from_phone_id,
-            **kwargs,
         )
 
     def wait_for_reply(
@@ -447,7 +439,6 @@ class SentTemplate(SentMessage):
             else None,
             to_user=user,
             from_phone_id=from_phone_id,
-            **kwargs,
         )
 
 

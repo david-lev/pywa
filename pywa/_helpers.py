@@ -64,7 +64,6 @@ def resolve_buttons_param(
 ) -> tuple[
     InteractiveType,
     dict,
-    dict[str, set[str] | str],
 ]:
     """
     Internal method to resolve ``buttons`` parameter. Returns a tuple of (``type``, ``buttons``, ``callback_options``).
@@ -74,31 +73,17 @@ def resolve_buttons_param(
         return (
             InteractiveType.LIST,
             data,
-            {
-                "_callback_options": {
-                    row["id"] for section in data["sections"] for row in section["rows"]
-                }
-            },
         )
     elif isinstance(buttons, (URLButton, ButtonUrl)):
-        return InteractiveType.CTA_URL, buttons.to_dict(), {}
+        return InteractiveType.CTA_URL, buttons.to_dict()
     elif isinstance(buttons, VoiceCallButton):
-        return InteractiveType.VOICE_CALL, buttons.to_dict(), {}
+        return InteractiveType.VOICE_CALL, buttons.to_dict()
     elif isinstance(buttons, CallPermissionRequestButton):
-        return InteractiveType.CALL_PERMISSION_REQUEST, buttons.to_dict(), {}
+        return InteractiveType.CALL_PERMISSION_REQUEST, buttons.to_dict()
     elif isinstance(buttons, FlowButton):
-        return (
-            InteractiveType.FLOW,
-            buttons.to_dict(),
-            {"_flow_token": buttons.flow_token},
-        )
+        return InteractiveType.FLOW, buttons.to_dict()
     else:  # assume its list of buttons
-        data = tuple(b.to_dict() for b in buttons)
-        return (
-            InteractiveType.BUTTON,
-            {"buttons": data},
-            {"_callback_options": {b["reply"]["id"] for b in data}},
-        )
+        return InteractiveType.BUTTON, {"buttons": tuple(b.to_dict() for b in buttons)}
 
 
 _media_types_default_filenames = {

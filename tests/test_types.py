@@ -257,8 +257,6 @@ def test_sent_message():
     )
     assert sm == SentMessage(
         _client=wa,
-        _callback_options=None,
-        _flow_token=None,
         id="wamid.HBgLMTY1MDUwNzY1MjAVAgARGBI5QTNDQTVCM0Q0Q0Q2RTY3RTcA",
         to_user=types.User(wa_id="16505555555", name=None, _client=wa),
         from_phone_id=wa.phone_id,
@@ -281,8 +279,6 @@ def test_sent_message():
         from_phone_id=wa.phone_id,
     ) == SentTemplate(
         _client=wa,
-        _callback_options=None,
-        _flow_token=None,
         id="wamid.HBgLMTY1MDUwNzY1MjAVAgARGBI5QTNDQTVCM0Q0Q0Q2RTY3RTcA",
         to_user=types.User(wa_id="16505555555", name=None, _client=wa),
         from_phone_id=wa.phone_id,

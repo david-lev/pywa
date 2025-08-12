@@ -385,7 +385,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 ),
                 from_phone_id=sender,
             )
-        typ, kb, sent_kw = helpers.resolve_buttons_param(buttons)
+        typ, kb = helpers.resolve_buttons_param(buttons)
         return SentMessage.from_sent_update(
             client=self,
             update=await self.api.send_message(
@@ -408,7 +408,6 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             ),
             from_phone_id=sender,
-            **sent_kw,
         )
 
     send_text = send_message  # alias
@@ -491,7 +490,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             raise ValueError(
                 "A caption must be provided when sending an image with buttons."
             )
-        typ, kb, sent_kw = helpers.resolve_buttons_param(buttons)
+        typ, kb = helpers.resolve_buttons_param(buttons)
         return SentMessage.from_sent_update(
             client=self,
             update=await self.api.send_message(
@@ -514,7 +513,6 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             ),
             from_phone_id=sender,
-            **sent_kw,
         )
 
     async def send_video(
@@ -594,7 +592,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             raise ValueError(
                 "A caption must be provided when sending a video with buttons."
             )
-        typ, kb, sent_kw = helpers.resolve_buttons_param(buttons)
+        typ, kb = helpers.resolve_buttons_param(buttons)
         return SentMessage.from_sent_update(
             client=self,
             update=await self.api.send_message(
@@ -617,7 +615,6 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             ),
             from_phone_id=sender,
-            **sent_kw,
         )
 
     async def send_document(
@@ -704,7 +701,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             raise ValueError(
                 "A caption must be provided when sending a document with buttons."
             )
-        typ, kb, sent_kw = helpers.resolve_buttons_param(buttons)
+        typ, kb = helpers.resolve_buttons_param(buttons)
         return SentMessage.from_sent_update(
             client=self,
             update=await self.api.send_message(
@@ -728,7 +725,6 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             ),
             from_phone_id=sender,
-            **sent_kw,
         )
 
     async def send_audio(
