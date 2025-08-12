@@ -117,7 +117,8 @@ __all__ = [
     "NavigateAction",
     "CompleteAction",
     "UpdateDataAction",
-    "OpenUrlAction",
+    "OpenURLAction",
+    "OpenUrlAction",  # Deprecated, use OpenURLAction instead
     "FlowActionType",
     "FlowRequestActionType",
     "Next",
@@ -261,7 +262,7 @@ class FlowRequest:
 
     def respond(
         self,
-        screen: str | None = None,
+        screen: str | Screen | None = None,
         data: _FlowResponseDataType | None = None,
         error_message: str | None = None,
         close_flow: bool = False,
@@ -424,7 +425,7 @@ class FlowResponse:
 
     version: str
     data: _FlowResponseDataType = dataclasses.field(default_factory=dict)
-    screen: str | None = None
+    screen: str | Screen | None = None
     error_message: str | None = None
     flow_token: str | None = None
     close_flow: bool = False
@@ -462,7 +463,11 @@ class FlowResponse:
                 ]
         return {
             "version": self.version,
-            "screen": self.screen if not self.close_flow else "SUCCESS",
+            "screen": (
+                self.screen.id if isinstance(self.screen, Screen) else self.screen
+            )
+            if not self.close_flow
+            else "SUCCESS",
             "data": data
             if not self.close_flow
             else {
@@ -1244,10 +1249,10 @@ class FlowJSON:
         data_channel_uri: The endpoint to use to communicate with your server (When using v3.0 or higher, this field need to be set via :meth:`WhatsApp.update_flow_metadata`).
     """
 
-    screens: list[Screen]
     version: str | float | Literal[utils.Version.FLOW_JSON]
     data_api_version: str | float | Literal[utils.Version.FLOW_DATA_API] | None = None
     routing_model: dict[str, list[str]] | None = None
+    screens: list[Screen]
     data_channel_uri: str | None = None
 
     def __post_init__(self):
@@ -2899,7 +2904,7 @@ class OptIn(FormComponent[bool]):
     required: bool | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     init_value: bool | ScreenDataRef[bool] | ComponentRef[bool] | None = None
-    on_click_action: OpenUrlAction | DataExchangeAction | NavigateAction | None = None
+    on_click_action: OpenURLAction | DataExchangeAction | NavigateAction | None = None
     on_select_action: UpdateDataAction | None = None
     on_unselect_action: UpdateDataAction | None = None
 
@@ -2934,7 +2939,7 @@ class EmbeddedLink(Component):
     )
     text: str | FlowStr | ScreenDataRef[str] | ComponentRef[str]
     on_click_action: (
-        DataExchangeAction | UpdateDataAction | NavigateAction | OpenUrlAction
+        DataExchangeAction | UpdateDataAction | NavigateAction | OpenURLAction
     )
     visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
 
@@ -3759,7 +3764,16 @@ class BaseAction(abc.ABC):
 @dataclasses.dataclass(slots=True, kw_only=True)
 class DataExchangeAction(BaseAction):
     """
-    Data Exchange Action. Sending Data to WhatsApp Flows Data Endpoint
+    Data Exchange Action. Sending Data to your flow endpoint.
+
+    >>> @wa.on_flow_request(endpoint="/my-flow")
+    >>> def my_flow_handler(_: WhatsApp, req: FlowRequest) -> FlowResponse:
+    >>>    ...
+
+    >>> @my_flow_handler.on_data_exchange(screen="SIGN_UP") # This is where the data exchange action is handled
+    >>> def handle_data_exchange(_: WhatsApp, req: FlowRequest) -> FlowResponse:
+    >>>    print(req.data) # The `payload` of the DataExchangeAction
+    >>>    return req.respond(...) # Respond to the data exchange action, e.g. navigate to the next screen or finish the flow
 
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#data-exchange-action>`_.
@@ -3813,7 +3827,7 @@ class NavigateAction(BaseAction):
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
-class OpenUrlAction(BaseAction):
+class OpenURLAction(BaseAction):
     """
     Open URL Action. Triggers a link to open in the device’s default web browser.
 
@@ -3821,8 +3835,8 @@ class OpenUrlAction(BaseAction):
 
     Example:
 
-        >>> OpenUrlAction(
-        ...     url='https://example.com'
+        >>> OpenURLAction(
+        ...     url='https://pywa.readthedocs.io'
         ... )
 
     Attributes:
@@ -3834,6 +3848,24 @@ class OpenUrlAction(BaseAction):
     )
     payload: None = dataclasses.field(default=None, init=False, repr=False)
     url: str
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class OpenUrlAction:
+    """Deprecated: Use :class:`OpenURLAction` instead."""
+
+    name: FlowActionType = dataclasses.field(
+        default=FlowActionType.OPEN_URL, init=False, repr=False
+    )
+    payload: None = dataclasses.field(default=None, init=False, repr=False)
+    url: str
+
+    def __post_init__(self):
+        warnings.warn(
+            "OpenUrlAction is deprecated. Use OpenURLAction instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)

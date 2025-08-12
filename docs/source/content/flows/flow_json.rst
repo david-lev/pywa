@@ -99,7 +99,7 @@ Here you will find all the components that make up a Flow JSON object.
 
 .. autoclass:: UpdateDataAction()
 
-.. autoclass:: OpenUrlAction()
+.. autoclass:: OpenURLAction()
 
 .. autoclass:: Next()
 
