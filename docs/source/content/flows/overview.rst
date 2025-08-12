@@ -1,9 +1,9 @@
 ♻️ Flows
-========
+=========
 
 .. currentmodule:: pywa.types.flows
 
-The WhatsApp Flows are now the most exciting part of the WhatsApp Cloud API.
+PyWa has a built-in support for WhatsApp Flows, which allows you to create structured interactions with your users.
 
 From `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows>`_:
 
@@ -15,15 +15,12 @@ From `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flo
 
     You can use Flows to book appointments, browse products, collect customer feedback, get new sales leads, or anything else where structured communication is more natural or comfortable for your customers.
 
-
-When you reading the official docs it's looks very intimidating, but in fact it's quite simple (by PyWa 😉).
-
 The Flows are separated into 4 parts:
 
 - Creating Flow
 - Sending Flow
-- Handling Flow requests and responding to them (Only for dynamic flow)
-- Getting Flow Completion message
+- Handling Flow requests and responding to them (Only for dynamic flows)
+- Getting Flow Completion
 
 Creating Flow
 -------------
@@ -50,10 +47,27 @@ First you need to create the flow, give it a name and set the categories by call
 
 Now you can start building the flow structure.
 
+.. tip::
+
+    You can also provide the flow json when creating the flow by passing the ``flow_json`` argument to :meth:`~pywa.client.WhatsApp.create_flow`, but here we treat it separately.
+
+    .. code-block:: python
+        :linenos:
+
+        created = wa.create_flow(
+            name="My New Flow",
+            categories=[FlowCategory.CUSTOMER_SUPPORT, FlowCategory.SURVEY],
+            flow_json=FlowJSON(...)  # The flow json to create,
+            publish=True,  # If you want to publish the flow immediately
+        )
+
 A flow is collection of screens containing components. screens can exchange data with each other and with your server.
 
 Flow can be static: all the components settings are predefined and no interaction is required from your server.
 Or it can be dynamic: your server can respond to screen actions and determine the next screen to display (or close the flow) and the data to provide to it.
+
+Available components
+-----------------
 
 Every component on the FlowJSON has a corresponding class in :mod:`pywa.types.flows`:
 
@@ -95,7 +109,7 @@ Every component on the FlowJSON has a corresponding class in :mod:`pywa.types.fl
        :class:`NavigateAction`,
        :class:`CompleteAction`,
        :class:`UpdateDataAction`,
-       :class:`OpenUrlAction`
+       :class:`OpenURLAction`
    * - Helpers
      - :class:`ScreenData`,
        :class:`ScreenDataUpdate`,
@@ -109,309 +123,128 @@ Every component on the FlowJSON has a corresponding class in :mod:`pywa.types.fl
 
 **Here is an example of static flow:**
 
+.. code-block:: python
+    :caption: newsletter_flow.py
+    :linenos:
+    :emphasize-lines: 12, 18, 24, 36-38
+
+    from pywa.types.flows import *
+
+    flow = FlowJSON(
+        version=7.0,
+        screens=[
+            Screen(
+                id="NEWSLETTER_SUBSCRIPTION",
+                title="Subscribe to our Newsletter",
+                terminal=True,
+                layout=Layout(
+                    children=[
+                        full_name := TextInput(
+                            name="full_name",
+                            label="Full Name",
+                            input_type=InputType.TEXT,
+                            required=True,
+                        ),
+                        email := TextInput(
+                            name="email",
+                            label="Email Address",
+                            input_type=InputType.EMAIL,
+                            required=True,
+                        ),
+                        is_subscribed := OptIn(
+                            name="is_subscribed",
+                            label="Subscribe to our newsletter",
+                            required=True,
+                            on_click_action=OpenURLAction(
+                                url="https://pywa.readthedocs.io/",
+                            ),
+                        ),
+                        Footer(
+                            label="Subscribe",
+                            on_click_action=CompleteAction(
+                                payload={
+                                    "full_name": full_name.ref,
+                                    "email": email.ref,
+                                    "is_subscribed": is_subscribed.ref,
+                                },
+                            ),
+                        ),
+                    ],
+                ),
+            )
+        ],
+    )
+
+
+Which is the equivalent of the following flow json:
+
 .. toggle::
 
-    Python code:
+    .. code-block:: json
+        :caption: newsletter_flow.json
+        :linenos:
 
-    .. toggle::
-
-        .. code-block:: python
-            :caption: simple_sign_up_flow.py
-            :linenos:
-            :emphasize-lines: 16, 22, 28, 39-41
-
-            from pywa.types.flows import *
-
-            static_flow = FlowJSON(
-                version=utils.Version.FLOW_JSON,
-                screens=[
-                    Screen(
-                        id="SIGN_UP",
-                        title="Finish Sign Up",
-                        terminal=True,
-                        layout=Layout(
-                            type=LayoutType.SINGLE_COLUMN,
-                            children=[
-                                Form(
-                                    name="form",
-                                    children=[
-                                        first_name := TextInput(
-                                            name="first_name",
-                                            label="First Name",
-                                            input_type=InputType.TEXT,
-                                            required=True,
-                                        ),
-                                        last_name := TextInput(
-                                            name="last_name",
-                                            label="Last Name",
-                                            input_type=InputType.TEXT,
-                                            required=True,
-                                        ),
-                                        email := TextInput(
-                                            name="email",
-                                            label="Email Address",
-                                            input_type=InputType.EMAIL,
-                                            required=True,
-                                        ),
-                                        Footer(
-                                            label="Done",
-                                            enabled=True,
-                                            on_click_action=CompleteAction(
-                                                payload={
-                                                    "first_name": first_name.ref,
-                                                    "last_name": last_name.ref,
-                                                    "email": email.ref,
-                                                },
-                                            ),
-                                        ),
-                                    ],
-                                )
-                            ],
-                        ),
-                    )
-                ],
-            )
-
-
-    Which is the equivalent of the following flow json:
-
-    .. toggle::
-
-        .. code-block:: json
-            :caption: simple_sign_up_flow.json
-            :linenos:
-
-            {
-              "version": "3.0",
-              "screens": [
+        {
+            "version": "7.0",
+            "screens": [
                 {
-                  "id": "SIGN_UP",
-                  "title": "Finish Sign Up",
-                  "terminal": true,
-                  "layout": {
-                    "type": "SingleColumnLayout",
-                    "children": [
-                      {
-                        "type": "Form",
-                        "name": "form",
+                    "id": "NEWSLETTER_SUBSCRIPTION",
+                    "title": "Subscribe to our Newsletter",
+                    "terminal": true,
+                    "layout": {
+                        "type": "SingleColumnLayout",
                         "children": [
-                          {
-                            "type": "TextInput",
-                            "name": "first_name",
-                            "label": "First Name",
-                            "input-type": "text",
-                            "required": true
-                          },
-                          {
-                            "type": "TextInput",
-                            "name": "last_name",
-                            "label": "Last Name",
-                            "input-type": "text",
-                            "required": true
-                          },
-                          {
-                            "type": "TextInput",
-                            "name": "email",
-                            "label": "Email Address",
-                            "input-type": "email",
-                            "required": true
-                          },
-                          {
-                            "type": "Footer",
-                            "label": "Done",
-                            "on-click-action": {
-                              "name": "complete",
-                              "payload": {
-                                "first_name": "${form.first_name}",
-                                "last_name": "${form.last_name}",
-                                "email": "${form.email}"
-                              }
+                            {
+                                "type": "TextInput",
+                                "name": "full_name",
+                                "label": "Full Name",
+                                "input-type": "text",
+                                "required": true
                             },
-                            "enabled": true
-                          }
-                        ]
-                      }
-                    ]
-                  }
-                }
-              ]
-            }
-
-    And this is how it looks like on WhatsApp:
-
-    .. toggle::
-
-        .. image:: ../../../../_static/guides/static-sign-up-screen.webp
-            :alt: Static Sign Up Screen
-            :width: 50%
-
-==================
-
-
-**Here is example of dynamic flow:**
-
-.. toggle::
-
-    Python code:
-
-    .. toggle::
-
-        .. code-block:: python
-            :caption: dynamic_sign_up_flow.py
-            :linenos:
-            :emphasize-lines: 3, 11-13, 21, 26, 28, 32, 34, 38, 44-46
-
-
-            dynamic_flow = FlowJSON(
-                version=utils.Version.FLOW_JSON,
-                data_api_version=utils.Version.FLOW_DATA_API,
-                routing_model={},
-                screens=[
-                    Screen(
-                        id="SIGN_UP",
-                        title="Finish Sign Up",
-                        terminal=True,
-                        data=[
-                            first_name_helper_text := ScreenData(key="first_name_helper_text", example="Enter your first name"),
-                            is_last_name_required := ScreenData(key="is_last_name_required", example=True),
-                            is_email_enabled := ScreenData(key="is_email_enabled", example=False),
-                        ],
-                        layout=Layout(
-                            type=LayoutType.SINGLE_COLUMN,
-                            children=[
-                                Form(
-                                    name="form",
-                                    children=[
-                                        first_name := TextInput(
-                                            name="first_name",
-                                            label="First Name",
-                                            input_type=InputType.TEXT,
-                                            required=True,
-                                            helper_text=first_name_helper_text.ref,
-                                        ),
-                                        last_name := TextInput(
-                                            name="last_name",
-                                            label="Last Name",
-                                            input_type=InputType.TEXT,
-                                            required=is_last_name_required.ref,
-                                        ),
-                                        email := TextInput(
-                                            name="email",
-                                            label="Email Address",
-                                            input_type=InputType.EMAIL,
-                                            enabled=is_email_enabled.ref,
-                                        ),
-                                        Footer(
-                                            label="Done",
-                                            on_click_action=CompleteAction(
-                                                payload={
-                                                    "first_name": last_name.ref,
-                                                    "last_name": last_name.ref,
-                                                    "email": email.ref,
-                                                },
-                                            ),
-                                        ),
-                                    ],
-                                )
-                            ],
-                        ),
-                    )
-                ],
-            )
-
-
-    Which is the equivalent of the following flow json:
-
-    .. toggle::
-
-        .. code-block:: json
-            :caption: dynamic_sign_up_flow.json
-            :linenos:
-
-            {
-                "version": "3.0",
-                "data_api_version": "3.0",
-                "routing_model": {},
-                "screens": [
-                    {
-                        "id": "SIGN_UP",
-                        "title": "Finish Sign Up",
-                        "data": {
-                            "first_name_helper_text": {
-                                "type": "string",
-                                "__example__": "Enter your first name"
+                            {
+                                "type": "TextInput",
+                                "name": "email",
+                                "label": "Email Address",
+                                "input-type": "email",
+                                "required": true
                             },
-                            "is_last_name_required": {
-                                "type": "boolean",
-                                "__example__": true
-                            },
-                            "is_email_enabled": {
-                                "type": "boolean",
-                                "__example__": false
-                            }
-                        },
-                        "terminal": true,
-                        "layout": {
-                            "type": "SingleColumnLayout",
-                            "children": [
-                                {
-                                    "type": "Form",
-                                    "name": "form",
-                                    "children": [
-                                        {
-                                            "type": "TextInput",
-                                            "name": "first_name",
-                                            "label": "First Name",
-                                            "input-type": "text",
-                                            "required": true,
-                                            "helper-text": "${data.first_name_helper_text}"
-                                        },
-                                        {
-                                            "type": "TextInput",
-                                            "name": "last_name",
-                                            "label": "Last Name",
-                                            "input-type": "text",
-                                            "required": "${data.is_last_name_required}"
-                                        },
-                                        {
-                                            "type": "TextInput",
-                                            "name": "email",
-                                            "label": "Email Address",
-                                            "input-type": "email",
-                                            "enabled": "${data.is_email_enabled}"
-                                        },
-                                        {
-                                            "type": "Footer",
-                                            "label": "Done",
-                                            "on-click-action": {
-                                                "name": "complete",
-                                                "payload": {
-                                                    "first_name": "${form.first_name}",
-                                                    "last_name": "${form.last_name}",
-                                                    "email": "${form.email}"
-                                                }
-                                            }
-                                        }
-                                    ]
+                            {
+                                "type": "OptIn",
+                                "name": "is_subscribed",
+                                "label": "Subscribe to our newsletter",
+                                "required": true,
+                                "on-click-action": {
+                                    "name": "open_url",
+                                    "url": "https://pywa.readthedocs.io/"
                                 }
-                            ]
-                        }
+                            },
+                            {
+                                "type": "Footer",
+                                "label": "Subscribe",
+                                "on-click-action": {
+                                    "name": "complete",
+                                    "payload": {
+                                        "full_name": "${form.full_name}",
+                                        "email": "${form.email}",
+                                        "is_subscribed": "${form.is_subscribed}"
+                                    }
+                                }
+                            }
+                        ]
                     }
-                ]
-            }
+                }
+            ]
+        }
 
-    And this is how it looks like on WhatsApp:
+And this is how it looks like on WhatsApp (iOS/Android):
 
-    .. toggle::
-
-        .. image:: ../../../../_static/guides/dynamic-sign-up-screen.webp
-            :alt: Dynamic Sign Up Screen
-            :width: 50%
+.. figure:: ../../../../_static/guides/simple-newsletter-flow.png
+    :align: center
 
 ==================
-
 
 After you have the flow json, you can update the flow with :meth:`~pywa.client.WhatsApp.update_flow_json`:
+
 
 .. code-block:: python
     :caption: update_flow.py
@@ -424,33 +257,35 @@ After you have the flow json, you can update the flow with :meth:`~pywa.client.W
     your_flow_json = FlowJSON(...)  # keep edit your flow
 
     if __name__ == "__main__":
-        wa = WhatsApp(..., business_account_id="1234567890123456")
-        flow_id = "123456789" # wa.create_flow(name="My New Flow").id # run this only once
+        wa = WhatsApp(..., business_account_id="1234567890123456") # waba id is required for creating flows
+        # created = wa.create_flow(name="Newsletter Flow", categories=[FlowCategory.CONTACT_US])
 
-        res = wa.update_flow_json(flow_id, flow_json=your_flow_json)
-        if not res.success:
+        res = wa.update_flow_json(flow_id=created.id, flow_json=newsletter_flow)
+        if not res: # If the flow was not updated successfully
             print("Validation errors:")
             for error in res.validation_errors:
                 print(error)
 
 
-The ``flow_json`` argument can be :class:`FlowJSON`, a :class:`dict`, json :class:`str`, json file path or ``open(json_file)`` obj.
+The ``flow_json`` argument can be :class:`FlowJSON`, a :class:`dict`, json :class:`str`, json file :class:`pathlib.Path` or a file-like object.
 
-You can get the :class:`FlowDetails` of the flow with :meth:`~pywa.client.WhatsApp.get_flow` to see if there is validation errors needed to be fixed:
+You can get the :class:`FlowDetails` of the flow with :meth:`~pywa.client.WhatsApp.get_flow`:
 
 .. code-block:: python
     :linenos:
 
-    from pywa import WhatsApp
+    flow = wa.get_flow(created.id)
+    print(flow)
 
-    wa = WhatsApp(...)
+Or getting all the flows with :meth:`~pywa.client.WhatsApp.get_flows`:
 
-    print(wa.get_flow(flow_id))
+.. code-block:: python
+    :linenos:
 
-    # FlowDetails(id='1234567890123456', name='My New Flow', validation_errors=(...))
+    flows = wa.get_flows()
+    for flow in flows:
+        print(flow)
 
-
-This way you always know if there is validation errors that needed to be fixed.
 
 To test your flow you need to sent it:
 
@@ -477,35 +312,60 @@ Let's see how to send text message with flow:
         to="1234567890",
         text="Hi, You need to finish your sign up!",
         buttons=FlowButton(
-            title="Finish Sign Up",
-            flow_id="1234567890123456",  # The `static_flow` flow id from above
-            flow_token="AQAAAAACS5FpgQ_cAAAAAD0QI3s.",
-            mode=FlowStatus.DRAFT,
-            flow_action_type=FlowActionType.NAVIGATE,
-            flow_action_screen="SIGN_UP", # The screen id to open when the user clicks the button
+            title="Finish Sign Up", # The button title that will appear on the bottom of the message
+            flow_id="1234567890123456",  # The `ewsletter_flow` flow id from above
+            mode=FlowStatus.DRAFT, # If the flow is in draft mode, you must specify the mode as `FlowStatus.DRAFT`.
+            flow_action_type=FlowActionType.NAVIGATE, # You tell WhatsApp what to do when the user clicks the button.
+            flow_action_screen="SIGN_UP", # The screen id to navigate to when the user clicks the button.
         )
     )
 
-Let's walk through the arguments:
 
-- ``title`` - The button title that will appear on the bottom of the message.
+Getting Flow Completion message
+-------------------------------
 
-- ``flow_id`` - The flow id that you want to send.
+When the user completes the flow, you will receive a request to your webhook with the payload you sent when you completed the flow.
 
-- ``flow_token`` - A unique token you generate for each flow message. The token is used to identify the flow message when you receive a response from the user.
+Here is how to listen to flow completion request:
 
-- ``mode`` - If the flow is in draft mode, you must specify the mode as ``FlowStatus.DRAFT``.
+.. code-block:: python
+    :linenos:
 
-- ``flow_action_type`` - The action to take when the user clicks the button. The action can be ``FlowActionType.NAVIGATE`` or ``FlowActionType.DATA_EXCHANGE``. since this example is static flow, we will use ``FlowActionType.NAVIGATE``.
+    from pywa import WhatsApp
+    from pywa.types import FlowCompletion
 
-- ``flow_action_screen`` - The first screen id to display when the user clicks the button.
+    wa = WhatsApp(...)
 
-    If you don't care about the dynamic example, you can skip to `Getting Flow Completion message <#getting-flow-completion-message>`_.
+    @wa.on_flow_completion
+    def on_flow_completion(_: WhatsApp, flow: FlowCompletion):
+        print(f"The user {flow.from_user.name} just completed the flow!")
+        print(flow.response)
 
-Handling Flow requests and responding to them
----------------------------------------------
+The ``.response`` attribute is the payload you sent when you completed the flow.
 
-This part is only for dynamic flow. here we will demonstrate how to handle the DATA_EXCHANGE requests and respond to them.
+.. note::
+
+    if you using :class:`PhotoPicker` or :class:`DocumentPicker` components, you will receive the files inside the flow completion .response.
+    You can constract them into pywa media objects by using :meth:`~pywa.types.FlowCompletion.get_media`:
+
+    .. code-block:: python
+        :linenos:
+
+        from pywa import WhatsApp, types
+
+        wa = WhatsApp(...)
+
+        @wa.on_flow_completion
+        def on_flow_completion(_: WhatsApp, flow: FlowCompletion):
+            img = flow.get_media(types.Image, key="profile_pic")
+            img.download()
+
+
+Handling Flow requests
+----------------------
+
+This is when things get interesting. WhatsApp Flows can be dynamic, which means that you can handle user actions and respond to them in real-time from your server.
+
 
 .. note::
 
@@ -560,41 +420,455 @@ This part is only for dynamic flow. here we will demonstrate how to handle the D
 
     >>> pip3 install "pywa[cryptography]"
 
+Let's see an example of a dynamic flow:
 
-In dynamic flow, when the user perform an action with type of ``FlowActionType.DATA_EXCHANGE`` you will receive a request to your server with the payload
-and you need to determine if you want to continue to the next screen or complete the flow.
-
-So in our dynamic example (``dynamic_sign_up_flow.py``), we have just one screen: ``SIGN_UP``.
 
 .. code-block:: python
+    :caption: sign_in_flow.py
+    :linenos:
+    :emphasize-lines: 5-11, 13, 16, 18-27, 31, 36, 38, 58-59, 66, 71, 77, 83, 87, 90, 94, 97, 102, 105, 113, 121-127, 134, 142, 146, 152
+
+
+    from pywa.types.flows import *
+
+    flow = FlowJSON(
+        version="7.2",
+        data_api_version="3.0",
+        routing_model={
+            "SIGN_IN": ["SIGN_UP", "FORGOT_PASSWORD"],
+            "SIGN_UP": ["TERMS_AND_CONDITIONS"],
+            "FORGOT_PASSWORD": [],
+            "TERMS_AND_CONDITIONS": [],
+        },
+        screens=[
+            signin_screen := Screen(
+                id="SIGN_IN",
+                title="Sign in",
+                terminal=True,
+                success=True,
+                data=[
+                    welcome := ScreenData(
+                        key="welcome",
+                        example="Welcome back! Please sign in to continue.",
+                    ),
+                    default_email := ScreenData(
+                        key="default_email",
+                        example="johndoe@gmail.com",
+                    ),
+                ],
+                layout=Layout(
+                    children=[
+                        TextSubheading(text=welcome.ref),
+                        signin_email := TextInput(
+                            name="email",
+                            label="Email address",
+                            input_type=InputType.EMAIL,
+                            required=True,
+                            init_value=default_email.ref,
+                        ),
+                        signin_password := TextInput(
+                            name="password",
+                            label="Password",
+                            input_type=InputType.PASSWORD,
+                            required=True,
+                        ),
+                        EmbeddedLink(
+                            text="Don't have an account? Sign up",
+                            on_click_action=NavigateAction(next=Next(name="SIGN_UP")),
+                        ),
+                        EmbeddedLink(
+                            text="Forgot password",
+                            on_click_action=NavigateAction(
+                                next=Next(name="FORGOT_PASSWORD"),
+                            )
+                        ),
+                        Footer(
+                            label="Sign in",
+                            on_click_action=DataExchangeAction(
+                                payload={
+                                    "email": signin_email.ref,
+                                    "password": signin_password.ref,
+                                }
+                            ),
+                        ),
+                    ]
+                ),
+            ),
+            signup_screen := Screen(
+                id="SIGN_UP",
+                title="Sign up",
+                layout=Layout(
+                    children=[
+                        first_name := TextInput(
+                            name="first_name",
+                            label="First Name",
+                            input_type=InputType.TEXT,
+                            required=True,
+                        ),
+                        last_name := TextInput(
+                            name="last_name",
+                            label="Last Name",
+                            input_type=InputType.TEXT,
+                            required=True,
+                        ),
+                        signup_email := TextInput(
+                            name="email",
+                            label="Email address",
+                            input_type=InputType.EMAIL,
+                            init_value=signin_screen / signin_email.ref,
+                            required=True,
+                        ),
+                        signup_password := TextInput(
+                            name="password",
+                            label="Set password",
+                            input_type=InputType.PASSWORD,
+                            init_value=signin_screen / signin_password.ref,
+                            required=True,
+                        ),
+                        confirm_password := TextInput(
+                            name="confirm_password",
+                            label="Confirm password",
+                            helper_text="Min 8 chars, incl. 1 number & 1 special character.",
+                            input_type=InputType.PASSWORD,
+                            init_value=signin_screen / signin_password.ref,
+                            required=True,
+                        ),
+                        terms_agreement := OptIn(
+                            name="terms_agreement",
+                            label="I agree with the terms.",
+                            on_click_action=NavigateAction(
+                                next=Next(type="screen", name="TERMS_AND_CONDITIONS")
+                            ),
+                            required=True,
+                        ),
+                        offers_acceptance := OptIn(
+                            name="offers_acceptance",
+                            label="I would like to receive news and offers.",
+                        ),
+                        Footer(
+                            label="Sign up",
+                            on_click_action=DataExchangeAction(
+                                payload={
+                                    "first_name": first_name.ref,
+                                    "last_name": last_name.ref,
+                                    "email": signup_email.ref,
+                                    "password": signup_password.ref,
+                                    "confirm_password": confirm_password.ref,
+                                    "terms_agreement": terms_agreement.ref,
+                                    "offers_acceptance": offers_acceptance.ref,
+                                }
+                            ),
+                        ),
+                    ]
+                ),
+            ),
+            forgot_password_screen := Screen(
+                id="FORGOT_PASSWORD",
+                title="Forgot password",
+                terminal=True,
+                success=True,
+                layout=Layout(
+                    children=[
+                        TextBody(text="Enter your email address for your account and we'll send a reset link. The single-use link will expire after 24 hours."),
+                        forgot_password_email := TextInput(
+                            name="email",
+                            label="Email address",
+                            input_type=InputType.EMAIL,
+                            init_value=signin_screen / signin_email.ref,
+                            required=True,
+                        ),
+                        Footer(
+                            label="Send reset link",
+                            on_click_action=DataExchangeAction(
+                                payload={"email": forgot_password_email.ref}
+                            ),
+                        ),
+                    ]
+                ),
+            ),
+            Screen(
+                id="TERMS_AND_CONDITIONS",
+                title="Terms and conditions",
+                layout=Layout(
+                    children=[
+                        TextHeading(text="Our Terms"),
+                        TextSubheading(text="Data usage"),
+                        TextBody(
+                            text="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed vitae odio dui. Praesent ut nulla tincidunt, scelerisque augue malesuada, volutpat lorem. Aliquam iaculis ex at diam posuere mollis. Suspendisse eget purus ac tellus interdum pharetra. In quis dolor turpis. Fusce in porttitor enim, vitae efficitur nunc. Fusce dapibus finibus volutpat. Fusce velit mi, ullamcorper ac gravida vitae, blandit quis ex. Fusce ultrices diam et justo blandit, quis consequat nisl euismod. Vestibulum pretium est sem, vitae convallis justo sollicitudin non. Morbi bibendum purus mattis quam condimentum, a scelerisque erat bibendum. Nullam sit amet bibendum lectus."
+                        ),
+                        TextSubheading(text="Privacy policy"),
+                        TextBody(
+                            text="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed vitae odio dui. Praesent ut nulla tincidunt, scelerisque augue malesuada, volutpat lorem. Aliquam iaculis ex at diam posuere mollis. Suspendisse eget purus ac tellus interdum pharetra. In quis dolor turpis. Fusce in porttitor enim, vitae efficitur nunc. Fusce dapibus finibus volutpat. Fusce velit mi, ullamcorper ac gravida vitae, blandit quis ex. Fusce ultrices diam et justo blandit, quis consequat nisl euismod. Vestibulum pretium est sem, vitae convallis justo sollicitudin non. Morbi bibendum purus mattis quam condimentum, a scelerisque erat bibendum. Nullam sit amet bibendum lectus."
+                        ),
+                    ]
+                ),
+            ),
+        ],
+    )
+
+Which is the equivalent of the following flow json:
+
+.. toggle::
+
+    .. code-block:: json
+        :caption: sign_in_flow.json
         :linenos:
-        :emphasize-lines: 6,7,8
 
-        Screen(
-            id="SIGN_UP",
-            title="Finish Sign Up",
-            terminal=True,
-            data=[
-                first_name_helper_text := ScreenData(key="first_name_helper_text", example="Enter your first name"),
-                is_last_name_required := ScreenData(key="is_last_name_required", example=True),
-                is_email_enabled := ScreenData(key="is_email_enabled", example=False),
-            ],
-            ...
-        )
+        {
+            "version": "7.2",
+            "data_api_version": "3.0",
+            "routing_model": {
+                "SIGN_IN": [
+                    "SIGN_UP",
+                    "FORGOT_PASSWORD"
+                ],
+                "SIGN_UP": [
+                    "TERMS_AND_CONDITIONS"
+                ],
+                "FORGOT_PASSWORD": [],
+                "TERMS_AND_CONDITIONS": []
+            },
+            "screens": [
+                {
+                    "id": "SIGN_IN",
+                    "title": "Sign in",
+                    "data": {
+                        "welcome": {
+                            "type": "string",
+                            "__example__": "Welcome back! Please sign in to continue."
+                        },
+                        "default_email": {
+                            "type": "string",
+                            "__example__": "johndoe@gmail.com"
+                        }
+                    },
+                    "terminal": true,
+                    "success": true,
+                    "layout": {
+                        "type": "SingleColumnLayout",
+                        "children": [
+                            {
+                                "type": "TextSubheading",
+                                "text": "${data.welcome}"
+                            },
+                            {
+                                "type": "TextInput",
+                                "name": "email",
+                                "label": "Email address",
+                                "input-type": "email",
+                                "required": true,
+                                "init-value": "${data.default_email}"
+                            },
+                            {
+                                "type": "TextInput",
+                                "name": "password",
+                                "label": "Password",
+                                "input-type": "password",
+                                "required": true
+                            },
+                            {
+                                "type": "EmbeddedLink",
+                                "text": "Don't have an account? Sign up",
+                                "on-click-action": {
+                                    "name": "navigate",
+                                    "next": {
+                                        "name": "SIGN_UP",
+                                        "type": "screen"
+                                    },
+                                    "payload": {}
+                                }
+                            },
+                            {
+                                "type": "EmbeddedLink",
+                                "text": "Forgot password",
+                                "on-click-action": {
+                                    "name": "navigate",
+                                    "next": {
+                                        "name": "FORGOT_PASSWORD",
+                                        "type": "screen"
+                                    },
+                                    "payload": {}
+                                }
+                            },
+                            {
+                                "type": "Footer",
+                                "label": "Sign in",
+                                "on-click-action": {
+                                    "name": "data_exchange",
+                                    "payload": {
+                                        "email": "${form.email}",
+                                        "password": "${form.password}"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "id": "SIGN_UP",
+                    "title": "Sign up",
+                    "layout": {
+                        "type": "SingleColumnLayout",
+                        "children": [
+                            {
+                                "type": "TextInput",
+                                "name": "first_name",
+                                "label": "First Name",
+                                "input-type": "text",
+                                "required": true
+                            },
+                            {
+                                "type": "TextInput",
+                                "name": "last_name",
+                                "label": "Last Name",
+                                "input-type": "text",
+                                "required": true
+                            },
+                            {
+                                "type": "TextInput",
+                                "name": "email",
+                                "label": "Email address",
+                                "input-type": "email",
+                                "required": true,
+                                "init-value": "${screen.SIGN_IN.form.email}"
+                            },
+                            {
+                                "type": "TextInput",
+                                "name": "password",
+                                "label": "Set password",
+                                "input-type": "password",
+                                "required": true,
+                                "init-value": "${screen.SIGN_IN.form.password}"
+                            },
+                            {
+                                "type": "TextInput",
+                                "name": "confirm_password",
+                                "label": "Confirm password",
+                                "input-type": "password",
+                                "required": true,
+                                "helper-text": "Min 8 chars, incl. 1 number & 1 special character.",
+                                "init-value": "${screen.SIGN_IN.form.password}"
+                            },
+                            {
+                                "type": "OptIn",
+                                "name": "terms_agreement",
+                                "label": "I agree with the terms.",
+                                "required": true,
+                                "on-click-action": {
+                                    "name": "navigate",
+                                    "next": {
+                                        "name": "TERMS_AND_CONDITIONS",
+                                        "type": "screen"
+                                    },
+                                    "payload": {}
+                                }
+                            },
+                            {
+                                "type": "OptIn",
+                                "name": "offers_acceptance",
+                                "label": "I would like to receive news and offers."
+                            },
+                            {
+                                "type": "Footer",
+                                "label": "Sign up",
+                                "on-click-action": {
+                                    "name": "data_exchange",
+                                    "payload": {
+                                        "first_name": "${form.first_name}",
+                                        "last_name": "${form.last_name}",
+                                        "email": "${form.email}",
+                                        "password": "${form.password}",
+                                        "confirm_password": "${form.confirm_password}",
+                                        "terms_agreement": "${form.terms_agreement}",
+                                        "offers_acceptance": "${form.offers_acceptance}"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "id": "FORGOT_PASSWORD",
+                    "title": "Forgot password",
+                    "terminal": true,
+                    "success": true,
+                    "layout": {
+                        "type": "SingleColumnLayout",
+                        "children": [
+                            {
+                                "type": "TextBody",
+                                "text": "Enter your email address for your account and we'll send a reset link. The single-use link will expire after 24 hours."
+                            },
+                            {
+                                "type": "TextInput",
+                                "name": "email",
+                                "label": "Email address",
+                                "input-type": "email",
+                                "required": true,
+                                "init-value": "${screen.SIGN_IN.form.email}"
+                            },
+                            {
+                                "type": "Footer",
+                                "label": "Send reset link",
+                                "on-click-action": {
+                                    "name": "data_exchange",
+                                    "payload": {
+                                        "email": "${form.email}"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "id": "TERMS_AND_CONDITIONS",
+                    "title": "Terms and conditions",
+                    "layout": {
+                        "type": "SingleColumnLayout",
+                        "children": [
+                            {
+                                "type": "TextHeading",
+                                "text": "Our Terms"
+                            },
+                            {
+                                "type": "TextSubheading",
+                                "text": "Data usage"
+                            },
+                            {
+                                "type": "TextBody",
+                                "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed vitae odio dui. Praesent ut nulla tincidunt, scelerisque augue malesuada, volutpat lorem. Aliquam iaculis ex at diam posuere mollis. Suspendisse eget purus ac tellus interdum pharetra. In quis dolor turpis. Fusce in porttitor enim, vitae efficitur nunc. Fusce dapibus finibus volutpat. Fusce velit mi, ullamcorper ac gravida vitae, blandit quis ex. Fusce ultrices diam et justo blandit, quis consequat nisl euismod. Vestibulum pretium est sem, vitae convallis justo sollicitudin non. Morbi bibendum purus mattis quam condimentum, a scelerisque erat bibendum. Nullam sit amet bibendum lectus."
+                            },
+                            {
+                                "type": "TextSubheading",
+                                "text": "Privacy policy"
+                            },
+                            {
+                                "type": "TextBody",
+                                "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed vitae odio dui. Praesent ut nulla tincidunt, scelerisque augue malesuada, volutpat lorem. Aliquam iaculis ex at diam posuere mollis. Suspendisse eget purus ac tellus interdum pharetra. In quis dolor turpis. Fusce in porttitor enim, vitae efficitur nunc. Fusce dapibus finibus volutpat. Fusce velit mi, ullamcorper ac gravida vitae, blandit quis ex. Fusce ultrices diam et justo blandit, quis consequat nisl euismod. Vestibulum pretium est sem, vitae convallis justo sollicitudin non. Morbi bibendum purus mattis quam condimentum, a scelerisque erat bibendum. Nullam sit amet bibendum lectus."
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
 
 
-The ``terminal`` argument is set to ``True`` which means that this screen can end the flow.
+This flow has 4 screens:
 
-As you can see, this screen gets data that help it to be dynamic.
+- ``SIGN_IN`` - The first screen that the user sees when they open the flow. It has a form to sign in and links to sign up and forgot password screens.
+- ``SIGN_UP`` - The screen that the user sees when they click on the sign up link in the sign in screen. It has a form to sign up and a link to the terms and conditions screen.
+- ``FORGOT_PASSWORD`` - The screen that the user sees when they click on the forgot password link in the sign in screen. It has a form to send a reset link to the user's email address.
+- ``TERMS_AND_CONDITIONS`` - The screen that the user sees when they click on the terms and conditions link in the sign up screen. It has the terms and conditions text.
 
-For example, we have :class:`TextInput` that gets the user's last name. We want to be able to decide if it's required or not,
-so if we already have the user's last name in our database, we don't require it.
-This can be done by setting the ``required`` argument to a dynamic value taken from the ``data`` map. this data can be provided by the previous screen, by our server or when sending the flow.
+Let's dive into the main concepts of dynamic flows:
 
-We want to demonstrate how to handle dynamic flow with our server, so we will send the flow with action type of ``FlowActionType.DATA_EXCHANGE``,
-So when the user clicks the button, we will receive a request to our server with the ation, flow_token and the screen which requested the data.
+- **data_api_version**: This is the version of the data API that the flow uses. It is used to determine how the data is exchanged between the client and the server. The current version is ``3.0``.
+- **routing_model**: This is a dictionary that defines the flow routing. It maps screen ids to other screen ids that can be navigated to from the current screen. For example, from the ``SIGN_IN`` screen, you can navigate to the ``SIGN_UP`` or ``FORGOT_PASSWORD`` screens. You can read more about Routing Model in `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#routing-model>`_.
+- **data**: This is a list of :class:`ScreenData` objects that define the data that should be provided to the screen when navigating to it. This data can be used to pre-fill the form fields or provide other information to the user. For example, in the ``SIGN_IN`` screen, we have a ``welcome`` screen data that provides a welcome message and a ``default_email`` screen data that provides a default email address to pre-fill the email field (you will see why we need it later).
+- **ref**: This is a reference to the screen data or the component that stores an user input. It is used to refer to the data inside the flow. For example, in the ``SIGN_IN`` screen, we have a ``signin_email`` component that has a reference to the email field. We can use this reference to get the value of the email field when the user submits the form.
+- **on_click_action**: This is an action that is executed when the user clicks on a button or a link. It can be a :class:`DataExchangeAction`, :class:`NavigateAction`, :class:`CompleteAction` or :class:`OpenURLAction`. For example, in the ``SIGN_IN`` screen, we have a ``Footer`` component with a label "Sign in" that has an :class:`DataExchangeAction` that sends the email and password to the server when the user clicks on it. the server will then validate the credentials and respond with the next screen to display or close the flow.
 
-We need to tell WhatsApp to send the requests to our serve. :meth:`~pywa.client.WhatsApp.update_flow_metadata`:
+We need to update the flow with this json using :meth:`~pywa.client.WhatsApp.update_flow_json` and then tell WhatsApp to send the requests to our server using :meth:`~pywa.client.WhatsApp.update_flow_metadata`:
 
 .. code-block:: python
     :linenos:
@@ -605,7 +879,7 @@ We need to tell WhatsApp to send the requests to our serve. :meth:`~pywa.client.
     wa = WhatsApp(...)
 
     wa.update_flow_metadata(
-        flow_id="1234567890123456",  # The `dynamic_flow` flow id from above
+        flow_id="1234567890123456",  # The `sign_in_flow` flow id from above
         endpoint_uri="https://your-server.com/flow"
     )
 
@@ -613,7 +887,7 @@ Let's send the flow. this time with an image:
 
 .. code-block:: python
     :linenos:
-    :emphasize-lines: 15
+    :emphasize-lines: 12, 14
 
     from pywa import WhatsApp
     from pywa.types import FlowButton, FlowActionType, FlowStatus
@@ -626,8 +900,7 @@ Let's send the flow. this time with an image:
         caption="Hi, You need to finish your sign up!",
         buttons=FlowButton(
             title="Finish Sign Up",
-            flow_id="1234567890123456",  # The `dynamic_flow` flow id from above
-            flow_token="AQAAAAACS5FpgQ_cAAAAAD0QI3s.",
+            flow_id="1234567890123456",  # The `sign_in_flow` flow id from above
             mode=FlowStatus.DRAFT,
             flow_action_type=FlowActionType.DATA_EXCHANGE,  # This time we want to exchange data
         )
@@ -636,77 +909,137 @@ Let's send the flow. this time with an image:
 Here we set the ``flow_action_type`` to ``FlowActionType.DATA_EXCHANGE`` since we want to exchange data with the server.
 So, when the user opens the flow, we will receive a request to our server to provide the screen to open and the data to provide to it.
 
-Let's register a callback function to handle this request:
 
 .. code-block:: python
     :linenos:
-    :emphasize-lines: 6, 9, 13-18
 
+    import datetime
+    import re
+    import dataclasses
     from pywa import WhatsApp
     from pywa.types import FlowRequest, FlowResponse
+
+    @dataclasses.dataclass
+    class User:
+        email: str
+        password: str
+        first_name: str
+        last_name: str
+        offer_acceptance: bool
+        forget_password_requested: datetime.datetime | None = None
+        is_signed_in: bool = False
+
+
+    class DemoDatabase:
+        def __init__(self):
+            self.users: dict[str, User] = {}
+
+        def get_user(self, email: str) -> User | None:
+            return self.users.get(email)
+
+        def add_user(self, user: User) -> None:
+            self.users[user.email] = user
+
+        def is_forget_password_available(self, email: str) -> bool:
+            user = self.get_user(email)
+            if not user:
+                return True
+            if user.forget_password_requested and user.forget_password_requested > (datetime.datetime.now() - datetime.timedelta(hours=24)):
+                return False
+            return True
+
+    db = DemoDatabase()
 
     wa = WhatsApp(
         ...,
         business_private_key=open("private.pem").read(),  # provide your business private key
     )
 
-    @wa.on_flow_request(endpoint="/flow")  # The endpoint we set above
-    def on_support_request(_: WhatsApp, req: FlowRequest) -> FlowResponse:
-        print(req.flow_token)  # use this to indentify the user who you sent the flow to
+    @wa.on_flow_request(endpoint="/signin")
+    def handle_signin_flow(_: WhatsApp, req: FlowRequest) -> FlowResponse:
+        raise NotImplementedError(req)
+
+
+    @handle_signin_flow.on_init
+    def on_init(_: WhatsApp, req: FlowRequest) -> FlowResponse:
         return req.respond(
-            screen="SIGN_UP",  # The screen id to open
+            screen=signin_screen,
             data={
-                "first_name_helper_text": "Please enter your first name",
-                "is_last_name_required": True,
-                "is_email_enabled": False,
+                welcome.key: "Welcome to our service! Please sign in to continue.",
+                default_email.key: "",
             },
         )
 
-.. tip::
 
-    If you have multiple screens and lots of different requests, you can split the logic into multiple sub-handlers
-
-    - See :class:`~pywa.handlers.FlowRequestCallbackWrapper` for more information.
-
-    .. code-block:: python
-        :linenos:
-
-        from pywa import WhatsApp, filters
-        from pywa.types import FlowRequest, FlowResponse
-
-        wa = WhatsApp(...)
-
-        @wa.on_flow_request(endpoint="/flow")  # The endpoint we set above
-        def main_handler(_: WhatsApp, req: FlowRequest) -> FlowResponse:
-            ...
-
-        @main_handler.on_init
-        def on_flow_init(_: WhatsApp, req: FlowRequest) -> FlowResponse:
-            ...
-
-        @main_handler.on_data_exchange(screen="SIGN_UP")
-        def on_sign_up(_: WhatsApp, req: FlowRequest) -> FlowResponse:
-            ...
-
-        @main_handler.on_data_exchange(screen="OTHER_SCREEN", filters=filters.new(lambda _, req: req.data.get("some_key") == "value"))
-        def on_other_screen(_: WhatsApp, req: FlowRequest) -> FlowResponse:
-            ...
+    @handle_signin_flow.on_data_exchange(screen=signin_screen)
+    def on_sign_in(_: WhatsApp, req: FlowRequest) -> FlowResponse:
+        user = db.get_user(req.data["email"])
+        if not user:
+            return req.respond(
+                screen=signin_screen,
+                error_message="User not found. Please sign up first.",
+                data={
+                    welcome.key: "Welcome to our service! Please sign in to continue.",
+                    default_email.key: "",
+                },
+            )
+        if user.password != req.data["password"]:
+            return req.respond(
+                screen=signin_screen,
+                error_message="Incorrect password. Please try again.",
+                data={
+                    welcome.key: "Welcome to our service! Please sign in to continue.",
+                    default_email.key: user.email,
+                },
+            )
+        user.is_signed_in = True
+        return req.respond(close_flow=True)
 
 
-We need to provide our business private key to decrypt the request and encrypt the response.
+    @handle_signin_flow.on_data_exchange(screen=signup_screen)
+    def on_sign_up(_: WhatsApp, req: FlowRequest) -> FlowResponse:
+        if not re.match(r"^(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$", req.data["password"]):
+            return req.respond(
+                screen=signup_screen,
+                error_message="Password must be at least 8 characters long and contain at least one number and one special character.",
+            )
+        if req.data["password"] != req.data["confirm_password"]:
+            return req.respond(
+                screen=signup_screen,
+                error_message="Passwords do not match. Please try again.",
+            )
+        user = User(
+            email=req.data["email"],
+            password=req.data["password"],
+            first_name=req.data["first_name"],
+            last_name=req.data["last_name"],
+            offer_acceptance=req.data["offers_acceptance"],
+            is_signed_in=False
+        )
+        db.add_user(user)
+        return req.respond(
+            screen=signin_screen,
+            data={
+                welcome.key: "Thank you for signing up! You can now sign in with your new account.",
+                default_email.key: user.email,
+            },
+        )
 
-After that. we are registering a callback function to handle the request.
-The callback function will receive the :class:`FlowRequest` object and should return :class:`FlowResponse` object.
-
-        A callback function can be return or raise :class:`FlowTokenNoLongerValid` or :class:`FlowRequestSignatureAuthenticationFailed`
-        to indicate that the flow token is no longer valid or the request signature authentication failed.
-
-In our example, we returning our dynamic data to the ``SIGN_UP`` screen.
-
-Of course, it can be more complex, if you have multiple screens, you can return data from them and then decide
-what screen to open next or complete the flow.
-
-    If you want example of more complex flow, you can check out the `Sign up Flow Example <../examples/sign_up_flow.html>`_.
+    @handle_signin_flow.on_data_exchange(screen=forgot_password_screen)
+    def on_forgot_password(_: WhatsApp, req: FlowRequest) -> FlowResponse:
+        if not db.is_forget_password_available(req.data["email"]):
+            return req.respond(
+                screen=forgot_password_screen,
+                error_message="You can't request a password reset at this time. Please try again later.",
+            )
+        ### SEND PASSWORD RESET EMAIL HERE ###
+        return req.respond(
+            screen=signin_screen,
+            data={
+                welcome.key: "A password reset link has been sent to your email address. Please check your inbox.",
+                default_email.key: req.data["email"],
+            },
+        )
 
 
 .. note::
@@ -724,47 +1057,6 @@ what screen to open next or complete the flow.
             with open(f"media/{decrypted_data.filename}", "wb") as f:
                 f.write(decrypted_data.data)
             ...
-
-Getting Flow Completion message
--------------------------------
-
-When the user completes the flow, you will receive a request to your webhook with the payload you sent when you completed the flow.
-
-        WhatApp recommends to send the user a summary of the flow response.
-
-Here is how to listen to flow completion request:
-
-.. code-block:: python
-    :linenos:
-
-    from pywa import WhatsApp
-    from pywa.types import FlowCompletion
-
-    wa = WhatsApp(...)
-
-    @wa.on_flow_completion
-    def on_flow_completion(_: WhatsApp, flow: FlowCompletion):
-        print(f"The user {flow.from_user.name} just completed the {flow.token} flow!")
-        print(flow.response)
-
-The ``.response`` attribute is the payload you sent when you completed the flow.
-
-.. note::
-
-    if you using :class:`PhotoPicker` or :class:`DocumentPicker` components, you will receive the files inside the flow completion .response.
-    You can constract them into pywa media objects by using :meth:`~pywa.types.FlowCompletion.get_media`:
-
-    .. code-block:: python
-        :linenos:
-
-        from pywa import WhatsApp, types
-
-        wa = WhatsApp(...)
-
-        @wa.on_flow_completion
-        def on_flow_completion(_: WhatsApp, flow: FlowCompletion):
-            img = flow.get_media(types.Image, key="profile_pic")
-            img.download()
 
 .. toctree::
     flow_json
