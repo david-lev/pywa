@@ -301,7 +301,7 @@ Let's see how to send text message with flow:
 
 .. code-block:: python
     :linenos:
-    :emphasize-lines: 9, 10, 11, 12, 13, 14, 15, 16
+    :emphasize-lines: 9-15
 
     from pywa import WhatsApp
     from pywa.types import FlowButton
@@ -326,7 +326,7 @@ Getting Flow Completion message
 
 When the user completes the flow, you will receive a request to your webhook with the payload you sent when you completed the flow.
 
-Here is how to listen to flow completion request:
+Here is how to listen to flow completion update:
 
 .. code-block:: python
     :linenos:

@@ -3,174 +3,158 @@
 
 .. currentmodule:: pywa.handlers
 
-To handle the updates from WhatsApp, you need a way to receive them. This is done by starting a web server that
-will receive the updates from WhatsApp and then call your callback function to handle them.
+To process updates from WhatsApp, your application needs to receive **incoming webhooks**.
+This is done by running a web server that listens for requests from WhatsApp and passes them to your handlers.
 
+**Why pywa Doesn’t Start the Server?**
 
-To allow maximum flexibility, ``pywa`` does not start the server. This allows the server to be
-started independently with the desired configurations without any need for pywa to know them.
-All pywa does is register a route that will handle the incoming updates from WhatsApp.
-This means that you can use the same server to handle other parts of your application without any limitation from pywa.
+``pywa`` is designed for **maximum flexibility** — it does not run the server for you.
+Instead, it only registers the route that will handle incoming updates.
 
-In order for WhatsApp to send the updates to your server, you need a callback url.
+This means you can:
 
-The callback url must be a public, secure (HTTPS) url that points to your server (or your local machine if you are
-testing locally). You can use a service like `Cloudflare Tunnel <https://developers.cloudflare.com/pages/how-to/preview-with-cloudflare-tunnel/>`_ or `localtunnel <https://localtunnel.github.io/www/>`_
-to create a secure tunnel to which WhatsApp can send the updates. These services
-will give you a public url that points to your machine (where you run the code).
+- Use any web framework you like.
+- Configure your server however you want.
+- Serve other parts of your app alongside ``pywa`` without restrictions.
 
-.. tip::
+.. note::
 
-        Facebook keep blocking domains that are used by these services (e.g. ngrok, localtunnel, etc.). So, you may need to try multiple services to find one that works, or use a custom domain.
+    Pywa has built-in support for FastAPI and Flask, but you can use any framework that supports handling HTTP requests.
 
+Setting Up a Callback URL
+-------------------------
+For WhatsApp to send updates to your server, you must provide a **callback URL** — a public, secure (``HTTPS``) endpoint that points to your running server.
 
-Here is an example using Cloudflare Tunnel:
+If you’re developing locally, you can use tunneling services like:
 
-- You will get screen with the public url that points to your machine
+- `grok <https://ngrok.com/>`_
+- `Cloudflare Tunnel <https://developers.cloudflare.com/pages/how-to/preview-with-cloudflare-tunnel/>`_
+- `localtunnel <https://localtunnel.github.io/www/>`_
+
+These create a secure, public URL that forwards traffic to your local machine.
+
+Example using ngrok:
 
 .. code-block:: bash
+    :caption: Terminal
 
-    cloudflared tunnel --url http://localhost:8080
+    ngrok http 8080
 
+Once you have a public URL, you must **register it** with WhatsApp — either automatically (via pywa) or manually (via the WhatsApp App Dashboard).
 
-Once you have a public url, You need to register it. This can be done two ways:
+Option 1: Automatic Callback URL Registration
+---------------------------------------------
+This is the simplest method — ``pywa`` will:
 
-* Automatically by pywa
-* Manually in the WhatsApp App Dashboard
+- Register your callback URL with WhatsApp.
+- Handle the verification request for you.
 
-Automatically registering the callback url
-__________________________________________
+**Requirements:**
 
-This is the easiest way to register the callback url. All you need to do is to pass the url to the ``callback_url`` argument
-when initializing the WhatsApp client and ``pywa`` will automatically register the url, and handle the verification request
-for you.
+- Your WhatsApp App **ID** and **Secret** (unless you’re setting callback_url_scope to ``PHONE`` or ``WABA``).
+  See `Facebook docs <https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings/>`_ for how to get them.
 
-This method requires the ID and the secret of the WhatsApp app.
-See `Here <https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings/>`_ how to get them.
+Example using FastAPI:
 
-- Example using FastAPI
+.. code-block:: python
+    :caption: main.py
+    :linenos:
+    :emphasize-lines: 4, 9, 10, 11, 12, 13
 
-.. toggle::
+    import fastapi
+    from pywa import WhatsApp
 
-    - Install `FastAPI <https://fastapi.tiangolo.com/>`_ (``pip3 install -U "pywa[fastapi]"``):
+    fastapi_app = fastapi.FastAPI()
 
-    .. code-block:: python
-        :caption: main.py
-        :linenos:
-        :emphasize-lines: 4, 9, 10, 11, 12, 13
+    wa = WhatsApp(
+        phone_id='1234567890',
+        token='xxxxxx',
+        server=fastapi_app,
+        callback_url='https://subdomain.ngrok.io',  # Your public URL
+        verify_token='XYZ123',
+        app_id=123456,
+        app_secret='xxxxxx'
+    )
 
-        import fastapi
-        from pywa import WhatsApp
+    # Register your handlers here
 
-        fastapi_app = fastapi.FastAPI()
+Run the server:
 
-        wa = WhatsApp(
-            phone_id='1234567890',
-            token='xxxxxx',
-            server=fastapi_app,
-            callback_url='https://abc123.trycloudflare.com',
-            verify_token='XYZ123',
-            app_id=123456,
-            app_secret='xxxxxx'
-        )
+.. code-block:: bash
+    :caption: Terminal
 
-        ... # register the handlers
+    fastapi dev main.py --port 8080
 
+.. note::
 
-    .. code-block:: bash
-        :caption: Terminal
+    The port must match the one you expose via your tunnel.
+    Example: ``ngrok http 8080`` means your server should run on port 8080.
 
-        fastapi dev main.py --port 8080
+Option 2: Manual Callback URL Registration
+------------------------------------------
+If you prefer to register the callback URL yourself:
 
-    The port that fastapi is running on (``8080`` in the example above) must be the same port that the callback url is listening on (e.g. ``cloudflared tunnel --url http://localhost:8080``).
+1. Start your server so ``pywa`` can handle WhatsApp’s verification request.
+2. Go to **App Dashboard > WhatsApp > Configuration**.
 
+.. image:: ../../../../_static/guides/register-callback-url.webp
+    :alt: Register Callback URL
 
---------------------------
+3. Enter:
 
-Registering the callback url manually in the WhatsApp App Dashboard
-___________________________________________________________________
+   - Your server’s public URL (e.g., ``https://subdomain.ngrok.io``).
+   - The ``verify_token`` you used in your ``WhatsApp`` client initialization.
 
-In this method, pywa will not register the callback url for you. Instead, pywa will assume that you have already registered
-an callback url, or that you will register one AFTER you start the server.
+Example using FastAPI:
 
-If you already have callback url that points to your server, you just need to start the server (on the same port that
-the callback url is listening on).
+.. code-block:: python
+    :caption: main.py
+    :linenos:
+    :emphasize-lines: 4, 9, 10
 
-If not, you will need to register a callback url manually in the WhatsApp App Dashboard, And this need to be done
-AFTER you start the server, so pywa can handle the verification request from WhatsApp.
+    import fastapi
+    from pywa import WhatsApp
 
-So, start the server:
+    fastapi_app = fastapi.FastAPI()
 
-- Example using FastAPI
+    wa = WhatsApp(
+        phone_id='1234567890',
+        token='xxxxxx',
+        server=fastapi_app,
+        verify_token='XYZ123',
+    )
 
-.. toggle::
+    # Register your handlers here
 
-    - Install `FastAPI <https://fastapi.tiangolo.com/>`_ (``pip3 install -U "pywa[fastapi]"``):
+Run the server:
 
-    .. code-block:: python
-        :caption: main.py
-        :linenos:
-        :emphasize-lines: 4, 9, 10
+.. code-block:: bash
+    :caption: Terminal
 
-        import fastapi
-        from pywa import WhatsApp
+    fastapi dev main.py --port 8080
 
-        fastapi_app = fastapi.FastAPI()
+Subscribing to Webhook Fields
+-----------------------------
+When registering manually, you must also subscribe to webhook fields in your app settings.
 
-        wa = WhatsApp(
-            phone_id='1234567890',
-            token='xxxxxx',
-            server=fastapi_app,
-            verify_token='XYZ123',
-        )
+Go to **App Dashboard > WhatsApp > Configuration** and scroll down to the **Webhook Fields** section.
 
-        ... # register the handlers
+.. image:: ../../../../_static/guides/subscribe-webhook-fields.webp
+    :alt: Subscribe to Webhook Fields
 
+Supported by pywa:
 
-    .. code-block:: bash
-        :caption: Terminal
+- ``messages`` – all user-related updates (messages, callbacks, message statuses)
+- ``calls`` – call connect, terminate, and status updates
+- ``message_template_status_update`` – template approval/rejection changes
+- ``message_template_quality_update`` – template quality score changes
+- ``message_template_components_update`` – template component changes (header, body, footer, buttons)
+- ``template_category_update`` – template category changes
+- ``user_preferences`` – user marketing preferences
 
-        fastapi dev main.py --port 8080
+You can also subscribe to other fields, but they won’t be processed automatically — use :meth:`~pywa.client.WhatsApp.on_raw_update` to handle them.
 
-    The port that fastapi is running on (``8080`` in the example above) must be the same port that the callback url is listening on (e.g. ``cloudflared tunnel --url http://localhost:8080``).
-
-Then, register the callback url in the WhatsApp App Dashboard.
-
-The registration can be done in the ``App Dashboard > WhatsApp > Configuration > Callback URL``. You need to enter the webhook url
-and the verify token that you used when initializing the WhatsApp client.
-
-.. toggle::
-
-    .. image:: https://user-images.githubusercontent.com/42866208/260836608-aae9f5c2-0088-4332-9f92-78ce8917be56.png
-        :width: 100%
-        :alt: WhatsApp webhook configuration
-
-.. important::
-
-    When registering the callback url manually, you must subscribe to webhook fields in your webhook settings. Otherwise, you will not receive any updates.
-    To enable it, go to your app dashboard, click on the ``Webhooks`` tab (Or the ``Configuration`` tab > ``Webhook fields``).
-    Then, subscribe to the fields you want to receive.
-
-    The current supported fields are:
-        - ``messages`` (all user related updates: messages, callbacks and message status updates)
-        - ``calls`` (call connect, terminate and status updates)
-        - ``message_template_status_update`` (template got approved, rejected, etc.)
-        - ``message_template_quality_update`` (template quality score got changed)
-        - ``message_template_components_update`` (template components got changed, e.g. header, body, footer or buttons)
-        - ``template_category_update`` (template category got changed)
-        - ``user_preferences`` (user marketing preferences)
-
-    You can subscribe to all the other fields, but they will not be handled by pywa, they can still be handled manually by
-    registering a callback for the :meth:`~pywa.client.WhatsApp.on_raw_update` decorator (or the :class:`RawUpdateHandler` handler).
-
-    .. toggle::
-
-        .. image:: ../../../../_static/guides/webhook-fields.webp
-           :width: 600
-           :alt: Subscribe to webhook fields
-           :align: center
-
-If everything is correct, WhatsApp will start sending the updates to the webhook url.
+Once everything is set up correctly, WhatsApp will start sending updates to your webhook URL.
 
 --------------------------
 
