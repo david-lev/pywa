@@ -27,7 +27,7 @@ For WhatsApp to send updates to your server, you must provide a **callback URL**
 
 If you’re developing locally, you can use tunneling services like:
 
-- `grok <https://ngrok.com/>`_
+- `ngrok <https://ngrok.com/>`_
 - `Cloudflare Tunnel <https://developers.cloudflare.com/pages/how-to/preview-with-cloudflare-tunnel/>`_
 - `localtunnel <https://localtunnel.github.io/www/>`_
 
@@ -158,18 +158,18 @@ Once everything is set up correctly, WhatsApp will start sending updates to your
 
 --------------------------
 
-Registering a callback function
--------------------------------
+Registering Callback Functions
+------------------------------
 
-To handle the incoming updates, you need to register a callback function. This function will be called whenever an update
-is received from WhatsApp.
+To handle incoming updates, you must **register callback functions**.
+These functions are called whenever WhatsApp sends an update.
 
+A callback function must accept two arguments:
 
-A callback function is a function that takes two (positional) arguments:
-    - The WhatsApp client object (:class:`~pywa.client.WhatsApp`)
-    - The update object (:class:`~pywa.types.Message`, :class:`~pywa.types.CallbackButton`, etc.)
+- The WhatsApp client object (:class:`~pywa.client.WhatsApp`)
+- The update object (:class:`~pywa.types.Message`, :class:`~pywa.types.CallbackButton`, etc.)
 
-Here is an example of a callback functions
+**Example:**
 
 .. code-block:: python
     :emphasize-lines: 3, 6
@@ -177,22 +177,24 @@ Here is an example of a callback functions
     from pywa import WhatsApp, types
 
     def echo_ok(client: WhatsApp, msg: types.Message):
-        msg.reply('Ok')
+        msg.reply("Ok")
 
     def react_to_button(client: WhatsApp, clb: types.CallbackButton):
-        clb.react('❤️')
+        clb.react("❤️")
 
-Once you define the callback function, you have two ways to register it:
+Once defined, you can register callbacks in two main ways:
+
+
 
 Using decorators
 ^^^^^^^^^^^^^^^^
 
-The easiest way to register a callback function is to use the ``on_message`` and the other ``on_...`` decorators:
+The simplest approach is with the ``on_...`` decorators such as :meth:`~pywa.client.WhatsApp.on_message`, :meth:`~pywa.client.WhatsApp.on_callback_button` etc.
 
 .. code-block:: python
     :caption: main.py
     :linenos:
-    :emphasize-lines: 7, 12
+    :emphasize-lines: 7, 11
 
     from pywa import WhatsApp, types
     from fastapi import FastAPI
@@ -204,11 +206,9 @@ The easiest way to register a callback function is to use the ``on_message`` and
     def handle_message(client: WhatsApp, msg: types.Message):
         print(msg)
 
-
     @wa.on_callback_button
     def handle_callback_button(client: WhatsApp, clb: types.CallbackButton):
         print(clb.data)
-
 
 .. code-block:: bash
     :caption: Terminal
@@ -217,9 +217,9 @@ The easiest way to register a callback function is to use the ``on_message`` and
 
 .. tip::
 
-    If you don't have accees to the client instance, you can register the callback functions with the WhatsApp class:
+    If you don’t have access to the client instance (e.g., in a module where you define handlers), you can register handlers **directly on the WhatsApp class**.
 
-    Create module for the handlers:
+    Example:
 
     .. code-block:: python
         :caption: my_handlers.py
@@ -232,35 +232,33 @@ The easiest way to register a callback function is to use the ``on_message`` and
         fastapi_app = FastAPI()
         wa = WhatsApp(..., server=fastapi_app)
 
-        @WhatsApp.on_message  # Register the handler with the WhatsApp class
+        @WhatsApp.on_message  # Register with the class itself
         def handle_message(client: WhatsApp, msg: types.Message):
             print(msg)
 
-
-    And then load it in the main file:
+    Then load the handlers in your main file:
 
     .. code-block:: python
         :caption: main.py
         :linenos:
-        :emphasize-lines: 4, 9
+        :emphasize-lines: 4, 8
 
         from pywa import WhatsApp
-        from . import my_handlers  # Import the module that contains the handlers
+        import my_handlers  # Import the module with your handlers
 
         wa = WhatsApp(..., handlers_modules=[my_handlers])
 
-        # Or:
-
+        # Or dynamically:
         wa = WhatsApp(...)
         wa.load_handlers_modules(my_handlers)
 
 
 Using ``Handler`` objects
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The other way to register a callback function is to use the :meth:`~pywa.client.WhatsApp.add_handlers` method and pass the function wrapped in
-a ``Handler`` object. This is useful when your application is large and you want to separate the handlers from the
-main code, or when you want to dynamically register handlers programmatically.
+For larger projects, or when you need to register handlers dynamically, you can wrap callback functions in ``Handler`` objects and add them via :meth:`~pywa.client.WhatsApp.add_handlers`.
+
+**Example:**
 
 .. code-block:: python
     :caption: my_handlers.py
@@ -268,21 +266,20 @@ main code, or when you want to dynamically register handlers programmatically.
 
     from pywa import WhatsApp, types
 
-    def handle_message(wa: WhatsApp, msg: types.Message):
-        print(message)
+    def handle_message(client: WhatsApp, msg: types.Message):
+        print(msg.text)
 
-    def handle_callback_button(wa: WhatsApp, clb: types.CallbackButton):
+    def handle_callback_button(client: WhatsApp, clb: types.CallbackButton):
         print(clb.data)
-
 
 .. code-block:: python
     :caption: main.py
     :linenos:
-    :emphasize-lines: 2, 9-10
+    :emphasize-lines: 3, 9-10
 
     from pywa import WhatsApp, handlers
-    from . import my_handlers
     from fastapi import FastAPI
+    import my_handlers  # Import the module with your handlers
 
     fastapi_app = FastAPI()
     wa = WhatsApp(..., server=fastapi_app)
@@ -292,15 +289,14 @@ main code, or when you want to dynamically register handlers programmatically.
         handlers.CallbackButtonHandler(callback=my_handlers.handle_callback_button),
     )
 
-
 .. code-block:: bash
     :caption: Terminal
 
     fastapi dev main.py
 
 
-Available handlers
-__________________
+Available Handlers
+-------------------
 
 .. list-table::
    :widths: 20 20 60
@@ -308,7 +304,7 @@ __________________
 
    * - Decorator
      - Handler
-     - The type of the update
+     - Update type
    * - :meth:`~pywa.client.WhatsApp.on_message`
      - :class:`MessageHandler`
      - :class:`~pywa.types.message.Message`
@@ -368,10 +364,12 @@ __________________
      - :class:`dict`
 
 
-Filtering updates
-__________________
 
-You can filter the updates by passing filters to the decorators. This is useful when you want to handle only specific updates.
+Filtering updates
+-----------------
+
+You can filter incoming updates by passing filters to your handlers.
+This is useful when you only want to react to specific types of messages.
 
 .. code-block:: python
     :caption: main.py
@@ -382,22 +380,22 @@ You can filter the updates by passing filters to the decorators. This is useful 
 
     wa = WhatsApp(...)
 
-    @wa.on_message(filters.text)  # Handle only text messages
+    @wa.on_message(filters.text)  # Only handle text messages
     def echo(client: WhatsApp, msg: types.Message):
-        # we know this handler will get only text messages, so:
-        msg.reply(text=msg.text)
+        msg.reply(text=msg.text)  # msg.text is guaranteed to exist here
 
 .. tip::
 
-    You can find useful filters in the :mod:`~pywa.filters` module or create your own filters. read more about filters `here <../filters/overview.html>`_.
+    Explore the :mod:`~pywa.filters` module for built-in filters,
+    or create your own. See more in the `filters guide <../filters/overview.html>`_.
 
 
-Listen instead of registering
-______________________________
+Using listeners instead of handlers
+------------------------------------
 
-The handlers can be registered and removed dynamicly when the server is running. but most of the time you can use listeners instead of registering new handler.
-This is because handler should be a start point of the application, like handling command, or menu click, but when you want to collect data from the user
-(e.g. ask for his age or address) you can use listeners:
+Handlers are best for **entry points** in your app (e.g., commands or button clicks).
+When you need to collect additional input from the user (like their age or address),
+you can use **listeners** instead of registering a new handler at runtime.
 
 .. code-block:: python
     :caption: main.py
@@ -408,20 +406,20 @@ This is because handler should be a start point of the application, like handlin
 
     wa = WhatsApp(...)
 
-    @wa.on_message(filters.command("start")
+    @wa.on_message(filters.command("start"))
     def start(_: WhatsApp, msg: types.Message):
         age = msg.reply("Hello! What's your age?").wait_for_reply(filters.text).text
         ...
 
 .. note::
 
-    Read more about listeners `here <../listeners/overview.html>`_.
+    Read more about listeners in the `listeners guide <../listeners/overview.html>`_.
 
 
-Stop or continue handling updates
-_________________________________
+Controlling handler flow
+-------------------------
 
-When a handler is called, when it finishes, in default, the next handler will not be called.
+By default, once a handler processes an update, no other handlers are called.
 
 .. code-block:: python
     :caption: main.py
@@ -435,17 +433,16 @@ When a handler is called, when it finishes, in default, the next handler will no
     @wa.on_message
     def handle_message(client: WhatsApp, msg: types.Message):
         print(msg)
-        # The next handler will not be called
+        # No further handlers will run
 
     @wa.on_message
     def handle_message2(client: WhatsApp, msg: types.Message):
         print(msg)
 
-
 .. tip::
-    :class: dropdown
 
-    The order of the handlers is the order they are registered. You can override this by providing ``priority`` argument to the handler.
+    Handlers run in the order they’re registered, unless you set a ``priority``.
+    A lower number means higher priority:
 
     .. code-block:: python
         :caption: main.py
@@ -456,15 +453,14 @@ When a handler is called, when it finishes, in default, the next handler will no
         wa = WhatsApp(...)
 
         @wa.on_message(priority=1)
-        def handle_message(client: WhatsApp, msg: types.Message):
-            print(msg)
+        def first(client: WhatsApp, msg: types.Message):
+            print("First:", msg)
 
-        @wa.on_message(priority=2) # this handler will be called before the previous one
-        def handle_message2(client: WhatsApp, msg: types.Message):
-            print(msg)
+        @wa.on_message(priority=2)  # Will run before the previous handler
+        def second(client: WhatsApp, msg: types.Message):
+            print("Second:", msg)
 
-
-You can change this behavior by setting the ``continue_handling`` to ``True`` when initializing :class:`~pywa.client.WhatsApp`.
+You can change the default behavior by enabling ``continue_handling`` when creating the client:
 
 .. code-block:: python
     :caption: main.py
@@ -474,13 +470,13 @@ You can change this behavior by setting the ``continue_handling`` to ``True`` wh
     wa = WhatsApp(..., continue_handling=True)
 
     @wa.on_message
-    def handle_message(client: WhatsApp, msg: types.Message):
+    def handler(client: WhatsApp, msg: types.Message):
         print(msg)
-        # The next handler WILL be called
-    ...
+        # The next handler WILL also run
 
-You can also change this behavior inside the callback function by calling the :meth:`~pywa.types.base_update.BaseUpdate.stop_handling`
-or :meth:`~pywa.types.base_update.BaseUpdate.continue_handling` methods on the update object.
+You can also decide per-message inside a handler by using
+:meth:`~pywa.types.base_update.BaseUpdate.stop_handling` or
+:meth:`~pywa.types.base_update.BaseUpdate.continue_handling`:
 
 .. code-block:: python
     :caption: main.py
@@ -494,21 +490,20 @@ or :meth:`~pywa.types.base_update.BaseUpdate.continue_handling` methods on the u
     @wa.on_message(filters.text)
     def handle_message(client: WhatsApp, msg: types.Message):
         print(msg)
-        if msg.text == 'stop':
-            msg.stop_handling() # The next handler will not be called
+        if msg.text == "stop":
+            msg.stop_handling()       # Stop further handlers
         else:
-            msg.continue_handling() # The next handler will be called
+            msg.continue_handling()   # Allow further handlers
 
-    ...
 
-Validating the updates
-______________________
+Validating updates
+------------------
 
 WhatsApp `recommends <https://developers.facebook.com/docs/graph-api/webhooks/getting-started#event-notifications>`_
-validating the updates by checking the signature of the update. This is done by comparing the
-signature of the update with the signature that WhatsApp sends in the ``X-Hub-Signature-256`` header of the request.
+validating updates using the ``X-Hub-Signature-256`` header.
+This ensures the update was really sent by WhatsApp.
 
-To enable this feature, you need to pass the ``app_secret`` when initializing the WhatsApp client.
+To enable validation, pass your ``app_secret`` when creating the client:
 
 .. code-block:: python
     :caption: main.py
@@ -518,15 +513,15 @@ To enable this feature, you need to pass the ``app_secret`` when initializing th
     from pywa import WhatsApp
 
     wa = WhatsApp(
-        validate_updates=True, # Default is True
-        app_secret='xxxx',
+        validate_updates=True,  # Enabled by default
+        app_secret="xxxx",
         ...
     )
 
-If the signature is invalid, pywa will return an ``HTTP 401 Unauthorized`` response.
+If the signature is invalid, pywa automatically responds with
+``HTTP 401 Unauthorized``.
 
-The validation is done by default. You can disable this feature by setting the ``validate_updates`` to ``False`` when initializing :class:`~pywa.client.WhatsApp`.
-
+You can disable validation by setting ``validate_updates=False``.
 
 .. toctree::
     handler_decorators
