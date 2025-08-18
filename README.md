@@ -25,23 +25,23 @@
   <a href="https://t.me/py_wa"><img src="https://badges.aleen42.com/src/telegram.svg" /></a>
 </p>
 
-> ⚠️ **Pywa v3 Release Candidate Available!**  
-> Pywa `v3.0.0` is now available for testing!  
+> ⚠️ **Pywa v3 Release Candidate Available!**
+> Pywa `v3.0.0` is now available for testing!
 >
 > 🚀 **What’s New in v3:**
 
-> • Complete **template system redesign** – easier structure, validation, and sending  
-> • Full support for **calls** (incoming and outgoing)  
+> • Complete **template system redesign** – easier structure, validation, and sending
+> • Full support for **calls** (incoming and outgoing)
 > • Improved **security**, **typing**, and **input validation**
 
-> 📚 [v3 Documentation »](https://pywa.readthedocs.io/en/v3/)  
-> 🧭 [Migration Guide (2.x → 3.x) »](https://github.com/david-lev/pywa/blob/v3/MIGRATION.md)  
-> 📝 [Full Changelog »](https://github.com/david-lev/pywa/blob/v3/CHANGELOG.md)  
+> 📚 [v3 Documentation »](https://pywa.readthedocs.io/en/v3/)
+> 🧭 [Migration Guide (2.x → 3.x) »](https://github.com/david-lev/pywa/blob/v3/MIGRATION.md)
+> 📝 [Full Changelog »](https://github.com/david-lev/pywa/blob/v3/CHANGELOG.md)
 >
-> 📦 **Install for testing:**  
+> 📦 **Install for testing:**
 > ```bash
 > pip install pywa==3.0.0-rc.3
-> ```  
+> ```
 >
 > 💬 Feedback and issue reports are encouraged to help us prepare for the stable release.
 
