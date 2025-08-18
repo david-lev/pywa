@@ -70,7 +70,7 @@ class _SentUpdate(_ClientShortcuts, abc.ABC):
     @property
     def listener_identifier(self) -> UserUpdateListenerIdentifier:
         return UserUpdateListenerIdentifier(
-            sender=self.sender, recipient=self.recipient
+            sender=self.recipient, recipient=self.sender
         )
 
 
