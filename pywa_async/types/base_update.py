@@ -69,14 +69,19 @@ class _ClientShortcutsAsync:
     ) -> SentMessage:
         """
         Reply to the message with text.
-            - Shortcut for :py:func:`~pywa.client.WhatsApp.send_message` with ``to`` and ``reply_to_message_id``.
+
+        - Shortcut for :py:func:`~pywa.client.WhatsApp.send_message` with ``to`` and ``reply_to_message_id``.
+        - Text messages are messages containing text and an optional link preview.
+        - You can have the WhatsApp client attempt to render a preview of the first URL in the body text string, if it contains one. URLs must begin with ``http://`` or ``https://``. If multiple URLs are in the body text string, only the first URL will be rendered. If omitted, or if unable to retrieve a link preview, a clickable link will be rendered instead.
+        - See `Text messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/text-messages>`_.
+        - See `Markdown <https://faq.whatsapp.com/539178204879377>`_ for formatting text messages.
 
         Example:
 
-            >>> msg.reply_text(
-            ...     text="Hello from PyWa! (https://github.com/david-lev/pywa)",
-            ...     quote=True,
-            ... )
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_message
+            ... async def callback(_: WhatsApp, msg: Message):
+            ...     await msg.reply(f"Hello {msg.from_user.name}! This is a reply to your message.", quote=True)
 
         Args:
             text: The text to reply with (markdown allowed, max 4096 characters).
@@ -90,7 +95,7 @@ class _ClientShortcutsAsync:
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
-            The ID of the sent reply.
+            The sent message.
         """
         return await self._client.send_message(
             sender=self._internal_recipient,
@@ -119,16 +124,22 @@ class _ClientShortcutsAsync:
     ) -> SentMessage:
         """
         Reply to the message with an image.
-            - Shortcut for :py:func:`~pywa.client.WhatsApp.send_image` with ``to`` and ``reply_to_message_id``.
-            - Images must be 8-bit, RGB or RGBA.
+
+        - Shortcut for :py:func:`~pywa.client.WhatsApp.send_image` with ``to`` and ``reply_to_message_id``.
+        - Image messages are messages that display a single image and an optional caption.
+        - See `Image messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/image-messages>`_.
+        - See `Supported image formats <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/image-messages#supported-image-formats>`_.
+        - Images must be 8-bit, RGB or RGBA.
 
         Example:
 
-            >>> msg.reply_image(
-            ...     image="https://example.com/image.png",
-            ...     caption="This is an image!",
-            ...     quote=True,
-            ... )
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_message
+            ... async def callback(_: WhatsApp, msg: Message):
+            ...     await msg.reply_image(
+            ...         image="https://example.com/image.jpg",
+            ...         caption="This is an image",
+            ...     )
 
         Args:
             image: The image to reply (either a media ID, URL, file path, bytes, or an open file object. When buttons are
@@ -144,7 +155,7 @@ class _ClientShortcutsAsync:
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
-            The ID of the sent reply.
+            The sent message.
         """
         return await self._client.send_image(
             sender=self._internal_recipient,
@@ -171,17 +182,22 @@ class _ClientShortcutsAsync:
     ) -> SentMessage:
         """
         Reply to the message with a video.
-            - Shortcut for :py:func:`~pywa.client.WhatsApp.send_video` with ``to`` and ``reply_to_message_id``.
-            - Only H.264 video codec and AAC audio codec is supported.
-            - Videos with a single audio stream or no audio stream are supported.
+
+        - Shortcut for :py:func:`~pywa.client.WhatsApp.send_video` with ``to`` and ``reply_to_message_id``.
+        - Video messages display a thumbnail preview of a video image with an optional caption. When the WhatsApp user taps the preview, it loads the video and displays it to the user.
+        - Only H.264 video codec and AAC audio codec supported. Single audio stream or no audio stream only.
+        - See `Video messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/video-messages>`_.
+        - See `Supported video formats <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/video-messages#supported-video-formats>`_.
 
         Example:
 
-            >>> msg.reply_video(
-            ...     video="https://example.com/video.mp4",
-            ...     caption="This is a video",
-            ...     quote=True,
-            ... )
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_message
+            ... async def callback(_: WhatsApp, msg: Message):
+            ...     await msg.reply_video(
+            ...         video="https://example.com/video.mp4",
+            ...         caption="This is a video",
+            ...     )
 
         Args:
             video: The video to reply (either a media ID, URL, file path, bytes, or an open file object. When buttons
@@ -197,7 +213,7 @@ class _ClientShortcutsAsync:
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
-            The ID of the sent reply.
+            The sent message.
         """
         return await self._client.send_video(
             sender=self._internal_recipient,
@@ -225,17 +241,22 @@ class _ClientShortcutsAsync:
     ) -> SentMessage:
         """
         Reply to the message with a document.
-            - Shortcut for :py:func:`~pywa.client.WhatsApp.send_document` with ``to`` and ``reply_to_message_id``.
+
+        - Shortcut for :py:func:`~pywa.client.WhatsApp.send_document` with ``to`` and ``reply_to_message_id``.
+        - Document messages are messages that display a document icon, linked to a document, that a WhatsApp user can tap to download.
+        - See `Document messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/document-messages>`_.
+        - See `Supported document types <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/document-messages#supported-document-types>`_.
 
         Example:
 
-            >>> msg.reply_document(
-            ...     document="https://example.com/example_123.pdf",
-            ...     filename="example.pdf",
-            ...     caption="Example PDF",
-            ...     quote=True,
-            ... )
-
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_message
+            ... async def callback(_: WhatsApp, msg: Message):
+            ...     await msg.reply_document(
+            ...         document="https://example.com/document.pdf",
+            ...         filename="document.pdf",
+            ...         caption="This is a document",
+            ...     )
 
         Args:
             document: The document to reply (either a media ID, URL, file path, bytes, or an open file object. When
@@ -253,7 +274,7 @@ class _ClientShortcutsAsync:
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
-            The ID of the sent reply.
+            The sent message.
         """
         return await self._client.send_document(
             sender=self._internal_recipient,
@@ -278,13 +299,18 @@ class _ClientShortcutsAsync:
     ) -> SentMessage:
         """
         Reply to the message with an audio.
-            - Shortcut for :py:func:`~pywa.client.WhatsApp.send_audio` with ``to`` and ``reply_to_message_id``.
+
+        - Shortcut for :py:func:`~pywa.client.WhatsApp.send_audio` with ``to`` and ``reply_to_message_id``.
+        - Audio messages display an audio icon and a link to an audio file. When the WhatsApp user taps the icon, the WhatsApp client loads and plays the audio file.
+        - See `Audio messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/audio-messages>`_.
+        - See `Supported audio formats <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/audio-messages#supported-audio-formats>`_.
 
         Example:
 
-            >>> msg.reply_audio(
-            ...     audio='https://example.com/audio.mp3',
-            ... )
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_message
+            ... async def callback(_: WhatsApp, msg: Message):
+            ...     await msg.reply_audio(audio="https://example.com/audio.mp3")
 
         Args:
             audio: The audio file to reply with (either a media ID, URL, file path, bytes, or an open file object).
@@ -294,7 +320,7 @@ class _ClientShortcutsAsync:
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
-            The ID of the sent message.
+            The sent message.
         """
         return await self._client.send_audio(
             sender=self._internal_recipient,
@@ -315,15 +341,20 @@ class _ClientShortcutsAsync:
     ) -> SentMessage:
         """
         Reply to the message with a sticker.
-            - Shortcut for :py:func:`~pywa.client.WhatsApp.send_sticker` with ``to`` and ``reply_to_message_id``.
-            - A static sticker needs to be 512x512 pixels and cannot exceed 100 KB.
-            - An animated sticker must be 512x512 pixels and cannot exceed 500 KB.
+
+        - Shortcut for :py:func:`~pywa.client.WhatsApp.send_sticker` with ``to`` and ``reply_to_message_id``.
+        - Sticker messages display animated or static sticker images in a WhatsApp message.
+        - A static sticker needs to be 512x512 pixels and cannot exceed 100 KB.
+        - An animated sticker must be 512x512 pixels and cannot exceed 500 KB.
+        - See `Sticker messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/sticker-messages>`_.
+        - See `Supported sticker formats <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/sticker-messages#supported-sticker-formats>`_.
 
         Example:
 
-            >>> msg.reply_sticker(
-            ...     sticker='https://example.com/sticker.webp',
-            ... )
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_message
+            ... async def callback(_: WhatsApp, msg: Message):
+            ...     await msg.reply_sticker(sticker="https://example.com/sticker.webp")
 
         Args:
             sticker: The sticker to reply with (either a media ID, URL, file path, bytes, or an open file object).
@@ -333,7 +364,7 @@ class _ClientShortcutsAsync:
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
-            The ID of the sent reply.
+            The sent message.
         """
         return await self._client.send_sticker(
             sender=self._internal_recipient,
@@ -356,17 +387,22 @@ class _ClientShortcutsAsync:
     ) -> SentMessage:
         """
         Reply to the message with a location.
-            - Shortcut for :py:func:`~pywa.client.WhatsApp.send_location` with ``to`` and ``reply_to_message_id``.
+
+        - Shortcut for :py:func:`~pywa.client.WhatsApp.send_location` with ``to`` and ``reply_to_message_id``.
+        - Location messages allow you to send a location's latitude and longitude coordinates to a WhatsApp user.
+        - Read more about `Location messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/location-messages>`_.
 
         Example:
 
-            >>> msg.reply_location(
-            ...     latitude=37.4847483695049,
-            ...     longitude=--122.1473373086664,
-            ...     name='WhatsApp HQ',
-            ...     address='Menlo Park, 1601 Willow Rd, United States',
-            ... )
-
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_message
+            ... async def callback(_: WhatsApp, msg: Message):
+            ...     await msg.reply_location(
+            ...         latitude=37.4847483695049,
+            ...         longitude=-122.1473373086664,
+            ...         name='WhatsApp HQ',
+            ...        address='Menlo Park, 1601 Willow Rd, United States',
+            ...     )
 
         Args:
             latitude: The latitude of the location.
@@ -377,7 +413,7 @@ class _ClientShortcutsAsync:
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
-            The ID of the sent reply.
+            The sent message.
         """
         return await self._client.send_location(
             sender=self._internal_recipient,
@@ -399,14 +435,18 @@ class _ClientShortcutsAsync:
     ) -> SentMessage:
         """
         Reply to the message with a request for the user's location.
-            - Shortcut for :py:func:`~pywa.client.WhatsApp.request_location` with ``to`` and ``reply_to_message_id``.
+
+        - Shortcut for :py:func:`~pywa.client.WhatsApp.request_location` with ``to`` and ``reply_to_message_id``.
+        - Location request messages display body text and a send location button. When a WhatsApp user taps the button, a location sharing screen appears which the user can then use to share their location.
+        - Once the user shares their location, a :class:`Message` update is triggered, containing the user's location details.
+        - Read more about `Location request messages <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-messages/location-request-messages>`_.
 
         Example:
 
-                >>> msg.reply_location_request(
-                ...     text='Please share your location',
-                ... )
-
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_message
+            ... async def callback(_: WhatsApp, msg: Message):
+            ...     await msg.reply_location_request(text='Please share your location')
 
         Args:
             text: The text to send with the request.
@@ -414,7 +454,7 @@ class _ClientShortcutsAsync:
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
-            The ID of the sent reply.
+            The sent message.
         """
         return await self._client.request_location(
             sender=self._internal_recipient,
@@ -433,21 +473,26 @@ class _ClientShortcutsAsync:
     ) -> SentMessage:
         """
         Reply to the message with a contact/s.
-            - Shortcut for :py:func:`~pywa.client.WhatsApp.send_contact` with ``to`` and ``reply_to_message_id``.
+
+        - Shortcut for :py:func:`~pywa.client.WhatsApp.send_contact` with ``to`` and ``reply_to_message_id``.
+        - Contacts messages allow you to send rich contact information directly to WhatsApp users, such as names, phone numbers, physical addresses, and email addresses. When a WhatsApp user taps the message's profile arrow, it displays the contact's information in a profile view:
+        - Each message can include information for up to 257 contacts, although it is recommended to send fewer for usability and negative feedback reasons.
+        - See `Contacts messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/contacts-messages>`_.
 
         Example:
 
-            >>> from pywa.types import Contact
-            >>> msg.reply_contact(
-            ...     contact=Contact(
-            ...         name=Contact.Name(formatted_name='David Lev', first_name='David'),
-            ...         phones=[Contact.Phone(phone='1234567890', wa_id='1234567890', type='MOBILE')],
-            ...         emails=[Contact.Email(email='test@test.com', type='WORK')],
-            ...         urls=[Contact.Url(url='https://exmaple.com', type='HOME')],
-            ...      ),
-            ...     quote=True,
-            ... )
-
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_message
+            ... async def callback(_: WhatsApp, msg: Message):
+            ...     await msg.reply_contact(
+            ...         contact=Contact(
+            ...             name=Contact.Name(formatted_name='David Lev', first_name='David'),
+            ...             phones=[Contact.Phone(phone='1234567890', wa_id='1234567890', type='MOBILE')],
+            ...             emails=[Contact.Email(email='test@test.com', type='WORK')],
+            ...             urls=[Contact.Url(url='https://exmaple.com', type='HOME')],
+            ...         ),
+            ...         quote=True,
+            ...     )
 
         Args:
             contact: The contact/s to send.
@@ -455,7 +500,7 @@ class _ClientShortcutsAsync:
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
-            The ID of the sent reply.
+            The sent message.
         """
         return await self._client.send_contact(
             sender=self._internal_recipient,
@@ -470,18 +515,27 @@ class _ClientShortcutsAsync:
     ) -> SentMessage:
         """
         React to the message with an emoji.
-            - Shortcut for :py:func:`~pywa.client.WhatsApp.send_reaction` with ``to`` and ``message_id``.
+
+        - Shortcut for :py:func:`~pywa.client.WhatsApp.send_reaction` with ``to`` and ``message_id``.
+        - Reaction messages are emoji-reactions that you can apply to a previous WhatsApp user message that you have received.
+        - When sending a reaction message, only a :class:`MessageStatus` update (``type`` set to ``SENT``) will be triggered; ``DELIVERED`` and ``READ`` updates will not be triggered.
+        - You can react to incoming messages by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.react` method on every update.
+        - See `Reaction messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/reaction-messages>`_.
 
         Example:
 
-            >>> msg.react('👍')
+        >>> wa = WhatsApp(...)
+        >>> @wa.on_message
+        ... async def callback(_: WhatsApp, msg: Message):
+        ...     await msg.react("👍")
 
         Args:
             emoji: The emoji to react with.
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
-            The ID of the sent reaction.
+            The sent message (You can't use this message id to remove the reaction or perform any other
+            action on it. instead, use the message ID of the message you reacted to).
         """
         return await self._client.send_reaction(
             sender=self._internal_recipient,
@@ -495,18 +549,26 @@ class _ClientShortcutsAsync:
         self, *, tracker: str | CallbackData | None = None
     ) -> SentMessage:
         """
-        Remove the reaction from the message.
-            - Shortcut for :py:func:`~pywa.client.WhatsApp.remove_reaction` with ``to`` and ``message_id``.
+                Remove the reaction from the message.
 
-        Example:
+                - Shortcut for :py:func:`~pywa.client.WhatsApp.remove_reaction` with ``to`` and ``message_id``.
+                - You can remove reactions from incoming messages by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.unreact` method on every update.
+                - See `Reaction messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/reaction-messages>`_.
 
-            >>> msg.unreact()
+                Example:
 
-        Args:
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+                    >>> wa = WhatsApp(...)
+                    >>> @wa.on_message
+                    ... async def callback(_: WhatsApp, msg: Message):
+                    ...     await msg.react("👍")
+                    ...     await msg.unreact()
 
-        Returns:
-            The ID of the sent unreaction.
+        =        Args:
+                    tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+
+                Returns:
+                    The sent message (You can't use this message id to remove the reaction or perform any other
+                    action on it. instead, use the message ID of the message you reacted to).
         """
         return await self._client.remove_reaction(
             sender=self._internal_recipient,
@@ -526,15 +588,25 @@ class _ClientShortcutsAsync:
     ) -> SentMessage:
         """
         Reply to the message with a catalog.
-            - Shortcut for :py:func:`~pywa.client.WhatsApp.send_catalog` with ``to`` and ``reply_to_message_id``.
+
+        - Shortcut for :py:func:`~pywa.client.WhatsApp.send_catalog` with ``to`` and ``reply_to_message_id``.
+        - Catalog messages are messages that allow you to showcase your product catalog entirely within WhatsApp.
+        - Catalog messages display a product thumbnail header image of your choice, custom body text, a fixed text header, a fixed text sub-header, and a View catalog button.
+        - When a customer taps the View catalog button, your product catalog appears within WhatsApp.
+        - You must have `inventory uploaded to Meta <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/sell-products-and-services/upload-inventory>`_ in an ecommerce catalog `connected to your WhatsApp Business Account <https://www.facebook.com/business/help/158662536425974>`_.
+        - Read more about `Catalog messages <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/sell-products-and-services/share-products#catalog-messages>`_.
 
         Example:
 
-            >>> msg.reply_catalog(
-            ...     body='This is a catalog',
-            ...     footer='Powered by PyWa',
-            ...     thumbnail_product_sku='SKU123',
-            ... )
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_message
+            ... async def callback(_: WhatsApp, msg: Message):
+            ...     await msg.reply_catalog(
+            ...         body='Check out our products!',
+            ...         footer='Powered by PyWa',
+            ...         thumbnail_product_sku='SKU123',  # Optional, if not provided,
+            ...         # the first item in the catalog will be used.
+            ...     )
 
         Args:
             body: Text to appear in the message body (up to 1024 characters).
@@ -545,7 +617,7 @@ class _ClientShortcutsAsync:
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
-            The ID of the sent reply.
+            The sent message.
         """
         return await self._client.send_catalog(
             sender=self._internal_recipient,
@@ -569,8 +641,22 @@ class _ClientShortcutsAsync:
     ) -> SentMessage:
         """
         Reply to the message with a product.
-            - Shortcut for :py:func:`~pywa.client.WhatsApp.send_product` with ``to`` and ``reply_to_message_id``.
-            - To reply with multiple products, use :py:func:`~BaseUserUpdate.reply_products`.
+
+        - Shortcut for :py:func:`~pywa.client.WhatsApp.send_product` with ``to`` and ``reply_to_message_id``.
+        - To reply with multiple products, use :py:func:`~BaseUserUpdate.reply_products`.
+        - See `Product messages <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/sell-products-and-services/share-products#product-messages>`_.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_message
+            ... def callback(_: WhatsApp, msg: Message):
+            ...     msg.reply_product(
+            ...         catalog_id='1234567890',
+            ...         sku='SKU123',
+            ...         body='Check out this product!',
+            ...         footer='Powered by PyWa',
+            ...     )
 
         Args:
             catalog_id: The ID of the catalog to send the product from. (To get the catalog ID use
@@ -583,7 +669,7 @@ class _ClientShortcutsAsync:
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
-            The ID of the sent reply.
+            The sent message.
         """
         return await self._client.send_product(
             sender=self._internal_recipient,
@@ -609,30 +695,33 @@ class _ClientShortcutsAsync:
     ) -> SentMessage:
         """
         Reply to the message with a product.
-            - Shortcut for :py:func:`~pywa.client.WhatsApp.send_products` with ``to`` and ``reply_to_message_id``.
-            - To reply with multiple products, use :py:func:`~BaseUserUpdate.reply_products`.
+
+        - Shortcut for :py:func:`~pywa.client.WhatsApp.send_products` with ``to`` and ``reply_to_message_id``.
+        - To reply with multiple products, use :py:func:`~BaseUserUpdate.reply_products`.
+        - See `Product messages <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/sell-products-and-services/share-products#product-messages>`_.
 
         Example:
 
-            >>> from pywa.types import ProductsSection
-            >>> msg.reply_products(
-            ...     catalog_id='1234567890',
-            ...     title='Tech Products',
-            ...     body='Check out our products!',
-            ...     product_sections=[
-            ...         ProductsSection(
-            ...             title='Smartphones',
-            ...             skus=['IPHONE12', 'GALAXYS21'],
-            ...         ),
-            ...         ProductsSection(
-            ...             title='Laptops',
-            ...             skus=['MACBOOKPRO', 'SURFACEPRO'],
-            ...         ),
-            ...     ],
-            ...     footer='Powered by PyWa',
-            ...     quote=True,
-            ... )
-
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_message
+            ... async def callback(_: WhatsApp, msg: Message):
+            ...    await msg.reply_products(
+            ...        catalog_id='1234567890',
+            ...        title='Tech Products',
+            ...        body='Check out our products!',
+            ...        product_sections=[
+            ...            ProductsSection(
+            ...                title='Smartphones',
+            ...                skus=['IPHONE12', 'GALAXYS21'],
+            ...            ),
+            ...            ProductsSection(
+            ...                title='Laptops',
+            ...                skus=['MACBOOKPRO', 'SURFACEPRO'],
+            ...            ),
+            ...        ],
+            ...        footer='Powered by PyWa',
+            ...        quote=True,
+            ...    )
 
         Args:
             catalog_id: The ID of the catalog to send the product from (To get the catalog ID
@@ -645,7 +734,7 @@ class _ClientShortcutsAsync:
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
-            The ID of the sent reply.
+            The sent message.
         """
         return await self._client.send_products(
             sender=self._internal_recipient,
@@ -673,7 +762,9 @@ class _ClientShortcutsAsync:
         """
         Reply to the message with a template.
 
-        -- Shortcut for :py:func:`~pywa.client.WhatsApp.send_template` with ``to`` and ``reply_to_message_id``.
+        - Shortcut for :py:func:`~pywa.client.WhatsApp.send_template` with ``to`` and ``reply_to_message_id``.
+        - To create a template, use :py:func:`~pywa.client.WhatsApp.create_template`.
+        - Read more about `Template Messages <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-message-templates>`_.
 
         Args:
             name: The name of the template to send.
@@ -683,6 +774,9 @@ class _ClientShortcutsAsync:
             message_activity_sharing: Whether to share message activities (e.g. message read) for that specific marketing message to Meta to help optimize marketing messages (optional, only if ``use_mm_lite_api`` is True).
             quote: Whether to quote the replied message (default: False).
             tracker: A callback data to track the message (optional, can be a string or a :class:`CallbackData` object).
+
+        Returns:
+            The sent template message.
         """
 
         return await self._client.send_template(
@@ -700,7 +794,18 @@ class _ClientShortcutsAsync:
     async def mark_as_read(self) -> SuccessResult:
         """
         Mark the message as read.
-            - Shortcut for :py:func:`~pywa.client.WhatsApp.mark_message_as_read` with ``message_id``.
+
+        - Shortcut for :py:func:`~pywa.client.WhatsApp.mark_message_as_read` with ``message_id``.
+        - You can mark incoming messages as read by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.mark_as_read` method or indicate typing by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.indicate_typing` method on every update.
+        - It's good practice to mark an incoming messages as read within 30 days of receipt. Marking a message as read will also mark earlier messages in the thread as read.
+        - Read more about `Mark messages as read <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/mark-message-as-read>`_.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_message
+            ... async def callback(_: WhatsApp, msg: Message):
+            ...     await msg.mark_as_read()
 
         Returns:
             Whether it was successful.
@@ -712,11 +817,17 @@ class _ClientShortcutsAsync:
     async def indicate_typing(self) -> SuccessResult:
         """
         Mark the message as read and display a typing indicator so the WhatsApp user knows you are preparing a response.
-        This is good practice if it will take you a few seconds to respond.
-
-        The typing indicator will be dismissed once you respond, or after 25 seconds, whichever comes first. To prevent a poor user experience, only display a typing indicator if you are going to respond.
 
         - Shortcut for :py:func:`~pywa.client.WhatsApp.indicate_typing` with ``message_id``.
+        - The typing indicator will be dismissed once you respond, or after 25 seconds, whichever comes first. To prevent a poor user experience, only display a typing indicator if you are going to respond.
+        - Read more about `Typing indicators <https://developers.facebook.com/docs/whatsapp/cloud-api/typing-indicators>`_.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_message
+            ... async def callback(_: WhatsApp, msg: Message):
+            ...     await msg.indicate_typing()
 
         Returns:
             Whether it was successful.
@@ -730,14 +841,23 @@ class _ClientShortcutsAsync:
     ) -> InitiatedCall:
         """
         Initiate a call with the user.
-            - Shortcut for :py:func:`~pywa.client.WhatsApp.call` with ``to`` and ``message_id``.
+
+        - Shortcut for :py:func:`~pywa.client.WhatsApp.call` with ``to`` and ``message_id``.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#initiate-call>`_.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_message
+            ... async def callback(_: WhatsApp, msg: Message):
+            ...    await msg.call(...)
 
         Args:
             sdp: The SDP object containing the call information.
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
-            The ID of the sent call.
+            The initiated call.
         """
         return await self._client.initiate_call(
             to=self._internal_sender,

@@ -898,7 +898,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             ...     caption="Example PDF"
             ... )
 
-
         Args:
             to: The phone ID of the WhatsApp user.
             document: The document to send (either a media ID, URL, file path, bytes, or an open file object. When
@@ -1116,9 +1115,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         - When sending a reaction message, only a :class:`MessageStatus` update (``type`` set to ``SENT``) will be triggered; ``DELIVERED`` and ``READ`` updates will not be triggered.
         - You can react to incoming messages by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.react` method on every update.
+        - See `Reaction messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/reaction-messages>`_.
 
         >>> wa = WhatsApp(...)
-        >>> @wa.on_message()
+        >>> @wa.on_message
         ... def message_handler(_: WhatsApp, msg: Message):
         ...     msg.react('👍')
 
@@ -1139,7 +1139,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the reaction (You can't use this message id to remove the reaction or perform any other
+            The sent message (You can't use this message id to remove the reaction or perform any other
             action on it. instead, use the message ID of the message you reacted to).
         """
         sender = helpers.resolve_arg(
@@ -1169,10 +1169,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Remove reaction from a message.
 
         - You can remove reactions from incoming messages by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.unreact` method on every update.
+        - See `Reaction messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/reaction-messages>`_.
 
         >>> wa = WhatsApp(...)
-        >>> @wa.on_message()
+        >>> @wa.on_message
         ... def message_handler(_: WhatsApp, msg: Message):
+        ...     msg.react('👍')
         ...     msg.unreact()
 
         Example:
@@ -1190,7 +1192,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The message ID of the reaction (You can't use this message id to re-react or perform any other action on it.
+            The sent message (You can't use this message id to re-react or perform any other action on it.
             instead, use the message ID of the message you unreacted to).
         """
         sender = helpers.resolve_arg(
@@ -1337,7 +1339,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         When a WhatsApp user taps the message's profile arrow, it displays the contact's information in a profile view:
 
         - Each message can include information for up to 257 contacts, although it is recommended to send fewer for usability and negative feedback reasons.
-
         - See `Contacts messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/contacts-messages>`_.
 
         Example:
@@ -1659,6 +1660,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         - The typing indicator will be dismissed once you respond, or after 25 seconds, whichever comes first. To prevent a poor user experience, only display a typing indicator if you are going to respond.
         - Read more about `Typing indicators <https://developers.facebook.com/docs/whatsapp/cloud-api/typing-indicators>`_.
 
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> wa.indicate_typing(message_id='wamid.XXX=')
+
         Args:
             message_id: The message ID to mark as read and display a typing indicator.
             sender: The phone ID (optional, if not provided, the client's phone ID will be used).
@@ -1699,9 +1705,15 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> wa = WhatsApp(...)
+            >>> wa.upload_media(media='https://example.com/image.jpg',)
+
+            >>> wa.upload_media(media=pathlib.Path('image.jpg'))
+            >>> wa.upload_media(media="/path/to/image.jpg")
+
             >>> wa.upload_media(
-            ...     media='https://example.com/image.jpg',
+            ...     media=b'...binary data...',
             ...     mime_type='image/jpeg',
+            ...     filename='image.jpg',
             ... )
 
         Args:
@@ -1816,7 +1828,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             >>> wa = WhatsApp(...)
             >>> wa.download_media(
             ...     url='https://mmg-fna.whatsapp.net/d/f/Amc.../v2/1234567890',
-            ...     path='/home/david/Downloads',
+            ...     path=pathlib.Path('/path/to/save'),
             ...     filename='image.jpg',
             ... )
 
@@ -1952,7 +1964,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> wa = WhatsApp(...)
-            >>> wa.get_business_phone_numbers()
+            >>> for phone_number in wa.get_business_phone_numbers():
+            ...     print(phone_number)
 
         Args:
             waba_id: The WABA ID to get the phone numbers from (optional, if not provided, the client's WABA ID will be used).
@@ -2060,6 +2073,23 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         - You can receive the current conversational automation settings using :py:func:`~pywa.client.WhatsApp.get_business_phone_number` and accessing the ``conversational_automation`` attribute.
         - Read more about `Conversational Automation <https://developers.facebook.com/docs/whatsapp/cloud-api/phone-numbers/conversational-components>`_.
 
+            >>> from pywa.types import Command
+            >>> wa = WhatsApp(...)
+            >>> wa.update_conversational_automation(
+            ...     enable_chat_opened=True,
+            ...     ice_breakers=['Plan a trip', 'Create a workout plan'],
+            ...     commands=[
+            ...         Command(
+            ...             command='start',
+            ...             description='Start a new conversation',
+            ...         ),
+            ...         Command(
+            ...             command='help',
+            ...             description='Get help with the bot',
+            ...         ),
+            ...     ],
+            ... )
+
         Args:
             enable_chat_opened: You can be notified whenever a WhatsApp user opens a chat with you for
              the first time. This can be useful if you want to reply to these users with a special welcome message of
@@ -2105,7 +2135,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> wa = WhatsApp(...)
-            >>> wa.update_display_name()
+            >>> wa.update_display_name(new_display_name="Pizza Bot")
 
         Args:
             new_display_name: The new display name.
@@ -2217,7 +2247,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             ...     email='test@test.com',
             ...     profile_picture_handle='1234567890',
             ...     industry=Industry.NOT_A_BIZ,
-            ...     websites=('https://example.com', 'https://google.com'),
+            ...     websites=['https://example.com', 'https://google.com'],
             ... )
 
         Args:
@@ -2639,6 +2669,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             ...     languages=[TemplateLanguage.ENGLISH_US],
             ...     pagination=Pagination(limit=10)
             ... )
+            >>> for template in templates:
+            ...     print(f'Template {template.id} - {template.name}: {template}')
 
         Args:
             statuses: The statuses of the templates to filter by (optional).
@@ -2697,6 +2729,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         Get the details of a specific template.
 
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> template_details = await wa.get_template(template_id='1234567890')
+
         Args:
             template_id: The ID of the template to retrieve.
 
@@ -2729,6 +2766,17 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         - Approved templates can be edited up to 10 times in a 30 day window, or 1 time in a 24 hour window. Rejected or paused templates can be edited an unlimited number of times.
         - After editing an approved or paused template, it will automatically be approved unless it fails template review.
         - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#edit-a-message-template>`_.
+
+        Example:
+
+            >>> from pywa.types.templates import *
+            >>> wa = WhatsApp(...)
+            >>> updated_template = wa.update_template(
+            ...     template_id='1234567890',
+            ...     new_category=TemplateCategory.MARKETING,
+            ...     new_components=[...],
+            ...     new_message_send_ttl_seconds=3600
+            ... )
 
         Args:
             template_id: The ID of the template to update.
@@ -2776,6 +2824,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         - To delete a template by ID, include the template's ID along with its name in your request; only the template with the matching template ID will be deleted.
         - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#deleting-templates>`_.
 
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> await wa.delete_template(template_name='seasonal_promotion') # Deletes all templates with that name
+            >>> await wa.delete_template(template_name='seasonal_promotion', template_id='1234567890') # Deletes only the template with that ID
+
         Args:
             template_name: The name of the template to delete.
             template_id: The ID of the template to delete (optional, if provided, only the template with the matching ID will be deleted).
@@ -2812,6 +2866,15 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         - Templates must have been sent at least 1,000 times in the queries specified timeframe.
         - Timeframes are limited to ``7``, ``30``, ``60`` and ``90`` day lookbacks from the time of the request.
         - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/template-comparison>`_.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> now = datetime.datetime.now()
+            >>> result = wa.compare_templates(
+            ...     '1234567890', '0987654321',
+            ...     start=now - datetime.timedelta(days=30), end=now # Compare templates sent in the last 30 days
+            ... )
 
         Args:
             template_id: The ID of the template to compare against others.
@@ -3028,7 +3091,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             >>> from pywa.types.flows import *
             >>> wa.update_flow_json(
             ...     flow_id='1234567890',
-            ...     flow_json=FlowJSON(version='2.1', screens=[Screen(...)])
+            ...     flow_json=FlowJSON(version='7.1', screens=[Screen(...)])
             ... )
 
             - From a json file path:
@@ -3159,6 +3222,17 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Get the flows associated with the WhatsApp Business account.
 
         - This method requires the WhatsApp Business account ID to be provided when initializing the client.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> flows = wa.get_flows(
+            ...     invalidate_preview=True,
+            ...     phone_number_id='1234567890',
+            ...     pagination=Pagination(limit=10)
+            ... )
+            ... for flow in flows:
+            ...     print(f'Flow {flow.id} - {flow.name}: {flow}')
 
         Args:
             invalidate_preview: Whether to invalidate the preview (optional, default: True).
