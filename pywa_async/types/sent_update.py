@@ -90,7 +90,7 @@ class SentMessage(_ClientShortcutsAsync, _SentMessage):
 
             ignore_updates_canceler = pywa_filters.new(_ignore_updates_canceler)
             cancelers = (
-                (ignore_updates_canceler | cancelers)
+                (cancelers | ignore_updates_canceler)
                 if cancelers
                 else ignore_updates_canceler
             )
