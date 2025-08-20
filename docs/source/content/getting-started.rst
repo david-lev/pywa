@@ -1,162 +1,140 @@
 ⚙️ Get Started
 ===============
 
-
 ⬇️ Installation
 ---------------
 
-- **Install using pip3:**
+- **Install using pip:**
 
 .. code-block:: bash
 
     pip3 install -U pywa
 
-- **Install from source (the bleeding edge):**
+- **Install from source (bleeding edge):**
 
 .. code-block:: bash
 
     git clone https://github.com/david-lev/pywa.git
     cd pywa && pip3 install -U .
 
-- **If you going to use the webhook features, here is shortcut to install the required dependencies:**
+- **For webhook features (FastAPI or Flask):**
 
 .. code-block:: bash
 
     pip3 install -U "pywa[fastapi]"
     pip3 install -U "pywa[flask]"
 
-- **If you going to use the Flow features and want to use the default FlowRequestDecryptor and the default FlowResponseEncryptor, here is shortcut to install the required dependencies:**
+- **For Flow features with default encryption/decryption:**
 
 .. code-block:: bash
 
     pip3 install -U "pywa[cryptography]"
 
-
 ================================
-
 
 Create a WhatsApp Application
 -----------------------------
 
-    You already have an app? skip to `Setup the App <#id1>`_.
+You already have an app? Skip to `Setup the App <#id1>`_.
 
-In order to use the WhatsApp Cloud API, you need to create a Facebook App.
-To do that you need a Facebook Developer account. If you don't have one, `you can register here <https://developers.facebook.com/>`_.
+To use the WhatsApp Cloud API, you need a Facebook App.
+If you don't have a Facebook Developer account, `register here <https://developers.facebook.com/>`_.
 
-1. Go to `Meta for Developers > My Apps <https://developers.facebook.com/apps/>`_ and create a new app
-    - Click `here <https://developers.facebook.com/apps/create/?show_additional_prod_app_info=false>`_ to go directly to the app creation page
+1. Go to `Meta for Developers > My Apps <https://developers.facebook.com/apps/>`_ and create a new app.
+   - Or click `here <https://developers.facebook.com/apps/create/?show_additional_prod_app_info=false>`_ to go directly to the app creation page.
 
-
-2. Select **Business** as the app type and click on **Next**
+2. Select **Business** as the app type and click **Next**.
 
 .. toggle::
 
     .. image:: ../../_static/guides/select-app-type.webp
-        :width: 600
-        :alt: Select app type
-        :align: center
+       :width: 600
+       :alt: Select app type
+       :align: center
 
---------------------
-
-4. Fill the app name and the email and hit **Create App**
+4. Fill in the app name and email, then click **Create App**.
 
 .. toggle::
 
     .. image:: ../../_static/guides/fill-app-details.webp
-        :width: 600
-        :alt: Fill the app details
-        :align: center
+       :width: 600
+       :alt: Fill app details
+       :align: center
 
---------------------
-
-5. In the **Add products to your app** screen, scroll down and search for **WhatsApp**. Click on **Set Up**
+5. In **Add products to your app**, search for **WhatsApp** and click **Set Up**.
 
 .. toggle::
 
     .. image:: ../../_static/guides/setup-whatsapp-product.webp
-        :width: 600
-        :alt: Setup WhatsApp product
-        :align: center
+       :width: 600
+       :alt: Setup WhatsApp product
+       :align: center
 
---------------------
-
-6. At this point you will be asked to select a **Meta Business Account**. If you have one - select it and hit **Next**. Accept the terms and conditions and hit **Submit**. If you don't have a Business Account, you will need to create one.
+6. Select a **Meta Business Account**, accept the terms, and click **Submit**.
+   If you don't have a Business Account, you will need to create one.
 
 .. toggle::
 
     .. image:: ../../_static/guides/select-meta-business-account.webp
-        :width: 600
-        :alt: select meta business
-        :align: center
+       :width: 600
+       :alt: Select meta business
+       :align: center
 
 --------------------
 
 Setup the App
 -------------
 
+You already have your **Phone ID** and **Token**? Skip to `Send a Message <#id2>`_.
 
-    You already have **Phone ID** and **Token**? skip to `Send a Message <#id2>`_.
-
-
-7. Now, in the left menu (under **Products**), expand **WhatsApp** and click on **API Setup**. The following screen will appear:
+7. In the left menu (under **Products**), expand **WhatsApp** and click **API Setup**.
 
 .. toggle::
 
     .. image:: ../../_static/guides/api-setup.webp
-        :width: 600
-        :alt: api setup
-        :align: center
+       :width: 600
+       :alt: API setup
+       :align: center
 
---------------------
-
-In the top you will see a **Temporary access token**. This is the token you will use to interact with the WhatsApp Cloud API.
-Right below it you will see the **Send and receive messages**. Below it you will see the **Phone number ID**. This is the ID
-of the phone number you will use to send and receive messages. You will need to use both of them in the next step.
+- Copy the **Temporary access token** (valid for 24h) and the **Phone number ID**.
 
 .. note::
 
-    The **Temporary access token** is valid for 24 hours. After that you will need to generate a new one.
-        - Learn `how to create a permanent token <https://developers.facebook.com/docs/whatsapp/business-management-api/get-started>`_.
-
+    Learn `how to create a permanent token <https://developers.facebook.com/docs/whatsapp/business-management-api/get-started>`_.
 
 .. attention::
 
-    If you haven't connected a real phone number to your WhatsApp Business Account, you have the option to use a test phone number.
-    This is a phone number that is provided by Meta and can be used for testing purposes only. You can send messages
-    up to 5 different numbers and you must add them to the **Allowed Numbers** list. (Select the **Test number** in the ``From`` field
-    and then in the **To** field, go to **Manage phone number list** and add the numbers you want to send messages to).
+    If you haven’t connected a real phone number, you can use a test number provided by Meta.
+    You can send messages to up to 5 allowed numbers. Add them in the **Manage phone number list**.
 
     .. toggle::
 
         .. image:: ../../_static/guides/verify-phone-number-for-testing.webp
-            :width: 600
-            :alt: test number
-            :align: center
+           :width: 600
+           :alt: Test number setup
+           :align: center
 
 --------------------
 
 Send a Message
 --------------
 
-
-So now you have a ``phone id`` and a ``token``. You can use them to send messages:
+Now you have your ``phone_id`` and ``token``. You can send messages:
 
 .. code-block:: python
 
     from pywa import WhatsApp
 
     wa = WhatsApp(
-        phone_id='YOUR_PHONE_ID',  # The phone id you got from the API Setup
-        token='YOUR_TOKEN'  # The token you got from the API Setup
+        phone_id='YOUR_PHONE_ID',  # from API Setup
+        token='YOUR_TOKEN'         # from API Setup
     )
-
-And that's it! You are ready to send messages!
 
 .. code-block:: python
 
     wa.send_message(
         to='PHONE_NUMBER_TO_SEND_TO',
-        text='Hi! This message sent from pywa!'
+        text='Hi! This message was sent from pywa!'
     )
 
     wa.send_image(
@@ -164,33 +142,26 @@ And that's it! You are ready to send messages!
         image='https://www.rd.com/wp-content/uploads/2021/04/GettyImages-1053735888-scaled.jpg'
     )
 
-
-
 .. note::
 
-    - The ``to`` parameter must be a phone number with the country code. For example: ``+972123456789``, ``16315551234``. You can read more about the `phone number format here <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-messages#phone-number-formats>`_.
-    - If you using the **Test Number**, remember to add the recipient number to the allowed numbers list.
-    - Free-form messages can only be received if the receiving number messaged the sending number in the last 24 hours, see `WhatsApp policy <https://business.whatsapp.com/policy>`_.
+    - The ``to`` parameter must include country code, e.g., ``+972123456789`` or ``16315551234``.
+      Read more about `phone number formats here <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-messages#phone-number-formats>`_.
+    - For **Test Numbers**, add recipients to the allowed numbers list.
+    - Free-form messages can only be received if the recipient messaged your number in the last 24h.
+      See `WhatsApp policy <https://business.whatsapp.com/policy>`_.
 
 --------------------
 
 Quick Start
 -----------
 
-Now you can continue to the next section and learn how to use the ``pywa`` package. here is a quick overview of the package:
+Here’s a quick overview of the ``pywa`` package:
 
-- The `WhatsApp <client/overview.html>`_ Client: is the core of the package. It is used to send and receive messages and media, register callbacks, manage profile and business settings and more.
-
-- The `Handlers <handlers/overview.html>`_: Learn how to register callbacks and handle incoming updates (messages, callbacks and more).
-
-- The `Listeners <listeners/overview.html>`_: Learn how to listen to incoming user updates.
-
-- The `Filters <filters/overview.html>`_: Learn how to handle specific updates by applying filters and conditions (for example, handle only text messages that contains the word "Hello").
-
-- The `Updates <updates/overview.html>`_: Learn about the different types of updates that the client can receive, their attributes and properties and how to use them.
-
-- The `Flows <flows/overview.html>`_: Learn how to create, update and send flows.
-
-- The `errors <errors/overview.html>`_: Learn about the different types of errors in the package and how to handle them.
-
-- The `Examples <examples/overview.html>`_: See some examples of how to use the package.
+- `WhatsApp <client/overview.html>`_: Core client to send/receive messages, manage profile/business settings, and register callbacks.
+- `Handlers <handlers/overview.html>`_: Register callbacks to handle incoming updates (messages, callbacks, and more).
+- `Listeners <listeners/overview.html>`_: Listen for incoming user updates.
+- `Filters <filters/overview.html>`_: Filter and handle specific updates, e.g., text messages containing “Hello”.
+- `Updates <updates/overview.html>`_: Explore different update types, their attributes, and usage.
+- `Flows <flows/overview.html>`_: Create, update, and send flows.
+- `Errors <errors/overview.html>`_: Learn about package errors and how to handle them.
+- `Examples <examples/overview.html>`_: See practical usage examples.

@@ -14,6 +14,8 @@ from __future__ import annotations
 
 __all__ = [
     "new",
+    "true",
+    "false",
     "update_id",
     "forwarded",
     "forwarded_many_times",

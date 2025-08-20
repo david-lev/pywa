@@ -107,10 +107,9 @@ class BaseUpdate(abc.ABC):
     """Shared data for the update. This data is shared between all handlers for the same update."""
 
     @property
-    @abc.abstractmethod
-    def listener_identifier(self) -> BaseListenerIdentifier:
+    def listener_identifier(self) -> BaseListenerIdentifier | None:
         """The identifier for the listener that this update is for."""
-        ...
+        return None
 
     @classmethod
     @abc.abstractmethod

@@ -40,6 +40,7 @@ class SentMessage(_ClientShortcutsAsync, _SentMessage):
         force_quote: bool = False,
         filters: pywa_filters.Filter = None,
         cancelers: pywa_filters.Filter = None,
+        ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> Message:
         """
@@ -65,6 +66,7 @@ class SentMessage(_ClientShortcutsAsync, _SentMessage):
             force_quote: Whether to force the reply to quote the sent message.
             filters: The filters to apply to the reply.
             cancelers: The filters to cancel the listening.
+            ignore_updates: Whether to ignore user updates (messages & callbacks) that do not pass the filters.
             timeout: The time to wait for a reply.
 
         Returns:
@@ -79,6 +81,20 @@ class SentMessage(_ClientShortcutsAsync, _SentMessage):
             reply_filter = pywa_filters.replays_to(self.id)
             filters = (reply_filter & filters) if filters else reply_filter
         filters = (pywa_filters.message & filters) if filters else pywa_filters.message
+        if ignore_updates:
+
+            def _ignore_updates_canceler(_, u) -> bool:
+                if isinstance(u, (Message, CallbackButton, CallbackSelection)):
+                    u.stop_handling()
+                return False
+
+            ignore_updates_canceler = pywa_filters.new(_ignore_updates_canceler)
+            cancelers = (
+                (ignore_updates_canceler | cancelers)
+                if cancelers
+                else ignore_updates_canceler
+            )
+
         return cast(
             Message,
             await self._client.listen(
@@ -132,19 +148,21 @@ class SentMessage(_ClientShortcutsAsync, _SentMessage):
             ListenerStopped: If the listener was stopped manually.
         """
         if cancel_on_new_update:
-            new_update_canceler = ~pywa_filters.update_id(self.id) & (
-                pywa_filters.message
-                | pywa_filters.callback_button
-                | pywa_filters.callback_selection
-            )
+
+            def _new_update_canceler(_, u) -> bool:
+                if isinstance(u, (Message, CallbackButton, CallbackSelection)):
+                    return True
+                return True
+
+            new_update_canceler = pywa_filters.new(_new_update_canceler)
             cancelers = (
-                (new_update_canceler & cancelers) if cancelers else new_update_canceler
+                (new_update_canceler | cancelers) if cancelers else new_update_canceler
             )
         return cast(
             MessageStatus,
             await self._client.listen(
                 to=self.listener_identifier,
-                filters=pywa_filters.message_status & pywa_filters.read,
+                filters=pywa_filters.update_id(self.id) & pywa_filters.read,
                 cancelers=cancelers,
                 timeout=timeout,
             ),
@@ -186,7 +204,7 @@ class SentMessage(_ClientShortcutsAsync, _SentMessage):
             MessageStatus,
             await self._client.listen(
                 to=self.listener_identifier,
-                filters=pywa_filters.message_status & pywa_filters.delivered,
+                filters=pywa_filters.update_id(self.id) & pywa_filters.delivered,
                 cancelers=cancelers,
                 timeout=timeout,
             ),

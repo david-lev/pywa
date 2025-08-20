@@ -5,7 +5,7 @@ __all__ = [
     "ListenerCanceled",
     "ListenerStopped",
     "UserUpdateListenerIdentifier",
-    "TemplateUpdateListenerIdentifier",
+    "TemplateStatusUpdateListenerIdentifier",
 ]
 
 import dataclasses
@@ -32,8 +32,7 @@ class UserUpdateListenerIdentifier(BaseListenerIdentifier):
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
-class TemplateUpdateListenerIdentifier(BaseListenerIdentifier):
-    waba_id: str
+class TemplateStatusUpdateListenerIdentifier(BaseListenerIdentifier):
     template_id: str
 
 

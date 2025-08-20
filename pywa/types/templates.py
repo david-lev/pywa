@@ -82,7 +82,7 @@ from .media import Media
 from .others import Result, SuccessResult, ProductsSection, _ItemFactory
 from .. import utils
 from .. import _helpers as helpers
-from ..listeners import TemplateUpdateListenerIdentifier
+from ..listeners import TemplateStatusUpdateListenerIdentifier
 
 if TYPE_CHECKING:
     from pywa import filters as pywa_filters
@@ -171,13 +171,6 @@ class BaseTemplateUpdate(BaseUpdate, abc.ABC):
     template_name: str
     template_language: TemplateLanguage
 
-    @property
-    def listener_identifier(self) -> TemplateUpdateListenerIdentifier:
-        return TemplateUpdateListenerIdentifier(
-            waba_id=self.id,
-            template_id=self.template_id,
-        )
-
     def get_template(self) -> TemplateDetails:
         """
         Fetches the template details from WhatsApp.
@@ -251,6 +244,12 @@ class TemplateStatusUpdate(BaseTemplateUpdate):
             else None,
             title=value.get("other_info", {}).get("title"),
             description=value.get("other_info", {}).get("description"),
+        )
+
+    @property
+    def listener_identifier(self) -> TemplateStatusUpdateListenerIdentifier:
+        return TemplateStatusUpdateListenerIdentifier(
+            template_id=self.template_id,
         )
 
     def unpause(self) -> TemplateUnpauseResult:
@@ -3749,7 +3748,8 @@ class _CreatedAndUpdatedTemplateActions:
     def wait_until_approved(
         self,
         *,
-        cancelers: pywa_filters.Filter | None = None,
+        cancel_on_rejection: bool = True,
+        cancelers: pywa_filters.Filter = None,
         timeout: float | None = None,
     ) -> TemplateStatusUpdate:
         """
@@ -3763,22 +3763,23 @@ class _CreatedAndUpdatedTemplateActions:
             >>> status = created_template.wait_until_approved(cancelers=filters.template_status & filters.template_status_rejected)
             >>> print(f"Template {created_template.id} is approved with status: {status.new_status}")
 
-
         Args:
+            cancel_on_rejection: Whether to cancel the waiting process if the template is rejected. Defaults to True.
             cancelers: A filter to cancel the waiting process.
             timeout: The maximum time to wait for the template to be approved.
 
         Returns:
             TemplateStatusUpdate: An update containing the status of the template once it is approved.
         """
+        if cancel_on_rejection:
+            cancelers = (
+                pywa_filters.template_status_rejected | cancelers or pywa_filters.false
+            )
         return cast(
             TemplateStatusUpdate,
             self._client.listen(
-                to=TemplateUpdateListenerIdentifier(
-                    waba_id=self._client.business_account_id, template_id=self.id
-                ),
-                filters=pywa_filters.template_status
-                & pywa_filters.template_status_approved,
+                to=TemplateStatusUpdateListenerIdentifier(template_id=self.id),
+                filters=pywa_filters.template_status_approved,
                 cancelers=cancelers,
                 timeout=timeout,
             ),
