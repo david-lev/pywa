@@ -152,11 +152,11 @@ class SentMessage(_ClientShortcutsAsync, _SentMessage):
             def _new_update_canceler(_, u) -> bool:
                 if isinstance(u, (Message, CallbackButton, CallbackSelection)):
                     return True
-                return True
+                return False
 
             new_update_canceler = pywa_filters.new(_new_update_canceler)
             cancelers = (
-                (new_update_canceler | cancelers) if cancelers else new_update_canceler
+                (cancelers | new_update_canceler) if cancelers else new_update_canceler
             )
         return cast(
             MessageStatus,

@@ -3773,7 +3773,7 @@ class _CreatedAndUpdatedTemplateActions:
         """
         if cancel_on_rejection:
             cancelers = (
-                pywa_filters.template_status_rejected | cancelers or pywa_filters.false
+                cancelers or pywa_filters.false | pywa_filters.template_status_rejected
             )
         return cast(
             TemplateStatusUpdate,
