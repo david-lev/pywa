@@ -7,7 +7,7 @@ import datetime
 from typing import TYPE_CHECKING, cast
 
 from pywa.listeners import TemplateUpdateListenerIdentifier
-from pywa.types import CallbackData
+from pywa_async.types import CallbackData
 from pywa.types.others import _ItemFactory
 from pywa.types.templates import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.templates import (
@@ -409,7 +409,7 @@ class _CreatedAndUpdatedTemplateActionsAsync:
 
         Example usage:
 
-            >>> from pywa import WhatsApp, filters
+            >>> from pywa_async import WhatsApp, filters
             >>> wa = WhatsApp(...)
             >>> created_template = wa.create_template(...)
             >>> status = created_template.wait_until_approved(cancelers=filters.template_status & filters.template_status_rejected)

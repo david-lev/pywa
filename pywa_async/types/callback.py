@@ -20,15 +20,14 @@ if TYPE_CHECKING:
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class CallbackButton(BaseUserUpdateAsync, _CallbackButton[_CallbackDataT]):
     """
-    Represents a callback button (Incoming update when user clicks on :class:`Button` or chooses
-    :class:`Template.QuickReplyButtonData`).
+    Represents a callback button (Incoming update when user clicks on :class:`~pywa.types.callback.Button` or on :class:`~pywa.types.templates.QuickReplyButton`'s template).
 
     ``CallbackButton`` is a generic class, so when providing a ``factory`` parameter in callback handlers, you can
     specify the type of the factory to get autocomplete in the ``data`` attribute.
 
     Here is an example:
 
-        >>> from pywa.types import CallbackData
+        >>> from pywa_async.types import CallbackData
         >>> from dataclasses import dataclass
         >>> @dataclass(frozen=True, slots=True)
         >>> class UserData(CallbackData): # Subclass CallbackData
@@ -36,8 +35,8 @@ class CallbackButton(BaseUserUpdateAsync, _CallbackButton[_CallbackDataT]):
         ...     name: str
         ...     admin: bool
 
-        >>> from pywa import WhatsApp
-        >>> from pywa.types import Button, CallbackButton
+        >>> from pywa_async import WhatsApp
+        >>> from pywa_async.types import Button, CallbackButton
         >>> wa = WhatsApp(...)
         >>> wa.send_message(
         ...     to='972987654321',
@@ -57,8 +56,7 @@ class CallbackButton(BaseUserUpdateAsync, _CallbackButton[_CallbackDataT]):
         from_user: The user who sent the message.
         timestamp: The timestamp when the message was sent (in UTC).
         reply_to_message: The message to which this callback button is a reply to.
-        data: The data of the button (the ``callback_data`` parameter you provided in :class:`Button` or
-         :class:`Template.QuickReplyButtonData`).
+        data: The data of the button (the ``callback_data`` parameter you provided in :class:`~pywa.types.callback.Button` or :class:`~pywa.types.templates.QuickReplyButton`).
         title: The title of the button.
         shared_data: Shared data between handlers.
     """
@@ -67,14 +65,14 @@ class CallbackButton(BaseUserUpdateAsync, _CallbackButton[_CallbackDataT]):
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class CallbackSelection(BaseUserUpdateAsync, _CallbackSelection[_CallbackDataT]):
     """
-    Represents a callback selection (Incoming update when user clicks on :class:`SectionRow` in :class:`SectionList`).
+    Represents a callback selection (Incoming update when user clicks on :class:`~pywa.types.callback.SectionRow` in :class:`~pywa.types.callback.SectionList`).
 
     ``CallbackSelection`` is a generic class, so when providing a ``factory`` parameter in callback handlers, you can
     specify the type of the factory to get autocomplete in the ``data`` attribute.
 
     Here is an example:
 
-        >>> from pywa.types import CallbackData
+        >>> from pywa_async.types import CallbackData
         >>> from dataclasses import dataclass
         >>> @dataclass(frozen=True, slots=True)
         >>> class UserData(CallbackData): # Subclass CallbackData
@@ -82,8 +80,8 @@ class CallbackSelection(BaseUserUpdateAsync, _CallbackSelection[_CallbackDataT])
         ...     name: str
         ...     admin: bool
 
-        >>> from pywa import WhatsApp
-        >>> from pywa.types import SectionList, Section, SectionRow, CallbackSelection
+        >>> from pywa_async import WhatsApp
+        >>> from pywa_async.types import SectionList, Section, SectionRow, CallbackSelection
         >>> wa = WhatsApp(...)
         >>> wa.send_message(
         ...     to='972987654321',
@@ -108,7 +106,7 @@ class CallbackSelection(BaseUserUpdateAsync, _CallbackSelection[_CallbackDataT])
         from_user: The user who sent the message.
         timestamp: The timestamp when the message was sent (in UTC).
         reply_to_message: The message to which this callback selection is a reply to.
-        data: The data of the selection (the ``callback_data`` parameter you provided in :class:`SectionRow`).
+        data: The data of the selection (the ``callback_data`` parameter you provided in :class:`~pywa.types.callback.SectionRow`).
         title: The title of the selection.
         description: The description of the selection (optional).
     """

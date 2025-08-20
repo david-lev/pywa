@@ -1267,6 +1267,8 @@ class Pagination:
 
     - See `Paginated Results <https://developers.facebook.com/docs/graph-api/results/>`_.
 
+    --------------------
+
     **Cursor-based Pagination**
 
     Cursor-based pagination is the most efficient method of paging and should always be used when possible.
@@ -1276,12 +1278,15 @@ class Pagination:
 
     - Don't store cursors. Cursors can quickly become invalid if items are added or deleted.
 
+    --------------------
 
     **Time-based Pagination**
 
     Time pagination is used to navigate through results data using Unix timestamps which point to specific times in a list of data.
 
     - For consistent results, specify both since and until parameters. Also, it is recommended that the time difference is a maximum of 6 months.
+
+    --------------------
 
     **Offset-based Pagination**
 
@@ -1352,8 +1357,8 @@ class Result(Generic[_T]):
     """
     This class is used to handle paginated results from the WhatsApp API. You can iterate over the results, and also access the next and previous pages of results.
 
-    - When using the ``next()`` or ``previous()`` methods, the results are returned as a new instance of the :class:`Result` class.
-    - You can access the cursors using the ``before`` and ``after`` properties and use them later in the :class:`Pagination` object.
+    - When using the :meth:`next` or :meth:`previous` methods, the results are returned as a new instance of the :class:`Result` class.
+    - You can access the cursors using the :attr:`before` and :attr:`after` properties and use them later in the :class:`Pagination` object.
 
     Example:
 
@@ -1367,18 +1372,6 @@ class Result(Generic[_T]):
         ...     next_res = res.next()
         ...
         >>> print(res.all())
-
-    Methods:
-        next: Get the next page of results. if there is no next page, it returns empty Result.
-        previous: Get the previous page of results. if there is no previous page, it returns empty Result.
-        all: Get all results from the current page, previous pages, and next pages.
-        empty: Returns an empty Result instance.
-
-    Properties:
-        has_next: Check if there is a next page of results.
-        has_previous: Check if there is a previous page of results.
-        before: Cursor that points to the start of the page of data that has been returned.
-        after: Cursor that points to the end of the page of data that has been returned.
     """
 
     def __init__(
@@ -1466,7 +1459,7 @@ class Result(Generic[_T]):
         """
         Get all results from the current page, previous pages, and next pages.
 
-        - Make sure to provide higher limit in the ``Pagination`` parameter to avoid hitting rate limits.
+        - Make sure to provide higher limit in the :class:`Pagination` parameter to avoid hitting rate limits.
         - Also consider using the ``sleep`` parameter to avoid hitting rate limits.
 
         Args:

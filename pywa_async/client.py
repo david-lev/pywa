@@ -1092,7 +1092,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Example:
 
-            >>> from pywa.types import Contact
+            >>> from pywa_async.types import Contact
             >>> wa = WhatsApp(...)
             >>> await wa.send_contact(
             ...     to='1234567890',
@@ -1295,7 +1295,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Example:
 
-            >>> from pywa.types import ProductsSection
+            >>> from pywa_async.types import ProductsSection
             >>> wa = WhatsApp(...)
             >>> await wa.send_products(
             ...     to='1234567890',
@@ -1828,7 +1828,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         - You can receive the current conversational automation settings using :py:func:`~pywa.client.WhatsApp.get_business_phone_number` and accessing the ``conversational_automation`` attribute.
         - Read more about `Conversational Automation <https://developers.facebook.com/docs/whatsapp/cloud-api/phone-numbers/conversational-components>`_.
 
-            >>> from pywa.types import Command
+            >>> from pywa_async.types import Command
             >>> wa = WhatsApp(...)
             >>> await wa.update_conversational_automation(
             ...     enable_chat_opened=True,
@@ -1992,7 +1992,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Example:
 
-            >>> from pywa.types import Industry
+            >>> from pywa_async.types import Industry
             >>> wa = WhatsApp(...)
             >>> await wa.update_business_profile(
             ...     about='This is a test business',
@@ -2145,7 +2145,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Example::
 
-            from pywa.types import template as t
+            from pywa_async.types import template as t
 
             wa = WhatsApp(..., business_account_id='1234567890')
 
@@ -2220,7 +2220,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Example:
 
-            >>> from pywa.types.templates import *
+            >>> from pywa_async.types.templates import *
             >>> wa = WhatsApp(...)
             >>> templates = await wa.upsert_authentication_template(
             ...     name='one_tap_authentication',
@@ -2290,7 +2290,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Example::
 
-            from pywa.types.templates import *
+            from pywa_async.types.templates import *
 
             wa = WhatsApp(...)
             await wa.send_template(
@@ -2303,7 +2303,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 ],
             )
 
-            from pywa.types.templates import *
+            from pywa_async.types.templates import *
 
             t = Template(
                 name='seasonal_promotion',
@@ -2525,7 +2525,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Example:
 
-            >>> from pywa.types.templates import *
+            >>> from pywa_async.types.templates import *
             >>> wa = WhatsApp(...)
             >>> updated_template = await wa.update_template(
             ...     template_id='1234567890',
@@ -2749,7 +2749,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Example:
 
-            >>> from pywa.types.flows import *
+            >>> from pywa_async.types.flows import *
             >>> wa = WhatsApp(...)
             >>> await wa.create_flow(
             ...     name='Feedback',

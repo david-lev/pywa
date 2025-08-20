@@ -39,7 +39,7 @@ class MessageStatus(BaseUserUpdateAsync, _MessageStatus[_CallbackDataT]):
 
     Here is an example:
 
-        >>> from pywa.types import CallbackData
+        >>> from pywa_async.types import CallbackData
         >>> from dataclasses import dataclass
         >>> @dataclass(frozen=True, slots=True)
         >>> class UserData(CallbackData): # Subclass CallbackData
@@ -47,8 +47,8 @@ class MessageStatus(BaseUserUpdateAsync, _MessageStatus[_CallbackDataT]):
         ...     name: str
         ...     admin: bool
 
-        >>> from pywa import WhatsApp
-        >>> from pywa.types import Button, CallbackButton
+        >>> from pywa_async import WhatsApp
+        >>> from pywa_async.types import Button, CallbackButton
         >>> wa = WhatsApp(...)
         >>> wa.send_message(
         ...     to='972987654321',

@@ -37,7 +37,7 @@ class StopHandling(Exception):
     """
     Raise this exception to stop handling an update.
 
-    You can call ``.stop_handling()`` on every update object to raise this exception.
+    You can call :meth:`~pywa.types.base_update.BaseUpdate.stop_handling` on every update object to raise this exception.
 
     Example:
 
@@ -45,12 +45,12 @@ class StopHandling(Exception):
             >>> from pywa.types import Message
             >>> wa = WhatsApp(...)
 
-            >>> @wa.on_message()
+            >>> @wa.on_message
             ... def callback(_: WhatsApp, msg: Message):
             ...     msg.reply_text("Hello from PyWa!")
             ...     msg.stop_handling()  # or raise StopHandling
 
-            >>> @wa.on_message()
+            >>> @wa.on_message
             ... def not_called(_: WhatsApp, msg: Message):
             ...     msg.reply_text("This message will not be sent")
     """
@@ -62,7 +62,7 @@ class ContinueHandling(Exception):
     """
     Raise this exception to continue handling an update.
 
-    You can call ``.continue_handling()`` on every update object to raise this exception.
+    You can call :meth:`~pywa.types.base_update.BaseUpdate.continue_handling` on every update object to raise this exception.
 
     Example:
 
@@ -70,12 +70,12 @@ class ContinueHandling(Exception):
             >>> from pywa.types import Message
             >>> wa = WhatsApp(...)
 
-            >>> @wa.on_message()
+            >>> @wa.on_message
             ... def callback(_: WhatsApp, msg: Message):
             ...     msg.reply_text("Hello from PyWa!")
             ...     msg.continue_handling()  # or raise ContinueHandling
 
-            >>> @wa.on_message()
+            >>> @wa.on_message
             ... def not_called(_: WhatsApp, msg: Message):
             ...     msg.reply_text("This message will be sent")
     """
@@ -122,7 +122,7 @@ class BaseUpdate(abc.ABC):
         """
         Call this method to break out of the handler loop. other handlers will not be called.
 
-        - Use ``.continue_handling()`` to continue to the next handler in the handlers loop.
+        - Use :meth:`~pywa.types.base_update.BaseUpdate.continue_handling` to continue to the next handler in the handlers loop.
 
         This method just raises :class:`StopHandling` which is caught by the handler loop and breaks out of it.
 
@@ -130,14 +130,14 @@ class BaseUpdate(abc.ABC):
 
             >>> from pywa import WhatsApp
             >>> from pywa.types import Message
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp(continue_handling=True) # NOT THE DEFAULT BEHAVIOR!
 
-            >>> @wa.on_message()
+            >>> @wa.on_message
             ... def callback(_: WhatsApp, msg: Message):
             ...     msg.reply_text("Hello from PyWa!")
-            ...     msg.stop_handling()
+            ...     msg.stop_handling() # overwrite the default `continue_handling` behavior
 
-            >>> @wa.on_message()
+            >>> @wa.on_message
             ... def callback_not_called(_: WhatsApp, msg: Message):
             ...     msg.reply_text("This message will not be sent")
         """
@@ -147,7 +147,7 @@ class BaseUpdate(abc.ABC):
         """
         Call this method to continue to the next handler in the handlers loop.
 
-        - Use ``.stop_handling()`` to break out of the handler loop.
+        - Use :meth:`~pywa.types.base_update.BaseUpdate.stop_handling` to break out of the handler loop.
 
         This method just raises :class:`ContinueHandling` which is caught by the handler loop and continues the loop.
 
@@ -155,15 +155,15 @@ class BaseUpdate(abc.ABC):
 
             >>> from pywa import WhatsApp
             >>> from pywa.types import Message
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp(continue_handling=False)  # default behavior
 
-            >>> @wa.on_message()
+            >>> @wa.on_message
             ... def callback(_: WhatsApp, msg: Message):
             ...     msg.reply_text("Hello from PyWa!")
-            ...     msg.continue_handling()
+            ...     msg.continue_handling() # overwrite the default `continue_handling` behavior
 
-            >>> @wa.on_message()
-            ... def callback_not_called(_: WhatsApp, msg: Message):
+            >>> @wa.on_message
+            ... def callback_called(_: WhatsApp, msg: Message):
             ...     msg.reply_text("This message will be sent")
         """
         raise ContinueHandling
