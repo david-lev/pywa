@@ -30,7 +30,7 @@ from .others import (
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
-    from .sent_message import SentMessage
+    from .sent_update import SentMessage
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)

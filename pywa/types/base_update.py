@@ -92,9 +92,6 @@ class BaseUpdate(abc.ABC):
     The field name of the webhook update
     https://developers.facebook.com/docs/graph-api/webhooks/reference/whatsapp-business-account
     """
-    _is_user_update: ClassVar[bool] = False
-    """Is the update came from a user? (e.g., message, callback, etc.)"""
-
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
     """The WhatsApp client that received the update."""
     id: str
@@ -1009,7 +1006,8 @@ class _ClientShortcuts(abc.ABC):
 class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
     """Base class for all user-related update types (message, callback, etc.)."""
 
-    _is_user_update: ClassVar[bool] = True
+    _is_user_action: ClassVar[bool] = False
+    """Is the update came from a user action? (e.g. message, call, etc.)"""
 
     _txt_fields: ClassVar[tuple[str, ...] | None] = None
     """Contains the text fields of the update to use when filtering."""

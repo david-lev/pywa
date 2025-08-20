@@ -74,6 +74,15 @@ class _SentUpdate(_ClientShortcuts, abc.ABC):
         )
 
 
+def _ignore_updates_canceler(_, u: BaseUserUpdate) -> bool:
+    if u._is_user_action:
+        u.stop_handling()
+    return False
+
+
+ignore_updates_canceler = pywa_filters.new(_ignore_updates_canceler)
+
+
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class SentMessage(_SentUpdate):
     """
@@ -132,7 +141,7 @@ class SentMessage(_SentUpdate):
             force_quote: Whether to force the reply to quote the sent message.
             filters: The filters to apply to the reply.
             cancelers: The filters to cancel the listening.
-            ignore_updates: Whether to ignore user updates (messages & callbacks) that do not pass the filters.
+            ignore_updates: Whether to ignore user updates that do not pass the filters.
             timeout: The time to wait for a reply.
 
         Returns:
@@ -148,13 +157,6 @@ class SentMessage(_SentUpdate):
             filters = (reply_filter & filters) if filters else reply_filter
         filters = (pywa_filters.message & filters) if filters else pywa_filters.message
         if ignore_updates:
-
-            def _ignore_updates_canceler(_, u: BaseUserUpdate) -> bool:
-                if isinstance(u, (Message, CallbackButton, CallbackSelection)):
-                    u.stop_handling()
-                return False
-
-            ignore_updates_canceler = pywa_filters.new(_ignore_updates_canceler)
             cancelers = (
                 (cancelers | ignore_updates_canceler)
                 if cancelers
@@ -216,7 +218,7 @@ class SentMessage(_SentUpdate):
         if cancel_on_new_update:
 
             def _new_update_canceler(_, u: BaseUserUpdate) -> bool:
-                if isinstance(u, (Message, CallbackButton, CallbackSelection)):
+                if u._is_user_action:
                     return True
                 return False
 
@@ -281,6 +283,7 @@ class SentMessage(_SentUpdate):
         *,
         filters: pywa_filters.Filter = None,
         cancelers: pywa_filters.Filter = None,
+        ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> CallbackButton:
         """
@@ -305,6 +308,7 @@ class SentMessage(_SentUpdate):
         Args:
             filters: The filters to apply to the button click.
             cancelers: The filters to cancel the listening.
+            ignore_updates: Whether to ignore user updates that do not pass the filters.
             timeout: The time to wait for the button click.
 
         Returns:
@@ -315,6 +319,12 @@ class SentMessage(_SentUpdate):
             ListenerCanceled: If the listener was canceled by a filter.
             ListenerStopped: If the listener was stopped manually.
         """
+        if ignore_updates:
+            cancelers = (
+                (cancelers | ignore_updates_canceler)
+                if cancelers
+                else ignore_updates_canceler
+            )
         return cast(
             CallbackButton,
             self._client.listen(
@@ -331,6 +341,7 @@ class SentMessage(_SentUpdate):
         *,
         filters: pywa_filters.Filter = None,
         cancelers: pywa_filters.Filter = None,
+        ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> CallbackSelection:
         """
@@ -339,6 +350,7 @@ class SentMessage(_SentUpdate):
         Args:
             filters: The filters to apply to the selection.
             cancelers: The filters to cancel the listening.
+            ignore_updates: Whether to ignore user updates that do not pass the filters.
             timeout: The time to wait for the selection.
 
         Returns:
@@ -349,7 +361,12 @@ class SentMessage(_SentUpdate):
             ListenerCanceled: If the listener was canceled by a filter.
             ListenerStopped: If the listener was stopped manually.
         """
-
+        if ignore_updates:
+            cancelers = (
+                (cancelers | ignore_updates_canceler)
+                if cancelers
+                else ignore_updates_canceler
+            )
         return cast(
             CallbackSelection,
             self._client.listen(
@@ -366,6 +383,7 @@ class SentMessage(_SentUpdate):
         *,
         filters: pywa_filters.Filter = None,
         cancelers: pywa_filters.Filter = None,
+        ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> FlowCompletion:
         """
@@ -385,6 +403,7 @@ class SentMessage(_SentUpdate):
         Args:
             filters: The filters to apply to the completion.
             cancelers: The filters to cancel the listening.
+            ignore_updates: Whether to ignore user updates that do not pass the filters.
             timeout: The time to wait for the completion.
 
         Returns:
@@ -395,6 +414,12 @@ class SentMessage(_SentUpdate):
             ListenerCanceled: If the listener was canceled by a filter.
             ListenerStopped: If the listener was stopped manually.
         """
+        if ignore_updates:
+            cancelers = (
+                (cancelers | ignore_updates_canceler)
+                if cancelers
+                else ignore_updates_canceler
+            )
         return cast(
             FlowCompletion,
             self._client.listen(

@@ -45,6 +45,7 @@ class PhoneNumberChange(BaseUserUpdate):
     body: str
 
     _webhook_field = "messages"
+    _is_user_action = False
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> PhoneNumberChange:
@@ -117,6 +118,7 @@ class IdentityChange(BaseUserUpdate):
     identity: Identity
 
     _webhook_field = "messages"
+    _is_user_action = False
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> IdentityChange:
