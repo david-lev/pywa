@@ -1007,7 +1007,7 @@ class _ClientShortcuts(abc.ABC):
 class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
     """Base class for all user-related update types (message, callback, etc.)."""
 
-    _is_user_action: ClassVar[bool] = False
+    _is_user_action: ClassVar[bool] = True
     """Is the update came from a user action? (e.g. message, call, etc.)"""
 
     _txt_fields: ClassVar[tuple[str, ...] | None] = None
