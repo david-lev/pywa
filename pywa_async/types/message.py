@@ -153,7 +153,7 @@ class Message(BaseUserUpdateAsync, _Message):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The ID of the sent message.
+            The sent message.
 
         Raises:
             ValueError: If the message type is ``reaction`` and no ``reply_to_message_id`` is provided, or if the message

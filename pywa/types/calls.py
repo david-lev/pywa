@@ -136,7 +136,7 @@ class _CallShortcuts:
 
         - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#reject-call>`_.
 
-        You have about 30 to 60 seconds after the Call Connect webhook is sent to accept the phone call. If the business does not respond the call is terminated on the WhatsApp user side with a "Not Answered" notification and a Terminate Webhook is delivered back to you.
+        You have about 30 to 60 seconds after the Call Connect webhook is sent to accept the phone call. If the business does not respond, the call is terminated on the WhatsApp user side with a "Not Answered" notification and a Terminate Webhook is delivered back to you.
 
         Returns:
             Whether the call was rejected.
@@ -850,7 +850,7 @@ class CallingSettings:
     Attributes:
         status: Enable or disable the Calling API for the given business phone number.
         call_icon_visibility: Configure whether the WhatsApp call button icon displays for users when chatting with the business. See `Call Icon Visibility <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/call-settings#parameter-details>`_ for more details.
-        call_hours: Allows you specify and trigger call settings for incoming calls based on your timezone, business operating hours, and holiday schedules.
+        call_hours: Allows you to specify and trigger call settings for incoming calls based on your timezone, business operating hours, and holiday schedules.
         callback_permission_status: Configure whether a WhatsApp user is prompted with a call permission request after calling your business.
         sip: Configure call signaling via signal initiation protocol (SIP). Note: When SIP is enabled, you cannot use calling related endpoints and will not receive calling related webhooks.
     """

@@ -242,13 +242,15 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
             >>> from pywa import WhatsApp
             >>> wa = WhatsApp(phone_id="1234567890",token="EAADKQl9oJxx")
-            >>> wa.send_message("1234567890", "Hello from PyWa!")
+            >>> wa.send_message(to="1234567890", text="Hello from PyWa!")
 
-        Example with webhook (using ``FastAPI``):
+        Example with webhook (using `FastAPI <https://fastapi.tiangolo.com/>`_):
 
-            >>> import pywa, fastapi
-            >>> fastapi_app = fastapi.FastAPI()
-            >>> wa = pywa.WhatsApp(
+            >>> from pywa import WhatsApp, types, filters
+            >>> from fastapi import FastAPI
+            >>> fastapi_app = FastAPI()
+
+            >>> wa = WhatsApp(
             ...     phone_id="1234567890",
             ...     token="EAADKQl9oJxx",
             ...     server=fastapi_app,
@@ -259,14 +261,14 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             ... )
 
             >>> @wa.on_message(filters.text)
-            ... def new_message(_: WhatsApp, msg: Message):
+            ... def new_message(_: WhatsApp, msg: types.Message):
             ...     msg.reply("Hello from PyWa!")
 
-            ``$ fastapi dev wa.py`` see `uvicorn docs <https://www.uvicorn.org/#command-line-options>`_ for more options (port, host, reload, etc.)
+            ``$ fastapi dev wa.py`` see `uvicorn docs <https://www.uvicorn.org/#command-line-options>`_ for more options (``port``, ``host``, etc.)
 
         Args:
             phone_id: The Phone number ID to send messages from (if you manage multiple WhatsApp business accounts
-             (e.g. partner solutions), you can specify the phone ID when sending messages, optional).
+             (e.g. Solution Partners, Tech Providers), you can specify the phone ID when sending messages when sending or when calling the API methods).
             token: The token to use for WhatsApp Cloud API (In production, you should
              `use permanent token <https://developers.facebook.com/docs/whatsapp/business-management-api/get-started>`_).
             api_version: The API version of the WhatsApp Cloud API (default to the latest version).
@@ -2732,7 +2734,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> wa = WhatsApp(...)
-            >>> template_details = await wa.get_template(template_id='1234567890')
+            >>> template_details = wa.get_template(template_id='1234567890')
 
         Args:
             template_id: The ID of the template to retrieve.
@@ -2827,8 +2829,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> wa = WhatsApp(...)
-            >>> await wa.delete_template(template_name='seasonal_promotion') # Deletes all templates with that name
-            >>> await wa.delete_template(template_name='seasonal_promotion', template_id='1234567890') # Deletes only the template with that ID
+            >>> wa.delete_template(template_name='seasonal_promotion') # Deletes all templates with that name
+            >>> wa.delete_template(template_name='seasonal_promotion', template_id='1234567890') # Deletes only the template with that ID
 
         Args:
             template_name: The name of the template to delete.

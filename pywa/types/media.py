@@ -121,7 +121,7 @@ class BaseUserMedia(Media, utils.FromDict):
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Image(BaseUserMedia):
     """
-    Represents an received image.
+    Represents a received image.
 
     Attributes:
         id: The ID of the file (can be used to download or re-send the image).

@@ -218,8 +218,9 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         handlers_modules: Iterable[ModuleType] | None = None,
     ) -> None:
         """
-        The WhatsApp client.
-            - Full documentation on `pywa.readthedocs.io <https://pywa.readthedocs.io>`_.
+        The WhatsApp Async client.
+
+        - Full documentation on `pywa.readthedocs.io <https://pywa.readthedocs.io>`_.
 
         Example without webhook:
 
@@ -227,11 +228,13 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             >>> wa = WhatsApp(phone_id="1234567890",token="EAADKQl9oJxx")
             >>> await wa.send_message("1234567890", "Hello from PyWa!")
 
-        Example with webhook (using ``FastAPI``):
+        Example with webhook (using `FastAPI <https://fastapi.tiangolo.com/>`_):
 
-            >>> import pywa_async, fastapi
-            >>> fastapi_app = fastapi.FastAPI()
-            >>> wa = pywa_async.WhatsApp(
+            >>> from pywa_async import WhatsApp, types, filters
+            >>> from fastapi import FastAPI
+            >>> fastapi_app = FastAPI()
+
+            >>> wa = WhatsApp(
             ...     phone_id="1234567890",
             ...     token="EAADKQl9oJxx",
             ...     server=fastapi_app,
@@ -242,14 +245,16 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             ... )
 
             >>> @wa.on_message(filters.text)
-            ... async def new_message(_: WhatsApp, msg: Message):
+            ... async def new_message(_: WhatsApp, msg: types.Message):
             ...     await msg.reply("Hello from PyWa!")
 
-            ``$ fastapi dev wa.py`` see `uvicorn docs <https://www.uvicorn.org/#command-line-options>`_ for more options (port, host, reload, etc.)
+            ``$ fastapi dev wa.py`` see `uvicorn docs <https://www.uvicorn.org/#command-line-options>`_ for more options (``port``, ``host``, etc.)
 
         Args:
             phone_id: The Phone number ID to send messages from (if you manage multiple WhatsApp business accounts
-             (e.g. partner solutions), you can specify the phone ID when sending messages, optional).
+             (e.g. Solution Partners, Tech Providers), you can specify the phone ID when sending messages when sending or when calling the API methods).
+            token: The token to use for WhatsApp Cloud API (In production, you should
+             `use permanent token <https://developers.facebook.com/docs/whatsapp/business-management-api/get-started>`_).
             token: The token to use for WhatsApp Cloud API (In production, you should
              `use permanent token <https://developers.facebook.com/docs/whatsapp/business-management-api/get-started>`_).
             api_version: The API version of the WhatsApp Cloud API (default to the latest version).

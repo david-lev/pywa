@@ -30,6 +30,7 @@ if TYPE_CHECKING:
         FlowButton,
         CallbackData,
     )
+    from .message import Message
     from .templates import TemplateLanguage, BaseParams
 
 
@@ -452,7 +453,7 @@ class _ClientShortcuts(abc.ABC):
         Args:
             audio: The audio file to reply with (either a media ID, URL, file path, bytes, or an open file object).
             quote: Whether to quote the replied message (default: False).
-            mime_type: The mime type of the audio (optional, required when sending a audio as bytes or a file object,
+            mime_type: The mime type of the audio (optional, required when sending an audio as bytes or a file object,
              or file path that does not have an extension).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 

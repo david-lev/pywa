@@ -2393,7 +2393,7 @@ class RichText(TextComponent):
     Represents text that is displayed as a rich text.
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#richtext>`_.
-    - The goal of the component is to provide a rich formatting capabilities and introduce the way to render large texts (Terms of Condition, Policy Documents, User Agreement and etc) without facing limitations of basic text components (TextHeading, TextSubheading, TextBody and etc)
+    - The goal of the component is to provide a rich formatting capabilities and introduce the way to render large texts (Terms of Condition, Policy Documents, User Agreement etc.) without facing limitations of basic text components (TextHeading, TextSubheading, TextBody etc.)
     - RichText component utilizes a select subset of the Markdown specification. It adheres strictly to standard Markdown syntax without introducing any custom modifications. Content created for the RichText component is fully compatible with standard Markdown documents.
     - Added in v5.1.
 

@@ -174,7 +174,7 @@ class Message(BaseUserUpdate):
         self,
     ) -> Image | Video | Sticker | Document | Audio | None:
         """
-        The media of the message if any, otherwise ``None``. (image, video, sticker, document or audio)
+        The media of the message, if any, otherwise ``None``. (image, video, sticker, document or audio)
             - If you want to check whether the message has any media, use :attr:`~Message.has_media` instead.
         """
         return next(
@@ -252,7 +252,7 @@ class Message(BaseUserUpdate):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The ID of the sent message.
+            The sent message.
 
         Raises:
             ValueError: If the message type is ``reaction`` and no ``reply_to_message_id`` is provided, or if the message

@@ -55,6 +55,7 @@ class WhatsAppError(Exception):
         cls, error: dict, response: httpx.Response | None = None
     ) -> WhatsAppError:
         """Create an error from a response."""
+        # noinspection PyCallingNonCallable
         return cls._get_exception(code=(int_code := int(error["code"])))(
             code=int_code,
             message=error["message"],
