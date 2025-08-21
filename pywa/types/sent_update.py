@@ -22,6 +22,7 @@ from pywa.types import (
     FlowButton,
     CallbackData,
     CallStatus,
+    MessageStatusType,
 )
 from pywa.types.base_update import _ClientShortcuts, BaseUpdate, BaseUserUpdate
 from pywa.types.calls import _CallShortcuts
@@ -80,7 +81,21 @@ def _ignore_updates_canceler(_, u: BaseUserUpdate) -> bool:
     return False
 
 
+def _failed_canceler(_, u: BaseUserUpdate) -> bool:
+    if isinstance(u, MessageStatus) and u.status == MessageStatusType.FAILED:
+        return True
+    return False
+
+
+def _new_update_canceler(_, u: BaseUserUpdate) -> bool:
+    if u._is_user_action:
+        return True
+    return False
+
+
 ignore_updates_canceler = pywa_filters.new(_ignore_updates_canceler)
+failed_canceler = pywa_filters.new(_failed_canceler)
+new_update_canceler = pywa_filters.new(_new_update_canceler)
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -177,6 +192,7 @@ class SentMessage(_SentUpdate):
         self,
         *,
         cancel_on_new_update: bool = False,
+        cancel_if_failed: bool = True,
         cancelers: pywa_filters.Filter = None,
         timeout: float | None = None,
     ) -> MessageStatus:
@@ -204,6 +220,7 @@ class SentMessage(_SentUpdate):
 
         Args:
             cancel_on_new_update: Whether to cancel when another message/button click arrives (which may indicate the previous message was read).
+            cancel_if_failed: Whether to cancel the listener if the message failed to send.
             cancelers: The filters to cancel the listening.
             timeout: The time to wait for the message to be read.
 
@@ -215,14 +232,9 @@ class SentMessage(_SentUpdate):
             ListenerCanceled: If the listener was canceled by a filter.
             ListenerStopped: If the listener was stopped manually.
         """
+        if cancel_if_failed:
+            cancelers = (cancelers | failed_canceler) if cancelers else failed_canceler
         if cancel_on_new_update:
-
-            def _new_update_canceler(_, u: BaseUserUpdate) -> bool:
-                if u._is_user_action:
-                    return True
-                return False
-
-            new_update_canceler = pywa_filters.new(_new_update_canceler)
             cancelers = (
                 (cancelers | new_update_canceler) if cancelers else new_update_canceler
             )
@@ -239,6 +251,7 @@ class SentMessage(_SentUpdate):
     def wait_until_delivered(
         self,
         *,
+        cancel_if_failed: bool = True,
         cancelers: pywa_filters.Filter = None,
         timeout: float | None = None,
     ) -> MessageStatus:
@@ -256,6 +269,7 @@ class SentMessage(_SentUpdate):
                     r.reply("You received the message", quote=True)
 
         Args:
+            cancel_if_failed: Whether to cancel the listener if the message failed to send.
             cancelers: The filters to cancel the listening.
             timeout: The time to wait for the message to be delivered.
 
@@ -267,7 +281,8 @@ class SentMessage(_SentUpdate):
             ListenerCanceled: If the listener was canceled by a filter.
             ListenerStopped: If the listener was stopped manually.
         """
-
+        if cancel_if_failed:
+            cancelers = (cancelers | failed_canceler) if cancelers else failed_canceler
         return cast(
             MessageStatus,
             self._client.listen(
@@ -278,9 +293,10 @@ class SentMessage(_SentUpdate):
             ),
         )
 
-    def wait_for_failed(
+    def wait_until_failed(
         self,
         *,
+        cancel_if_delivered: bool = True,
         filters: pywa_filters.Filter = None,
         cancelers: pywa_filters.Filter = None,
         timeout: float | None = None,
@@ -298,19 +314,19 @@ class SentMessage(_SentUpdate):
                 )
                 try:
                     failed = m.wait_for_failed(
-                        filters=pywa_filters.failed_with_error(errors.ReEngagementMessage),  # message was send after 24 hours
-                        cancelers=pywa_filters.delivered,
+                        filters=filters.failed_with(errors.ReEngagementMessage),  # message was send after 24 hours
+                        cancel_if_delivered=True, # defaults to True, so the listener will be canceled if the message was delivered
                         timeout=5,
                     )
+                    failed.reply_template(...)
                 except ListenerCanceled:
-                    print("The message was delivered")
+                    print("The message was delivered successfully, so the listener was canceled.")
                 except ListenerTimeout:
                     pass
 
-                failed.reply_template(...)
-
         Args:
             filters: The filters to apply to the failed message.
+            cancel_if_delivered: Whether to cancel the listener if the message was delivered.
             cancelers: The filters to cancel the listening.
             timeout: The time to wait for the message to fail.
 
@@ -322,6 +338,12 @@ class SentMessage(_SentUpdate):
             ListenerCanceled: If the listener was canceled by a filter.
             ListenerStopped: If the listener was stopped manually.
         """
+        if cancel_if_delivered:
+            cancelers = (
+                (cancelers | pywa_filters.delivered)
+                if cancelers
+                else pywa_filters.delivered
+            )
         return cast(
             MessageStatus,
             self._client.listen(
