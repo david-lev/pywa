@@ -12,7 +12,7 @@ async def flow_request_media_decryptor(
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components/media_upload#endpoint>`_.
     - Use the .decrypt_media() shorthand method of the :class:`FlowRequest` class instead.
-    - This implementation requires ``cryptography`` to be installed. To install it, run ``pip3 install 'pywa[cryptography]'`` or ``pip3 install cryptography``.
+    - This implementation requires `cryptography <https://cryptography.io>`_ to be installed. To install it, run `pip3 install 'pywa[cryptography]'` or `pip3 install cryptography`.
 
     Example:
 

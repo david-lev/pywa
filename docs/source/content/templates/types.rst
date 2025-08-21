@@ -6,15 +6,11 @@ Template Types
 .. autoclass:: Template()
 
 .. autoclass:: TemplateDetails()
-    :members: update, duplicate, delete, compare, migrate, send, unpause
+    :members: update, duplicate, delete, compare, send, unpause
 
 .. autoclass:: TemplateStatus()
 
-.. autoclass:: TemplateRejectionReason()
-
 .. autoclass:: QualityScore()
-
-.. autoclass:: QualityScoreType()
 
 .. autoclass:: LibraryTemplate()
 
@@ -54,7 +50,7 @@ Template Types
     :members: params
 .. autoclass:: FlowButtonIcon()
 .. autoclass:: PhoneNumberButton()
-    :members: params, library_input
+    :members: library_input
 .. autoclass:: VoiceCallButton()
 .. autoclass:: CallPermissionRequestButton()
 .. autoclass:: QuickReplyButton()
@@ -67,7 +63,6 @@ Template Types
 .. autoclass:: MPMButton()
     :members: params
 .. autoclass:: SPMButton()
-    :members: params
 .. autoclass:: OneTapOTPButton()
     :members: params, library_input
 .. autoclass:: ZeroTapOTPButton()

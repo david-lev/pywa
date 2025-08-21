@@ -19,8 +19,6 @@ Others
 
 .. autoclass:: Pagination()
 
-.. autoclass:: WhatsAppBusinessAccount()
-
 .. autoclass:: BusinessVerificationStatus()
 .. autoclass:: MarketingMessagesLiteAPIStatus()
 .. autoclass:: MarketingMessagesOnboardingStatus()

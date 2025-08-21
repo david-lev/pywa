@@ -532,7 +532,7 @@ class FlowTokenNoLongerValid(FlowResponseError):
         ...         raise FlowTokenNoLongerValid(error_message='Open the flow again to continue.')
         ...    ...
 
-    - The layout will be closed and the :class:`FlowButton` will be disabled for the user.
+    - The layout will be closed and the :class:`~pywa.types.callback.FlowButton` will be disabled for the user.
     - You can send a new message to the user generating a new Flow token.
     - This action may be used to prevent users from initiating the same Flow again.
     - You are able to set an error message to display to the user. e.g. “The order has already been placed”

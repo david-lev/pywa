@@ -83,7 +83,7 @@ class ServerType(enum.Enum):
 
 
 def is_installed(lib: str) -> bool:
-    """Check if the cryptography library is installed."""
+    """Check if the library is installed."""
     try:
         importlib.import_module(lib)
         return True
@@ -254,7 +254,7 @@ def default_flow_request_decryptor(
     The default global decryption function for decrypting data exchange requests from WhatsApp Flow.
 
     - This implementation follows the :class:`FlowRequestDecryptor` type hint.
-    - This implementation requires ``cryptography`` to be installed. To install it, run ``pip3 install 'pywa[cryptography]'`` or ``pip3 install cryptography``.
+    - This implementation requires `cryptography <https://cryptography.io>`_ to be installed. To install it, run `pip3 install 'pywa[cryptography]'` or `pip3 install cryptography`.
     - This implementation was taken from the official documentation at
       `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/guides/implementingyourflowendpoint#python-django-example>`_.
 
@@ -323,7 +323,7 @@ def default_flow_response_encryptor(response: dict, aes_key: bytes, iv: bytes) -
     The default global encryption function for encrypting data exchange responses to WhatsApp Flow.
 
     - This implementation follows the :class:`FlowResponseEncryptor` type hint.
-    - This implementation requires ``cryptography`` to be installed. To install it, run ``pip3 install 'pywa[cryptography]'`` or ``pip3 install cryptography``.
+    - This implementation requires `cryptography <https://cryptography.io>`_ to be installed. To install it, run `pip3 install 'pywa[cryptography]'` or `pip3 install cryptography`.
     - This implementation was taken from the official documentation at
       `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/guides/implementingyourflowendpoint#python-django-example>`_.
 
@@ -401,7 +401,7 @@ def flow_request_media_decryptor(
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components/media_upload#endpoint>`_.
     - Use the .decrypt_media() shorthand method of the :class:`FlowRequest` class instead.
-    - This implementation requires ``cryptography`` to be installed. To install it, run ``pip3 install 'pywa[cryptography]'`` or ``pip3 install cryptography``.
+    - This implementation requires `cryptography <https://cryptography.io>`_ to be installed. To install it, run `pip3 install 'pywa[cryptography]'` or `pip3 install cryptography`.
 
     Example:
 

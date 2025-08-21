@@ -20,8 +20,6 @@ Call Types
 
 .. autoclass:: CallHours()
 
-.. autoclass:: CallingSettingsStatus()
-
 .. autoclass:: WeekDay()
 
 .. autoclass:: Monday()

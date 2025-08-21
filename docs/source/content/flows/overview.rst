@@ -67,7 +67,7 @@ Flow can be static: all the components settings are predefined and no interactio
 Or it can be dynamic: your server can respond to screen actions and determine the next screen to display (or close the flow) and the data to provide to it.
 
 Available components
------------------
+---------------------
 
 Every component on the FlowJSON has a corresponding class in :mod:`pywa.types.flows`:
 

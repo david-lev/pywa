@@ -224,7 +224,6 @@ The simplest approach is with the ``on_...`` decorators such as :meth:`~pywa.cli
     .. code-block:: python
         :caption: my_handlers.py
         :linenos:
-        :emphasize-lines: 7, 12
 
         from pywa import WhatsApp, types
         from fastapi import FastAPI
@@ -400,7 +399,7 @@ you can use **listeners** instead of registering a new handler at runtime.
 .. code-block:: python
     :caption: main.py
     :linenos:
-    :emphasize-lines: 7, 12
+    :emphasize-lines: 7
 
     from pywa import WhatsApp, types, filters
 
