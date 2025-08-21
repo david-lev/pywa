@@ -278,6 +278,62 @@ class SentMessage(_SentUpdate):
             ),
         )
 
+    def wait_for_failed(
+        self,
+        *,
+        filters: pywa_filters.Filter = None,
+        cancelers: pywa_filters.Filter = None,
+        timeout: float | None = None,
+    ) -> MessageStatus:
+        """
+        Wait for the message to fail.
+
+        Example:
+
+            .. code-block:: python
+
+                m = wa.send_message(
+                    to="123456",
+                    text="This message will fail",
+                )
+                try:
+                    failed = m.wait_for_failed(
+                        filters=pywa_filters.failed_with_error(errors.ReEngagementMessage),  # message was send after 24 hours
+                        cancelers=pywa_filters.delivered,
+                        timeout=5,
+                    )
+                except ListenerCanceled:
+                    print("The message was delivered")
+                except ListenerTimeout:
+                    pass
+
+                failed.reply_template(...)
+
+        Args:
+            filters: The filters to apply to the failed message.
+            cancelers: The filters to cancel the listening.
+            timeout: The time to wait for the message to fail.
+
+        Returns:
+            The message status indicating the failure.
+
+        Raises:
+            ListenerTimeout: If the listener timed out.
+            ListenerCanceled: If the listener was canceled by a filter.
+            ListenerStopped: If the listener was stopped manually.
+        """
+        return cast(
+            MessageStatus,
+            self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.message_status
+                & pywa_filters.failed
+                & (filters or pywa_filters.true),
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
+        )
+
     def wait_for_click(
         self,
         *,
