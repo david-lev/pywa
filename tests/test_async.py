@@ -1,22 +1,50 @@
 import asyncio
 import inspect
 
+import pytest
+
 from pywa import WhatsApp as WhatsAppSync
 from pywa.handlers import _HandlerDecorators
 from pywa.types.base_update import BaseUpdate
 from pywa_async import WhatsApp as WhatsAppAsync
-from pywa.api import WhatsAppCloudApi as WhatsAppCloudApiSync
-from pywa_async.api import WhatsAppCloudApiAsync
+from pywa.api import GraphAPI as GraphAPISync
+from pywa_async.api import GraphAPIAsync
 from pywa.server import Server as ServerSync
 from pywa.listeners import _Listeners as ListenersSync
+from pywa.types.templates import (
+    TemplateDetails as TemplateDetailsSync,
+    TemplatesResult as TemplatesResultSync,
+    CreatedTemplate as CreatedTemplateSync,
+    CreatedTemplates as CreatedTemplatesSync,
+    UpdatedTemplate as UpdatedTemplateSync,
+)
+from pywa_async.types.templates import (
+    TemplateDetails as TemplateDetailsAsync,
+    TemplatesResult as TemplatesResultAsync,
+    CreatedTemplate as CreatedTemplateAsync,
+    CreatedTemplates as CreatedTemplatesAsync,
+    UpdatedTemplate as UpdatedTemplateAsync,
+)
+
+
 from pywa.types import (
     Message as MessageSync,
     CallbackButton as CallbackButtonSync,
     CallbackSelection as CallbackSelectionSync,
     MessageStatus as MessageStatusSync,
     ChatOpened as ChatOpenedSync,
+    PhoneNumberChange as PhoneNumberChangeSync,
+    IdentityChange as IdentityChangeSync,
     FlowCompletion as FlowCompletionSync,
-    TemplateStatus as TemplateStatusSync,
+    TemplateStatusUpdate as TemplateStatusUpdateSync,
+    TemplateCategoryUpdate as TemplateCategoryUpdateSync,
+    TemplateQualityUpdate as TemplateQualityUpdateSync,
+    TemplateComponentsUpdate as TemplateComponentsUpdateSync,
+    CallConnect as CallConnectSync,
+    CallTerminate as CallTerminateSync,
+    CallStatus as CallStatusSync,
+    CallPermissionUpdate as CallPermissionUpdateSync,
+    UserMarketingPreferences as UserMarketingPreferencesSync,
     FlowRequest as FlowRequestSync,
     FlowResponse as FlowResponseSync,
     MediaUrlResponse as MediaUrlResponseSync,
@@ -29,8 +57,18 @@ from pywa_async.types import (
     CallbackSelection as CallbackSelectionAsync,
     MessageStatus as MessageStatusAsync,
     ChatOpened as ChatOpenedAsync,
+    PhoneNumberChange as PhoneNumberChangeAsync,
+    IdentityChange as IdentityChangeAsync,
     FlowCompletion as FlowCompletionAsync,
-    TemplateStatus as TemplateStatusAsync,
+    TemplateStatusUpdate as TemplateStatusUpdateAsync,
+    TemplateCategoryUpdate as TemplateCategoryUpdateAsync,
+    TemplateQualityUpdate as TemplateQualityUpdateAsync,
+    TemplateComponentsUpdate as TemplateComponentsUpdateAsync,
+    CallConnect as CallConnectAsync,
+    CallTerminate as CallTerminateAsync,
+    CallStatus as CallStatusAsync,
+    CallPermissionUpdate as CallPermissionUpdateAsync,
+    UserMarketingPreferences as UserMarketingPreferencesAsync,
     FlowRequest as FlowRequestAsync,
     FlowResponse as FlowResponseAsync,
     MediaUrlResponse as MediaUrlResponseAsync,
@@ -39,38 +77,68 @@ from pywa_async.types import (
 )
 from pywa.types.flows import FlowDetails as FlowDetailsSync
 from pywa_async.types.flows import FlowDetails as FlowDetailsAsync
-from pywa.types.media import BaseMedia as BaseMediaSync
-from pywa_async.types.media import BaseMediaAsync
-from pywa.types.sent_message import SentMessage as SentMessageSync
-from pywa_async.types.sent_message import SentMessage as SentMessageAsync
-
-OVERRIDES: list[tuple] = [
-    (WhatsAppSync, WhatsAppAsync),
-    (MessageSync, MessageAsync),
-    (CallbackButtonSync, CallbackButtonAsync),
-    (CallbackSelectionSync, CallbackSelectionAsync),
-    (MessageStatusSync, MessageStatusAsync),
-    (ChatOpenedSync, ChatOpenedAsync),
-    (FlowCompletionSync, FlowCompletionAsync),
-    (TemplateStatusSync, TemplateStatusAsync),
-    (FlowRequestSync, FlowRequestAsync),
-    (FlowResponseSync, FlowResponseAsync),
-    (FlowDetailsSync, FlowDetailsAsync),
-    (MediaUrlResponseSync, MediaUrlResponseAsync),
-    (BaseMediaSync, BaseMediaAsync),
-    (SentMessageSync, SentMessageAsync),
-    (WhatsAppCloudApiSync, WhatsAppCloudApiAsync),
-    (WhatsAppCloudApiSync, WhatsAppCloudApiAsync),
-    (UserSync, UserAsync),
-    (ResultSync, ResultAsync),
-]
+from pywa.types.media import Media as MediaSync
+from pywa_async.types.media import Media as MediaAsync
+from pywa.types.media import BaseUserMedia as BaseUserMediaSync
+from pywa_async.types.media import BaseUserMedia as BaseUserMediaAsync
+from pywa.types.sent_update import (
+    SentMessage as SentMessageSync,
+    SentTemplate as SentTemplateSync,
+    InitiatedCall as InitiatedCallSync,
+)
+from pywa_async.types.sent_update import (
+    SentMessage as SentMessageAsync,
+    SentTemplate as SentTemplateAsync,
+    InitiatedCall as InitiatedCallAsync,
+)
 
 
-def get_all_methods_names(obj):
+@pytest.fixture(scope="session")
+def overrides() -> list[tuple[type, type]]:
+    return [
+        (WhatsAppSync, WhatsAppAsync),
+        (MessageSync, MessageAsync),
+        (CallbackButtonSync, CallbackButtonAsync),
+        (CallbackSelectionSync, CallbackSelectionAsync),
+        (MessageStatusSync, MessageStatusAsync),
+        (ChatOpenedSync, ChatOpenedAsync),
+        (PhoneNumberChangeSync, PhoneNumberChangeAsync),
+        (IdentityChangeSync, IdentityChangeAsync),
+        (FlowCompletionSync, FlowCompletionAsync),
+        (TemplateStatusUpdateSync, TemplateStatusUpdateAsync),
+        (TemplateCategoryUpdateSync, TemplateCategoryUpdateAsync),
+        (TemplateQualityUpdateSync, TemplateQualityUpdateAsync),
+        (TemplateComponentsUpdateSync, TemplateComponentsUpdateAsync),
+        (UserMarketingPreferencesSync, UserMarketingPreferencesAsync),
+        (CallConnectSync, CallConnectAsync),
+        (CallTerminateSync, CallTerminateAsync),
+        (CallStatusSync, CallStatusAsync),
+        (CallPermissionUpdateSync, CallPermissionUpdateAsync),
+        (FlowRequestSync, FlowRequestAsync),
+        (FlowResponseSync, FlowResponseAsync),
+        (FlowDetailsSync, FlowDetailsAsync),
+        (MediaUrlResponseSync, MediaUrlResponseAsync),
+        (MediaSync, MediaAsync),
+        (BaseUserMediaSync, BaseUserMediaAsync),
+        (SentMessageSync, SentMessageAsync),
+        (SentTemplateSync, SentTemplateAsync),
+        (InitiatedCallSync, InitiatedCallAsync),
+        (GraphAPISync, GraphAPIAsync),
+        (UserSync, UserAsync),
+        (ResultSync, ResultAsync),
+        (TemplateDetailsSync, TemplateDetailsAsync),
+        (TemplatesResultSync, TemplatesResultAsync),
+        (CreatedTemplateSync, CreatedTemplateAsync),
+        (CreatedTemplatesSync, CreatedTemplatesAsync),
+        (UpdatedTemplateSync, UpdatedTemplateAsync),
+    ]
+
+
+def get_obj_methods_names(obj):
     return {m for m in dir(obj) if callable(getattr(obj, m)) and not m.startswith("__")}
 
 
-def test_all_methods_are_overwritten_in_async():
+def test_all_methods_are_overwritten_in_async(overrides):
     skip_methods = [
         m.__name__
         for m in {
@@ -88,22 +156,32 @@ def test_all_methods_are_overwritten_in_async():
             ServerSync._after_handling_update,
             ServerSync._delayed_register_callback_url,
             ServerSync._register_callback_url,
-            ServerSync._get_handler,
+            ServerSync._get_handler_type,
             ServerSync._register_flow_endpoint_callback,
             _HandlerDecorators.on_message,
             _HandlerDecorators.on_callback_button,
             _HandlerDecorators.on_callback_selection,
             _HandlerDecorators.on_message_status,
             _HandlerDecorators.on_chat_opened,
+            _HandlerDecorators.on_phone_number_change,
+            _HandlerDecorators.on_identity_change,
             _HandlerDecorators.on_flow_completion,
             _HandlerDecorators.on_flow_request,
-            _HandlerDecorators.on_template_status,
+            _HandlerDecorators.on_template_status_update,
+            _HandlerDecorators.on_template_category_update,
+            _HandlerDecorators.on_template_quality_update,
+            _HandlerDecorators.on_template_components_update,
+            _HandlerDecorators.on_call_connect,
+            _HandlerDecorators.on_call_terminate,
+            _HandlerDecorators.on_call_status,
+            _HandlerDecorators.on_call_permission_update,
+            _HandlerDecorators.on_user_marketing_preferences,
             _HandlerDecorators.on_raw_update,
             ListenersSync._remove_listener,
             BaseUpdate.from_update,
             BaseUpdate.stop_handling,
             BaseUpdate.continue_handling,
-            BaseMediaSync.from_flow_completion,
+            BaseUserMediaSync.from_flow_completion,
             SentMessageSync.from_sent_update,
             FlowRequestSync.decrypt_media,
             FlowRequestSync.token_no_longer_valid,
@@ -111,9 +189,8 @@ def test_all_methods_are_overwritten_in_async():
             FlowRequestSync.from_dict,
             FlowResponseSync.to_dict,
             FlowCompletionSync.get_media,
-            TemplateStatusSync.TemplateEvent,
-            TemplateStatusSync.TemplateRejectionReason,
             UserSync.as_vcard,
+            TemplateDetailsSync.to_json,
         }
     ]
     non_async = {
@@ -124,10 +201,12 @@ def test_all_methods_are_overwritten_in_async():
         "_usr_cls",
         "_httpx_client",
         "_flow_req_cls",
+        "_api_fields",
+        "is_quick_reply",
     }
-    for sync_obj, async_obj in OVERRIDES:
+    for sync_obj, async_obj in overrides:
         for method_name in filter(
-            lambda m: m not in skip_methods, get_all_methods_names(sync_obj)
+            lambda m: m not in skip_methods, get_obj_methods_names(sync_obj)
         ):
             sync_method, async_method = (
                 getattr(sync_obj, method_name),
@@ -136,19 +215,19 @@ def test_all_methods_are_overwritten_in_async():
             if not asyncio.iscoroutinefunction(async_method):
                 if method_name in non_async:
                     assert sync_method != async_method, (
-                        f"Method/attr {method_name} is not overwritten in {async_obj.__name__}"
+                        f"Method/attr {method_name} is not overwritten in {async_obj}"
                     )
                     continue
                 raise AssertionError(
-                    f"Method {method_name} is not overwritten in {async_obj.__name__}"
+                    f"Method {method_name} is not overwritten in {async_obj}"
                 )
 
 
-def test_same_signature():
+def test_same_signature(overrides):
     skip_methods = [
         m.__name__
         for m in {
-            BaseMediaSync.from_dict,
+            BaseUserMediaSync.from_dict,
         }
     ]
     skip_methods.extend(
@@ -168,8 +247,8 @@ def test_same_signature():
             (WhatsAppSync.webhook_challenge_handler, ("self",)),
         )
     }
-    for sync_obj, async_obj in OVERRIDES:
-        for method_name in get_all_methods_names(sync_obj):
+    for sync_obj, async_obj in overrides:
+        for method_name in get_obj_methods_names(sync_obj):
             if method_name in skip_methods:
                 continue
             sync_sig, async_sig = (
@@ -178,7 +257,7 @@ def test_same_signature():
             )
             try:
                 assert sync_sig.parameters == async_sig.parameters, (
-                    f"Method {method_name} has different signature in {async_obj.__name__}"
+                    f"Method {method_name} has different signature in {async_obj}"
                 )
             except AssertionError:
                 if method_name in skip_signature_check:
@@ -190,22 +269,22 @@ def test_same_signature():
                         sync_sig.pop(param, None)
                         async_sig.pop(param, None)
                     assert sync_sig == async_sig, (
-                        f"Method {method_name} has different signature in {async_obj.__name__}"
+                        f"Method {method_name} has different signature in {async_obj}"
                     )
                 else:
                     raise
 
 
-def test_same_return_annotation():
+def test_same_return_annotation(overrides):
     skip_methods = [
         m.__name__
         for m in {
-            BaseMediaSync.from_dict,
-            BaseMediaSync.from_flow_completion,
+            BaseUserMediaSync.from_dict,
+            BaseUserMediaSync.from_flow_completion,
         }
     ]
-    for sync_obj, async_obj in OVERRIDES:
-        for method_name in get_all_methods_names(sync_obj):
+    for sync_obj, async_obj in overrides:
+        for method_name in get_obj_methods_names(sync_obj):
             if method_name in skip_methods:
                 continue
             sync_sig, async_sig = (
@@ -213,16 +292,16 @@ def test_same_return_annotation():
                 inspect.signature(getattr(async_obj, method_name)),
             )
             assert sync_sig.return_annotation == async_sig.return_annotation, (
-                f"Method {method_name} has different return annotations in {async_obj.__name__}"
+                f"Method {method_name} has different return annotations in {async_obj}"
             )
 
 
-def test_same_docstring():
+def test_same_docstring(overrides):
     skip_methods = [
         m.__name__
         for m in {
-            BaseMediaSync.from_dict,
-            BaseMediaSync.from_flow_completion,
+            BaseUserMediaSync.from_dict,
+            BaseUserMediaSync.from_flow_completion,
         }
     ] + [
         "wait_for_completion",
@@ -231,27 +310,60 @@ def test_same_docstring():
         "_httpx_client",
         "_flow_req_cls",
     ]
-    for sync_obj, async_obj in OVERRIDES:
-        for method_name in get_all_methods_names(sync_obj):
+    for sync_obj, async_obj in overrides:
+        _check_docs(
+            sync_doc=sync_obj.__doc__,
+            async_doc=async_obj.__doc__,
+            async_obj=async_obj,
+            method_name=None,
+        )
+        for method_name in get_obj_methods_names(sync_obj):
             if method_name in skip_methods:
                 continue
             sync_doc, async_doc = (
                 getattr(sync_obj, method_name).__doc__,
                 getattr(async_obj, method_name).__doc__,
             )
-            if (sync_doc and not async_doc) or (not sync_doc and async_doc):
-                raise AssertionError(
-                    f"Method {method_name} missing docstrings in {async_obj.__name__}"
-                )
-            try:
-                assert sync_doc == async_doc, (
-                    f"Method {method_name} has different docstrings in {async_obj.__name__}"
-                )
-            except AssertionError:
-                for line in zip(
-                    sync_doc.splitlines(), async_doc.splitlines(), strict=True
-                ):
-                    if line[0] != line[1]:
-                        if "async" in line[1] or "await" in line[1]:  # async examples
-                            continue
-                        raise
+            _check_docs(
+                sync_doc=sync_doc,
+                async_doc=async_doc,
+                async_obj=async_obj,
+                method_name=method_name,
+            )
+
+
+def _check_docs(
+    *, sync_doc: str, async_doc: str, async_obj: type, method_name: str | None
+):
+    if (sync_doc and not async_doc) or (not sync_doc and async_doc):
+        if method_name:
+            raise AssertionError(
+                f"Method {method_name} missing docstrings in {async_obj}"
+            )
+        raise AssertionError(f"Missing docstrings in {async_obj}")
+    try:
+        assert sync_doc == async_doc, (
+            f"Method {method_name} has different docstrings in {async_obj}"
+            if method_name
+            else f"Docstrings are different in {async_obj}"
+        )
+    except AssertionError:
+        for doc, adoc in zip(
+            sync_doc.splitlines(), async_doc.splitlines(), strict=True
+        ):
+            if doc != adoc:
+                if "async" in adoc.lower() or "await" in adoc.lower():  # async examples
+                    continue
+                raise
+
+
+def test_all_handlers_to_updates_are_overwritten_in_async(overrides):
+    assert len(WhatsAppSync._handlers_to_updates) == len(
+        WhatsAppAsync._handlers_to_updates
+    ), (
+        "WhatsAppSync._handlers_to_updates and WhatsAppAsync._handlers_to_updates have different lengths"
+    )
+    for handler, update in WhatsAppSync._handlers_to_updates.items():
+        assert WhatsAppAsync._handlers_to_updates[handler] != update, (
+            f"Handler {handler} has the same update class in WhatsAppAsync: {update}"
+        )

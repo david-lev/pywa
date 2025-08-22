@@ -4,6 +4,7 @@ from __future__ import annotations
 
 
 __all__ = [
+    "Media",
     "Image",
     "Video",
     "Sticker",
@@ -12,47 +13,31 @@ __all__ = [
     "MediaUrlResponse",
 ]
 
-import abc
 import dataclasses
 import mimetypes
 from typing import TYPE_CHECKING
 
+from .others import SuccessResult
 from .. import utils
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class BaseMedia(abc.ABC, utils.FromDict):
+@dataclasses.dataclass(frozen=True, slots=True)
+class Media:
     """Base class for all media types."""
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
-
-    @property
-    @abc.abstractmethod
-    def id(self) -> str: ...
-
-    @property
-    @abc.abstractmethod
-    def sha256(self) -> str: ...
-
-    @property
-    @abc.abstractmethod
-    def mime_type(self) -> str: ...
+    id: str
 
     def get_media_url(self) -> str:
         """Gets the URL of the media. (expires after 5 minutes)"""
         return self._client.get_media_url(media_id=self.id).url
 
-    @property
-    def extension(self) -> str | None:
-        """Gets the extension of the media (with dot.)"""
-        clean_mimetype = self.mime_type.split(";")[0].strip()
-        return mimetypes.guess_extension(clean_mimetype)
-
     def download(
         self,
+        *,
         path: str | None = None,
         filename: str | None = None,
         in_memory: bool = False,
@@ -74,15 +59,42 @@ class BaseMedia(abc.ABC, utils.FromDict):
             The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
         """
         return self._client.download_media(
-            url=self.get_media_url(),
+            url=self.get_media_url()
+            if not hasattr(self, "url")
+            else self.url,  # MediaUrlResponse
             path=path,
             filename=filename,
             in_memory=in_memory,
             **kwargs,
         )
 
+    def delete(self, *, phone_id: str | int | None = utils.MISSING) -> SuccessResult:
+        """
+        Deletes the media from WhatsApp servers.
+
+        Args:
+            phone_id: The phone ID to delete the media from (optional, If included, the operation will only be processed if the ID matches the ID of the business phone number that the media was uploaded on. pass None to use the client's phone ID).
+        """
+        return self._client.delete_media(media_id=self.id, phone_id=phone_id)
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class BaseUserMedia(Media, utils.FromDict):
+    """Base class for all media types."""
+
+    sha256: str
+    mime_type: str
+
+    @property
+    def extension(self) -> str | None:
+        """Gets the extension of the media (with dot.)"""
+        clean_mimetype = self.mime_type.split(";")[0].strip()
+        return mimetypes.guess_extension(clean_mimetype)
+
     @classmethod
-    def from_flow_completion(cls, client: WhatsApp, media: dict[str, str]) -> BaseMedia:
+    def from_flow_completion(
+        cls, client: WhatsApp, media: dict[str, str]
+    ) -> BaseUserMedia:
         """
         Create a media object from the media dict returned by the flow completion.
 
@@ -107,9 +119,9 @@ class BaseMedia(abc.ABC, utils.FromDict):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Image(BaseMedia):
+class Image(BaseUserMedia):
     """
-    Represents an received image.
+    Represents a received image.
 
     Attributes:
         id: The ID of the file (can be used to download or re-send the image).
@@ -117,13 +129,9 @@ class Image(BaseMedia):
         mime_type: The MIME type of the image.
     """
 
-    id: str
-    sha256: str
-    mime_type: str
-
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Video(BaseMedia):
+class Video(BaseUserMedia):
     """
     Represents a video.
 
@@ -133,13 +141,9 @@ class Video(BaseMedia):
         mime_type: The MIME type of the video.
     """
 
-    id: str
-    sha256: str
-    mime_type: str
-
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Sticker(BaseMedia):
+class Sticker(BaseUserMedia):
     """
     Represents a sticker.
 
@@ -150,14 +154,11 @@ class Sticker(BaseMedia):
         animated: Whether the sticker is animated.
     """
 
-    id: str
-    sha256: str
-    mime_type: str
     animated: bool
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Document(BaseMedia):
+class Document(BaseUserMedia):
     """
     Represents a document.
 
@@ -168,14 +169,11 @@ class Document(BaseMedia):
         filename: The filename of the document (optional).
     """
 
-    id: str
-    sha256: str
-    mime_type: str
     filename: str | None = None
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Audio(BaseMedia):
+class Audio(BaseUserMedia):
     """
     Represents an audio.
 
@@ -186,14 +184,11 @@ class Audio(BaseMedia):
         voice: Whether the audio is a voice message or just an audio file.
     """
 
-    id: str
-    sha256: str
-    mime_type: str
     voice: bool
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class MediaUrlResponse(utils.FromDict):
+class MediaUrlResponse(Media, utils.FromDict):
     """
     Represents a media response.
 
@@ -205,36 +200,7 @@ class MediaUrlResponse(utils.FromDict):
         file_size: The size of the media in bytes.
     """
 
-    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
-    id: str
     url: str
+    file_size: int
     mime_type: str
     sha256: str
-    file_size: int
-
-    def download(
-        self,
-        filepath: str | None = None,
-        filename: str | None = None,
-        in_memory: bool = False,
-        **kwargs,
-    ) -> bytes | str:
-        """
-        Download a media file from WhatsApp servers.
-
-        Args:
-            filepath: The path where to save the file (if not provided, the current working directory will be used).
-            filename: The name of the file (if not provided, it will be guessed from the URL + extension).
-            in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
-            **kwargs: Additional arguments to pass to ``httpx.get(...)``.
-
-        Returns:
-            The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
-        """
-        return self._client.download_media(
-            url=self.url,
-            path=filepath,
-            filename=filename,
-            in_memory=in_memory,
-            **kwargs,
-        )

@@ -7,7 +7,8 @@ from platform import system
 import pytest
 
 from pywa import WhatsApp, types, utils, _helpers as helpers, filters
-from pywa.types import sent_message, Contact
+from pywa.types import Contact
+from pywa.types.media import Media
 
 PHONE_ID = "123456789"
 TOKEN = "xyz"
@@ -34,10 +35,10 @@ def wa():
 
 def test_api_usage_without_token():
     with pytest.raises(ValueError):
-        WhatsApp(phone_id="123", token="").api
+        _ = WhatsApp(phone_id="123", token="").api
 
     with pytest.raises(ValueError):
-        WhatsApp(token=None).api
+        _ = WhatsApp(token=None).api
 
 
 def test_warning_when_version_lower_than_min():
@@ -89,10 +90,10 @@ def test_resolve_buttons_param():
                 {"type": "reply", "reply": {"id": "button2", "title": "Button 2"}},
             )
         },
-        {"_callback_options": {"button2", "button1"}},
     )
+
     assert helpers.resolve_buttons_param(
-        types.ButtonUrl(title="PyWa Docs", url="https://pywa.readthedocs.io")
+        types.URLButton(title="PyWa Docs", url="https://pywa.readthedocs.io")
     ) == (
         types.others.InteractiveType.CTA_URL,
         {
@@ -102,8 +103,24 @@ def test_resolve_buttons_param():
                 "url": "https://pywa.readthedocs.io",
             },
         },
-        {},
     )
+
+    assert helpers.resolve_buttons_param(
+        types.VoiceCallButton(
+            title="Call me",
+            ttl_minutes=50,
+        )
+    ) == (
+        types.others.InteractiveType.VOICE_CALL,
+        {
+            "name": "voice_call",
+            "parameters": {
+                "display_text": "Call me",
+                "ttl_minutes": 50,
+            },
+        },
+    )
+
     assert helpers.resolve_buttons_param(
         types.FlowButton(
             title="Next",
@@ -131,7 +148,6 @@ def test_resolve_buttons_param():
                 },
             },
         },
-        {"_flow_token": "flow_token"},
     )
 
     assert helpers.resolve_buttons_param(
@@ -167,7 +183,6 @@ def test_resolve_buttons_param():
                 },
             ),
         },
-        {"_callback_options": {"row1"}},
     )
 
 
@@ -214,27 +229,6 @@ def test_get_media_msg():
         "caption": "caption",
         "filename": "filename",
     }
-
-
-def test_get_flow_fields():
-    assert helpers.get_flow_fields(
-        invalidate_preview=True,
-        phone_number_id="1234",
-    ) == (
-        "id",
-        "name",
-        "status",
-        "updated_at",
-        "categories",
-        "validation_errors",
-        "json_version",
-        "data_api_version",
-        "endpoint_uri",
-        "preview.invalidate(true)",
-        "whatsapp_business_account",
-        "application",
-        "health_status.phone_number(1234)",
-    )
 
 
 def test_get_flow_metric_field():
@@ -347,29 +341,54 @@ def test_resolve_flow_json_param():
 def test_resolve_waba_id_param():
     client = WhatsApp(business_account_id=WABA_ID)
 
-    assert helpers.resolve_waba_id_param(client, waba_id=None) == WABA_ID
-    assert helpers.resolve_waba_id_param(client, waba_id="987654321") == "987654321"
+    assert (
+        helpers.resolve_arg(
+            wa=client,
+            value=None,
+            method_arg="waba_id",
+            client_arg="business_account_id",
+        )
+        == WABA_ID
+    )
+    assert (
+        helpers.resolve_arg(
+            wa=client,
+            value=987654321,
+            method_arg="waba_id",
+            client_arg="business_account_id",
+        )
+        == "987654321"
+    )
 
     with pytest.raises(ValueError):
-        helpers.resolve_waba_id_param(WhatsApp(), waba_id=None)
+        helpers.resolve_arg(
+            wa=WhatsApp(),
+            value=None,
+            method_arg="waba_id",
+            client_arg="business_account_id",
+        )
 
 
 def test_resolve_phone_id_param():
     client = WhatsApp(phone_id=PHONE_ID)
 
     assert (
-        helpers.resolve_phone_id_param(client, phone_id=None, arg_name="phone_id")
+        helpers.resolve_arg(
+            wa=client, value=None, method_arg="phone_id", client_arg="phone_id"
+        )
         == PHONE_ID
     )
     assert (
-        helpers.resolve_phone_id_param(
-            client, phone_id="123456789", arg_name="phone_id"
+        helpers.resolve_arg(
+            wa=client, value="1234567890", method_arg="phone_id", client_arg="phone_id"
         )
-        == "123456789"
+        == "1234567890"
     )
 
     with pytest.raises(ValueError):
-        helpers.resolve_phone_id_param(WhatsApp(), phone_id=None, arg_name="phone_id")
+        helpers.resolve_arg(
+            wa=WhatsApp(), value=None, method_arg="phone_id", client_arg="phone_id"
+        )
 
 
 def test_resolve_media_param_with_url():
@@ -387,6 +406,17 @@ def test_resolve_media_param_with_media_id():
     assert helpers.resolve_media_param(
         wa=wa,
         media="1234567890",
+        mime_type=None,
+        filename=None,
+        media_type=types.MessageType.IMAGE,
+        phone_id=PHONE_ID,
+    ) == (False, "1234567890")
+
+
+def test_resolve_media_param_with_media():
+    assert helpers.resolve_media_param(
+        wa=wa,
+        media=Media(_client=wa, id="1234567890"),
         mime_type=None,
         filename=None,
         media_type=types.MessageType.IMAGE,
@@ -766,19 +796,3 @@ def test_send_products(api, wa):
         reply_to_message_id=None,
         biz_opaque_callback_data=None,
     )
-
-
-def test_mark_message_as_read(api, wa):
-    api.return_value.mark_message_as_read.return_value = SENT_MESSAGE
-    wa.mark_message_as_read(
-        message_id=MSG_ID,
-    )
-    api.mark_message_as_read.assert_called_once_with(
-        phone_id=PHONE_ID,
-        message_id=MSG_ID,
-    )
-
-
-def test_created_flow(api, wa):
-    with pytest.warns(DeprecationWarning):
-        wa.create_flow(name="flow", categories=[], waba_id=123)

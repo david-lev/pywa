@@ -61,6 +61,17 @@ class User(_User):
             for u in (await self._client.unblock_users((self.wa_id,))).removed_users
         }
 
+    async def get_call_permissions(self) -> CallPermissions:
+        """
+        Get the call permissions of the user.
+
+        - Shortcut for :meth:`~pywa.client.WhatsApp.get_call_permissions` with the user wa_id.
+
+        Returns:
+            CallPermissions: The call permissions of the user.
+        """
+        return await self._client.get_call_permissions(wa_id=self.wa_id)
+
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class UsersBlockedResult(_UsersBlockedResult):
@@ -92,33 +103,21 @@ class Result(_Result[_T]):
     """
     This class is used to handle paginated results from the WhatsApp API. You can iterate over the results, and also access the next and previous pages of results.
 
-    - When using the ``next()`` or ``previous()`` methods, the results are returned as a new instance of the :class:`Result` class.
-    - You can access the cursors using the ``before`` and ``after`` properties and use them later in the :class:`Pagination` object.
+    - When using the :meth:`next` or :meth:`previous` methods, the results are returned as a new instance of the :class:`Result` class.
+    - You can access the cursors using the :attr:`before` and :attr:`after` properties and use them later in the :class:`Pagination` object.
 
     Example:
 
-        >>> from pywa import WhatsApp, types
+        >>> from pywa_async import WhatsApp, types
         >>> wa = WhatsApp(...)
-        >>> res = wa.get_blocked_users(pagination=types.Pagination(limit=100))
+        >>> res = await wa.get_blocked_users(pagination=types.Pagination(limit=100))
         >>> for user in res:
         ...     print(user.name, user.wa_id)
         ...
         >>> if res.has_next:
-        ...     next_res = res.next()
+        ...     next_res = await res.next()
         ...
-        >>> print(res.all())
-
-    Methods:
-        next: Get the next page of results. if there is no next page, it returns empty Result.
-        previous: Get the previous page of results. if there is no previous page, it returns empty Result.
-        all: Get all results from the current page, previous pages, and next pages.
-        empty: Returns an empty Result instance.
-
-    Properties:
-        has_next: Check if there is a next page of results.
-        has_previous: Check if there is a previous page of results.
-        before: Cursor that points to the start of the page of data that has been returned.
-        after: Cursor that points to the end of the page of data that has been returned.
+        >>> print(await res.all())
     """
 
     _wa: WhatsAppAsync
@@ -175,7 +174,7 @@ class Result(_Result[_T]):
         """
         Get all results from the current page, previous pages, and next pages.
 
-        - Make sure to provide higher limit in the ``Pagination`` parameter to avoid hitting rate limits.
+        - Make sure to provide higher limit in the :class:`Pagination` parameter to avoid hitting rate limits.
         - Also consider using the ``sleep`` parameter to avoid hitting rate limits.
 
         Args:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from types import MappingProxyType
+import warnings
 
 """This module contains the types related to messages."""
 
@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Iterable
 from ..errors import WhatsAppError
 
 from .base_update import BaseUserUpdate  # noqa
-from .callback import Button, ButtonUrl, SectionList
+from .callback import Button, URLButton, SectionList, VoiceCallButton, FlowButton
 from .media import Audio, Document, Image, Sticker, Video
 from .others import (
     Contact,
@@ -24,13 +24,13 @@ from .others import (
     ProductsSection,
     Reaction,
     ReplyToMessage,
-    System,
     User,
+    Referral,
 )
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
-    from .sent_message import SentMessage
+    from .sent_update import SentMessage
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -45,25 +45,23 @@ class Message(BaseUserUpdate):
         metadata: The metadata of the message (to which phone number it was sent).
         type: The message type (See :class:`MessageType`).
         from_user: The user who sent the message.
-        timestamp: The timestamp when the message was sent (in UTC).
-        reply_to_message: The message to which this message is a reply to. (Optional)
+        timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
+        reply_to_message: The message to which this message is a reply (if any).
         forwarded: Whether the message was forwarded.
-        forwarded_many_times: Whether the message was forwarded many times.
-         (when True, ``forwarded`` will be True as well)
-        text: The text of the message (if the message type is :class:`MessageType.TEXT`).
-        image: The image of the message (if the message type is :class:`MessageType.IMAGE`).
-        video: The video of the message (if the message type is :class:`MessageType.VIDEO`).
-        sticker: The sticker of the message (if the message type is :class:`MessageType.STICKER`).
-        document: The document of the message (if the message type is :class:`MessageType.DOCUMENT`).
-        audio: The audio of the message (if the message type is :class:`MessageType.AUDIO`).
-        caption: The caption of the message (Optional, only available for :class:`MessageType.IMAGE`,
-         :class:`MessageType.VIDEO` and :class:`MessageType.DOCUMENT`).
-        reaction: The reaction of the message (if the message type is :class:`MessageType.REACTION`).
-        location: The location of the message (if the message type is :class:`MessageType.LOCATION`).
-        contacts: The contacts of the message (if the message type is :class:`MessageType.CONTACTS`).
-        order: The order of the message (if the message type is :class:`MessageType.ORDER`).
-        system: The system update (if the message type is :class:`MessageType.SYSTEM`).
-        error: The error of the message (if the message type is :class:`MessageType.UNSUPPORTED`).
+        forwarded_many_times: Whether the message was forwarded more than 5 times. (when ``True``, ``forwarded`` will be ``True`` as well)
+        text: The text of the message.
+        image: The image of the message.
+        video: The video of the message.
+        sticker: The sticker of the message.
+        document: The document of the message.
+        audio: The audio of the message.
+        caption: The caption of the message (Optional, only available for image video and document messages).
+        reaction: The reaction of the message.
+        location: The location of the message.
+        contacts: The contacts of the message.
+        order: The order of the message.
+        referral: The referral information of the message (When a customer clicks an ad that redirects to WhatsApp).
+        error: The error of the message.
         shared_data: Shared data between handlers.
     """
 
@@ -82,11 +80,23 @@ class Message(BaseUserUpdate):
     location: Location | None = None
     contacts: tuple[Contact, ...] | None = None
     order: Order | None = None
-    system: System | None = None
+    referral: Referral | None = None
     error: WhatsAppError | None = None
 
     _media_fields = {"image", "video", "sticker", "document", "audio"}
     _txt_fields = ("text", "caption")
+    _webhook_field = "messages"
+
+    @property
+    def system(self) -> None:
+        """Backwards compatibility for the ``system`` attr."""
+        warnings.warn(
+            "The `system` property is deprecated and will be removed in a future version. "
+            "Listen to `PhoneNumberChange` and `IdentityChange` updates instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return None
 
     @property
     def message_id_to_reply(self) -> str:
@@ -114,7 +124,9 @@ class Message(BaseUserUpdate):
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> Message:
-        msg = (value := update["entry"][0]["changes"][0]["value"])["messages"][0]
+        msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
+            "messages"
+        ][0]
         error = value.get("errors", msg.get("errors", (None,)))[0]
         msg_type = msg["type"]
         context = msg.get("context", {})
@@ -134,6 +146,7 @@ class Message(BaseUserUpdate):
         return cls(
             _client=client,
             raw=update,
+            waba_id=entry["id"],
             id=msg["id"],
             type=MessageType(msg_type),
             **msg_content,
@@ -146,10 +159,13 @@ class Message(BaseUserUpdate):
             forwarded=context.get("forwarded", False)
             or context.get("frequently_forwarded", False),
             forwarded_many_times=context.get("frequently_forwarded", False),
-            reply_to_message=ReplyToMessage.from_dict(context),
+            reply_to_message=ReplyToMessage.from_dict(msg["context"])
+            if context.get("id")
+            else None,
             caption=msg.get(msg_type, {}).get("caption")
             if msg_type in cls._media_fields
             else None,
+            referral=Referral.from_dict(msg["referral"]) if "referral" in msg else None,
             error=WhatsAppError.from_dict(error=error) if error is not None else None,
         )
 
@@ -158,7 +174,7 @@ class Message(BaseUserUpdate):
         self,
     ) -> Image | Video | Sticker | Document | Audio | None:
         """
-        The media of the message if any, otherwise ``None``. (image, video, sticker, document or audio)
+        The media of the message, if any, otherwise ``None``. (image, video, sticker, document or audio)
             - If you want to check whether the message has any media, use :attr:`~Message.has_media` instead.
         """
         return next(
@@ -205,7 +221,12 @@ class Message(BaseUserUpdate):
         header: str | None = None,
         body: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | SectionList | None = None,
+        buttons: Iterable[Button]
+        | URLButton
+        | VoiceCallButton
+        | FlowButton
+        | SectionList
+        | None = None,
         preview_url: bool = False,
         reply_to_message_id: str = None,
         tracker: str | None = None,
@@ -231,7 +252,7 @@ class Message(BaseUserUpdate):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The ID of the sent message.
+            The sent message.
 
         Raises:
             ValueError: If the message type is ``reaction`` and no ``reply_to_message_id`` is provided, or if the message
@@ -343,16 +364,6 @@ class Message(BaseUserUpdate):
                     title=header,
                     body=body,
                     footer=footer,
-                    reply_to_message_id=reply_to_message_id,
-                )
-            case MessageType.SYSTEM:
-                return self._client.send_message(
-                    sender=sender,
-                    to=to,
-                    text=self.system.body,
-                    header=header,
-                    footer=footer,
-                    buttons=buttons,
                     reply_to_message_id=reply_to_message_id,
                 )
             case _:

@@ -43,10 +43,20 @@ __all__ = [
     "CallbackSelectionHandler",
     "RawUpdateHandler",
     "MessageStatusHandler",
-    "TemplateStatusHandler",
+    "TemplateStatusUpdateHandler",
+    "TemplateCategoryUpdateHandler",
+    "TemplateQualityUpdateHandler",
+    "TemplateComponentsUpdateHandler",
     "FlowCompletionHandler",
     "FlowRequestHandler",
     "ChatOpenedHandler",
+    "PhoneNumberChangeHandler",
+    "IdentityChangeHandler",
+    "CallConnectHandler",
+    "CallTerminateHandler",
+    "CallStatusHandler",
+    "CallPermissionUpdateHandler",
+    "UserMarketingPreferencesHandler",
 ]
 
 import abc
@@ -55,7 +65,17 @@ import dataclasses
 import functools
 import logging
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, cast, TypeAlias, Awaitable, TypedDict
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    cast,
+    TypeAlias,
+    Awaitable,
+    TypedDict,
+    Generic,
+    TypeVar,
+)
 
 from . import utils
 from .filters import Filter, new as new_filter
@@ -64,13 +84,23 @@ from .types import (
     CallbackSelection,
     Message,
     MessageStatus,
-    TemplateStatus,
+    TemplateStatusUpdate,
+    TemplateQualityUpdate,
+    TemplateComponentsUpdate,
+    TemplateCategoryUpdate,
+    UserMarketingPreferences,
     FlowRequest,
     FlowResponse,
     ChatOpened,
     CallbackData,
     FlowButton,
     FlowActionType,
+    CallConnect,
+    CallTerminate,
+    CallStatus,
+    PhoneNumberChange,
+    IdentityChange,
+    CallPermissionUpdate,
 )
 from .types.flows import (
     FlowCompletion,
@@ -104,11 +134,45 @@ _MessageStatusCallback: TypeAlias = Callable[
 _ChatOpenedCallback: TypeAlias = Callable[
     ["WhatsApp", ChatOpened], Any | Awaitable[Any]
 ]
-_TemplateStatusCallback: TypeAlias = Callable[
-    ["WhatsApp", TemplateStatus], Any | Awaitable[Any]
+_TemplateStatusUpdateCallback: TypeAlias = Callable[
+    ["WhatsApp", TemplateStatusUpdate], Any | Awaitable[Any]
+]
+_TemplateCategoryUpdateCallback: TypeAlias = Callable[
+    ["WhatsApp", TemplateCategoryUpdate], Any | Awaitable[Any]
+]
+_TemplateQualityUpdateCallback: TypeAlias = Callable[
+    ["WhatsApp", TemplateQualityUpdate], Any | Awaitable[Any]
+]
+_TemplateComponentsUpdateCallback: TypeAlias = Callable[
+    ["WhatsApp", TemplateComponentsUpdate], Any | Awaitable[Any]
 ]
 _FlowCompletionCallback: TypeAlias = Callable[
     ["WhatsApp", FlowCompletion], Any | Awaitable[Any]
+]
+_CallConnectCallback: TypeAlias = Callable[
+    ["WhatsApp", CallConnect], Any | Awaitable[Any]
+]
+_CallTerminateCallback: TypeAlias = Callable[
+    ["WhatsApp", CallTerminate], Any | Awaitable[Any]
+]
+_CallStatusCallback: TypeAlias = Callable[
+    ["WhatsApp", CallStatus], Any | Awaitable[Any]
+]
+_CallPermissionUpdateCallback: TypeAlias = Callable[
+    ["WhatsApp", "CallPermissionUpdate"],
+    Any | Awaitable[Any],
+]
+_UserMarketingPreferencesCallback: TypeAlias = Callable[
+    ["WhatsApp", "UserMarketingPreferences"],
+    Any | Awaitable[Any],
+]
+_PhoneNumberChangeCallback: TypeAlias = Callable[
+    ["WhatsApp", "PhoneNumberChange"],
+    Any | Awaitable[Any],
+]
+_IdentityChangeCallback: TypeAlias = Callable[
+    ["WhatsApp", "IdentityChange"],
+    Any | Awaitable[Any],
 ]
 
 
@@ -122,30 +186,22 @@ class EncryptedFlowRequestType(TypedDict):
 
 _logger = logging.getLogger(__name__)
 
-_FactorySupported: TypeAlias = CallbackButton | CallbackSelection | MessageStatus
+_FactorySupported: TypeAlias = (
+    CallbackButton | CallbackSelection | MessageStatus | CallStatus
+)
+
+_UpdateType = TypeVar("_UpdateType")
 
 
-class Handler(abc.ABC):
+class Handler(Generic[_UpdateType]):
     """Base class for all handlers."""
 
-    @property
-    @abc.abstractmethod
-    def _field_name(self) -> str | None:
-        """
-        The field name of the webhook update
-        https://developers.facebook.com/docs/graph-api/webhooks/reference/whatsapp-business-account
-        """
-
-    @property
-    @abc.abstractmethod
-    def _is_user_update(self) -> bool:
-        """
-        Whether the update is a user update or not.
-        """
+    _update: type[_UpdateType] | None
+    """The update this handler should handle"""
 
     def __init__(
         self,
-        callback: Callable[[WhatsApp, Any | dict], Any | Awaitable[Any]],
+        callback: Callable[[WhatsApp, _UpdateType], Any | Awaitable[Any]],
         filters: Filter | None,
         priority: int,
     ):
@@ -157,19 +213,19 @@ class Handler(abc.ABC):
         self._priority = priority
         self._is_async_callback = utils.is_async_callable(callback)
 
-    def check(self, wa: WhatsApp, update: BaseUpdate | dict) -> bool:
+    def check(self, wa: WhatsApp, update: _UpdateType) -> bool:
         return self._filters is None or self._filters.check_sync(wa, update)
 
-    def handle(self, wa: WhatsApp, update: BaseUpdate | dict) -> bool:
+    def handle(self, wa: WhatsApp, update: _UpdateType) -> bool:
         if not self.check(wa, update):
             return False
         self._callback(wa, update)
         return True
 
-    async def acheck(self, wa: WhatsApp, update: BaseUpdate | dict) -> bool:
+    async def acheck(self, wa: WhatsApp, update: _UpdateType) -> bool:
         return self._filters is None or await self._filters.check_async(wa, update)
 
-    async def ahandle(self, wa: WhatsApp, update: BaseUpdate | dict) -> bool:
+    async def ahandle(self, wa: WhatsApp, update: _UpdateType) -> bool:
         if not await self.acheck(wa, update):
             return False
         await self._callback(wa, update) if self._is_async_callback else self._callback(
@@ -179,23 +235,23 @@ class Handler(abc.ABC):
 
     @staticmethod
     @functools.cache
-    def _fields_to_subclasses() -> dict[str, type[Handler]]:
+    def _handled_fields() -> dict[str, type[Handler]]:
         """
-        Return a dict of all the subclasses of `Handler` with their field name as the key.
-        (e.g. ``{'messages': MessageHandler}``)
+        Return a dict of all the subclasses of `Handler` with their update field name as the key.
+        (e.g. `{'messages': MessageHandler}, 'calls': CallConnect}`)
 
         **IMPORTANT:** This function is for internal use only, DO NOT USE IT to get the available handlers
         (use ``Handler.__subclasses__()`` instead).
 
-        **IMPORTANT:** This function is cached, so if you subclass `Handler` after calling this function, the new class
+        **IMPORTANT:** This function is cached, so if you subclass ``Handler`` after calling this function, the new class
         will not be included in the returned dict.
         """
         return cast(
             dict[str, type[Handler]],
             {
-                h._field_name: h
+                h._update._webhook_field: h
                 for h in Handler.__subclasses__()
-                if h._field_name is not None
+                if h._update is not None
             },
         )
 
@@ -206,11 +262,11 @@ class Handler(abc.ABC):
         return self.__repr__()
 
 
-class MessageHandler(Handler):
+class MessageHandler(Handler[Message]):
     """
-    Handler for incoming :class:`pywa.types.Message`.
+    Handler for :class:`~pywa.types.Message` updates (Text, media, etc...).
 
-    - You can use the :func:`~pywa.client.WhatsApp.on_message` decorator to register a callback for this type.
+    - You can use the :func:`~pywa.client.WhatsApp.on_message` decorator to register a handler for this type.
 
     Example:
 
@@ -220,14 +276,12 @@ class MessageHandler(Handler):
         >>> wa.add_handlers(MessageHandler(print_text_messages, filters.text))
 
     Args:
-        callback: The callback function (Takes the :class:`pywa.WhatsApp` instance and a :class:`pywa.types.Message` as
-         arguments)
+        callback: The callback function (Takes the :class:`~pywa.client.WhatsApp` client instance and a :class:`~pywa.types.Message` as positional arguments).
         filters: The filters to apply to the callback
         priority: The priority of the handler (default: ``0``)
     """
 
-    _field_name = "messages"
-    _is_user_update = True
+    _update = Message
 
     def __init__(
         self,
@@ -238,12 +292,11 @@ class MessageHandler(Handler):
         super().__init__(callback=callback, filters=filters, priority=priority)
 
 
-class _FactoryHandler(Handler):
+class _FactoryHandler(Generic[_UpdateType], Handler[_UpdateType]):
     """Base class for handlers that use a factory to construct the callback data."""
 
-    _field_name = "messages"
+    _update = None
     _data_field: str
-    _is_user_update = True
 
     def __init__(
         self,
@@ -285,9 +338,9 @@ class _FactoryHandler(Handler):
         return f"{self.__class__.__name__}(callback={self._callback}, filters={self._filters}, factory={self._factory}, priority={self._priority})"
 
 
-class CallbackButtonHandler(_FactoryHandler):
+class CallbackButtonHandler(_FactoryHandler[CallbackButton]):
     """
-    Handler for callback buttons (User clicks on a :class:`pywa.types.Button`).
+    Handler for :class:`~pywa.types.CallbackButton` updates (user clicks on a :class:`~pywa.types.callback.Button` or :class:`~pywa.types.templates.QuickReplyButton`).
 
     - You can use the :func:`~pywa.client.WhatsApp.on_callback_button` decorator to register a handler for this type.
 
@@ -299,13 +352,13 @@ class CallbackButtonHandler(_FactoryHandler):
         >>> wa.add_handlers(CallbackButtonHandler(print_btn, filters.startswith('id:')))
 
     Args:
-        callback: The callback function (gets the WhatsApp instance and the callback as arguments)
-        *filters: The filters to apply to the handler (Takes a :class:`pywa.WhatsApp` instance and a
-         :class:`pywa.types.CallbackButton` and returns a :class:`bool`)
-        factory: The constructor to use to construct the callback data.
+        callback: The callback function. (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.CallbackButton` as positional arguments)
+        filters: The filters to apply to the handler
+        factory: The :class:`~pywa.types.callback.CallbackData` constructor to use to construct the callback data.
         priority: The priority of the handler (default: ``0``)
     """
 
+    _update = CallbackButton
     _data_field = "data"
 
     def __init__(
@@ -323,9 +376,9 @@ class CallbackButtonHandler(_FactoryHandler):
         )
 
 
-class CallbackSelectionHandler(_FactoryHandler):
+class CallbackSelectionHandler(_FactoryHandler[CallbackSelection]):
     """
-    Handler for callback selections (User selects an option from :class:`pywa.types.SectionList`).
+    Handler for :class:`~pywa.types.CallbackSelection` updates (user selects an :class:`~pywa.types.callback.SectionRow` from a :class:`~pywa.types.callback.SectionList`.).
 
     - You can use the :func:`~pywa.client.WhatsApp.on_callback_selection` decorator to register a handler for this type.
 
@@ -337,13 +390,13 @@ class CallbackSelectionHandler(_FactoryHandler):
         >>> wa.add_handlers(CallbackSelectionHandler(print_selection, filters.startswith('id:')))
 
     Args:
-        callback: The callback function. (Takes a :class:`pywa.WhatsApp` instance and a
-         :class:`pywa.types.CallbackSelection` as arguments)
+        callback: The callback function. (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.callback.CallbackSelection` as positional arguments)
         filters: The filters to apply to the handler
-        factory: The constructor to use to construct the callback data.
+        factory: The :class:`~pywa.types.callback.CallbackData` constructor to use to construct the callback data.
         priority: The priority of the handler (default: ``0``)
     """
 
+    _update = CallbackSelection
     _data_field = "data"
 
     def __init__(
@@ -361,9 +414,9 @@ class CallbackSelectionHandler(_FactoryHandler):
         )
 
 
-class MessageStatusHandler(_FactoryHandler):
+class MessageStatusHandler(_FactoryHandler[MessageStatus]):
     """
-    Handler for :class:`pywa.types.MessageStatus` updates (Message is sent, delivered, read, failed, etc...).
+    Handler for :class:`~pywa.types.message_status.MessageStatus` updates (Message status updates, e.g. ``sent``, ``delivered``, ``read``).
 
     - You can use the :func:`~pywa.client.WhatsApp.on_message_status` decorator to register a handler for this type.
 
@@ -377,13 +430,13 @@ class MessageStatusHandler(_FactoryHandler):
         >>> wa.add_handlers(MessageStatusHandler(print_failed_messages, filters.failed))
 
     Args:
-        callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a :class:`pywa.types.MessageStatus` as
-            arguments)
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.message_status.MessageStatus` as positional arguments).
         filters: The filters to apply to the handler
-        factory: The constructor to use to construct the callback data.
+        factory: The :class:`~pywa.types.callback.CallbackData` constructor to use to construct the ``tracker`` data.
         priority: The priority of the handler (default: ``0``)
     """
 
+    _update = MessageStatus
     _data_field = "tracker"
 
     def __init__(
@@ -401,9 +454,9 @@ class MessageStatusHandler(_FactoryHandler):
         )
 
 
-class ChatOpenedHandler(Handler):
+class ChatOpenedHandler(Handler[ChatOpened]):
     """
-    Handler for :class:`pywa.types.ChatOpened`
+    Handler for :class:`~pywa.types.ChatOpened` updates (Chat is opened).
 
     - You can use the :func:`~pywa.client.WhatsApp.on_chat_opened` decorator to register a handler for this type.
 
@@ -415,15 +468,12 @@ class ChatOpenedHandler(Handler):
         >>> wa.add_handlers(ChatOpenedHandler(print_chat_opened))
 
     Args:
-        callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a
-            :class:`pywa.types.ChatOpened` as arguments)
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.ChatOpened` as positional arguments)
         filters: The filters to apply to the handler
         priority: The priority of the handler (default: ``0``)
-
     """
 
-    _field_name = "messages"
-    _is_user_update = True
+    _update = ChatOpened
 
     def __init__(
         self,
@@ -434,42 +484,221 @@ class ChatOpenedHandler(Handler):
         super().__init__(callback=callback, filters=filters, priority=priority)
 
 
-class TemplateStatusHandler(Handler):
+class PhoneNumberChangeHandler(Handler[PhoneNumberChange]):
     """
-    Handler for :class:`pywa.types.TemplateStatus` updates (Template message is approved, rejected etc...).
+    Handler for :class:`~pywa.types.PhoneNumberChange` updates (user changes their phone number).
 
-    - You can use the :func:`~pywa.client.WhatsApp.on_template_status` decorator to register a handler for this type.
-
+    - You can use the :func:`~pywa.client.WhatsApp.on_phone_number_change` decorator to register a handler for this type.
 
     Example:
 
         >>> from pywa import WhatsApp
         >>> wa = WhatsApp(...)
-        >>> print_template_status = lambda _, msg: print(msg)
-        >>> wa.add_handlers(TemplateStatusHandler(print_template_status))
+        >>> print_phone_number_change = lambda _, msg: print(msg)
+        >>> wa.add_handlers(PhoneNumberChangeHandler(print_phone_number_change))
 
     Args:
-        callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a
-            :class:`pywa.types.TemplateStatus` as arguments)
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.system.PhoneNumberChange` as positional arguments)
         filters: The filters to apply to the handler
         priority: The priority of the handler (default: ``0``)
     """
 
-    _field_name = "message_template_status_update"
-    _is_user_update = False
+    _update = PhoneNumberChange
 
     def __init__(
         self,
-        callback: _TemplateStatusCallback,
+        callback: _PhoneNumberChangeCallback,
         filters: Filter = None,
         priority: int = 0,
     ):
         super().__init__(callback=callback, filters=filters, priority=priority)
 
 
-class FlowCompletionHandler(Handler):
+class IdentityChangeHandler(Handler[PhoneNumberChange]):
     """
-    Handler for :class:`pywa.types.FlowCompletion` updates (Flow is completed).
+    Handler for :class:`~pywa.types.system.IdentityChange` updates (user changes their identity).
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_identity_change` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_identity_change = lambda _, msg: print(msg)
+        >>> wa.add_handlers(IdentityChangeHandler(print_identity_change))
+
+    Args:
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.system.IdentityChange` as positional arguments)
+        filters: The filters to apply to the handler
+        priority: The priority of the handler (default: ``0``)
+    """
+
+    _update = IdentityChange
+
+    def __init__(
+        self,
+        callback: _IdentityChangeCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class TemplateStatusUpdateHandler(Handler[TemplateStatusUpdate]):
+    """
+    Handler for :class:`~pywa.types.templates.TemplateStatusUpdate` updates (Template status updates, e.g. ``approved``, ``rejected`` etc.).
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_template_status_update` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_template_status_update = lambda _, msg: print(msg)
+        >>> wa.add_handlers(TemplateStatusUpdateHandler(print_template_status_update))
+
+    Args:
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.templates.TemplateStatusUpdate` as positional arguments)
+        filters: The filters to apply to the handler
+        priority: The priority of the handler (default: ``0``)
+
+    """
+
+    _update = TemplateStatusUpdate
+
+    def __init__(
+        self,
+        callback: _TemplateStatusUpdateCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class TemplateCategoryUpdateHandler(Handler[TemplateCategoryUpdate]):
+    """
+    Handler for :class:`~pywa.types.templates.TemplateCategoryUpdate` updates (Template category updates, e.g. from ``UTILITY`` to ``MARKETING``).
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_template_category_update` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_template_category_update = lambda _, msg: print(msg)
+        >>> wa.add_handlers(TemplateCategoryUpdateHandler(print_template_category_update))
+
+    Args:
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.templates.TemplateCategoryUpdate` as positional arguments)
+        filters: The filters to apply to the handler
+        priority: The priority of the handler (default: ``0``)
+
+    """
+
+    _update = TemplateCategoryUpdate
+
+    def __init__(
+        self,
+        callback: _TemplateCategoryUpdateCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class TemplateQualityUpdateHandler(Handler[TemplateQualityUpdate]):
+    """
+    Handler for :class:`~pywa.types.templates.TemplateQualityUpdate` updates (Template quality updates, e.g. ``GREEN`` to ``RED``).
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_template_quality_update` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_template_quality_update = lambda _, msg: print(msg)
+        >>> wa.add_handlers(TemplateQualityUpdateHandler(print_template_quality_update))
+
+    Args:
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.templates.TemplateQualityUpdate` as positional arguments)
+        filters: The filters to apply to the handler
+        priority: The priority of the handler (default: ``0``)
+    """
+
+    _update = TemplateQualityUpdate
+
+    def __init__(
+        self,
+        callback: _TemplateQualityUpdateCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class TemplateComponentsUpdateHandler(Handler[TemplateComponentsUpdate]):
+    """
+    Handler for :class:`~pywa.types.templates.TemplateComponentsUpdate` updates (Template components updates, e.g. when a template component is added or removed).
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_template_components_update` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_template_components_update = lambda _, msg: print(msg)
+        >>> wa.add_handlers(TemplateComponentsUpdateHandler(print_template_components_update))
+
+    Args:
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.templates.TemplateComponentsUpdate` as positional arguments)
+        filters: The filters to apply to the handler
+        priority: The priority of the handler (default: ``0``)
+    """
+
+    _update = TemplateComponentsUpdate
+
+    def __init__(
+        self,
+        callback: _TemplateComponentsUpdateCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class UserMarketingPreferencesHandler(Handler[UserMarketingPreferences]):
+    """
+    Handler for :class:`~pywa.types.user_preferences.UserMarketingPreferences` updates (User marketing preferences updates).
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_user_marketing_preferences` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_user_marketing_preferences = lambda _, msg: print(msg)
+        >>> wa.add_handlers(UserMarketingPreferencesHandler(print_user_marketing_preferences))
+
+    Args:
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.user_preferences.UserMarketingPreferences` as positional arguments)
+        filters: The filters to apply to the handler
+        priority: The priority of the handler (default: ``0``)
+    """
+
+    _update = UserMarketingPreferences
+
+    def __init__(
+        self,
+        callback: _UserMarketingPreferencesCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class FlowCompletionHandler(Handler[FlowCompletion]):
+    """
+    Handler for :class:`~pywa.types.flows.FlowCompletion` updates (Flow completion updates).
 
     - You can use the :func:`~pywa.client.WhatsApp.on_flow_completion` decorator to register a handler for this type.
 
@@ -477,19 +706,16 @@ class FlowCompletionHandler(Handler):
 
         >>> from pywa import WhatsApp
         >>> wa = WhatsApp(...)
-        >>> print_flow = lambda _, flow: print(flow)
-        >>> wa.add_handlers(FlowCompletionHandler(print_flow)
+        >>> print_flow_completion = lambda _, msg: print(msg)
+        >>> wa.add_handlers(FlowCompletionHandler(print_flow_completion))
 
     Args:
-        callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a
-            :class:`pywa.types.FlowCompletion` as arguments)
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.flows.FlowCompletion` as positional arguments)
         filters: The filters to apply to the handler
         priority: The priority of the handler (default: ``0``)
-
     """
 
-    _field_name = "messages"
-    _is_user_update = True
+    _update = FlowCompletion
 
     def __init__(
         self,
@@ -500,28 +726,154 @@ class FlowCompletionHandler(Handler):
         super().__init__(callback=callback, filters=filters, priority=priority)
 
 
-class RawUpdateHandler(Handler):
+class CallConnectHandler(Handler[CallConnect]):
     """
-    A raw update callback.
+    Handler for :class:`~pywa.types.calls.CallConnect` updates (Call connect updates).
 
-    - This handler will be called for **EVERY** update received from WhatsApp, even if it's not sent to the client phone number.
+    - You can use the :func:`~pywa.client.WhatsApp.on_call_connect` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_call_connect = lambda _, msg: print(msg)
+        >>> wa.add_handlers(CallConnectHandler(print_call_connect))
+
+    Args:
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.calls.CallConnect` as positional arguments)
+        filters: The filters to apply to the handler
+        priority: The priority of the handler (default: ``0``)
+    """
+
+    _update = CallConnect
+
+    def __init__(
+        self,
+        callback: _CallConnectCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class CallTerminateHandler(Handler[CallTerminate]):
+    """
+    Handler for :class:`~pywa.types.calls.CallTerminate` updates (Call terminate updates).
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_call_terminate` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_call_terminate = lambda _, msg: print(msg)
+        >>> wa.add_handlers(CallTerminateHandler(print_call_terminate))
+
+    Args:
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.calls.CallTerminate` as positional arguments)
+        filters: The filters to apply to the handler
+        priority: The priority of the handler (default: ``0``)
+    """
+
+    _update = CallTerminate
+
+    def __init__(
+        self,
+        callback: _CallTerminateCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class CallStatusHandler(_FactoryHandler[CallStatus]):
+    """
+    Handler for :class:`~pywa.types.calls.CallStatus` updates (Call status updates, e.g. ``ringing``, ``accepted``, ``rejected``, etc.).
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_call_status` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_call_status = lambda _, msg: print(msg)
+        >>> wa.add_handlers(CallStatusHandler(print_call_status))
+
+    Args:
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.calls.CallStatus` as positional arguments)
+        filters: The filters to apply to the handler
+        factory: The :class:`~pywa.types.callback.CallbackData` constructor to use to construct the ``tracker`` data.
+        priority: The priority of the handler (default: ``0``)
+    """
+
+    _update = CallStatus
+    _data_field = "tracker"
+
+    def __init__(
+        self,
+        callback: _CallStatusCallback,
+        filters: Filter = None,
+        factory: type[CallbackData] | None = None,
+        priority: int = 0,
+    ):
+        super().__init__(
+            callback=callback,
+            filters=filters,
+            factory=factory,
+            priority=priority,
+        )
+
+
+class CallPermissionUpdateHandler(Handler[CallPermissionUpdate]):
+    """
+    Handler for :class:`~pywa.types.calls.CallPermissionUpdate` updates (Call permission updates, e.g. when a user grants or revokes permission to receive calls).
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_call_permission_update` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_call_permission_update = lambda _, msg: print(msg)
+        >>> wa.add_handlers(CallPermissionUpdateHandler(print_call_permission_update))
+
+    Args:
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.calls.CallPermissionUpdate` as positional arguments)
+        filters: The filters to apply to the handler
+        priority: The priority of the handler (default: ``0``)
+    """
+
+    _update = CallPermissionUpdate
+
+    def __init__(
+        self,
+        callback: _CallPermissionUpdateCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class RawUpdateHandler(Handler[dict]):
+    """
+    Handler for raw updates (dicts) from the webhook.
+
     - You can use the :func:`~pywa.client.WhatsApp.on_raw_update` decorator to register a handler for this type.
 
     Example:
 
         >>> from pywa import WhatsApp
         >>> wa = WhatsApp(...)
-        >>> print_updates = lambda _, data: print(data)
-        >>> wa.add_handlers(RawUpdateHandler(print_updates))
+        >>> print_raw_update = lambda _, update: print(update)
+        >>> wa.add_handlers(RawUpdateHandler(print_raw_update))
 
     Args:
-        callback: The callback function (Takes a :class:`pywa.WhatsApp` instance and a :class:`dict` as arguments)
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a raw update :class:`dict` as positional arguments)
         filters: The filters to apply to the handler
         priority: The priority of the handler (default: ``0``)
     """
 
-    _field_name = None
-    _is_user_update = False
+    _update = None
 
     def __init__(
         self,
@@ -557,39 +909,11 @@ class _CallbackWrapperDecorators(abc.ABC):
         filters: Filter = None,
     ) -> _CallbackWrapperDecorators: ...
 
-    def set_errors_handler(self, callback: None) -> None:
-        """Deprecated. Use ``.add_handler(...)`` with filter to check ``req.has_error``"""
-        warnings.warn(
-            "The `set_errors_handler` method is deprecated. Use `.add_handler(...)` with filter to check `req.has_error`",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        for action in FlowRequestActionType:
-            self.add_handler(
-                callback=callback,
-                action=action,
-                screen=None,
-                filters=_flow_req_has_error_filter,
-            )
-        return self
-
-    def on_errors(self=None, clb: None = None) -> None:
-        """Deprecated. Use ``.add_handler(...)`` with filter to check ``req.has_error``"""
-        warnings.warn(
-            "The `on_errors` decorator is deprecated. Use `on_data_exchange(call_on_error=True)` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        if clb:  # @main_callback.on_errors
-            self.set_errors_handler(callback=clb)
-            return clb
-
-        def decorator(callback: _FlowRequestHandlerT):  # @main_callback.on_errors()
-            self.set_errors_handler(callback)
-            return callback
-
-        return decorator
+    @abc.abstractmethod
+    def add_completion_handler(
+        self,
+        handler: FlowCompletionHandler,
+    ) -> _CallbackWrapperDecorators: ...
 
     def on(
         self,
@@ -774,6 +1098,44 @@ class _CallbackWrapperDecorators(abc.ABC):
 
         return deco
 
+    def on_completion(
+        self=None,
+        filters: Filter = None,
+        *,
+        priority: int = 0,
+    ) -> Callable[[_FlowCompletionCallback], _FlowCompletionCallback]:
+        """
+        Decorator to add a handler for flow completion requests.
+
+        **The :class:`FlowCompletion` update is not sent to the flow endpoint, but to the webhook endpoint.**
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_flow_request("/feedback_flow")
+            ... def feedback_flow_handler(_: WhatsApp, req: FlowRequest):
+            ...     ...
+
+            >>> @feedback_flow_handler.on_completion(filters=filters.new(lambda _, flow: flow.response["rating"] == "5"))
+            ... def on_flow_completion(_: WhatsApp, flow: FlowCompletion):
+            ...     print("Flow completed with rating 5")
+        """
+        if callable(filters):
+            self.add_completion_handler(
+                FlowCompletionHandler(callback=filters, filters=None, priority=priority)
+            )
+            return filters
+
+        def deco(callback: _FlowCompletionCallback) -> _FlowCompletionCallback:
+            self.add_completion_handler(
+                FlowCompletionHandler(
+                    callback=callback, filters=filters, priority=priority
+                )
+            )
+            return callback
+
+        return deco
+
 
 class FlowRequestHandler(_CallbackWrapperDecorators):
     """
@@ -785,7 +1147,6 @@ class FlowRequestHandler(_CallbackWrapperDecorators):
         endpoint: The endpoint to listen to (The endpoint uri you set to the flow. e.g ``/feedback_flow``).
         acknowledge_errors: Whether to acknowledge errors (The return value of the callback will be ignored, and
          pywa will acknowledge the error automatically).
-        handle_health_check: Deprecated. health checks will be handled automatically by pywa.
         private_key: The private key to use to decrypt the requests (Override the global ``business_private_key``).
         private_key_password: The password to use to decrypt the private key (Override the global ``business_private_key_password``).
         request_decryptor: The function to use to decrypt the requests (Override the global ``flows_request_decryptor``)
@@ -802,18 +1163,13 @@ class FlowRequestHandler(_CallbackWrapperDecorators):
         private_key_password: str | None = None,
         request_decryptor: utils.FlowRequestDecryptor | None = None,
         response_encryptor: utils.FlowResponseEncryptor | None = None,
-        handle_health_check: None = None,
     ):
-        if handle_health_check is not None:
-            warnings.warn(
-                "The `handle_health_check` argument is deprecated and will be removed in the future.",
-                DeprecationWarning,
-            )
         self._main_handler = callback
         self._handlers: dict[
             tuple[FlowRequestActionType | str, str | None],
             list[tuple[Filter | None, _FlowRequestHandlerT]],
         ] = collections.defaultdict(list)  # {(action, screen?): [(filters?, callback)]}
+        self._completion_handlers: list[FlowCompletionHandler] = []
         self._endpoint = endpoint
         self._acknowledge_errors = acknowledge_errors
         self._private_key = private_key
@@ -830,6 +1186,18 @@ class FlowRequestHandler(_CallbackWrapperDecorators):
         filters: Filter = None,
     ) -> _CallbackWrapperDecorators:
         self._handlers[(action, screen)].append((filters, callback))
+        return self
+
+    def add_completion_handler(
+        self, handler: FlowCompletionHandler
+    ) -> _CallbackWrapperDecorators:
+        """
+        Add a handler for flow completion requests.
+
+        Args:
+            handler: The handler to add.
+        """
+        self._completion_handlers.append(handler)
         return self
 
 
@@ -852,7 +1220,7 @@ class _HandlerDecorators:
         Decorator to register a function as a callback for raw updates (:class:`dict`).
 
         - This callback is called for **EVERY** update received from WhatsApp, even if it's not sent to the client phone number.
-        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`RawUpdateHandler`.
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.RawUpdateHandler`.
 
         Example:
 
@@ -893,9 +1261,9 @@ class _HandlerDecorators:
         priority: int = 0,
     ) -> Callable[[_MessageCallback], _MessageCallback] | _MessageCallback:
         """
-        Decorator to register a function as a callback for incoming :class:`pywa.types.Message` (User sends a message).
+        Decorator to register a function as a callback for incoming :class:`~pywa.types.Message`.
 
-        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`MessageHandler`.
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.MessageHandler`.
 
         Example:
 
@@ -942,9 +1310,9 @@ class _HandlerDecorators:
         | _CallbackButtonCallback
     ):
         """
-        Decorator to register a function as a callback when a user clicks on a :class:`pywa.types.Button`.
+        Decorator to register a function as a callback for incoming :class:`~pywa.types.CallbackButton` (when a user clicks on a :class:`~pywa.types.callback.Button` or :class:`~pywa.types.templates.QuickReplyButton`).
 
-        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`CallbackButtonHandler`.
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.CallbackButtonHandler`.
 
         Example:
 
@@ -956,7 +1324,7 @@ class _HandlerDecorators:
 
         Args:
             filters: Filters to apply to the incoming callback button presses.
-            factory: The constructor to use to construct the callback data.
+            factory: The :class:`~pywa.types.callback.CallbackData` subclass to use to construct the callback data.
             priority: The priority of the handler (default: ``0``).
         """
 
@@ -993,9 +1361,9 @@ class _HandlerDecorators:
         | _CallbackSelectionCallback
     ):
         """
-        Decorator to register a function as a callback when a user selects an option from a :class:`pywa.types.SectionList`.
+        Decorator to register a function as a callback for incoming :class:`~pywa.types.CallbackSelection` (when a user selects an :class:`~pywa.types.callback.SectionRow` from a :class:`~pywa.types.callback.SectionList`.).
 
-        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`CallbackSelectionHandler`.
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.CallbackSelectionHandler`.
 
         Example:
 
@@ -1007,7 +1375,7 @@ class _HandlerDecorators:
 
         Args:
             filters: Filters to apply to the incoming callback selections.
-            factory: The constructor to use to construct the callback data.
+            factory: The :class:`~pywa.types.callback.CallbackData` subclass to use to construct the callback data.
             priority: The priority of the handler (default: ``0``).
         """
 
@@ -1044,10 +1412,9 @@ class _HandlerDecorators:
         | _MessageStatusCallback
     ):
         """
-        Decorator to register a function as a callback for incoming message status changes (Message is sent, delivered,
-        read, failed, etc...).
+        Decorator to register a function as a callback for incoming :class:`~pywa.types.message_status.MessageStatus` (when a message status changes, e.g. ``sent``, ``delivered``, ``read``, ``failed``).
 
-        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`MessageStatusHandler`.
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.MessageStatusHandler`.
 
         **DO NOT USE THIS HANDLER WITHOUT FILTERS TO SEND MESSAGES, IT WILL CAUSE AN INFINITE LOOP!**
 
@@ -1062,7 +1429,7 @@ class _HandlerDecorators:
 
         Args:
             filters: Filters to apply to the incoming message status changes.
-            factory: The constructor to use to construct the callback data.
+            factory: The :class:`~pywa.types.callback.CallbackData` subclass to use to construct the ``tracker`` data.
             priority: The priority of the handler (default: ``0``).
         """
 
@@ -1095,9 +1462,9 @@ class _HandlerDecorators:
         priority: int = 0,
     ) -> Callable[[_ChatOpenedCallback], _ChatOpenedCallback] | _ChatOpenedCallback:
         """
-        Decorator to register a function as a callback for incoming chat opened (User opens a chat).
+        Decorator to register a function as a callback for incoming :class:`~pywa.types.ChatOpened` (when a user opens a chat with the business).
 
-        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`ChatOpenedHandler`.
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.ChatOpenedHandler`.
 
         Example:
 
@@ -1108,7 +1475,7 @@ class _HandlerDecorators:
             ...     print(f"The user {chat_opened.from_user.wa_id} just opened a chat with us!")
 
         Args:
-            filters: Filters to apply to the incoming chat opened.
+            filters: Filters to apply to the incoming chat opened events.
             priority: The priority of the handler (default: ``0``).
         """
 
@@ -1133,27 +1500,120 @@ class _HandlerDecorators:
 
         return deco
 
-    def on_template_status(
+    def on_phone_number_change(
         self: WhatsApp | Filter = None,
         filters: Filter = None,
         priority: int = 0,
     ) -> (
-        Callable[[_TemplateStatusCallback], _TemplateStatusCallback]
-        | _TemplateStatusCallback
+        Callable[[_PhoneNumberChangeCallback], _PhoneNumberChangeCallback]
+        | _PhoneNumberChangeCallback
     ):
         """
-        Decorator to register a function as a callback for :class:`pywa.types.TemplateStatus` updates (Template message
-        is approved, rejected etc...).
+        Decorator to register a function as a callback for incoming :class:`~pywa.types.system.PhoneNumberChange` (when a user changes their phone number).
 
-        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`TemplateStatusHandler`.
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.PhoneNumberChangeHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_phone_number_change
+            ... def phone_number_change_handler(client: WhatsApp, phone_number_change: types.PhoneNumberChange):
+            ...     print(f"The user {phone_number_change.from_user.wa_id} just changed their phone number to {phone_number_change.new_phone_number}!")
+
+        Args:
+            filters: Filters to apply to the incoming phone number change events.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=PhoneNumberChangeHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(callback: _PhoneNumberChangeCallback) -> _PhoneNumberChangeCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=PhoneNumberChangeHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_identity_change(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_IdentityChangeCallback], _IdentityChangeCallback]
+        | _IdentityChangeCallback
+    ):
+        """
+        Decorator to register a function as a callback for incoming :class:`~pywa.types.system.IdentityChange` (when a user changes their identity).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.IdentityChangeHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_identity_change
+            ... def identity_change_handler(client: WhatsApp, identity_change: types.IdentityChange):
+            ...     print(f"The user {identity_change.from_user.wa_id} just changed their identity!: {identity_change.body}")
+
+        Args:
+            filters: Filters to apply to the incoming identity change events.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=IdentityChangeHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(callback: _IdentityChangeCallback) -> _IdentityChangeCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=IdentityChangeHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_template_status_update(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_TemplateStatusUpdateCallback], _TemplateStatusUpdateCallback]
+        | _TemplateStatusUpdateCallback
+    ):
+        """
+        Decorator to register a function as a callback for :class:`~pywa.types.templates.TemplateStatusUpdate` updates (Template status changed, e.g. ``approved``, ``rejected``, etc.).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.TemplateStatusUpdateHandler`.
 
         Example:
 
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
-            >>> @wa.on_template_status
-            ... def approved_handler(client: WhatsApp, status: types.TemplateStatus):
-            ...     print(f"Template {status.message_template_name} just got {status.event}!")
+            >>> @wa.on_template_status_update
+            ... def approved_handler(client: WhatsApp, update: types.TemplateStatusUpdate):
+            ...     print(f"Template {update.template_name} just got {update.new_status}!")
 
         Args:
             filters: Filters to apply to the incoming template status changes.
@@ -1163,17 +1623,166 @@ class _HandlerDecorators:
         if (
             clb := _registered_without_parentheses(
                 self=self,
-                handler_type=TemplateStatusHandler,
+                handler_type=TemplateStatusUpdateHandler,
                 filters=filters,
                 priority=priority,
             )
         ) is not None:
             return clb
 
-        def deco(callback: _TemplateStatusCallback) -> _TemplateStatusCallback:
+        def deco(
+            callback: _TemplateStatusUpdateCallback,
+        ) -> _TemplateStatusUpdateCallback:
             return _registered_with_parentheses(
                 self=self,
-                handler_type=TemplateStatusHandler,
+                handler_type=TemplateStatusUpdateHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_template_category_update(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_TemplateCategoryUpdateCallback], _TemplateCategoryUpdateCallback]
+        | _TemplateCategoryUpdateCallback
+    ):
+        """
+        Decorator to register a function as a callback for :class:`~pywa.types.templatesCategoryUpdate` updates (Template category changed, e.g. from ``UTILITY`` to ``MARKETING``).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.TemplateCategoryUpdateHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types, filters
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_template_category_update
+            ... def category_update_handler(client: WhatsApp, update: types.TemplateCategoryUpdate):
+            ...     print(f"Template {update.template_name} category changed from {update.previous_category} to {update.new_category}!")
+
+        Args:
+            filters: Filters to apply to the incoming template category changes.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=TemplateCategoryUpdateHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(
+            callback: _TemplateCategoryUpdateCallback,
+        ) -> _TemplateCategoryUpdateCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=TemplateCategoryUpdateHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_template_quality_update(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_TemplateQualityUpdateCallback], _TemplateQualityUpdateCallback]
+        | _TemplateQualityUpdateCallback
+    ):
+        """
+        Decorator to register a function as a callback for :class:`~pywa.types.templates.TemplateQualityUpdate` updates (Template quality changed).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.TemplateQualityUpdateHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types, filters
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_template_quality_update
+            ... def quality_update_handler(client: WhatsApp, update: types.TemplateQualityUpdate):
+            ...     print(f"Template {update.template_name} quality changed to {update.new_quality_score}!")
+
+        Args:
+            filters: Filters to apply to the incoming template quality changes.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=TemplateQualityUpdateHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(
+            callback: _TemplateQualityUpdateCallback,
+        ) -> _TemplateQualityUpdateCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=TemplateQualityUpdateHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_template_components_update(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_TemplateComponentsUpdateCallback], _TemplateComponentsUpdateCallback]
+        | _TemplateComponentsUpdateCallback
+    ):
+        """
+        Decorator to register a function as a callback for :class:`pywa.types.templates.TemplateComponentsUpdate` updates (Template components changed).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.TemplateComponentsUpdateHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types, filters
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_template_components_update
+            ... def components_update_handler(client: WhatsApp, update: types.TemplateComponentsUpdate):
+            ...     print(f"Template {update.template_name} components updated!")
+
+        Args:
+            filters: Filters to apply to the incoming template components changes.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=TemplateComponentsUpdateHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(
+            callback: _TemplateComponentsUpdateCallback,
+        ) -> _TemplateComponentsUpdateCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=TemplateComponentsUpdateHandler,
                 callback=callback,
                 filters=filters,
                 priority=priority,
@@ -1190,9 +1799,9 @@ class _HandlerDecorators:
         | _FlowCompletionCallback
     ):
         """
-        Decorator to register a function as a callback for :class:`pywa.types.FlowCompletion` updates (Flow is completed).
+        Decorator to register a function as a callback for :class:`~pywa.types.FlowCompletion` updates (:class:`~pywa.types.callback.FlowButton` is completed).
 
-        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`FlowCompletionHandler`.
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.FlowCompletionHandler`.
 
         Example:
 
@@ -1228,6 +1837,247 @@ class _HandlerDecorators:
 
         return deco
 
+    def on_call_connect(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> Callable[[_CallConnectCallback], _CallConnectCallback] | _CallConnectCallback:
+        """
+        Decorator to register a function as a callback for :class:`~pywa.types.calls.CallConnect` updates (incoming/outgoing call).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.CallConnectHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_call_connect
+            ... def incoming_call_handler(client: WhatsApp, call: types.CallConnect):
+            ...     print(f"You getting an incoming call from {call.from_user.name}")
+            ...     call.accept()
+
+
+        Args:
+            filters: Filters to apply to the incoming call connect.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=CallConnectHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(callback: _CallConnectCallback) -> _CallConnectCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=CallConnectHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_call_terminate(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_CallTerminateCallback], _CallTerminateCallback]
+        | _CallTerminateCallback
+    ):
+        """
+        Decorator to register a function as a callback for :class:`~pywa.types.calls.CallTerminate` updates (when a call is ended).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.CallTerminateHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_call_terminate
+            ... def on_hangup(client: WhatsApp, call: types.CallTerminate):
+            ...     print(f"The call {call.from_user.name} is terminated")
+
+        Args:
+            filters: Filters to apply to the incoming call terminate.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=CallTerminateHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(callback: _CallTerminateCallback) -> _CallTerminateCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=CallTerminateHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_call_status(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        factory: type[CallbackData] | None = None,
+        priority: int = 0,
+    ) -> Callable[[_CallStatusCallback], _CallStatusCallback] | _CallStatusCallback:
+        """
+        Decorator to register a function as a callback for :class:`~pywa.types.calls.CallStatus` updates (when a call status changes, e.g. ``ringing``, ``accepted``, ``rejected``, etc.).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.CallStatusHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_call_status
+            ... def on_status(client: WhatsApp, call: types.CallStatus):
+            ...     print(f"The call with {call.from_user.name} is {call.status}")
+
+        Args:
+            filters: Filters to apply to the incoming call status.
+            factory: The constructor to use to construct the callback data.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=CallStatusHandler,
+                filters=filters,
+                priority=priority,
+                factory=factory,
+            )
+        ) is not None:
+            return clb
+
+        def deco(callback: _CallStatusCallback) -> _CallStatusCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=CallStatusHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+                factory=factory,
+            )
+
+        return deco
+
+    def on_call_permission_update(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_CallPermissionUpdateCallback], _CallPermissionUpdateCallback]
+        | _CallPermissionUpdateCallback
+    ):
+        """
+        Decorator to register a function as a callback for :class:`~pywa.types.calls.CallPermissionUpdate` updates (when the user accepts or rejects the :class:`~pywa.types.callback.CallPermissionRequestButton`).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.CallPermissionUpdateHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_call_permission_update
+            ... def call_permission_handler(client: WhatsApp, update: types.CallPermissionUpdate):
+            ...     if update: # Use boolean context to check if the call permission is granted
+            ...         update.reply("We will now be able to call you!")
+            ...         update.call(...)
+
+        Args:
+            filters: Filters to apply to the incoming call permission updates.
+            priority: The priority of the handler (default: ``0``).
+        """
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=CallPermissionUpdateHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(
+            callback: _CallPermissionUpdateCallback,
+        ) -> _CallPermissionUpdateCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=CallPermissionUpdateHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_user_marketing_preferences(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_UserMarketingPreferencesCallback], _UserMarketingPreferencesCallback]
+        | _UserMarketingPreferencesCallback
+    ):
+        """
+        Decorator to register a function as a callback for :class:`~pywa.types.user_preferences.UserMarketingPreferences` updates (User wants to stop or resume receiving marketing :class:`~pywa.types.templates.Template` 's).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.UserMarketingPreferencesHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_user_marketing_preferences
+            ... def user_marketing_preferences_handler(client: WhatsApp, prefs: types.UserMarketingPreferences):
+            ...     if not prefs: # use boolean context to check if the user wants to stop receiving marketing messages
+            ...         print(f"The user {prefs.from_user.wa_id} wants to stop receiving marketing messages.")
+
+        Args:
+            filters: Filters to apply to the incoming user marketing preferences updates.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=UserMarketingPreferencesHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(
+            callback: _UserMarketingPreferencesCallback,
+        ) -> _UserMarketingPreferencesCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=UserMarketingPreferencesHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
     def on_flow_request(
         self: WhatsApp | str = None,
         endpoint: str = None,
@@ -1237,13 +2087,14 @@ class _HandlerDecorators:
         private_key_password: str | None = None,
         request_decryptor: utils.FlowRequestDecryptor | None = None,
         response_encryptor: utils.FlowResponseEncryptor | None = None,
-        handle_health_check: None = None,
     ) -> Callable[
         [_FlowRequestHandlerT],
         FlowRequestCallbackWrapper | FlowRequestHandler,
     ]:
         """
-        Decorator to register a function to handle and respond to incoming flow requests.
+        Decorator to register a function to handle and respond to incoming :class:`~pywa.types.flows.FlowRequest` (when a user interacts with a flow. e.g. trigger :class:`~pywa.types.flows.DataExchangeAction` or navigates to a screen in a flow).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.FlowRequestHandler`.
 
         Example:
 
@@ -1265,7 +2116,6 @@ class _HandlerDecorators:
             private_key_password: The password to use to decrypt the private key (Override the global ``business_private_key_password``).
             request_decryptor: The function to use to decrypt the requests (Override the global ``flows_request_decryptor``)
             response_encryptor: The function to use to encrypt the responses (Override the global ``flows_response_encryptor``)
-            handle_health_check: Deprecated. health checks will be handled automatically by pywa.
         """
 
         def decorator(
@@ -1283,7 +2133,6 @@ class _HandlerDecorators:
                     private_key_password=private_key_password,
                     request_decryptor=request_decryptor,
                     response_encryptor=response_encryptor,
-                    handle_health_check=handle_health_check,
                 )
                 setattr(handler, _flow_request_handler_attr, None)
                 return handler
@@ -1292,7 +2141,6 @@ class _HandlerDecorators:
                 endpoint=endpoint,
                 callback=callback,
                 acknowledge_errors=acknowledge_errors,
-                handle_health_check=handle_health_check,
                 private_key=private_key,
                 private_key_password=private_key_password,
                 request_decryptor=request_decryptor,
@@ -1393,7 +2241,6 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         private_key_password: str | None = None,
         request_decryptor: utils.FlowRequestDecryptor | None = None,
         response_encryptor: utils.FlowResponseEncryptor | None = None,
-        handle_health_check: None = None,
     ):
         wa._check_for_async_callback(callback)
         self._wa = wa
@@ -1437,11 +2284,6 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
                 '\n>> Install it with `pip install cryptography` / pip install "pywa[cryptography]" or use a '
                 "custom decryptor/encryptor."
             )
-        if handle_health_check is not None:
-            warnings.warn(
-                "The `handle_health_check` argument is deprecated and will be removed in the future.",
-                DeprecationWarning,
-            )
 
     def add_handler(
         self,
@@ -1481,6 +2323,23 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         self._handlers[
             (action, screen.id if isinstance(screen, Screen) else screen)
         ].append((filters, callback))
+        return self
+
+    def add_completion_handler(
+        self, handler: FlowCompletionHandler
+    ) -> FlowRequestCallbackWrapper:
+        """
+        Add a handler for flow completion events.
+
+        - This is a shortcut for adding a handler for the `FlowCompletionHandler` type.
+
+        Args:
+            handler: The FlowCompletionHandler instance to add.
+
+        Returns:
+            The current instance.
+        """
+        self._wa.add_handlers(handler)
         return self
 
     def _get_callback(self, req: FlowRequest) -> _FlowRequestHandlerT:

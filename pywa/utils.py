@@ -11,7 +11,7 @@ import enum
 import importlib
 import warnings
 import logging
-from typing import Any, Callable, Protocol, TypeAlias
+from typing import Any, Callable, Protocol, TypeAlias, ClassVar
 
 import httpx
 
@@ -83,22 +83,12 @@ class ServerType(enum.Enum):
 
 
 def is_installed(lib: str) -> bool:
-    """Check if the cryptography library is installed."""
+    """Check if the library is installed."""
     try:
         importlib.import_module(lib)
         return True
     except ImportError:
         return False
-
-
-def is_requests_and_err(session) -> tuple[bool, type[Exception]]:
-    """Check if the given object is a requests/httpx session and return the error type."""
-    try:
-        if isinstance(session, importlib.import_module("requests").Session):
-            return True, importlib.import_module("requests").HTTPError
-        raise ImportError
-    except ImportError:
-        return False, importlib.import_module("httpx").HTTPStatusError
 
 
 class Version(enum.Enum):
@@ -119,7 +109,7 @@ class Version(enum.Enum):
 
     # KEY = (MIN_VERSION: str, LATEST_VERSION: str)
     GRAPH_API = ("17.0", "23.0")
-    FLOW_JSON = ("2.1", "7.1")
+    FLOW_JSON = ("2.1", "7.2")
     FLOW_DATA_API = ("3.0", "3.0")
     FLOW_MSG = ("3", "3")
 
@@ -157,13 +147,44 @@ class CallbackURLScope(enum.Enum):
 
 
 class StrEnum(str, enum.Enum):
-    """Enum where the values are also (and must be) strings."""
+    """A string-based enum that allows for custom handling of missing values."""
+
+    _check_value: Callable[[str], bool] | None = str.isupper
+    """Check if the value needs to be modified or not."""
+    _modify_value: Callable[[str], str] | None = str.upper
+    """Modify the value if needed."""
 
     def __str__(self):
+        """Return the string representation of the enum member."""
         return self.value
 
     def __repr__(self):
         return f"{self.__class__.__name__}.{self.name}"
+
+    def __init_subclass__(cls, *args, **kwargs):
+        """Ensure that the enum has an 'UNKNOWN' member to handle missing values."""
+        if list(cls) and not hasattr(
+            cls, "UNKNOWN"
+        ):  # in python3.10 __init_subclass__ does not have access to enum members
+            raise TypeError(
+                f"Enum {cls.__name__} must have an 'UNKNOWN' member to handle missing values."
+            )
+        return super().__init_subclass__(*args, **kwargs)
+
+    @classmethod
+    def _missing_(cls, value: str):
+        """Handle missing values in the enum."""
+        if callable(cls._check_value) and not cls._check_value(value):
+            return cls(cls._modify_value(value))
+
+        _logger.warning(
+            "Unknown value '%s' for enum '%s'. Defaulting to `%s.UNKNOWN`.",
+            value,
+            cls.__name__,
+            cls.__name__,
+        )
+        # noinspection PyUnresolvedReferences
+        return cls.UNKNOWN
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -179,6 +200,22 @@ class FromDict:
                 for k, v in (data | kwargs).items()
                 if k in (f.name for f in dataclasses.fields(cls))
             }
+        )
+
+
+class APIObject:
+    """Base class for API objects that allows overriding field names."""
+
+    _override_api_fields: ClassVar[dict[str, str]] = {}
+    """Override API field names for this object."""
+
+    @classmethod
+    @functools.cache
+    def _api_fields(cls, *args, **kwargs) -> tuple[str, ...]:
+        return tuple(
+            cls._override_api_fields.get(f.name, f.name)
+            for f in dataclasses.fields(cls)
+            if not f.name.startswith("_")
         )
 
 
@@ -217,7 +254,7 @@ def default_flow_request_decryptor(
     The default global decryption function for decrypting data exchange requests from WhatsApp Flow.
 
     - This implementation follows the :class:`FlowRequestDecryptor` type hint.
-    - This implementation requires ``cryptography`` to be installed. To install it, run ``pip3 install 'pywa[cryptography]'`` or ``pip3 install cryptography``.
+    - This implementation requires `cryptography <https://cryptography.io>`_ to be installed. To install it, run `pip3 install 'pywa[cryptography]'` or `pip3 install cryptography`.
     - This implementation was taken from the official documentation at
       `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/guides/implementingyourflowendpoint#python-django-example>`_.
 
@@ -286,7 +323,7 @@ def default_flow_response_encryptor(response: dict, aes_key: bytes, iv: bytes) -
     The default global encryption function for encrypting data exchange responses to WhatsApp Flow.
 
     - This implementation follows the :class:`FlowResponseEncryptor` type hint.
-    - This implementation requires ``cryptography`` to be installed. To install it, run ``pip3 install 'pywa[cryptography]'`` or ``pip3 install cryptography``.
+    - This implementation requires `cryptography <https://cryptography.io>`_ to be installed. To install it, run `pip3 install 'pywa[cryptography]'` or `pip3 install cryptography`.
     - This implementation was taken from the official documentation at
       `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/guides/implementingyourflowendpoint#python-django-example>`_.
 
@@ -330,16 +367,41 @@ def webhook_updates_validator(
     return hmac.compare_digest(signature, x_hub_signature.removeprefix("sha256="))
 
 
+@dataclasses.dataclass(frozen=True, slots=True)
+class FlowRequestDecryptedMedia:
+    """
+    Represents the decrypted media from a flow request.
+
+    Attributes:
+        media_id (str): The media ID.
+        filename (str): The filename of the media.
+        data (bytes): The decrypted media data.
+    """
+
+    media_id: str
+    filename: str
+    data: bytes
+
+    def __iter__(self):
+        """Allow iteration over the attributes."""
+        warnings.warn(
+            "flow_request_media_decryptor() is no longer return (media_id, filename, data) tuple, but FlowRequestDecryptedMedia object.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return iter((self.media_id, self.filename, self.data))
+
+
 def flow_request_media_decryptor(
     encrypted_media: dict[str, str | dict[str, str]],
     dl_session: httpx.Client | None = None,
-) -> tuple[str, str, bytes]:
+) -> FlowRequestDecryptedMedia:
     """
     Decrypt the encrypted media file from the flow request.
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components/media_upload#endpoint>`_.
-    - Use the .decrypt_media() s
-    - This implementation requires ``cryptography`` to be installed. To install it, run ``pip3 install 'pywa[cryptography]'`` or ``pip3 install cryptography``.
+    - Use the .decrypt_media() shorthand method of the :class:`FlowRequest` class instead.
+    - This implementation requires `cryptography <https://cryptography.io>`_ to be installed. To install it, run `pip3 install 'pywa[cryptography]'` or `pip3 install cryptography`.
 
     Example:
 
@@ -347,9 +409,9 @@ def flow_request_media_decryptor(
         >>> wa = WhatsApp(...)
         >>> @wa.on_flow_request("/media-upload")
         ... def on_media_upload_request(_: WhatsApp, req: types.FlowRequest) -> types.FlowResponse | None:
-        ...     media_id, filename, decrypted_data = req.decrypt_media(key="driver_license", index=0)
-        ...     with open(filename, "wb") as file:
-        ...         file.write(decrypted_data)
+        ...     dec = req.decrypt_media(key="driver_license", index=0)
+        ...     with open(dec.filename, "wb") as file:
+        ...         file.write(dec.data)
         ...     return req.respond(...)
 
     Args:
@@ -357,10 +419,7 @@ def flow_request_media_decryptor(
         dl_session (httpx.Client): download session. Optional.
 
     Returns:
-        tuple[str, str, bytes]
-        - media_id (str): media ID
-        - filename (str): media filename
-        - decrypted_data (bytes): decrypted media file
+        An object containing the media ID, filename, and decrypted data.
 
     Raises:
         HTTPStatusError: If the request to the CDN URL fails.
@@ -368,10 +427,10 @@ def flow_request_media_decryptor(
     """
     res = (dl_session or httpx.Client()).get(encrypted_media["cdn_url"])
     res.raise_for_status()
-    return (
-        encrypted_media["media_id"],
-        encrypted_media["file_name"],
-        _flow_request_media_decryptor(
+    return FlowRequestDecryptedMedia(
+        media_id=encrypted_media["media_id"],
+        filename=encrypted_media["file_name"],
+        data=_flow_request_media_decryptor(
             res.content, encrypted_media["encryption_metadata"]
         ),
     )
@@ -421,30 +480,6 @@ def rename_func(extended_with: str) -> Callable:
         return func
 
     return inner
-
-
-def deprecated_func(use_instead: str | None) -> Callable:
-    """Mark a function as deprecated."""
-
-    def decorator(func: Callable) -> Callable:
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            msg = (
-                f"Function `{func.__name__}` is deprecated and will be removed in a future version"
-                + (f". Use `{use_instead}` instead." if use_instead else ".")
-            )
-            warnings.simplefilter("always", DeprecationWarning)
-            warnings.warn(message=msg, category=DeprecationWarning, stacklevel=2)
-            return func(*args, **kwargs)
-
-        return wrapper
-
-    return decorator
-
-
-def listener_identifier(sender: str | int, recipient: str | int) -> tuple[str, str]:
-    """Create a unique identifier for a listener."""
-    return str(sender), str(recipient)
 
 
 def is_async_callable(obj: Any) -> bool:

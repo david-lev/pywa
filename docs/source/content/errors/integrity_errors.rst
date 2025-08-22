@@ -9,3 +9,5 @@ Integrity Errors
     :show-inheritance:
 .. autoclass:: AccountLocked()
     :show-inheritance:
+.. autoclass:: AccountRestrictedFromCountry()
+    :show-inheritance:

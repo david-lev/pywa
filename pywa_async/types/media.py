@@ -11,6 +11,8 @@ __all__ = [
     "MediaUrlResponse",
 ]
 
+from pywa.types.others import SuccessResult
+from .. import utils
 from pywa.types.media import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.media import (
     Image as _Image,
@@ -28,13 +30,12 @@ if TYPE_CHECKING:
     from ..client import WhatsApp
 
 
-class BaseMediaAsync:
+class Media:
     """Base class for all media types."""
 
-    id: str
-    sha256: str
-    mime_type: str
-    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
+    def __init__(self, _client: WhatsApp, id: str):
+        self._client = _client
+        self.id = id
 
     async def get_media_url(self) -> str:
         """Gets the URL of the media. (expires after 5 minutes)"""
@@ -42,6 +43,7 @@ class BaseMediaAsync:
 
     async def download(
         self,
+        *,
         path: str | None = None,
         filename: str | None = None,
         in_memory: bool = False,
@@ -51,7 +53,7 @@ class BaseMediaAsync:
         Download a media file from WhatsApp servers.
             - Same as :func:`~pywa.client.WhatsApp.download_media` with ``media_url=media.get_media_url()``
 
-        >>> await message.image.download()
+        >>> message.image.download()
 
         Args:
             path: The path where to save the file (if not provided, the current working directory will be used).
@@ -63,17 +65,34 @@ class BaseMediaAsync:
             The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
         """
         return await self._client.download_media(
-            url=await self.get_media_url(),
+            url=(await self.get_media_url())
+            if not hasattr(self, "url")
+            else self.url,  # MediaUrlResponse
             path=path,
             filename=filename,
             in_memory=in_memory,
             **kwargs,
         )
 
+    async def delete(
+        self, *, phone_id: str | int | None = utils.MISSING
+    ) -> SuccessResult:
+        """
+        Deletes the media from WhatsApp servers.
+
+        Args:
+            phone_id: The phone ID to delete the media from (optional, If included, the operation will only be processed if the ID matches the ID of the business phone number that the media was uploaded on. pass None to use the client's phone ID).
+        """
+        return await self._client.delete_media(media_id=self.id, phone_id=phone_id)
+
+
+class BaseUserMedia(Media):
+    """Base class for all media types."""
+
     @classmethod
     def from_flow_completion(
         cls, client: WhatsApp, media: dict[str, str]
-    ) -> BaseMediaAsync:
+    ) -> BaseUserMedia:
         """
         Create a media object from the media dict returned by the flow completion.
 
@@ -99,7 +118,7 @@ class BaseMediaAsync:
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Image(BaseMediaAsync, _Image):
+class Image(BaseUserMedia, _Image):
     """
     Represents an received image.
 
@@ -111,7 +130,7 @@ class Image(BaseMediaAsync, _Image):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Video(BaseMediaAsync, _Video):
+class Video(BaseUserMedia, _Video):
     """
     Represents a video.
 
@@ -123,7 +142,7 @@ class Video(BaseMediaAsync, _Video):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Sticker(BaseMediaAsync, _Sticker):
+class Sticker(BaseUserMedia, _Sticker):
     """
     Represents a sticker.
 
@@ -136,7 +155,7 @@ class Sticker(BaseMediaAsync, _Sticker):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Document(BaseMediaAsync, _Document):
+class Document(BaseUserMedia, _Document):
     """
     Represents a document.
 
@@ -149,7 +168,7 @@ class Document(BaseMediaAsync, _Document):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Audio(BaseMediaAsync, _Audio):
+class Audio(BaseUserMedia, _Audio):
     """
     Represents an audio.
 
@@ -162,7 +181,7 @@ class Audio(BaseMediaAsync, _Audio):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class MediaUrlResponse(_MediaUrlResponse):
+class MediaUrlResponse(Media, _MediaUrlResponse):
     """
     Represents a media response.
 
@@ -173,32 +192,3 @@ class MediaUrlResponse(_MediaUrlResponse):
         sha256: The SHA256 hash of the media.
         file_size: The size of the media in bytes.
     """
-
-    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
-
-    async def download(
-        self,
-        filepath: str | None = None,
-        filename: str | None = None,
-        in_memory: bool = False,
-        **kwargs,
-    ) -> bytes | str:
-        """
-        Download a media file from WhatsApp servers.
-
-        Args:
-            filepath: The path where to save the file (if not provided, the current working directory will be used).
-            filename: The name of the file (if not provided, it will be guessed from the URL + extension).
-            in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
-            **kwargs: Additional arguments to pass to ``httpx.get(...)``.
-
-        Returns:
-            The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
-        """
-        return await self._client.download_media(
-            url=self.url,
-            path=filepath,
-            filename=filename,
-            in_memory=in_memory,
-            **kwargs,
-        )

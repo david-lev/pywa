@@ -14,7 +14,7 @@ import dataclasses
 from typing import TYPE_CHECKING, Iterable, Callable, Any
 
 from .base_update import BaseUserUpdateAsync  # noqa
-from .callback import Button, ButtonUrl, SectionList
+from .callback import Button, URLButton, SectionList, VoiceCallButton, FlowButton
 from .media import Audio, Document, Image, Sticker, Video
 from .others import (
     MessageType,
@@ -22,13 +22,12 @@ from .others import (
     Location,
     Order,
     Reaction,
-    System,
     Contact,
 )
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
-    from .sent_message import SentMessage
+    from .sent_update import SentMessage
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -43,25 +42,23 @@ class Message(BaseUserUpdateAsync, _Message):
         metadata: The metadata of the message (to which phone number it was sent).
         type: The message type (See :class:`MessageType`).
         from_user: The user who sent the message.
-        timestamp: The timestamp when the message was sent (in UTC).
-        reply_to_message: The message to which this message is a reply to. (Optional)
+        timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
+        reply_to_message: The message to which this message is a reply (if any).
         forwarded: Whether the message was forwarded.
-        forwarded_many_times: Whether the message was forwarded many times.
-         (when True, ``forwarded`` will be True as well)
-        text: The text of the message (if the message type is :class:`MessageType.TEXT`).
-        image: The image of the message (if the message type is :class:`MessageType.IMAGE`).
-        video: The video of the message (if the message type is :class:`MessageType.VIDEO`).
-        sticker: The sticker of the message (if the message type is :class:`MessageType.STICKER`).
-        document: The document of the message (if the message type is :class:`MessageType.DOCUMENT`).
-        audio: The audio of the message (if the message type is :class:`MessageType.AUDIO`).
-        caption: The caption of the message (Optional, only available for :class:`MessageType.IMAGE`,
-         :class:`MessageType.VIDEO` and :class:`MessageType.DOCUMENT`).
-        reaction: The reaction of the message (if the message type is :class:`MessageType.REACTION`).
-        location: The location of the message (if the message type is :class:`MessageType.LOCATION`).
-        contacts: The contacts of the message (if the message type is :class:`MessageType.CONTACTS`).
-        order: The order of the message (if the message type is :class:`MessageType.ORDER`).
-        system: The system update (if the message type is :class:`MessageType.SYSTEM`).
-        error: The error of the message (if the message type is :class:`MessageType.UNSUPPORTED`).
+        forwarded_many_times: Whether the message was forwarded more than 5 times. (when ``True``, ``forwarded`` will be ``True`` as well)
+        text: The text of the message.
+        image: The image of the message.
+        video: The video of the message.
+        sticker: The sticker of the message.
+        document: The document of the message.
+        audio: The audio of the message.
+        caption: The caption of the message (Optional, only available for image video and document messages).
+        reaction: The reaction of the message.
+        location: The location of the message.
+        contacts: The contacts of the message.
+        order: The order of the message.
+        referral: The referral information of the message (When a customer clicks an ad that redirects to WhatsApp).
+        error: The error of the message.
         shared_data: Shared data between handlers.
     """
 
@@ -125,7 +122,12 @@ class Message(BaseUserUpdateAsync, _Message):
         header: str | None = None,
         body: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button] | ButtonUrl | SectionList | None = None,
+        buttons: Iterable[Button]
+        | URLButton
+        | VoiceCallButton
+        | FlowButton
+        | SectionList
+        | None = None,
         preview_url: bool = False,
         reply_to_message_id: str = None,
         tracker: str | None = None,
@@ -151,7 +153,7 @@ class Message(BaseUserUpdateAsync, _Message):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The ID of the sent message.
+            The sent message.
 
         Raises:
             ValueError: If the message type is ``reaction`` and no ``reply_to_message_id`` is provided, or if the message

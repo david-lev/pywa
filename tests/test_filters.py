@@ -16,7 +16,7 @@ from pywa.types import (
     ReferredProduct,
 )
 from pywa.types.base_update import BaseUpdate
-from tests.common import API_VERSIONS, CLIENTS
+from tests.common import CLIENTS
 
 _T = TypeVar("_T", bound=BaseUpdate)
 WHATSAPP_N = "1234567890"
@@ -240,8 +240,6 @@ FILTERS: dict[str, dict[str, list[tuple[Callable[[_T], _T], Filter]]]] = {
     "chat_opened": {"chat_opened": [(same, fil.chat_opened)]},
 }
 
-RANDOM_API_VER = random.choice(API_VERSIONS)
-
 
 def test_combinations():
     true, false = fil.new(lambda _, __: True), fil.new(lambda _, __: False)
@@ -279,20 +277,21 @@ async def test_combinations_async():
 
 
 def test_filters():
-    for client, updates in CLIENTS.items():
-        for filename, tests in updates[RANDOM_API_VER].items():
-            for test in tests:
-                for test_name, update in test.items():
-                    for update_modifier, filter_obj in FILTERS.get(filename, {}).get(
-                        test_name, ()
-                    ):
-                        update = update_modifier(update)
-                        try:
-                            assert cast(Filter, filter_obj).check_sync(client, update)
-                        except AssertionError as e:
-                            raise AssertionError(
-                                f"Test {filename}/{test_name} failed on {update}"
-                            ) from e
+    for client, update_files in CLIENTS.items():
+        for file, updates in update_files.items():
+            for update_name, update in updates.items():
+                for update_modifier, filter_obj in FILTERS.get(file.stem, {}).get(
+                    update_name, ()
+                ):
+                    modified_update = update_modifier(update)
+                    try:
+                        assert cast(Filter, filter_obj).check_sync(
+                            client, modified_update
+                        )
+                    except AssertionError as e:
+                        raise AssertionError(
+                            f"Test {file.stem}/{update_name} failed on {modified_update}"
+                        ) from e
 
 
 def modify_text(msg: Message, to: str):

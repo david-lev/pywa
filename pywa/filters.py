@@ -14,6 +14,8 @@ from __future__ import annotations
 
 __all__ = [
     "new",
+    "true",
+    "false",
     "update_id",
     "forwarded",
     "forwarded_many_times",
@@ -68,7 +70,28 @@ __all__ = [
     "with_tracker",
     "flow_completion",
     "template_status",
+    "template_status_approved",
+    "template_status_rejected",
+    "template_quality",
+    "template_category",
+    "template_components",
     "chat_opened",
+    "call_connect",
+    "outgoing_call",
+    "incoming_call",
+    "call_status",
+    "call_answered",
+    "call_rejected",
+    "call_ringing",
+    "call_permission_update",
+    "call_permission_accepted",
+    "call_permission_rejected",
+    "call_terminate",
+    "phone_number_change",
+    "identity_change",
+    "user_marketing_preferences",
+    "user_marketing_preferences_stop",
+    "user_marketing_preferences_resume",
 ]
 
 import re
@@ -82,12 +105,25 @@ from .types import CallbackSelection as _Cls
 from .types import MessageStatus as _Ms
 from .types import MessageStatusType as _Mst
 from .types import MessageType as _Mt
-from .types import TemplateStatus as _Ts
+from .types import TemplateStatusUpdate as _Ts
+from .types import TemplateQualityUpdate as _Tq
+from .types import TemplateCategoryUpdate as _Tc
+from .types import TemplateComponentsUpdate as _Tcc
 from .types import FlowCompletion as _Fc
 from .types import ChatOpened as _Co
+from .types import CallConnect as _Cc
+from .types import CallStatus as _Cst
+from .types import CallPermissionUpdate as _Cpu
+from .types import CallTerminate as _Ct
+from .types import PhoneNumberChange as _Pnc
+from .types import IdentityChange as _Ic
+from .types import UserMarketingPreferences as _Mup
+
 from .types.base_update import (
     BaseUpdate as _BaseUpdate,
 )  # noqa
+from .types.calls import CallDirection, CallPermissionResponse, CallStatusType
+from .types.templates import TemplateStatus
 
 if TYPE_CHECKING:
     from pywa import WhatsApp as _Wa
@@ -194,6 +230,12 @@ def new(
         },
     )()
 
+
+true = new(lambda _, __: True, name="true")
+"""Filter that always returns True."""
+
+false = new(lambda _, __: False, name="false")
+"""Filter that always returns False."""
 
 forwarded = new(
     lambda _, m: m.forwarded,
@@ -718,7 +760,7 @@ def failed_with(
         lambda _, s: s.status == _Mst.FAILED
         and (
             any((isinstance(s.error, e) for e in exceptions))
-            or s.error.error_code in error_codes
+            or s.error.code in error_codes
         ),
         name="status_failed_with",
     )
@@ -730,8 +772,89 @@ with_tracker = new(lambda _, s: s.tracker is not None, name="with_tracker")
 template_status = new(lambda _, s: isinstance(s, _Ts), name="template_status")
 """Filters for template status updates."""
 
+template_status_approved = new(
+    lambda _, s: s.status == TemplateStatus.APPROVED, name="template_status_approved"
+)
+
+template_status_rejected = new(
+    lambda _, s: s.status == TemplateStatus.REJECTED, name="template_status_rejected"
+)
+
+template_quality = new(lambda _, s: isinstance(s, _Tq), name="template_quality")
+"""Filters for template quality updates."""
+
+template_category = new(lambda _, s: isinstance(s, _Tc), name="template_category")
+"""Filters for template category updates."""
+
+template_components = new(lambda _, s: isinstance(s, _Tcc), name="template_components")
+"""Filters for template components updates."""
+
 flow_completion = new(lambda _, f: isinstance(f, _Fc), name="flow_completion")
 """Filter for flow completion updates."""
 
 chat_opened = new(lambda _, c: isinstance(c, _Co), name="chat_opened")
 """Filter for chat opened updates."""
+
+call_connect = new(lambda _, c: isinstance(c, _Cc), name="call_connect")
+"""Filter for call connect updates."""
+
+outgoing_call = new(
+    lambda _, c: c.direction == CallDirection.BUSINESS_INITIATED,
+    name="outgoing_call",
+)
+incoming_call = new(
+    lambda _, c: c.direction == CallDirection.USER_INITIATED,
+    name="incoming_call",
+)
+"""Filter for incoming call updates."""
+
+call_status = new(lambda _, c: isinstance(c, _Cst), name="call_status")
+"""Filter for call status updates."""
+
+call_answered = new(
+    lambda _, c: c.status == CallStatusType.ACCEPTED,
+    name="call_answered",
+)
+call_rejected = new(
+    lambda _, c: c.status == CallStatusType.REJECTED, name="call_rejected"
+)
+call_ringing = new(lambda _, c: c.status == CallStatusType.RINGING, name="call_ringing")
+
+call_permission_update = new(
+    lambda _, c: isinstance(c, _Cpu), name="call_permission_update"
+)
+"""Filter for call permission updates."""
+
+call_permission_accepted = new(
+    lambda _, c: c.response == CallPermissionResponse.ACCEPT,
+    name="call_permission_accepted",
+)
+call_permission_rejected = new(
+    lambda _, c: c.response == CallPermissionResponse.REJECT,
+    name="call_permission_rejected",
+)
+
+call_terminate = new(lambda _, c: isinstance(c, _Ct), name="call_terminate")
+"""Filter for call terminate updates."""
+
+phone_number_change = new(lambda _, c: isinstance(c, _Pnc), name="phone_number_change")
+"""Filter for phone number change updates."""
+
+identity_change = new(lambda _, c: isinstance(c, _Ic), name="identity_change")
+"""Filter for identity change updates."""
+
+user_marketing_preferences = new(
+    lambda _, m: isinstance(m, _Mup), name="user_marketing_preferences"
+)
+"""Filter for user marketing preferences updates."""
+
+user_marketing_preferences_stop = new(
+    lambda _, m: bool(m),
+    name="user_marketing_preferences_stop",
+)
+"""Filter for user marketing preferences updates that indicate the user has requested to stop receiving marketing messages."""
+user_marketing_preferences_resume = new(
+    lambda _, m: not bool(m),
+    name="user_marketing_preferences_resume",
+)
+"""Filter for user marketing preferences updates that indicate the user has requested to resume receiving marketing messages."""

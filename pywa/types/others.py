@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import time
 
 from ..errors import WhatsAppError
@@ -11,7 +12,16 @@ import math
 import logging
 import datetime
 
-from typing import TYPE_CHECKING, Any, Iterable, TypeVar, Protocol, Generic, Iterator
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Iterable,
+    TypeVar,
+    Protocol,
+    Generic,
+    Iterator,
+    ClassVar,
+)
 
 from .. import utils
 
@@ -20,6 +30,7 @@ if TYPE_CHECKING:
     from .chat_opened import ChatOpened
     from .media import Image, Video, Document, Audio, Sticker
     from .callback import CallbackButton, CallbackSelection
+    from .calls import CallPermissions, CallingSettings
     from ..client import WhatsApp
 
 _logger = logging.getLogger(__name__)
@@ -83,6 +94,17 @@ class User:
             u.input for u in self._client.unblock_users((self.wa_id,)).removed_users
         }
 
+    def get_call_permissions(self) -> CallPermissions:
+        """
+        Get the call permissions of the user.
+
+        - Shortcut for :meth:`~pywa.client.WhatsApp.get_call_permissions` with the user wa_id.
+
+        Returns:
+            CallPermissions: The call permissions of the user.
+        """
+        return self._client.get_call_permissions(wa_id=self.wa_id)
+
     def as_vcard(self) -> str:
         """Get the user as a vCard."""
         return "\n".join(
@@ -111,13 +133,16 @@ class MessageType(utils.StrEnum):
         LOCATION: Message.location -> :class:`Location`.
         CONTACTS: Message.contacts -> tuple[:class:`Contact`].
         ORDER: Message.order -> :class:`Order`.
-        SYSTEM: Message.system -> :class:`System`.
         UNKNOWN: An unknown message (Warning with the actual type will be logged).
         UNSUPPORTED: An unsupported message (message type not supported by WhatsApp Cloud API).
-        INTERACTIVE: Only used in :class:`CallbackButton` and :class:`CallbackSelection`.
+        INTERACTIVE: Only used in :class:`CallbackButton`, :class:`CallbackSelection` and :class:`CallPermissionUpdate`.
         BUTTON: Only used in :class:`CallbackButton`.
         REQUEST_WELCOME: Only used in :class:`ChatOpened`.
+        SYSTEM: Only used in :class:`PhoneNumberChange` and :class:`IdentityChange`
     """
+
+    _check_value = str.islower
+    _modify_value = str.lower
 
     TEXT = "text"
     IMAGE = "image"
@@ -129,18 +154,13 @@ class MessageType(utils.StrEnum):
     LOCATION = "location"
     CONTACTS = "contacts"
     ORDER = "order"
-    SYSTEM = "system"
     UNKNOWN = "unknown"
     UNSUPPORTED = "unsupported"
 
     INTERACTIVE = "interactive"
     BUTTON = "button"
     REQUEST_WELCOME = "request_welcome"
-
-    @classmethod
-    def _missing_(cls, value: str) -> MessageType:
-        _logger.warning("Unknown message type: %s. Defaulting to UNKNOWN.", value)
-        return cls.UNKNOWN
+    SYSTEM = "system"
 
 
 class InteractiveType(utils.StrEnum):
@@ -151,6 +171,9 @@ class InteractiveType(utils.StrEnum):
 
     """
 
+    _check_value = str.islower
+    _modify_value = str.lower
+
     BUTTON = "button"
     CTA_URL = "cta_url"
     CATALOG_MESSAGE = "catalog_message"
@@ -159,6 +182,10 @@ class InteractiveType(utils.StrEnum):
     PRODUCT_LIST = "product_list"
     FLOW = "flow"
     LOCATION_REQUEST_MESSAGE = "location_request_message"
+    VOICE_CALL = "voice_call"
+    CALL_PERMISSION_REQUEST = "call_permission_request"
+
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -444,14 +471,10 @@ class ReferredProduct:
     sku: str
 
     @classmethod
-    def from_dict(cls, data: dict | None) -> ReferredProduct | None:
-        return (
-            cls(
-                catalog_id=data["catalog_id"],
-                sku=data["product_retailer_id"],
-            )
-            if data
-            else None
+    def from_dict(cls, data: dict) -> ReferredProduct:
+        return cls(
+            catalog_id=data["catalog_id"],
+            sku=data["product_retailer_id"],
         )
 
 
@@ -471,17 +494,13 @@ class ReplyToMessage:
     referred_product: ReferredProduct | None
 
     @classmethod
-    def from_dict(cls, data: dict | None) -> ReplyToMessage | None:
-        return (
-            cls(
-                message_id=data["id"],
-                from_user_id=data["from"],
-                referred_product=ReferredProduct.from_dict(
-                    data.get("referred_product")
-                ),
-            )
-            if (data and "id" in data)
-            else None
+    def from_dict(cls, data: dict) -> ReplyToMessage:
+        return cls(
+            message_id=data["id"],
+            from_user_id=data["from"],
+            referred_product=ReferredProduct.from_dict(data["referred_product"])
+            if "referred_product" in data
+            else None,
         )
 
 
@@ -564,33 +583,35 @@ class Order:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class System:
+class Referral(utils.FromDict):
     """
-    Represents a system update (A customer has updated their phone number or profile information).
+    Represents a referral object in a message.
+
+    - This object is included in the messages object when a customer clicks an ad that redirects to WhatsApp.
 
     Attributes:
-        type: The type of the system update (``customer_changed_number`` or ``customer_identity_changed``).
-        body: Describes the change to the customer's identity or phone number.
-        identity: Hash for the identity fetched from server.
-        wa_id: The WhatsApp ID for the customer prior to the update.
-        new_wa_id: New WhatsApp ID for the customer when their phone number is updated.
+        source_url: The Meta URL that leads to the ad or post clicked by the customer.
+        source_type: The type of the ad’s source; ``ad`` or ``post``.
+        source_id: Meta ID for an ad or a post.
+        headline: Headline used in the ad or post.
+        body: Body for the ad or post.
+        media_type: Media present in the ad or post; ``image`` or ``video``.
+        image_url: URL of the image, when ``media_type`` is an ``image``.
+        video_url: URL of the video, when ``media_type`` is a ``video``.
+        thumbnail_url: URL for the thumbnail, when media_type is a video.
+        ctwa_clid: Click ID generated by Meta for ads that click to WhatsApp.
     """
 
-    type: str | None
-    body: str | None
-    identity: str | None
-    wa_id: str | None
-    new_wa_id: str | None
-
-    @classmethod
-    def from_dict(cls, data: dict, _client: WhatsApp) -> System:
-        return cls(
-            type=data.get("type"),
-            body=data.get("body"),
-            identity=data.get("identity"),
-            wa_id=data.get("customer"),
-            new_wa_id=data.get("wa_id"),
-        )
+    source_url: str | None = None
+    source_type: str | None = None
+    source_id: str | None = None
+    headline: str | None = None
+    body: str | None = None
+    media_type: str | None = None
+    image_url: str | None = None
+    video_url: str | None = None
+    thumbnail_url: str | None = None
+    ctwa_clid: str | None = None
 
 
 @dataclasses.dataclass(slots=True)
@@ -659,14 +680,11 @@ class Industry(utils.StrEnum):
     RESTAURANT = "RESTAURANT"
     NOT_A_BIZ = "NOT_A_BIZ"
 
-    @classmethod
-    def _missing_(cls, value: str) -> Industry:
-        _logger.warning("Unknown industry: %s. Defaulting to UNDEFINED.", value)
-        return cls.UNDEFINED
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class BusinessProfile:
+class BusinessProfile(utils.APIObject):
     """
     Represents a business profile.
 
@@ -680,6 +698,8 @@ class BusinessProfile:
         websites: The URLs associated with the business. For instance, a website, Facebook Page, or Instagram.
          There is a maximum of 2 websites with a maximum of 256 characters each.
     """
+
+    _override_api_fields: ClassVar = {"industry": "vertical"}
 
     about: str
     address: str | None
@@ -703,7 +723,7 @@ class BusinessProfile:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class CommerceSettings:
+class CommerceSettings(utils.APIObject):
     """
     Represents the WhatsApp commerce settings.
 
@@ -726,26 +746,170 @@ class CommerceSettings:
         )
 
 
+class BusinessVerificationStatus(utils.StrEnum):
+    """
+    Represents the business verification status.
+
+    Attributes:
+        EXPIRED: The business verification has expired.
+        FAILED: The business verification has failed.
+        INELIGIBLE: The business is not eligible for verification.
+        NOT_VERIFIED: The business is not verified.
+        PENDING: The business verification is pending.
+        PENDING_NEED_MORE_INFO: The business verification is pending and needs more information.
+        PENDING_SUBMISSION: The business verification is pending submission.
+        REJECTED: The business verification has been rejected.
+        REVOKED: The business verification has been revoked.
+        VERIFIED: The business is verified.
+    """
+
+    EXPIRED = "expired"
+    FAILED = "failed"
+    INELIGIBLE = "ineligible"
+    NOT_VERIFIED = "not_verified"
+    PENDING = "pending"
+    PENDING_NEED_MORE_INFO = "pending_need_more_info"
+    PENDING_SUBMISSION = "pending_submission"
+    REJECTED = "rejected"
+    REVOKED = "revoked"
+    VERIFIED = "verified"
+
+    UNKNOWN = "UNKNOWN"
+
+
+class MarketingMessagesLiteAPIStatus(utils.StrEnum):
+    """
+    Represents the WhatsApp Business Account's status for onboarding onto Marketing Messages Lite.
+
+    Attributes:
+        INELIGIBLE: The WABA has not met all eligibility requirements.
+        ELIGIBLE: The WABA has met all eligibility requirements.
+        ONBOARDED: The WABA is eligible to use MM Lite API and has signed MM Lite Terms of Service, has a valid payment method attached, and is linked to an Ad account.
+        UNKNOWN: An unknown status. Please contact support for assistance.
+    """
+
+    INELIGIBLE = "INELIGIBLE"
+    ELIGIBLE = "ELIGIBLE"
+    ONBOARDED = "ONBOARDED"
+    UNKNOWN = "UNKNOWN"
+
+
+class MarketingMessagesOnboardingStatus(utils.StrEnum):
+    """
+    Represents the WhatsApp Business Account's status for onboarding onto Marketing Messages Lite API.
+
+    Attributes:
+        INELIGIBLE_ON_BEHALF_OF_WABA: The WhatsApp Business Account (“WABA”) uses the “OBO” model which is not supported. You must either first transfer ownership of the WABA to the customer or onboard using the Intent API.
+        INELIGIBLE_INACTIVE_OR_RESTRICTED: The WhatsApp Business Account is inactive or is restricted from messaging due to a policy enforcement issue.
+        INELIGIBLE_COUNTRY_NOT_SUPPORTED: The WhatsApp Business Account is in a region that does not support the MM Lite API.
+        INELIGIBLE_USING_WHATSAPP_BUSINESS_APP: The WhatsApp Business phone number is being used within the WhatsApp Business app.
+        ELIGIBLE: WhatsApp Business Account is eligible to onboard and use the MM Lite API.
+        PENDING_VALID_PAYMENT_METHOD: The WhatsApp Business Account requires setting up a valid payment method.
+        PENDING_INTERNAL_SETUP: WhatsApp Business Account is in the configuration process of using the MM Lite API and requires no further action from the business customer or partner.
+        ONBOARDED: The WhatsApp Business Account has successfully onboarded and is ready to use the MM Lite API.
+    """
+
+    INELIGIBLE_ON_BEHALF_OF_WABA = "INELIGIBLE_ON_BEHALF_OF_WABA"
+    INELIGIBLE_INACTIVE_OR_RESTRICTED = "INELIGIBLE_INACTIVE_OR_RESTRICTED"
+    INELIGIBLE_COUNTRY_NOT_SUPPORTED = "INELIGIBLE_COUNTRY_NOT_SUPPORTED"
+    INELIGIBLE_USING_WHATSAPP_BUSINESS_APP = "INELIGIBLE_USING_WHATSAPP_BUSINESS_APP"
+    ELIGIBLE = "ELIGIBLE"
+    PENDING_VALID_PAYMENT_METHOD = "PENDING_VALID_PAYMENT_METHOD"
+    PENDING_INTERNAL_SETUP = "PENDING_INTERNAL_SETUP"
+    ONBOARDED = "ONBOARDED"
+
+    UNKNOWN = "UNKNOWN"
+
+
 @dataclasses.dataclass(frozen=True, slots=True)
-class WhatsAppBusinessAccount(utils.FromDict):
+class BusinessInfo(utils.APIObject, utils.FromDict):
+    id: str
+    name: str
+    status: str
+    type: str
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class WhatsAppBusinessAccount(utils.APIObject):
     """
     Represents a WhatsApp Business Account.
 
     Attributes:
         id: The ID of the account.
-        message_template_namespace: The namespace of the message templates.
-        name: The name of the account.
-        timezone_id: The timezone ID of the account.
+        status: The status of the WhatsApp Business Account (e.g. ACTIVE).
+        message_template_namespace: Namespace string for the message templates that belong to the WhatsApp Business Account
+        name: User-friendly name to differentiate WhatsApp Business Accounts.
+        timezone_id: The timezone of the WhatsApp Business Account (See `Timezone IDs <https://developers.facebook.com/docs/marketing-api/reference/ad-account/timezone-ids/>`_).
+        business_verification_status: Current status of business verification of Meta Business Account which owns this WhatsApp Business Account
+        is_enabled_for_insights: If true, indicates the WhatsApp Business Account enabled template analytics. See `Analytics <https://developers.facebook.com/docs/whatsapp/business-management-api/analytics>`_.
+        marketing_messages_lite_api_status: WhatsApp Business Account's status for onboarding onto Marketing Messages Lite.
+        marketing_messages_onboarding_status: Onboarding status of the WhatsApp Business account into Marketing Messages Lite API.
+        ownership_type: Ownership type of the WhatsApp Business Account.
+        currency: The currency in which the payment transactions for the WhatsApp Business Account will be processed
+        country: country of the WhatsApp Business Account's owning Meta Business account
+
     """
 
     id: str
-    message_template_namespace: str
     name: str
     timezone_id: str
+    message_template_namespace: str
+    status: str | None
+    business_verification_status: BusinessVerificationStatus | None
+    is_enabled_for_insights: bool | None
+    marketing_messages_lite_api_status: MarketingMessagesLiteAPIStatus | None
+    marketing_messages_onboarding_status: MarketingMessagesOnboardingStatus | None
+    on_behalf_of_business_info: BusinessInfo | None
+    ownership_type: str | None
+    health_status: dict | None
+    currency: str | None
+    country: str | None
+    subscribed_apps: tuple[FacebookApplication, ...] | None
+
+    @classmethod
+    def from_dict(cls, data: dict) -> WhatsAppBusinessAccount:
+        return cls(
+            id=data["id"],
+            status=data.get("status"),
+            name=data["name"],
+            timezone_id=data["timezone_id"],
+            message_template_namespace=data.get("message_template_namespace"),
+            business_verification_status=BusinessVerificationStatus(
+                data["business_verification_status"]
+            )
+            if "business_verification_status" in data
+            else None,
+            is_enabled_for_insights=data.get("is_enabled_for_insights"),
+            marketing_messages_lite_api_status=MarketingMessagesLiteAPIStatus(
+                data["marketing_messages_lite_api_status"]
+            )
+            if "marketing_messages_lite_api_status" in data
+            else None,
+            marketing_messages_onboarding_status=MarketingMessagesOnboardingStatus(
+                data["marketing_messages_onboarding_status"]
+            )
+            if "marketing_messages_onboarding_status" in data
+            else None,
+            on_behalf_of_business_info=BusinessInfo.from_dict(
+                data["on_behalf_of_business_info"]
+            )
+            if "on_behalf_of_business_info" in data
+            else None,
+            ownership_type=data.get("ownership_type"),
+            health_status=data.get("health_status"),
+            currency=data.get("currency"),
+            country=data.get("country"),
+            subscribed_apps=tuple(
+                FacebookApplication.from_dict(app["whatsapp_business_api_data"])
+                for app in data["subscribed_apps"]["data"]
+            )
+            if "subscribed_apps" in data
+            else None,
+        )
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class FacebookApplication(utils.FromDict):
+class FacebookApplication(utils.FromDict, utils.APIObject):
     """
     Represents a Facebook Application.
 
@@ -758,6 +922,63 @@ class FacebookApplication(utils.FromDict):
     id: str
     name: str
     link: str
+
+
+class StorageStatus(utils.StrEnum):
+    """
+    Represents the storage status of a WhatsApp Business Phone Number.
+
+    Attributes:
+        DEFAULT: Default storage status.
+        IN_COUNTRY_STORAGE_ENABLED: In-country storage is enabled.
+    """
+
+    DEFAULT = "DEFAULT"
+    IN_COUNTRY_STORAGE_ENABLED = "IN_COUNTRY_STORAGE_ENABLED"
+
+    UNKNOWN = "UNKNOWN"
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class StorageConfiguration:
+    """
+    Local storage offers an additional layer of data management control, by giving you the option to specify where your message data is stored at rest. If your company is in a regulated industry such as finance, government, or healthcare, you may prefer to have your message data stored in a specific country when at rest because of regulatory or company policies.
+
+    Local storage is controlled by a setting enabled or disabled at a WhatsApp business phone number level. Both Cloud API and MM Lite API support local storage, and the setting will apply to any messages sent via either API if enabled.
+
+    **How local storage works**
+
+    When Local storage is enabled, the following constraints are applied to message content for a business phone number:
+
+    - Data-in-use: When message content is sent or received by Cloud API or MM Lite API, message content may be stored on Meta data centers internationally while being processed.
+    - Data-at-rest: After the data-in-use period, message content is deleted from Meta data centers outside of the specified local storage region, and persisted only in data centers within the local storage region selected. Note that the data-in-use period differs between Cloud API and MM Lite API as specified below:
+        - When using local storage for Cloud API, the data-in-use period is up to 60 minutes.
+        - When using local storage for MM Lite API, the data-in-use period is up to 90 minutes.
+    The local storage feature supplements other WhatsApp Business Platform privacy and security controls, and allows customers to ensure a higher level of compliance with local data protection regulations.
+
+    **Data in scope**
+
+    Local storage applies to message content (text and media) sent and/or received via Cloud API and MM Lite API. The following message content are in scope of the local storage feature:
+
+    - Text messages: text payload (message body)
+    - Media messages: media payload (audio, document, image or video)
+    - Template messages (static template + parameters passed at message send time): components with text / media payload
+    In addition, a limited set of metadata attributes is included with the locally stored message content, in order to correctly associate the encrypted message payload with the originally processed message, and to audit the fact of localization. The stored metadata is protected with tokenization and encryption.
+
+    **Available Regions**
+
+    To see what regions are supported by local storage, see the ``data_localization_region`` parameter in the documentation on phone number registration.
+    """
+
+    status: str
+    data_localization_region: str | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict) -> StorageConfiguration:
+        return cls(
+            status=StorageStatus(data["status"]),
+            data_localization_region=data.get("data_localization_region"),
+        )
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -798,7 +1019,7 @@ class ConversationalAutomation:
 
     Attributes:
         id: The ID of the WhatsApp Business Phone Number.
-        chat_opened_enabled: Whether the welcome message is enabled (if so, you can listen to the :class:`ChatOpened` event).
+        chat_opened_enabled: Whether the welcome message is enabled (if so, you can listen to the :class:`~pywa.types.chat_opened.ChatOpened` event).
         ice_breakers: See `Ice Breakers <https://developers.facebook.com/docs/whatsapp/cloud-api/phone-numbers/conversational-components/#ice-breakers>`_.
         commands: The `commands <https://developers.facebook.com/docs/whatsapp/cloud-api/phone-numbers/conversational-components/#commands>`_.
     """
@@ -821,8 +1042,8 @@ class ConversationalAutomation:
         )
 
 
-@dataclasses.dataclass
-class BusinessPhoneNumber:
+@dataclasses.dataclass(frozen=True, slots=True)
+class BusinessPhoneNumber(utils.APIObject):
     """
     Represents a WhatsApp Business Phone Number.
 
@@ -883,7 +1104,7 @@ class BusinessPhoneNumber:
     platform_type: str | None
     throughput: dict[str, str] | None
     eligibility_for_api_business_global_search: str | None
-    health_status: dict[str, str] | None
+    health_status: dict | None
     certificate: str | None
     new_certificate: str | None
     last_onboarded_time: str | None
@@ -928,7 +1149,7 @@ class BusinessPhoneNumber:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class QRCode:
+class QRCode(utils.APIObject):
     """
     Customers can scan a QR code from their phone to quickly begin a conversation with your business.
     The WhatsApp Business Management API allows you to create and access these QR codes and associated short links.
@@ -948,11 +1169,21 @@ class QRCode:
     @classmethod
     def from_dict(cls, data: dict):
         return cls(
-            code=data.get("code"),
-            prefilled_message=data.get("prefilled_message"),
-            deep_link_url=data.get("deep_link_url"),
+            code=data["code"],
+            prefilled_message=data["prefilled_message"],
+            deep_link_url=data["deep_link_url"],
             qr_image_url=data.get("qr_image_url"),
         )
+
+    @classmethod
+    @functools.cache
+    def _api_fields(cls, image_type: str | None) -> tuple[str, ...]:
+        fields = list(super(QRCode, cls)._api_fields())
+        if image_type is not None:
+            fields[fields.index("qr_image_url")] = f"qr_image_url.format({image_type})"
+        else:
+            fields.remove("qr_image_url")
+        return tuple(fields)
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -1036,6 +1267,8 @@ class Pagination:
 
     - See `Paginated Results <https://developers.facebook.com/docs/graph-api/results/>`_.
 
+    --------------------
+
     **Cursor-based Pagination**
 
     Cursor-based pagination is the most efficient method of paging and should always be used when possible.
@@ -1045,12 +1278,15 @@ class Pagination:
 
     - Don't store cursors. Cursors can quickly become invalid if items are added or deleted.
 
+    --------------------
 
     **Time-based Pagination**
 
     Time pagination is used to navigate through results data using Unix timestamps which point to specific times in a list of data.
 
     - For consistent results, specify both since and until parameters. Also, it is recommended that the time difference is a maximum of 6 months.
+
+    --------------------
 
     **Offset-based Pagination**
 
@@ -1121,8 +1357,8 @@ class Result(Generic[_T]):
     """
     This class is used to handle paginated results from the WhatsApp API. You can iterate over the results, and also access the next and previous pages of results.
 
-    - When using the ``next()`` or ``previous()`` methods, the results are returned as a new instance of the :class:`Result` class.
-    - You can access the cursors using the ``before`` and ``after`` properties and use them later in the :class:`Pagination` object.
+    - When using the :meth:`next` or :meth:`previous` methods, the results are returned as a new instance of the :class:`Result` class.
+    - You can access the cursors using the :attr:`before` and :attr:`after` properties and use them later in the :class:`Pagination` object.
 
     Example:
 
@@ -1136,18 +1372,6 @@ class Result(Generic[_T]):
         ...     next_res = res.next()
         ...
         >>> print(res.all())
-
-    Methods:
-        next: Get the next page of results. if there is no next page, it returns empty Result.
-        previous: Get the previous page of results. if there is no previous page, it returns empty Result.
-        all: Get all results from the current page, previous pages, and next pages.
-        empty: Returns an empty Result instance.
-
-    Properties:
-        has_next: Check if there is a next page of results.
-        has_previous: Check if there is a previous page of results.
-        before: Cursor that points to the start of the page of data that has been returned.
-        after: Cursor that points to the end of the page of data that has been returned.
     """
 
     def __init__(
@@ -1206,7 +1430,7 @@ class Result(Generic[_T]):
         if self.has_next:
             # noinspection PyProtectedMember
             response = self._wa.api._make_request(method="GET", endpoint=self._next_url)
-            return Result(
+            return self.__class__(
                 wa=self._wa, response=response, item_factory=self._item_factory
             )
         return self.empty
@@ -1222,7 +1446,7 @@ class Result(Generic[_T]):
             response = self._wa.api._make_request(
                 method="GET", endpoint=self._previous_url
             )
-            return Result(
+            return self.__class__(
                 wa=self._wa, response=response, item_factory=self._item_factory
             )
         return self.empty
@@ -1235,7 +1459,7 @@ class Result(Generic[_T]):
         """
         Get all results from the current page, previous pages, and next pages.
 
-        - Make sure to provide higher limit in the ``Pagination`` parameter to avoid hitting rate limits.
+        - Make sure to provide higher limit in the :class:`Pagination` parameter to avoid hitting rate limits.
         - Also consider using the ``sleep`` parameter to avoid hitting rate limits.
 
         Args:
@@ -1276,4 +1500,28 @@ class Result(Generic[_T]):
         return bool(self._data)
 
     def __repr__(self) -> str:
-        return f"Result({self._data!r}, has_next={self.has_next}, has_previous={self.has_previous})"
+        return f"Result({self._data!r}, has_next={self.has_next!r}, has_previous={self.has_previous!r})"
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class SuccessResult(utils.FromDict):
+    """
+    Represents a simple success result.
+
+    - This is used for operations that do not return any data, but only indicate success or failure.
+
+    You can use *this* class to check if an operation was successful or not::
+
+        >>> wa = WhatsApp(...)
+        >>> if wa.update_template(...): # update_template returns SuccessResult so we can check it directly
+        ...     print("Template updated successfully")
+
+    Attributes:
+        success: Whether the operation was successful.
+    """
+
+    success: bool
+
+    def __bool__(self) -> bool:
+        """Returns True if the operation was successful."""
+        return self.success

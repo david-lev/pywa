@@ -1,7 +1,7 @@
 Others
 ======
 
-.. currentmodule:: pywa.types.sent_message
+.. currentmodule:: pywa.types.sent_update
 
 .. autoclass:: SentMessage()
 
@@ -12,14 +12,28 @@ Others
 
 .. currentmodule:: pywa.types.others
 
+.. autoclass:: SuccessResult()
+
 .. autoclass:: Result()
     :members: has_next, next, has_previous, previous, all, before, after, empty
 
 .. autoclass:: Pagination()
 
+.. autoclass:: BusinessVerificationStatus()
+.. autoclass:: MarketingMessagesLiteAPIStatus()
+.. autoclass:: MarketingMessagesOnboardingStatus()
+
 .. autoclass:: BusinessProfile()
 
 .. autoclass:: BusinessPhoneNumber()
+
+.. currentmodule:: pywa.types.calls
+
+.. autoclass:: BusinessPhoneNumberSettings()
+
+.. currentmodule:: pywa.types.others
+
+.. autoclass:: StorageConfiguration()
 
 .. autoclass:: ConversationalAutomation()
 
@@ -50,12 +64,6 @@ Others
 .. autoclass:: StopHandling()
 
 .. autoclass:: ContinueHandling()
-
-.. autoclass:: ListenerTimeout()
-
-.. autoclass:: ListenerCanceled()
-
-.. autoclass:: ListenerStopped()
 
 .. currentmodule:: pywa.utils
 

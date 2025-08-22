@@ -52,14 +52,14 @@ open_url = FlowJSON(
                 children=[
                     EmbeddedLink(
                         text="This is an external link.",
-                        on_click_action=OpenUrlAction(
+                        on_click_action=OpenURLAction(
                             url="https://pywa.readthedocs.io/",
                         ),
                     ),
                     OptIn(
                         label="I agree to the terms.",
                         name="T&Cs",
-                        on_click_action=OpenUrlAction(
+                        on_click_action=OpenURLAction(
                             url="https://pywa.readthedocs.io/",
                         ),
                     ),

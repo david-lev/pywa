@@ -1,43 +1,50 @@
 💬 Updates
 ==========
 
-
 .. currentmodule:: pywa.types
 
-Updates are the incoming events from WhatsApp Cloud API. They are sent to your webhook URL and constructed by the library
-to be easily and type-safely to handle.
+Updates are the **incoming events** from the WhatsApp Cloud API.
+They are sent to your webhook URL and converted by PyWa into type-safe objects that are easy to handle.
 
-In WhatsApp Cloud API, the updates called ``fields`` and need to be subscribed to in order to receive them to your webhook URL.
+In WhatsApp Cloud API, updates are called **fields**, and you need to subscribe to them in order to receive them at your webhook URL.
 
-The currently supported fields by PyWa are:
+-----------------
+Supported Fields
+-----------------
 
-- ``messages`` (all user related updates: messages, callbacks and message status updates)
-- ``message_template_status_update`` (template got approved, rejected, etc.)
+The currently supported fields in PyWa are:
 
-.. important::
-
-    If you register your callback URL manually (not using PyWa), you need to subscribe to the fields you want to receive.
-    Go to your app dashboard, click on the ``Webhooks`` tab (Or the ``Configuration`` tab > ``Webhook fields``).
-    Then, subscribe to the fields you want to receive.
-
-    .. toggle::
-
-        .. image:: ../../../../_static/guides/webhook-fields.webp
-           :width: 600
-           :alt: Subscribe to webhook fields
-           :align: center
+- ``messages`` → all user-related updates (messages, callbacks, message status updates)
+- ``calls`` → call connect, terminate, and status updates
+- ``message_template_status_update`` → template approved, rejected, etc.
+- ``message_template_quality_update`` → template quality score changed
+- ``message_template_components_update`` → template components changed (header, body, footer, buttons)
+- ``template_category_update`` → template category changed
+- ``user_preferences`` → user marketing preferences
 
 .. tip::
 
-        If you do want to handle other types of updates (fields), you can use the :py:class:`~pywa.handlers.RawUpdateHandler`
-        (or the :func:`~pywa.client.WhatsApp.on_raw_update` decorator) to handle them.
+   If you want to handle other types of updates, use :func:`~pywa.client.WhatsApp.on_raw_update` decorator or the :py:class:`~pywa.handlers.RawUpdateHandler` class.
 
+   .. code-block:: python
 
-The supported fields are automatically handled by PyWa and converted to the following types:
+      from pywa import WhatsApp, types
 
-- To handle updates see `Handlers <../handlers/overview.html>`_
+      wa = WhatsApp(...)
 
-User related updates:
+      @wa.on_raw_update
+      def handle_raw_update(wa: WhatsApp, raw: dict):
+          print("Received raw update:", raw)
+
+-----------------
+Update Types
+-----------------
+
+The supported fields are automatically handled by PyWa and converted into Python classes.
+
+👉 To learn how to handle them, see: `Handlers <../handlers/overview.html>`_
+
+**User-related updates:**
 
 .. list-table::
    :widths: 25 75
@@ -48,17 +55,31 @@ User related updates:
    * - :py:class:`~pywa.types.message.Message`
      - A message sent by a user (text, media, order, location, etc.)
    * - :py:class:`~pywa.types.callback.CallbackButton`
-     - A :py:class:`~pywa.types.callback.Button` pressed by a user
+     - A :py:class:`~pywa.types.callback.Button` | :py:class:`~pywa.types.templates.QuickReplyButton` pressed by a user
    * - :py:class:`~pywa.types.callback.CallbackSelection`
      - A :py:class:`~pywa.types.callback.SectionRow` chosen by a user
    * - :py:class:`~pywa.types.flows.FlowCompletion`
      - A flow completed by a user
    * - :py:class:`~pywa.types.message_status.MessageStatus`
-     - A message status update (e.g. delivered, seen, etc.)
+     - A message status update (delivered, seen, etc.)
    * - :py:class:`~pywa.types.chat_opened.ChatOpened`
      - A chat opened by a user
+   * - :py:class:`~pywa.types.system.PhoneNumberChange`
+     - A user's phone number changed
+   * - :py:class:`~pywa.types.system.IdentityChange`
+     - A user's identity changed
+   * - :py:class:`~pywa.types.calls.CallConnect`
+     - A call connected by a user
+   * - :py:class:`~pywa.types.calls.CallTerminate`
+     - A call terminated by a user
+   * - :py:class:`~pywa.types.calls.CallStatus`
+     - A call status update (ringing, busy, etc.)
+   * - :py:class:`~pywa.types.calls.CallPermissionUpdate`
+     - A call permission update (permission granted or denied)
+   * - :py:class:`~pywa.types.user_preferences.UserMarketingPreferences`
+     - A user marketing preferences update (e.g. opted in, opted out)
 
-Account related updates:
+**Account-related updates:**
 
 .. list-table::
    :widths: 25 75
@@ -66,13 +87,22 @@ Account related updates:
 
    * - Type
      - Description
-   * - :py:class:`~pywa.types.template.TemplateStatus`
-     - A template status update (e.g. approved, rejected, etc.)
+   * - :py:class:`~pywa.types.templates.TemplateStatusUpdate`
+     - A template status update (approved, rejected, etc.)
+   * - :py:class:`~pywa.types.templates.TemplateCategoryUpdate`
+     - A template category update (category changed)
+   * - :py:class:`~pywa.types.templates.TemplateQualityUpdate`
+     - A template quality update (quality score changed)
+   * - :py:class:`~pywa.types.templates.TemplateComponentsUpdate`
+     - A template components update (header, body, footer, buttons changed)
 
+-----------------
+Common Properties
+-----------------
 
 .. currentmodule:: pywa.types.base_update
 
-All updates have common methods and properties:
+All updates share common methods and properties:
 
 .. list-table::
    :widths: 25 75
@@ -85,13 +115,13 @@ All updates have common methods and properties:
    * - :attr:`~BaseUpdate.raw`
      - The raw update data
    * - :attr:`~BaseUpdate.timestamp`
-     - The timestamp of the update (in UTC)
+     - The update timestamp (UTC)
    * - :meth:`~BaseUpdate.stop_handling`
-     - Stop next handlers from handling the update
+     - Prevent further handlers from processing the update
    * - :meth:`~BaseUpdate.continue_handling`
-     - Continue to the next handler
+     - Force the update to continue to the next handler
 
-All user-related-updates have common methods and properties:
+**User-related updates** share additional properties:
 
 .. list-table::
    :widths: 25 75
@@ -100,49 +130,51 @@ All user-related-updates have common methods and properties:
    * - Method / Property
      - Description
    * - :attr:`~BaseUserUpdate.sender`
-     - The phone id who sent the update
+     - The phone ID of the sender
    * - :attr:`~BaseUserUpdate.recipient`
-     - The phone id who received the update
+     - The phone ID of the recipient
    * - :attr:`~BaseUserUpdate.message_id_to_reply`
-     - The message id to reply to
+     - The message ID to reply to
    * - :meth:`~BaseUserUpdate.reply_text`
-     - Reply to the update with a text message
+     - Reply with a text message
    * - :meth:`~BaseUserUpdate.reply_image`
-     - Reply to the update with an image message
+     - Reply with an image message
    * - :meth:`~BaseUserUpdate.reply_video`
-     - Reply to the update with a video message
+     - Reply with a video message
    * - :meth:`~BaseUserUpdate.reply_audio`
-     - Reply to the update with an audio message
+     - Reply with an audio message
    * - :meth:`~BaseUserUpdate.reply_document`
-     - Reply to the update with a document message
+     - Reply with a document message
    * - :meth:`~BaseUserUpdate.reply_location`
-     - Reply to the update with a location message
+     - Reply with a location message
    * - :meth:`~BaseUserUpdate.reply_location_request`
-     - Request a location from the user
+     - Request the user’s location
    * - :meth:`~BaseUserUpdate.reply_contact`
-     - Reply to the update with a contact message
+     - Reply with a contact message
    * - :meth:`~BaseUserUpdate.reply_sticker`
-     - Reply to the update with a sticker message
+     - Reply with a sticker message
    * - :meth:`~BaseUserUpdate.reply_template`
-     - Reply to the update with a template message
+     - Reply with a template message
    * - :meth:`~BaseUserUpdate.reply_catalog`
-     - Reply to the update with a catalog message
+     - Reply with a catalog message
    * - :meth:`~BaseUserUpdate.reply_product`
-     - Reply to the update with a product message
+     - Reply with a product message
    * - :meth:`~BaseUserUpdate.reply_products`
-     - Reply to the update with a list of product messages
+     - Reply with a list of product messages
    * - :meth:`~BaseUserUpdate.react`
-     - React to the update with a emoji
+     - React to the update with an emoji
    * - :meth:`~BaseUserUpdate.unreact`
-     - Unreact to the update
+     - Remove a reaction
    * - :meth:`~BaseUserUpdate.mark_as_read`
      - Mark the update as read
    * - :meth:`~BaseUserUpdate.indicate_typing`
-     - Indicate that the user is typing
+     - Indicate typing to the user
    * - :meth:`~BaseUserUpdate.block_sender`
      - Block the sender
    * - :meth:`~BaseUserUpdate.unblock_sender`
      - Unblock the sender
+   * - :meth:`~BaseUserUpdate.call`
+     - Start a call with the sender
 
 .. toctree::
     message
@@ -151,5 +183,15 @@ All user-related-updates have common methods and properties:
     flow_completion
     message_status
     chat_opened
-    template_status
+    phone_number_change
+    identity_change
+    call_connect
+    call_terminate
+    call_status
+    call_permission_update
+    user_marketing_preferences
+    template_status_update
+    template_category_update
+    template_quality_update
+    template_components_update
     common_methods

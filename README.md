@@ -16,7 +16,7 @@
 
 <p align="center">
   <a href="https://pypi.org/project/pywa/"><img src="https://img.shields.io/pypi/v/pywa.svg" /></a>
-  <a href="https://pypi.org/project/pywa/"><img src="https://img.shields.io/pypi/dm/pywa" /></a>
+  <a href="https://pypi.org/project/pywa/"><img src="https://static.pepy.tech/badge/pywa" /></a>
   <a href="https://github.com/david-lev/pywa/actions/workflows/tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/david-lev/pywa/tests.yml?label=Tests" /></a>
   <a href="https://codecov.io/gh/david-lev/pywa"><img src="https://img.shields.io/codecov/c/github/david-lev/pywa" /></a>
   <a href="https://pywa.readthedocs.io"><img src="https://readthedocs.org/projects/pywa/badge/?version=latest&" /></a>
@@ -24,26 +24,6 @@
   <a href="https://www.codefactor.io/repository/github/david-lev/pywa/overview/master"><img src="https://www.codefactor.io/repository/github/david-lev/pywa/badge/master" /></a>
   <a href="https://t.me/py_wa"><img src="https://badges.aleen42.com/src/telegram.svg" /></a>
 </p>
-
-> ⚠️ **Pywa v3 Release Candidate Available!**  
-> Pywa `v3.0.0` is now available for testing!  
->
-> 🚀 **What’s New in v3:**
-
-> • Complete **template system redesign** – easier structure, validation, and sending  
-> • Full support for **calls** (incoming and outgoing)  
-> • Improved **security**, **typing**, and **input validation**
-
-> 📚 [v3 Documentation »](https://pywa.readthedocs.io/en/v3/)  
-> 🧭 [Migration Guide (2.x → 3.x) »](https://github.com/david-lev/pywa/blob/v3/MIGRATION.md)  
-> 📝 [Full Changelog »](https://github.com/david-lev/pywa/blob/v3/CHANGELOG.md)  
->
-> 📦 **Install for testing:**  
-> ```bash
-> pip install pywa==3.0.0-rc.3
-> ```  
->
-> 💬 Feedback and issue reports are encouraged to help us prepare for the stable release.
 
 ---
 
@@ -58,30 +38,29 @@ Fully **typed**, **documented**, and **production-ready** — build powerful bot
 --------------------------------
 
 > [Get Started](https://pywa.readthedocs.io/en/latest/content/getting-started.html)
-• [WhatsApp Client](https://pywa.readthedocs.io/en/latest/content/client/overview.html)
+• [Client](https://pywa.readthedocs.io/en/latest/content/client/overview.html)
 • [Handlers](https://pywa.readthedocs.io/en/latest/content/handlers/overview.html)
 • [Listeners](https://pywa.readthedocs.io/en/latest/content/listeners/overview.html)
-• [Filters](https://pywa.readthedocs.io/en/latest/content/filters/overview.html)
 • [Updates](https://pywa.readthedocs.io/en/latest/content/updates/overview.html)
-• [Templates](https://pywa.readthedocs.io/en/v3/content/templates/overview.html)
+• [Filters](https://pywa.readthedocs.io/en/latest/content/filters/overview.html)
+• [Templates](https://pywa.readthedocs.io/en/latest/content/templates/overview.html)
 • [Flows](https://pywa.readthedocs.io/en/latest/content/flows/overview.html)
-• [Calls](https://pywa.readthedocs.io/en/v3/content/calls/overview.html)
-• [Examples](https://pywa.readthedocs.io/en/latest/content/examples/overview.html)
-
+• [Calls](https://pywa.readthedocs.io/en/latest/content/calls/overview.html)
 
 ------------------------
 
 ⚡ **Why PyWa?**
 ---------------
-- **🚀 Fast and Simple**: Focus on building your bot without worrying about low-level details.
-- **💬 Rich Messaging**: Send text, images, videos, documents, audio, locations, contacts, and interactive keyboards.
-- **📩 Real-Time Updates**: Receive messages, callbacks, and message status updates effortlessly.
-- **🔔 Listeners**: Use powerful listeners to wait for specific user events.
-- **♻️ Flows Support**: Create, send, and listen to Flows seamlessly.
-- **🔄 Webhook Integration**: Built-in support for popular frameworks like Flask and FastAPI.
-- **🔬 Advanced Filters**: Handle incoming updates with powerful filtering options.
-- **📄 Template Messaging**: Easily create and send template messages.
-- **✅ Production-Ready**: Fully typed, documented, and rigorously tested for reliability.
+- **🚀 Fast & Simple** – Focus on building, not boilerplate.
+- **💬 Rich Messaging** – Text, images, files, audio, locations, contacts, buttons & more.
+- **📩 Real-Time Updates** – Messages, callbacks, delivery/read receipts, account updates, and more.
+- **🔔 Listeners** – Wait for user replies, clicks, or reactions with ease.
+- **📄 Templates** – Create and send powerful WhatsApp templates.
+- **♻️ Flows** – Build interactive WhatsApp flows effortlessly.
+- **📞 Calls Support** – Receive and handle call events.
+- **🔄 Webhook-Ready** – Native support for Flask, FastAPI, and more.
+- **🔬 Filters** – Advanced filtering for incoming updates.
+- **✅ Production-Ready** – Typed, documented, and fully tested.
 
 ------------------------
 
@@ -165,7 +144,7 @@ def click_me(client: WhatsApp, clb: types.CallbackButton):
 - To run the server, use [fastapi-cli](https://fastapi.tiangolo.com/#run-it) (`pip install "fastapi[standard]"`):
 
 ```bash
-fastapi dev wa.py  # see uvicorn docs for more options (port, host, reload, etc.)
+fastapi dev wa.py  # see uvicorn docs for more options (port, host, etc.)
 ```
 
 - **Async Usage**
@@ -186,7 +165,55 @@ async def main():
 @wa.on_message
 async def hello(_: WhatsApp, msg: types.Message): # async callback
     await msg.react("👋")
-    await msg.reply(...)
+    await msg.reply("Hello from PyWa Async!")
+```
+
+- **Create and send template messages**
+> See [Templates](https://pywa.readthedocs.io/en/latest/content/templates/overview.html) for more details and examples.
+
+```python
+from pywa import WhatsApp
+from pywa.types.templates import *
+
+wa = WhatsApp(..., business_account_id=123456)
+
+# Create a template
+wa.create_template(
+    template=Template(
+        name="buy_new_iphone_x",
+        category=TemplateCategory.MARKETING,
+        language=TemplateLanguage.ENGLISH_US,
+        parameter_format=ParamFormat.NAMED,
+        components=[
+            ht := HeaderText("The New iPhone {{iphone_num}} is here!", iphone_num=15),
+            bt := BodyText("Buy now and use the code {{code}} to get {{per}}% off!", code="WA_IPHONE_15", per=15),
+            FooterText(text="Powered by PyWa"),
+            Buttons(
+                buttons=[
+                    url := URLButton(text="Buy Now", url="https://example.com/shop/{{1}}", example="iphone15"),
+                    PhoneNumberButton(text="Call Us", phone_number="1234567890"),
+                    qrb1 := QuickReplyButton(text="Unsubscribe from marketing messages"),
+                    qrb2 := QuickReplyButton(text="Unsubscribe from all messages"),
+                ]
+            ),
+
+        ]
+    ),
+)
+
+# Send the template message
+wa.send_template(
+    to="9876543210",
+    name="buy_new_iphone_x",
+    language=TemplateLanguage.ENGLISH_US,
+    params=[
+        ht.params(iphone_num=30),
+        bt.params(code="WA_IPHONE_30", per=30),
+        url.params(url_variable="iphone30", index=0),
+        qrb1.params(callback_data="unsubscribe_from_marketing_messages", index=1),
+        qrb2.params(callback_data="unsubscribe_from_all_messages", index=2),
+    ]
+)
 ```
 
 - **Create and send flows**
@@ -263,53 +290,6 @@ def handle_flow_response(_: WhatsApp, flow: types.FlowCompletion):
     )
 ```
 
-- **Create and send template messages**
-
-```python
-from pywa import WhatsApp, types
-
-# Create a WhatsApp client
-wa = WhatsApp(..., business_account_id=123456)
-
-# Create a template
-created = wa.create_template(
-    template=types.NewTemplate(
-        name="buy_new_iphone_x",
-        category=types.NewTemplate.Category.MARKETING,
-        language=types.NewTemplate.Language.ENGLISH_US,
-        header=types.NewTemplate.Text(text="The New iPhone {15} is here!"),
-        body=types.NewTemplate.Body(text="Buy now and use the code {WA_IPHONE_15} to get {15%} off!"),
-        footer=types.NewTemplate.Footer(text="Powered by PyWa"),
-        buttons=[
-            types.NewTemplate.UrlButton(title="Buy Now", url="https://example.com/shop/{iphone15}"),
-            types.NewTemplate.PhoneNumberButton(title="Call Us", phone_number='1234567890'),
-            types.NewTemplate.QuickReplyButton(text="Unsubscribe from marketing messages"),
-            types.NewTemplate.QuickReplyButton(text="Unsubscribe from all messages"),
-        ],
-    ),
-)
-
-# Send the template message
-wa.send_template(
-    to="9876543210",
-    template=types.Template(
-        name="buy_new_iphone_x",
-        language=types.Template.Language.ENGLISH_US,
-        header=types.Template.TextValue(value="15"),
-        body=[
-            types.Template.TextValue(value="John Doe"),
-            types.Template.TextValue(value="WA_IPHONE_15"),
-            types.Template.TextValue(value="15%"),
-        ],
-        buttons=[
-            types.Template.UrlButtonValue(value="iphone15"),
-            types.Template.QuickReplyButtonData(data="unsubscribe_from_marketing_messages"),
-            types.Template.QuickReplyButtonData(data="unsubscribe_from_all_messages"),
-        ],
-    ),
-)
-```
-
 🎛 **Installation**
 --------------------
 
@@ -348,16 +328,6 @@ pip3 install -U "pywa[cryptography]"
 
 See the [Documentation](https://pywa.readthedocs.io/) for detailed instructions
 
-☑️ **TODO**
-------------
-
-- ~~Add support for async~~
-- ~~Add support for more web frameworks (Django, aiohttp, etc.)~~
-- ~~Add support for flows~~
-- Add support for more types of updates (``account_alerts``, ``phone_number_quality_updates``, ``template_category_updates``, etc.)
-- Add more examples and guides
-
-Feel free to open an issue if you have any suggestions. or even better - submit a PR!
 
 ⚖️ **License**
 ---------------
@@ -370,3 +340,8 @@ This project is licensed under the MIT License - see the
 --------------------
 
 Contributions are welcome! Please see the [Contributing Guide](https://github.com/david-lev/pywa/blob/master/CONTRIBUTING.md) for more information.
+
+🗣 **Community**
+--------------------
+
+Join the [Telegram Group](https://t.me/pywachat) to discuss, ask questions, and share your projects built with PyWa!

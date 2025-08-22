@@ -13,5 +13,5 @@ Rate Limit Errors
     :show-inheritance:
 .. autoclass:: SpamRateLimitHit()
     :show-inheritance:
-.. autoclass:: ToManyMessages()
+.. autoclass:: TooManyMessages()
     :show-inheritance:

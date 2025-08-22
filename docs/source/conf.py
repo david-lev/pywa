@@ -69,7 +69,7 @@ suppress_warnings = ["image.not_readable"]
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["../static"]
-html_favicon = "favicon.ico"
+html_favicon = "../static/favicon.ico"
 
 # sphinx.ext.autodoc
 autodoc_member_order = "bysource"
@@ -147,7 +147,7 @@ ogp_image_alt = "PyWa Logo"
 ogp_description_length = 300
 ogp_type = "website"
 ogp_custom_meta_tags = [
-    '<meta property="og:description" content="PyWa • Build WhatsApp Bots in Python • Fast, Effortless, Powerful 🚀" /> '
+    '<meta property="og:description" content="🚀 PyWa • Build WhatsApp Bots in Python • Fast, Effortless, Powerful" /> '
 ]
 
 # html_extra_path = ["google898e98a538257a96.html"]

@@ -6,12 +6,13 @@ from pywa.utils import _flow_request_media_decryptor
 async def flow_request_media_decryptor(
     encrypted_media: dict[str, str | dict[str, str]],
     dl_session: httpx.AsyncClient | None = None,
-) -> tuple[str, str, bytes]:
+) -> FlowRequestDecryptedMedia:
     """
     Decrypt the encrypted media file from the flow request.
 
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components/media_upload#endpoint>`_.
-    - This implementation requires ``cryptography`` to be installed. To install it, run ``pip3 install 'pywa[cryptography]'`` or ``pip3 install cryptography``.
+    - Use the .decrypt_media() shorthand method of the :class:`FlowRequest` class instead.
+    - This implementation requires `cryptography <https://cryptography.io>`_ to be installed. To install it, run `pip3 install 'pywa[cryptography]'` or `pip3 install cryptography`.
 
     Example:
 
@@ -19,9 +20,9 @@ async def flow_request_media_decryptor(
         >>> wa = WhatsApp(...)
         >>> @wa.on_flow_request("/media-upload")
         ... async def on_media_upload_request(_: WhatsApp, req: types.FlowRequest) -> types.FlowResponse | None:
-        ...     media_id, filename, decrypted_data = await req.decrypt_media(key="driver_license", index=0)
-        ...     with open(filename, "wb") as file:
-        ...         file.write(decrypted_data)
+        ...     dec = await req.decrypt_media(key="driver_license", index=0)
+        ...     with open(dec.filename, "wb") as file:
+        ...         file.write(dec.data)
         ...     return req.respond(...)
 
     Args:
@@ -40,10 +41,10 @@ async def flow_request_media_decryptor(
     """
     res = await (dl_session or httpx.AsyncClient()).get(encrypted_media["cdn_url"])
     res.raise_for_status()
-    return (
-        encrypted_media["media_id"],
-        encrypted_media["file_name"],
-        _flow_request_media_decryptor(
+    return FlowRequestDecryptedMedia(
+        media_id=encrypted_media["media_id"],
+        filename=encrypted_media["file_name"],
+        data=_flow_request_media_decryptor(
             res.content, encrypted_media["encryption_metadata"]
         ),
     )

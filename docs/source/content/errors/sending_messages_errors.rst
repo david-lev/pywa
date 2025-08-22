@@ -45,3 +45,5 @@ Sending Messages Errors
     :show-inheritance:
 .. autoclass:: AccountInMaintenanceMode()
     :show-inheritance:
+.. autoclass:: UserIsInExperimentGroup()
+    :show-inheritance:

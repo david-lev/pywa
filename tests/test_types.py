@@ -1,12 +1,18 @@
 import datetime
+
 from pywa import types, WhatsApp
 from pywa.types import Result
 from pywa.types.flows import FlowDetails
-from pywa.types.sent_message import SentMessage, SentTemplate, SentTemplateStatus
+from pywa.types.sent_update import (
+    SentMessage,
+    SentTemplate,
+    SentTemplateStatus,
+    InitiatedCall,
+)
 import pytest
 from unittest.mock import MagicMock, call
 
-wa = WhatsApp(token="token")
+wa = WhatsApp(phone_id="123456789", token="token")
 
 
 def test_flow_details():
@@ -57,11 +63,22 @@ def test_flow_details():
                 2024, 12, 31, 18, 45, 52, tzinfo=datetime.timezone.utc
             ),
         ),
-        whatsapp_business_account=types.flows.WhatsAppBusinessAccount(
+        whatsapp_business_account=types.others.WhatsAppBusinessAccount(
             id="124578",
             name="Test WhatsApp Business Account",
             timezone_id="1",
             message_template_namespace="1acaxyzfec",
+            status=None,
+            business_verification_status=None,
+            is_enabled_for_insights=None,
+            marketing_messages_onboarding_status=None,
+            marketing_messages_lite_api_status=None,
+            on_behalf_of_business_info=None,
+            ownership_type=None,
+            health_status=None,
+            country=None,
+            currency=None,
+            subscribed_apps=None,
         ),
         application=types.flows.FacebookApplication(
             link="https://www.facebook.com/games/?app_id=12345",
@@ -227,7 +244,7 @@ def test_business_phone_number():
 
 
 def test_sent_message():
-    assert SentMessage.from_sent_update(
+    sm = SentMessage.from_sent_update(
         client=wa,
         update={
             "messaging_product": "whatsapp",
@@ -237,14 +254,15 @@ def test_sent_message():
             ],
         },
         from_phone_id=wa.phone_id,
-    ) == SentMessage(
+    )
+    assert sm == SentMessage(
         _client=wa,
-        _callback_options=None,
-        _flow_token=None,
         id="wamid.HBgLMTY1MDUwNzY1MjAVAgARGBI5QTNDQTVCM0Q0Q0Q2RTY3RTcA",
         to_user=types.User(wa_id="16505555555", name=None, _client=wa),
         from_phone_id=wa.phone_id,
     )
+    assert sm.sender == wa.phone_id
+    assert sm.recipient == sm.to_user.wa_id
 
     assert SentTemplate.from_sent_update(
         client=wa,
@@ -261,12 +279,32 @@ def test_sent_message():
         from_phone_id=wa.phone_id,
     ) == SentTemplate(
         _client=wa,
-        _callback_options=None,
-        _flow_token=None,
         id="wamid.HBgLMTY1MDUwNzY1MjAVAgARGBI5QTNDQTVCM0Q0Q0Q2RTY3RTcA",
         to_user=types.User(wa_id="16505555555", name=None, _client=wa),
         from_phone_id=wa.phone_id,
         status=SentTemplateStatus.ACCEPTED,
+    )
+
+
+def test_initiated_call():
+    c = InitiatedCall.from_sent_update(
+        client=wa,
+        update={
+            "messaging_product": "whatsapp",
+            "calls": [{"id": "wacid.fiurefh8e="}],
+            "success": True,
+        },
+        from_phone_id=wa.phone_id,
+        to_wa_id="16506666666",
+    )
+    assert c.caller == wa.phone_id
+    assert c.callee == "16506666666"
+    assert c == InitiatedCall(
+        _client=wa,
+        id="wacid.fiurefh8e=",
+        to_user=types.User(wa_id="16506666666", name=None, _client=wa),
+        from_phone_id=wa.phone_id,
+        success=True,
     )
 
 

@@ -4,44 +4,67 @@ __all__ = [
     "resolve_buttons_param",
     "resolve_media_param",
     "resolve_tracker_param",
-    "resolve_phone_id_param",
-    "resolve_waba_id_param",
+    "resolve_arg",
+    "upload_template_media_components",
     "resolve_flow_json_param",
     "get_interactive_msg",
     "get_media_msg",
-    "get_flow_fields",
     "get_flow_metric_field",
     "resolve_callback_data",
 ]
 
 import datetime
+import itertools
 import json
+import mimetypes
 import pathlib
-from typing import Any, BinaryIO, Literal, Iterable, TYPE_CHECKING
+import threading
+from concurrent import futures
+from typing import Any, BinaryIO, Iterable, TYPE_CHECKING
+
+import httpx
 
 from .types import (
     FlowMetricName,
     FlowMetricGranularity,
     FlowJSON,
     CallbackData,
-    MessageType,
-    ButtonUrl,
+    URLButton,
+    VoiceCallButton,
     SectionList,
     FlowButton,
     Button,
+    CallPermissionRequestButton,
+    ButtonUrl,
+    MessageType,
 )
 from pywa.types.others import InteractiveType
+from .types.media import Media
+from .types.templates import (
+    TemplateBaseComponent,
+    _BaseMediaHeaderComponent,
+    HeaderFormatType,
+    Carousel,
+    _BaseMediaParams,
+    BaseParams,
+)
 
 if TYPE_CHECKING:
     from pywa import WhatsApp
 
 
 def resolve_buttons_param(
-    buttons: Iterable[Button] | ButtonUrl | FlowButton | SectionList,
+    buttons: (
+        Iterable[Button]
+        | URLButton
+        | VoiceCallButton
+        | CallPermissionRequestButton
+        | FlowButton
+        | SectionList
+    ),
 ) -> tuple[
     InteractiveType,
     dict,
-    dict[str, set[str] | str],
 ]:
     """
     Internal method to resolve ``buttons`` parameter. Returns a tuple of (``type``, ``buttons``, ``callback_options``).
@@ -51,51 +74,63 @@ def resolve_buttons_param(
         return (
             InteractiveType.LIST,
             data,
-            {
-                "_callback_options": {
-                    row["id"] for section in data["sections"] for row in section["rows"]
-                }
-            },
         )
-    elif isinstance(buttons, ButtonUrl):
-        return InteractiveType.CTA_URL, buttons.to_dict(), {}
+    elif isinstance(buttons, (URLButton, ButtonUrl)):
+        return InteractiveType.CTA_URL, buttons.to_dict()
+    elif isinstance(buttons, VoiceCallButton):
+        return InteractiveType.VOICE_CALL, buttons.to_dict()
+    elif isinstance(buttons, CallPermissionRequestButton):
+        return InteractiveType.CALL_PERMISSION_REQUEST, buttons.to_dict()
     elif isinstance(buttons, FlowButton):
-        return (
-            InteractiveType.FLOW,
-            buttons.to_dict(),
-            {"_flow_token": buttons.flow_token},
-        )
+        return InteractiveType.FLOW, buttons.to_dict()
     else:  # assume its list of buttons
-        data = tuple(b.to_dict() for b in buttons)
-        return (
-            InteractiveType.BUTTON,
-            {"buttons": data},
-            {"_callback_options": {b["reply"]["id"] for b in data}},
-        )
+        return InteractiveType.BUTTON, {"buttons": tuple(b.to_dict() for b in buttons)}
 
 
+_header_format_to_message_type = {
+    HeaderFormatType.IMAGE: MessageType.IMAGE,
+    HeaderFormatType.VIDEO: MessageType.VIDEO,
+    HeaderFormatType.DOCUMENT: MessageType.DOCUMENT,
+}
 _media_types_default_filenames = {
-    MessageType.IMAGE: "image.jpg",
-    MessageType.VIDEO: "video.mp4",
-    MessageType.AUDIO: "audio.mp3",
-    MessageType.STICKER: "sticker.webp",
+    MessageType.IMAGE: "pywa-image.jpg",
+    MessageType.VIDEO: "pywa-video.mp4",
+    MessageType.AUDIO: "pywa-audio.mp3",
+    MessageType.STICKER: "pywa-sticker.webp",
+    MessageType.DOCUMENT: "pywa-document.pdf",
+}
+_media_types_default_mime_types = {
+    MessageType.IMAGE: "image/jpeg",
+    MessageType.VIDEO: "video/mp4",
+    MessageType.AUDIO: "audio/mpeg",
+    MessageType.STICKER: "image/webp",
+    MessageType.DOCUMENT: "application/pdf",
+}
+_template_header_formats_filename = {
+    HeaderFormatType.IMAGE: "pywa-template-header-image.jpg",
+    HeaderFormatType.VIDEO: "pywa-template-header-video.mp4",
+    HeaderFormatType.DOCUMENT: "pywa-template-header-document.pdf",
+}
+_template_header_formats_default_mime_types = {
+    HeaderFormatType.IMAGE: "image/jpeg",
+    HeaderFormatType.VIDEO: "video/mp4",
+    HeaderFormatType.DOCUMENT: "application/pdf",
 }
 
 
 def resolve_media_param(
     wa: WhatsApp,
-    media: str | pathlib.Path | bytes | BinaryIO,
+    media: str | Media | pathlib.Path | bytes | BinaryIO,
     mime_type: str | None,
     filename: str | None,
-    media_type: Literal[
-        MessageType.IMAGE, MessageType.VIDEO, MessageType.AUDIO, MessageType.STICKER
-    ]
-    | None,
+    media_type: MessageType | None,
     phone_id: str,
 ) -> tuple[bool, str]:
     """
     Internal method to resolve the ``media`` parameter. Returns a tuple of (``is_url``, ``media_id_or_url``).
     """
+    if isinstance(media, Media):
+        return False, media.id
     if isinstance(media, (str, pathlib.Path)):
         if str(media).startswith(("https://", "http://")):
             return True, media
@@ -105,9 +140,193 @@ def resolve_media_param(
     return False, wa.upload_media(
         phone_id=phone_id,
         media=media,
-        mime_type=mime_type,
-        filename=_media_types_default_filenames.get(media_type, filename),
-    )
+        mime_type=mime_type or _media_types_default_mime_types.get(media_type),
+        filename=filename or _media_types_default_filenames.get(media_type),
+    ).id
+
+
+def upload_template_media_components(
+    *,
+    wa: WhatsApp,
+    app_id: int | str | None,
+    components: list[TemplateBaseComponent | dict],
+) -> None:
+    """
+    Internal method to upload media components examples in a template.
+    """
+    not_uploaded = []
+    for comp in components:
+        if isinstance(comp, _BaseMediaHeaderComponent) and comp._handle is None:
+            not_uploaded.append(comp)
+        elif isinstance(comp, Carousel):
+            for card in comp.cards:
+                for cc in card.components:
+                    if isinstance(cc, _BaseMediaHeaderComponent) and cc._handle is None:
+                        not_uploaded.append(cc)
+    if not not_uploaded:
+        return
+
+    stop_event = threading.Event()
+    with futures.ThreadPoolExecutor(
+        thread_name_prefix="pywa-upload-template-media"
+    ) as executor:
+        tasks = [
+            executor.submit(
+                _upload_comps_example,
+                wa=wa,
+                example=example,
+                comps=list(comps),
+                app_id=app_id,
+                stop_event=stop_event,
+            )
+            for example, comps in itertools.groupby(
+                not_uploaded, key=lambda x: x.example
+            )
+        ]
+        for future in futures.as_completed(tasks):
+            future.result()
+            if stop_event.is_set():
+                break
+
+
+def _upload_comps_example(
+    *,
+    wa: WhatsApp,
+    example: str | Media | pathlib.Path | bytes | BinaryIO,
+    comps: list[_BaseMediaHeaderComponent],
+    app_id: int | str | None,
+    stop_event: threading.Event,
+) -> None:
+    if stop_event.is_set():
+        return
+    first_comp = comps[0]
+    filename: str | None = None
+    mime_type: str | None = None
+    raw_bytes: bytes | None = None
+    try:
+        if isinstance(example, (str, pathlib.Path, Media)):
+            if str(example).startswith(("https://", "http://")):  # URL
+                res = httpx.Client(follow_redirects=True).get(str(example))
+                res.raise_for_status()
+                raw_bytes = res.content
+                mime_type = res.headers.get("Content-Type")
+            elif (path := pathlib.Path(example)).is_file():  # File path
+                with open(path, "rb") as f:
+                    filename = path.name
+                    mime_type = mimetypes.guess_type(path)[0]
+                    raw_bytes = f.read()
+            elif str(example).isdigit() or isinstance(
+                example, Media
+            ):  # WhatsApp Media ID
+                url_res = wa.get_media_url(
+                    media_id=example.id if isinstance(example, Media) else example
+                )
+                mime_type = url_res.mime_type
+                raw_bytes = wa.download_media(url=url_res.url, in_memory=True)
+        elif isinstance(example, bytes):  # Raw bytes
+            raw_bytes = example
+        if not raw_bytes:
+            raise ValueError(
+                f"Invalid media example for component {first_comp.__class__.__name__}: {example}. "
+                "It must be a URL, file path, WhatsApp Media, or bytes."
+            )
+        app_id = resolve_arg(
+            wa=wa,
+            value=app_id,
+            method_arg="app_id",
+            client_arg="app_id",
+        )
+        handle = wa.api.upload_file(
+            upload_session_id=wa.api.create_upload_session(
+                app_id=app_id,
+                file_name=filename
+                or _template_header_formats_filename.get(
+                    first_comp.format, "pywa-template-header"
+                ),
+                file_length=len(raw_bytes),
+                file_type=mime_type
+                or _template_header_formats_default_mime_types.get(
+                    first_comp.format, "application/octet-stream"
+                ),
+            )["id"],
+            file=raw_bytes,
+            file_offset=0,
+        )["h"]
+
+        for comp in comps:
+            comp._handle = handle
+
+    except Exception as e:
+        stop_event.set()
+        e.add_note(
+            f"Failed to upload media for component {first_comp.__class__.__name__} with example: {example if not isinstance(example, bytes) else '<bytes>'}"
+        )
+        raise
+
+
+def upload_template_media_params(
+    *,
+    wa: WhatsApp,
+    sender: str,
+    params: list[BaseParams | dict],
+) -> None:
+    """
+    Internal method to upload media parameters when sending a template message.
+    """
+    not_uploaded = []
+    for param in params:
+        if isinstance(param, _BaseMediaParams) and param._resolved_media is None:
+            not_uploaded.append(param)
+        elif isinstance(param, Carousel._Params):
+            for card_params in param.cards:
+                for p in card_params.params:
+                    if isinstance(p, _BaseMediaParams) and p._resolved_media is None:
+                        not_uploaded.append(p)
+
+    if not not_uploaded:
+        return
+    with futures.ThreadPoolExecutor(
+        thread_name_prefix="pywa-upload-template-media-params"
+    ) as executor:
+        tasks = [
+            executor.submit(
+                _upload_params_media,
+                wa=wa,
+                sender=sender,
+                media=media,
+                params=list(params),
+            )
+            for media, params in itertools.groupby(not_uploaded, key=lambda x: x.media)
+        ]
+        for task in futures.wait(tasks)[0]:
+            task.result()
+
+
+def _upload_params_media(
+    *,
+    wa: WhatsApp,
+    sender: str,
+    media: str | Media | pathlib.Path | bytes | BinaryIO,
+    params: list[_BaseMediaParams],
+) -> None:
+    first_param = params[0]
+    try:
+        is_url, media_id_or_url = resolve_media_param(
+            wa=wa,
+            media=media,
+            mime_type=None,
+            filename=None,
+            media_type=_header_format_to_message_type[first_param.format],
+            phone_id=sender,
+        )
+        for p in params:
+            p._is_url = is_url
+            p._resolved_media = media_id_or_url
+    except Exception as e:
+        e.add_note(
+            f"Failed to upload media for parameter {first_param} with media: {media if not isinstance(media, bytes) else '<bytes>'}"
+        )
+        raise e
 
 
 def resolve_tracker_param(tracker: str | CallbackData | None) -> str | None:
@@ -115,27 +334,19 @@ def resolve_tracker_param(tracker: str | CallbackData | None) -> str | None:
     return tracker.to_str() if isinstance(tracker, CallbackData) else tracker
 
 
-def resolve_phone_id_param(
-    wa: WhatsApp, phone_id: str | int | None, arg_name: str
+def resolve_arg(
+    *,
+    wa: WhatsApp,
+    value: str | int | None,
+    method_arg: str,
+    client_arg: str,
 ) -> str:
-    """Internal method to resolve the `phone_id` parameter."""
-    if phone_id is not None:
-        return str(phone_id)
-    if wa.phone_id is not None:
-        return wa.phone_id
+    if value is not None:
+        return str(value)
+    if getattr(wa, client_arg, None) is not None:
+        return str(getattr(wa, client_arg))
     raise ValueError(
-        f"When initializing WhatsApp without phone_id, {arg_name} must be provided."
-    )
-
-
-def resolve_waba_id_param(wa: WhatsApp, waba_id: str | int | None) -> str:
-    """Internal method to resolve the `waba_id` parameter."""
-    if waba_id is not None:
-        return str(waba_id)
-    if wa.business_account_id is not None:
-        return wa.business_account_id
-    raise ValueError(
-        "When initializing WhatsApp without business_account_id, waba_id must be provided."
+        f"When initializing WhatsApp without `{client_arg}`, `{method_arg}` must be provided."
     )
 
 
@@ -198,29 +409,6 @@ def get_media_msg(
         **({"caption": caption} if caption else {}),
         **({"filename": filename} if filename else {}),
     }
-
-
-def get_flow_fields(
-    invalidate_preview: bool, phone_number_id: str | None
-) -> tuple[str, ...]:
-    """Internal method to get the fields of a flow."""
-    return (
-        "id",
-        "name",
-        "status",
-        "updated_at",
-        "categories",
-        "validation_errors",
-        "json_version",
-        "data_api_version",
-        "endpoint_uri",
-        f"preview.invalidate({'true' if invalidate_preview else 'false'})",
-        "whatsapp_business_account",
-        "application",
-        "health_status"
-        if not phone_number_id
-        else f"health_status.phone_number({phone_number_id})",
-    )
 
 
 def get_flow_metric_field(

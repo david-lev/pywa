@@ -3,13 +3,21 @@ from typing import Any, Callable
 from pywa.types import (
     MessageType,
     MessageStatusType,
-    TemplateStatus,
+    MarketingPreference,
+)
+from pywa.types.calls import (
+    CallEvent,
+    CallDirection,
+    CallPermissionResponse,
+    CallPermissionResponseSource,
 )
 from pywa.types.media import Image, Video, Document, Audio
+from pywa.types.system import SystemType
+from pywa.types.templates import TemplateStatus, TemplateCategory
 from .common import CLIENTS
 
-# {filename: {test_name: [test_funcs]}}
-TYPES: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
+# {update_file: {update_name: [test_funcs]}}
+TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
     "message": {
         "text": [lambda m: m.text is not None],
         "image": [
@@ -45,7 +53,6 @@ TYPES: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
         "chosen_location": [lambda m: not m.location.current_location],
         "contacts": [lambda m: m.contacts is not None],
         "order": [lambda m: m.order is not None],
-        "system": [lambda m: m.system is not None],
         "unsupported": [lambda m: m.error is not None],
         "reply": [lambda m: m.is_reply],
         "forwarded": [lambda m: m.forwarded],
@@ -53,6 +60,7 @@ TYPES: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
         "interactive_message_with_err": [
             lambda m: m.type == MessageType.INTERACTIVE and m.error is not None
         ],
+        "referral": [lambda m: m.referral is not None],
     },
     "callback_button": {
         "button": [lambda b: b.type == MessageType.INTERACTIVE],
@@ -69,8 +77,14 @@ TYPES: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
         "failed": [lambda s: s.error is not None],
         "with_tracker": [lambda s: s.tracker is not None],
     },
-    "template_status": {
-        "approved": [lambda s: s.event == TemplateStatus.TemplateEvent.APPROVED],
+    "template_status_update": {
+        "approved": [lambda s: s.new_status == TemplateStatus.APPROVED],
+    },
+    "template_category_update": {
+        "marketing": [lambda c: c.new_category == TemplateCategory.MARKETING],
+    },
+    "template_components_update": {
+        "element": [lambda c: c.template_element is not None],
     },
     "flow_completion": {
         "completion": [
@@ -82,19 +96,53 @@ TYPES: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
     "chat_opened": {
         "chat_opened": [lambda c: c.type == MessageType.REQUEST_WELCOME],
     },
+    "system": {
+        "phone_number_change": [
+            lambda s: s.sys_type == SystemType.USER_CHANGED_NUMBER,
+            lambda s: s.sender == s.old_wa_id,
+        ],
+        "identity_change": [
+            lambda s: s.sys_type == SystemType.CUSTOMER_IDENTITY_CHANGED,
+        ],
+    },
+    "call_connect": {
+        "business_initiated": [
+            lambda c: c.direction == CallDirection.BUSINESS_INITIATED
+        ],
+        "user_initiated": [lambda c: c.direction == CallDirection.USER_INITIATED],
+    },
+    "call_terminate": {
+        "call_terminate": [lambda c: c.event == CallEvent.TERMINATE],
+    },
+    "call_status": {
+        "call_status": [lambda c: c.type is not None],
+    },
+    "call_permission_update": {
+        "accept": [
+            lambda c: c.response == CallPermissionResponse.ACCEPT
+            and c.response_source == CallPermissionResponseSource.USER_ACTION
+            and c.expiration_timestamp is not None,
+        ],
+        "reject": [
+            lambda c: c.response == CallPermissionResponse.REJECT
+            and c.response_source == CallPermissionResponseSource.USER_ACTION
+            and c.expiration_timestamp is None,
+        ],
+    },
+    "user_marketing_preferences": {
+        "resume": [lambda u: u.value == MarketingPreference.RESUME],
+    },
 }
 
 
 def test_types():
-    for client, updates in CLIENTS.items():
-        for version, files in updates.items():
-            for filename, tests in files.items():
-                for test in tests:
-                    for test_name, update in test.items():
-                        for test_func in TYPES[filename][test_name]:
-                            try:
-                                assert test_func(update)
-                            except AssertionError as e:
-                                raise AssertionError(
-                                    f"Failed to assert test='{test_name}', v={version}, error={e}"
-                                )
+    for client, update_files in CLIENTS.items():
+        for file, updates in update_files.items():
+            for update_name, update in updates.items():
+                for test_func in TESTS[file.stem][update_name]:
+                    try:
+                        assert test_func(update)
+                    except AssertionError as e:
+                        raise AssertionError(
+                            f"Failed to assert update_name='{update_name}' error={e}"
+                        )

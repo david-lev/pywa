@@ -19,10 +19,11 @@ Media
 
 .. currentmodule:: pywa.types.media
 
-.. autoproperty:: BaseMedia.extension
-.. automethod:: BaseMedia.get_media_url
-.. automethod:: BaseMedia.download
-.. automethod:: BaseMedia.from_flow_completion
+.. autoclass:: Media()
+    :members: get_media_url, download, delete
+
+.. autoproperty:: BaseUserMedia.extension
+.. automethod:: BaseUserMedia.from_flow_completion
 
 ----------------
 

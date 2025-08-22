@@ -1,97 +1,119 @@
+from __future__ import annotations
+
 """
 This module contains the errors that can be raised by the WhatsApp Cloud API or incoming error from the webhook.
 """
-
+import warnings
+import dataclasses
 import functools
-from typing import Iterable, Type
+from typing import Iterable, ClassVar
 
 import httpx
 
 
+@dataclasses.dataclass(slots=True, frozen=True)
 class WhatsAppError(Exception):
     """
-    Base exception for all WhatsApp errors.
+    Base dataclass for WhatsApp errors.
 
     - `'Cloud API Error Codes' on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/support/error-codes>`_.
     - `'Flow Error Codes' on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/error-codes>`_.
+    - `'Calling Error Codes' on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/troubleshooting>`_.
+    - `'Block User Error Codes' on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/block-users#error-codes>`_.
 
     Attributes:
-        error_code: The error code.
-        error_subcode: The error subcode (optional).
-        type: The error type (optional).
+        code: The error code.
         message: The error message.
         details: The error details (optional).
         fbtrace_id: The Facebook trace ID (optional).
         href: The href to the documentation (optional).
         raw_response: The :class:`httpx.Response` obj that returned the error (optional, only if the error was raised
-         from an API call).
+            from an API call).
+        subcode: The error subcode (optional).
+        type: The error type (optional).
+        is_transient: Whether the error is transient (optional).
+        user_title: The user-facing title for the error (optional).
+        user_msg: The user-facing message for the error (optional).
     """
 
-    __error_codes__: Iterable[int] | None
+    __error_codes__: ClassVar[Iterable[int] | None] = None
 
-    def __init__(
-        self,
-        error_code: int,
-        message: str,
-        details: str | None,
-        fbtrace_id: str | None,
-        href: str | None,
-        raw_response: httpx.Response | None,
-        error_subcode: int | None = None,
-        err_type: str | None = None,
-    ) -> None:
-        self.error_code = error_code
-        self.error_subcode = error_subcode
-        self.type = err_type
-        self.message = message
-        self.details = details
-        self.fbtrace_id = fbtrace_id
-        self.href = href
-        self.raw_response = raw_response
-
-    @property
-    def status_code(self) -> int | None:
-        """The status code (in case of raw_response, else None)."""
-        return self.raw_response.status_code if self.raw_response is not None else None
+    code: int
+    message: str
+    details: str | None = None
+    fbtrace_id: str | None = None
+    href: str | None = None
+    raw_response: httpx.Response | None = None
+    subcode: int | None = None
+    type: str | None = None
+    is_transient: bool | None = None
+    user_title: str | None = None
+    user_msg: str | None = None
 
     @classmethod
     def from_dict(
         cls, error: dict, response: httpx.Response | None = None
-    ) -> "WhatsAppError":
+    ) -> WhatsAppError:
         """Create an error from a response."""
-        return cls._get_exception(error["code"])(
-            raw_response=response,
-            error_code=error["code"],
+        # noinspection PyCallingNonCallable
+        return cls._get_exception(code=(int_code := int(error["code"])))(
+            code=int_code,
             message=error["message"],
             details=error.get("error_data", {}).get("details", None),
             fbtrace_id=error.get("fbtrace_id"),
             href=error.get("href"),
-            error_subcode=error.get("error_subcode"),
-            err_type=error.get("type"),
+            raw_response=response,
+            subcode=error.get("error_subcode"),
+            type=error.get("type"),
+            is_transient=error.get("is_transient"),
+            user_title=error.get("error_user_title"),
+            user_msg=error.get("error_user_msg"),
         )
 
-    @staticmethod
-    @functools.cache
-    def _all_exceptions() -> tuple[Type["WhatsAppError"], ...]:
-        """Get all exceptions that can be raised from this error."""
-        return tuple(
-            ss for s in WhatsAppError.__subclasses__() for ss in s.__subclasses__()
-        )
+    @property
+    def status_code(self) -> int | None:
+        """The status code (in case of ``raw_response``, else None)."""
+        return self.raw_response.status_code if self.raw_response is not None else None
 
-    @staticmethod
-    @functools.cache
-    def _get_exception(code: int) -> Type["WhatsAppError"]:
+    @classmethod
+    def _get_exception(cls, code: int) -> type[WhatsAppError]:
         """Get the exception class from the error code."""
-        return next(
-            (e for e in WhatsAppError._all_exceptions() if code in e.__error_codes__),
-            WhatsAppError,
+        return _all_exceptions().get(code, WhatsAppError)
+
+    @property
+    def error_code(self) -> int:
+        """Deprecated, use `code` instead."""
+        warnings.warn(
+            "WhatsAppError.error_code is deprecated, use WhatsAppError.code instead.",
+            DeprecationWarning,
+            stacklevel=2,
         )
+        return self.code
+
+    @property
+    def error_subcode(self) -> int | None:
+        """Deprecated, use `subcode` instead."""
+        warnings.warn(
+            "WhatsAppError.error_subcode is deprecated, use WhatsAppError.subcode instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.subcode
 
     def __str__(self) -> str:
-        return f"{self.__class__.__name__}(message={self.message!r}, details={self.details!r}, code={self.error_code!r})"
+        """Return a string representation of the error."""
+        return self.__repr__()
 
-    def __repr__(self) -> str:
-        return self.__str__()
+
+@functools.cache
+def _all_exceptions() -> dict[int, type[WhatsAppError]]:
+    """Get all exceptions that can be raised from this error."""
+    return {
+        code: ssc
+        for sc in WhatsAppError.__subclasses__()
+        for ssc in sc.__subclasses__()
+        for code in ssc.__error_codes__
+    }
 
 
 class AuthorizationError(WhatsAppError):
@@ -174,12 +196,6 @@ class TooManyMessages(ThrottlingError):
     __error_codes__ = (131056,)
 
 
-class ToManyMessages(TooManyMessages):
-    """Deprecated, use :class:`TooManyMessages` instead."""
-
-    pass
-
-
 # ====================================================================================================
 
 
@@ -207,6 +223,16 @@ class AccountLocked(IntegrityError):
     __error_codes__ = (131031,)
 
 
+class AccountRestrictedFromCountry(IntegrityError):
+    """
+    The WhatsApp Business Account is restricted from messaging to users in certain countries.
+
+    See WhatsApp Business Messaging Policy for details on allowed countries for messaging in your business category.
+    """
+
+    __error_codes__ = (130497,)
+
+
 # ====================================================================================================
 
 
@@ -214,6 +240,15 @@ class SendMessageError(WhatsAppError):
     """Base exception for all message errors."""
 
     __error_codes__ = None
+
+
+class UserIsInExperimentGroup(SendMessageError):
+    """The user is part of an experiment group and the message was not sent as part of an experiment.
+
+    See `Marketing Message Experiment <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/experiments#marketing-message-experiment>`_.
+    """
+
+    __error_codes__ = (130472,)
 
 
 class MessageUndeliverable(SendMessageError):
@@ -372,7 +407,7 @@ class RecipientCannotBeSender(SendMessageError):
 class BusinessPaymentIssue(SendMessageError):
     """Message failed to send because there were one or more errors related to your payment method."""
 
-    __error_codes__ = (131042,)
+    __error_codes__ = (131042, 131044)  # 131044 is for calling
 
 
 class IncorrectCertificate(SendMessageError):
@@ -385,6 +420,12 @@ class AccountInMaintenanceMode(SendMessageError):
     """Business Account is in maintenance mode"""
 
     __error_codes__ = (131057,)
+
+
+class UserStoppedMarketingMessages(SendMessageError):
+    """User has stopped marketing messages from the business account. you should listen to UserMarketingPreferences updates"""
+
+    __error_codes__ = (131050,)
 
 
 # ====================================================================================================
@@ -511,3 +552,147 @@ class BlockUserInternalError(BlockUserError):
     """
 
     __error_codes__ = (139103,)
+
+
+# ====================================================================================================
+
+
+class CallingError(WhatsAppError):
+    """
+    Base exception for all calling errors.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/troubleshooting>`_.
+    """
+
+    __error_codes__ = None
+
+
+class CallingNotEnabled(CallingError):
+    """
+    Calling is not enabled on the business phone number.
+
+    `Configure call settings to enable Calling API features <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/call-settings>`_.
+    """
+
+    __error_codes__ = (138000,)
+
+
+class CallingCannotBeEnabled(CallingError):
+    """
+    WhatsApp Business calling cannot be enabled because technical pre-requisites are not met.
+
+    See `prerequisites <https://developers.facebook.com/docs/whatsapp/cloud-api/calling#step-1--prerequisites>`_ for more details
+
+    `Configure SIP <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/sip>`_ or ensure there is at-least one app subscribed to the WhatsApp Business Account that also has subscription to the calls webhook field.
+    """
+
+    __error_codes__ = (138018,)
+
+
+class ReceiverUncallable(CallingError):
+    """
+    Receiver is unable to receive calls
+
+    Reasons can include:
+
+    - The recipient phone number is not a WhatsApp phone number.
+    - The recipient has not accepted our new Terms of Service and Privacy Policy.
+    - Recipient using an unsupported client. The currently supported clients are Android, iOS, SMB Android and SMB iOS
+
+    Confirm with the recipient that they agree to be contacted by you over WhatsApp and are using the latest version of WhatsApp.
+    """
+
+    __error_codes__ = (138001,)
+
+
+class ConcurrentCallsLimit(CallingError):
+    """
+    Limit reached for maximum concurrent calls (1000) for the given number
+
+    Try again later or reduce the frequency or amount of API calls the app is making.
+    """
+
+    __error_codes__ = (138002,)
+
+
+class DuplicateCall(CallingError):
+    """
+    A call is already ongoing with the receiver
+
+    Try again later when the current call ends.
+    """
+
+    __error_codes__ = (138003,)
+
+
+class CallConnectionError(CallingError):
+    """
+    Error while connecting the call
+
+    Try again later or investigate the connection params provided to the API.
+    """
+
+    __error_codes__ = (138004,)
+
+
+class CallRateLimitExceeded(CallingError):
+    """
+    Limit reached for maximum calls that can be initiated by the business phone number
+
+    Try again later or reduce the frequency or amount of API calls the app is making.
+    """
+
+    __error_codes__ = (138005,)
+
+
+class CallPermissionNotFound(CallingError):
+    """
+    No approved `call permission <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-call-permissions>`_ from the recipient
+
+    Ensure a call permission has been accepted by the consumer
+    """
+
+    __error_codes__ = (138006,)
+
+
+class CallConnectionTimeout(CallingError):
+    """
+    Call was unable to connect due to a timeout
+
+    Business did not apply the offer/answer SDP from Cloud API in time. Connect API was not invoked with the answer SDP in time
+    """
+
+    __error_codes__ = (138007,)
+
+
+class CallPermissionRequestLimitHit(CallingError):
+    """
+    Limit reached for call permission request sends for the given business and consumer pair
+
+    When a business sends more than the limit of call permission requests per time period, Call Permission Requests are rate limited. A connected call with a consumer will reset the limits.
+    """
+
+    __error_codes__ = (138009,)
+
+
+class BusinessInitiatedCallsLimitHit(CallingError):
+    """
+    Limit reached for maximum business initiated calls allowed in 24 hours. Currently 5 connected business initiated calls are allowed within 24 hours.
+
+    Exact error details will be listed in the error_data section of the response payload. Details will include a timestamp when the next call is allowed.
+    """
+
+    __error_codes__ = (138012,)
+
+
+class FetchCallPermissionLimitHit(CallingError):
+    """
+    Limit reached for requests to the fetch call permission status API.
+
+    Try again later or reduce the frequency or amount of requests to the API the app is making.
+    """
+
+    __error_codes__ = (
+        138013,
+        613,
+    )  # WhatsApp changed the error code from 138013 to 613

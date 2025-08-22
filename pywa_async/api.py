@@ -8,8 +8,10 @@ import httpx
 
 from .errors import WhatsAppError
 
+_logger = logging.getLogger(__name__)
 
-class WhatsAppCloudApiAsync(WhatsAppCloudApi):
+
+class GraphAPIAsync(GraphAPI):
     """Internal methods for the WhatsApp Async client. Do not use this class directly."""
 
     _session: httpx.AsyncClient
@@ -27,15 +29,18 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         )
 
     def __str__(self):
-        return f"WhatsAppCloudApiAsync(session={self._session!r})"
+        return f"GraphAPIAsync(session={self._session!r})"
 
-    async def _make_request(self, method: str, endpoint: str, **kwargs) -> dict | list:
+    async def _make_request(
+        self, method: str, endpoint: str, log_kwargs: bool = True, **kwargs
+    ) -> dict:
         """
         Internal method to make a request to the WhatsApp Cloud API.
 
         Args:
             method: The HTTP method to use.
             endpoint: The endpoint to request.
+            log_kwargs: Whether to log the kwargs or not (in debug mode).
             **kwargs: Additional arguments to pass to the request.
 
         Returns:
@@ -44,7 +49,19 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         Raises:
             WhatsAppError: If the request failed.
         """
-        res = await self._session.request(method=method, url=endpoint, **kwargs)
+        _logger.debug(
+            "Making request: %s %s with kwargs: %s",
+            method,
+            endpoint,
+            kwargs if log_kwargs else "OMITTED",
+        )
+        try:
+            res = await self._session.request(method=method, url=endpoint, **kwargs)
+        except httpx.RequestError as e:
+            e.add_note(
+                "You may want to provide your own `httpx.AsyncClient` instance. e.g. `WhatsApp(session=httpx.AsyncClient(timeout=..., proxies=...))`. See https://www.python-httpx.org/api/#asyncclient for more information."
+            )
+            raise
         if res.status_code >= 400:
             raise WhatsAppError.from_dict(error=res.json()["error"], response=res)
         return res.json()
@@ -81,6 +98,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
                 "client_id": app_id,
                 "client_secret": app_secret,
             },
+            log_kwargs=False,
         )
 
     async def set_app_callback_url(
@@ -341,6 +359,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
                 "messaging_product": (None, "whatsapp"),
                 "type": (None, mime_type),
             },
+            log_kwargs=False,
         )
 
     async def get_media_url(self, media_id: str) -> dict:
@@ -371,7 +390,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
     async def get_media_bytes(
         self,
         media_url: str,
-        **kwargs,
+        **httpx_kwargs,
     ) -> tuple[bytes, str | None]:
         """
         Get the bytes of a media file from WhatsApp servers.
@@ -380,17 +399,19 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
 
         Args:
             media_url: The URL of the media file (from ``get_media_url``).
-            **kwargs: Additional arguments to pass to the request.
+            **httpx_kwargs: Additional arguments to pass to the httpx get request.
 
         Returns:
             The media file bytes and the MIME type (if available).
         """
         headers = self._session.headers.copy()
-        res = await self._session.get(media_url, headers=headers, **kwargs)
+        res = await self._session.get(media_url, headers=headers, **httpx_kwargs)
         res.raise_for_status()
         return res.content, res.headers.get("Content-Type")
 
-    async def delete_media(self, media_id: str) -> dict[str, bool]:
+    async def delete_media(
+        self, media_id: str, phone_number_id: str | None = None
+    ) -> dict[str, bool]:
         """
         Delete a media file from WhatsApp servers.
 
@@ -402,13 +423,19 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
 
         Args:
             media_id: The ID of the media file.
+            phone_number_id: Business phone number ID. If included, the operation will only be processed if the ID matches the ID of the business phone number that the media was uploaded on.
 
         Returns:
             True if the media file was deleted successfully, False otherwise.
         """
-        return await self._make_request(method="DELETE", endpoint=f"/{media_id}")
+        params = {"phone_number_id": phone_number_id} if phone_number_id else None
+        return await self._make_request(
+            method="DELETE", endpoint=f"/{media_id}", params=params
+        )
 
-    async def send_raw_request(self, method: str, endpoint: str, **kwargs) -> Any:
+    async def send_raw_request(
+        self, method: str, endpoint: str, log_kwargs: bool = True, **kwargs
+    ) -> Any:
         """
         Send a raw request to WhatsApp Cloud API.
 
@@ -418,6 +445,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         Args:
             method: The HTTP method to use (e.g. ``POST``, ``GET``, etc.).
             endpoint: The endpoint to send the message to (e.g. ``/{phone_id}/messages/``).
+            log_kwargs: Whether to log the kwargs or not (in debug mode).
             **kwargs: Additional arguments to send with the request (e.g. ``json={...}, headers={...}``).
 
         Example:
@@ -440,6 +468,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         return await self._make_request(
             method=method,
             endpoint=endpoint,
+            log_kwargs=log_kwargs,
             **kwargs,
         )
 
@@ -485,6 +514,51 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             json=data,
         )
 
+    async def send_marketing_message(
+        self,
+        sender: str,
+        to: str,
+        template: dict[str, str | list[str]],
+        reply_to_message_id: str | None = None,
+        message_activity_sharing: bool | None = None,
+        biz_opaque_callback_data: str | None = None,
+    ) -> dict[str, dict | list]:
+        """
+        Send marketing template messages via MM Lite API.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#sending-messages>`_.
+
+
+        Args:
+            sender: The phone id to send the message from.
+            to: The phone number to send the message to.
+            template: The template object to send.
+            reply_to_message_id: The ID of the message to reply to.
+            message_activity_sharing: Toggles on / off sharing message activities (e.g. message read) for that specific marketing message to Meta to help optimize marketing messages.
+            biz_opaque_callback_data: The tracker to send with the message.
+
+        Returns:
+            The response from the WhatsApp Cloud API.
+        """
+        body = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": to,
+            "type": "template",
+            "template": template,
+        }
+        if reply_to_message_id:
+            body["context"] = {"message_id": reply_to_message_id}
+        if message_activity_sharing is not None:
+            body["message_activity_sharing"] = message_activity_sharing
+        if biz_opaque_callback_data:
+            body["biz_opaque_callback_data"] = biz_opaque_callback_data
+        return await self._make_request(
+            method="POST",
+            endpoint=f"/{sender}/marketing_messages",
+            json=body,
+        )
+
     async def register_phone_number(
         self,
         phone_id: str,
@@ -524,6 +598,32 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             },
         )
 
+    async def deregister_phone_number(
+        self,
+        phone_id: str,
+    ) -> dict[str, bool]:
+        """
+        Deregister a phone number.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/registration/#deregister>`_.
+
+        Return example::
+
+            {
+                'success': True
+            }
+
+        Args:
+            phone_id: The ID of the phone number to deregister.
+
+        Returns:
+            The success of the operation.
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint=f"/{phone_id}/deregister",
+        )
+
     async def mark_message_as_read(
         self,
         phone_id: str,
@@ -555,6 +655,29 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
                 "status": "read",
                 "message_id": message_id,
             },
+        )
+
+    async def get_waba_info(
+        self,
+        waba_id: str,
+        fields: tuple[str, ...] | None = None,
+    ) -> dict[str, Any]:
+        """
+        Get the WhatsApp Business Account information.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/graph-api/reference/whats-app-business-account>`_.
+
+        Args:
+            waba_id: The ID of the WhatsApp Business Account.
+            fields: The fields to get. If None, all available fields will be returned.
+
+        Returns:
+            The WhatsApp Business Account information.
+        """
+        return await self._make_request(
+            method="GET",
+            endpoint=f"/{waba_id}",
+            params={"fields": ",".join(fields)} if fields else None,
         )
 
     async def get_business_phone_number(
@@ -640,6 +763,55 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             params=params,
         )
 
+    async def get_business_phone_number_settings(
+        self,
+        phone_id: str,
+        fields: tuple[str, ...] | None = None,
+        include_sip_credentials: bool | None = None,
+    ) -> dict[str, Any]:
+        """
+        Get the business phone number settings.
+
+        Args:
+            phone_id: The ID of the phone number to get.
+            include_sip_credentials: Whether to include SIP credentials in the response.
+            fields: The fields to get. If None, all available fields will be returned.
+
+        Returns:
+            The business phone number settings.
+        """
+        params = {
+            "fields": ",".join(fields) if fields else None,
+        }
+        if include_sip_credentials is not None:
+            params["include_sip_credentials"] = include_sip_credentials
+        return await self._make_request(
+            method="GET",
+            endpoint=f"/{phone_id}/settings",
+            params=params,
+        )
+
+    async def update_business_phone_number_settings(
+        self,
+        phone_id: str,
+        settings: dict[str, Any],
+    ) -> dict[str, bool]:
+        """
+        Update the business phone number settings.
+
+        Args:
+            phone_id: The ID of the phone number to update.
+            settings: The settings to update.
+
+        Returns:
+            The success of the operation.
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint=f"/{phone_id}/settings",
+            json=settings,
+        )
+
     async def update_conversational_automation(
         self,
         phone_id: str,
@@ -678,6 +850,36 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
                     "commands": commands,
                 }.items()
                 if v is not None
+            },
+        )
+
+    async def update_display_name(
+        self,
+        phone_id: str,
+        new_display_name: str,
+    ) -> dict[str, bool]:
+        """
+        Update the display name of the business phone number.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/phone-numbers#updating-display-name-via-api>`_.
+
+        Return example::
+
+            {
+                'success': True
+            }
+
+        Args:
+            phone_id: The ID of the phone number to update.
+            new_display_name: The new display name to set.
+        """
+
+        return await self._make_request(
+            method="POST",
+            endpoint=f"/{phone_id}",
+            json={
+                "new_display_name": new_display_name,
+                "messaging_product": "whatsapp",
             },
         )
 
@@ -744,7 +946,9 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             json=data,
         )
 
-    async def get_commerce_settings(self, phone_id: str) -> dict[str, list[dict]]:
+    async def get_commerce_settings(
+        self, phone_id: str, fields: tuple[str, ...] | None = None
+    ) -> dict:
         """
         Get the commerce settings of the business catalog.
 
@@ -764,6 +968,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
 
         Args:
             phone_id: The ID of the phone number to get.
+            fields: The fields to get. If None, all fields will be returned.
 
         Returns:
             The commerce settings of the business catalog.
@@ -771,6 +976,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         return await self._make_request(
             method="GET",
             endpoint=f"/{phone_id}/whatsapp_commerce_settings",
+            params={"fields": ",".join(fields)} if fields else None,
         )
 
     async def update_commerce_settings(
@@ -802,8 +1008,8 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
     async def create_template(
         self,
         waba_id: str,
-        template: dict[str, str | list[str]],
-    ) -> dict[str, str]:
+        template: str,
+    ) -> dict:
         """
         Create a message template.
 
@@ -824,7 +1030,235 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         return await self._make_request(
             method="POST",
             endpoint=f"/{waba_id}/message_templates",
-            json=template,
+            data=template,
+            headers={"Content-Type": "application/json"},
+        )
+
+    async def get_template(
+        self,
+        template_id: str,
+        fields: tuple[str, ...] | None = None,
+    ) -> dict[str, Any]:
+        """
+        Get a message template.
+
+        Example::
+
+            {
+              "name": "seasonal_promotion_text_only",
+              "status": "APPROVED",
+              "id": "564750795574598"
+            }
+
+        Args:
+            template_id: The ID of the template to get.
+            fields: The fields to get. If None, all fields will be returned.
+
+        Returns:
+            The template data.
+        """
+        return await self._make_request(
+            method="GET",
+            endpoint=f"/{template_id}",
+            params={"fields": ",".join(fields)} if fields else None,
+        )
+
+    async def get_templates(
+        self,
+        waba_id: str,
+        fields: tuple[str, ...] | None = None,
+        filters: dict[str, Any] | None = None,
+        summary_fields: tuple[str, ...] | None = None,
+        pagination: dict[str, str] | None = None,
+    ) -> dict[str, list[dict[str, Any]]]:
+        """
+        Get a list of message templates.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#retrieve-templates>`_.
+
+        Args:
+            waba_id: The ID of the WhatsApp Business Account.
+            fields: The fields to get. If None, all fields will be returned.
+            filters: Filters to apply to the templates. e.g. {"status": "APPROVED"}.
+            summary_fields: Aggregated information a such as counts.
+            pagination: Pagination parameters to apply to the templates.
+
+        Returns:
+            A dict with the templates data.
+        """
+        params = {
+            "fields": ",".join(fields) if fields else None,
+            **(filters if filters else {}),
+            **(pagination if pagination else {}),
+            **({"summary": ",".join(summary_fields)} if summary_fields else {}),
+        }
+        return await self._make_request(
+            method="GET",
+            endpoint=f"/{waba_id}/message_templates",
+            params={k: v for k, v in params.items() if v is not None},
+        )
+
+    async def update_template(
+        self,
+        template_id: str,
+        template: str,
+    ) -> dict[str, bool]:
+        """
+        Update a message template.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#edit-a-message-template>`_.
+
+        Args:
+            template_id: The ID of the template to update.
+            template: The template data to update.
+
+        Returns:
+            A dict with the success status of the operation.
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint=f"/{template_id}",
+            data=template,
+            headers={"Content-Type": "application/json"},
+        )
+
+    async def delete_template(
+        self,
+        waba_id: str,
+        template_name: str,
+        template_id: str | None = None,
+    ) -> dict[str, bool]:
+        """
+        Delete a message template.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#deleting-templates>`_.
+
+        Args:
+            waba_id: The ID of the WhatsApp Business Account.
+            template_name: The name of the template to delete.
+            template_id: The ID of the template to delete. If not provided, the template will be deleted by name.
+
+        Returns:
+            A dict with the success status of the operation.
+        """
+        return await self._make_request(
+            method="DELETE",
+            endpoint=f"/{waba_id}/message_templates",
+            params={
+                "name": template_name,
+                **({"hsm_id": template_id} if template_id else {}),
+            },
+        )
+
+    async def compare_templates(
+        self,
+        template_id: str,
+        template_ids: tuple[str, ...],
+        start: str,
+        end: str,
+    ) -> dict:
+        """
+        Compare a template with other templates.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/template-comparison>`_.
+
+        Args:
+            template_id: The ID of the template to compare.
+            template_ids: The IDs of the templates to compare with.
+            start: TUNIX timestamp indicating start of timeframe.
+            end: UNIX timestamp indicating end of timeframe.
+
+        Returns:
+            A dict with the comparison results.
+        """
+        return await self._make_request(
+            method="GET",
+            endpoint=f"/{template_id}/compare",
+            params={
+                "template_ids": ",".join(template_ids),
+                "start": start,
+                "end": end,
+            },
+        )
+
+    async def migrate_templates(
+        self,
+        dest_waba_id: str,
+        source_waba_id: str,
+        page_number: int | None = None,
+    ) -> dict:
+        """
+        Migrate templates from one WABA to another.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/template-migration>`_.
+
+        Args:
+            dest_waba_id: The ID of the destination WhatsApp Business Account.
+            source_waba_id: The ID of the source WhatsApp Business Account.
+            page_number: Indicates amount of templates to migrate as sets of 500. Zero-indexed. For example, to migrate 1000 templates, send one request with this value set to 0 and another request with this value set to 1, in parallel.
+
+        Returns:
+            A dict with the migration results.
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint=f"/{dest_waba_id}/migrate_message_templates",
+            params={
+                "source_waba_id": source_waba_id,
+                **({"page_number": page_number} if page_number is not None else {}),
+            },
+        )
+
+    async def unpause_template(self, template_id: str) -> dict[str, bool | str]:
+        """
+        Unpause a message template.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/graph-api/reference/whats-app-business-hsm/unpause/>`_.
+
+        Args:
+            template_id: The ID of the template to unpause.
+
+        Returns:
+            A dict with the success status of the operation.
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint=f"/{template_id}/unpause",
+        )
+
+    async def upsert_message_templates(
+        self,
+        waba_id: str,
+        template: str,
+    ) -> dict:
+        """
+        Bulk update or create authentication templates in multiple languages that include or exclude the optional security and expiration warnings.
+
+        If a template already exists with a matching name and language, the template will be updated with the contents of the request, otherwise, a new template will be created.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates#bulk-management>`_.
+
+        Return example::
+
+            {
+                "data": [
+                    {
+                        "id": "123456789012345",
+                        "language": "en_US",
+                        "status": "APPROVED"
+                    },
+                    ...
+                ],
+
+        Args:
+            waba_id: The ID of the WhatsApp Business Account.
+            template: A dict containing the template to create or update to all languages listed in the template.
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint=f"/{waba_id}/upsert_message_templates",
+            data=template,
+            headers={"Content-Type": "application/json"},
         )
 
     async def create_flow(
@@ -972,6 +1406,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
                 "asset_type": (None, "FLOW_JSON"),
                 "messaging_product": (None, "whatsapp"),
             },
+            log_kwargs=False,
         )
 
     async def publish_flow(
@@ -1264,6 +1699,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         self,
         phone_id: str,
         code: str,
+        fields: tuple[str, ...] | None = None,
     ) -> dict:
         """
         Get a QR code.
@@ -1273,6 +1709,7 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         Args:
             phone_id: The ID of the phone number to get the QR code from.
             code: The code of the QR code.
+            fields: The fields to get. If None, default fields will be returned.
 
         Return example::
 
@@ -1289,11 +1726,13 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
         return await self._make_request(
             method="GET",
             endpoint=f"/{phone_id}/message_qrdls/{code}",
+            params={"fields": ",".join(fields)} if fields else None,
         )
 
     async def get_qr_codes(
         self,
         phone_id: str,
+        fields: tuple[str, ...] | None = None,
         pagination: dict[str, str] | None = None,
     ) -> dict:
         """
@@ -1322,12 +1761,20 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
 
         Args:
             phone_id: The ID of the phone number to get the QR codes from.
+            fields: The fields to get. If None, default fields will be returned.
             pagination: The pagination parameters.
         """
         return await self._make_request(
             method="GET",
             endpoint=f"/{phone_id}/message_qrdls",
-            params=pagination,
+            params={
+                k: v
+                for k, v in {
+                    "fields": ",".join(fields) if fields else None,
+                    **(pagination or {}),
+                }.items()
+                if v is not None
+            },
         )
 
     async def update_qr_code(
@@ -1522,4 +1969,322 @@ class WhatsAppCloudApiAsync(WhatsAppCloudApi):
             method="GET",
             endpoint=f"/{phone_id}/block_users",
             params=pagination,
+        )
+
+    async def create_upload_session(
+        self,
+        app_id: str,
+        file_name: str,
+        file_length: int,
+        file_type: str,
+    ) -> dict[str, str]:
+        """
+        Create an upload session for a file.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/graph-api/guides/upload#step-1>`_.
+
+        Args:
+            app_id: The ID of the app to create the upload session for.
+            file_name: The name of the file to upload.
+            file_length: File size in bytes
+            file_type: The file's MIME type. Valid values are: ``application/pdf``, ``image/jpeg``, ``image/jpg``, ``image/png``, and ``video/mp4``.
+
+        Returns:
+            The ID of the upload session
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint=f"/{app_id}/uploads?file_name={file_name}&file_length={file_length}&file_type={file_type}",
+        )
+
+    async def upload_file(
+        self,
+        upload_session_id: str,
+        file: bytes,
+        file_offset: int = 0,
+    ) -> dict[str, str]:
+        """
+        Upload a file to an upload session.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/graph-api/guides/upload#step-2>`_.
+
+        Args:
+            upload_session_id: The ID of the upload session to upload the file to (This is the ID returned by the ``create_upload_session`` method).
+            file: The file to upload (as bytes).
+            file_offset: The offset in the file to start uploading from. you can use this to resume an interrupted upload (use `get_upload_session` to get the current offset).
+
+        Returns:
+            The file handle of the uploaded file.
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint=f"/{upload_session_id}",
+            headers={
+                "file_offset": str(file_offset),
+            },
+            data=file,
+            log_kwargs=False,
+        )
+
+    async def get_upload_session(
+        self,
+        upload_session_id: str,
+    ) -> dict[str, str | int]:
+        """
+        Get the status of an upload session (resuming an interrupted upload).
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/graph-api/guides/upload#resume-an-interrupted-upload>`_.
+
+        Args:
+            upload_session_id: The ID of the upload session.
+
+        Returns:
+            The status of the upload session (ID and current offset)
+        """
+        return await self._make_request(
+            method="GET",
+            endpoint=f"/{upload_session_id}",
+        )
+
+    async def get_call_permissions(self, phone_id: str, user_wa_id: str) -> dict:
+        """
+        Get call permissions for a user.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-call-permissions>`_.
+
+        Return example::
+
+            {
+              "messaging_product": "whatsapp",
+              "permission": {
+                "status": "temporary",
+                "expiration_time": 1745343479
+              },
+              "actions": [
+                {
+                  "action_name": "send_call_permission_request",
+                  "can_perform_action": True,
+                  "limits": [
+                    {
+                      "time_period": "PT24H",
+                      "max_allowed": 1,
+                      "current_usage": 0,
+                    },
+                    {
+                      "time_period": "P7D",
+                      "max_allowed": 2,
+                      "current_usage": 1,
+                    }
+                  ]
+                },
+                {
+                  "action_name": "start_call",
+                  "can_perform_action": False,
+                  "limits": [
+                    {
+                      "time_period": "PT24H",
+                      "max_allowed": 5,
+                      "current_usage": 5,
+                      "limit_expiration_time": 1745622600,
+                    }
+                  ]
+                }
+              }
+            }
+
+        Args:
+            phone_id: The ID of the phone number to get call permissions for.
+            user_wa_id: The WhatsApp ID of the user to check permissions for.
+
+        Returns:
+            The response from the WhatsApp Cloud API.
+        """
+        return await self._make_request(
+            method="GET",
+            endpoint=f"/{phone_id}/call_permissions",
+            params={"user_wa_id": user_wa_id},
+        )
+
+    async def initiate_call(
+        self,
+        phone_id: str,
+        to: str,
+        sdp: dict[str, str],
+        biz_opaque_callback_data: str | None = None,
+    ) -> dict[str, str | bool]:
+        """
+        Initiate a call.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#initiate-call>`_.
+
+        Return example::
+
+            {
+              "messaging_product": "whatsapp",
+              "calls" : [{
+                 "id" : "wacid.ABGGFjFVU2AfAgo6V",
+               }]
+            }
+
+        Args:
+            phone_id: The ID of the phone number to initiate the call on.
+            to: The number being called (callee).
+            sdp: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
+            biz_opaque_callback_data: An arbitrary string you can pass in that is useful for tracking and logging purposes.
+
+        Returns:
+            The response from the WhatsApp Cloud API containing the call ID.
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint=f"{phone_id}/calls",
+            json={
+                "messaging_product": "whatsapp",
+                "to": to,
+                "action": "connect",
+                "session": sdp,
+                **(
+                    {"biz_opaque_callback_data": biz_opaque_callback_data}
+                    if biz_opaque_callback_data
+                    else {}
+                ),
+            },
+        )
+
+    async def pre_accept_call(
+        self, phone_id: str, call_id: str, sdp: dict[str, str] | None = None
+    ) -> dict[str, str | bool]:
+        """
+        Pre-accept a call.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#pre-accept-call>`_.
+
+        Return example::
+
+            {
+                "messaging_product": "whatsapp",
+                "success": True
+            }
+
+        Args:
+            phone_id: The ID of the phone number to pre-accept the call on.
+            call_id: The ID of the call to pre-accept.
+            sdp: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
+
+        Returns:
+            The response from the WhatsApp Cloud API.
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint=f"{phone_id}/calls",
+            json={
+                "messaging_product": "whatsapp",
+                "call_id": call_id,
+                "action": "pre_accept",
+                **({"session": sdp} if sdp else {}),
+            },
+        )
+
+    async def accept_call(
+        self,
+        phone_id: str,
+        call_id: str,
+        sdp: dict[str, str] | None = None,
+        biz_opaque_callback_data: str | None = None,
+    ) -> dict[str, str | bool]:
+        """
+        Accept a call.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#accept-call>`_.
+
+        Return example::
+
+            {
+                "messaging_product": "whatsapp",
+                "success": True
+            }
+
+        Args:
+            phone_id: The ID of the phone number to accept the call on.
+            call_id: The ID of the call to accept.
+            sdp: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
+            biz_opaque_callback_data: An arbitrary string you can pass in that is useful for tracking and logging purposes.
+
+        Returns:
+            The response from the WhatsApp Cloud API.
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint=f"{phone_id}/calls",
+            json={
+                "messaging_product": "whatsapp",
+                "call_id": call_id,
+                "action": "accept",
+                **({"session": sdp} if sdp else {}),
+                **(
+                    {"biz_opaque_callback_data": biz_opaque_callback_data}
+                    if biz_opaque_callback_data
+                    else {}
+                ),
+            },
+        )
+
+    async def reject_call(self, phone_id: str, call_id: str) -> dict[str, bool]:
+        """
+        Reject a call.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#reject-call>`_.
+
+        Return example::
+
+            {
+                "messaging_product": "whatsapp",
+                "success": True
+            }
+
+        Args:
+            phone_id: The ID of the phone number to reject the call on.
+            call_id: The ID of the call to reject.
+
+        Returns:
+            The response from the WhatsApp Cloud API.
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint=f"{phone_id}/calls",
+            json={
+                "messaging_product": "whatsapp",
+                "call_id": call_id,
+                "action": "reject",
+            },
+        )
+
+    async def terminate_call(self, phone_id: str, call_id: str) -> dict[str, bool]:
+        """
+        Terminate a call.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-initiated-calls#terminate-call>`_.
+
+        Return example::
+
+            {
+                "messaging_product": "whatsapp",
+                "success": True
+            }
+
+        Args:
+            phone_id: The ID of the phone number to terminate the call on.
+            call_id: The ID of the call to terminate.
+
+        Returns:
+            The response from the WhatsApp Cloud API.
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint=f"{phone_id}/calls",
+            json={
+                "messaging_product": "whatsapp",
+                "call_id": call_id,
+                "action": "terminate",
+            },
         )

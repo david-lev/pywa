@@ -45,15 +45,15 @@ class MessageStatusType(utils.StrEnum):
         FAILED: The message failed to send (you can access the ``.error`` attribute for more information).
     """
 
+    _check_value = str.islower
+    _modify_value = str.lower
+
     SENT = "sent"
     DELIVERED = "delivered"
     READ = "read"
     FAILED = "failed"
 
-    @classmethod
-    def _missing_(cls, value: str) -> MessageStatusType:
-        _logger.warning("Unknown message status type: %s. Defaulting to FAILED.", value)
-        return cls.FAILED
+    UNKNOWN = "UNKNOWN"
 
 
 class ConversationCategory(utils.StrEnum):
@@ -63,25 +63,24 @@ class ConversationCategory(utils.StrEnum):
     Attributes:
         AUTHENTICATION: The conversation is related to authentication.
         MARKETING: The conversation is related to marketing.
+        MARKETING_LITE: The conversation is related to marketing lite.
         UTILITY: The conversation is related to utility.
         SERVICE: The conversation is related to service.
         REFERRAL_CONVERSION: The conversation is related to referral conversion.
         UNKNOWN: The conversation category is unknown.
     """
 
+    _check_value = str.islower
+    _modify_value = str.lower
+
     AUTHENTICATION = "authentication"
     MARKETING = "marketing"
+    MARKETING_LITE = "marketing_lite"
     UTILITY = "utility"
     SERVICE = "service"
     REFERRAL_CONVERSION = "referral_conversion"
-    UNKNOWN = "unknown"
 
-    @classmethod
-    def _missing_(cls, value: str) -> ConversationCategory:
-        _logger.warning(
-            "Unknown conversation category: %s. Defaulting to UNKNOWN.", value
-        )
-        return cls.UNKNOWN
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -139,14 +138,19 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
     tracker: _CallbackDataT | None
 
     _txt_fields = ("tracker",)
+    _webhook_field = "messages"
+    _is_user_action = False
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: dict) -> MessageStatus:
-        status = (value := update["entry"][0]["changes"][0]["value"])["statuses"][0]
+        status = (value := (entry := update["entry"][0])["changes"][0]["value"])[
+            "statuses"
+        ][0]
         error = value.get("errors", status.get("errors", (None,)))[0]
         return cls(
             _client=client,
             raw=update,
+            waba_id=entry["id"],
             id=status["id"],
             metadata=Metadata.from_dict(value["metadata"]),
             status=MessageStatusType(status["status"]),
@@ -166,16 +170,6 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
             else None,
             error=WhatsAppError.from_dict(error=error) if error else None,
         )
-
-    @property
-    def pricing_model(self) -> str | None:
-        """Deprecated: Use ``.pricing.model`` instead."""
-        warnings.warn(
-            "The `pricing_model` is deprecated. Use `pricing.model` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.pricing.model.value if self.pricing else None
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -222,10 +216,7 @@ class PricingModel(utils.StrEnum):
     CBP = "CBP"
     PMP = "PMP"
 
-    @classmethod
-    def _missing_(cls, value: str) -> PricingModel:
-        _logger.warning("Unknown pricing model: %s. Defaulting to CBP.", value)
-        return cls.CBP
+    UNKNOWN = "UNKNOWN"
 
 
 class PricingType(utils.StrEnum):
@@ -238,9 +229,14 @@ class PricingType(utils.StrEnum):
         FREE_ENTRY_POINT: Indicates the message is free because it is part of a `free-entry point conversation <https://developers.facebook.com/docs/whatsapp/pricing#free-entry-point-conversations>`_.
     """
 
+    _check_value = str.islower
+    _modify_value = str.lower
+
     REGULAR = "regular"
     FREE_CUSTOMER_SERVICE = "free_customer_service"
     FREE_ENTRY_POINT = "free_entry_point"
+
+    UNKNOWN = "UNKNOWN"
 
 
 class PricingCategory(utils.StrEnum):
@@ -251,17 +247,24 @@ class PricingCategory(utils.StrEnum):
         AUTHENTICATION: Indicates an authentication template message.
         AUTHENTICATION_INTERNATIONAL: Indicates an authentication template message sent to a WhatsApp user in a country or region that has authentication-international rates.
         MARKETING: Indicates a marketing template message.
+        MARKETING_LITE: Indicates a marketing template message sent via MM Lite API.
         UTILITY: Indicates a utility template message.
         SERVICE: Indicates a non-template message.
         REFERRAL_CONVERSION: Indicates the message is part of a `free entry point conversation <https://developers.facebook.com/docs/whatsapp/pricing#free-entry-point-conversations>`_.
     """
 
+    _check_value = str.islower
+    _modify_value = str.lower
+
     AUTHENTICATION = "authentication"
     AUTHENTICATION_INTERNATIONAL = "authentication_international"
     MARKETING = "marketing"
+    MARKETING_LITE = "marketing_lite"
     UTILITY = "utility"
     SERVICE = "service"
     REFERRAL_CONVERSION = "referral_conversion"
+
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclasses.dataclass(frozen=True, slots=True)

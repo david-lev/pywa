@@ -1,0 +1,78 @@
+{
+  "business_initiated": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "837432645395",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "16315553601",
+                "phone_number_id": "743897493242"
+              },
+              "calls": [
+                {
+                  "id": "wacid.xxxx=",
+                  "to": "16315553601",
+                  "from": "16315553602",
+                  "event": "connect",
+                  "timestamp": "1752582933",
+                  "direction": "BUSINESS_INITIATED",
+                  "session": {
+                    "sdp": "<<RFC 8866 SDP>>",
+                    "sdp_type": "answer"
+                  }
+                }
+              ]
+            },
+            "field": "calls"
+          }
+        ]
+      }
+    ]
+  },
+  "user_initiated": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "100293269804676",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "16315553601",
+                "phone_number_id": "743897493242"
+              },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321"
+                }
+              ],
+              "calls": [
+                {
+                  "id": "wacid.xxxx=",
+                  "from": "972987654321",
+                  "to": "16315553601",
+                  "event": "connect",
+                  "timestamp": "1752583107",
+                  "direction": "USER_INITIATED",
+                  "session": {
+                    "sdp": "<<RFC 8866 SDP>>",
+                    "sdp_type": "offer"
+                  }
+                }
+              ]
+            },
+            "field": "calls"
+          }
+        ]
+      }
+    ]
+  }
+}

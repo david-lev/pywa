@@ -3,21 +3,21 @@ requires = ["setuptools>=68.0.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.dynamic]
-version = {attr = "pywa.__version__"}
-readme = {file = "README.md", content-type = "text/markdown"}
-dependencies = {file = "requirements.txt"}
+version = { attr = "pywa.__version__" }
+readme = { file = "README.md", content-type = "text/markdown" }
+dependencies = { file = "requirements.txt" }
 
 [tool.setuptools.packages.find]
 include = ["pywa*"]
 
 [project]
 name = "pywa"
-description = "Build WhatsApp Bots in Python • Fast, Effortless, Powerful 🚀"
+description = "🚀 Build WhatsApp Bots in Python • Fast, Effortless, Powerful"
 dynamic = ["version", "readme", "dependencies"]
 license = { text = "MIT" }
 requires-python = ">=3.10"
 authors = [
-    {name = "David Lev", email = "david@davidlev.dev"},
+    { name = "David Lev", email = "david@davidlev.dev" },
 ]
 keywords = ["whatsapp", "whatsapp-api", "whatsapp-cloud-api", "whatsapp-cloud", "whatsapp-api-python",
     "whatsapp-cloud-api-python", "pywa", "wapy", "wa", "wa-api", "wa-cloud-api", "wa-cloud", "wa-api-python",
@@ -62,4 +62,9 @@ omit = [
     "pywa/listeners.py",
     "pywa/server.py",
     "pywa/handlers.py",
+    "pywa/types/message.py",
+    "pywa/_helpers.py",
+    "pywa/types/templates.py",
+    "pywa/types/sent_update.py",
+
 ]
