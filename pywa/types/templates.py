@@ -63,6 +63,7 @@ __all__ = [
     "LibraryTemplate",
     "DegreesOfFreedomSpec",
     "CreativeFeaturesSpec",
+    "TapTargetConfiguration",
 ]
 
 import datetime
@@ -604,6 +605,7 @@ class ParamType(utils.StrEnum):
     PAYLOAD = "payload"
     LIMITED_TIME_OFFER = "limited_time_offer"
     CAROUSEL = "carousel"
+    TAP_TARGET_CONFIGURATION = "tap_target_configuration"
 
     UNKNOWN = "UNKNOWN"
 
@@ -828,6 +830,44 @@ class BaseParams(abc.ABC):
 
     @abc.abstractmethod
     def to_dict(self) -> dict: ...
+
+
+class TapTargetConfiguration(BaseParams):
+    """
+    Tap target title URL override
+
+    Tap target override enables image-based, text-based, and header-less message templates to function as interactive Call-to-Action URL buttons. These buttons display a custom title and open the destination linked to the first URL button.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-message-templates/tap-target-url-title-override>`_.
+
+    Attributes:
+        title: URL Title.
+        url: The URL to open.
+    """
+
+    title: str
+    url: str
+
+    def __init__(
+        self,
+        title: str,
+        url: str,
+    ):
+        self.title = title
+        self.url = url
+
+    def to_dict(self) -> dict:
+        return {
+            "type": ParamType.TAP_TARGET_CONFIGURATION.value,
+            "parameters": [
+                {
+                    "type": ParamType.TAP_TARGET_CONFIGURATION.value,
+                    ParamType.TAP_TARGET_CONFIGURATION.value: [
+                        {"url": self.url, "title": self.title}
+                    ],
+                }
+            ],
+        }
 
 
 # =========== HEADER ===========

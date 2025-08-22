@@ -38,7 +38,7 @@ Fully **typed**, **documented**, and **production-ready** — build powerful bot
 --------------------------------
 
 > [Get Started](https://pywa.readthedocs.io/en/latest/content/getting-started.html)
-• [WhatsApp Client](https://pywa.readthedocs.io/en/latest/content/client/overview.html)
+• [Client](https://pywa.readthedocs.io/en/latest/content/client/overview.html)
 • [Handlers](https://pywa.readthedocs.io/en/latest/content/handlers/overview.html)
 • [Listeners](https://pywa.readthedocs.io/en/latest/content/listeners/overview.html)
 • [Updates](https://pywa.readthedocs.io/en/latest/content/updates/overview.html)
@@ -46,7 +46,6 @@ Fully **typed**, **documented**, and **production-ready** — build powerful bot
 • [Templates](https://pywa.readthedocs.io/en/latest/content/templates/overview.html)
 • [Flows](https://pywa.readthedocs.io/en/latest/content/flows/overview.html)
 • [Calls](https://pywa.readthedocs.io/en/latest/content/calls/overview.html)
-• [Examples](https://pywa.readthedocs.io/en/latest/content/examples/overview.html)
 
 ------------------------
 

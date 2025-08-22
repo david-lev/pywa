@@ -84,6 +84,8 @@ Template Types
 .. autoclass:: CarouselCard()
     :members: params
 
+.. autoclass:: TapTargetConfiguration()
+
 .. autoclass:: AuthenticationBody()
     :members: params, library_input
 

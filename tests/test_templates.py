@@ -655,3 +655,17 @@ def test_comp_and_params_to_dict():
             }
         ],
     }
+    ttc = TapTargetConfiguration(
+        title="Offer Details", url="https://www.luckyshrubs.com/"
+    )
+    assert ttc.to_dict() == {
+        "type": "tap_target_configuration",
+        "parameters": [
+            {
+                "type": "tap_target_configuration",
+                "tap_target_configuration": [
+                    {"url": "https://www.luckyshrubs.com/", "title": "Offer Details"}
+                ],
+            }
+        ],
+    }
