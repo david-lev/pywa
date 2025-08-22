@@ -3,6 +3,42 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+
+#### 3.0.0 (2025-08-22) **Latest**
+
+This release is a major update with significant improvements, new features, and some breaking changes.
+Please review the migration guide before upgrading.
+
+- [templates] Complete refactor of template support: creation, retrieval, sending, deleting, and status updates
+- [calls] Added full support for calls: making and receiving calls, call status updates, and call settings management
+- [user_preferences] Added full support for user preferences
+- [listeners] Unified listener handling with better safety checks
+- [system] Restructured system updates into `PhoneNumberChange` and `IdentityChange`
+- [client]
+  - `upload_media` now returns a `Media` object
+  - `mark_message_as_read` and other `update...` methods now return `SuccessResult` instead of `bool`
+  - New methods: `delete_media`, `get_business_phone_number_settings`, `update_business_phone_number_settings`, `update_display_name`, `get_business_account`, `deregister_phone_number`
+  - Support for mm-lite-api when sending templates
+  - Support for getting and setting `StorageConfiguration`
+- [callback]
+  - Added `is_quick_reply` to `CallbackButton`
+  - Stricter dataclass validation (no `kw_only`)
+- [updates]
+  - All user updates now include `waba_id`
+  - `Message` include new `referral` field
+- [types]
+  - Added `is_on_biz_app` to `BusinessPhoneNumber`
+  - `SuccessResult` introduced for extensibility
+- [security] Fixed XSS vulnerability
+- [api] `httpx.RequestError` now suggests providing a custom `httpx.Client`
+- [errors] Error messages are now more descriptive
+- [utils]
+  - Enum values handled case-sensitively
+  - Return `FlowRequestDecryptedMedia` object instead of raw tuple
+  - New `APIObject` helper for dataclasses
+- [deprecations] All previously deprecated attributes and types have been removed
+- [docs] New pywa logo 🚀
+
 #### 3.0.0-rc.3 (2025-08-06)
 
 - [templates] `params` is now can be called on class level
@@ -52,7 +88,7 @@
 - [deprecations] removed attrs and types marked as deprecated
 
 
-### 2.11.0 (2025-06-17) **Latest**
+### 2.11.0 (2025-06-17)
 
 - [flows] adding support for `ImageCarousel`
 - [flows] adding `with_params` to `FlowPreview` to configure the interactive web preview
