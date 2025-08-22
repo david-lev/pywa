@@ -36,6 +36,7 @@ from .types import (
     Button,
     CallPermissionRequestButton,
     ButtonUrl,
+    MessageType,
 )
 from pywa.types.others import InteractiveType
 from .types.media import Media
@@ -86,11 +87,24 @@ def resolve_buttons_param(
         return InteractiveType.BUTTON, {"buttons": tuple(b.to_dict() for b in buttons)}
 
 
+_header_format_to_message_type = {
+    HeaderFormatType.IMAGE: MessageType.IMAGE,
+    HeaderFormatType.VIDEO: MessageType.VIDEO,
+    HeaderFormatType.DOCUMENT: MessageType.DOCUMENT,
+}
 _media_types_default_filenames = {
-    "IMAGE": "pywa-image.jpg",
-    "VIDEO": "pywa-video.mp4",
-    "AUDIO": "pywa-audio.mp3",
-    "STICKER": "pywa-sticker.webp",
+    MessageType.IMAGE: "pywa-image.jpg",
+    MessageType.VIDEO: "pywa-video.mp4",
+    MessageType.AUDIO: "pywa-audio.mp3",
+    MessageType.STICKER: "pywa-sticker.webp",
+    MessageType.DOCUMENT: "pywa-document.pdf",
+}
+_media_types_default_mime_types = {
+    MessageType.IMAGE: "image/jpeg",
+    MessageType.VIDEO: "video/mp4",
+    MessageType.AUDIO: "audio/mpeg",
+    MessageType.STICKER: "image/webp",
+    MessageType.DOCUMENT: "application/pdf",
 }
 _template_header_formats_filename = {
     HeaderFormatType.IMAGE: "pywa-template-header-image.jpg",
@@ -109,7 +123,7 @@ def resolve_media_param(
     media: str | Media | pathlib.Path | bytes | BinaryIO,
     mime_type: str | None,
     filename: str | None,
-    media_type: str | None,
+    media_type: MessageType | None,
     phone_id: str,
 ) -> tuple[bool, str]:
     """
@@ -126,8 +140,8 @@ def resolve_media_param(
     return False, wa.upload_media(
         phone_id=phone_id,
         media=media,
-        mime_type=mime_type,
-        filename=_media_types_default_filenames.get(media_type, filename),
+        mime_type=mime_type or _media_types_default_mime_types.get(media_type),
+        filename=filename or _media_types_default_filenames.get(media_type),
     ).id
 
 
@@ -302,7 +316,7 @@ def _upload_params_media(
             media=media,
             mime_type=None,
             filename=None,
-            media_type=first_param.format.value,
+            media_type=_header_format_to_message_type[first_param.format],
             phone_id=sender,
         )
         for p in params:

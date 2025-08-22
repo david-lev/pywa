@@ -14,6 +14,8 @@ from pywa._helpers import (
     _media_types_default_filenames,
     _template_header_formats_filename,
     _template_header_formats_default_mime_types,
+    _header_format_to_message_type,
+    _media_types_default_mime_types,
 )
 from pywa.types.templates import (
     TemplateBaseComponent,
@@ -37,10 +39,7 @@ async def resolve_media_param(
     media: str | Media | pathlib.Path | bytes | BinaryIO,
     mime_type: str | None,
     filename: str | None,
-    media_type: Literal[
-        MessageType.IMAGE, MessageType.VIDEO, MessageType.AUDIO, MessageType.STICKER
-    ]
-    | None,
+    media_type: MessageType | None,
     phone_id: str,
 ) -> tuple[bool, str]:
     """
@@ -58,8 +57,8 @@ async def resolve_media_param(
         await wa.upload_media(
             phone_id=phone_id,
             media=media,
-            mime_type=mime_type,
-            filename=_media_types_default_filenames.get(media_type, filename),
+            mime_type=mime_type or _media_types_default_mime_types.get(media_type),
+            filename=filename or _media_types_default_filenames.get(media_type),
         )
     ).id
 
@@ -235,7 +234,7 @@ async def _upload_params_media(
             media=media,
             mime_type=None,
             filename=None,
-            media_type=first_param.format.value,
+            media_type=_header_format_to_message_type[first_param.format],
             phone_id=sender,
         )
         for p in params:
