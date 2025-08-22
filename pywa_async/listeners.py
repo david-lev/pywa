@@ -5,6 +5,7 @@ import warnings
 from pywa.listeners import *  # noqa MUST BE IMPORTED FIRST
 from pywa.listeners import (
     Listener as _Listener,
+    ListenerCanceled as _ListenerCanceled,
     BaseListenerIdentifier,
 )  # noqa MUST BE IMPORTED FIRST
 
@@ -22,9 +23,41 @@ from .types import (
     ChatOpened,
     FlowCompletion,
 )
+from .types.base_update import BaseUserUpdateAsync
 
 if TYPE_CHECKING:
     from .client import WhatsApp
+
+
+class ListenerCanceled(_ListenerCanceled):
+    """
+    The listener was canceled by a filter
+
+    Example:
+
+        .. code-block:: python
+
+            try:
+                wa.listen(
+                    to=UserUpdateListenerIdentifier(
+                        sender="123456",
+                        recipient="654321"
+                    ),
+                    filters=filters.message & filters.text,
+                    cancelers=filters.callback_button & filters.matches("cancel")
+                )
+            except ListenerCanceled as e:
+                assert e.update.data == "cancel" # the update that caused the listener to be canceled
+                wa.send_message("123456", "You cancelled the listener by clicking the `cancel` button")
+
+    Attributes:
+        update: The update that caused the listener to be canceled
+    """
+
+    update: BaseUpdate | BaseUserUpdateAsync | None
+
+    def __init__(self, update: BaseUpdate | BaseUserUpdateAsync | None = None):
+        super().__init__(update)
 
 
 class Listener(_Listener):

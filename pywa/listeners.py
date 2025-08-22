@@ -17,7 +17,7 @@ from . import utils
 
 if TYPE_CHECKING:
     from .client import WhatsApp
-    from .types.base_update import BaseUpdate
+    from .types.base_update import BaseUpdate, BaseUserUpdate
     from .filters import Filter
 
 
@@ -85,7 +85,9 @@ class ListenerCanceled(Exception):
         update: The update that caused the listener to be canceled
     """
 
-    def __init__(self, update: BaseUpdate | None = None):
+    update: BaseUpdate | BaseUserUpdate | None
+
+    def __init__(self, update: BaseUpdate | BaseUserUpdate | None = None):
         self.update = update
 
     def __str__(self):
@@ -126,6 +128,8 @@ class ListenerStopped(Exception):
 
 
 class Listener:
+    _listener_canceled = ListenerCanceled
+
     def __init__(
         self,
         filters: Filter,
@@ -146,7 +150,7 @@ class Listener:
         self.event.set()
 
     def cancel(self, update: BaseUpdate | None = None) -> None:
-        self.set_exception(ListenerCanceled(update))
+        self.set_exception(self._listener_canceled(update))
 
     def stop(self, reason: str | None = None) -> None:
         self.set_exception(ListenerStopped(reason))
