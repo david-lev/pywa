@@ -7,4 +7,3 @@ sphinxcontrib-googleanalytics==0.5
 sphinx-last-updated-by-git==0.3.8
 sphinx-favicon==1.0.1
 sphinx-sitemap==2.8.0
-sphinx-thebe==0.3.1

@@ -49,7 +49,6 @@ extensions = [
     "sphinx_last_updated_by_git",
     "sphinx_favicon",
     "sphinx_sitemap",
-    "sphinx_thebe",
 ]
 
 html_baseurl = os.environ.get("SPHINX_HTML_BASE_URL", "http://127.0.0.1:5500/")
@@ -85,7 +84,10 @@ html_favicon = "../static/favicon.ico"
 # sphinx.ext.autodoc
 autodoc_member_order = "bysource"
 # autodoc_typehints = "none"  # show type hints in doc signature
-# autodoc_typehints = "description"  # show type hints in doc body instead of signature
+autodoc_typehints = "description"  # show type hints in doc body instead of signature
+autodoc_typehints_description_target = (
+    "documented_params"  # show type hints only for documented params
+)
 
 # sphinx.ext.napoleon
 napoleon_google_docstring = True
@@ -98,8 +100,6 @@ copybutton_prompt_text = (
 )
 copybutton_prompt_is_regexp = True
 copybutton_remove_prompts = True
-
-thebe_config = {"selector": "div.highlight"}
 
 # sphinx_book_theme
 html_theme_options = {
@@ -155,9 +155,6 @@ html_theme_options = {
     "extra_footer": "<div>🤖 Hey there! I am using PyWa.</div>",
     "show_version_warning_banner": True,
     "search_as_you_type": True,
-    "launch_buttons": {
-        "thebe": True,
-    },
 }
 
 # sphinx.ext.intersphinx
