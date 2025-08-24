@@ -1,6 +1,10 @@
 sphinx-book-theme==1.1.4
 sphinx-copybutton==0.5.2
-sphinxext-opengraph==0.9.1
+sphinxext-opengraph==0.12.0
 sphinx-togglebutton==0.3.2
-myst-parser==4.0.0
-sphinxcontrib-googleanalytics==0.4
+myst-parser==4.0.1
+sphinxcontrib-googleanalytics==0.5
+sphinx-last-updated-by-git==0.3.8
+sphinx-favicon==1.0.1
+sphinx-sitemap==2.8.0
+sphinx-thebe==0.3.1

@@ -57,7 +57,7 @@ Now, listeners are blocking. This means that the code execution will stop until 
     @wa.on_message(filters.command("start"))
     def start(_: WhatsApp, msg: types.Message):
         sent = msg.reply("Hello! How old are you?", buttons=[types.Button(title="Cancel", callback_data="cancel")])
-        age_reply: Message = sent.wait_for_reply(
+        age_reply = sent.wait_for_reply(
             filters=filters.text & filters.new(lambda _, m: m.text.isdigit()),
             cancelers=filters.callback_button & filters.matches("cancel"),
             timeout=60,
@@ -65,44 +65,6 @@ Now, listeners are blocking. This means that the code execution will stop until 
         ...
 
 In the example above, we added a button to the message that the user can press to cancel the listener. We also set a timeout of 60 seconds for the listener. If the user presses the cancel button or if the listener times out, the listener will stop waiting for a reply and raise an exception.
-
-.. attention::
-
-    If the listener did not **use** the update (the update not matched the filters or the cancelers), the update **will be passed to the handlers**.
-    This means that the update can be processed by other handlers that are registered to handle the same update type.
-    This behavior changed since version ``3.0.0``, before that - when update was not used by the listener - it was ignored and not passed to the handlers.
-
-    If you must prevent the update from being passed to the handlers, call the :meth:`~pywa.types.base_update.BaseUpdate.stop_handling` method on the update inside the filters or the cancelers:
-
-
-    .. code-block:: python
-        :linenos:
-        :emphasize-lines: 5-9, 20
-
-        from pywa import WhatsApp, types, filters
-
-        wa = WhatsApp(...)
-
-        def _age_canceler(_: WhatsApp, update: types.base_update.BaseUserUpdate) -> bool:
-            if isinstance(update, types.CallbackButton):
-                return update.data == "cancel" # If the user clicked the cancel button, we canceling the listener
-            elif isinstance(update, types.Message):
-                update.reply("Please send only your age in digits.") # Forcing the user to send a valid age and ignore every other messages
-                update.stop_handling() # prevent further processing of this update by the handlers
-            return False
-
-
-        @wa.on_message(filters.command("start"))
-        def start(_: WhatsApp, msg: types.Message):
-            sent = msg.reply(
-                "Hello! How old are you?",
-                buttons=[types.Button(title="Cancel", callback_data="cancel")],
-            )
-            age_reply: Message = sent.wait_for_reply(
-                filters=filters.text & filters.new(lambda _, m: m.text.isdigit()),
-                cancelers=filters.new(_age_canceler), # Using a custom canceler function to handle the cancel button and invalid messages
-            )
-
 
 Handling cancel and timeout
 ____________________________
@@ -122,7 +84,7 @@ You can use these exceptions to handle the cancel and timeout cases in your code
     @wa.on_message(filters.command("start"))
     def start(_: WhatsApp, msg: types.Message):
         try:
-            age_reply: Message = msg.reply(
+            age_reply = msg.reply(
                 text="Hello! How old are you?",
                 buttons=[types.Button(title="Cancel", callback_data="cancel")],
             ).wait_for_reply(
@@ -199,6 +161,14 @@ For example, let's create a listener that waits for another user to enter the bo
         else:
             db.add_admin(new_admin_phone)
             msg.reply(f"{new_admin_phone} is now an admin.")
+
+.. attention::
+
+    If the listener did not **use** the update (the update not matched the filters or the cancelers), the update **will be passed to the handlers**.
+    This means that the update can be processed by other handlers that are registered to handle the same update type.
+    This behavior changed since version ``3.0.0``, before that - when update was not used by the listener - it was ignored and not passed to the handlers.
+
+    If you must prevent the update from being passed to the handlers, call the :meth:`~pywa.types.base_update.BaseUpdate.stop_handling` method on the update inside the filters or the cancelers (it will not affect the listener behavior, just prevent the update from being passed to the handlers).
 
 
 Shortcuts
