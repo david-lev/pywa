@@ -459,7 +459,7 @@ def test_send_message(api, wa):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
-        typ=types.MessageType.TEXT.value.value,
+        typ=types.MessageType.TEXT.value,
         msg={"body": "Hello", "preview_url": False},
         reply_to_message_id=MSG_ID,
         biz_opaque_callback_data=None,
