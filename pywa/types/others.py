@@ -141,9 +141,6 @@ class MessageType(utils.StrEnum):
         SYSTEM: Only used in :class:`PhoneNumberChange` and :class:`IdentityChange`
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
-
     TEXT = "text"
     IMAGE = "image"
     VIDEO = "video"
@@ -161,6 +158,9 @@ class MessageType(utils.StrEnum):
     BUTTON = "button"
     REQUEST_WELCOME = "request_welcome"
     SYSTEM = "system"
+
+    _check_value = str.islower
+    _modify_value = str.lower
 
 
 class InteractiveType(utils.StrEnum):

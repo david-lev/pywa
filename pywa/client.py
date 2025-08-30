@@ -632,7 +632,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 update=self.api.send_message(
                     sender=sender,
                     to=str(to),
-                    typ=MessageType.TEXT,
+                    typ=MessageType.TEXT.value,
                     msg={"body": text, "preview_url": preview_url},
                     reply_to_message_id=reply_to_message_id,
                     biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
@@ -645,7 +645,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             update=self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.INTERACTIVE,
+                typ=MessageType.INTERACTIVE.value,
                 msg=helpers.get_interactive_msg(
                     typ=typ,
                     action=kb,
@@ -730,7 +730,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 update=self.api.send_message(
                     sender=sender,
                     to=str(to),
-                    typ=MessageType.IMAGE,
+                    typ=MessageType.IMAGE.value,
                     msg=helpers.get_media_msg(
                         media_id_or_url=image, is_url=is_url, caption=caption
                     ),
@@ -749,7 +749,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             update=self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.INTERACTIVE,
+                typ=MessageType.INTERACTIVE.value,
                 msg=helpers.get_interactive_msg(
                     typ=typ,
                     action=kb,
@@ -832,7 +832,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 update=self.api.send_message(
                     sender=sender,
                     to=str(to),
-                    typ=MessageType.VIDEO,
+                    typ=MessageType.VIDEO.value,
                     msg=helpers.get_media_msg(
                         media_id_or_url=video, is_url=is_url, caption=caption
                     ),
@@ -851,7 +851,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             update=self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.INTERACTIVE,
+                typ=MessageType.INTERACTIVE.value,
                 msg=helpers.get_interactive_msg(
                     typ=typ,
                     action=kb,
@@ -937,7 +937,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 update=self.api.send_message(
                     sender=sender,
                     to=str(to),
-                    typ=MessageType.DOCUMENT,
+                    typ=MessageType.DOCUMENT.value,
                     msg=helpers.get_media_msg(
                         media_id_or_url=document,
                         is_url=is_url,
@@ -959,7 +959,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             update=self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.INTERACTIVE,
+                typ=MessageType.INTERACTIVE.value,
                 msg=helpers.get_interactive_msg(
                     typ=typ,
                     action=kb,
@@ -1032,7 +1032,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             update=self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.AUDIO,
+                typ=MessageType.AUDIO.value,
                 msg=helpers.get_media_msg(media_id_or_url=audio, is_url=is_url),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
@@ -1095,7 +1095,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             update=self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.STICKER,
+                typ=MessageType.STICKER.value,
                 msg=helpers.get_media_msg(media_id_or_url=sticker, is_url=is_url),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
@@ -1152,7 +1152,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             update=self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.REACTION,
+                typ=MessageType.REACTION.value,
                 msg={"emoji": emoji, "message_id": message_id},
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             ),
@@ -1205,7 +1205,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             update=self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.REACTION,
+                typ=MessageType.REACTION.value,
                 msg={"emoji": "", "message_id": message_id},
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             ),
@@ -1261,7 +1261,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             update=self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.LOCATION,
+                typ=MessageType.LOCATION.value,
                 msg={
                     "latitude": latitude,
                     "longitude": longitude,
@@ -1315,7 +1315,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             update=self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.INTERACTIVE,
+                typ=MessageType.INTERACTIVE.value,
                 msg=helpers.get_interactive_msg(
                     typ=InteractiveType.LOCATION_REQUEST_MESSAGE,
                     action={"name": "send_location"},
@@ -1375,7 +1375,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             update=self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.CONTACTS,
+                typ=MessageType.CONTACTS.value,
                 msg=tuple(c.to_dict() for c in contact)
                 if isinstance(contact, Iterable)
                 else (contact.to_dict(),),
@@ -1435,7 +1435,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             update=self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.INTERACTIVE,
+                typ=MessageType.INTERACTIVE.value,
                 msg=helpers.get_interactive_msg(
                     typ=InteractiveType.CATALOG_MESSAGE,
                     action={
@@ -1511,7 +1511,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             update=self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.INTERACTIVE,
+                typ=MessageType.INTERACTIVE.value,
                 msg=helpers.get_interactive_msg(
                     typ=InteractiveType.PRODUCT,
                     action={
@@ -1592,7 +1592,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             update=self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.INTERACTIVE,
+                typ=MessageType.INTERACTIVE.value,
                 msg=helpers.get_interactive_msg(
                     typ=InteractiveType.PRODUCT_LIST,
                     action={

@@ -459,7 +459,7 @@ def test_send_message(api, wa):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
-        typ=types.MessageType.TEXT,
+        typ=types.MessageType.TEXT.value.value,
         msg={"body": "Hello", "preview_url": False},
         reply_to_message_id=MSG_ID,
         biz_opaque_callback_data=None,
@@ -477,7 +477,7 @@ def test_send_image(api, wa):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
-        typ=types.MessageType.IMAGE,
+        typ=types.MessageType.IMAGE.value,
         msg={
             "link": "https://example.com/image.jpg",
             "caption": "caption",
@@ -497,7 +497,7 @@ def test_send_video(api, wa):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
-        typ=types.MessageType.VIDEO,
+        typ=types.MessageType.VIDEO.value,
         msg={
             "id": "1234567890",
             "caption": "caption",
@@ -516,7 +516,7 @@ def test_send_audio(api, wa):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
-        typ=types.MessageType.AUDIO,
+        typ=types.MessageType.AUDIO.value,
         msg={
             "id": "1234567890",
         },
@@ -535,7 +535,7 @@ def test_send_document(api, wa):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
-        typ=types.MessageType.DOCUMENT,
+        typ=types.MessageType.DOCUMENT.value,
         msg={
             "id": "1234567890",
             "filename": "filename",
@@ -556,7 +556,7 @@ def test_send_location(api, wa):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
-        typ=types.MessageType.LOCATION,
+        typ=types.MessageType.LOCATION.value,
         msg={
             "latitude": 12.34,
             "longitude": 56.78,
@@ -589,7 +589,7 @@ def test_send_contact(api, wa):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
-        typ=types.MessageType.CONTACTS,
+        typ=types.MessageType.CONTACTS.value,
         msg=(
             {
                 "name": {
@@ -636,7 +636,7 @@ def test_send_sticker(api, wa):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
-        typ=types.MessageType.STICKER,
+        typ=types.MessageType.STICKER.value,
         msg={
             "id": "1234567890",
         },
@@ -655,7 +655,7 @@ def test_send_reaction(api, wa):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
-        typ=types.MessageType.REACTION,
+        typ=types.MessageType.REACTION.value,
         msg={
             "emoji": "😍",
             "message_id": MSG_ID,
@@ -673,7 +673,7 @@ def test_remove_reaction(api, wa):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
-        typ=types.MessageType.REACTION,
+        typ=types.MessageType.REACTION.value,
         msg={
             "emoji": "",
             "message_id": MSG_ID,
@@ -692,7 +692,7 @@ def test_request_location(api, wa):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
-        typ=types.MessageType.INTERACTIVE,
+        typ=types.MessageType.INTERACTIVE.value,
         msg={
             "action": {
                 "name": "send_location",
@@ -715,7 +715,7 @@ def test_send_catalog(api, wa):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
-        typ=types.MessageType.INTERACTIVE,
+        typ=types.MessageType.INTERACTIVE.value,
         msg={
             "action": {
                 "name": "catalog_message",
@@ -741,7 +741,7 @@ def test_send_product(api, wa):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
-        typ=types.MessageType.INTERACTIVE,
+        typ=types.MessageType.INTERACTIVE.value,
         msg={
             "action": {
                 "catalog_id": "1234567890",
@@ -771,7 +771,7 @@ def test_send_products(api, wa):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
-        typ=types.MessageType.INTERACTIVE,
+        typ=types.MessageType.INTERACTIVE.value,
         msg={
             "action": {
                 "catalog_id": "1234567890",
