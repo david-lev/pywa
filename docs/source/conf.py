@@ -149,7 +149,6 @@ html_theme_options = {
     "show_toc_level": 2,
     "extra_footer": "<div>🤖 Hey there! I am using PyWa.</div>",
     "show_version_warning_banner": True,
-    "search_as_you_type": True,
 }
 
 # sphinx.ext.intersphinx

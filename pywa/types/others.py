@@ -135,10 +135,10 @@ class MessageType(utils.StrEnum):
         ORDER: Message.order -> :class:`Order`.
         UNKNOWN: An unknown message (Warning with the actual type will be logged).
         UNSUPPORTED: An unsupported message (message type not supported by WhatsApp Cloud API).
-        INTERACTIVE: Only used in :class:`CallbackButton`, :class:`CallbackSelection` and :class:`CallPermissionUpdate`.
+        INTERACTIVE: Only used in :class:`CallbackButton`, :class:`CallbackSelection` and :class:`~pywa.types.calls.CallPermissionUpdate`.
         BUTTON: Only used in :class:`CallbackButton`.
         REQUEST_WELCOME: Only used in :class:`ChatOpened`.
-        SYSTEM: Only used in :class:`PhoneNumberChange` and :class:`IdentityChange`
+        SYSTEM: Only used in :class:`~pywa.types.system.PhoneNumberChange` and :class:`~pywa.types.system.IdentityChange`
     """
 
     TEXT = "text"

@@ -11,6 +11,8 @@ __all__ = [
     "MediaUrlResponse",
 ]
 
+import pathlib
+
 from pywa.types.others import SuccessResult
 from .. import utils
 from pywa.types.media import *  # noqa MUST BE IMPORTED FIRST
@@ -48,12 +50,18 @@ class Media:
         filename: str | None = None,
         in_memory: bool = False,
         **kwargs,
-    ) -> bytes | str:
+    ) -> pathlib.Path | bytes:
         """
         Download a media file from WhatsApp servers.
-            - Same as :func:`~pywa.client.WhatsApp.download_media` with ``media_url=media.get_media_url()``
 
-        >>> message.image.download()
+        - Same as :func:`~pywa.client.WhatsApp.download_media` with ``media_url=media.get_media_url()``
+
+        >>> from pywa_async import WhatsApp, types, filters
+        >>> wa = WhatsApp(...)
+
+        >>> @wa.on_message(filters.image)
+        ... async def on_message(_: WhatsApp, msg: types.Message):
+        ...     await msg.image.download(...)
 
         Args:
             path: The path where to save the file (if not provided, the current working directory will be used).

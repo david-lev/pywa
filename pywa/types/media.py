@@ -15,6 +15,7 @@ __all__ = [
 
 import dataclasses
 import mimetypes
+import pathlib
 from typing import TYPE_CHECKING
 
 from .others import SuccessResult
@@ -42,12 +43,18 @@ class Media:
         filename: str | None = None,
         in_memory: bool = False,
         **kwargs,
-    ) -> bytes | str:
+    ) -> pathlib.Path | bytes:
         """
         Download a media file from WhatsApp servers.
-            - Same as :func:`~pywa.client.WhatsApp.download_media` with ``media_url=media.get_media_url()``
 
-        >>> message.image.download()
+        - Same as :func:`~pywa.client.WhatsApp.download_media` with ``media_url=media.get_media_url()``
+
+        >>> from pywa import WhatsApp, types, filters
+        >>> wa = WhatsApp(...)
+
+        >>> @wa.on_message(filters.image)
+        ... def on_message(_: WhatsApp, msg: types.Message):
+        ...     msg.image.download(...)
 
         Args:
             path: The path where to save the file (if not provided, the current working directory will be used).
@@ -80,7 +87,7 @@ class Media:
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class BaseUserMedia(Media, utils.FromDict):
-    """Base class for all media types."""
+    """Base class for all user media types (Image, Video, Sticker, Document, Audio)."""
 
     sha256: str
     mime_type: str
