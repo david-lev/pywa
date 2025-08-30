@@ -95,7 +95,7 @@ class Media:
 
 
 class BaseUserMedia(Media):
-    """Base class for all media types."""
+    """Base class for all user media types (Image, Video, Sticker, Document, Audio)."""
 
     @classmethod
     def from_flow_completion(
