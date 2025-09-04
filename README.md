@@ -297,8 +297,9 @@ from django.http import HttpRequest, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .service import WHATSAPP
-# Attach handlers to the WHATSAPP instance using available methods
+from .service.whatsapp import WHATSAPP
+# WHATSAPP = WhatsApp(...)
+# Attach handlers to the WhatsApp instance using available methods
 # https://pywa.readthedocs.io/en/latest/content/handlers/overview.html#registering-callback-functions
 
 
