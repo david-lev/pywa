@@ -118,37 +118,37 @@ def test_ref_to_str_with_screen():
 def test_ref_equality():
     ref = Ref(prefix="data", field="age")
     condition = ref == 21
-    assert condition.to_str() == "(${data.age} == 21)"
+    assert condition.to_str() == "`(${data.age} == 21)`"
 
 
 def test_ref_inequality():
     ref = Ref(prefix="data", field="age")
     condition = ref != 18
-    assert condition.to_str() == "(${data.age} != 18)"
+    assert condition.to_str() == "`(${data.age} != 18)`"
 
 
 def test_ref_greater_than():
     ref = Ref(prefix="data", field="age")
     condition = ref > 21
-    assert condition.to_str() == "(${data.age} > 21)"
+    assert condition.to_str() == "`(${data.age} > 21)`"
 
 
 def test_ref_greater_than_or_equal():
     ref = Ref(prefix="data", field="age")
     condition = ref >= 21
-    assert condition.to_str() == "(${data.age} >= 21)"
+    assert condition.to_str() == "`(${data.age} >= 21)`"
 
 
 def test_ref_less_than():
     ref = Ref(prefix="data", field="age")
     condition = ref < 21
-    assert condition.to_str() == "(${data.age} < 21)"
+    assert condition.to_str() == "`(${data.age} < 21)`"
 
 
 def test_ref_less_than_or_equal():
     ref = Ref(prefix="data", field="age")
     condition = ref <= 21
-    assert condition.to_str() == "(${data.age} <= 21)"
+    assert condition.to_str() == "`(${data.age} <= 21)`"
 
 
 def test_ref_addition():
@@ -262,14 +262,14 @@ def test_logical_and_with_ref():
     ref1 = Ref(prefix="data", field="age")
     ref2 = Ref(prefix="form", field="is_verified")
     condition = ref1 & ref2
-    assert condition.to_str() == "(${data.age} && ${form.is_verified})"
+    assert condition.to_str() == "`(${data.age} && ${form.is_verified})`"
 
 
 def test_logical_or_with_ref():
     ref1 = Ref(prefix="data", field="age")
     ref2 = Ref(prefix="form", field="is_verified")
     condition = ref1 | ref2
-    assert condition.to_str() == "(${data.age} || ${form.is_verified})"
+    assert condition.to_str() == "`(${data.age} || ${form.is_verified})`"
 
 
 def test_logical_and_with_condition():
@@ -280,7 +280,7 @@ def test_logical_and_with_condition():
     combined_condition = condition1 & condition2
     assert (
         combined_condition.to_str()
-        == "((${data.age} > 21) && (${form.is_verified} == true))"
+        == "`((${data.age} > 21) && (${form.is_verified} == true))`"
     )
 
 
@@ -292,14 +292,14 @@ def test_logical_or_with_condition():
     combined_condition = condition1 | condition2
     assert (
         combined_condition.to_str()
-        == "((${data.age} < 18) || (${form.is_verified} == false))"
+        == "`((${data.age} < 18) || (${form.is_verified} == false))`"
     )
 
 
 def test_invert_condition():
     ref = Ref(prefix="data", field="age")
     condition = ~ref
-    assert condition.to_str() == "!${data.age}"
+    assert condition.to_str() == "`!${data.age}`"
 
 
 def test_combined_conditions_with_invert():
@@ -307,7 +307,7 @@ def test_combined_conditions_with_invert():
     ref2 = Ref(prefix="form", field="is_verified")
     condition = ~(ref1 > 18) & (ref2 == True)  # noqa: E712
     assert (
-        condition.to_str() == "(!(${data.age} > 18) && (${form.is_verified} == true))"
+        condition.to_str() == "`(!(${data.age} > 18) && (${form.is_verified} == true))`"
     )
 
 
@@ -315,22 +315,22 @@ def test_combined_conditions_with_literal_before():
     ref1 = Ref(prefix="data", field="age")
     ref2 = Ref(prefix="form", field="is_verified")
     condition = ref2 & (ref1 > 18)
-    assert condition.to_str() == "(${form.is_verified} && (${data.age} > 18))"
+    assert condition.to_str() == "`(${form.is_verified} && (${data.age} > 18))`"
 
 
 def test_combined_conditions_with_literal_after():
     ref1 = Ref(prefix="form", field="is_verified")
     ref2 = Ref(prefix="data", field="age")
     condition = (ref2 > 18) & ref1
-    assert condition.to_str() == "((${data.age} > 18) && ${form.is_verified})"
+    assert condition.to_str() == "`((${data.age} > 18) && ${form.is_verified})`"
 
 
 def test_condition_with_backticks():
     ref = Ref(prefix="data", field="age")
     condition = ref > 18
-    assert condition.to_str() == "(${data.age} > 18)"
-    condition.wrap_with_backticks = True
     assert condition.to_str() == "`(${data.age} > 18)`"
+    condition.wrap_with_backticks = False
+    assert condition.to_str() == "(${data.age} > 18)"
 
 
 def visible_conditions_wrapped_with_backticks():

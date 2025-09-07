@@ -1315,7 +1315,7 @@ class DataSource:
     on_unselect_action: UpdateDataAction | None = None
     description: str | ScreenDataRef[str] | ComponentRef[str] | None = None
     metadata: str | ScreenDataRef[str] | ComponentRef[str] | None = None
-    enabled: bool | ScreenDataRef[bool] | ComponentRef[bool] | None = None
+    enabled: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     image: str | ScreenDataRef[str] | ComponentRef[str] | None = None
     alt_text: str | ScreenDataRef[str] | ComponentRef[str] | None = None
     color: str | ScreenDataRef[str] | ComponentRef[str] | None = None
@@ -1632,12 +1632,6 @@ class Component(abc.ABC):
     @abc.abstractmethod
     def visible(self) -> bool | str | Condition | None: ...
 
-    def __post_init__(self):
-        if isinstance(self.visible, Condition):
-            self.visible.wrap_with_backticks = (
-                True  # visible condition should be wrapped with backticks
-            )
-
 
 class TemplateComponentType(utils.StrEnum):
     """Internal component types"""
@@ -1934,7 +1928,7 @@ class Condition(_Combine):
 
     def __init__(self, expression: str):
         self._expression = expression
-        self.wrap_with_backticks = False
+        self.wrap_with_backticks = True
 
     def __repr__(self) -> str:
         return f"Condition({self._expression})"
@@ -2151,11 +2145,11 @@ class FormComponent(Component, abc.ABC, Generic[_ScreenDataValTypeVar]):
 
     @property
     @abc.abstractmethod
-    def required(self) -> bool | str | ScreenDataRef[bool] | None: ...
+    def required(self) -> bool | Condition | ScreenDataRef[bool] | None: ...
 
     @property
     @abc.abstractmethod
-    def enabled(self) -> bool | str | ScreenDataRef[bool] | None: ...
+    def enabled(self) -> bool | Condition | ScreenDataRef[bool] | None: ...
 
     @property
     @abc.abstractmethod
@@ -2343,7 +2337,9 @@ class TextBody(TextComponent):
     )
     markdown: bool | None = None
     font_weight: FontWeight | str | ScreenDataRef[str] | ComponentRef[str] | None = None
-    strikethrough: bool | ScreenDataRef[bool] | ComponentRef[bool] | None = None
+    strikethrough: (
+        bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None
+    ) = None
     visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
 
 
@@ -2550,11 +2546,11 @@ class TextInput(TextEntryComponent):
         LabelVariant | str | ScreenDataRef[str] | ComponentRef[str] | None
     ) = None
     pattern: str | re.Pattern | ScreenDataRef[str] | ComponentRef[str] | None = None
-    required: bool | ScreenDataRef[bool] | ComponentRef[bool] | None = None
+    required: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     min_chars: int | ScreenDataRef[int] | None = None
     max_chars: int | ScreenDataRef[int] | None = None
     helper_text: str | FlowStr | ScreenDataRef[str] | ComponentRef[str] | None = None
-    enabled: bool | ScreenDataRef[bool] | ComponentRef[bool] | None = None
+    enabled: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     init_value: str | ScreenDataRef[str] | ComponentRef[str] | None = None
     error_message: str | ScreenDataRef[str] | ComponentRef[str] | None = None
@@ -2599,10 +2595,10 @@ class TextArea(TextEntryComponent):
     label_variant: (
         LabelVariant | str | ScreenDataRef[str] | ComponentRef[str] | None
     ) = None
-    required: bool | ScreenDataRef[bool] | ComponentRef[bool] | None = None
+    required: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     max_length: int | ScreenDataRef[int] | None = None
     helper_text: str | FlowStr | ScreenDataRef[str] | ComponentRef[str] | None = None
-    enabled: bool | ScreenDataRef[bool] | ComponentRef[bool] | None = None
+    enabled: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     init_value: str | ScreenDataRef[str] | ComponentRef[str] | None = None
     error_message: str | ScreenDataRef[str] | ComponentRef[str] | None = None
@@ -2675,9 +2671,9 @@ class CheckboxGroup(FormComponent[list[str]]):
     description: str | FlowStr | ScreenDataRef[str] | ComponentRef[str] | None = None
     min_selected_items: int | ScreenDataRef[int] | None = None
     max_selected_items: int | ScreenDataRef[int] | None = None
-    required: bool | ScreenDataRef[bool] | ComponentRef[bool] | None = None
+    required: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
-    enabled: bool | ScreenDataRef[bool] | ComponentRef[bool] | None = None
+    enabled: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     init_value: list[str] | ScreenDataRef[list[str]] | None = None
     media_size: MediaSize | str | ScreenDataRef[str] | ComponentRef[str] | None = None
     on_select_action: DataExchangeAction | UpdateDataAction | None = None
@@ -2727,9 +2723,9 @@ class RadioButtonsGroup(FormComponent[str]):
     data_source: list[DataSource] | ScreenDataRef[list[DataSource]]
     label: str | FlowStr | ScreenDataRef[str] | ComponentRef[str] | None = None
     description: str | FlowStr | ScreenDataRef[str] | ComponentRef[str] | None = None
-    required: bool | ScreenDataRef[bool] | ComponentRef[bool] | None = None
+    required: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
-    enabled: bool | ScreenDataRef[bool] | ComponentRef[bool] | None = None
+    enabled: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     init_value: str | ScreenDataRef[str] | ComponentRef[str] | None = None
     media_size: MediaSize | str | ScreenDataRef[str] | ComponentRef[str] | None = None
     on_select_action: DataExchangeAction | UpdateDataAction | None = None
@@ -2776,8 +2772,8 @@ class Dropdown(FormComponent[str]):
     name: str
     label: str | FlowStr | ScreenDataRef[str] | ComponentRef[str]
     data_source: list[DataSource] | ScreenDataRef[list[DataSource]]
-    enabled: bool | ScreenDataRef[bool] | ComponentRef[bool] | None = None
-    required: bool | ScreenDataRef[bool] | ComponentRef[bool] | None = None
+    enabled: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
+    required: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     init_value: str | ScreenDataRef[str] | ComponentRef[str] | None = None
     on_select_action: DataExchangeAction | UpdateDataAction | None = None
@@ -2832,9 +2828,9 @@ class ChipsSelector(FormComponent[list[str]]):
     description: str | FlowStr | ScreenDataRef[str] | ComponentRef[str] | None = None
     min_selected_items: int | ScreenDataRef[int] | None = None
     max_selected_items: int | ScreenDataRef[int] | None = None
-    required: bool | ScreenDataRef[bool] | ComponentRef[bool] | None = None
+    required: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
-    enabled: bool | ScreenDataRef[bool] | ComponentRef[bool] | None = None
+    enabled: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     init_value: list[str] | ScreenDataRef[list[str]] | None = None
     on_select_action: DataExchangeAction | UpdateDataAction | None = None
     on_unselect_action: UpdateDataAction | None = None
@@ -2865,7 +2861,7 @@ class Footer(Component):
     left_caption: str | FlowStr | ScreenDataRef[str] | ComponentRef[str] | None = None
     center_caption: str | FlowStr | ScreenDataRef[str] | ComponentRef[str] | None = None
     right_caption: str | FlowStr | ScreenDataRef[str] | ComponentRef[str] | None = None
-    enabled: bool | ScreenDataRef[bool] | ComponentRef[bool] | None = None
+    enabled: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -2901,7 +2897,7 @@ class OptIn(FormComponent[bool]):
     enabled: None = dataclasses.field(default=None, init=False, repr=False)
     name: str
     label: str | FlowStr | ScreenDataRef[str] | ComponentRef[str]
-    required: bool | ScreenDataRef[bool] | ComponentRef[bool] | None = None
+    required: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     init_value: bool | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     on_click_action: OpenURLAction | DataExchangeAction | NavigateAction | None = None
@@ -3149,8 +3145,8 @@ class DatePicker(FormComponent[str]):
         | None
     ) = None
     helper_text: str | FlowStr | ScreenDataRef[str] | ComponentRef[str] | None = None
-    enabled: bool | ScreenDataRef[bool] | ComponentRef[bool] | None = None
-    required: bool | ScreenDataRef[bool] | ComponentRef[bool] | None = None
+    enabled: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
+    required: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     init_value: (
         datetime.date
@@ -3317,9 +3313,10 @@ class CalendarPicker(FormComponent[str]):
         | ScreenDataRef[CalendarRangeValues[str]]
         | None
     ) = None
-    enabled: bool | ScreenDataRef[bool] | ComponentRef[bool] | None = None
+    enabled: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     required: (
         bool
+        | Condition
         | ScreenDataRef[bool]
         | ComponentRef[bool]
         | CalendarRangeValues[bool]
@@ -3515,7 +3512,7 @@ class PhotoPicker(FormComponent):
         ...     max_file_size_kb=10_000,  # 10MB
         ...     min_uploaded_photos=1,
         ...     max_uploaded_photos=3,
-        )
+        ... )
 
     Attributes:
         name: The unique name (id) for this component.
@@ -3545,7 +3542,7 @@ class PhotoPicker(FormComponent):
     max_file_size_kb: int | ScreenDataRef[int] | None = None
     min_uploaded_photos: int | ScreenDataRef[int] | None = None
     max_uploaded_photos: int | ScreenDataRef[int] | None = None
-    enabled: bool | ScreenDataRef[bool] | ComponentRef[bool] | None = None
+    enabled: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     error_message: str | ScreenDataRef[str] | ComponentRef[str] | None = None
 
@@ -3571,7 +3568,7 @@ class DocumentPicker(FormComponent):
         ...     min_uploaded_documents=1,
         ...     max_uploaded_documents=1,
         ...     allowed_mime_types=['application/pdf', 'image/jpeg', 'image/png'],
-        )
+        ... )
 
     Attributes:
         name: The unique name (id) for this component.
@@ -3598,7 +3595,7 @@ class DocumentPicker(FormComponent):
     min_uploaded_documents: int | ScreenDataRef[int] | None = None
     max_uploaded_documents: int | ScreenDataRef[int] | None = None
     allowed_mime_types: list[str] | ScreenDataRef[list[str]] | None = None
-    enabled: bool | ScreenDataRef[bool] | ComponentRef[bool] | None = None
+    enabled: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
     error_message: str | ScreenDataRef[str] | ComponentRef[str] | None = None
 
@@ -3650,6 +3647,12 @@ class If(Component):
     condition: Condition | str
     then: list[Component | dict[str, Any]]
     else_: list[Component | dict[str, Any]] | None = None
+
+    def __post_init__(self):
+        if isinstance(self.condition, Condition):
+            self.condition.wrap_with_backticks = (
+                False  # Condition inside `If` should not be wrapped with backticks
+            )
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
