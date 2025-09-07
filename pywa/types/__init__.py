@@ -2,7 +2,7 @@
 This package contains all the types used in the library.
 """
 
-from .base_update import StopHandling, ContinueHandling
+from .base_update import StopHandling, ContinueHandling, RawUpdate
 from .callback import (
     Button,
     URLButton,

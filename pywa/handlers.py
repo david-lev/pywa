@@ -110,9 +110,10 @@ from .types.flows import (
     Screen,
 )  # noqa
 
+from .types.base_update import RawUpdate
+
 if TYPE_CHECKING:
     from .client import WhatsApp
-    from .types.base_update import BaseUpdate  # noqa
 
 _FlowRequestHandlerT: TypeAlias = Callable[
     ["WhatsApp", FlowRequest],
@@ -120,7 +121,7 @@ _FlowRequestHandlerT: TypeAlias = Callable[
 ]
 """Type hint for the flow request handler."""
 
-_RawUpdateCallback: TypeAlias = Callable[["WhatsApp", dict], Any | Awaitable[Any]]
+_RawUpdateCallback: TypeAlias = Callable[["WhatsApp", RawUpdate], Any | Awaitable[Any]]
 _MessageCallback: TypeAlias = Callable[["WhatsApp", Message], Any | Awaitable[Any]]
 _CallbackButtonCallback: TypeAlias = Callable[
     ["WhatsApp", CallbackButton], Any | Awaitable[Any]
@@ -854,7 +855,7 @@ class CallPermissionUpdateHandler(Handler[CallPermissionUpdate]):
         super().__init__(callback=callback, filters=filters, priority=priority)
 
 
-class RawUpdateHandler(Handler[dict]):
+class RawUpdateHandler(Handler[RawUpdate]):
     """
     Handler for raw updates (dicts) from the webhook.
 
@@ -868,7 +869,7 @@ class RawUpdateHandler(Handler[dict]):
         >>> wa.add_handlers(RawUpdateHandler(print_raw_update))
 
     Args:
-        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a raw update :class:`dict` as positional arguments)
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a raw update :class:`RawUpdate` as positional arguments)
         filters: The filters to apply to the handler
         priority: The priority of the handler (default: ``0``)
     """
@@ -1217,16 +1218,16 @@ class _HandlerDecorators:
         priority: int = 0,
     ) -> Callable[[_RawUpdateCallback], _RawUpdateCallback] | _RawUpdateCallback:
         """
-        Decorator to register a function as a callback for raw updates (:class:`dict`).
+        Decorator to register a function as a callback for raw updates (:class:`RawUpdate`).
 
-        - This callback is called for **EVERY** update received from WhatsApp, even if it's not sent to the client phone number.
+        - This callback is called for **EVERY** update received from WhatsApp, even if it is already handled by another handler or listener.
         - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.RawUpdateHandler`.
 
         Example:
 
             >>> wa = WhatsApp(...)
             >>> @wa.on_raw_update
-            ... def raw_update_handler(_: WhatsApp, update: dict):
+            ... def raw_update_handler(_: WhatsApp, update: RawUpdate):
             ...     print(update)
 
         Args:

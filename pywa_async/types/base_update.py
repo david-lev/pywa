@@ -2,11 +2,6 @@
 
 from __future__ import annotations
 
-__all__ = [
-    "StopHandling",
-    "ContinueHandling",
-]
-
 from pywa.types.base_update import *  # noqa MUST BE IMPORTED FIRST
 
 import pathlib
