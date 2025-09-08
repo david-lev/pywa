@@ -1305,14 +1305,14 @@ class DataSource:
         image: The base64 encoded image of the data source. Limited to 1MB (added in v5.0).
         alt_text: The alt text of the image. (added in v5.0).
         color: 6-digit hex color code. (added in v5.0).
-        on_select_action: The update data action to perform when the data source is selected. (added in v6.0).
-        on_unselect_action: The update data action to perform when the data source is unselected. (added in v6.0).
+        on_select_action: The action to perform when an item is selected. (added in v6.0).
+        on_unselect_action: The action to perform when an item is unselected. (added in v6.0).
     """
 
     id: str | ScreenDataRef[str] | ComponentRef[str]
     title: str | ScreenDataRef[str] | ComponentRef[str]
-    on_select_action: UpdateDataAction | None = None
-    on_unselect_action: UpdateDataAction | None = None
+    on_select_action: DataExchangeAction | UpdateDataAction | None = None
+    on_unselect_action: DataExchangeAction | UpdateDataAction | None = None
     description: str | ScreenDataRef[str] | ComponentRef[str] | None = None
     metadata: str | ScreenDataRef[str] | ComponentRef[str] | None = None
     enabled: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
