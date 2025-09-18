@@ -1224,10 +1224,15 @@ class _BaseMediaParams(BaseParams, abc.ABC):
     format: HeaderFormatType
     param_type: Literal[ParamType.IMAGE, ParamType.VIDEO, ParamType.DOCUMENT]
 
-    def __init__(self, media: str | Media | pathlib.Path | bytes | BinaryIO):
+    def __init__(
+        self,
+        media: str | Media | pathlib.Path | bytes | BinaryIO,
+        filename: str | None = None,
+    ):
         self.media = media
         self._resolved_media: str | None = None
         self._is_url: bool | None = None
+        self.filename = filename
 
     def to_dict(
         self,
@@ -1241,6 +1246,7 @@ class _BaseMediaParams(BaseParams, abc.ABC):
                     "type": self.param_type.value,
                     self.param_type.value: {
                         "link" if self._is_url else "id": self._resolved_media,
+                        **({"filename": self.filename} if self.filename else {}),
                     },
                 }
             ],
@@ -1358,23 +1364,31 @@ class HeaderDocument(_BaseMediaHeaderComponent):
         format = HeaderFormatType.DOCUMENT
         param_type = ParamType.DOCUMENT
 
-        def __init__(self, *, document: str | Media | pathlib.Path | bytes | BinaryIO):
-            super().__init__(media=document)
+        def __init__(
+            self,
+            *,
+            document: str | Media | pathlib.Path | bytes | BinaryIO,
+            filename: str | None = None,
+        ):
+            super().__init__(media=document, filename=filename)
 
     @staticmethod
     def params(
-        *, document: str | Media | pathlib.Path | bytes | BinaryIO
+        *,
+        document: str | Media | pathlib.Path | bytes | BinaryIO,
+        filename: str | None = None,
     ) -> HeaderDocument._Params:
         """
         Fill the parameters for the header document component.
 
         Args:
             document: The document media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
+            filename: The filename to be displayed for the document. If not provided, the filename will be Untitled.
 
         Returns:
             An instance of BaseParams containing the media parameter.
         """
-        return HeaderDocument._Params(document=document)
+        return HeaderDocument._Params(document=document, filename=filename)
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
