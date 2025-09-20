@@ -4,7 +4,7 @@ import dataclasses
 import datetime
 from typing import TYPE_CHECKING
 
-from .base_update import BaseUserUpdate  # noqa
+from .base_update import BaseUserUpdate, RawUpdate  # noqa
 from .others import (
     MessageType,
     Metadata,
@@ -36,7 +36,7 @@ class ChatOpened(BaseUserUpdate):
     _webhook_field = "messages"
 
     @classmethod
-    def from_update(cls, client: WhatsApp, update: dict) -> ChatOpened:
+    def from_update(cls, client: WhatsApp, update: RawUpdate) -> ChatOpened:
         msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
             "messages"
         ][0]

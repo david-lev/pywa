@@ -72,7 +72,7 @@ import pathlib
 import re
 
 from . import CallbackData
-from .base_update import BaseUpdate
+from .base_update import BaseUpdate, RawUpdate
 from .flows import FlowActionType, FlowJSON
 import abc
 import dataclasses
@@ -220,7 +220,7 @@ class TemplateStatusUpdate(BaseTemplateUpdate):
     _webhook_field = "message_template_status_update"
 
     @classmethod
-    def from_update(cls, client: WhatsApp, update: dict) -> TemplateStatusUpdate:
+    def from_update(cls, client: WhatsApp, update: RawUpdate) -> TemplateStatusUpdate:
         value = (data := update["entry"][0])["changes"][0]["value"]
         return cls(
             _client=client,
@@ -323,7 +323,7 @@ class TemplateCategoryUpdate(BaseTemplateUpdate):
     _webhook_field = "template_category_update"
 
     @classmethod
-    def from_update(cls, client: WhatsApp, update: dict) -> TemplateCategoryUpdate:
+    def from_update(cls, client: WhatsApp, update: RawUpdate) -> TemplateCategoryUpdate:
         value = (data := update["entry"][0])["changes"][0]["value"]
         return cls(
             _client=client,
@@ -377,7 +377,9 @@ class TemplateComponentsUpdate(BaseTemplateUpdate):
     _webhook_field = "message_template_components_update"
 
     @classmethod
-    def from_update(cls, client: WhatsApp, update: dict) -> TemplateComponentsUpdate:
+    def from_update(
+        cls, client: WhatsApp, update: RawUpdate
+    ) -> TemplateComponentsUpdate:
         value = (data := update["entry"][0])["changes"][0]["value"]
         return cls(
             _client=client,
@@ -424,7 +426,7 @@ class TemplateQualityUpdate(BaseTemplateUpdate):
     _webhook_field = "message_template_quality_update"
 
     @classmethod
-    def from_update(cls, client: WhatsApp, update: dict) -> TemplateQualityUpdate:
+    def from_update(cls, client: WhatsApp, update: RawUpdate) -> TemplateQualityUpdate:
         value = (data := update["entry"][0])["changes"][0]["value"]
         return cls(
             _client=client,

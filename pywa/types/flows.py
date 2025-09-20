@@ -28,7 +28,7 @@ import httpx
 
 from .media import BaseUserMedia
 from .. import utils
-from .base_update import BaseUserUpdate  # noqa
+from .base_update import BaseUserUpdate, RawUpdate  # noqa
 from .others import (
     WhatsAppBusinessAccount,
     FacebookApplication,
@@ -156,7 +156,7 @@ class FlowCompletion(BaseUserUpdate):
     _webhook_field = "messages"
 
     @classmethod
-    def from_update(cls, client: WhatsApp, update: dict) -> FlowCompletion:
+    def from_update(cls, client: WhatsApp, update: RawUpdate) -> FlowCompletion:
         msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
             "messages"
         ][0]

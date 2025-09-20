@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING, Generic
 from .. import utils
 from ..errors import WhatsAppError
 
-from .base_update import BaseUserUpdate  # noqa
+from .base_update import BaseUserUpdate, RawUpdate  # noqa
 from .others import Metadata, User
 
 if TYPE_CHECKING:
@@ -142,7 +142,7 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
     _is_user_action = False
 
     @classmethod
-    def from_update(cls, client: WhatsApp, update: dict) -> MessageStatus:
+    def from_update(cls, client: WhatsApp, update: RawUpdate) -> MessageStatus:
         status = (value := (entry := update["entry"][0])["changes"][0]["value"])[
             "statuses"
         ][0]

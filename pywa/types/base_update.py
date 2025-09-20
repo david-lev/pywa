@@ -175,35 +175,23 @@ class RawUpdate(dict, _HandlingFlow):
 
     @property
     def id(self) -> str:
+        """The WhatsApp Business Account ID for the business that is subscribed to the webhook."""
         return self["entry"][0]["id"]
 
     @property
     def field(self) -> str:
+        """The field name of the webhook update."""
         return self["entry"][0]["changes"][0]["field"]
 
     @property
     def value(self) -> dict:
+        """The value of the webhook update."""
         return self["entry"][0]["changes"][0]["value"]
 
+    def _immutable(self, *_, **__):
+        raise TypeError("RawUpdate is immutable")
 
-_MUTATING_METHODS = [
-    "__setitem__",
-    "__delitem__",
-    "clear",
-    "pop",
-    "popitem",
-    "setdefault",
-    "update",
-]
-
-for method_name in _MUTATING_METHODS:
-
-    def make_immutable_method(name):
-        return lambda self, *args, **kwargs: (_ for _ in ()).throw(
-            TypeError(f"RawUpdate is immutable: {name}")
-        )
-
-    setattr(RawUpdate, method_name, make_immutable_method(method_name))
+    __setitem__ = __delitem__ = clear = pop = popitem = setdefault = update = _immutable
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -233,7 +221,7 @@ class BaseUpdate(abc.ABC, _HandlingFlow):
 
     @classmethod
     @abc.abstractmethod
-    def from_update(cls, client: WhatsApp, update: dict) -> BaseUpdate:
+    def from_update(cls, client: WhatsApp, update: RawUpdate) -> BaseUpdate:
         """Create an update object from a raw update dict."""
         ...
 

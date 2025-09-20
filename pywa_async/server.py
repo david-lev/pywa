@@ -252,12 +252,12 @@ class Server:
             # Always call raw update handler last
             await self._call_raw_update_handler(raw_update)
 
-    async def _call_raw_update_handler(self: "WhatsApp", update: dict) -> None:
+    async def _call_raw_update_handler(self: "WhatsApp", update: RawUpdate) -> None:
         """Invoke the raw update handler."""
         await self._invoke_callbacks(RawUpdateHandler, update)
 
     async def _invoke_callbacks(
-        self: "WhatsApp", handler_type: type[Handler], update: BaseUpdate | dict
+        self: "WhatsApp", handler_type: type[Handler], update: BaseUpdate | RawUpdate
     ) -> None:
         """Process and call registered handlers for the update."""
         for handler in self._handlers[handler_type]:

@@ -365,14 +365,14 @@ class Server:
             # Always call raw update handler last
             self._call_raw_update_handler(raw_update)
 
-    def _call_raw_update_handler(self: "WhatsApp", update: dict) -> None:
+    def _call_raw_update_handler(self: "WhatsApp", update: RawUpdate) -> None:
         """Invoke the raw update handler."""
         self._invoke_callbacks(handlers.RawUpdateHandler, update)
 
     def _invoke_callbacks(
         self: "WhatsApp",
         handler_type: type[handlers.Handler],
-        update: BaseUpdate | dict,
+        update: BaseUpdate | RawUpdate,
     ) -> None:
         """Process and call registered handlers for the update."""
         for handler in self._handlers[handler_type]:
@@ -419,28 +419,26 @@ class Server:
         self: "WhatsApp", update: RawUpdate
     ) -> type[handlers.Handler] | None:
         """Get the handler for the given update."""
-        field = update["entry"][0]["changes"][0]["field"]
-        value = update["entry"][0]["changes"][0]["value"]
 
-        if self.filter_updates and update["entry"][0]["id"] != self.business_account_id:
+        if self.filter_updates and update.id != self.business_account_id:
             return None
 
         try:
             if (
                 self.filter_updates
-                and value["metadata"]["phone_number_id"] != self.phone_id
+                and update.value["metadata"]["phone_number_id"] != self.phone_id
             ):
                 return None
         except KeyError:  # no metadata in update
             pass
 
-        if handler := _complex_fields_handlers.get(field, lambda wa, v: None)(
-            self, value
+        if handler := _complex_fields_handlers.get(update.field, lambda wa, v: None)(
+            self, update.value
         ):
             return handler
 
         # noinspection PyProtectedMember
-        return handlers.Handler._handled_fields().get(field)
+        return handlers.Handler._handled_fields().get(update.field)
 
     def _delayed_register_callback_url(
         self: "WhatsApp",
