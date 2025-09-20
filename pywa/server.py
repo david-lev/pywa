@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Callable
 
 from . import utils, handlers, errors
 
-from .types import MessageType, UserPreferenceCategory
+from .types import MessageType, UserPreferenceCategory, RawUpdate
 from .types.base_update import (
     BaseUpdate,
     StopHandling,
@@ -179,17 +179,17 @@ class Server:
         Returns:
             A tuple containing the response and the status code.
         """
-        res, status, update_dict, update_hash = self._check_and_prepare_update(
+        res, status, raw_update, update_hash = self._check_and_prepare_update(
             update=update, hmac_header=hmac_header
         )
         if res:
             return res, status
-        self._call_handlers(update_dict)
+        self._call_handlers(raw_update)
         return self._after_handling_update(update_hash)
 
     def _check_and_prepare_update(
         self, update: bytes, hmac_header: str = None
-    ) -> tuple[str | None, int | None, dict | None, str | None]:
+    ) -> tuple[str | None, int | None, RawUpdate | None, str | None]:
         if self._validate_updates:
             if not hmac_header:
                 _logger.debug(
@@ -208,7 +208,7 @@ class Server:
                 )
                 return "Error, invalid signature", 401, None, None
         try:
-            update_dict: dict = json.loads(update)
+            raw_update = RawUpdate(update, hmac_header=hmac_header)
         except (TypeError, ValueError):
             _logger.debug(
                 "Webhook ('%s') received non-JSON data: %s",
@@ -221,14 +221,14 @@ class Server:
         _logger.debug(
             "Webhook ('%s') received an update: %s",
             self._webhook_endpoint,
-            update_dict,
+            raw_update,
         )
         if self._skip_duplicate_updates:
             if update_hash in self._updates_in_process:
                 return "ok", 200, None, None
             self._updates_in_process.add(update_hash)
 
-        return None, None, update_dict, update_hash
+        return None, None, raw_update, update_hash
 
     def _after_handling_update(self, update_hash: str) -> tuple[str, int]:
         if self._skip_duplicate_updates:
@@ -334,11 +334,11 @@ class Server:
                     f"The `server` must be one of {utils.ServerType.protocols_names()} or None for a custom server"
                 )
 
-    def _call_handlers(self: "WhatsApp", update: dict) -> None:
+    def _call_handlers(self: "WhatsApp", raw_update: RawUpdate) -> None:
         """Call the handlers for the given update."""
         try:
             try:
-                handler_type = self._get_handler_type(update)
+                handler_type = self._get_handler_type(raw_update)
             except (KeyError, ValueError, TypeError, IndexError):
                 (_logger.error if self._validate_updates else _logger.debug)(
                     "Webhook ('%s') received unexpected update%s: %s",
@@ -346,7 +346,7 @@ class Server:
                     " (Enable `validate_updates` to ignore updates with invalid data)"
                     if not self._validate_updates
                     else "",
-                    update,
+                    raw_update,
                 )
                 handler_type = None
 
@@ -355,24 +355,24 @@ class Server:
             try:
                 constructed_update: BaseUpdate = self._handlers_to_updates[
                     handler_type
-                ].from_update(client=self, update=update)
+                ].from_update(client=self, update=raw_update)
                 if self._process_listener(constructed_update):
                     return
                 self._invoke_callbacks(handler_type, constructed_update)
             except Exception:
-                _logger.exception("Failed to construct update: %s", update)
+                _logger.exception("Failed to construct update: %s", raw_update)
         finally:
             # Always call raw update handler last
-            self._call_raw_update_handler(update)
+            self._call_raw_update_handler(raw_update)
 
-    def _call_raw_update_handler(self: "WhatsApp", update: dict) -> None:
+    def _call_raw_update_handler(self: "WhatsApp", update: RawUpdate) -> None:
         """Invoke the raw update handler."""
         self._invoke_callbacks(handlers.RawUpdateHandler, update)
 
     def _invoke_callbacks(
         self: "WhatsApp",
         handler_type: type[handlers.Handler],
-        update: BaseUpdate | dict,
+        update: BaseUpdate | RawUpdate,
     ) -> None:
         """Process and call registered handlers for the update."""
         for handler in self._handlers[handler_type]:
@@ -416,31 +416,29 @@ class Server:
         return not self._continue_handling
 
     def _get_handler_type(
-        self: "WhatsApp", update: dict
+        self: "WhatsApp", update: RawUpdate
     ) -> type[handlers.Handler] | None:
         """Get the handler for the given update."""
-        field = update["entry"][0]["changes"][0]["field"]
-        value = update["entry"][0]["changes"][0]["value"]
 
-        if self.filter_updates and update["entry"][0]["id"] != self.business_account_id:
+        if self.filter_updates and update.id != self.business_account_id:
             return None
 
         try:
             if (
                 self.filter_updates
-                and value["metadata"]["phone_number_id"] != self.phone_id
+                and update.value["metadata"]["phone_number_id"] != self.phone_id
             ):
                 return None
         except KeyError:  # no metadata in update
             pass
 
-        if handler := _complex_fields_handlers.get(field, lambda wa, v: None)(
-            self, value
+        if handler := _complex_fields_handlers.get(update.field, lambda wa, v: None)(
+            self, update.value
         ):
             return handler
 
         # noinspection PyProtectedMember
-        return handlers.Handler._handled_fields().get(field)
+        return handlers.Handler._handled_fields().get(update.field)
 
     def _delayed_register_callback_url(
         self: "WhatsApp",

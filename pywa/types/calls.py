@@ -45,7 +45,7 @@ import dataclasses
 import datetime
 from typing import TYPE_CHECKING, Generic
 
-from .base_update import BaseUserUpdate, BaseUpdate, _ClientShortcuts  # noqa
+from .base_update import BaseUserUpdate, BaseUpdate, RawUpdate, _ClientShortcuts  # noqa
 from .others import (
     Metadata,
     SuccessResult,
@@ -183,7 +183,7 @@ class CallConnect(BaseUserUpdate, _CallShortcuts):
     _webhook_field = "calls"
 
     @classmethod
-    def from_update(cls, client: WhatsApp, update: dict) -> CallConnect:
+    def from_update(cls, client: WhatsApp, update: RawUpdate) -> CallConnect:
         call = (value := (entry := update["entry"][0])["changes"][0]["value"])["calls"][
             0
         ]
@@ -252,7 +252,7 @@ class CallPermissionUpdate(BaseUserUpdate):
         )
 
     @classmethod
-    def from_update(cls, client: WhatsApp, update: dict) -> CallPermissionUpdate:
+    def from_update(cls, client: WhatsApp, update: RawUpdate) -> CallPermissionUpdate:
         perm = (
             msg := (value := (entry := update["entry"][0])["changes"][0]["value"])[
                 "messages"
@@ -526,7 +526,7 @@ class CallStatus(BaseUserUpdate, _CallShortcuts, Generic[_CallbackDataT]):
     _webhook_field = "calls"
 
     @classmethod
-    def from_update(cls, client: WhatsApp, update: dict) -> CallStatus:
+    def from_update(cls, client: WhatsApp, update: RawUpdate) -> CallStatus:
         status = (value := (entry := update["entry"][0])["changes"][0]["value"])[
             "statuses"
         ][0]

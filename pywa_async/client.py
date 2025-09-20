@@ -278,8 +278,8 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
              (optional, recomended for validating updates, required when registering a ``callback_url``).
             webhook_endpoint: The endpoint to listen for incoming messages (if you're using the server for another purpose,
              you can change this to avoid conflicts).
-            filter_updates: Whether to filter out user updates that are not sent to this phone_id (default: ``True``, does
-             not apply to raw updates or updates that are not user-related).
+            filter_updates: Whether to filter out user updates that are not sent to this phone_id or business_account_id (default: ``True``, does
+             not apply to raw updates).
             helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="business_account_id"): The WhatsApp business account ID (WABA ID) that owns the phone ID (optional, required for some API
              methods).
             business_private_key: The global private key to use in the ``flows_request_decryptor``

@@ -11,7 +11,7 @@ import dataclasses
 import datetime
 from typing import TYPE_CHECKING
 
-from .base_update import BaseUserUpdate  # noqa
+from .base_update import BaseUserUpdate, RawUpdate  # noqa
 from .others import (
     MessageType,
     Metadata,
@@ -48,7 +48,7 @@ class PhoneNumberChange(BaseUserUpdate):
     _is_user_action = False
 
     @classmethod
-    def from_update(cls, client: WhatsApp, update: dict) -> PhoneNumberChange:
+    def from_update(cls, client: WhatsApp, update: RawUpdate) -> PhoneNumberChange:
         sys = (
             msg := (value := (entry := update["entry"][0])["changes"][0]["value"])[
                 "messages"
@@ -121,7 +121,7 @@ class IdentityChange(BaseUserUpdate):
     _is_user_action = False
 
     @classmethod
-    def from_update(cls, client: WhatsApp, update: dict) -> IdentityChange:
+    def from_update(cls, client: WhatsApp, update: RawUpdate) -> IdentityChange:
         msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
             "messages"
         ][0]

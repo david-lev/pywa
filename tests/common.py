@@ -3,8 +3,7 @@ import pathlib
 
 from pywa import WhatsApp
 from pywa_async import WhatsApp as WhatsAppAsync
-from pywa.types.base_update import BaseUpdate
-
+from pywa.types.base_update import BaseUpdate, RawUpdate
 
 CLIENTS: dict[WhatsApp, dict[pathlib.Path, dict[str, BaseUpdate]]] = {
     WhatsApp(phone_id="1234567890", token="xyzxyzxyz", filter_updates=False): {},
@@ -21,7 +20,9 @@ for client, update_files in CLIENTS.items():
             update_name_to_raw_update = json.load(f)
         update_files[file] = {
             update_name: client._handlers_to_updates[
-                client._get_handler_type(raw_update)
+                client._get_handler_type(
+                    RawUpdate(json.dumps(raw_update).encode("utf-8"), hmac_header=None)
+                )
             ].from_update(client=client, update=raw_update)
             for update_name, raw_update in update_name_to_raw_update.items()
         }

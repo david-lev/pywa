@@ -30,6 +30,7 @@ from .types import (
     FlowCompletion,
     ContinueHandling,
     StopHandling,
+    RawUpdate,
 )
 
 _logger = logging.getLogger(__name__)
@@ -72,12 +73,12 @@ class Server:
         Returns:
             A tuple containing the response and the status code.
         """
-        res, status, update_dict, update_hash = self._check_and_prepare_update(
+        res, status, raw_update, update_hash = self._check_and_prepare_update(
             update=update, hmac_header=hmac_header
         )
         if res:
             return res, status
-        await self._call_handlers(update_dict)
+        await self._call_handlers(raw_update)
         return self._after_handling_update(update_hash)
 
     def _register_routes(self: "WhatsApp") -> None:
@@ -220,11 +221,11 @@ class Server:
 
         return callback_wrapper
 
-    async def _call_handlers(self: "WhatsApp", update: dict) -> None:
+    async def _call_handlers(self: "WhatsApp", raw_update: RawUpdate) -> None:
         """Call the handlers for the given update."""
         try:
             try:
-                handler_type = self._get_handler_type(update)
+                handler_type = self._get_handler_type(raw_update)
             except (KeyError, ValueError, TypeError, IndexError):
                 (_logger.error if self._validate_updates else _logger.debug)(
                     "Webhook ('%s') received unexpected update%s: %s",
@@ -232,7 +233,7 @@ class Server:
                     " (Enable `validate_updates` to ignore updates with invalid data)"
                     if not self._validate_updates
                     else "",
-                    update,
+                    raw_update,
                 )
                 handler_type = None
 
@@ -241,22 +242,22 @@ class Server:
             try:
                 constructed_update: BaseUpdate = self._handlers_to_updates[
                     handler_type
-                ].from_update(client=self, update=update)
+                ].from_update(client=self, update=raw_update)
                 if await self._process_listener(constructed_update):
                     return
                 await self._invoke_callbacks(handler_type, constructed_update)
             except Exception:
-                _logger.exception("Failed to construct update: %s", update)
+                _logger.exception("Failed to construct update: %s", raw_update)
         finally:
             # Always call raw update handler last
-            await self._call_raw_update_handler(update)
+            await self._call_raw_update_handler(raw_update)
 
-    async def _call_raw_update_handler(self: "WhatsApp", update: dict) -> None:
+    async def _call_raw_update_handler(self: "WhatsApp", update: RawUpdate) -> None:
         """Invoke the raw update handler."""
         await self._invoke_callbacks(RawUpdateHandler, update)
 
     async def _invoke_callbacks(
-        self: "WhatsApp", handler_type: type[Handler], update: BaseUpdate | dict
+        self: "WhatsApp", handler_type: type[Handler], update: BaseUpdate | RawUpdate
     ) -> None:
         """Process and call registered handlers for the update."""
         for handler in self._handlers[handler_type]:

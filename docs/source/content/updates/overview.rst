@@ -33,7 +33,7 @@ The currently supported fields in PyWa are:
       wa = WhatsApp(...)
 
       @wa.on_raw_update
-      def handle_raw_update(wa: WhatsApp, raw: dict):
+      def handle_raw_update(wa: WhatsApp, raw: types.RawUpdate):
           print("Received raw update:", raw)
 
 -----------------
@@ -194,4 +194,5 @@ All updates share common methods and properties:
     template_category_update
     template_quality_update
     template_components_update
+    raw_update
     common_methods

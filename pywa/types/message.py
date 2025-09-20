@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Iterable
 
 from ..errors import WhatsAppError
 
-from .base_update import BaseUserUpdate  # noqa
+from .base_update import BaseUserUpdate, RawUpdate  # noqa
 from .callback import Button, URLButton, SectionList, VoiceCallButton, FlowButton
 from .media import Audio, Document, Image, Sticker, Video
 from .others import (
@@ -123,7 +123,7 @@ class Message(BaseUserUpdate):
         return self.reply_to_message is not None or self.reaction is not None
 
     @classmethod
-    def from_update(cls, client: WhatsApp, update: dict) -> Message:
+    def from_update(cls, client: WhatsApp, update: RawUpdate) -> Message:
         msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
             "messages"
         ][0]

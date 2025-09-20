@@ -360,7 +360,7 @@ Available Handlers
      - :class:`~pywa.types.user_preferences.UserMarketingPreferences`
    * - :meth:`~pywa.client.WhatsApp.on_raw_update`
      - :class:`RawUpdateHandler`
-     - :class:`dict`
+     - :class:`~pywa.types.base_update.RawUpdate`
 
 
 

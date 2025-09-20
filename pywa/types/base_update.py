@@ -4,11 +4,13 @@ from __future__ import annotations
 
 
 __all__ = [
+    "RawUpdate",
     "StopHandling",
     "ContinueHandling",
 ]
 
 import abc
+import json
 import pathlib
 import dataclasses
 import datetime
@@ -86,37 +88,7 @@ class ContinueHandling(Exception):
     pass
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class BaseUpdate(abc.ABC):
-    """Base class for all webhook updates."""
-
-    _webhook_field: ClassVar[str]
-    """
-    The field name of the webhook update
-    https://developers.facebook.com/docs/graph-api/webhooks/reference/whatsapp-business-account
-    """
-    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
-    """The WhatsApp client that received the update."""
-    id: str
-    """The WhatsApp Business Account ID for the business that is subscribed to the webhook."""
-    timestamp: datetime.datetime
-    """Timestamp indicating when the WhatsApp server received the message from the customer (in UTC)."""
-    raw: dict = dataclasses.field(repr=False, hash=False, compare=False)
-    """The raw update dict from WhatsApp."""
-    shared_data: dict = dataclasses.field(hash=False, default_factory=dict)
-    """Shared data for the update. This data is shared between all handlers for the same update."""
-
-    @property
-    def listener_identifier(self) -> BaseListenerIdentifier | None:
-        """The identifier for the listener that this update is for."""
-        return None
-
-    @classmethod
-    @abc.abstractmethod
-    def from_update(cls, client: WhatsApp, update: dict) -> BaseUpdate:
-        """Create an update object from a raw update dict."""
-        ...
-
+class _HandlingFlow:
     def stop_handling(self) -> NoReturn:
         """
         Call this method to break out of the handler loop. other handlers will not be called.
@@ -166,6 +138,94 @@ class BaseUpdate(abc.ABC):
             ...     msg.reply_text("This message will be sent")
         """
         raise ContinueHandling
+
+
+class RawUpdate(dict, _HandlingFlow):
+    """
+    The raw update dict from WhatsApp.
+
+    - This class is a subclass of :class:`dict` and is immutable (you can't change its content).
+
+    Example:
+
+            >>> from pywa import WhatsApp
+            >>> from pywa.types import RawUpdate
+
+            >>> wa = WhatsApp(...)
+
+            >>> @wa.on_raw_update
+            ... def callback(_: WhatsApp, update: RawUpdate):
+            ...     print(update["entry"])  # the raw dict
+            ...     print(update.id, update.field, update.value)  # shortcut properties
+            ...     print(update.raw)  # the raw bytes of the update
+
+    Attributes:
+        raw: The raw bytes of the update.
+        hmac_header: The value of the ``X-Hub-Signature-256`` header (if present).
+        shared_data: A dict that can be used to share data between handlers for the same update.
+    """
+
+    raw: bytes
+    hmac_header: str | None
+    shared_data: dict
+
+    def __init__(self, /, u: bytes, *, hmac_header: str | None):
+        super().__init__(json.loads(u))
+        self.raw = u
+        self.hmac_header = hmac_header
+        self.shared_data = {}
+
+    @property
+    def id(self) -> str:
+        """The WhatsApp Business Account ID for the business that is subscribed to the webhook."""
+        return self["entry"][0]["id"]
+
+    @property
+    def field(self) -> str:
+        """The field name of the webhook update."""
+        return self["entry"][0]["changes"][0]["field"]
+
+    @property
+    def value(self) -> dict:
+        """The value of the webhook update."""
+        return self["entry"][0]["changes"][0]["value"]
+
+    def _immutable(self, *_, **__):
+        raise TypeError("RawUpdate is immutable")
+
+    __setitem__ = __delitem__ = clear = pop = popitem = setdefault = update = _immutable
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class BaseUpdate(abc.ABC, _HandlingFlow):
+    """Base class for all webhook updates."""
+
+    _webhook_field: ClassVar[str]
+    """
+    The field name of the webhook update
+    https://developers.facebook.com/docs/graph-api/webhooks/reference/whatsapp-business-account
+    """
+    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
+    """The WhatsApp client that received the update."""
+    id: str
+    """The WhatsApp Business Account ID for the business that is subscribed to the webhook."""
+    timestamp: datetime.datetime
+    """Timestamp indicating when the WhatsApp server received the message from the customer (in UTC)."""
+    raw: RawUpdate = dataclasses.field(repr=False, hash=False, compare=False)
+    """The raw update dict from WhatsApp."""
+    shared_data: dict = dataclasses.field(hash=False, default_factory=dict)
+    """Shared data for the update. This data is shared between all handlers for the same update."""
+
+    @property
+    def listener_identifier(self) -> BaseListenerIdentifier | None:
+        """The identifier for the listener that this update is for."""
+        return None
+
+    @classmethod
+    @abc.abstractmethod
+    def from_update(cls, client: WhatsApp, update: RawUpdate) -> BaseUpdate:
+        """Create an update object from a raw update dict."""
+        ...
 
 
 class _ClientShortcuts(abc.ABC):

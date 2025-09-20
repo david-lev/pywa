@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 from .. import utils
 
-from .base_update import BaseUserUpdate  # noqa
+from .base_update import BaseUserUpdate, RawUpdate  # noqa
 from .others import Metadata
 
 if TYPE_CHECKING:
@@ -55,7 +55,9 @@ class UserMarketingPreferences(BaseUserUpdate):
         )
 
     @classmethod
-    def from_update(cls, client: WhatsApp, update: dict) -> UserMarketingPreferences:
+    def from_update(
+        cls, client: WhatsApp, update: RawUpdate
+    ) -> UserMarketingPreferences:
         prefs = (value := (entry := update["entry"][0])["changes"][0]["value"])[
             "user_preferences"
         ][0]
