@@ -2,12 +2,19 @@ import datetime
 
 import pytest
 
-from pywa import types
+from pywa import types, _helpers as helpers
 from pywa.types import flows
 from pywa.types.templates import *  # noqa: F403
 import importlib
 import json
 import pathlib
+
+
+def _resolve_example_handles(template: Template):
+    not_uploaded = helpers._filter_not_uploaded_comps(template.components)
+    for comp in not_uploaded:
+        comp._handle = comp._example
+    return template
 
 
 def test_templates_to_json(caplog):
@@ -25,7 +32,13 @@ def test_templates_to_json(caplog):
 
                 assert (
                     json.loads(
-                        Template.from_dict(json.loads(example_obj.to_json())).to_json()
+                        _resolve_example_handles(
+                            Template.from_dict(
+                                json.loads(
+                                    _resolve_example_handles(example_obj).to_json()
+                                )
+                            )
+                        ).to_json()
                     )
                     == example_dict
                 ), (
@@ -153,8 +166,8 @@ def test_comp_and_params_to_dict():
         "type": "HEADER",
         "parameters": [{"type": "text", "text": "John"}],
     }
-
     hi = HeaderImage(example="1:imagehandle")
+    hi._handle = "1:imagehandle"
     assert hi.to_dict() == {
         "type": "HEADER",
         "format": "IMAGE",
@@ -168,6 +181,7 @@ def test_comp_and_params_to_dict():
     }
 
     hv = HeaderVideo(example="1:videohandle")
+    hv._handle = "1:videohandle"
     assert hv.to_dict() == {
         "type": "HEADER",
         "format": "VIDEO",
@@ -181,6 +195,7 @@ def test_comp_and_params_to_dict():
     }
 
     hd = HeaderDocument(example="1:documenthandle")
+    hd._handle = "1:documenthandle"
     assert hd.to_dict() == {
         "type": "HEADER",
         "format": "DOCUMENT",

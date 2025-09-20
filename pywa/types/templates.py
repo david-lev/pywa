@@ -1173,7 +1173,7 @@ class _BaseMediaHeaderComponent(BaseHeaderComponent, abc.ABC):
 
     format: HeaderFormatType
 
-    def __init__(self, example: str | Media | pathlib.Path | bytes | BinaryIO):
+    def __init__(self, example: str | int | Media | pathlib.Path | bytes | BinaryIO):
         """
         Initializes a media header component for a template.
 
@@ -1183,23 +1183,19 @@ class _BaseMediaHeaderComponent(BaseHeaderComponent, abc.ABC):
         self.example = example
 
     @property
-    def example(self) -> str | Media | pathlib.Path | bytes | BinaryIO:
+    def example(self) -> str | int | Media | pathlib.Path | bytes | BinaryIO:
         """
         Returns the example media for the header component.
         """
         return self._example
 
     @example.setter
-    def example(self, value: str | Media | pathlib.Path | bytes | BinaryIO):
+    def example(self, value: str | int | Media | pathlib.Path | bytes | BinaryIO):
         """
         Sets the example media for the header component (and resets the handle).
         """
         self._example = value
-        if re.match(r"^\d:.*", str(value)):
-            # If the example is a file handle (e.g., "4:cGRmLnBkZg=="),
-            self._handle = str(value)
-        else:
-            self._handle = None
+        self._handle = None
 
     @classmethod
     def from_dict(cls, data: dict) -> _BaseMediaHeaderComponent:
@@ -1224,16 +1220,24 @@ class _BaseMediaParams(BaseParams, abc.ABC):
     format: HeaderFormatType
     param_type: Literal[ParamType.IMAGE, ParamType.VIDEO, ParamType.DOCUMENT]
 
-    def __init__(self, media: str | Media | pathlib.Path | bytes | BinaryIO):
+    def __init__(
+        self,
+        media: str | int | Media | pathlib.Path | bytes | BinaryIO,
+        filename: str | None = None,
+    ):
         self.media = media
         self._resolved_media: str | None = None
         self._is_url: bool | None = None
+        self._filename = filename
+        self._fallback_filename: str | None = None
 
     def to_dict(
         self,
     ) -> dict:
         if self._resolved_media is None:
             raise ValueError(f"{self.__class__.__name__} media not resolved yet")
+        if self._filename is utils.MISSING:
+            self._filename = self._fallback_filename
         return {
             "type": ComponentType.HEADER.value,
             "parameters": [
@@ -1241,6 +1245,7 @@ class _BaseMediaParams(BaseParams, abc.ABC):
                     "type": self.param_type.value,
                     self.param_type.value: {
                         "link" if self._is_url else "id": self._resolved_media,
+                        **({"filename": self._filename} if self._filename else {}),
                     },
                 }
             ],
@@ -1250,8 +1255,12 @@ class _BaseMediaParams(BaseParams, abc.ABC):
         """
         Clears the cached media for this media param (if you using the same params object more than 30 days, the media ID will be expired, so you need to reupload the media).
         """
-        self._resolved_media = None
-        self._is_url = None
+        self._resolved_media, self._is_url, self._filename, self._fallback_filename = (
+            None,
+            None,
+            None,
+            None,
+        )
 
 
 class HeaderImage(_BaseMediaHeaderComponent):
@@ -1276,12 +1285,14 @@ class HeaderImage(_BaseMediaHeaderComponent):
         format = HeaderFormatType.IMAGE
         param_type = ParamType.IMAGE
 
-        def __init__(self, *, image: str | Media | pathlib.Path | bytes | BinaryIO):
+        def __init__(
+            self, *, image: str | int | Media | pathlib.Path | bytes | BinaryIO
+        ):
             super().__init__(media=image)
 
     @staticmethod
     def params(
-        *, image: str | Media | pathlib.Path | bytes | BinaryIO
+        *, image: str | int | Media | pathlib.Path | bytes | BinaryIO
     ) -> HeaderImage._Params:
         """
         Fill the parameters for the header image component.
@@ -1317,12 +1328,14 @@ class HeaderVideo(_BaseMediaHeaderComponent):
         format = HeaderFormatType.VIDEO
         param_type = ParamType.VIDEO
 
-        def __init__(self, *, video: str | Media | pathlib.Path | bytes | BinaryIO):
+        def __init__(
+            self, *, video: str | int | Media | pathlib.Path | bytes | BinaryIO
+        ):
             super().__init__(media=video)
 
     @staticmethod
     def params(
-        *, video: str | Media | pathlib.Path | bytes | BinaryIO
+        *, video: str | int | Media | pathlib.Path | bytes | BinaryIO
     ) -> HeaderVideo._Params:
         """
         Fill the parameters for the header video component.
@@ -1358,23 +1371,31 @@ class HeaderDocument(_BaseMediaHeaderComponent):
         format = HeaderFormatType.DOCUMENT
         param_type = ParamType.DOCUMENT
 
-        def __init__(self, *, document: str | Media | pathlib.Path | bytes | BinaryIO):
-            super().__init__(media=document)
+        def __init__(
+            self,
+            *,
+            document: str | int | Media | pathlib.Path | bytes | BinaryIO,
+            filename: str | None,
+        ):
+            super().__init__(media=document, filename=filename)
 
     @staticmethod
     def params(
-        *, document: str | Media | pathlib.Path | bytes | BinaryIO
+        *,
+        document: str | int | Media | pathlib.Path | bytes | BinaryIO,
+        filename: str | None = utils.MISSING,
     ) -> HeaderDocument._Params:
         """
         Fill the parameters for the header document component.
 
         Args:
             document: The document media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
+            filename: Document filename, with extension. The WhatsApp client will use an appropriate file type icon based on the extension (Optional, if not provided, if possible, the filename will be extracted from the URL or file path. pass ``None`` to skip this behavior).
 
         Returns:
             An instance of BaseParams containing the media parameter.
         """
-        return HeaderDocument._Params(document=document)
+        return HeaderDocument._Params(document=document, filename=filename)
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
