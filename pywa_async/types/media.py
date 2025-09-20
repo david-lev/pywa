@@ -93,6 +93,25 @@ class Media:
         """
         return await self._client.delete_media(media_id=self.id, phone_id=phone_id)
 
+    async def reupload(
+        self,
+        *,
+        to_phone_id: str | int | None = None,
+        override_filename: str | None = None,
+    ) -> Media:
+        """
+        Reuploads the media to WhatsApp servers.
+
+        - Useful for re-sending media from another business phone number or if you want to use the media more than 30 days after it was uploaded.
+
+        Args:
+            to_phone_id: The phone ID to upload the media to (if not provided, the client's phone ID will be used).
+            override_filename: The filename to use for the re-uploaded media (if not provided, the original filename will be used if available).
+        """
+        return await self._client.upload_media(
+            media=self, phone_id=to_phone_id, filename=override_filename
+        )
+
 
 class BaseUserMedia(Media):
     """Base class for all user media types (Image, Video, Sticker, Document, Audio)."""

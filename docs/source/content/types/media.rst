@@ -8,7 +8,7 @@ Media
 .. currentmodule:: pywa.types.media
 
 .. autoclass:: Media()
-    :members: get_media_url, download, delete
+    :members: get_media_url, download, delete, reupload
 
 
 .. autoclass:: BaseUserMedia()
