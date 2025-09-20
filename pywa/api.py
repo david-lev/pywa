@@ -69,8 +69,8 @@ class GraphAPI:
         )
         try:
             res = self._session.request(method=method, url=endpoint, **kwargs)
-        except httpx.RequestError as e:
-            e.add_note(
+        except httpx.RequestError:
+            _logger.info(
                 "You may want to provide your own `httpx.Client` instance. e.g. `WhatsApp(session=httpx.Client(timeout=..., proxies=...))`. See https://www.python-httpx.org/api/#client for more information."
             )
             raise
