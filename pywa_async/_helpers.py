@@ -14,17 +14,23 @@ from pywa._helpers import (
     _media_types_default_filenames,
     _template_header_formats_filename,
     _template_header_formats_default_mime_types,
-    _header_format_to_message_type,
     _media_types_default_mime_types,
+    detect_media_source,
+    MediaSource,
+    _get_media_from_path,
+    MediaInfo,
+    _get_media_from_open_file_obj,
+    _filter_not_uploaded_comps,
+    _filter_not_uploaded_params,
+    _header_format_to_media_type,
+    _get_filename_from_httpx_response_headers,
 )
 from pywa.types.templates import (
     TemplateBaseComponent,
     _BaseMediaHeaderComponent,
-    Carousel,
     _BaseMediaParams,
     BaseParams,
 )
-from .types import MessageType
 
 from typing import BinaryIO, Literal, TYPE_CHECKING, Coroutine
 
@@ -35,32 +41,144 @@ if TYPE_CHECKING:
 
 
 async def resolve_media_param(
+    *,
     wa: WhatsApp,
-    media: str | Media | pathlib.Path | bytes | BinaryIO,
+    media: str | int | Media | pathlib.Path | bytes | BinaryIO,
     mime_type: str | None,
     filename: str | None,
-    media_type: MessageType | None,
+    media_type: Literal["image", "video", "audio", "sticker", "document"] | None,
     phone_id: str,
-) -> tuple[bool, str]:
+) -> tuple[bool, str, str]:
     """
-    Internal method to resolve the ``media`` parameter. Returns a tuple of (``is_url``, ``media_id_or_url``).
+    Internal method to resolve the ``media`` parameter. Returns a tuple of (``is_url``, ``media_id_or_url``, ``filename``).
     """
-    if isinstance(media, Media):
-        return False, media.id
-    if isinstance(media, (str, pathlib.Path)):
-        if str(media).startswith(("https://", "http://")):
-            return True, media
-        elif str(media).isdigit() and not pathlib.Path(media).is_file():
-            return False, media  # assume it's a media ID
-    # assume its bytes or a file path
-    return False, (
-        await wa.upload_media(
+    source = detect_media_source(media)
+    match source:
+        case MediaSource.EXTERNAL_URL:
+            return True, str(media), filename or pathlib.Path(media).name
+        case MediaSource.MEDIA_ID:
+            return False, str(media), filename
+        case MediaSource.MEDIA_OBJ:
+            return False, media.id, filename
+    media_id, filename = await internal_upload_media(
+        media=media,
+        media_source=source,
+        media_type=media_type,
+        mime_type=mime_type,
+        filename=filename,
+        wa=wa,
+        phone_id=phone_id,
+    )
+    return False, media_id, filename
+
+
+async def _get_media_from_url(
+    url: str,
+    dl_session: httpx.AsyncClient | None = None,
+) -> MediaInfo:
+    res = await (dl_session or httpx.AsyncClient(follow_redirects=True)).get(url)
+    try:
+        res.raise_for_status()
+    except httpx.HTTPError as e:
+        raise ValueError(f"An error occurred while downloading from {url}") from e
+    return MediaInfo(
+        content=res.content,
+        filename=pathlib.Path(url).name,
+        mime_type=res.headers.get("Content-Type") or mimetypes.guess_type(url)[0],
+    )
+
+
+async def _get_media_from_media_id_or_obj_or_url(
+    wa: WhatsApp,
+    media: str | Media,
+    media_source: MediaSource,
+) -> MediaInfo:
+    filename: str | None = None
+    mime_type: str | None = None
+    match media_source:
+        case MediaSource.MEDIA_ID:
+            url_res = await wa.get_media_url(media_id=str(media))
+            url, mime_type = url_res.url, url_res.mime_type
+        case MediaSource.MEDIA_OBJ:
+            url_res = await wa.get_media_url(media_id=media.id)
+            url, mime_type = url_res.url, url_res.mime_type
+        case MediaSource.MEDIA_URL:
+            url, mime_type = media, None
+        case _:
+            raise ValueError(
+                "media must be MediaSource.MEDIA_ID, MEDIA_OBJ or MEDIA_URL"
+            )
+
+    content, headers = await wa.api.get_media_bytes(media_url=url)
+    return MediaInfo(
+        content=content,
+        filename=filename or _get_filename_from_httpx_response_headers(headers),
+        mime_type=mime_type or headers.get("Content-Type"),
+    )
+
+
+async def internal_upload_media(
+    *,
+    media: str | int | Media | pathlib.Path | bytes | BinaryIO,
+    media_source: MediaSource,
+    media_type: str | None,
+    mime_type: str | None,
+    filename: str | None,
+    wa: WhatsApp,
+    phone_id: str,
+    dl_session: httpx.AsyncClient | None = None,
+) -> tuple[str, str]:
+    """
+    Internal method to upload media to WhatsApp servers. Returns a tuple of (``media_id``, ``filename``).
+    """
+    content: bytes | None = None
+    fallback_filename: str | None = None
+    fallback_mime_type: str | None = None
+
+    match media_source:
+        case MediaSource.EXTERNAL_URL:
+            content, fallback_filename, fallback_mime_type = await _get_media_from_url(
+                url=media, dl_session=dl_session
+            )
+        case MediaSource.PATH:
+            content, fallback_filename, fallback_mime_type = _get_media_from_path(
+                path=media
+            )
+        case MediaSource.BYTES:
+            content = media
+        case MediaSource.FILE_OBJ:
+            content, fallback_filename, fallback_mime_type = (
+                _get_media_from_open_file_obj(file_obj=media)
+            )
+        case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
+            (
+                content,
+                fallback_filename,
+                fallback_mime_type,
+            ) = await _get_media_from_media_id_or_obj_or_url(
+                wa=wa, media=media, media_source=media_source
+            )
+        case _:
+            raise ValueError(
+                "Media source must be URL, path, bytes, file object, or Media"
+            )
+    if content is None:
+        raise ValueError(f"Failed to get media content from {media}")
+    final_filename = (
+        filename
+        or fallback_filename
+        or _media_types_default_filenames.get(media_type, "file.txt")
+    )
+    return (
+        await wa.api.upload_media(
             phone_id=phone_id,
-            media=media,
-            mime_type=mime_type or _media_types_default_mime_types.get(media_type),
-            filename=filename or _media_types_default_filenames.get(media_type),
+            media=content,
+            mime_type=mime_type
+            or fallback_mime_type
+            or _media_types_default_mime_types.get(media_type, "text/plain"),
+            filename=final_filename,
         )
-    ).id
+    )["id"], final_filename
 
 
 async def upload_template_media_components(
@@ -72,29 +190,23 @@ async def upload_template_media_components(
     """
     Internal method to upload media components examples in a template.
     """
-    not_uploaded = []
-    for comp in components:
-        if isinstance(comp, _BaseMediaHeaderComponent) and comp._handle is None:
-            not_uploaded.append(comp)
-        elif isinstance(comp, Carousel):
-            for card in comp.cards:
-                for cc in card.components:
-                    if isinstance(cc, _BaseMediaHeaderComponent) and cc._handle is None:
-                        not_uploaded.append(cc)
-    if not_uploaded:
-        await _run_all_and_cancel_on_exception(
-            *[
-                _upload_comps_example(
-                    wa=wa,
-                    example=example,
-                    comps=list(comps),
-                    app_id=app_id,
-                )
-                for example, comps in itertools.groupby(
-                    not_uploaded, key=lambda x: x.example
-                )
-            ]
-        )
+    not_uploaded = _filter_not_uploaded_comps(components)
+    if not not_uploaded:
+        return
+
+    await _run_all_and_cancel_on_exception(
+        *[
+            _upload_comps_example(
+                wa=wa,
+                example=example,
+                comps=list(comps),
+                app_id=app_id,
+            )
+            for example, comps in itertools.groupby(
+                not_uploaded, key=lambda x: x.example
+            )
+        ]
+    )
 
 
 async def _run_all_and_cancel_on_exception(*coros: Coroutine):
@@ -122,27 +234,29 @@ async def _upload_comps_example(
     mime_type: str | None = None
     raw_bytes: bytes | None = None
     try:
-        if isinstance(example, (str, pathlib.Path, Media)):
-            if str(example).startswith(("https://", "http://")):  # URL
-                res = await httpx.AsyncClient(follow_redirects=True).get(str(example))
-                res.raise_for_status()
-                raw_bytes = res.content
-                mime_type = res.headers.get("Content-Type")
-            elif (path := pathlib.Path(example)).is_file():  # File path
-                with open(path, "rb") as f:
-                    filename = path.name
-                    mime_type = mimetypes.guess_type(path)[0]
-                    raw_bytes = f.read()
-            elif str(example).isdigit() or isinstance(
-                example, Media
-            ):  # WhatsApp Media ID
-                url_res = await wa.get_media_url(
-                    media_id=example.id if isinstance(example, Media) else example
+        source = detect_media_source(example)
+        match source:
+            case MediaSource.EXTERNAL_URL:
+                raw_bytes, filename, mime_type = await _get_media_from_url(url=example)
+            case MediaSource.PATH:
+                raw_bytes, filename, mime_type = _get_media_from_path(path=example)
+            case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
+                (
+                    raw_bytes,
+                    filename,
+                    mime_type,
+                ) = await _get_media_from_media_id_or_obj_or_url(
+                    wa=wa, media=example, media_source=source
                 )
-                mime_type = url_res.mime_type
-                raw_bytes = await wa.download_media(url=url_res.url, in_memory=True)
-        elif isinstance(example, bytes):
-            raw_bytes = example
+            case MediaSource.BYTES:
+                raw_bytes = example
+            case MediaSource.FILE_OBJ:
+                raw_bytes, filename, mime_type = _get_media_from_open_file_obj(example)
+            case MediaSource.FILE_HANDLE:
+                for comp in comps:
+                    comp._handle = example
+                return
+
         if not raw_bytes:
             raise ValueError(
                 f"Invalid media example for component {first_comp.__class__.__name__}: {example}. "
@@ -179,10 +293,9 @@ async def _upload_comps_example(
             comp._handle = handle
 
     except Exception as e:
-        e.add_note(
+        raise ValueError(
             f"Failed to upload media for component {first_comp.__class__.__name__} with example: {example if not isinstance(example, bytes) else '<bytes>'}"
-        )
-        raise
+        ) from e
 
 
 async def upload_template_media_params(
@@ -194,15 +307,7 @@ async def upload_template_media_params(
     """
     Internal method to upload media parameters when sending a template message.
     """
-    not_uploaded = []
-    for param in params:
-        if isinstance(param, _BaseMediaParams) and param._resolved_media is None:
-            not_uploaded.append(param)
-        elif isinstance(param, Carousel._Params):
-            for card_params in param.cards:
-                for p in card_params.params:
-                    if isinstance(p, _BaseMediaParams) and p._resolved_media is None:
-                        not_uploaded.append(p)
+    not_uploaded = _filter_not_uploaded_params(params)
 
     if not not_uploaded:
         return
@@ -229,19 +334,19 @@ async def _upload_params_media(
 ) -> None:
     first_param = params[0]
     try:
-        is_url, media_id_or_url = await resolve_media_param(
+        is_url, media_id_or_url, fallback_filename = await resolve_media_param(
             wa=wa,
             media=media,
             mime_type=None,
             filename=None,
-            media_type=_header_format_to_message_type[first_param.format],
+            media_type=_header_format_to_media_type[first_param.format],
             phone_id=sender,
         )
         for p in params:
             p._is_url = is_url
             p._resolved_media = media_id_or_url
+            p._fallback_filename = fallback_filename
     except Exception as e:
-        e.add_note(
+        raise ValueError(
             f"Failed to upload media for parameter {first_param} with media: {media if not isinstance(media, bytes) else '<bytes>'}"
-        )
-        raise e
+        ) from e

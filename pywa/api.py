@@ -399,7 +399,7 @@ class GraphAPI:
         self,
         media_url: str,
         **httpx_kwargs,
-    ) -> tuple[bytes, str | None]:
+    ) -> tuple[bytes, httpx.Headers]:
         """
         Get the bytes of a media file from WhatsApp servers.
 
@@ -410,12 +410,12 @@ class GraphAPI:
             **httpx_kwargs: Additional arguments to pass to the httpx get request.
 
         Returns:
-            The media file bytes and the MIME type (if available).
+            The media file bytes and the response headers.
         """
         headers = self._session.headers.copy()
         res = self._session.get(media_url, headers=headers, **httpx_kwargs)
         res.raise_for_status()
-        return res.content, res.headers.get("Content-Type")
+        return res.content, res.headers
 
     def delete_media(
         self, media_id: str, phone_number_id: str | None = None

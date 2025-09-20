@@ -1,12 +1,14 @@
 import dataclasses
+import io
 import json
 import datetime
-import tempfile
-from platform import system
+import pathlib
+from unittest import mock
 
 import pytest
 
 from pywa import WhatsApp, types, utils, _helpers as helpers, filters
+from pywa._helpers import MediaSource
 from pywa.types import Contact
 from pywa.types.media import Media
 
@@ -391,37 +393,34 @@ def test_resolve_phone_id_param():
         )
 
 
-def test_resolve_media_param_with_url():
-    assert helpers.resolve_media_param(
-        wa=wa,
-        media="https://example.com/image.jpg",
-        mime_type=None,
-        filename=None,
-        media_type=types.MessageType.IMAGE,
-        phone_id=PHONE_ID,
-    ) == (True, "https://example.com/image.jpg")
-
-
-def test_resolve_media_param_with_media_id():
-    assert helpers.resolve_media_param(
-        wa=wa,
-        media="1234567890",
-        mime_type=None,
-        filename=None,
-        media_type=types.MessageType.IMAGE,
-        phone_id=PHONE_ID,
-    ) == (False, "1234567890")
-
-
-def test_resolve_media_param_with_media():
-    assert helpers.resolve_media_param(
-        wa=wa,
-        media=Media(_client=wa, id="1234567890"),
-        mime_type=None,
-        filename=None,
-        media_type=types.MessageType.IMAGE,
-        phone_id=PHONE_ID,
-    ) == (False, "1234567890")
+def test_detect_media_source(wa):
+    assert (
+        helpers.detect_media_source("https://example.com/image.jpg")
+        == MediaSource.EXTERNAL_URL
+    )
+    assert helpers.detect_media_source("1234567890") == MediaSource.MEDIA_ID
+    assert helpers.detect_media_source(1234567890) == MediaSource.MEDIA_ID
+    assert (
+        helpers.detect_media_source(Media(id="1234567890", _client=wa))
+        == MediaSource.MEDIA_OBJ
+    )
+    assert (
+        helpers.detect_media_source(
+            "https://lookaside.fbsbx.com/whatsapp_business/attachments/?mid=12345678"
+        )
+        == MediaSource.MEDIA_URL
+    )
+    with mock.patch("pathlib.Path.is_file", return_value=True):
+        assert helpers.detect_media_source("/path/to/file.jpg") == MediaSource.PATH
+        assert (
+            helpers.detect_media_source(pathlib.Path("/path/to/file.jpg"))
+            == MediaSource.PATH
+        )
+    assert helpers.detect_media_source(b"binarydata") == MediaSource.BYTES
+    assert helpers.detect_media_source("2:c2FtcGxl...") == MediaSource.FILE_HANDLE
+    assert (
+        helpers.detect_media_source(io.BytesIO(b"binarydata")) == MediaSource.FILE_OBJ
+    )
 
 
 def test_check_for_async_callback():

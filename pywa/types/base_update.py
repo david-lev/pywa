@@ -29,9 +29,11 @@ if TYPE_CHECKING:
         SectionList,
         FlowButton,
         CallbackData,
+        CallPermissionRequestButton,
     )
     from .message import Message
     from .templates import TemplateLanguage, BaseParams
+    from .media import Media
 
 
 class StopHandling(Exception):
@@ -196,6 +198,7 @@ class _ClientShortcuts(abc.ABC):
             Iterable[Button]
             | URLButton
             | VoiceCallButton
+            | CallPermissionRequestButton
             | SectionList
             | FlowButton
             | None
@@ -251,7 +254,7 @@ class _ClientShortcuts(abc.ABC):
 
     def reply_image(
         self,
-        image: str | pathlib.Path | bytes | BinaryIO,
+        image: str | int | Media | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
@@ -309,7 +312,7 @@ class _ClientShortcuts(abc.ABC):
 
     def reply_video(
         self,
-        video: str | pathlib.Path | bytes | BinaryIO,
+        video: str | int | Media | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
@@ -367,7 +370,7 @@ class _ClientShortcuts(abc.ABC):
 
     def reply_document(
         self,
-        document: str | pathlib.Path | bytes | BinaryIO,
+        document: str | int | Media | pathlib.Path | bytes | BinaryIO,
         filename: str | None = None,
         caption: str | None = None,
         footer: str | None = None,
@@ -429,7 +432,7 @@ class _ClientShortcuts(abc.ABC):
 
     def reply_audio(
         self,
-        audio: str | pathlib.Path | bytes | BinaryIO,
+        audio: str | int | Media | pathlib.Path | bytes | BinaryIO,
         *,
         quote: bool = False,
         mime_type: str | None = None,
@@ -471,7 +474,7 @@ class _ClientShortcuts(abc.ABC):
 
     def reply_sticker(
         self,
-        sticker: str | pathlib.Path | bytes | BinaryIO,
+        sticker: str | int | Media | pathlib.Path | bytes | BinaryIO,
         *,
         quote: bool = False,
         mime_type: str | None = None,

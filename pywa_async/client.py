@@ -45,7 +45,6 @@ from .types import (
     SectionList,
     Template,
     FlowButton,
-    MessageType,
     BusinessPhoneNumber,
     Command,
     CallbackData,
@@ -383,7 +382,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 update=await self.api.send_message(
                     sender=sender,
                     to=str(to),
-                    typ=MessageType.TEXT.value,
+                    typ="text",
                     msg={"body": text, "preview_url": preview_url},
                     reply_to_message_id=reply_to_message_id,
                     biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
@@ -396,12 +395,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             update=await self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.INTERACTIVE.value,
+                typ="interactive",
                 msg=helpers.get_interactive_msg(
                     typ=typ,
                     action=kb,
                     header={
-                        "type": MessageType.TEXT,
+                        "type": "text",
                         "text": header,
                     }
                     if header
@@ -420,7 +419,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def send_image(
         self,
         to: str | int,
-        image: str | Media | pathlib.Path | bytes | BinaryIO,
+        image: str | int | Media | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
@@ -467,12 +466,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
-        is_url, image = await helpers.resolve_media_param(
+        is_url, image, _ = await helpers.resolve_media_param(
             wa=self,
             media=image,
             mime_type=mime_type,
             filename=None,
-            media_type=MessageType.IMAGE,
+            media_type="image",
             phone_id=sender,
         )
 
@@ -482,7 +481,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 update=await self.api.send_message(
                     sender=sender,
                     to=str(to),
-                    typ=MessageType.IMAGE.value,
+                    typ="image",
                     msg=helpers.get_media_msg(
                         media_id_or_url=image, is_url=is_url, caption=caption
                     ),
@@ -501,12 +500,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             update=await self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.INTERACTIVE.value,
+                typ="interactive",
                 msg=helpers.get_interactive_msg(
                     typ=typ,
                     action=kb,
                     header={
-                        "type": MessageType.IMAGE,
+                        "type": "image",
                         "image": {
                             "link" if is_url else "id": image,
                         },
@@ -523,7 +522,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def send_video(
         self,
         to: str | int,
-        video: str | Media | pathlib.Path | bytes | BinaryIO,
+        video: str | int | Media | pathlib.Path | bytes | BinaryIO,
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
@@ -570,12 +569,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
-        is_url, video = await helpers.resolve_media_param(
+        is_url, video, _ = await helpers.resolve_media_param(
             wa=self,
             media=video,
             mime_type=mime_type,
             filename=None,
-            media_type=MessageType.VIDEO,
+            media_type="video",
             phone_id=sender,
         )
         if not buttons:
@@ -584,7 +583,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 update=await self.api.send_message(
                     sender=sender,
                     to=str(to),
-                    typ=MessageType.VIDEO.value,
+                    typ="video",
                     msg=helpers.get_media_msg(
                         media_id_or_url=video, is_url=is_url, caption=caption
                     ),
@@ -603,12 +602,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             update=await self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.INTERACTIVE.value,
+                typ="interactive",
                 msg=helpers.get_interactive_msg(
                     typ=typ,
                     action=kb,
                     header={
-                        "type": MessageType.VIDEO,
+                        "type": "video",
                         "video": {
                             "link" if is_url else "id": video,
                         },
@@ -625,8 +624,8 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def send_document(
         self,
         to: str | int,
-        document: str | Media | pathlib.Path | bytes | BinaryIO,
-        filename: str | None = None,
+        document: str | int | Media | pathlib.Path | bytes | BinaryIO,
+        filename: str | None = utils.MISSING,
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
@@ -656,7 +655,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             to: The phone ID of the WhatsApp user.
             document: The document to send (either a media ID, URL, file path, bytes, or an open file object. When
              buttons are provided, only URL is supported).
-            filename: Document filename, with extension. The WhatsApp client will use an appropriate file type icon based on the extension.
+            filename: Document filename, with extension. The WhatsApp client will use an appropriate file type icon based on the extension (Optional, if not provided, if possible, the filename will be extracted from the URL or file path. pass ``None`` to skip this behavior).
             caption: The caption of the document (required when sending a document with buttons,
              `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
             footer: The footer of the message (if buttons are provided, optional,
@@ -675,21 +674,23 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
-        is_url, document = await helpers.resolve_media_param(
+        is_url, document, fallback_filename = await helpers.resolve_media_param(
             wa=self,
             media=document,
             mime_type=mime_type,
-            filename=filename,
+            filename="document",
             media_type=None,
             phone_id=sender,
         )
+        if filename is utils.MISSING:
+            filename = fallback_filename
         if not buttons:
             return SentMessage.from_sent_update(
                 client=self,
                 update=await self.api.send_message(
                     sender=sender,
                     to=str(to),
-                    typ=MessageType.DOCUMENT.value,
+                    typ="document",
                     msg=helpers.get_media_msg(
                         media_id_or_url=document,
                         is_url=is_url,
@@ -711,12 +712,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             update=await self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.INTERACTIVE.value,
+                typ="interactive",
                 msg=helpers.get_interactive_msg(
                     typ=typ,
                     action=kb,
                     header={
-                        "type": MessageType.DOCUMENT,
+                        "type": "document",
                         "document": {
                             "link" if is_url else "id": document,
                             "filename": filename,
@@ -734,7 +735,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def send_audio(
         self,
         to: str | int,
-        audio: str | Media | pathlib.Path | bytes | BinaryIO,
+        audio: str | int | Media | pathlib.Path | bytes | BinaryIO,
         *,
         mime_type: str | None = None,
         reply_to_message_id: str | None = None,
@@ -771,12 +772,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
-        is_url, audio = await helpers.resolve_media_param(
+        is_url, audio, _ = await helpers.resolve_media_param(
             wa=self,
             media=audio,
             mime_type=mime_type,
             filename=None,
-            media_type=MessageType.AUDIO,
+            media_type="audio",
             phone_id=sender,
         )
         return SentMessage.from_sent_update(
@@ -784,7 +785,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             update=await self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.AUDIO.value,
+                typ="audio",
                 msg=helpers.get_media_msg(media_id_or_url=audio, is_url=is_url),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
@@ -795,7 +796,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def send_sticker(
         self,
         to: str | int,
-        sticker: str | Media | pathlib.Path | bytes | BinaryIO,
+        sticker: str | int | Media | pathlib.Path | bytes | BinaryIO,
         *,
         mime_type: str | None = None,
         reply_to_message_id: str | None = None,
@@ -834,12 +835,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
-        is_url, sticker = await helpers.resolve_media_param(
+        is_url, sticker, _ = await helpers.resolve_media_param(
             wa=self,
             media=sticker,
             mime_type=mime_type,
             filename=None,
-            media_type=MessageType.STICKER,
+            media_type="sticker",
             phone_id=sender,
         )
         return SentMessage.from_sent_update(
@@ -847,7 +848,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             update=await self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.STICKER.value,
+                typ="sticker",
                 msg=helpers.get_media_msg(media_id_or_url=sticker, is_url=is_url),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
@@ -904,7 +905,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             update=await self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.REACTION.value,
+                typ="reaction",
                 msg={"emoji": emoji, "message_id": message_id},
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             ),
@@ -957,7 +958,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             update=await self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.REACTION.value,
+                typ="reaction",
                 msg={"emoji": "", "message_id": message_id},
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             ),
@@ -1013,7 +1014,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             update=await self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.LOCATION.value,
+                typ="location",
                 msg={
                     "latitude": latitude,
                     "longitude": longitude,
@@ -1067,7 +1068,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             update=await self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.INTERACTIVE.value,
+                typ="interactive",
                 msg=helpers.get_interactive_msg(
                     typ=InteractiveType.LOCATION_REQUEST_MESSAGE,
                     action={"name": "send_location"},
@@ -1127,7 +1128,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             update=await self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.CONTACTS.value,
+                typ="contacts",
                 msg=tuple(c.to_dict() for c in contact)
                 if isinstance(contact, Iterable)
                 else (contact.to_dict(),),
@@ -1187,7 +1188,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             update=await self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.INTERACTIVE.value,
+                typ="interactive",
                 msg=helpers.get_interactive_msg(
                     typ=InteractiveType.CATALOG_MESSAGE,
                     action={
@@ -1263,7 +1264,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             update=await self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.INTERACTIVE.value,
+                typ="interactive",
                 msg=helpers.get_interactive_msg(
                     typ=InteractiveType.PRODUCT,
                     action={
@@ -1344,7 +1345,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             update=await self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ=MessageType.INTERACTIVE.value,
+                typ="interactive",
                 msg=helpers.get_interactive_msg(
                     typ=InteractiveType.PRODUCT_LIST,
                     action={
@@ -1352,7 +1353,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                         "sections": tuple(ps.to_dict() for ps in product_sections),
                     },
                     header={
-                        "type": MessageType.TEXT,
+                        "type": "text",
                         "text": title,
                     },
                     body=body,
@@ -1441,11 +1442,13 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
     async def upload_media(
         self,
-        media: str | pathlib.Path | bytes | BinaryIO,
+        media: str | int | pathlib.Path | bytes | BinaryIO | Media,
         mime_type: str | None = None,
         filename: str | None = None,
-        dl_session: httpx.AsyncClient | None = None,
+        dl_session: httpx.Client | None = None,
         *,
+        media_type: Literal["image", "video", "audio", "document", "sticker"]
+        | None = None,
         phone_id: str | int | None = None,
     ) -> Media:
         """
@@ -1472,72 +1475,38 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Args:
             media: The media to upload (can be a URL, bytes, or a file path).
-            mime_type: The MIME type of the media (required if media is bytes or a file path).
-            filename: The file name of the media (required if media is bytes).
+            mime_type: The MIME type of the media.
+            filename: The file name of the media.
             dl_session: A httpx client to use when downloading the media from a URL (optional, if not provided, a
              new session will be created).
+            media_type: The type of the media (optional, for default mimetype and filename).
             phone_id: The phone ID to upload the media to (optional, if not provided, the client's phone ID will be used).
 
         Returns:
-            The media ID.
-
-        Raises:
-            ValueError:
-                - If provided ``media`` is file path and the file does not exist.
-                - If provided ``media`` is URL and the URL is invalid or media cannot be downloaded.
-                - If provided ``media`` is bytes and ``filename`` or ``mime_type`` is not provided.
+            The uploaded media.
         """
-        phone_id = helpers.resolve_arg(
-            wa=self,
-            value=phone_id,
-            method_arg="phone_id",
-            client_arg="phone_id",
-        )
-
-        if isinstance(media, (str, pathlib.Path)):
-            if (path := pathlib.Path(media)).is_file():
-                file, filename, mime_type = (
-                    open(path, "rb"),
-                    filename or path.name,
-                    mime_type or mimetypes.guess_type(path)[0],
-                )
-            elif (url := str(media)).startswith(("https://", "http://")):
-                res = await (
-                    dl_session or httpx.AsyncClient(follow_redirects=True)
-                ).get(url)
-                try:
-                    res.raise_for_status()
-                except httpx.HTTPError as e:
-                    raise ValueError(
-                        f"An error occurred while downloading from {url}"
-                    ) from e
-                file, filename, mime_type = (
-                    res.content,
-                    filename or pathlib.Path(media).name,
-                    mime_type or res.headers["Content-Type"],
-                )
-            else:
-                raise ValueError(f"File not found or invalid URL: {media}")
-        else:
-            file = media
-
-        if filename is None:
-            raise ValueError("`filename` is required if media is bytes")
-        if mime_type is None:
-            raise ValueError("`mime_type` is required if media is bytes")
         return Media(
             _client=self,
             id=(
-                await self.api.upload_media(
-                    phone_id=phone_id,
-                    filename=filename,
-                    media=file,
+                await helpers.internal_upload_media(
+                    media=media,
+                    media_source=helpers.detect_media_source(media),
+                    media_type=media_type,
                     mime_type=mime_type,
+                    filename=filename,
+                    wa=self,
+                    phone_id=helpers.resolve_arg(
+                        wa=self,
+                        value=phone_id,
+                        method_arg="phone_id",
+                        client_arg="phone_id",
+                    ),
+                    dl_session=dl_session,
                 )
-            )["id"],
+            )[0],
         )
 
-    async def get_media_url(self, media_id: str) -> MediaUrlResponse:
+    async def get_media_url(self, media_id: str | int) -> MediaUrlResponse:
         """
         Get a media URL for a media ID.
 
@@ -1557,7 +1526,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             A MediaResponse object with the media URL.
         """
-        res = await self.api.get_media_url(media_id=media_id)
+        res = await self.api.get_media_url(media_id=str(media_id))
         return MediaUrlResponse(
             _client=self,
             id=res["id"],
@@ -1593,29 +1562,33 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Args:
             url: The URL of the media file (from :py:func:`~pywa.client.WhatsApp.get_media_url`).
             path: The path where to save the file (if not provided, the current working directory will be used).
-            filename: The name of the file (if not provided, it will be guessed from the URL + extension).
+            filename: The name of the file to save (if not provided, it will be extracted from the ``Content-Disposition`` header or a SHA256 hash of the URL will be used).
             in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
             **httpx_kwargs: Additional arguments to pass to :py:func:`httpx.get`.
 
         Returns:
             The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
         """
-        content, mimetype = await self.api.get_media_bytes(
-            media_url=url, **httpx_kwargs
-        )
+        content, headers = await self.api.get_media_bytes(media_url=url, **httpx_kwargs)
+        mimetype = headers.get("Content-Type")
         if in_memory:
             return content
         if path is None:
             path = pathlib.Path.cwd()
         if filename is None:
-            clean_mimetype = mimetype.split(";")[0].strip() if mimetype else None
-            filename = hashlib.sha256(url.encode()).hexdigest() + (
-                (mimetypes.guess_extension(clean_mimetype) if clean_mimetype else None)
-                or ".bin"
-            )
+            filename = helpers._get_filename_from_httpx_response_headers(headers)
+            if filename is None:
+                clean_mimetype = mimetype.split(";")[0].strip() if mimetype else None
+                filename = hashlib.sha256(url.encode()).hexdigest() + (
+                    (
+                        mimetypes.guess_extension(clean_mimetype)
+                        if clean_mimetype
+                        else None
+                    )
+                    or ".bin"
+                )
         path = pathlib.Path(path) / filename
-        with open(path, "wb") as f:
-            f.write(content)
+        path.write_bytes(content)
         return path
 
     async def delete_media(
