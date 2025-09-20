@@ -3,8 +3,18 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+#### 3.1.0 (2025-09-21) **Latest**
 
-#### 3.0.0 (2025-08-22) **Latest**
+- [types] adding `RawUpdate` type
+- [flows] update `enabled` and `required` fields to use `Condition` type
+- [flows] added support for `DataExchangeAction` in `DataSource` (`on_select_action` and `on_unselect_action`)
+- [flows] update `FLOW_JSON` version to `7.3`
+- [client] refactoring media resolving
+- [templates] adding `filename` when sending document
+- [media] allow to re-upload media to another phone id
+
+
+#### 3.0.0 (2025-08-22)
 
 This release is a major update with significant improvements, new features, and some breaking changes.
 Please review the migration guide before upgrading.
