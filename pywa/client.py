@@ -320,11 +320,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             str(business_account_id) if business_account_id is not None else None
         )
         self.app_id = str(app_id) if app_id is not None else None
-        self.filter_updates = (
-            filter_updates
-            if (phone_id is not None or business_account_id is not None)
-            else False
-        )
+        self.filter_updates = filter_updates
         self._handlers: dict[
             type[Handler] | None,
             list[Handler],

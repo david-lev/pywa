@@ -420,12 +420,17 @@ class Server:
     ) -> type[handlers.Handler] | None:
         """Get the handler for the given update."""
 
-        if self.filter_updates and update.id != self.business_account_id:
+        if (
+            self.filter_updates
+            and self.business_account_id
+            and update.id != self.business_account_id
+        ):
             return None
 
         try:
             if (
                 self.filter_updates
+                and self.phone_id
                 and update.value["metadata"]["phone_number_id"] != self.phone_id
             ):
                 return None
@@ -624,9 +629,6 @@ def _handle_messages_field(
     wa: "WhatsApp", value: dict
 ) -> type[handlers.Handler] | None:
     """Handle webhook updates with 'messages' field."""
-    if wa.filter_updates and (value["metadata"]["phone_number_id"] != wa.phone_id):
-        return None
-
     if "messages" in value:
         msg_type = value["messages"][0]["type"]
         if msg_type == MessageType.INTERACTIVE:
@@ -668,8 +670,6 @@ def _handle_messages_field(
 
 def _handle_calls_field(wa: "WhatsApp", value: dict) -> type[handlers.Handler] | None:
     """Handle webhook updates with 'calls' field."""
-    if wa.filter_updates and (value["metadata"]["phone_number_id"] != wa.phone_id):
-        return None
     if "calls" in value:
         if (handler := _CALL_EVENTS.get(value["calls"][0]["event"])) is not None:
             return handler
@@ -687,8 +687,6 @@ def _handle_user_preferences_field(
     wa: "WhatsApp", value: dict
 ) -> type[handlers.Handler] | None:
     """Handle webhook updates with 'user_preferences' field."""
-    if wa.filter_updates and (value["metadata"]["phone_number_id"] != wa.phone_id):
-        return None
     if (
         value["user_preferences"][0]["category"]
         == UserPreferenceCategory.MARKETING_MESSAGES
