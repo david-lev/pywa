@@ -9,6 +9,6 @@
 from pywa.client import WhatsApp
 from pywa.utils import Version
 
-__version__ = "3.1.0"
+__version__ = "3.1.1"
 __author__ = "David Lev"
 __license__ = "MIT"

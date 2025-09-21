@@ -3,7 +3,12 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-#### 3.1.0 (2025-09-21) **Latest**
+#### 3.1.1 (2025-09-21) **Latest**
+
+- [server] Fix `filter updates`
+
+
+#### 3.1.0 (2025-09-21)
 
 - [types] adding `RawUpdate` type
 - [flows] update `enabled` and `required` fields to use `Condition` type
