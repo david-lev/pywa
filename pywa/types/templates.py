@@ -731,12 +731,14 @@ class CreativeFeaturesSpec:
         image_touchups: Whether to apply touch-ups to images.
         add_text_overlay: Whether to add text overlays to images.
         image_animation: Whether to apply animations to images.
+        image_background_gen: Whether to generate backgrounds for images.
     """
 
     image_brightness_and_contrast: bool
     image_touchups: bool
     add_text_overlay: bool
     image_animation: bool
+    image_background_gen: bool
 
     def __init__(
         self,
@@ -744,6 +746,7 @@ class CreativeFeaturesSpec:
         image_touchups: bool,
         add_text_overlay: bool,
         image_animation: bool,
+        image_background_gen: bool,
     ):
         """
         Initializes the creative features specification.
@@ -753,11 +756,13 @@ class CreativeFeaturesSpec:
             image_touchups: Whether to apply touch-ups to images.
             add_text_overlay: Whether to add text overlays to images.
             image_animation: Whether to apply animations to images.
+            image_background_gen: Whether to generate backgrounds for images.
         """
         self.image_brightness_and_contrast = image_brightness_and_contrast
         self.image_touchups = image_touchups
         self.add_text_overlay = add_text_overlay
         self.image_animation = image_animation
+        self.image_background_gen = image_background_gen
 
     def to_dict(self) -> dict:
         return {
@@ -775,6 +780,9 @@ class CreativeFeaturesSpec:
             "image_animation": {
                 "enroll_status": "OPT_IN" if self.image_animation else "OPT_OUT"
             },
+            "image_background_gen": {
+                "enroll_status": "OPT_IN" if self.image_background_gen else "OPT_OUT"
+            },
         }
 
     def __repr__(self) -> str:
@@ -782,7 +790,8 @@ class CreativeFeaturesSpec:
             f"CreativeFeaturesSpec(image_brightness_and_contrast={self.image_brightness_and_contrast}, "
             f"image_touchups={self.image_touchups}, "
             f"add_text_overlay={self.add_text_overlay}, "
-            f"image_animation={self.image_animation})"
+            f"image_animation={self.image_animation}), "
+            f"image_background_gen={self.image_background_gen})"
         )
 
 
