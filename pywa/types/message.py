@@ -8,7 +8,7 @@ __all__ = ["Message"]
 
 import dataclasses
 import datetime
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING, Iterable, ClassVar
 
 from ..errors import WhatsAppError
 
@@ -83,7 +83,13 @@ class Message(BaseUserUpdate):
     referral: Referral | None = None
     error: WhatsAppError | None = None
 
-    _media_fields = {"image", "video", "sticker", "document", "audio"}
+    _media_objs: ClassVar[dict] = {
+        "image": Image,
+        "video": Video,
+        "sticker": Sticker,
+        "document": Document,
+        "audio": Audio,
+    }
     _txt_fields = ("text", "caption")
     _webhook_field = "messages"
 
@@ -123,6 +129,49 @@ class Message(BaseUserUpdate):
         return self.reply_to_message is not None or self.reaction is not None
 
     @classmethod
+    def _resolve_msg_content(
+        cls,
+        *,
+        client: WhatsApp,
+        msg_type: MessageType,
+        msg: dict,
+        timestamp: datetime.datetime,
+        recipient: str,
+    ) -> dict:
+        match msg_type:
+            case MessageType.TEXT:
+                return {msg_type.value: msg[msg_type.value]["body"]}
+            case (
+                MessageType.IMAGE
+                | MessageType.VIDEO
+                | MessageType.STICKER
+                | MessageType.DOCUMENT
+                | MessageType.AUDIO
+            ):
+                return {
+                    msg_type.value: cls._media_objs[msg_type.value].from_dict(
+                        client=client,
+                        data=msg[msg_type.value],
+                        arrived_at=timestamp,
+                        received_to=recipient,
+                    )
+                }
+            case MessageType.REACTION:
+                return {msg_type.value: Reaction.from_dict(msg[msg_type.value])}
+            case MessageType.LOCATION:
+                return {msg_type.value: Location.from_dict(msg[msg_type.value])}
+            case MessageType.CONTACTS:
+                return {
+                    msg_type.value: tuple(
+                        Contact.from_dict(c) for c in msg[msg_type.value]
+                    )
+                }
+            case MessageType.ORDER:
+                return {msg_type.value: Order.from_dict(msg[msg_type.value])}
+            case _:
+                return {}
+
+    @classmethod
     def from_update(cls, client: WhatsApp, update: RawUpdate) -> Message:
         msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
             "messages"
@@ -130,12 +179,18 @@ class Message(BaseUserUpdate):
         error = value.get("errors", msg.get("errors", (None,)))[0]
         msg_type = msg["type"]
         context = msg.get("context", {})
-        # noinspection PyProtectedMember
-        constructor = client._msg_fields_to_objects_constructors.get(msg_type)
-        msg_content = (
-            {msg_type: constructor(msg[msg_type], _client=client)}
-            if constructor is not None
-            else {}
+        metadata = Metadata.from_dict(value["metadata"])
+        timestamp = datetime.datetime.fromtimestamp(
+            int(msg["timestamp"]),
+            datetime.timezone.utc,
+        )
+        msg_type = MessageType(msg_type)
+        msg_content = cls._resolve_msg_content(
+            client=client,
+            msg_type=msg_type,
+            msg=msg,
+            timestamp=timestamp,
+            recipient=metadata.phone_number_id,
         )
         try:
             usr = client._usr_cls.from_dict(value["contacts"][0], client=client)
@@ -148,22 +203,19 @@ class Message(BaseUserUpdate):
             raw=update,
             waba_id=entry["id"],
             id=msg["id"],
-            type=MessageType(msg_type),
+            type=msg_type,
             **msg_content,
             from_user=usr,
-            timestamp=datetime.datetime.fromtimestamp(
-                int(msg["timestamp"]),
-                datetime.timezone.utc,
-            ),
-            metadata=Metadata.from_dict(value["metadata"]),
+            timestamp=timestamp,
+            metadata=metadata,
             forwarded=context.get("forwarded", False)
             or context.get("frequently_forwarded", False),
             forwarded_many_times=context.get("frequently_forwarded", False),
-            reply_to_message=ReplyToMessage.from_dict(msg["context"])
+            reply_to_message=ReplyToMessage.from_dict(context)
             if context.get("id")
             else None,
             caption=msg.get(msg_type, {}).get("caption")
-            if msg_type in cls._media_fields
+            if msg_type in cls._media_objs
             else None,
             referral=Referral.from_dict(msg["referral"]) if "referral" in msg else None,
             error=WhatsAppError.from_dict(error=error) if error is not None else None,
@@ -180,7 +232,7 @@ class Message(BaseUserUpdate):
         return next(
             (
                 getattr(self, media_type)
-                for media_type in self._media_fields
+                for media_type in self._media_objs
                 if getattr(self, media_type)
             ),
             None,

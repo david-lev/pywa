@@ -401,7 +401,9 @@ def test_detect_media_source(wa):
     assert helpers.detect_media_source("1234567890") == MediaSource.MEDIA_ID
     assert helpers.detect_media_source(1234567890) == MediaSource.MEDIA_ID
     assert (
-        helpers.detect_media_source(Media(id="1234567890", _client=wa))
+        helpers.detect_media_source(
+            Media(_id="1234567890", _client=wa, uploaded_to=wa.phone_id)
+        )
         == MediaSource.MEDIA_OBJ
     )
     assert (

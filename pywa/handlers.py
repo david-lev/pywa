@@ -857,7 +857,7 @@ class CallPermissionUpdateHandler(Handler[CallPermissionUpdate]):
 
 class RawUpdateHandler(Handler[RawUpdate]):
     """
-    Handler for raw updates (dicts) from the webhook.
+    Handler for raw updates from the webhook.
 
     - You can use the :func:`~pywa.client.WhatsApp.on_raw_update` decorator to register a handler for this type.
 
@@ -869,7 +869,7 @@ class RawUpdateHandler(Handler[RawUpdate]):
         >>> wa.add_handlers(RawUpdateHandler(print_raw_update))
 
     Args:
-        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a raw update :class:`RawUpdate` as positional arguments)
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.base_update.RawUpdate` as positional arguments)
         filters: The filters to apply to the handler
         priority: The priority of the handler (default: ``0``)
     """
@@ -1218,7 +1218,7 @@ class _HandlerDecorators:
         priority: int = 0,
     ) -> Callable[[_RawUpdateCallback], _RawUpdateCallback] | _RawUpdateCallback:
         """
-        Decorator to register a function as a callback for raw updates (:class:`RawUpdate`).
+        Decorator to register a function as a callback for raw updates (:class:`~pywa.types.base_update.RawUpdate`).
 
         - This callback is called for **EVERY** update received from WhatsApp, even if it is already handled by another handler or listener.
         - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.RawUpdateHandler`.
@@ -1751,7 +1751,7 @@ class _HandlerDecorators:
         | _TemplateComponentsUpdateCallback
     ):
         """
-        Decorator to register a function as a callback for :class:`pywa.types.templates.TemplateComponentsUpdate` updates (Template components changed).
+        Decorator to register a function as a callback for :class:`~pywa.types.templates.TemplateComponentsUpdate` updates (Template components changed).
 
         - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.TemplateComponentsUpdateHandler`.
 

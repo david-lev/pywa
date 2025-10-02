@@ -47,7 +47,7 @@ from pywa.types import (
     UserMarketingPreferences as UserMarketingPreferencesSync,
     FlowRequest as FlowRequestSync,
     FlowResponse as FlowResponseSync,
-    MediaUrlResponse as MediaUrlResponseSync,
+    MediaURL as MediaUrlResponseSync,
     User as UserSync,
     Result as ResultSync,
 )
@@ -71,16 +71,14 @@ from pywa_async.types import (
     UserMarketingPreferences as UserMarketingPreferencesAsync,
     FlowRequest as FlowRequestAsync,
     FlowResponse as FlowResponseAsync,
-    MediaUrlResponse as MediaUrlResponseAsync,
+    MediaURL as MediaUrlResponseAsync,
     User as UserAsync,
     Result as ResultAsync,
 )
 from pywa.types.flows import FlowDetails as FlowDetailsSync
 from pywa_async.types.flows import FlowDetails as FlowDetailsAsync
-from pywa.types.media import Media as MediaSync
+from pywa.types.media import Media as MediaSync, ArrivedMedia
 from pywa_async.types.media import Media as MediaAsync
-from pywa.types.media import BaseUserMedia as BaseUserMediaSync
-from pywa_async.types.media import BaseUserMedia as BaseUserMediaAsync
 from pywa.types.sent_update import (
     SentMessage as SentMessageSync,
     SentTemplate as SentTemplateSync,
@@ -119,7 +117,6 @@ def overrides() -> list[tuple[type, type]]:
         (FlowDetailsSync, FlowDetailsAsync),
         (MediaUrlResponseSync, MediaUrlResponseAsync),
         (MediaSync, MediaAsync),
-        (BaseUserMediaSync, BaseUserMediaAsync),
         (SentMessageSync, SentMessageAsync),
         (SentTemplateSync, SentTemplateAsync),
         (InitiatedCallSync, InitiatedCallAsync),
@@ -181,7 +178,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
             BaseUpdate.from_update,
             BaseUpdate.stop_handling,
             BaseUpdate.continue_handling,
-            BaseUserMediaSync.from_flow_completion,
+            ArrivedMedia.from_flow_completion,
             SentMessageSync.from_sent_update,
             FlowRequestSync.decrypt_media,
             FlowRequestSync.token_no_longer_valid,
@@ -191,6 +188,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
             FlowCompletionSync.get_media,
             UserSync.as_vcard,
             TemplateDetailsSync.to_json,
+            MessageSync._resolve_msg_content,
         }
     ]
     non_async = {
@@ -225,19 +223,12 @@ def test_all_methods_are_overwritten_in_async(overrides):
 
 def test_same_signature(overrides):
     skip_methods = [
-        m.__name__
-        for m in {
-            BaseUserMediaSync.from_dict,
-        }
+        "_api_cls",
+        "_usr_cls",
+        "_httpx_client",
+        "_flow_req_cls",
     ]
-    skip_methods.extend(
-        {
-            "_api_cls",
-            "_usr_cls",
-            "_httpx_client",
-            "_flow_req_cls",
-        }
-    )
+
     skip_signature_check = {
         m.__name__: skip_params
         for m, skip_params in (
@@ -276,13 +267,7 @@ def test_same_signature(overrides):
 
 
 def test_same_return_annotation(overrides):
-    skip_methods = [
-        m.__name__
-        for m in {
-            BaseUserMediaSync.from_dict,
-            BaseUserMediaSync.from_flow_completion,
-        }
-    ]
+    skip_methods = []
     for sync_obj, async_obj in overrides:
         for method_name in get_obj_methods_names(sync_obj):
             if method_name in skip_methods:
@@ -298,12 +283,6 @@ def test_same_return_annotation(overrides):
 
 def test_same_docstring(overrides):
     skip_methods = [
-        m.__name__
-        for m in {
-            BaseUserMediaSync.from_dict,
-            BaseUserMediaSync.from_flow_completion,
-        }
-    ] + [
         "wait_for_completion",
         "_api_cls",
         "_usr_cls",

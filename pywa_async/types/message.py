@@ -70,6 +70,14 @@ class Message(BaseUserUpdateAsync, _Message):
     document: Document | None = None
     audio: Audio | None = None
 
+    _media_objs = {
+        "image": Image,
+        "video": Video,
+        "sticker": Sticker,
+        "document": Document,
+        "audio": Audio,
+    }
+
     @property
     def media(
         self,
@@ -81,7 +89,7 @@ class Message(BaseUserUpdateAsync, _Message):
         return next(
             (
                 getattr(self, media_type)
-                for media_type in self._media_fields
+                for media_type in self._media_objs
                 if getattr(self, media_type)
             ),
             None,

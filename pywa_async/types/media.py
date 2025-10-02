@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 __all__ = [
+    "Media",
     "Image",
     "Video",
     "Sticker",
     "Document",
     "Audio",
-    "MediaUrlResponse",
+    "MediaURL",
+    "UploadedBy",
 ]
 
+import datetime
 import pathlib
 
 from pywa.types.others import SuccessResult
@@ -22,7 +25,7 @@ from pywa.types.media import (
     Sticker as _Sticker,
     Document as _Document,
     Audio as _Audio,
-    MediaUrlResponse as _MediaUrlResponse,
+    MediaURL as _MediaURL,
 )  # noqa MUST BE IMPORTED FIRST
 
 import dataclasses
@@ -33,11 +36,35 @@ if TYPE_CHECKING:
 
 
 class Media:
-    """Base class for all media types."""
+    """
+    Base class for all media types.
 
-    def __init__(self, _client: WhatsApp, id: str):
+    Attributes:
+        id: The ID of the media.
+        uploaded_by: Who uploaded the media (business or user).
+        uploaded_at: The timestamp when the media was uploaded (in UTC).
+        uploaded_to: The phone ID the media was uploaded to.
+    """
+
+    id: str
+    uploaded_by: UploadedBy
+    uploaded_at: datetime.datetime
+    uploaded_to: str
+
+    def __init__(
+        self,
+        _client: WhatsApp,
+        _id: str,
+        uploaded_to: str,
+    ):
         self._client = _client
-        self.id = id
+        self.id = _id
+        self.uploaded_to = uploaded_to
+        self.uploaded_at = datetime.datetime.now(datetime.timezone.utc)
+        self.uploaded_by = UploadedBy.BUSINESS
+
+    def __repr__(self) -> str:
+        return f"MediaAsync(id={self.id!r}, uploaded_by={self.uploaded_by!r}, uploaded_at={self.uploaded_at!r}, uploaded_to={self.uploaded_to!r})"
 
     async def get_media_url(self) -> str:
         """Gets the URL of the media. (expires after 5 minutes)"""
@@ -73,9 +100,7 @@ class Media:
             The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
         """
         return await self._client.download_media(
-            url=(await self.get_media_url())
-            if not hasattr(self, "url")
-            else self.url,  # MediaUrlResponse
+            url=await self.get_media_url(),
             path=path,
             filename=filename,
             in_memory=in_memory,
@@ -113,39 +138,8 @@ class Media:
         )
 
 
-class BaseUserMedia(Media):
-    """Base class for all user media types (Image, Video, Sticker, Document, Audio)."""
-
-    @classmethod
-    def from_flow_completion(
-        cls, client: WhatsApp, media: dict[str, str]
-    ) -> BaseUserMedia:
-        """
-        Create a media object from the media dict returned by the flow completion.
-
-        - You can use the shortcut :meth:`~pywa_async.types.FlowCompletion.get_media`
-
-        Example:
-            >>> from pywa_async import WhatsApp, types
-            >>> wa = WhatsApp(...)
-            >>> @wa.on_flow_completion
-            ... async def on_flow_completion(_: WhatsApp, flow: types.FlowCompletion):
-            ...     img = types.Image.from_flow_completion(client=wa, media=flow.response['media'])
-            ...     await img.download()
-
-        Args:
-            client: The WhatsApp client.
-            media: The media dict returned by the flow completion.
-
-        Returns:
-            The media object (Image, Video, Sticker, Document, Audio).
-        """
-        # noinspection PyUnresolvedReferences
-        return cls.from_dict(media, _client=client)
-
-
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Image(BaseUserMedia, _Image):
+class Image(Media, _Image):
     """
     Represents an received image.
 
@@ -157,7 +151,7 @@ class Image(BaseUserMedia, _Image):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Video(BaseUserMedia, _Video):
+class Video(Media, _Video):
     """
     Represents a video.
 
@@ -169,7 +163,7 @@ class Video(BaseUserMedia, _Video):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Sticker(BaseUserMedia, _Sticker):
+class Sticker(Media, _Sticker):
     """
     Represents a sticker.
 
@@ -182,7 +176,7 @@ class Sticker(BaseUserMedia, _Sticker):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Document(BaseUserMedia, _Document):
+class Document(Media, _Document):
     """
     Represents a document.
 
@@ -195,7 +189,7 @@ class Document(BaseUserMedia, _Document):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Audio(BaseUserMedia, _Audio):
+class Audio(Media, _Audio):
     """
     Represents an audio.
 
@@ -208,9 +202,11 @@ class Audio(BaseUserMedia, _Audio):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class MediaUrlResponse(Media, _MediaUrlResponse):
+class MediaURL(_MediaURL):
     """
     Represents a media response.
+
+    - The URL is valid for 5 minutes.
 
     Attributes:
         id: The ID of the media.
@@ -219,3 +215,88 @@ class MediaUrlResponse(Media, _MediaUrlResponse):
         sha256: The SHA256 hash of the media.
         file_size: The size of the media in bytes.
     """
+
+    _client: WhatsApp
+
+    async def download(
+        self,
+        *,
+        path: str | None = None,
+        filename: str | None = None,
+        in_memory: bool = False,
+        **kwargs,
+    ) -> pathlib.Path | bytes:
+        """
+        Download a media file from WhatsApp servers.
+
+        - Same as :func:`~pywa.client.WhatsApp.download_media` with ``media_url=media.url``
+
+        >>> from pywa_async import WhatsApp, types, filters
+        >>> wa = WhatsApp(...)
+
+        >>> @wa.on_message(filters.image)
+        ... async def on_message(wa: WhatsApp, msg: types.Message):
+        ...    url = await wa.get_media_url(media_id=msg.image.id)
+        ...    await url.download(...)
+        ...    # TIP: You can use msg.download_media() or msg.image.download() as a shortcut
+
+        Args:
+            path: The path where to save the file (if not provided, the current working directory will be used).
+            filename: The name of the file (if not provided, it will be guessed from the URL + extension).
+            in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
+            **kwargs: Additional arguments to pass to ``httpx.get(...)``.
+
+        Returns:
+            The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
+        """
+        return await self._client.download_media(
+            url=self.url,
+            path=path,
+            filename=filename,
+            in_memory=in_memory,
+            **kwargs,
+        )
+
+    async def delete(
+        self, *, phone_id: str | int | None = utils.MISSING
+    ) -> SuccessResult:
+        """
+        Deletes the media from WhatsApp servers.
+
+        Args:
+            phone_id: The phone ID to delete the media from (optional, If included, the operation will only be processed if the ID matches the ID of the business phone number that the media was uploaded on. pass None to use the client's phone ID).
+        """
+        return await self._client.delete_media(media_id=self.id, phone_id=phone_id)
+
+    async def reupload(
+        self,
+        *,
+        to_phone_id: str | int | None = None,
+        override_filename: str | None = None,
+    ) -> Media:
+        """
+        Reuploads the media to WhatsApp servers.
+
+        - Useful for re-sending media from another business phone number or if you want to use the media more than 30 days after it was uploaded.
+        - If the media URL is expired, it will use the media ID to reupload (Will make an extra request to get a new URL).
+
+        Args:
+            to_phone_id: The phone ID to upload the media to (if not provided, the client's phone ID will be used).
+            override_filename: The filename to use for the re-uploaded media (if not provided, the original filename will be used if available).
+        """
+        return await self._client.upload_media(
+            media=self.id if self.is_expired else self.url,
+            phone_id=to_phone_id,
+            filename=override_filename,
+        )
+
+    async def regenerate_url(self) -> MediaURL:
+        """
+        Regenerates the media URL.
+
+        - The new URL will be valid for 5 minutes.
+
+        Returns:
+            The new MediaURL object.
+        """
+        return await self._client.get_media_url(media_id=self.id)

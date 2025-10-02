@@ -26,7 +26,7 @@ from typing import (
 
 import httpx
 
-from .media import BaseUserMedia
+from .media import ArrivedMedia
 from .. import utils
 from .base_update import BaseUserUpdate, RawUpdate  # noqa
 from .others import (
@@ -125,6 +125,8 @@ __all__ = [
     "NextType",
 ]
 
+_FlowResMediaType = TypeVar("_FlowResMediaType", bound=ArrivedMedia)
+
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
 class FlowCompletion(BaseUserUpdate):
@@ -189,14 +191,16 @@ class FlowCompletion(BaseUserUpdate):
             response=response,
         )
 
-    def get_media(self, media_cls: Type[BaseUserMedia], key: str) -> BaseUserMedia:
+    def get_media(
+        self, media_cls: Type[_FlowResMediaType], key: str
+    ) -> _FlowResMediaType:
         """
         Get the media object from the response.
 
         Example:
             >>> from pywa import WhatsApp, types
             >>> wa = WhatsApp(...)
-            >>> @wa.on_flow_completion()
+            >>> @wa.on_flow_completion
             ... def on_flow_completion(_: WhatsApp, flow: types.FlowCompletion):
             ...     img = flow.get_media(types.Image,key="image")
             ...     img.download()
@@ -211,7 +215,12 @@ class FlowCompletion(BaseUserUpdate):
         Raises:
             KeyError: If the key is not found in the response.
         """
-        return media_cls.from_flow_completion(self._client, self.response[key])
+        return media_cls.from_dict(
+            client=self._client,
+            data=self.response[key],
+            arrived_at=self.timestamp,
+            received_to=self.recipient,
+        )
 
 
 class FlowRequestActionType(utils.StrEnum):

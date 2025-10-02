@@ -39,7 +39,7 @@ from .types import (
     CommerceSettings,
     Contact,
     Industry,
-    MediaUrlResponse,
+    MediaURL,
     Message,
     ProductsSection,
     SectionList,
@@ -127,7 +127,7 @@ from .types.templates import (
     Buttons,
     UpdatedTemplate,
 )
-from .types.media import Media
+from .types.media import Media, UploadedBy
 from .types.flows import FlowJSONUpdateResult
 from .types.calls import CallPermissions, SessionDescription
 from .types.others import (
@@ -171,18 +171,6 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         CallPermissionUpdateHandler: CallPermissionUpdate,
     }
     """A dictionary that maps handler types to their respective update constructors."""
-
-    _msg_fields_to_objects_constructors = (
-        _WhatsApp._msg_fields_to_objects_constructors
-        | dict(
-            image=Image.from_dict,
-            video=Video.from_dict,
-            sticker=Sticker.from_dict,
-            document=Document.from_dict,
-            audio=Audio.from_dict,
-        )
-    )
-    """A mapping of message types to their respective constructors."""
 
     def __init__(
         self,
@@ -1485,9 +1473,15 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             The uploaded media.
         """
+        upload_to = helpers.resolve_arg(
+            wa=self,
+            value=phone_id,
+            method_arg="phone_id",
+            client_arg="phone_id",
+        )
         return Media(
             _client=self,
-            id=(
+            _id=(
                 await helpers.internal_upload_media(
                     media=media,
                     media_source=helpers.detect_media_source(media),
@@ -1495,18 +1489,14 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                     mime_type=mime_type,
                     filename=filename,
                     wa=self,
-                    phone_id=helpers.resolve_arg(
-                        wa=self,
-                        value=phone_id,
-                        method_arg="phone_id",
-                        client_arg="phone_id",
-                    ),
+                    phone_id=upload_to,
                     dl_session=dl_session,
                 )
             )[0],
+            uploaded_to=upload_to,
         )
 
-    async def get_media_url(self, media_id: str | int) -> MediaUrlResponse:
+    async def get_media_url(self, media_id: str | int) -> MediaURL:
         """
         Get a media URL for a media ID.
 
@@ -1527,7 +1517,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             A MediaResponse object with the media URL.
         """
         res = await self.api.get_media_url(media_id=str(media_id))
-        return MediaUrlResponse(
+        return MediaURL(
             _client=self,
             id=res["id"],
             url=res["url"],
