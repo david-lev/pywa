@@ -47,3 +47,5 @@ Sending Messages Errors
     :show-inheritance:
 .. autoclass:: UserIsInExperimentGroup()
     :show-inheritance:
+.. autoclass:: RecipientIdentityKeyMismatch()
+    :show-inheritance:

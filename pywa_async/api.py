@@ -480,6 +480,7 @@ class GraphAPIAsync(GraphAPI):
         msg: dict[str, str | list[str]] | tuple[dict],
         reply_to_message_id: str | None = None,
         biz_opaque_callback_data: str | None = None,
+        recipient_identity_key_hash: str | None = None,
     ) -> dict[str, dict | list]:
         """
         Send a message to a WhatsApp user.
@@ -493,6 +494,7 @@ class GraphAPIAsync(GraphAPI):
             msg: The message object to send.
             reply_to_message_id: The ID of the message to reply to.
             biz_opaque_callback_data: The tracker to send with the message.
+            recipient_identity_key_hash: message would only be delivered if the hash value matches the customer's current hash.
 
         Returns:
             The response from the WhatsApp Cloud API.
@@ -508,6 +510,8 @@ class GraphAPIAsync(GraphAPI):
             data["context"] = {"message_id": reply_to_message_id}
         if biz_opaque_callback_data:
             data["biz_opaque_callback_data"] = biz_opaque_callback_data
+        if recipient_identity_key_hash:
+            data["recipient_identity_key_hash"] = recipient_identity_key_hash
         return await self._make_request(
             method="POST",
             endpoint=f"/{sender}/messages",
@@ -522,6 +526,7 @@ class GraphAPIAsync(GraphAPI):
         reply_to_message_id: str | None = None,
         message_activity_sharing: bool | None = None,
         biz_opaque_callback_data: str | None = None,
+        recipient_identity_key_hash: str | None = None,
     ) -> dict[str, dict | list]:
         """
         Send marketing template messages via MM Lite API.
@@ -536,6 +541,7 @@ class GraphAPIAsync(GraphAPI):
             reply_to_message_id: The ID of the message to reply to.
             message_activity_sharing: Toggles on / off sharing message activities (e.g. message read) for that specific marketing message to Meta to help optimize marketing messages.
             biz_opaque_callback_data: The tracker to send with the message.
+            recipient_identity_key_hash: message would only be delivered if the hash value matches the customer's current hash.
 
         Returns:
             The response from the WhatsApp Cloud API.
@@ -553,6 +559,8 @@ class GraphAPIAsync(GraphAPI):
             body["message_activity_sharing"] = message_activity_sharing
         if biz_opaque_callback_data:
             body["biz_opaque_callback_data"] = biz_opaque_callback_data
+        if recipient_identity_key_hash:
+            body["recipient_identity_key_hash"] = recipient_identity_key_hash
         return await self._make_request(
             method="POST",
             endpoint=f"/{sender}/marketing_messages",
