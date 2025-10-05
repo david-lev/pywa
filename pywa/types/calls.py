@@ -21,6 +21,7 @@ __all__ = [
     "CallbackPermissionStatus",
     "SIPStatus",
     "SIPServer",
+    "SIPSettings",
     "Monday",
     "Tuesday",
     "Wednesday",
@@ -51,6 +52,7 @@ from .others import (
     SuccessResult,
     ReplyToMessage,
     StorageConfiguration,
+    UserIdentityChangeSettings,
 )
 from .callback import _CallbackDataT, CallbackData
 from .. import utils
@@ -422,7 +424,7 @@ class CallTerminate(BaseUserUpdate, _CallShortcuts, Generic[_CallbackDataT]):
 
     @classmethod
     def from_update(
-        cls, client: WhatsApp, update: dict
+        cls, client: WhatsApp, update: RawUpdate
     ) -> CallTerminate[_CallbackDataT]:
         call = (value := (entry := update["entry"][0])["changes"][0]["value"])["calls"][
             0
@@ -611,21 +613,66 @@ class SIPStatus(utils.StrEnum):
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+class SIPSettings:
+    """
+    Represents the SIP settings for a business phone number.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/sip#configure-update-sip-settings-on-business-phone-number>`_.
+
+    Each application can have only 1 SIP server configured for it. The servers is an array to be futureproof. It also makes the POST payload schema be consistent with GET payload schema because you can have multiple apps each with their own SIP server. In the GET payload, if you see multiple SIP servers, it means you've used the POST API with different access tokens that belong to different apps.
+
+    To delete a previously configured SIP server, pass an empty array to this field. If you still see some servers remaining after you clear, those servers may belong to different apps, so you need to use the corresponding access tokens to clear them
+
+    Attributes:
+        status: Enable or disable SIP for the given business phone number.
+        servers: The list of SIP servers configured for the business phone number (maximum of 3).
+    """
+
+    status: SIPStatus
+    servers: list[SIPServer]
+
+    @classmethod
+    def from_dict(cls, data: dict) -> SIPSettings:
+        return cls(
+            status=SIPStatus(data["status"]),
+            servers=[SIPServer.from_dict(server) for server in data.get("servers", [])],
+        )
+
+    def to_dict(self) -> dict:
+        return {
+            "status": self.status.value,
+            "servers": [server.to_dict() for server in self.servers],
+        }
+
+
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
 class SIPServer(utils.FromDict):
     """
     Represents a SIP server configuration.
 
     Attributes:
-        hostname: The hostname of the SIP server.
-        port: The port of the SIP server.
-        request_uri_user_params: Optional parameters for the request URI user.
+        hostname: The host name of the SIP server. Requests must use TLS.
+        port: The port within your SIP server that will accept requests. Requests must use TLS. Default port is ``5061``.
+        request_uri_user_params: An optional field for passing any parameters you want included in the user portion of the request URI used in our SIP INVITE to your SIP server.
         sip_user_password: The password for the SIP user (only if ``include_sip_credentials`` is True).
+        app_id: The app ID that configures the SIP server.
     """
 
     hostname: str
-    port: int
-    request_uri_user_params: dict[str, str] | None
-    sip_user_password: str | None
+    port: int | None = None
+    request_uri_user_params: dict[str, str] | None = None
+    sip_user_password: str | None = None
+    app_id: int
+
+    def to_dict(self) -> dict:
+        data = {
+            "hostname": self.hostname,
+        }
+        if self.port is not None:
+            data["port"] = self.port
+        if self.request_uri_user_params is not None:
+            data["request_uri_user_params"] = self.request_uri_user_params
+        return data
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -860,7 +907,7 @@ class CallingSettings:
     call_hours: CallHours | None = None
     callback_permission_status: CallbackPermissionStatus | None = None
     srtp_key_exchange_protocol: STRPKeyExchangeProtocol | None = None
-    sip: SIPServer | None = None
+    sip: SIPSettings | None = None
 
     def to_dict(self):
         data = {}
@@ -875,7 +922,7 @@ class CallingSettings:
         if self.srtp_key_exchange_protocol:
             data["srtp_key_exchange_protocol"] = self.srtp_key_exchange_protocol.value
         if self.sip:
-            data["sip"] = dataclasses.asdict(self.sip)
+            data["sip"] = self.sip.to_dict()
         return data
 
     @classmethod
@@ -898,7 +945,7 @@ class CallingSettings:
             )
             if "srtp_key_exchange_protocol" in data
             else None,
-            sip=SIPServer.from_dict(data["sip"]) if "sip" in data else None,
+            sip=SIPSettings.from_dict(data["sip"]) if "sip" in data else None,
         )
 
 

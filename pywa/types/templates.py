@@ -531,9 +531,9 @@ class TemplateCategory(utils.StrEnum):
     <https://developers.facebook.com/docs/whatsapp/updates-to-pricing/new-template-guidelines#template-categorization>`_
 
     Attributes:
-        AUTHENTICATION: Enable businesses to verify a user’s identity, potentially at various steps of the customer journey.
-        MARKETING: Enable businesses to achieve a wide range of goals, from generating awareness to driving sales and retargeting customers.
-        UTILITY: Enable businesses to follow up on user actions or requests, since these messages are typically triggered by user actions.
+        AUTHENTICATION: Enable businesses to verify a user’s identity, potentially at various steps of the customer journey. See `Authentication templates <https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates>`_ for more details.
+        MARKETING: Enable businesses to achieve a wide range of goals, from generating awareness to driving sales and retargeting customers. See `Marketing templates <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/marketing-templates>`_ for more details.
+        UTILITY: Enable businesses to follow up on user actions or requests, since these messages are typically triggered by user actions. See `Utility templates <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/utility-templates>`_ for more details.
     """
 
     AUTHENTICATION = "AUTHENTICATION"
@@ -3189,7 +3189,7 @@ class Template:
         category: The category of the template (See `Template Categorization <https://developers.facebook.com/docs/whatsapp/updates-to-pricing/new-template-guidelines#template-categorization>`_).
         components: Components that make up the template. Header, BodyText, FooterText, Buttons, Cards, etc. (See `Template Components <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components>`_).
         parameter_format: The type of parameter formatting the :class:`HeaderText` and :class:`BodyText` components of the template will use. Defaults to ``POSITIONAL``.
-        message_send_ttl_seconds: The time-to-live (TTL) for the template message in seconds. (See `Time-to-live (TTL) <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#time-to-live--ttl---customization--defaults--min-max-values--and-compatibility>`_).
+        message_send_ttl_seconds: The time-to-live (TTL) for the template message in seconds. (See `Time-to-live (TTL) <https://developers.facebook.com/docs/whatsapp/business-management-api/time-to-live>`_).
     """
 
     name: str
@@ -3396,7 +3396,7 @@ class TemplateDetails(utils.APIObject):
         language: The language of the template (See `Supported Languages <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/supported-languages>`_).
         components: Components that make up the template. Header, Body, Footer, Buttons, Cards, etc. (See `Template Components <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components>`_).
         parameter_format: The type of parameter formatting the Header and BodyText components of the template will use.
-        message_send_ttl_seconds: The time-to-live (TTL) for the template message in seconds (See `Time-to-live (TTL) <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#time-to-live--ttl---customization--defaults--min-max-values--and-compatibility>`_).
+        message_send_ttl_seconds: The time-to-live (TTL) for the template message in seconds (See `Time-to-live (TTL) <https://developers.facebook.com/docs/whatsapp/business-management-api/time-to-live>`_).
         correct_category: The correct category of the template, if applicable.
         previous_category: The previous category of the template, if applicable.
         rejected_reason: The reason the message template was rejected, if applicable (See `Template Rejected Status <https://developers.facebook.com/docs/whatsapp/updates-to-pricing/new-template-guidelines#rejected-status>`_).
