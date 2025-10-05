@@ -52,7 +52,6 @@ from .others import (
     SuccessResult,
     ReplyToMessage,
     StorageConfiguration,
-    UserIdentityChangeSettings,
 )
 from .callback import _CallbackDataT, CallbackData
 from .. import utils
