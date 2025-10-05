@@ -1808,8 +1808,11 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
     async def update_business_phone_number_settings(
         self,
-        settings: BusinessPhoneNumberSettings,
+        settings: None = None,
         *,
+        calling: CallingSettings | None = None,
+        storage_configuration: StorageConfiguration | None = None,
+        user_identity_change: UserIdentityChangeSettings | None = None,
         phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
@@ -1821,15 +1824,25 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             >>> wa = WhatsApp(...)
             >>> s = await wa.get_business_phone_number_settings()
             >>> s.calling.status = CallingSettingsStatus.ENABLED
-            >>> await wa.update_business_phone_number_settings(settings)
+            >>> await wa.update_business_phone_number_settings(calling=s.calling)
 
         Args:
-            settings: The new settings to update.
+            calling: The calling settings to update (optional).
+            storage_configuration: The storage configuration to update (optional).
+            user_identity_change: The user identity change settings to update (optional).
+            settings: Deprecated, use `calling`, `storage_configuration`, and `user_identity_change` instead.
             phone_id: The phone ID to update the settings for (optional, if not provided, the client's phone ID will be used).
 
         Returns:
             Whether the settings were updated successfully.
         """
+        if settings is not None:
+            warnings.warn(
+                "The `settings` parameter is deprecated, use `calling`, `storage_configuration`, and `user_identity_change` instead.",
+            )
+            calling = settings.calling
+            storage_configuration = settings.storage_configuration
+            user_identity_change = settings.user_identity_change
         return SuccessResult.from_dict(
             await self.api.update_business_phone_number_settings(
                 phone_id=helpers.resolve_arg(
@@ -1838,7 +1851,11 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                     method_arg="phone_id",
                     client_arg="phone_id",
                 ),
-                settings=settings.to_dict(),
+                settings=BusinessPhoneNumberSettings(
+                    calling=calling,
+                    storage_configuration=storage_configuration,
+                    user_identity_change=user_identity_change,
+                ).to_dict(),
             )
         )
 
