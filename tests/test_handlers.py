@@ -191,10 +191,14 @@ def test_get_flow_request_handler():
 
 
 def test_shared_data():
+    class Raw:
+        def __init__(self):
+            self.shared_data = {}
+
     wa = WhatsApp(server=None, verify_token="xyzxyz")
     msg = Message(
         _client=wa,
-        raw={},
+        raw=Raw(),
         waba_id="456",
         id="123",
         type=types.MessageType.TEXT,

@@ -5,3 +5,4 @@ Raw Update
 
 
 .. autoclass:: RawUpdate()
+    :members: id, field, value

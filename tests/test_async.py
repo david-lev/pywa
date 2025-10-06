@@ -181,6 +181,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
             BaseUpdate.from_update,
             BaseUpdate.stop_handling,
             BaseUpdate.continue_handling,
+            BaseUpdate.handle_again,
             BaseUserMediaSync.from_flow_completion,
             SentMessageSync.from_sent_update,
             FlowRequestSync.decrypt_media,
