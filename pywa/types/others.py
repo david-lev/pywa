@@ -947,7 +947,7 @@ class StorageConfiguration:
     """
     Local storage offers an additional layer of data management control, by giving you the option to specify where your message data is stored at rest. If your company is in a regulated industry such as finance, government, or healthcare, you may prefer to have your message data stored in a specific country when at rest because of regulatory or company policies.
 
-    - Read more at `developers.facebook.com <https://devסelopers.facebook.com/docs/whatsapp/cloud-api/overview/local-storage>`_.
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/overview/local-storage>`_.
 
     Local storage is controlled by a setting enabled or disabled at a WhatsApp business phone number level. Both Cloud API and MM Lite API support local storage, and the setting will apply to any messages sent via either API if enabled.
 
