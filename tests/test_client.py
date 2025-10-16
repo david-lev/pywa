@@ -423,6 +423,23 @@ def test_detect_media_source(wa):
     assert (
         helpers.detect_media_source(io.BytesIO(b"binarydata")) == MediaSource.FILE_OBJ
     )
+    assert (
+        helpers.detect_media_source((b for b in [b"binarydata"]))
+        == MediaSource.BYTES_GEN
+    )
+    assert (
+        helpers.detect_media_source(
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABHUlEQVR42mNgoBvgx4ABYBxVSF"
+        )
+        == MediaSource.BASE64_DATA_URI
+    )
+    assert (
+        helpers.detect_media_source(
+            # valid base64 but not data URI
+            "SGVsbG8sIHdvcmxkIQ=="
+        )
+        == MediaSource.BASE64
+    )
 
 
 def test_check_for_async_callback():

@@ -19,7 +19,7 @@ from pywa._helpers import (
     MediaSource,
     _get_media_from_path,
     MediaInfo,
-    _get_media_from_open_file_obj,
+    _get_media_from_file_like_obj,
     _filter_not_uploaded_comps,
     _filter_not_uploaded_params,
     _header_format_to_media_type,
@@ -76,14 +76,19 @@ async def _get_media_from_url(
     url: str,
     dl_session: httpx.AsyncClient | None = None,
 ) -> MediaInfo:
-    res = await (dl_session or httpx.AsyncClient(follow_redirects=True)).get(url)
+    res = (
+        await (dl_session or httpx.AsyncClient(follow_redirects=True))
+        .stream(url)
+        .__aenter__()
+    )
     try:
         res.raise_for_status()
     except httpx.HTTPError as e:
         raise ValueError(f"An error occurred while downloading from {url}") from e
     return MediaInfo(
-        content=res.content,
-        filename=pathlib.Path(url).name,
+        content=await res.aiter_bytes(),
+        filename=_get_filename_from_httpx_response_headers(res.headers)
+        or pathlib.Path(url).name,
         mime_type=res.headers.get("Content-Type") or mimetypes.guess_type(url)[0],
     )
 
@@ -148,7 +153,7 @@ async def internal_upload_media(
             content = media
         case MediaSource.FILE_OBJ:
             content, fallback_filename, fallback_mime_type = (
-                _get_media_from_open_file_obj(file_obj=media)
+                _get_media_from_file_like_obj(file_obj=media)
             )
         case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
             (
@@ -251,7 +256,7 @@ async def _upload_comps_example(
             case MediaSource.BYTES:
                 raw_bytes = example
             case MediaSource.FILE_OBJ:
-                raw_bytes, filename, mime_type = _get_media_from_open_file_obj(example)
+                raw_bytes, filename, mime_type = _get_media_from_file_like_obj(example)
             case MediaSource.FILE_HANDLE:
                 for comp in comps:
                     comp._handle = example

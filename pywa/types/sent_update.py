@@ -514,7 +514,7 @@ class SentTemplateStatus(utils.StrEnum):
     """
     Represents the status of a sent template.
 
-    - Read more about template pacing on `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/message-templates/guidelines#template-pacing>`_.
+    - Read more about template pacing on `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/template-pacing>`_.
 
     Attributes:
         ACCEPTED: The template was accepted.

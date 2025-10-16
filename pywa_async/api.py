@@ -328,7 +328,7 @@ class GraphAPIAsync(GraphAPI):
     async def upload_media(
         self,
         phone_id: str,
-        media: bytes,
+        media: bytes | str | BinaryIO | Iterator[bytes],
         mime_type: str,
         filename: str,
     ) -> dict[str, str]:
@@ -345,7 +345,7 @@ class GraphAPIAsync(GraphAPI):
 
         Args:
             phone_id: The ID of the phone number to upload the media to.
-            media: media bytes or open(path, 'rb') object
+            media: media bytes, file-like object, or bytes generator
             mime_type: The type of the media file
             filename: The name of the media file
         Returns:
@@ -391,9 +391,9 @@ class GraphAPIAsync(GraphAPI):
         self,
         media_url: str,
         **httpx_kwargs,
-    ) -> tuple[bytes, httpx.Headers]:
+    ):
         """
-        Get the bytes of a media file from WhatsApp servers.
+        Get media stream from WhatsApp servers.
 
         - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#download-media>`_.
 
@@ -402,12 +402,14 @@ class GraphAPIAsync(GraphAPI):
             **httpx_kwargs: Additional arguments to pass to the httpx get request.
 
         Returns:
-            The media file bytes and the response headers.
+            A context manager containing the response stream.
         """
-        headers = self._session.headers.copy()
-        res = await self._session.get(media_url, headers=headers, **httpx_kwargs)
-        res.raise_for_status()
-        return res.content, res.headers
+        return self._session.stream(
+            method="GET",
+            url=media_url,
+            headers=self._session.headers.copy(),
+            **httpx_kwargs,
+        )
 
     async def delete_media(
         self, media_id: str, phone_number_id: str | None = None

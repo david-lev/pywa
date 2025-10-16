@@ -13,6 +13,7 @@ __all__ = [
     "resolve_callback_data",
 ]
 
+import base64
 import datetime
 import enum
 import io
@@ -20,11 +21,12 @@ import itertools
 import json
 import logging
 import mimetypes
+import os
 import pathlib
 import re
 import threading
 from concurrent import futures
-from typing import Any, BinaryIO, Iterable, TYPE_CHECKING, NamedTuple, Literal
+from typing import Any, BinaryIO, Iterable, TYPE_CHECKING, NamedTuple, Literal, Iterator
 
 import httpx
 
@@ -57,6 +59,8 @@ if TYPE_CHECKING:
 
 
 _logger = logging.getLogger(__name__)
+
+CHUNK_SIZE = 64 * 1024
 
 
 def resolve_buttons_param(
@@ -133,12 +137,22 @@ class MediaSource(enum.Enum):
     )  # https://lookaside.fbsbx.com/whatsapp_business/attachments/?mid=...
     PATH = enum.auto()  # /path/to/file or pathlib.Path
     BYTES = enum.auto()  # b"binary data"
+    BYTES_GEN = enum.auto()  # generator yielding bytes
     FILE_HANDLE = enum.auto()  # "2:c2FtcGxl..."
     FILE_OBJ = enum.auto()  # open("/path/to/file", "rb"), io.BytesIO(b"data"), etc.
+    BASE64_DATA_URI = enum.auto()  # data:...;base64,...
+    BASE64 = enum.auto()  # "iVBORw0KGgoAAAANSUhEUgAA..."
+
+
+_MEDIA_ID_PATTERN = re.compile(r"^\d:.*")
+_BASE64_DATA_URI_PATTERN = re.compile(
+    r"^data:(?P<mime>[\w/-]+);base64,(?P<data>[A-Za-z0-9+/]+={0,2})$"
+)
+_BASE64_PATTERN = re.compile(r"^[A-Za-z0-9+/]+={0,2}$")
 
 
 def detect_media_source(
-    media: str | int | Media | pathlib.Path | bytes | BinaryIO,
+    media: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
 ) -> MediaSource:
     if isinstance(media, (str, pathlib.Path, int)):
         media = str(media)
@@ -157,12 +171,18 @@ def detect_media_source(
         elif pathlib.Path(media).is_file():
             _logger.debug("Detected media source as file path")
             return MediaSource.PATH
-        elif re.match(r"^\d:.*", media):
+        elif re.match(_MEDIA_ID_PATTERN, media):
             _logger.debug("Detected media source as file handle")
             return MediaSource.FILE_HANDLE
+        elif re.match(_BASE64_DATA_URI_PATTERN, media):
+            _logger.debug("Detected media source as base64 data URI")
+            return MediaSource.BASE64_DATA_URI
+        elif len(media) % 4 == 0 and re.match(_BASE64_PATTERN, media):
+            _logger.debug("Detected media source as base64 string")
+            return MediaSource.BASE64
         else:
             raise ValueError(
-                f"String media must be a URL, existing file path, WhatsApp media ID, or file handle. Got: {media}"
+                f"String media must be a valid URL, existing file path, WhatsApp media ID, file handle, or base64 string. not: {media[:30]}{'...' if len(media) > 30 else ''}"
             )
     elif isinstance(media, Media):
         _logger.debug("Detected media source as WhatsApp Media object")
@@ -173,6 +193,11 @@ def detect_media_source(
     elif isinstance(media, io.IOBase):
         _logger.debug("Detected media source as file like object")
         return MediaSource.FILE_OBJ
+    elif callable(getattr(media, "__iter__", None)) and not isinstance(
+        media, (str, bytes, bytearray)
+    ):
+        _logger.debug("Detected media source as bytes generator")
+        return MediaSource.BYTES_GEN
     else:
         raise TypeError(f"Invalid media type: {type(media)}")
 
@@ -180,7 +205,7 @@ def detect_media_source(
 def resolve_media_param(
     *,
     wa: WhatsApp,
-    media: str | int | Media | pathlib.Path | bytes | BinaryIO,
+    media: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
     mime_type: str | None,
     filename: str | None,
     media_type: Literal["image", "video", "audio", "sticker", "document"] | None,
@@ -209,9 +234,188 @@ def resolve_media_param(
     return False, media_id, filename
 
 
+class _IteratorStream:
+    def __init__(self, iterator: Iterator[bytes], length: int | None = None):
+        self.iterator = iterator
+        self._buffer = b""
+        self._done = False
+        self.length = length
+
+    def readable(self) -> bool:
+        return True
+
+    def read(self, size: int = -1) -> bytes:
+        if self._done:
+            return b""
+
+        if size < 0:
+            chunks = [self._buffer]
+            self._buffer = b""
+            for chunk in self.iterator:
+                if not chunk:
+                    break
+                chunks.append(chunk)
+            self._done = True
+            return b"".join(chunks)
+
+        data = bytearray(self._buffer)
+        self._buffer = b""
+
+        while len(data) < size:
+            try:
+                chunk = next(self.iterator)
+            except StopIteration:
+                self._done = True
+                break
+            except Exception:
+                self._done = True
+                raise
+            if not chunk:
+                self._done = True
+                break
+            data.extend(chunk)
+
+        if len(data) > size:
+            self._buffer = bytes(data[size:])
+            data = data[:size]
+
+        return bytes(data)
+
+
+class MediaInfo(NamedTuple):
+    content: bytes | BinaryIO | _IteratorStream
+    filename: str | None
+    mime_type: str | None
+    length: int | None
+    client: httpx.Client | None = None
+    cm: Any = None  # context manager to keep alive
+
+
+def _get_media_from_url(
+    url: str,
+    dl_session: httpx.Client,
+) -> MediaInfo:
+    res = (cm := dl_session.stream("GET", url)).__enter__()
+    try:
+        res.raise_for_status()
+        return MediaInfo(
+            content=_IteratorStream(res.iter_bytes(chunk_size=CHUNK_SIZE)),
+            filename=_get_filename_from_httpx_response_headers(res.headers)
+            or pathlib.Path(url).name,
+            mime_type=res.headers.get("Content-Type") or mimetypes.guess_type(url)[0],
+            length=int(res.headers.get("Content-Length", 0)) or None,
+            cm=cm,
+        )
+    except httpx.HTTPError as e:
+        res.close()
+        raise ValueError(f"An error occurred while downloading from {url}: {e}") from e
+
+
+def _get_media_from_base64(
+    base64_str: str,
+) -> MediaInfo:
+    match = re.match(_BASE64_DATA_URI_PATTERN, base64_str)
+    if match:
+        mime_type = match.group("mime")
+        b64_data = match.group("data")
+    elif re.match(_BASE64_PATTERN, base64_str):
+        mime_type = None
+        b64_data = base64_str
+    else:
+        raise ValueError("Invalid base64 string")
+    decoded_bytes = base64.b64decode(b64_data)
+    return MediaInfo(
+        content=decoded_bytes,
+        filename=None,
+        mime_type=mime_type,
+        length=len(decoded_bytes),
+    )
+
+
+def _get_media_from_path(
+    path: pathlib.Path | str,
+) -> MediaInfo:
+    p = pathlib.Path(path)
+    return MediaInfo(
+        content=open(p, "rb"),
+        filename=p.name,
+        mime_type=mimetypes.guess_type(p)[0],
+        length=p.stat().st_size,
+    )
+
+
+def _get_media_from_file_like_obj(
+    file_obj: BinaryIO,
+) -> MediaInfo:
+    try:
+        length = os.fstat(file_obj.fileno()).st_size
+    except (AttributeError, OSError):
+        pos = file_obj.tell()
+        file_obj.seek(0, io.SEEK_END)
+        length = file_obj.tell()
+        file_obj.seek(pos)
+    except (AttributeError, OSError):
+        length = None
+    filename = getattr(file_obj, "name", None)
+    return MediaInfo(
+        content=file_obj,
+        filename=filename,
+        mime_type=mimetypes.guess_type(filename)[0] if filename else None,
+        length=length,
+    )
+
+
+def _get_filename_from_httpx_response_headers(
+    headers: httpx.Headers,
+) -> str | None:
+    content_disposition = headers.get("Content-Disposition")
+    if content_disposition:
+        parts = content_disposition.split("filename=")
+        if len(parts) > 1:
+            return parts[1].strip().strip('"').strip("'")
+    return None
+
+
+def _get_media_from_media_id_or_obj_or_url(
+    wa: WhatsApp,
+    media: str | Media,
+    media_source: MediaSource,
+) -> MediaInfo:
+    filename: str | None = None
+    mime_type: str | None = None
+    url: str | None = None
+    match media_source:
+        case MediaSource.MEDIA_ID:
+            url_res = wa.get_media_url(media_id=str(media))
+            url, mime_type = url_res.url, url_res.mime_type
+        case MediaSource.MEDIA_OBJ:
+            url_res = wa.get_media_url(media_id=media.id)
+            url, mime_type = url_res.url, url_res.mime_type
+        case MediaSource.MEDIA_URL:
+            url, mime_type = media, None
+        case _:
+            raise ValueError(
+                "media must be MediaSource.MEDIA_ID, MEDIA_OBJ or MEDIA_URL"
+            )
+
+    res = (cm := wa.api.get_media_bytes(media_url=url)).__enter__()
+    try:
+        res.raise_for_status()
+    except httpx.HTTPError as e:
+        res.close()
+        raise ValueError(f"An error occurred while downloading from {url}: {e}") from e
+    return MediaInfo(
+        content=_IteratorStream(res.iter_bytes(chunk_size=CHUNK_SIZE)),
+        filename=filename or _get_filename_from_httpx_response_headers(res.headers),
+        mime_type=mime_type or res.headers.get("Content-Type"),
+        length=int(res.headers.get("Content-Length", 0)) or None,
+        cm=cm,
+    )
+
+
 def internal_upload_media(
     *,
-    media: str | int | Media | pathlib.Path | bytes | BinaryIO,
+    media: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
     media_source: MediaSource,
     media_type: str | None,
     mime_type: str | None,
@@ -223,50 +427,65 @@ def internal_upload_media(
     """
     Internal method to upload media to WhatsApp servers. Returns a tuple of (``media_id``, ``filename``).
     """
-    content: bytes | None = None
-    fallback_filename: str | None = None
-    fallback_mime_type: str | None = None
+    media_info: MediaInfo | None = None
+    client, close_client = None, False
 
     match media_source:
         case MediaSource.EXTERNAL_URL:
-            content, fallback_filename, fallback_mime_type = _get_media_from_url(
-                url=media, dl_session=dl_session
+            client, close_client = (
+                (dl_session, False)
+                if dl_session
+                else (httpx.Client(follow_redirects=True), True)
             )
+            media_info = _get_media_from_url(url=media, dl_session=client)
         case MediaSource.PATH:
-            content, fallback_filename, fallback_mime_type = _get_media_from_path(
-                path=media
-            )
+            media_info = _get_media_from_path(path=media)
         case MediaSource.BYTES:
-            content = media
+            media_info = MediaInfo(
+                content=media, filename=None, mime_type=None, length=len(media)
+            )
         case MediaSource.FILE_OBJ:
-            content, fallback_filename, fallback_mime_type = (
-                _get_media_from_open_file_obj(file_obj=media)
-            )
+            media_info = _get_media_from_file_like_obj(file_obj=media)
         case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
-            content, fallback_filename, fallback_mime_type = (
-                _get_media_from_media_id_or_obj_or_url(
-                    wa=wa, media=media, media_source=media_source
-                )
+            media_info = _get_media_from_media_id_or_obj_or_url(
+                wa=wa, media=media, media_source=media_source
             )
+        case MediaSource.BYTES_GEN:
+            media_info = MediaInfo(
+                content=_IteratorStream(media),
+                filename=None,
+                mime_type=None,
+                length=None,
+            )
+        case MediaSource.BASE64_DATA_URI, MediaSource.BASE64:
+            media_info = _get_media_from_base64(base64_str=media)
         case _:
             raise ValueError(
-                "Media source must be URL, path, bytes, file object, or Media"
+                "Media source must be URL, file path, bytes, file-like object, WhatsApp Media, or base64 string."
             )
-    if content is None:
+    if media_info is None:
         raise ValueError(f"Failed to get media content from {media}")
     final_filename = (
         filename
-        or fallback_filename
+        or media_info.filename
         or _media_types_default_filenames.get(media_type, "file.txt")
     )
-    return wa.api.upload_media(
-        phone_id=phone_id,
-        media=content,
-        mime_type=mime_type
-        or fallback_mime_type
-        or _media_types_default_mime_types.get(media_type, "text/plain"),
-        filename=final_filename,
-    )["id"], final_filename
+    try:
+        return wa.api.upload_media(
+            phone_id=phone_id,
+            media=media_info.content,
+            mime_type=mime_type
+            or media_info.mime_type
+            or _media_types_default_mime_types.get(media_type, "text/plain"),
+            filename=final_filename,
+        )["id"], final_filename
+    finally:
+        try:  # close file or stream
+            media_info.content.close()  # type: ignore
+            if close_client:
+                client.close()  # type: ignore
+        except Exception:
+            pass
 
 
 def _filter_not_uploaded_comps(
@@ -320,89 +539,6 @@ def upload_template_media_components(
                 break
 
 
-class MediaInfo(NamedTuple):
-    content: bytes
-    filename: str | None
-    mime_type: str | None
-
-
-def _get_media_from_url(
-    url: str,
-    dl_session: httpx.Client | None = None,
-) -> MediaInfo:
-    res = (dl_session or httpx.Client(follow_redirects=True)).get(url)
-    try:
-        res.raise_for_status()
-    except httpx.HTTPError as e:
-        raise ValueError(f"An error occurred while downloading from {url}") from e
-    return MediaInfo(
-        content=res.content,
-        filename=pathlib.Path(url).name,
-        mime_type=res.headers.get("Content-Type") or mimetypes.guess_type(url)[0],
-    )
-
-
-def _get_media_from_path(
-    path: pathlib.Path | str,
-) -> MediaInfo:
-    p = pathlib.Path(path)
-    with open(p, "rb") as f:
-        return MediaInfo(
-            content=f.read(), filename=p.name, mime_type=mimetypes.guess_type(path)[0]
-        )
-
-
-def _get_media_from_open_file_obj(
-    file_obj: BinaryIO,
-) -> MediaInfo:
-    filename = getattr(file_obj, "name", None)
-    return MediaInfo(
-        content=file_obj.read(),
-        filename=filename,
-        mime_type=mimetypes.guess_type(filename)[0] if filename else None,
-    )
-
-
-def _get_filename_from_httpx_response_headers(
-    headers: httpx.Headers,
-) -> str | None:
-    content_disposition = headers.get("Content-Disposition")
-    if content_disposition:
-        parts = content_disposition.split("filename=")
-        if len(parts) > 1:
-            return parts[1].strip().strip('"').strip("'")
-    return None
-
-
-def _get_media_from_media_id_or_obj_or_url(
-    wa: WhatsApp,
-    media: str | Media,
-    media_source: MediaSource,
-) -> MediaInfo:
-    filename: str | None = None
-    mime_type: str | None = None
-    match media_source:
-        case MediaSource.MEDIA_ID:
-            url_res = wa.get_media_url(media_id=str(media))
-            url, mime_type = url_res.url, url_res.mime_type
-        case MediaSource.MEDIA_OBJ:
-            url_res = wa.get_media_url(media_id=media.id)
-            url, mime_type = url_res.url, url_res.mime_type
-        case MediaSource.MEDIA_URL:
-            url, mime_type = media, None
-        case _:
-            raise ValueError(
-                "media must be MediaSource.MEDIA_ID, MEDIA_OBJ or MEDIA_URL"
-            )
-
-    content, headers = wa.api.get_media_bytes(media_url=url)
-    return MediaInfo(
-        content=content,
-        filename=filename or _get_filename_from_httpx_response_headers(headers),
-        mime_type=mime_type or headers.get("Content-Type"),
-    )
-
-
 def _upload_comps_example(
     *,
     wa: WhatsApp,
@@ -414,34 +550,40 @@ def _upload_comps_example(
     if stop_event.is_set():
         return
     first_comp = comps[0]
-    filename: str | None = None
-    mime_type: str | None = None
-    raw_bytes: bytes | None = None
+    media_info: MediaInfo | None = None
+    client = None
 
     source = detect_media_source(example)
     match source:
         case MediaSource.EXTERNAL_URL:
-            raw_bytes, filename, mime_type = _get_media_from_url(url=example)
+            client = httpx.Client(follow_redirects=True)
+            media_info = _get_media_from_url(url=example, dl_session=client)
         case MediaSource.PATH:
-            raw_bytes, filename, mime_type = _get_media_from_path(path=example)
+            media_info = _get_media_from_path(path=example)
         case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
-            raw_bytes, filename, mime_type = _get_media_from_media_id_or_obj_or_url(
+            media_info = _get_media_from_media_id_or_obj_or_url(
                 wa=wa, media=example, media_source=source
             )
         case MediaSource.BYTES:
-            raw_bytes = example
+            media_info = MediaInfo(
+                content=example, filename=None, mime_type=None, length=len(example)
+            )
         case MediaSource.FILE_OBJ:
-            raw_bytes, filename, mime_type = _get_media_from_open_file_obj(example)
+            media_info = _get_media_from_file_like_obj(example)
         case MediaSource.FILE_HANDLE:
             for comp in comps:
                 comp._handle = example
             return
 
     try:
-        if not raw_bytes:
+        if not media_info:
             raise ValueError(
                 f"Invalid media example for component {first_comp.__class__.__name__}: {example}. "
-                "It must be a URL, file path, WhatsApp Media, or bytes."
+                "It must be a URL, file path, bytes, file-like object, WhatsApp Media, or file handle."
+            )
+        if media_info.length is None:
+            raise ValueError(
+                f"Media example for component {first_comp.__class__.__name__} must have a known length."
             )
         handle = wa.api.upload_file(
             upload_session_id=wa.api.create_upload_session(
@@ -451,17 +593,17 @@ def _upload_comps_example(
                     method_arg="app_id",
                     client_arg="app_id",
                 ),
-                file_name=filename
+                file_name=media_info.filename
                 or _template_header_formats_filename.get(
                     first_comp.format, "pywa-template-header"
                 ),
-                file_length=len(raw_bytes),
-                file_type=mime_type
+                file_length=media_info.length,
+                file_type=media_info.mime_type
                 or _template_header_formats_default_mime_types.get(
                     first_comp.format, "application/octet-stream"
                 ),
             )["id"],
-            file=raw_bytes,
+            file=media_info.content,
             file_offset=0,
         )["h"]
 
@@ -473,6 +615,10 @@ def _upload_comps_example(
         raise ValueError(
             f"Failed to upload media for component {first_comp.__class__.__name__} with example: {example if not isinstance(example, bytes) else '<bytes>'}"
         ) from e
+
+    finally:
+        if client:
+            client.close()
 
 
 def _filter_not_uploaded_params(
