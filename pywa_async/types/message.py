@@ -122,12 +122,14 @@ class Message(BaseUserUpdateAsync, _Message):
         header: str | None = None,
         body: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button]
-        | URLButton
-        | VoiceCallButton
-        | FlowButton
-        | SectionList
-        | None = None,
+        buttons: (
+            Iterable[Button]
+            | URLButton
+            | VoiceCallButton
+            | FlowButton
+            | SectionList
+            | None
+        ) = None,
         preview_url: bool = False,
         reply_to_message_id: str = None,
         tracker: str | None = None,
@@ -265,16 +267,6 @@ class Message(BaseUserUpdateAsync, _Message):
                     title=header,
                     body=body,
                     footer=footer,
-                    reply_to_message_id=reply_to_message_id,
-                )
-            case MessageType.SYSTEM:
-                return await self._client.send_message(
-                    sender=sender,
-                    to=to,
-                    text=self.system.body,
-                    header=header,
-                    footer=footer,
-                    buttons=buttons,
                     reply_to_message_id=reply_to_message_id,
                 )
             case _:

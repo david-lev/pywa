@@ -221,12 +221,14 @@ class Message(BaseUserUpdate):
         header: str | None = None,
         body: str | None = None,
         footer: str | None = None,
-        buttons: Iterable[Button]
-        | URLButton
-        | VoiceCallButton
-        | FlowButton
-        | SectionList
-        | None = None,
+        buttons: (
+            Iterable[Button]
+            | URLButton
+            | VoiceCallButton
+            | FlowButton
+            | SectionList
+            | None
+        ) = None,
         preview_url: bool = False,
         reply_to_message_id: str = None,
         tracker: str | None = None,
