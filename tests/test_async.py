@@ -348,13 +348,20 @@ def _check_docs(
             else f"Docstrings are different in {async_obj}"
         )
     except AssertionError:
-        for doc, adoc in zip(
-            sync_doc.splitlines(), async_doc.splitlines(), strict=True
-        ):
-            if doc != adoc:
-                if "async" in adoc.lower() or "await" in adoc.lower():  # async examples
-                    continue
-                raise
+        try:
+            for doc, adoc in zip(
+                sync_doc.splitlines(), async_doc.splitlines(), strict=True
+            ):
+                if doc != adoc:
+                    if (
+                        "async" in adoc.lower() or "await" in adoc.lower()
+                    ):  # async examples
+                        continue
+                    raise
+        except ValueError:  # different number of lines
+            raise AssertionError(
+                f"Method {method_name} has different docstrings in {async_obj}"
+            )
 
 
 def test_all_handlers_to_updates_are_overwritten_in_async(overrides):

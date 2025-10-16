@@ -24,7 +24,6 @@ class User(_User):
     Attributes:
         wa_id: The WhatsApp ID of the user (The phone number with the country code).
         name: The name of the user (``None`` on :class:`MessageStatus` or when message type is :class:`MessageType.SYSTEM`).
-        input: The input of the recipient is only available when sending a message.
     """
 
     _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)

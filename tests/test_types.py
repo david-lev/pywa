@@ -260,6 +260,7 @@ def test_sent_message():
         id="wamid.HBgLMTY1MDUwNzY1MjAVAgARGBI5QTNDQTVCM0Q0Q0Q2RTY3RTcA",
         to_user=types.User(wa_id="16505555555", name=None, _client=wa),
         from_phone_id=wa.phone_id,
+        input="16505555555",
     )
     assert sm.sender == wa.phone_id
     assert sm.recipient == sm.to_user.wa_id
@@ -283,6 +284,7 @@ def test_sent_message():
         to_user=types.User(wa_id="16505555555", name=None, _client=wa),
         from_phone_id=wa.phone_id,
         status=SentTemplateStatus.ACCEPTED,
+        input="16505555555",
     )
 
 

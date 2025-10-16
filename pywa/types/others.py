@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import functools
 import time
+import warnings
 
 from ..errors import WhatsAppError
 
@@ -44,13 +45,12 @@ class User:
     Attributes:
         wa_id: The WhatsApp ID of the user (The phone number with the country code).
         name: The name of the user (``None`` on :class:`MessageStatus` or when message type is :class:`MessageType.SYSTEM`).
-        input: The input of the recipient is only available when sending a message.
     """
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
     wa_id: str
     name: str | None
-    input: str | None = dataclasses.field(
+    _input: str | None = dataclasses.field(
         default=None, repr=False, hash=False, compare=False
     )
 
@@ -60,8 +60,18 @@ class User:
             _client=client,
             wa_id=data["wa_id"],
             name=data.get("profile", {}).get("name"),
-            input=data.get("input"),
+            _input=data.get("input"),
         )
+
+    @property
+    def input(self) -> None:
+        """Deprecated, access the input from the sent message instead."""
+        warnings.warn(
+            "User.input is deprecated, access the input from the sent message instead. e.g. wa.send_message(...).input",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._input
 
     def block(self) -> bool:
         """
