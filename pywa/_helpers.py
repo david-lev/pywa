@@ -26,7 +26,15 @@ import pathlib
 import re
 import threading
 from concurrent import futures
-from typing import Any, BinaryIO, Iterable, TYPE_CHECKING, NamedTuple, Literal, Iterator
+from typing import (
+    Any,
+    BinaryIO,
+    Iterable,
+    TYPE_CHECKING,
+    NamedTuple,
+    Literal,
+    Iterator,
+)
 
 import httpx
 
@@ -234,56 +242,53 @@ def resolve_media_param(
     return False, media_id, filename
 
 
-class _IteratorStream:
-    def __init__(self, iterator: Iterator[bytes], length: int | None = None):
-        self.iterator = iterator
-        self._buffer = b""
-        self._done = False
-        self.length = length
+class GeneratorStreamer:
+    """
+    A MEMORY-EFFICIENT, buffer-free file-like wrapper for a byte generator.
+    Ignores read(size) to prevent buffering, relying on the fixed-chunk size
+    of the underlying generator.
 
-    def readable(self) -> bool:
-        return True
+    httpx supports streaming uploads from such file-like objects.
+    They also support generators directly, but not when using multipart/form-data.
+    This class allows streaming multipart/form-data uploads from a byte generator
+    without loading the entire content into memory.
 
-    def read(self, size: int = -1) -> bytes:
-        if self._done:
+    Note: seek() only supports seeking to the end to get the length,
+    and tell() to get the current read position.
+    """
+
+    def __init__(self, generator: Iterator[bytes], length: int | None = None):
+        self._iterator = itertools.chain(generator, [b""])
+        self._length = length
+        self._bytes_read = 0
+
+    def read(self, _) -> bytes:
+        try:
+            chunk = next(self._iterator)
+        except StopIteration:
             return b""
+        self._bytes_read += len(chunk)
+        return chunk
 
-        if size < 0:
-            chunks = [self._buffer]
-            self._buffer = b""
-            for chunk in self.iterator:
-                if not chunk:
-                    break
-                chunks.append(chunk)
-            self._done = True
-            return b"".join(chunks)
+    def seek(self, offset: int, whence: int = 0) -> int:
+        if (
+            offset == 0 and whence == os.SEEK_END
+        ):  # pass https://github.com/encode/httpx/blob/def4778d622e8bf49a9fea4dda78cca4cf666d8a/httpx/_utils.py#L95 check
+            if self._length is None:
+                raise OSError("Length unknown; cannot seek to end.")
+            return self._length
 
-        data = bytearray(self._buffer)
-        self._buffer = b""
+        if offset == 0 and whence == os.SEEK_SET:
+            return self._bytes_read
 
-        while len(data) < size:
-            try:
-                chunk = next(self.iterator)
-            except StopIteration:
-                self._done = True
-                break
-            except Exception:
-                self._done = True
-                raise
-            if not chunk:
-                self._done = True
-                break
-            data.extend(chunk)
+        raise OSError("Cannot seek a streaming object.")
 
-        if len(data) > size:
-            self._buffer = bytes(data[size:])
-            data = data[:size]
-
-        return bytes(data)
+    def tell(self) -> int:
+        return self._bytes_read
 
 
 class MediaInfo(NamedTuple):
-    content: bytes | BinaryIO | _IteratorStream
+    content: bytes | BinaryIO | GeneratorStreamer
     filename: str | None
     mime_type: str | None
     length: int | None
@@ -298,12 +303,15 @@ def _get_media_from_url(
     res = (cm := dl_session.stream("GET", url)).__enter__()
     try:
         res.raise_for_status()
+        length: int | None = int(res.headers.get("Content-Length", 0)) or None
         return MediaInfo(
-            content=_IteratorStream(res.iter_bytes(chunk_size=CHUNK_SIZE)),
+            content=GeneratorStreamer(
+                res.iter_bytes(chunk_size=CHUNK_SIZE), length=length
+            ),
             filename=_get_filename_from_httpx_response_headers(res.headers)
             or pathlib.Path(url).name,
             mime_type=res.headers.get("Content-Type") or mimetypes.guess_type(url)[0],
-            length=int(res.headers.get("Content-Length", 0)) or None,
+            length=length,
             cm=cm,
         )
     except httpx.HTTPError as e:
@@ -404,11 +412,12 @@ def _get_media_from_media_id_or_obj_or_url(
     except httpx.HTTPError as e:
         res.close()
         raise ValueError(f"An error occurred while downloading from {url}: {e}") from e
+    length: int | None = int(res.headers.get("Content-Length", 0)) or None
     return MediaInfo(
-        content=_IteratorStream(res.iter_bytes(chunk_size=CHUNK_SIZE)),
+        content=GeneratorStreamer(res.iter_bytes(chunk_size=CHUNK_SIZE), length=length),
         filename=filename or _get_filename_from_httpx_response_headers(res.headers),
         mime_type=mime_type or res.headers.get("Content-Type"),
-        length=int(res.headers.get("Content-Length", 0)) or None,
+        length=length,
         cm=cm,
     )
 
@@ -452,7 +461,7 @@ def internal_upload_media(
             )
         case MediaSource.BYTES_GEN:
             media_info = MediaInfo(
-                content=_IteratorStream(media),
+                content=GeneratorStreamer(media),
                 filename=None,
                 mime_type=None,
                 length=None,
