@@ -14,7 +14,15 @@ import logging
 import mimetypes
 import pathlib
 from types import ModuleType
-from typing import BinaryIO, Iterable, Literal, Any, AsyncGenerator
+from typing import (
+    BinaryIO,
+    Iterable,
+    Literal,
+    Any,
+    AsyncGenerator,
+    Iterator,
+    AsyncIterator,
+)
 
 import httpx
 
@@ -355,12 +363,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
              `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the message (optional).
             preview_url: Whether to show a preview of the URL in the message (if any).
-            reply_to_message_id: The message ID to reply to (optional).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            reply_to_message_id: The message ID to quote (optional).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`~pywa.types.callback.CallbackData`).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent message.
+            The sent text message.
         """
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
@@ -408,7 +416,14 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def send_image(
         self,
         to: str | int,
-        image: str | int | Media | pathlib.Path | bytes | BinaryIO,
+        image: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
@@ -436,17 +451,13 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Args:
             to: The phone ID of the WhatsApp user.
-            image: The image to send (either a media ID, URL, file path, bytes, or an open file object. When buttons are
-             provided, only URL is supported).
-            caption: The caption of the image (required when buttons are provided,
-             `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
-            footer: The footer of the message (if buttons are provided, optional,
-             `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
+            image: The image to send (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
+            caption: The caption of the image (required when buttons are provided, `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
+            footer: The footer of the message (if buttons are provided, optional, `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the image (optional).
-            reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
-            mime_type: The mime type of the image (optional, required when sending an image as bytes or a file object,
-             or file path that does not have an extension).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            reply_to_message_id: The message ID to quote (optional).
+            mime_type: The mime type of the image (optional, required when sending an image as bytes, or file path that does not have an extension).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`~pywa.types.callback.CallbackData`).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
@@ -511,7 +522,14 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def send_video(
         self,
         to: str | int,
-        video: str | int | Media | pathlib.Path | bytes | BinaryIO,
+        video: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
@@ -539,21 +557,17 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Args:
             to: The phone ID of the WhatsApp user.
-            video: The video to send (either a media ID, URL, file path, bytes, or an open file object. When buttons are
-             provided, only URL is supported).
-            caption: The caption of the video (required when sending a video with buttons,
-             `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
-            footer: The footer of the message (if buttons are provided, optional,
-             `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
+            video: The video to send (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
+            caption: The caption of the video (required when sending a video with buttons, `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
+            footer: The footer of the message (if buttons are provided, optional, `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the video (optional).
-            reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
-            mime_type: The mime type of the video (optional, required when sending a video as bytes or a file object,
-             or file path that does not have an extension).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            reply_to_message_id: The message ID to quote (optional).
+            mime_type: The mime type of the video (optional, required when sending a video as bytes or file path that does not have an extension).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`~pywa.types.callback.CallbackData`).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent video.
+            The sent video message.
         """
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
@@ -613,7 +627,14 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def send_document(
         self,
         to: str | int,
-        document: str | int | Media | pathlib.Path | bytes | BinaryIO,
+        document: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
         filename: str | None = utils.MISSING,
         caption: str | None = None,
         footer: str | None = None,
@@ -642,22 +663,18 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Args:
             to: The phone ID of the WhatsApp user.
-            document: The document to send (either a media ID, URL, file path, bytes, or an open file object. When
-             buttons are provided, only URL is supported).
-            filename: Document filename, with extension. The WhatsApp client will use an appropriate file type icon based on the extension (Optional, if not provided, if possible, the filename will be extracted from the URL or file path. pass ``None`` to skip this behavior).
-            caption: The caption of the document (required when sending a document with buttons,
-             `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
-            footer: The footer of the message (if buttons are provided, optional,
-             `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
+            document: The document to send (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
+            filename: Document filename, with extension. The WhatsApp client will use an appropriate file type icon based on the extension (Optional, if not provided, if possible, the filename will be extracted from the media. pass ``None`` to skip this behavior).
+            caption: The caption of the document (required when sending a document with buttons, `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
+            footer: The footer of the message (if buttons are provided, optional, `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the document (optional).
-            reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
-            mime_type: The mime type of the document (optional, required when sending a document as bytes or a file
-             object, or file path that does not have an extension).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            reply_to_message_id: The message ID to quote (optional).
+            mime_type: The mime type of the document (optional, required when sending a document as bytes or file path that does not have an extension).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`~pywa.types.callback.CallbackData`).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent document.
+            The sent document message.
         """
 
         sender = helpers.resolve_arg(
@@ -724,7 +741,14 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def send_audio(
         self,
         to: str | int,
-        audio: str | int | Media | pathlib.Path | bytes | BinaryIO,
+        audio: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
         *,
         mime_type: str | None = None,
         reply_to_message_id: str | None = None,
@@ -747,15 +771,14 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Args:
             to: The phone ID of the WhatsApp user.
-            audio: The audio file to send (either a media ID, URL, file path, bytes, or an open file object).
-            mime_type: The mime type of the audio file (optional, required when sending an audio file as bytes or a file
-             object, or file path that does not have an extension).
-            reply_to_message_id: The message ID to reply to (optional).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            audio: The audio file to send (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
+            mime_type: The mime type of the audio file (optional, required when sending an audio as bytes or file path that does not have an extension).
+            reply_to_message_id: The message ID to quote (optional).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`~pywa.types.callback.CallbackData`).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent audio file.
+            The sent audio message.
         """
 
         sender = helpers.resolve_arg(
@@ -785,7 +808,14 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def send_sticker(
         self,
         to: str | int,
-        sticker: str | int | Media | pathlib.Path | bytes | BinaryIO,
+        sticker: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
         *,
         mime_type: str | None = None,
         reply_to_message_id: str | None = None,
@@ -810,15 +840,14 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Args:
             to: The phone ID of the WhatsApp user.
-            sticker: The sticker to send (either a media ID, URL, file path, bytes, or an open file object).
-            mime_type: The mime type of the sticker (optional, required when sending a sticker as bytes or a file
-             object, or file path that does not have an extension).
-            reply_to_message_id: The message ID to reply to (optional).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            sticker: The sticker to send (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
+            mime_type: The mime type of the sticker (optional, required when sending a sticker as bytes or file path that does not have an extension).
+            reply_to_message_id: The message ID to quote (optional).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`~pywa.types.callback.CallbackData`).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent message.
+            The sent sticker message.
         """
 
         sender = helpers.resolve_arg(
@@ -879,11 +908,11 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             to: The phone ID of the WhatsApp user.
             emoji: The emoji to react with.
             message_id: The message ID to react to.
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`~pywa.types.callback.CallbackData`).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent message (You can't use this message id to remove the reaction or perform any other
+            The sent reaction message (You can't use this message id to remove the reaction or perform any other
             action on it. instead, use the message ID of the message you reacted to).
         """
         sender = helpers.resolve_arg(
@@ -932,11 +961,11 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Args:
             to: The phone ID of the WhatsApp user.
             message_id: The message ID to remove the reaction from.
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`~pywa.types.callback.CallbackData`).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent message (You can't use this message id to re-react or perform any other action on it.
+            The sent (un)reaction message (You can't use this message id to re-react or perform any other action on it.
             instead, use the message ID of the message you unreacted to).
         """
         sender = helpers.resolve_arg(
@@ -988,12 +1017,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             longitude: The longitude of the location.
             name: The name of the location (optional).
             address: The address of the location (optional).
-            reply_to_message_id: The message ID to reply to (optional).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            reply_to_message_id: The message ID to quote (optional).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`~pywa.types.callback.CallbackData`).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent location.
+            The sent location message.
         """
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
@@ -1034,7 +1063,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Example:
 
             >>> wa = WhatsApp(...)
-            >>> await wa.request_location(
+            >>> wa.request_location(
             ...     to='1234567890',
             ...     text='Please share your location with us.',
             ... )
@@ -1042,12 +1071,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Args:
             to: The phone ID of the WhatsApp user.
             text: The text to send with the button.
-            reply_to_message_id: The message ID to reply to (optional).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            reply_to_message_id: The message ID to quote (optional).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`~pywa.types.callback.CallbackData`).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent message.
+            The sent location request message.
         """
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
@@ -1102,12 +1131,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Args:
             to: The phone ID of the WhatsApp user.
             contact: The contact/s to send.
-            reply_to_message_id: The message ID to reply to (optional).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            reply_to_message_id: The message ID to quote (optional).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`~pywa.types.callback.CallbackData`).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent message.
+            The sent contact/s message.
         """
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
@@ -1162,12 +1191,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
             thumbnail_product_sku: Item SKU number. Labeled as Content ID in the Commerce Manager. The thumbnail of this item will be used as the message's header image. If omitted, the product image of the first item in your catalog will be used.
-            reply_to_message_id: The message ID to reply to (optional).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            reply_to_message_id: The message ID to quote (optional).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`~pywa.types.callback.CallbackData`).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent message.
+            The sent catalog message.
         """
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
@@ -1238,12 +1267,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             sku: The product SKU to send.
             body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
-            reply_to_message_id: The message ID to reply to (optional).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            reply_to_message_id: The message ID to quote (optional).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`~pywa.types.callback.CallbackData`).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent message.
+            The sent product message.
         """
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
@@ -1319,12 +1348,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             title: The title of the product list (up to 60 characters).
             body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
-            reply_to_message_id: The message ID to reply to (optional).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            reply_to_message_id: The message ID to quote (optional).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`~pywa.types.callback.CallbackData`).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent message.
+            The sent products message.
         """
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
@@ -1429,12 +1458,20 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             )
         )
 
+    # noinspection PyMethodOverriding
     async def upload_media(
         self,
-        media: str | int | pathlib.Path | bytes | BinaryIO | Media,
+        media: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
         mime_type: str | None = None,
         filename: str | None = None,
-        dl_session: httpx.Client | None = None,
+        dl_session: httpx.AsyncClient | None = None,
         *,
         media_type: Literal["image", "video", "audio", "document", "sticker"]
         | None = None,
@@ -1463,11 +1500,10 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             ... )
 
         Args:
-            media: The media to upload (can be a URL, bytes, or a file path).
+            media: The media to upload (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
             mime_type: The MIME type of the media.
             filename: The file name of the media.
-            dl_session: A httpx client to use when downloading the media from a URL (optional, if not provided, a
-             new session will be created).
+            dl_session: A httpx client to use when downloading the media from a URL (optional, for custom settings like proxies, headers, etc. If not provided, a new client will be created for the download).
             media_type: The type of the media (optional, for default mimetype and filename).
             phone_id: The phone ID to upload the media to (optional, if not provided, the client's phone ID will be used).
 
@@ -1515,7 +1551,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             media_id: The media ID.
 
         Returns:
-            A MediaResponse object with the media URL.
+            A MediaURL object with the media URL.
         """
         res = await self.api.get_media_url(media_id=str(media_id))
         return MediaURL(
@@ -2399,7 +2435,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             use_mm_lite_api: Whether to use `Marketing Messages Lite API <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api>`_ (optional, default: False).
             message_activity_sharing: Whether to share message activities (e.g. message read) for that specific marketing message to Meta to help optimize marketing messages (optional, only if ``use_mm_lite_api`` is True).
             reply_to_message_id: The ID of the message to reply to (optional).
-            tracker: A callback data to track the message (optional, can be a string or a :class:`CallbackData` object).
+            tracker: A callback data to track the message (optional, can be a string or a :class:`~pywa.types.callback.CallbackData` object).
             sender: The phone ID to send the template from (optional, if not provided, the client's phone ID will be used).
         """
         sender = helpers.resolve_arg(
@@ -3627,7 +3663,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Args:
             to: The number being called (callee)
             sdp: Contains the session description protocol (SDP) type and description language.
-            tracker: The data to track the call with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            tracker: The data to track the call with (optional, up to 512 characters, for complex data You can use :class:`~pywa.types.callback.CallbackData`).
             phone_id: The phone ID to initiate the call from (optional, if not provided, the client's phone ID will be used).
 
         Returns:
@@ -3693,7 +3729,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Args:
             call_id: The ID of the call to accept.
             sdp: Contains the session description protocol (SDP) type and description language.
-            tracker: The data to track the call with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            tracker: The data to track the call with (optional, up to 512 characters, for complex data You can use :class:`~pywa.types.callback.CallbackData`).
             phone_id: The phone ID to accept the call from (optional, if not provided, the client's phone ID will be used).
 
         Returns:

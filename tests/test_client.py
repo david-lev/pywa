@@ -427,6 +427,14 @@ def test_detect_media_source(wa):
         helpers.detect_media_source((b for b in [b"binarydata"]))
         == MediaSource.BYTES_GEN
     )
+
+    async def agen():
+        yield b"binarydata"
+
+    assert (
+        helpers.detect_media_source(x async for x in agen())
+        == MediaSource.ASYNC_BYTES_GEN
+    )
     assert (
         helpers.detect_media_source(
             "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABHUlEQVR42mNgoBvgx4ABYBxVSF"

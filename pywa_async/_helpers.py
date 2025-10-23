@@ -25,6 +25,8 @@ from pywa._helpers import (
     _header_format_to_media_type,
     get_filename_from_httpx_response_headers,
     DOWNLOAD_CHUNK_SIZE,
+    GeneratorStreamer,
+    get_media_from_base64,
 )
 from pywa.types.templates import (
     TemplateBaseComponent,
@@ -33,7 +35,7 @@ from pywa.types.templates import (
     BaseParams,
 )
 
-from typing import BinaryIO, Literal, TYPE_CHECKING, Coroutine
+from typing import BinaryIO, Literal, TYPE_CHECKING, Coroutine, Iterator, AsyncIterator
 
 from .types.media import Media
 
@@ -44,7 +46,14 @@ if TYPE_CHECKING:
 async def resolve_media_param(
     *,
     wa: WhatsApp,
-    media: str | int | Media | pathlib.Path | bytes | BinaryIO,
+    media: str
+    | int
+    | Media
+    | pathlib.Path
+    | bytes
+    | BinaryIO
+    | Iterator[bytes]
+    | AsyncIterator[bytes],
     mime_type: str | None,
     filename: str | None,
     media_type: Literal["image", "video", "audio", "sticker", "document"] | None,
@@ -73,34 +82,32 @@ async def resolve_media_param(
     return False, media_id, filename
 
 
-async def _get_media_from_url(
+async def get_media_from_url(
     url: str,
-    dl_session: httpx.AsyncClient | None = None,
+    dl_session: httpx.AsyncClient,
 ) -> MediaInfo:
-    res = (
-        await (dl_session or httpx.AsyncClient(follow_redirects=True))
-        .stream(url)
-        .__aenter__()
-    )
+    res = await dl_session.get(url, follow_redirects=True)
     try:
         res.raise_for_status()
     except httpx.HTTPError as e:
         raise ValueError(f"An error occurred while downloading from {url}") from e
     return MediaInfo(
-        content=await res.aiter_bytes(),
+        content=res.content,
         filename=get_filename_from_httpx_response_headers(res.headers)
         or pathlib.Path(url).name,
         mime_type=res.headers.get("Content-Type") or mimetypes.guess_type(url)[0],
+        length=len(res.content),
     )
 
 
-async def _get_media_from_media_id_or_obj_or_url(
+async def get_media_from_media_id_or_obj_or_url(
     wa: WhatsApp,
     media: str | Media,
     media_source: MediaSource,
 ) -> MediaInfo:
     filename: str | None = None
     mime_type: str | None = None
+    url: str | None = None
     match media_source:
         case MediaSource.MEDIA_ID:
             url_res = await wa.get_media_url(media_id=str(media))
@@ -110,81 +117,113 @@ async def _get_media_from_media_id_or_obj_or_url(
             url, mime_type = url_res.url, url_res.mime_type
         case MediaSource.MEDIA_URL:
             url, mime_type = media, None
-        case _:
-            raise ValueError(
-                "media must be MediaSource.MEDIA_ID, MEDIA_OBJ or MEDIA_URL"
-            )
+    if url is None:
+        raise ValueError("Failed to resolve media URL")
 
-    content, headers = await wa.api.stream_media_bytes(media_url=url)
+    async with wa.api.stream_media_bytes(media_url=url) as res:
+        try:
+            res.raise_for_status()
+        except httpx.HTTPError as e:
+            raise ValueError(f"An error occurred while downloading from {url}") from e
+
     return MediaInfo(
-        content=content,
-        filename=filename or get_filename_from_httpx_response_headers(headers),
-        mime_type=mime_type or headers.get("Content-Type"),
+        content=await res.aread(),
+        filename=filename or get_filename_from_httpx_response_headers(res.headers),
+        mime_type=mime_type or res.headers.get("Content-Type"),
+        length=int(res.headers.get("Content-Length", "0")) or None,
     )
 
 
 async def internal_upload_media(
     *,
-    media: str | int | Media | pathlib.Path | bytes | BinaryIO,
+    media: str
+    | int
+    | Media
+    | pathlib.Path
+    | bytes
+    | BinaryIO
+    | Iterator[bytes]
+    | AsyncIterator[bytes],
     media_source: MediaSource,
     media_type: str | None,
     mime_type: str | None,
     filename: str | None,
     wa: WhatsApp,
     phone_id: str,
-    dl_session: httpx.AsyncClient | None = None,
+    dl_session: httpx.Client | None = None,
 ) -> tuple[str, str]:
     """
     Internal method to upload media to WhatsApp servers. Returns a tuple of (``media_id``, ``filename``).
     """
-    content: bytes | None = None
-    fallback_filename: str | None = None
-    fallback_mime_type: str | None = None
+    media_info: MediaInfo | None = None
+    client, close_client = None, False
 
     match media_source:
         case MediaSource.EXTERNAL_URL:
-            content, fallback_filename, fallback_mime_type = await _get_media_from_url(
-                url=media, dl_session=dl_session
+            client, close_client = (
+                (dl_session, False) if dl_session else (httpx.AsyncClient(), True)
+            )
+            media_info = await get_media_from_url(
+                url=media,
+                dl_session=client,
             )
         case MediaSource.PATH:
-            content, fallback_filename, fallback_mime_type = get_media_from_path(
-                path=media
-            )
+            media_info = get_media_from_path(path=media)
         case MediaSource.BYTES:
-            content = media
+            media_info = MediaInfo(
+                content=media, filename=None, mime_type=None, length=len(media)
+            )
         case MediaSource.FILE_OBJ:
-            content, fallback_filename, fallback_mime_type = (
-                get_media_from_file_like_obj(file_obj=media)
-            )
+            media_info = get_media_from_file_like_obj(file_obj=media)
         case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
-            (
-                content,
-                fallback_filename,
-                fallback_mime_type,
-            ) = await _get_media_from_media_id_or_obj_or_url(
-                wa=wa, media=media, media_source=media_source
+            media_info = await get_media_from_media_id_or_obj_or_url(
+                wa=wa,
+                media=media,
+                media_source=media_source,
             )
+        case MediaSource.BYTES_GEN:
+            media_info = MediaInfo(
+                content=GeneratorStreamer(media),
+                filename=None,
+                mime_type=None,
+                length=None,
+            )
+        case MediaSource.ASYNC_BYTES_GEN:
+            content = b"".join([chunk async for chunk in media])
+            media_info = MediaInfo(
+                content=content,
+                filename=None,
+                mime_type=None,
+                length=len(content),
+            )
+        case MediaSource.BASE64_DATA_URI, MediaSource.BASE64:
+            media_info = get_media_from_base64(base64_str=media)
         case _:
             raise ValueError(
-                "Media source must be URL, path, bytes, file object, or Media"
+                "Media source must be URL, file path, bytes, bytes generator, file-like object, WhatsApp Media, or base64 string."
             )
-    if content is None:
+    if media_info is None:
         raise ValueError(f"Failed to get media content from {media}")
     final_filename = (
         filename
-        or fallback_filename
+        or media_info.filename
         or _media_types_default_filenames.get(media_type, "file.txt")
     )
-    return (
-        await wa.api.upload_media(
+    try:
+        return wa.api.upload_media(
             phone_id=phone_id,
-            media=content,
+            media=media_info.content,
             mime_type=mime_type
-            or fallback_mime_type
+            or media_info.mime_type
             or _media_types_default_mime_types.get(media_type, "text/plain"),
             filename=final_filename,
-        )
-    )["id"], final_filename
+        )["id"], final_filename
+    finally:
+        try:  # close file or stream
+            if close_client:
+                client.close()  # type: ignore
+        except Exception:
+            pass
 
 
 async def upload_template_media_components(
@@ -231,66 +270,98 @@ async def _run_all_and_cancel_on_exception(*coros: Coroutine):
 async def _upload_comps_example(
     *,
     wa: WhatsApp,
-    example: str | Media | pathlib.Path | bytes | BinaryIO,
+    example: str
+    | int
+    | Media
+    | pathlib.Path
+    | bytes
+    | BinaryIO
+    | Iterator[bytes]
+    | AsyncIterator[bytes],
     comps: list[_BaseMediaHeaderComponent],
     app_id: int | str | None,
 ) -> None:
     first_comp = comps[0]
-    filename: str | None = None
-    mime_type: str | None = None
-    raw_bytes: bytes | None = None
-    try:
-        source = detect_media_source(example)
-        match source:
-            case MediaSource.EXTERNAL_URL:
-                raw_bytes, filename, mime_type = await _get_media_from_url(url=example)
-            case MediaSource.PATH:
-                raw_bytes, filename, mime_type = get_media_from_path(path=example)
-            case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
-                (
-                    raw_bytes,
-                    filename,
-                    mime_type,
-                ) = await _get_media_from_media_id_or_obj_or_url(
-                    wa=wa, media=example, media_source=source
-                )
-            case MediaSource.BYTES:
-                raw_bytes = example
-            case MediaSource.FILE_OBJ:
-                raw_bytes, filename, mime_type = get_media_from_file_like_obj(example)
-            case MediaSource.FILE_HANDLE:
-                for comp in comps:
-                    comp._handle = example
-                return
+    media_info: MediaInfo | None = None
+    client = None
 
-        if not raw_bytes:
+    source = detect_media_source(example)
+    match source:
+        case MediaSource.EXTERNAL_URL:
+            client = httpx.AsyncClient()
+            media_info = await get_media_from_url(
+                url=example,
+                dl_session=client,
+            )
+        case MediaSource.PATH:
+            media_info = get_media_from_path(path=example)
+        case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
+            media_info = await get_media_from_media_id_or_obj_or_url(
+                wa=wa,
+                media=example,
+                media_source=source,
+            )
+        case MediaSource.BYTES:
+            media_info = MediaInfo(
+                content=example, filename=None, mime_type=None, length=len(example)
+            )
+        case MediaSource.FILE_OBJ:
+            media_info = get_media_from_file_like_obj(example)
+        case MediaSource.BYTES_GEN:
+            all_bytes = b"".join(example)
+            media_info = MediaInfo(
+                content=all_bytes,
+                filename=None,
+                mime_type=None,
+                length=len(all_bytes),
+            )
+        case MediaSource.ASYNC_BYTES_GEN:
+            all_bytes = b"".join([chunk async for chunk in example])
+            media_info = MediaInfo(
+                content=all_bytes,
+                filename=None,
+                mime_type=None,
+                length=len(all_bytes),
+            )
+        case MediaSource.BASE64_DATA_URI | MediaSource.BASE64:
+            media_info = get_media_from_base64(base64_str=example)
+        case MediaSource.FILE_HANDLE:
+            for comp in comps:
+                comp._handle = example
+            return
+
+    try:
+        if not media_info:
             raise ValueError(
                 f"Invalid media example for component {first_comp.__class__.__name__}: {example}. "
-                "It must be a URL, file path, WhatsApp Media, or bytes."
+                "It must be a URL, file path, bytes, file-like object, WhatsApp Media, or file handle."
             )
-        app_id = resolve_arg(
-            wa=wa,
-            value=app_id,
-            method_arg="app_id",
-            client_arg="app_id",
-        )
+        if media_info.length is None:
+            raise ValueError(
+                f"Media example for component {first_comp.__class__.__name__} must have a known length."
+            )
         handle = (
             await wa.api.upload_file(
                 upload_session_id=(
                     await wa.api.create_upload_session(
-                        app_id=app_id,
-                        file_name=filename
+                        app_id=resolve_arg(
+                            wa=wa,
+                            value=app_id,
+                            method_arg="app_id",
+                            client_arg="app_id",
+                        ),
+                        file_name=media_info.filename
                         or _template_header_formats_filename.get(
                             first_comp.format, "pywa-template-header"
                         ),
-                        file_length=len(raw_bytes),
-                        file_type=mime_type
+                        file_length=media_info.length,
+                        file_type=media_info.mime_type
                         or _template_header_formats_default_mime_types.get(
                             first_comp.format, "application/octet-stream"
                         ),
                     )
                 )["id"],
-                file=raw_bytes,
+                file=media_info.content,
                 file_offset=0,
             )
         )["h"]
@@ -302,6 +373,10 @@ async def _upload_comps_example(
         raise ValueError(
             f"Failed to upload media for component {first_comp.__class__.__name__} with example: {example if not isinstance(example, bytes) else '<bytes>'}"
         ) from e
+
+    finally:
+        if client:
+            await client.aclose()
 
 
 async def upload_template_media_params(
@@ -335,7 +410,14 @@ async def _upload_params_media(
     *,
     wa: WhatsApp,
     sender: str,
-    media: str | Media | pathlib.Path | bytes | BinaryIO,
+    media: str
+    | int
+    | Media
+    | pathlib.Path
+    | bytes
+    | BinaryIO
+    | Iterator[bytes]
+    | AsyncIterator[bytes],
     params: list[_BaseMediaParams],
 ) -> None:
     first_param = params[0]

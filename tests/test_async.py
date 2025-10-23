@@ -139,6 +139,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
     skip_methods = [
         m.__name__
         for m in {
+            WhatsAppSync.stream_media,
             WhatsAppSync.add_handlers,
             WhatsAppSync.remove_handlers,
             WhatsAppSync.remove_callbacks,
@@ -149,6 +150,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
             WhatsAppSync._check_for_async_callback,
             WhatsAppSync._check_for_async_filters,
             WhatsAppSync._flow_req_cls,
+            GraphAPISync.stream_media_bytes,
             ServerSync._check_and_prepare_update,
             ServerSync._after_handling_update,
             ServerSync._delayed_register_callback_url,
@@ -236,6 +238,17 @@ def test_same_signature(overrides):
             (FlowRequestSync.decrypt_media, ("dl_session",)),
             (WhatsAppSync.webhook_update_handler, ("self",)),
             (WhatsAppSync.webhook_challenge_handler, ("self",)),
+            (WhatsAppSync.send_image, ("image",)),
+            (MessageSync.reply_image, ("image",)),
+            (WhatsAppSync.send_video, ("video",)),
+            (MessageSync.reply_video, ("video",)),
+            (WhatsAppSync.send_document, ("document",)),
+            (MessageSync.reply_document, ("document",)),
+            (WhatsAppSync.send_audio, ("audio",)),
+            (MessageSync.reply_audio, ("audio",)),
+            (WhatsAppSync.send_sticker, ("sticker",)),
+            (MessageSync.reply_sticker, ("sticker",)),
+            (WhatsAppSync.upload_media, ("media", "download_chunk_size", "dl_session")),
         )
     }
     for sync_obj, async_obj in overrides:
@@ -267,7 +280,11 @@ def test_same_signature(overrides):
 
 
 def test_same_return_annotation(overrides):
-    skip_methods = []
+    skip_methods = [
+        WhatsAppSync.stream_media.__name__,
+        GraphAPISync.stream_media_bytes.__name__,
+        MediaSync.stream.__name__,
+    ]
     for sync_obj, async_obj in overrides:
         for method_name in get_obj_methods_names(sync_obj):
             if method_name in skip_methods:
@@ -284,6 +301,7 @@ def test_same_return_annotation(overrides):
 def test_same_docstring(overrides):
     skip_methods = [
         "wait_for_completion",
+        "upload_media",
         "_api_cls",
         "_usr_cls",
         "_httpx_client",

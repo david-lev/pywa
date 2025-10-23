@@ -19,13 +19,17 @@ import datetime
 import enum
 import mimetypes
 import pathlib
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Generator
 
 from .others import SuccessResult
 from .. import utils
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
+
+BUSINESS_UPLOADS_EXPIRATION_DAYS = 30
+USER_UPLOADS_EXPIRATION_DAYS = 7
+URL_EXPIRATION_MINUTES = 5
 
 
 class UploadedBy(enum.Enum):
@@ -37,11 +41,153 @@ class UploadedBy(enum.Enum):
         USER: The media was uploaded by a user (available for 7 days).
     """
 
-    BUSINESS = 30
-    USER = 7
+    BUSINESS = BUSINESS_UPLOADS_EXPIRATION_DAYS
+    USER = USER_UPLOADS_EXPIRATION_DAYS
 
 
-class Media:
+class _MediaActions:
+    _client: WhatsApp
+    id: str
+
+    def get_media_url(self) -> str:
+        """Gets the URL of the media. (expires after 5 minutes)"""
+        if getattr(self, "url", None):
+            if (
+                datetime.datetime.now(datetime.timezone.utc) - self.uploaded_at
+            ) < datetime.timedelta(minutes=URL_EXPIRATION_MINUTES):
+                return self.url
+        return self._client.get_media_url(media_id=self.id).url
+
+    def download(
+        self,
+        *,
+        path: str | pathlib.Path | None = None,
+        filename: str | None = None,
+        in_memory: None = None,
+        chunk_size: int | None = None,
+        **httpx_kwargs,
+    ) -> pathlib.Path:
+        """
+        Download a media file from WhatsApp servers.
+
+        - Same as :func:`~pywa.client.WhatsApp.download_media` with ``media_url=media.get_media_url()``
+
+        >>> from pywa import WhatsApp, types, filters
+        >>> wa = WhatsApp(...)
+
+        >>> @wa.on_message(filters.image)
+        ... def on_message(_: WhatsApp, msg: types.Message):
+        ...     msg.image.download(path=pathlib.Path('/path/to/save'), filename='my_image.jpg')
+
+        Args:
+            path: The path where to save the file (if not provided, the current working directory will be used).
+            filename: The name of the file to save (if not provided, it will be extracted from the ``Content-Disposition`` header or a SHA256 hash of the URL will be used).
+            chunk_size: The size (in bytes) of each chunk to read when downloading the media (default: ``64KB``).
+            in_memory: Deprecated: Use :py:func:`~pywa.client.WhatsApp.get_media_bytes` or :py:func:`~pywa.client.WhatsApp.stream_media` instead. If True, the file will be returned as bytes instead of being saved to disk.
+            **httpx_kwargs: Additional arguments to pass to ``httpx.get(...)``.
+
+        Returns:
+            The path of the saved file.
+        """
+        return self._client.download_media(
+            url=self.get_media_url(),
+            path=path,
+            filename=filename,
+            in_memory=in_memory,
+            chunk_size=chunk_size,
+            **httpx_kwargs,
+        )
+
+    def get_bytes(self, **httpx_kwargs) -> bytes:
+        """
+        Get the media file as bytes.
+
+        - Same as :func:`~pywa.client.WhatsApp.get_media_bytes` with ``media_url=media.get_media_url()``
+
+        >>> from pywa import WhatsApp, types, filters
+        >>> wa = WhatsApp(...)
+
+        >>> @wa.on_message(filters.document)
+        ... def on_message(_: WhatsApp, msg: types.Message):
+        ...     doc_bytes = msg.document.get_bytes()
+
+        Args:
+            **httpx_kwargs: Additional arguments to pass to ``httpx.get(...)``.
+
+        Returns:
+            The media file as bytes.
+        """
+        return self._client.get_media_bytes(
+            url=self.get_media_url(),
+            **httpx_kwargs,
+        )
+
+    def stream(self, chunk_size: int | None = None, **httpx_kwargs) -> Generator[bytes]:
+        """
+        Stream the media file as bytes.
+
+        - Same as :func:`~pywa.client.WhatsApp.stream_media` with ``media_url=media.get_media_url()``
+
+        >>> from pywa import WhatsApp, types, filters
+
+        >>> wa = WhatsApp(...)
+
+        >>> @wa.on_message(filters.document)
+        ... def on_message(_: WhatsApp, msg: types.Message):
+        ...     with httpx.Client() as client:
+        ...        client.post('http://example.com/upload', content=msg.document.stream())
+
+        Args:
+            chunk_size: The size (in bytes) of each chunk to read (default: ``64KB``).
+            **httpx_kwargs: Additional arguments to pass to ``httpx.get(...)``.
+
+        Returns:
+            An iterator that yields chunks of the media file as bytes.
+        """
+        return self._client.stream_media(
+            url=self.get_media_url(),
+            chunk_size=chunk_size,
+            **httpx_kwargs,
+        )
+
+    def delete(self, *, phone_id: str | int | None = utils.MISSING) -> SuccessResult:
+        """
+        Deletes the media from WhatsApp servers.
+
+        Args:
+            phone_id: The phone ID to delete the media from (optional, If included, the operation will only be processed if the ID matches the ID of the business phone number that the media was uploaded on. pass None to use the client's phone ID).
+        """
+        return self._client.delete_media(media_id=self.id, phone_id=phone_id)
+
+    def reupload(
+        self,
+        *,
+        to_phone_id: str | int | None = None,
+        override_filename: str | None = None,
+    ) -> Media:
+        """
+        Reuploads the media to WhatsApp servers.
+
+        - Useful for re-sending media from another business phone number or if you want to use the media more than 30 days after it was uploaded.
+
+        Args:
+            to_phone_id: The phone ID to upload the media to (if not provided, the client's phone ID will be used).
+            override_filename: The filename to use for the re-uploaded media (if not provided, the original filename will be used if available).
+        """
+        return self._client.upload_media(
+            media=self.id
+            if (
+                not getattr(self, "url", None)
+                or (datetime.datetime.now(datetime.timezone.utc) - self.uploaded_at)
+                > datetime.timedelta(minutes=URL_EXPIRATION_MINUTES)
+            )
+            else self.url,
+            phone_id=to_phone_id,
+            filename=override_filename,
+        )
+
+
+class Media(_MediaActions):
     """
     Base class for all media types.
 
@@ -90,75 +236,6 @@ class Media:
         delta = self.expires_at - datetime.datetime.now(datetime.timezone.utc)
         return max(delta.days, 0)
 
-    def get_media_url(self) -> str:
-        """Gets the URL of the media. (expires after 5 minutes)"""
-        return self._client.get_media_url(media_id=self.id).url
-
-    def download(
-        self,
-        *,
-        path: str | None = None,
-        filename: str | None = None,
-        in_memory: bool = False,
-        **kwargs,
-    ) -> pathlib.Path | bytes:
-        """
-        Download a media file from WhatsApp servers.
-
-        - Same as :func:`~pywa.client.WhatsApp.download_media` with ``media_url=media.get_media_url()``
-
-        >>> from pywa import WhatsApp, types, filters
-        >>> wa = WhatsApp(...)
-
-        >>> @wa.on_message(filters.image)
-        ... def on_message(_: WhatsApp, msg: types.Message):
-        ...     msg.image.download(...)
-
-        Args:
-            path: The path where to save the file (if not provided, the current working directory will be used).
-            filename: The name of the file (if not provided, it will be guessed from the URL + extension).
-            in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
-            **kwargs: Additional arguments to pass to ``httpx.get(...)``.
-
-        Returns:
-            The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
-        """
-        return self._client.download_media(
-            url=self.get_media_url(),
-            path=path,
-            filename=filename,
-            in_memory=in_memory,
-            **kwargs,
-        )
-
-    def delete(self, *, phone_id: str | int | None = utils.MISSING) -> SuccessResult:
-        """
-        Deletes the media from WhatsApp servers.
-
-        Args:
-            phone_id: The phone ID to delete the media from (optional, If included, the operation will only be processed if the ID matches the ID of the business phone number that the media was uploaded on. pass None to use the client's phone ID).
-        """
-        return self._client.delete_media(media_id=self.id, phone_id=phone_id)
-
-    def reupload(
-        self,
-        *,
-        to_phone_id: str | int | None = None,
-        override_filename: str | None = None,
-    ) -> Media:
-        """
-        Reuploads the media to WhatsApp servers.
-
-        - Useful for re-sending media from another business phone number or if you want to use the media more than 30 days after it was uploaded.
-
-        Args:
-            to_phone_id: The phone ID to upload the media to (if not provided, the client's phone ID will be used).
-            override_filename: The filename to use for the re-uploaded media (if not provided, the original filename will be used if available).
-        """
-        return self._client.upload_media(
-            media=self, phone_id=to_phone_id, filename=override_filename
-        )
-
 
 def _get_arrived_media_dict(
     client: WhatsApp,
@@ -172,6 +249,7 @@ def _get_arrived_media_dict(
         id=data["id"],
         sha256=data["sha256"],
         mime_type=data["mime_type"],
+        url=data.get("url"),
         uploaded_by=UploadedBy.USER,
         uploaded_at=arrived_at or datetime.datetime.now(datetime.timezone.utc),
         uploaded_to=received_to,
@@ -188,6 +266,7 @@ class ArrivedMedia(Media):
         id: The ID of the file (can be used to download or re-send the media later, but only for 7 days after it was uploaded by the user).
         sha256: The SHA256 hash of the media.
         mime_type: The MIME type of the media.
+        url: The URL of the media (may be None in webhook versions before 24.0, use :meth:`~pywa.types.ArrivedMedia.get_media_url` to get it).
         uploaded_by: Who uploaded the media (always USER for arrived media).
         uploaded_at: The timestamp when the message containing the media was received (in UTC).
         uploaded_to: The phone ID the media was received to (optional when constructing manually).
@@ -197,6 +276,7 @@ class ArrivedMedia(Media):
     id: str
     sha256: str
     mime_type: str
+    url: str | None
     uploaded_by: UploadedBy
     uploaded_at: datetime.datetime
     uploaded_to: str | None = None
@@ -378,7 +458,7 @@ class Audio(ArrivedMedia):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class MediaURL:
+class MediaURL(_MediaActions):
     """
     Represents a media response.
 
@@ -417,7 +497,7 @@ class MediaURL:
     @property
     def expires_at(self) -> datetime.datetime:
         """Gets the expiration date of the media URL (5 minutes after creation)."""
-        return self.generated_at + datetime.timedelta(minutes=5)
+        return self.generated_at + datetime.timedelta(minutes=URL_EXPIRATION_MINUTES)
 
     @property
     def is_expired(self) -> bool:
@@ -433,53 +513,11 @@ class MediaURL:
             0,
         )
 
-    def download(
-        self,
-        *,
-        path: str | None = None,
-        filename: str | None = None,
-        in_memory: bool = False,
-        **kwargs,
-    ) -> pathlib.Path | bytes:
-        """
-        Download a media file from WhatsApp servers.
-
-        - Same as :func:`~pywa.client.WhatsApp.download_media` with ``media_url=media.url``
-
-        >>> from pywa import WhatsApp, types, filters
-        >>> wa = WhatsApp(...)
-
-        >>> @wa.on_message(filters.image)
-        ... def on_message(wa: WhatsApp, msg: types.Message):
-        ...    url = wa.get_media_url(media_id=msg.image.id)
-        ...    url.download(...)
-        ...    # TIP: You can use msg.download_media() or msg.image.download() as a shortcut
-
-        Args:
-            path: The path where to save the file (if not provided, the current working directory will be used).
-            filename: The name of the file (if not provided, it will be guessed from the URL + extension).
-            in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
-            **kwargs: Additional arguments to pass to ``httpx.get(...)``.
-
-        Returns:
-            The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
-        """
-        return self._client.download_media(
-            url=self.url,
-            path=path,
-            filename=filename,
-            in_memory=in_memory,
-            **kwargs,
-        )
-
-    def delete(self, *, phone_id: str | int | None = utils.MISSING) -> SuccessResult:
-        """
-        Deletes the media from WhatsApp servers.
-
-        Args:
-            phone_id: The phone ID to delete the media from (optional, If included, the operation will only be processed if the ID matches the ID of the business phone number that the media was uploaded on. pass None to use the client's phone ID).
-        """
-        return self._client.delete_media(media_id=self.id, phone_id=phone_id)
+    def get_media_url(self) -> str:
+        """Gets the URL of the media. (expires after 5 minutes)"""
+        if not self.is_expired:
+            return self.url
+        return self._client.get_media_url(media_id=self.id).url
 
     def reupload(
         self,

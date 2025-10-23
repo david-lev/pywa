@@ -34,6 +34,7 @@ from typing import (
     NamedTuple,
     Literal,
     Iterator,
+    AsyncIterable,
 )
 
 import httpx
@@ -148,6 +149,7 @@ class MediaSource(enum.Enum):
     PATH = enum.auto()  # /path/to/file or pathlib.Path
     BYTES = enum.auto()  # b"binary data"
     BYTES_GEN = enum.auto()  # generator yielding bytes
+    ASYNC_BYTES_GEN = enum.auto()  # async generator yielding bytes
     FILE_HANDLE = enum.auto()  # "2:c2FtcGxl..."
     FILE_OBJ = enum.auto()  # open("/path/to/file", "rb"), io.BytesIO(b"data"), etc.
     BASE64_DATA_URI = enum.auto()  # data:...;base64,...
@@ -206,11 +208,12 @@ def detect_media_source(
     elif isinstance(media, io.IOBase):
         _logger.debug("Detected media source as file like object")
         return MediaSource.FILE_OBJ
-    elif callable(getattr(media, "__iter__", None)) and not isinstance(
-        media, (str, bytes, bytearray)
-    ):
+    elif isinstance(media, Iterable):
         _logger.debug("Detected media source as bytes generator")
         return MediaSource.BYTES_GEN
+    elif isinstance(media, AsyncIterable):
+        _logger.debug("Detected media source as async bytes generator")
+        return MediaSource.ASYNC_BYTES_GEN
     else:
         raise TypeError(f"Invalid media type: {type(media)}")
 
@@ -494,7 +497,7 @@ def internal_upload_media(
             media_info = get_media_from_base64(base64_str=media)
         case _:
             raise ValueError(
-                "Media source must be URL, file path, bytes, file-like object, WhatsApp Media, or base64 string."
+                "Media source must be URL, file path, bytes, bytes generator, file-like object, WhatsApp Media, or base64 string."
             )
     if media_info is None:
         raise ValueError(f"Failed to get media content from {media}")
