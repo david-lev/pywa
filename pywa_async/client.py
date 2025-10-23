@@ -750,6 +750,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         | Iterator[bytes]
         | AsyncIterator[bytes],
         *,
+        is_voice: bool | None = None,
         mime_type: str | None = None,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -772,6 +773,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Args:
             to: The phone ID of the WhatsApp user.
             audio: The audio file to send (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
+            is_voice: Set to True if sending a voice message. `Voice messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/audio-messages#voice-messages>`_ must be Ogg files encoded with the ``OPUS`` codec.
             mime_type: The mime type of the audio file (optional, required when sending an audio as bytes or file path that does not have an extension).
             reply_to_message_id: The message ID to quote (optional).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`~pywa.types.callback.CallbackData`).
@@ -798,7 +800,9 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 sender=sender,
                 to=str(to),
                 typ="audio",
-                msg=helpers.get_media_msg(media_id_or_url=audio, is_url=is_url),
+                msg=helpers.get_media_msg(
+                    media_id_or_url=audio, is_url=is_url, is_voice=is_voice
+                ),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
             ),

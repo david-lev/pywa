@@ -821,11 +821,13 @@ def get_media_msg(
     is_url: bool,
     caption: str | None = None,
     filename: str | None = None,
+    is_voice: bool | None = None,
 ):
     return {
         ("link" if is_url else "id"): media_id_or_url,
         **({"caption": caption} if caption else {}),
         **({"filename": filename} if filename else {}),
+        **({"voice": is_voice} if is_voice is not None else {}),
     }
 
 
