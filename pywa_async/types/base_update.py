@@ -6,7 +6,7 @@ from pywa.types.base_update import *  # noqa MUST BE IMPORTED FIRST
 
 import pathlib
 import dataclasses
-from typing import TYPE_CHECKING, BinaryIO, Iterable
+from typing import TYPE_CHECKING, BinaryIO, Iterable, Iterator, AsyncIterator
 
 from pywa.types.templates import BaseParams
 from .others import Contact, ProductsSection, User, SuccessResult
@@ -111,7 +111,14 @@ class _ClientShortcutsAsync:
 
     async def reply_image(
         self,
-        image: str | int | Media | pathlib.Path | bytes | BinaryIO,
+        image: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
@@ -169,7 +176,14 @@ class _ClientShortcutsAsync:
 
     async def reply_video(
         self,
-        video: str | int | Media | pathlib.Path | bytes | BinaryIO,
+        video: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
@@ -227,7 +241,14 @@ class _ClientShortcutsAsync:
 
     async def reply_document(
         self,
-        document: str | int | Media | pathlib.Path | bytes | BinaryIO,
+        document: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
         filename: str | None = None,
         caption: str | None = None,
         footer: str | None = None,
@@ -289,8 +310,16 @@ class _ClientShortcutsAsync:
 
     async def reply_audio(
         self,
-        audio: str | int | Media | pathlib.Path | bytes | BinaryIO,
+        audio: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
         *,
+        is_voice: bool | None = None,
         quote: bool = False,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -312,6 +341,7 @@ class _ClientShortcutsAsync:
 
         Args:
             audio: The audio file to reply with (either a media ID, URL, file path, bytes, or an open file object).
+            is_voice: Set to True if sending a voice message. `Voice messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/audio-messages#voice-messages>`_ must be Ogg files encoded with the ``OPUS`` codec.
             quote: Whether to quote the replied message (default: False).
             mime_type: The mime type of the audio (optional, required when sending an audio as bytes or a file object,
              or file path that does not have an extension).
@@ -324,6 +354,7 @@ class _ClientShortcutsAsync:
             sender=self._internal_recipient,
             to=self._internal_sender,
             audio=audio,
+            is_voice=is_voice,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             mime_type=mime_type,
             tracker=tracker,
@@ -331,7 +362,14 @@ class _ClientShortcutsAsync:
 
     async def reply_sticker(
         self,
-        sticker: str | int | Media | pathlib.Path | bytes | BinaryIO,
+        sticker: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
         *,
         quote: bool = False,
         mime_type: str | None = None,

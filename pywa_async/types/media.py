@@ -3,18 +3,20 @@
 from __future__ import annotations
 
 __all__ = [
+    "Media",
     "Image",
     "Video",
     "Sticker",
     "Document",
     "Audio",
-    "MediaUrlResponse",
+    "MediaURL",
+    "UploadedBy",
 ]
 
+import datetime
 import pathlib
 
 from pywa.types.others import SuccessResult
-from .. import utils
 from pywa.types.media import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.media import (
     Image as _Image,
@@ -22,35 +24,41 @@ from pywa.types.media import (
     Sticker as _Sticker,
     Document as _Document,
     Audio as _Audio,
-    MediaUrlResponse as _MediaUrlResponse,
+    MediaURL as _MediaURL,
+    URL_EXPIRATION_MINUTES,
 )  # noqa MUST BE IMPORTED FIRST
 
 import dataclasses
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, AsyncGenerator
+
+from .. import utils
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
 
 
-class Media:
-    """Base class for all media types."""
-
-    def __init__(self, _client: WhatsApp, id: str):
-        self._client = _client
-        self.id = id
+class _MediaActionsAsync:
+    _client: WhatsApp
+    id: str
 
     async def get_media_url(self) -> str:
         """Gets the URL of the media. (expires after 5 minutes)"""
+        if getattr(self, "url", None):
+            if (
+                datetime.datetime.now(datetime.timezone.utc) - self.uploaded_at
+            ) < datetime.timedelta(minutes=URL_EXPIRATION_MINUTES):
+                return self.url
         return (await self._client.get_media_url(media_id=self.id)).url
 
     async def download(
         self,
         *,
-        path: str | None = None,
+        path: str | pathlib.Path | None = None,
         filename: str | None = None,
-        in_memory: bool = False,
-        **kwargs,
-    ) -> pathlib.Path | bytes:
+        in_memory: None = None,
+        chunk_size: int | None = None,
+        **httpx_kwargs,
+    ) -> pathlib.Path:
         """
         Download a media file from WhatsApp servers.
 
@@ -61,25 +69,79 @@ class Media:
 
         >>> @wa.on_message(filters.image)
         ... async def on_message(_: WhatsApp, msg: types.Message):
-        ...     await msg.image.download(...)
+        ...     await msg.image.download(path=pathlib.Path('/path/to/save'), filename='my_image.jpg')
 
         Args:
             path: The path where to save the file (if not provided, the current working directory will be used).
-            filename: The name of the file (if not provided, it will be guessed from the URL + extension).
-            in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
-            **kwargs: Additional arguments to pass to ``httpx.get(...)``.
+            filename: The name of the file to save (if not provided, it will be extracted from the ``Content-Disposition`` header or a SHA256 hash of the URL will be used).
+            chunk_size: The size (in bytes) of each chunk to read when downloading the media (default: ``64KB``).
+            in_memory: Deprecated: Use :py:func:`~pywa.client.WhatsApp.get_media_bytes` or :py:func:`~pywa.client.WhatsApp.stream_media` instead. If True, the file will be returned as bytes instead of being saved to disk.
+            **httpx_kwargs: Additional arguments to pass to ``httpx.get(...)``.
 
         Returns:
-            The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
+            The path of the saved file.
         """
         return await self._client.download_media(
-            url=(await self.get_media_url())
-            if not hasattr(self, "url")
-            else self.url,  # MediaUrlResponse
+            url=await self.get_media_url(),
             path=path,
             filename=filename,
             in_memory=in_memory,
-            **kwargs,
+            chunk_size=chunk_size,
+            **httpx_kwargs,
+        )
+
+    async def get_bytes(self, **httpx_kwargs) -> bytes:
+        """
+        Get the media file as bytes.
+
+        - Same as :func:`~pywa.client.WhatsApp.get_media_bytes` with ``media_url=media.get_media_url()``
+
+        >>> from pywa_async import WhatsApp, types, filters
+        >>> wa = WhatsApp(...)
+
+        >>> @wa.on_message(filters.document)
+        ... async def on_message(_: WhatsApp, msg: types.Message):
+        ...     doc_bytes = await msg.document.get_bytes()
+
+        Args:
+            **httpx_kwargs: Additional arguments to pass to ``httpx.get(...)``.
+
+        Returns:
+            The media file as bytes.
+        """
+        return await self._client.get_media_bytes(
+            url=await self.get_media_url(),
+            **httpx_kwargs,
+        )
+
+    async def stream(
+        self, chunk_size: int | None = None, **httpx_kwargs
+    ) -> AsyncGenerator[bytes]:
+        """
+        Stream the media file as bytes.
+
+        - Same as :func:`~pywa.client.WhatsApp.stream_media` with ``media_url=media.get_media_url()``
+
+        >>> from pywa_async import WhatsApp, types, filters
+
+        >>> wa = WhatsApp(...)
+
+        >>> @wa.on_message(filters.document)
+        ... async def on_message(_: WhatsApp, msg: types.Message):
+        ...     async with httpx.AsyncClient() as client:
+        ...        await client.post('http://example.com/upload', content=msg.document.stream())
+
+        Args:
+            chunk_size: The size (in bytes) of each chunk to read (default: ``64KB``).
+            **httpx_kwargs: Additional arguments to pass to ``httpx.get(...)``.
+
+        Returns:
+            An iterator that yields chunks of the media file as bytes.
+        """
+        return self._client.stream_media(
+            url=await self.get_media_url(),
+            chunk_size=chunk_size,
+            **httpx_kwargs,
         )
 
     async def delete(
@@ -109,43 +171,52 @@ class Media:
             override_filename: The filename to use for the re-uploaded media (if not provided, the original filename will be used if available).
         """
         return await self._client.upload_media(
-            media=self, phone_id=to_phone_id, filename=override_filename
+            media=self.id
+            if (
+                not getattr(self, "url", None)
+                or (datetime.datetime.now(datetime.timezone.utc) - self.uploaded_at)
+                > datetime.timedelta(minutes=URL_EXPIRATION_MINUTES)
+            )
+            else self.url,
+            phone_id=to_phone_id,
+            filename=override_filename,
         )
 
 
-class BaseUserMedia(Media):
-    """Base class for all user media types (Image, Video, Sticker, Document, Audio)."""
+class Media(_MediaActionsAsync):
+    """
+    Base class for all media types.
 
-    @classmethod
-    def from_flow_completion(
-        cls, client: WhatsApp, media: dict[str, str]
-    ) -> BaseUserMedia:
-        """
-        Create a media object from the media dict returned by the flow completion.
+    Attributes:
+        id: The ID of the media.
+        uploaded_by: Who uploaded the media (business or user).
+        uploaded_at: The timestamp when the media was uploaded (in UTC).
+        uploaded_to: The phone ID the media was uploaded to.
+    """
 
-        - You can use the shortcut :meth:`~pywa_async.types.FlowCompletion.get_media`
+    id: str
+    uploaded_by: UploadedBy
+    uploaded_at: datetime.datetime
+    uploaded_to: str
 
-        Example:
-            >>> from pywa_async import WhatsApp, types
-            >>> wa = WhatsApp(...)
-            >>> @wa.on_flow_completion
-            ... async def on_flow_completion(_: WhatsApp, flow: types.FlowCompletion):
-            ...     img = types.Image.from_flow_completion(client=wa, media=flow.response['media'])
-            ...     await img.download()
+    def __init__(
+        self,
+        _client: WhatsApp,
+        _id: str,
+        uploaded_to: str,
+    ):
+        self._client = _client
+        self.id = _id
+        self.uploaded_to = uploaded_to
+        self.uploaded_at = datetime.datetime.now(datetime.timezone.utc)
+        self.uploaded_by = UploadedBy.BUSINESS
 
-        Args:
-            client: The WhatsApp client.
-            media: The media dict returned by the flow completion.
-
-        Returns:
-            The media object (Image, Video, Sticker, Document, Audio).
-        """
-        # noinspection PyUnresolvedReferences
-        return cls.from_dict(media, _client=client)
+    def __repr__(self) -> str:
+        return f"MediaAsync(id={self.id!r}, uploaded_by={self.uploaded_by!r}, uploaded_at={self.uploaded_at!r}, uploaded_to={self.uploaded_to!r})"
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Image(BaseUserMedia, _Image):
+class Image(Media, _Image):
     """
     Represents an received image.
 
@@ -157,7 +228,7 @@ class Image(BaseUserMedia, _Image):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Video(BaseUserMedia, _Video):
+class Video(Media, _Video):
     """
     Represents a video.
 
@@ -169,7 +240,7 @@ class Video(BaseUserMedia, _Video):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Sticker(BaseUserMedia, _Sticker):
+class Sticker(Media, _Sticker):
     """
     Represents a sticker.
 
@@ -182,7 +253,7 @@ class Sticker(BaseUserMedia, _Sticker):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Document(BaseUserMedia, _Document):
+class Document(Media, _Document):
     """
     Represents a document.
 
@@ -195,7 +266,7 @@ class Document(BaseUserMedia, _Document):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Audio(BaseUserMedia, _Audio):
+class Audio(Media, _Audio):
     """
     Represents an audio.
 
@@ -208,9 +279,11 @@ class Audio(BaseUserMedia, _Audio):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class MediaUrlResponse(Media, _MediaUrlResponse):
+class MediaURL(_MediaActionsAsync, _MediaURL):
     """
     Represents a media response.
+
+    - The URL is valid for 5 minutes.
 
     Attributes:
         id: The ID of the media.
@@ -219,3 +292,44 @@ class MediaUrlResponse(Media, _MediaUrlResponse):
         sha256: The SHA256 hash of the media.
         file_size: The size of the media in bytes.
     """
+
+    _client: WhatsApp
+
+    async def get_media_url(self) -> str:
+        """Gets the URL of the media. (expires after 5 minutes)"""
+        if not self.is_expired:
+            return self.url
+        return (await self._client.get_media_url(media_id=self.id)).url
+
+    async def reupload(
+        self,
+        *,
+        to_phone_id: str | int | None = None,
+        override_filename: str | None = None,
+    ) -> Media:
+        """
+        Reuploads the media to WhatsApp servers.
+
+        - Useful for re-sending media from another business phone number or if you want to use the media more than 30 days after it was uploaded.
+        - If the media URL is expired, it will use the media ID to reupload (Will make an extra request to get a new URL).
+
+        Args:
+            to_phone_id: The phone ID to upload the media to (if not provided, the client's phone ID will be used).
+            override_filename: The filename to use for the re-uploaded media (if not provided, the original filename will be used if available).
+        """
+        return await self._client.upload_media(
+            media=self.id if self.is_expired else self.url,
+            phone_id=to_phone_id,
+            filename=override_filename,
+        )
+
+    async def regenerate_url(self) -> MediaURL:
+        """
+        Regenerates the media URL.
+
+        - The new URL will be valid for 5 minutes.
+
+        Returns:
+            The new MediaURL object.
+        """
+        return await self._client.get_media_url(media_id=self.id)

@@ -203,10 +203,12 @@ class Server:
                 x_hub_signature=hmac_header,
             ):
                 _logger.debug(
-                    "Webhook ('%s') received an update with an invalid signature",
+                    "Webhook ('%s') received an update with unmatching signature: %s, update: %s",
                     self._webhook_endpoint,
+                    hmac_header,
+                    update,
                 )
-                return "Error, invalid signature", 401, None, None
+                return "Unmatching signature", 200, None, None
         try:
             raw_update = RawUpdate(update, hmac_header=hmac_header)
         except (TypeError, ValueError):

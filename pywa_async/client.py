@@ -14,7 +14,15 @@ import logging
 import mimetypes
 import pathlib
 from types import ModuleType
-from typing import BinaryIO, Iterable, Literal, Any
+from typing import (
+    BinaryIO,
+    Iterable,
+    Literal,
+    Any,
+    AsyncGenerator,
+    Iterator,
+    AsyncIterator,
+)
 
 import httpx
 
@@ -40,7 +48,7 @@ from .types import (
     CommerceSettings,
     Contact,
     Industry,
-    MediaUrlResponse,
+    MediaURL,
     Message,
     ProductsSection,
     SectionList,
@@ -131,7 +139,7 @@ from .types.templates import (
     Buttons,
     UpdatedTemplate,
 )
-from .types.media import Media
+from .types.media import Media, UploadedBy
 from .types.flows import FlowJSONUpdateResult
 from .types.calls import CallPermissions, SessionDescription
 from .types.others import (
@@ -175,18 +183,6 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         CallPermissionUpdateHandler: CallPermissionUpdate,
     }
     """A dictionary that maps handler types to their respective update constructors."""
-
-    _msg_fields_to_objects_constructors = (
-        _WhatsApp._msg_fields_to_objects_constructors
-        | dict(
-            image=Image.from_dict,
-            video=Video.from_dict,
-            sticker=Sticker.from_dict,
-            document=Document.from_dict,
-            audio=Audio.from_dict,
-        )
-    )
-    """A mapping of message types to their respective constructors."""
 
     def __init__(
         self,
@@ -365,19 +361,17 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Args:
             to: The phone ID of the WhatsApp user.
             text: The text to send (`markdown <https://faq.whatsapp.com/539178204879377>`_ allowed, max 4096 characters).
-            header: The header of the message (if ``buttons`` are provided, optional, up to 60 characters,
-             no `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
-            footer: The footer of the message (if ``buttons`` are provided, optional, up to 60 characters,
-             `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
+            header: The header of the message (if ``buttons`` are provided, optional, up to 60 characters, no `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
+            footer: The footer of the message (if ``buttons`` are provided, optional, up to 60 characters, `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the message (optional).
             preview_url: Whether to show a preview of the URL in the message (if any).
-            reply_to_message_id: The message ID to reply to (optional).
+            reply_to_message_id: The message ID to quote (optional).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent message.
+            The sent text message.
         """
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
@@ -427,7 +421,14 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def send_image(
         self,
         to: str | int,
-        image: str | int | Media | pathlib.Path | bytes | BinaryIO,
+        image: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
@@ -456,16 +457,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Args:
             to: The phone ID of the WhatsApp user.
-            image: The image to send (either a media ID, URL, file path, bytes, or an open file object. When buttons are
-             provided, only URL is supported).
-            caption: The caption of the image (required when buttons are provided,
-             `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
-            footer: The footer of the message (if buttons are provided, optional,
-             `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
+            image: The image to send (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
+            caption: The caption of the image (required when buttons are provided, `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
+            footer: The footer of the message (if buttons are provided, optional, `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the image (optional).
-            reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
-            mime_type: The mime type of the image (optional, required when sending an image as bytes or a file object,
-             or file path that does not have an extension).
+            reply_to_message_id: The message ID to quote (optional).
+            mime_type: The mime type of the image (optional, required when sending an image as bytes, or file path that does not have an extension).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
@@ -534,7 +531,14 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def send_video(
         self,
         to: str | int,
-        video: str | int | Media | pathlib.Path | bytes | BinaryIO,
+        video: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
@@ -563,22 +567,18 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Args:
             to: The phone ID of the WhatsApp user.
-            video: The video to send (either a media ID, URL, file path, bytes, or an open file object. When buttons are
-             provided, only URL is supported).
-            caption: The caption of the video (required when sending a video with buttons,
-             `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
-            footer: The footer of the message (if buttons are provided, optional,
-             `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
+            video: The video to send (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
+            caption: The caption of the video (required when sending a video with buttons, `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
+            footer: The footer of the message (if buttons are provided, optional, `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the video (optional).
-            reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
-            mime_type: The mime type of the video (optional, required when sending a video as bytes or a file object,
-             or file path that does not have an extension).
+            reply_to_message_id: The message ID to quote (optional).
+            mime_type: The mime type of the video (optional, required when sending a video as bytes or file path that does not have an extension).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent video.
+            The sent video message.
         """
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
@@ -640,7 +640,14 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def send_document(
         self,
         to: str | int,
-        document: str | int | Media | pathlib.Path | bytes | BinaryIO,
+        document: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
         filename: str | None = utils.MISSING,
         caption: str | None = None,
         footer: str | None = None,
@@ -670,23 +677,19 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Args:
             to: The phone ID of the WhatsApp user.
-            document: The document to send (either a media ID, URL, file path, bytes, or an open file object. When
-             buttons are provided, only URL is supported).
-            filename: Document filename, with extension. The WhatsApp client will use an appropriate file type icon based on the extension (Optional, if not provided, if possible, the filename will be extracted from the URL or file path. pass ``None`` to skip this behavior).
-            caption: The caption of the document (required when sending a document with buttons,
-             `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
-            footer: The footer of the message (if buttons are provided, optional,
-             `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
+            document: The document to send (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
+            filename: Document filename, with extension. The WhatsApp client will use an appropriate file type icon based on the extension (Optional, if not provided, if possible, the filename will be extracted from the media. pass ``None`` to skip this behavior).
+            caption: The caption of the document (required when sending a document with buttons, `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
+            footer: The footer of the message (if buttons are provided, optional, `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the document (optional).
-            reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
-            mime_type: The mime type of the document (optional, required when sending a document as bytes or a file
-             object, or file path that does not have an extension).
+            reply_to_message_id: The message ID to quote (optional).
+            mime_type: The mime type of the document (optional, required when sending a document as bytes or file path that does not have an extension).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent document.
+            The sent document message.
         """
 
         sender = helpers.resolve_arg(
@@ -755,8 +758,16 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def send_audio(
         self,
         to: str | int,
-        audio: str | int | Media | pathlib.Path | bytes | BinaryIO,
+        audio: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
         *,
+        is_voice: bool | None = None,
         mime_type: str | None = None,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -779,16 +790,16 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Args:
             to: The phone ID of the WhatsApp user.
-            audio: The audio file to send (either a media ID, URL, file path, bytes, or an open file object).
-            mime_type: The mime type of the audio file (optional, required when sending an audio file as bytes or a file
-             object, or file path that does not have an extension).
-            reply_to_message_id: The message ID to reply to (optional).
+            audio: The audio file to send (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
+            is_voice: Set to True if sending a voice message. `Voice messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/audio-messages#voice-messages>`_ must be Ogg files encoded with the ``OPUS`` codec.
+            mime_type: The mime type of the audio file (optional, required when sending an audio as bytes or file path that does not have an extension).
+            reply_to_message_id: The message ID to quote (optional).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent audio file.
+            The sent audio message.
         """
 
         sender = helpers.resolve_arg(
@@ -808,7 +819,9 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 sender=sender,
                 to=str(to),
                 typ="audio",
-                msg=helpers.get_media_msg(media_id_or_url=audio, is_url=is_url),
+                msg=helpers.get_media_msg(
+                    media_id_or_url=audio, is_url=is_url, is_voice=is_voice
+                ),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
                 recipient_identity_key_hash=identity_key_hash,
@@ -819,7 +832,14 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def send_sticker(
         self,
         to: str | int,
-        sticker: str | int | Media | pathlib.Path | bytes | BinaryIO,
+        sticker: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
         *,
         mime_type: str | None = None,
         reply_to_message_id: str | None = None,
@@ -845,16 +865,15 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Args:
             to: The phone ID of the WhatsApp user.
-            sticker: The sticker to send (either a media ID, URL, file path, bytes, or an open file object).
-            mime_type: The mime type of the sticker (optional, required when sending a sticker as bytes or a file
-             object, or file path that does not have an extension).
-            reply_to_message_id: The message ID to reply to (optional).
+            sticker: The sticker to send (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
+            mime_type: The mime type of the sticker (optional, required when sending a sticker as bytes or file path that does not have an extension).
+            reply_to_message_id: The message ID to quote (optional).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent message.
+            The sent sticker message.
         """
 
         sender = helpers.resolve_arg(
@@ -922,7 +941,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent message (You can't use this message id to remove the reaction or perform any other
+            The sent reaction message (You can't use this message id to remove the reaction or perform any other
             action on it. instead, use the message ID of the message you reacted to).
         """
         sender = helpers.resolve_arg(
@@ -978,7 +997,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent message (You can't use this message id to re-react or perform any other action on it.
+            The sent (un)reaction message (You can't use this message id to re-react or perform any other action on it.
             instead, use the message ID of the message you unreacted to).
         """
         sender = helpers.resolve_arg(
@@ -1032,13 +1051,13 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             longitude: The longitude of the location.
             name: The name of the location (optional).
             address: The address of the location (optional).
-            reply_to_message_id: The message ID to reply to (optional).
+            reply_to_message_id: The message ID to quote (optional).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent location.
+            The sent location message.
         """
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
@@ -1081,7 +1100,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Example:
 
             >>> wa = WhatsApp(...)
-            >>> await wa.request_location(
+            >>> wa.request_location(
             ...     to='1234567890',
             ...     text='Please share your location with us.',
             ... )
@@ -1089,13 +1108,13 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Args:
             to: The phone ID of the WhatsApp user.
             text: The text to send with the button.
-            reply_to_message_id: The message ID to reply to (optional).
+            reply_to_message_id: The message ID to quote (optional).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent message.
+            The sent location request message.
         """
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
@@ -1152,13 +1171,13 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Args:
             to: The phone ID of the WhatsApp user.
             contact: The contact/s to send.
-            reply_to_message_id: The message ID to reply to (optional).
+            reply_to_message_id: The message ID to quote (optional).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent message.
+            The sent contact/s message.
         """
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
@@ -1215,13 +1234,13 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
             thumbnail_product_sku: Item SKU number. Labeled as Content ID in the Commerce Manager. The thumbnail of this item will be used as the message's header image. If omitted, the product image of the first item in your catalog will be used.
-            reply_to_message_id: The message ID to reply to (optional).
+            reply_to_message_id: The message ID to quote (optional).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent message.
+            The sent catalog message.
         """
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
@@ -1294,13 +1313,13 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             sku: The product SKU to send.
             body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
-            reply_to_message_id: The message ID to reply to (optional).
+            reply_to_message_id: The message ID to quote (optional).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent message.
+            The sent product message.
         """
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
@@ -1378,13 +1397,13 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             title: The title of the product list (up to 60 characters).
             body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
-            reply_to_message_id: The message ID to reply to (optional).
+            reply_to_message_id: The message ID to quote (optional).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
-            The sent message.
+            The sent products message.
         """
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
@@ -1490,12 +1509,20 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             )
         )
 
+    # noinspection PyMethodOverriding
     async def upload_media(
         self,
-        media: str | int | pathlib.Path | bytes | BinaryIO | Media,
+        media: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
         mime_type: str | None = None,
         filename: str | None = None,
-        dl_session: httpx.Client | None = None,
+        dl_session: httpx.AsyncClient | None = None,
         *,
         media_type: Literal["image", "video", "audio", "document", "sticker"]
         | None = None,
@@ -1524,20 +1551,25 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             ... )
 
         Args:
-            media: The media to upload (can be a URL, bytes, or a file path).
+            media: The media to upload (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
             mime_type: The MIME type of the media.
             filename: The file name of the media.
-            dl_session: A httpx client to use when downloading the media from a URL (optional, if not provided, a
-             new session will be created).
+            dl_session: A httpx client to use when downloading the media from a URL (optional, for custom settings like proxies, headers, etc. If not provided, a new client will be created for the download).
             media_type: The type of the media (optional, for default mimetype and filename).
             phone_id: The phone ID to upload the media to (optional, if not provided, the client's phone ID will be used).
 
         Returns:
             The uploaded media.
         """
+        upload_to = helpers.resolve_arg(
+            wa=self,
+            value=phone_id,
+            method_arg="phone_id",
+            client_arg="phone_id",
+        )
         return Media(
             _client=self,
-            id=(
+            _id=(
                 await helpers.internal_upload_media(
                     media=media,
                     media_source=helpers.detect_media_source(media),
@@ -1545,18 +1577,14 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                     mime_type=mime_type,
                     filename=filename,
                     wa=self,
-                    phone_id=helpers.resolve_arg(
-                        wa=self,
-                        value=phone_id,
-                        method_arg="phone_id",
-                        client_arg="phone_id",
-                    ),
+                    phone_id=upload_to,
                     dl_session=dl_session,
                 )
             )[0],
+            uploaded_to=upload_to,
         )
 
-    async def get_media_url(self, media_id: str | int) -> MediaUrlResponse:
+    async def get_media_url(self, media_id: str | int) -> MediaURL:
         """
         Get a media URL for a media ID.
 
@@ -1574,10 +1602,10 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             media_id: The media ID.
 
         Returns:
-            A MediaResponse object with the media URL.
+            A MediaURL object with the media URL.
         """
         res = await self.api.get_media_url(media_id=str(media_id))
-        return MediaUrlResponse(
+        return MediaURL(
             _client=self,
             id=res["id"],
             url=res["url"],
@@ -1592,12 +1620,17 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         url: str,
         path: str | pathlib.Path | None = None,
         filename: str | None = None,
-        in_memory: bool = False,
+        in_memory: None = None,
+        chunk_size: int = helpers.DOWNLOAD_CHUNK_SIZE,
         **httpx_kwargs: Any,
-    ) -> pathlib.Path | bytes:
+    ) -> pathlib.Path:
         """
         Download a media file from WhatsApp servers.
 
+        - Use :py:func:`~pywa.client.WhatsApp.get_media_url` to get the media URL from a media ID.
+        - Use :py:func:`~pywa.types.Message.download_media` to download media directly from a message.
+        - Use :py:func:`~pywa.client.WhatsApp.get_media_bytes` to get the media as bytes.
+        - Use :py:func:`~pywa.client.WhatsApp.stream_media` to stream the media as bytes.
         - See `Download media <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#download-media>`_.
 
         Example:
@@ -1610,36 +1643,109 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             ... )
 
         Args:
-            url: The URL of the media file (from :py:func:`~pywa.client.WhatsApp.get_media_url`).
+            url: The URL of the media file.
             path: The path where to save the file (if not provided, the current working directory will be used).
             filename: The name of the file to save (if not provided, it will be extracted from the ``Content-Disposition`` header or a SHA256 hash of the URL will be used).
-            in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
+            chunk_size: The size (in bytes) of each chunk to read when downloading the media (default: ``64KB``).
+            in_memory: Deprecated: Use :py:func:`~pywa.client.WhatsApp.get_media_bytes` or :py:func:`~pywa.client.WhatsApp.stream_media` instead. If True, the file will be returned as bytes instead of being saved to disk.
             **httpx_kwargs: Additional arguments to pass to :py:func:`httpx.get`.
 
         Returns:
-            The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
+            The path of the saved file.
         """
-        content, headers = await self.api.get_media_bytes(media_url=url, **httpx_kwargs)
-        mimetype = headers.get("Content-Type")
         if in_memory:
-            return content
-        if path is None:
-            path = pathlib.Path.cwd()
-        if filename is None:
-            filename = helpers._get_filename_from_httpx_response_headers(headers)
+            warnings.warn(
+                "`in_memory` parameter is deprecated and will be removed in future versions. "
+                "Use `get_media_bytes` or `stream_media` methods instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            return await self.get_media_bytes(url=url, **httpx_kwargs)
+        async with self.api.stream_media_bytes(media_url=url, **httpx_kwargs) as res:
+            res.raise_for_status()
+            mimetype = res.headers.get("Content-Type")
+            if path is None:
+                path = pathlib.Path.cwd()
             if filename is None:
-                clean_mimetype = mimetype.split(";")[0].strip() if mimetype else None
-                filename = hashlib.sha256(url.encode()).hexdigest() + (
-                    (
-                        mimetypes.guess_extension(clean_mimetype)
-                        if clean_mimetype
-                        else None
+                filename = helpers.get_filename_from_httpx_response_headers(res.headers)
+                if filename is None:
+                    clean_mimetype = (
+                        mimetype.split(";")[0].strip() if mimetype else None
                     )
-                    or ".bin"
-                )
-        path = pathlib.Path(path) / filename
-        path.write_bytes(content)
-        return path
+                    filename = hashlib.sha256(url.encode()).hexdigest() + (
+                        (
+                            mimetypes.guess_extension(clean_mimetype)
+                            if clean_mimetype
+                            else None
+                        )
+                        or ".bin"
+                    )
+            path = pathlib.Path(path) / filename
+            with path.open("wb") as f:
+                async for chunk in res.aiter_bytes(chunk_size=chunk_size):
+                    f.write(chunk)
+            return path
+
+    async def get_media_bytes(self, url: str, **httpx_kwargs: Any) -> bytes:
+        """
+        Get media file as bytes from WhatsApp servers.
+
+        - Use :py:func:`~pywa.client.WhatsApp.get_media_url` to get the media URL from a media ID.
+        - Use :py:func:`~pywa.types.Message.get_media_bytes` to get the media directly from a message.
+        - Use :py:func:`~pywa.client.WhatsApp.download_media` to download the media to a file.
+        - Use :py:func:`~pywa.client.WhatsApp.stream_media` to stream the media as bytes.
+        - See `Download media <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#download-media>`_.
+
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> media_bytes = await wa.get_media_bytes(
+            ...     url='https://mmg-fna.whatsapp.net/d/f/Amc.../v2/1234567890',
+            ... )
+
+        Args:
+            url: The URL of the media file.
+            **httpx_kwargs: Additional arguments to pass to :py:func:`httpx.get
+
+        Returns:
+            The media file as bytes.
+        """
+        async with self.api.stream_media_bytes(media_url=url, **httpx_kwargs) as res:
+            res.raise_for_status()
+            return await res.aread()
+
+    async def stream_media(
+        self,
+        url: str,
+        *,
+        chunk_size: int = helpers.DOWNLOAD_CHUNK_SIZE,
+        **httpx_kwargs: Any,
+    ) -> AsyncGenerator[bytes]:
+        """
+        Stream media file as bytes from WhatsApp servers.
+
+        - Use :py:func:`~pywa.client.WhatsApp.get_media_url` to get the media URL from a media ID.
+        - Use :py:func:`~pywa.types.Message.stream_media` to stream the media directly from a message.
+        - Use :py:func:`~pywa.client.WhatsApp.download_media` to download the media to a file.
+        - Use :py:func:`~pywa.client.WhatsApp.get_media_bytes` to get the media as bytes.
+        - See `Download media <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#download-media>`_.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> async with httpx.AsyncClient() as client:
+            >>>    await client.post("https://my-server.com/upload", content=wa.stream_media()) # streaming upload
+
+        Args:
+            url: The URL of the media file.
+            chunk_size: The size (in bytes) of each chunk to read (default: ``64KB``).
+            **httpx_kwargs: Additional arguments to pass to :py:func:`httpx.get`.
+        """
+        async with self.api.stream_media_bytes(media_url=url, **httpx_kwargs) as res:
+            res.raise_for_status()
+            async for chunk in res.aiter_bytes(chunk_size=chunk_size):
+                yield chunk
 
     async def delete_media(
         self,
@@ -3629,7 +3735,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Args:
             to: The number being called (callee)
             sdp: Contains the session description protocol (SDP) type and description language.
-            tracker: The data to track the call with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
+            tracker: The data to track the call with (optional, up to 512 characters, for complex data You can use :class:`~pywa.types.callback.CallbackData`).
             phone_id: The phone ID to initiate the call from (optional, if not provided, the client's phone ID will be used).
 
         Returns:
@@ -3695,7 +3801,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Args:
             call_id: The ID of the call to accept.
             sdp: Contains the session description protocol (SDP) type and description language.
-            tracker: The data to track the call with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
+            tracker: The data to track the call with (optional, up to 512 characters, for complex data You can use :class:`~pywa.types.callback.CallbackData`).
             phone_id: The phone ID to accept the call from (optional, if not provided, the client's phone ID will be used).
 
         Returns:

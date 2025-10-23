@@ -77,7 +77,7 @@ from .flows import FlowActionType, FlowJSON
 import abc
 import dataclasses
 import logging
-from typing import TYPE_CHECKING, Literal, BinaryIO, cast, Iterator
+from typing import TYPE_CHECKING, Literal, BinaryIO, cast, Iterator, AsyncIterator
 
 from .media import Media
 from .others import Result, SuccessResult, ProductsSection, _ItemFactory
@@ -1184,7 +1184,17 @@ class _BaseMediaHeaderComponent(BaseHeaderComponent, abc.ABC):
 
     format: HeaderFormatType
 
-    def __init__(self, example: str | int | Media | pathlib.Path | bytes | BinaryIO):
+    def __init__(
+        self,
+        example: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
+    ):
         """
         Initializes a media header component for a template.
 
@@ -1194,14 +1204,19 @@ class _BaseMediaHeaderComponent(BaseHeaderComponent, abc.ABC):
         self.example = example
 
     @property
-    def example(self) -> str | int | Media | pathlib.Path | bytes | BinaryIO:
+    def example(
+        self,
+    ) -> str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes]:
         """
         Returns the example media for the header component.
         """
         return self._example
 
     @example.setter
-    def example(self, value: str | int | Media | pathlib.Path | bytes | BinaryIO):
+    def example(
+        self,
+        value: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
+    ):
         """
         Sets the example media for the header component (and resets the handle).
         """
@@ -1233,7 +1248,7 @@ class _BaseMediaParams(BaseParams, abc.ABC):
 
     def __init__(
         self,
-        media: str | int | Media | pathlib.Path | bytes | BinaryIO,
+        media: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
         filename: str | None = None,
     ):
         self.media = media
@@ -1297,13 +1312,21 @@ class HeaderImage(_BaseMediaHeaderComponent):
         param_type = ParamType.IMAGE
 
         def __init__(
-            self, *, image: str | int | Media | pathlib.Path | bytes | BinaryIO
+            self,
+            *,
+            image: str
+            | int
+            | Media
+            | pathlib.Path
+            | bytes
+            | BinaryIO
+            | Iterator[bytes],
         ):
             super().__init__(media=image)
 
     @staticmethod
     def params(
-        *, image: str | int | Media | pathlib.Path | bytes | BinaryIO
+        *, image: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes]
     ) -> HeaderImage._Params:
         """
         Fill the parameters for the header image component.
@@ -1340,13 +1363,21 @@ class HeaderVideo(_BaseMediaHeaderComponent):
         param_type = ParamType.VIDEO
 
         def __init__(
-            self, *, video: str | int | Media | pathlib.Path | bytes | BinaryIO
+            self,
+            *,
+            video: str
+            | int
+            | Media
+            | pathlib.Path
+            | bytes
+            | BinaryIO
+            | Iterator[bytes],
         ):
             super().__init__(media=video)
 
     @staticmethod
     def params(
-        *, video: str | int | Media | pathlib.Path | bytes | BinaryIO
+        *, video: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes]
     ) -> HeaderVideo._Params:
         """
         Fill the parameters for the header video component.
@@ -1385,7 +1416,13 @@ class HeaderDocument(_BaseMediaHeaderComponent):
         def __init__(
             self,
             *,
-            document: str | int | Media | pathlib.Path | bytes | BinaryIO,
+            document: str
+            | int
+            | Media
+            | pathlib.Path
+            | bytes
+            | BinaryIO
+            | Iterator[bytes],
             filename: str | None,
         ):
             super().__init__(media=document, filename=filename)
@@ -1393,7 +1430,7 @@ class HeaderDocument(_BaseMediaHeaderComponent):
     @staticmethod
     def params(
         *,
-        document: str | int | Media | pathlib.Path | bytes | BinaryIO,
+        document: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
         filename: str | None = utils.MISSING,
     ) -> HeaderDocument._Params:
         """

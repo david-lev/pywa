@@ -401,7 +401,9 @@ def test_detect_media_source(wa):
     assert helpers.detect_media_source("1234567890") == MediaSource.MEDIA_ID
     assert helpers.detect_media_source(1234567890) == MediaSource.MEDIA_ID
     assert (
-        helpers.detect_media_source(Media(id="1234567890", _client=wa))
+        helpers.detect_media_source(
+            Media(_id="1234567890", _client=wa, uploaded_to=wa.phone_id)
+        )
         == MediaSource.MEDIA_OBJ
     )
     assert (
@@ -420,6 +422,31 @@ def test_detect_media_source(wa):
     assert helpers.detect_media_source("2:c2FtcGxl...") == MediaSource.FILE_HANDLE
     assert (
         helpers.detect_media_source(io.BytesIO(b"binarydata")) == MediaSource.FILE_OBJ
+    )
+    assert (
+        helpers.detect_media_source((b for b in [b"binarydata"]))
+        == MediaSource.BYTES_GEN
+    )
+
+    async def agen():
+        yield b"binarydata"
+
+    assert (
+        helpers.detect_media_source(x async for x in agen())
+        == MediaSource.ASYNC_BYTES_GEN
+    )
+    assert (
+        helpers.detect_media_source(
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABHUlEQVR42mNgoBvgx4ABYBxVSF"
+        )
+        == MediaSource.BASE64_DATA_URI
+    )
+    assert (
+        helpers.detect_media_source(
+            # valid base64 but not data URI
+            "SGVsbG8sIHdvcmxkIQ=="
+        )
+        == MediaSource.BASE64
     )
 
 

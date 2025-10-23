@@ -61,6 +61,7 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
             lambda m: m.type == MessageType.INTERACTIVE and m.error is not None
         ],
         "referral": [lambda m: m.referral is not None],
+        "media_with_url": [lambda m: m.media.url is not None],
     },
     "callback_button": {
         "button": [lambda b: b.type == MessageType.INTERACTIVE],

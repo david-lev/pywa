@@ -1,7 +1,8 @@
 """The internal API for the WhatsApp client."""
 
 import logging
-from typing import Any, TYPE_CHECKING
+from contextlib import _GeneratorContextManager
+from typing import Any, TYPE_CHECKING, BinaryIO, Iterator
 
 import httpx
 
@@ -75,6 +76,7 @@ class GraphAPI:
             )
             raise
         if res.status_code >= 400:
+            print("ERROR123", res.json())
             raise WhatsAppError.from_dict(error=res.json()["error"], response=res)
         return res.json()
 
@@ -336,7 +338,7 @@ class GraphAPI:
     def upload_media(
         self,
         phone_id: str,
-        media: bytes,
+        media: bytes | str | BinaryIO | Iterator[bytes],
         mime_type: str,
         filename: str,
     ) -> dict[str, str]:
@@ -353,7 +355,7 @@ class GraphAPI:
 
         Args:
             phone_id: The ID of the phone number to upload the media to.
-            media: media bytes or open(path, 'rb') object
+            media: media bytes, file-like object, or bytes generator
             mime_type: The type of the media file
             filename: The name of the media file
         Returns:
@@ -367,7 +369,7 @@ class GraphAPI:
                 "messaging_product": (None, "whatsapp"),
                 "type": (None, mime_type),
             },
-            log_kwargs=False,
+            # log_kwargs=False,
         )
 
     def get_media_url(self, media_id: str) -> dict:
@@ -395,13 +397,13 @@ class GraphAPI:
         """
         return self._make_request(method="GET", endpoint=f"/{media_id}")
 
-    def get_media_bytes(
+    def stream_media_bytes(
         self,
         media_url: str,
         **httpx_kwargs,
-    ) -> tuple[bytes, httpx.Headers]:
+    ) -> _GeneratorContextManager[httpx.Response]:
         """
-        Get the bytes of a media file from WhatsApp servers.
+        Get media stream from WhatsApp servers.
 
         - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#download-media>`_.
 
@@ -410,12 +412,15 @@ class GraphAPI:
             **httpx_kwargs: Additional arguments to pass to the httpx get request.
 
         Returns:
-            The media file bytes and the response headers.
+            A context manager containing the response stream.
         """
-        headers = self._session.headers.copy()
-        res = self._session.get(media_url, headers=headers, **httpx_kwargs)
-        res.raise_for_status()
-        return res.content, res.headers
+        return self._session.stream(
+            method="GET",
+            url=media_url,
+            headers=self._session.headers.copy(),
+            follow_redirects=True,
+            **httpx_kwargs,
+        )
 
     def delete_media(
         self, media_id: str, phone_number_id: str | None = None
@@ -2034,7 +2039,7 @@ class GraphAPI:
             headers={
                 "file_offset": str(file_offset),
             },
-            data=file,
+            content=file,
             log_kwargs=False,
         )
 

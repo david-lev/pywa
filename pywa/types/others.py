@@ -202,7 +202,7 @@ class InteractiveType(utils.StrEnum):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class Reaction(utils.FromDict):
+class Reaction:
     """
     Represents a reaction to a message.
 
@@ -215,7 +215,7 @@ class Reaction(utils.FromDict):
     emoji: str | None = None
 
     @classmethod
-    def from_dict(cls, data: dict, **kwargs) -> Reaction:
+    def from_dict(cls, data: dict) -> Reaction:
         return cls(
             message_id=data["message_id"], emoji=data.get("emoji") or None
         )  # sometimes it's empty string 🤦‍
@@ -582,7 +582,7 @@ class Order:
     text: str | None
 
     @classmethod
-    def from_dict(cls, data: dict, _client: WhatsApp) -> Order:
+    def from_dict(cls, data: dict) -> Order:
         return cls(
             catalog_id=data["catalog_id"],
             text=data.get("text"),
