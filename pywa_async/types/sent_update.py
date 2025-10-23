@@ -35,6 +35,7 @@ class SentMessage(_ClientShortcutsAsync, _SentMessage):
         id: The ID of the message.
         to_user: The user the message was sent to.
         from_phone_id: The WhatsApp ID of the sender who sent the message.
+        input: The input (phone number) of the recipient.
     """
 
     async def wait_for_reply(
@@ -432,6 +433,7 @@ class SentTemplate(SentMessage, _SentTemplate):
         to_user: The user the message was sent to.
         from_phone_id: The WhatsApp ID of the sender who sent the message.
         status: The status of the sent template.
+        input: The input (phone number) of the recipient.
     """
 
 

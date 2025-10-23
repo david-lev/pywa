@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import functools
 import time
+import warnings
 
 from ..errors import WhatsAppError
 
@@ -45,14 +46,13 @@ class User:
         wa_id: The WhatsApp ID of the user (The phone number with the country code).
         name: The name of the user (``None`` on :class:`MessageStatus`).
         identity_key_hash: The identity key hash of the user (Only if identity key check is enabled on the phone number settings).
-        input: The input of the recipient is only available when sending a message.
     """
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
     wa_id: str
     name: str | None
     identity_key_hash: str | None = None
-    input: str | None = dataclasses.field(
+    _input: str | None = dataclasses.field(
         default=None, repr=False, hash=False, compare=False
     )
 
@@ -60,11 +60,21 @@ class User:
     def from_dict(cls, data: dict, client: WhatsApp) -> User:
         return cls(
             _client=client,
+            _input=data.get("input"),
             wa_id=data["wa_id"],
-            name=data.get("profile", {}).get("name"),
-            input=data.get("input"),
             identity_key_hash=data.get("identity_key_hash"),
+            name=data.get("profile", {}).get("name"),
         )
+
+    @property
+    def input(self) -> None:
+        """Deprecated, access the input from the sent message instead."""
+        warnings.warn(
+            "User.input is deprecated, access the input from the sent message instead. e.g. wa.send_message(...).input",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._input
 
     def block(self) -> bool:
         """

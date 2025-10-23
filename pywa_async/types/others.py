@@ -25,7 +25,6 @@ class User(_User):
         wa_id: The WhatsApp ID of the user (The phone number with the country code).
         name: The name of the user (``None`` on :class:`MessageStatus`).
         identity_key_hash: The identity key hash of the user (Only if identity key check is enabled on the phone number settings).
-        input: The input of the recipient is only available when sending a message.
     """
 
     _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)

@@ -107,7 +107,10 @@ class SentMessage(_SentUpdate):
         id: The ID of the message.
         to_user: The user the message was sent to.
         from_phone_id: The WhatsApp ID of the sender who sent the message.
+        input: The input (phone number) of the recipient.
     """
+
+    input: str
 
     @classmethod
     def from_sent_update(
@@ -122,6 +125,7 @@ class SentMessage(_SentUpdate):
             id=msg_id,
             to_user=user,
             from_phone_id=from_phone_id,
+            input=update["contacts"][0]["input"],
         )
 
     def wait_for_reply(
@@ -540,6 +544,7 @@ class SentTemplate(SentMessage):
         to_user: The user the message was sent to.
         from_phone_id: The WhatsApp ID of the sender who sent the message.
         status: The status of the sent template.
+        input: The input (phone number) of the recipient.
     """
 
     status: SentTemplateStatus | None
@@ -560,6 +565,7 @@ class SentTemplate(SentMessage):
             else None,
             to_user=user,
             from_phone_id=from_phone_id,
+            input=update["contacts"][0]["input"],
         )
 
 
