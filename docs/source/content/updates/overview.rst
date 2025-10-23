@@ -116,10 +116,14 @@ All updates share common methods and properties:
      - The raw update data
    * - :attr:`~BaseUpdate.timestamp`
      - The update timestamp (UTC)
+   * - :attr:`~BaseUpdate.shared_data`
+     - A dictionary to share data between handlers
    * - :meth:`~BaseUpdate.stop_handling`
      - Prevent further handlers from processing the update
    * - :meth:`~BaseUpdate.continue_handling`
      - Force the update to continue to the next handler
+   * - :meth:`~BaseUpdate.handle_again`
+     - Re-handle the update from the first handler
 
 **User-related updates** share additional properties:
 

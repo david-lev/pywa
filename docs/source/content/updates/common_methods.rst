@@ -4,7 +4,7 @@ Common methods
 .. currentmodule:: pywa.types.base_update
 
 .. autoclass:: BaseUpdate()
-    :members: id, raw, timestamp, stop_handling, continue_handling
+    :members: id, raw, timestamp, shared_data, stop_handling, continue_handling, handle_again
 
 .. autoclass:: BaseUserUpdate()
     :members: sender, recipient, message_id_to_reply,

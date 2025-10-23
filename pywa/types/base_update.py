@@ -14,7 +14,7 @@ import json
 import pathlib
 import dataclasses
 import datetime
-from typing import TYPE_CHECKING, BinaryIO, Iterable, ClassVar, NoReturn
+from typing import TYPE_CHECKING, BinaryIO, Iterable, ClassVar, NoReturn, Awaitable
 
 from .others import Contact, Metadata, ProductsSection, User, SuccessResult
 from ..listeners import BaseListenerIdentifier, UserUpdateListenerIdentifier
@@ -142,7 +142,7 @@ class _HandlingFlow:
 
 class RawUpdate(dict, _HandlingFlow):
     """
-    The raw update dict from WhatsApp.
+    The raw update from WhatsApp.
 
     - This class is a subclass of :class:`dict` and is immutable (you can't change its content).
 
@@ -210,11 +210,14 @@ class BaseUpdate(abc.ABC, _HandlingFlow):
     id: str
     """The WhatsApp Business Account ID for the business that is subscribed to the webhook."""
     timestamp: datetime.datetime
-    """Timestamp indicating when the WhatsApp server received the message from the customer (in UTC)."""
+    """Timestamp indicating when the event occurred."""
     raw: RawUpdate = dataclasses.field(repr=False, hash=False, compare=False)
-    """The raw update dict from WhatsApp."""
-    shared_data: dict = dataclasses.field(hash=False, default_factory=dict)
-    """Shared data for the update. This data is shared between all handlers for the same update."""
+    """The raw update from WhatsApp."""
+
+    @property
+    def shared_data(self) -> dict:
+        """Shared data for the update. This data is shared between all handlers for the same update."""
+        return self.raw.shared_data
 
     @property
     def listener_identifier(self) -> BaseListenerIdentifier | None:
@@ -226,6 +229,14 @@ class BaseUpdate(abc.ABC, _HandlingFlow):
     def from_update(cls, client: WhatsApp, update: RawUpdate) -> BaseUpdate:
         """Create an update object from a raw update dict."""
         ...
+
+    def handle_again(self) -> None | Awaitable[None]:
+        """
+        Re-handle the update by calling the handlers again.
+
+        This can be useful if you want to re-process an update that cause an :class:`~pywa.listeners.ListenerCanceled` event, or if you want to re-process an update after registering a new handler dynamically.
+        """
+        return self._client._call_handlers(self.raw)
 
 
 class _ClientShortcuts(abc.ABC):

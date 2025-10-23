@@ -33,7 +33,7 @@ from typing import (
     Literal,
 )
 
-from .base_update import BaseUserUpdate  # noqa
+from .base_update import BaseUserUpdate, RawUpdate  # noqa
 from .flows import FlowStatus, FlowActionType
 from .others import MessageType, Metadata, ReplyToMessage, InteractiveType
 from .. import utils, _helpers as helpers
@@ -300,7 +300,7 @@ class CallbackButton(BaseUserUpdate, Generic[_CallbackDataT]):
     _webhook_field = "messages"
 
     @classmethod
-    def from_update(cls, client: "WhatsApp", update: dict) -> "CallbackButton":
+    def from_update(cls, client: "WhatsApp", update: RawUpdate) -> "CallbackButton":
         msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
             "messages"
         ][0]
@@ -400,7 +400,7 @@ class CallbackSelection(BaseUserUpdate, Generic[_CallbackDataT]):
     _webhook_field = "messages"
 
     @classmethod
-    def from_update(cls, client: "WhatsApp", update: dict) -> "CallbackSelection":
+    def from_update(cls, client: "WhatsApp", update: RawUpdate) -> "CallbackSelection":
         msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
             "messages"
         ][0]
