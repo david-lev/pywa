@@ -210,13 +210,15 @@ async def internal_upload_media(
         or _media_types_default_filenames.get(media_type, "file.txt")
     )
     try:
-        return wa.api.upload_media(
-            phone_id=phone_id,
-            media=media_info.content,
-            mime_type=mime_type
-            or media_info.mime_type
-            or _media_types_default_mime_types.get(media_type, "text/plain"),
-            filename=final_filename,
+        return (
+            await wa.api.upload_media(
+                phone_id=phone_id,
+                media=media_info.content,
+                mime_type=mime_type
+                or media_info.mime_type
+                or _media_types_default_mime_types.get(media_type, "text/plain"),
+                filename=final_filename,
+            )
         )["id"], final_filename
     finally:
         try:  # close file or stream
