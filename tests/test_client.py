@@ -462,6 +462,7 @@ def test_send_message(api, wa):
         msg={"body": "Hello", "preview_url": False},
         reply_to_message_id=MSG_ID,
         biz_opaque_callback_data=None,
+        recipient_identity_key_hash=None,
     )
 
 
@@ -483,6 +484,7 @@ def test_send_image(api, wa):
         },
         reply_to_message_id=MSG_ID,
         biz_opaque_callback_data=None,
+        recipient_identity_key_hash=None,
     )
 
 
@@ -503,6 +505,7 @@ def test_send_video(api, wa):
         },
         reply_to_message_id=None,
         biz_opaque_callback_data=None,
+        recipient_identity_key_hash=None,
     )
 
 
@@ -521,6 +524,7 @@ def test_send_audio(api, wa):
         },
         reply_to_message_id=None,
         biz_opaque_callback_data=None,
+        recipient_identity_key_hash=None,
     )
 
 
@@ -541,6 +545,7 @@ def test_send_document(api, wa):
         },
         reply_to_message_id=None,
         biz_opaque_callback_data=None,
+        recipient_identity_key_hash=None,
     )
 
 
@@ -564,6 +569,7 @@ def test_send_location(api, wa):
         },
         reply_to_message_id=None,
         biz_opaque_callback_data=None,
+        recipient_identity_key_hash=None,
     )
 
 
@@ -623,6 +629,7 @@ def test_send_contact(api, wa):
         ),
         reply_to_message_id=None,
         biz_opaque_callback_data=None,
+        recipient_identity_key_hash=None,
     )
 
 
@@ -641,6 +648,7 @@ def test_send_sticker(api, wa):
         },
         reply_to_message_id=None,
         biz_opaque_callback_data=None,
+        recipient_identity_key_hash=None,
     )
 
 
@@ -660,6 +668,7 @@ def test_send_reaction(api, wa):
             "message_id": MSG_ID,
         },
         biz_opaque_callback_data=None,
+        recipient_identity_key_hash=None,
     )
 
 
@@ -678,6 +687,7 @@ def test_remove_reaction(api, wa):
             "message_id": MSG_ID,
         },
         biz_opaque_callback_data=None,
+        recipient_identity_key_hash=None,
     )
 
 
@@ -701,6 +711,7 @@ def test_request_location(api, wa):
         },
         reply_to_message_id=MSG_ID,
         biz_opaque_callback_data=None,
+        recipient_identity_key_hash=None,
     )
 
 
@@ -727,6 +738,7 @@ def test_send_catalog(api, wa):
         },
         reply_to_message_id=None,
         biz_opaque_callback_data=None,
+        recipient_identity_key_hash=None,
     )
 
 
@@ -750,6 +762,7 @@ def test_send_product(api, wa):
         },
         reply_to_message_id=None,
         biz_opaque_callback_data=None,
+        recipient_identity_key_hash=None,
     )
 
 
@@ -794,4 +807,5 @@ def test_send_products(api, wa):
         },
         reply_to_message_id=None,
         biz_opaque_callback_data=None,
+        recipient_identity_key_hash=None,
     )

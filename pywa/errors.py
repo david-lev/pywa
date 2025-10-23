@@ -428,6 +428,15 @@ class UserStoppedMarketingMessages(SendMessageError):
     __error_codes__ = (131050,)
 
 
+class RecipientIdentityKeyMismatch(SendMessageError):
+    """The recipient's identity key hash does not match the one on record.
+
+    This can happen if the user has reinstalled WhatsApp or changed devices. Confirm the correct Recipient Identity Key Hash or send without any identity key hash.
+    """
+
+    __error_codes__ = (137000,)
+
+
 # ====================================================================================================
 
 

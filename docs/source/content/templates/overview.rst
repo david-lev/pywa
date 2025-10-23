@@ -9,6 +9,10 @@ Think of templates as reusable message blueprints that ensure your communication
 
 PyWa offers a comprehensive and intuitive interface to create, manage, and send these templates seamlessly. Whether you're looking to send promotional offers, account updates, or authentication codes, PyWa's templating system ensures your messages are structured, consistent, and compliant with WhatsApp's guidelines.
 
+- From `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates>`_:
+
+    Templates are WhatsApp Business Account assets that can be sent in template messages via Cloud API or Marketing Messages Lite API. Template messages are the only type of message that can be sent to WhatsApp users outside of a `customer service window <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-messages/#customer-service-windows>`_, so templates are commonly used when messaging users in bulk, or when you need to message a user, but no customer service window is open between you and the user.
+
 Defining Template
 ------------------
 

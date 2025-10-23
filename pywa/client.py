@@ -95,6 +95,7 @@ from .types import (
     UserMarketingPreferences,
     PhoneNumberChange,
     IdentityChange,
+    CallingSettings,
 )
 from .types.base_update import BaseUpdate
 from .types.calls import CallPermissions, SessionDescription
@@ -120,6 +121,8 @@ from .types.others import (
     Order,
     SuccessResult,
     WhatsAppBusinessAccount,
+    StorageConfiguration,
+    UserIdentityChangeSettings,
 )
 from .types.templates import (
     TemplatesResult,
@@ -584,6 +587,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         preview_url: bool = False,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
+        identity_key_hash: str | None = None,
         sender: str | int | None = None,
     ) -> SentMessage:
         """
@@ -612,7 +616,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             buttons: The buttons to send with the message (optional).
             preview_url: Whether to show a preview of the URL in the message (if any).
             reply_to_message_id: The message ID to reply to (optional).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
@@ -631,6 +636,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     msg={"body": text, "preview_url": preview_url},
                     reply_to_message_id=reply_to_message_id,
                     biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                    recipient_identity_key_hash=identity_key_hash,
                 ),
                 from_phone_id=sender,
             )
@@ -655,6 +661,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 ),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
         )
@@ -672,6 +679,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         reply_to_message_id: str | None = None,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
+        identity_key_hash: str | None = None,
         sender: str | int | None = None,
     ) -> SentMessage:
         """
@@ -702,7 +710,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
             mime_type: The mime type of the image (optional, required when sending an image as bytes or a file object,
              or file path that does not have an extension).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
@@ -731,6 +740,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     ),
                     reply_to_message_id=reply_to_message_id,
                     biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                    recipient_identity_key_hash=identity_key_hash,
                 ),
                 from_phone_id=sender,
             )
@@ -759,6 +769,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 ),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
         )
@@ -774,6 +785,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         mime_type: str | None = None,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
+        identity_key_hash: str | None = None,
         sender: str | int | None = None,
     ) -> SentMessage:
         """
@@ -804,7 +816,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
             mime_type: The mime type of the video (optional, required when sending a video as bytes or a file object,
              or file path that does not have an extension).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
@@ -833,6 +846,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     ),
                     reply_to_message_id=reply_to_message_id,
                     biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                    recipient_identity_key_hash=identity_key_hash,
                 ),
                 from_phone_id=sender,
             )
@@ -861,6 +875,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 ),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
         )
@@ -877,6 +892,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         mime_type: str | None = None,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
+        identity_key_hash: str | None = None,
         sender: str | int | None = None,
     ) -> SentMessage:
         """
@@ -908,7 +924,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             reply_to_message_id: The message ID to reply to (optional, only works if buttons provided).
             mime_type: The mime type of the document (optional, required when sending a document as bytes or a file
              object, or file path that does not have an extension).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
@@ -943,6 +960,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     ),
                     reply_to_message_id=reply_to_message_id,
                     biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                    recipient_identity_key_hash=identity_key_hash,
                 ),
                 from_phone_id=sender,
             )
@@ -972,6 +990,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 ),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
         )
@@ -984,6 +1003,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         mime_type: str | None = None,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
+        identity_key_hash: str | None = None,
         sender: str | int | None = None,
     ) -> SentMessage:
         """
@@ -1006,7 +1026,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             mime_type: The mime type of the audio file (optional, required when sending an audio file as bytes or a file
              object, or file path that does not have an extension).
             reply_to_message_id: The message ID to reply to (optional).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
@@ -1033,6 +1054,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 msg=helpers.get_media_msg(media_id_or_url=audio, is_url=is_url),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
         )
@@ -1045,6 +1067,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         mime_type: str | None = None,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
+        identity_key_hash: str | None = None,
         sender: str | int | None = None,
     ) -> SentMessage:
         """
@@ -1069,7 +1092,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             mime_type: The mime type of the sticker (optional, required when sending a sticker as bytes or a file
              object, or file path that does not have an extension).
             reply_to_message_id: The message ID to reply to (optional).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
@@ -1096,6 +1120,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 msg=helpers.get_media_msg(media_id_or_url=sticker, is_url=is_url),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
         )
@@ -1107,6 +1132,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         message_id: str,
         *,
         tracker: str | CallbackData | None = None,
+        identity_key_hash: str | None = None,
         sender: str | int | None = None,
     ) -> SentMessage:
         """
@@ -1134,7 +1160,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             to: The phone ID of the WhatsApp user.
             emoji: The emoji to react with.
             message_id: The message ID to react to.
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
@@ -1152,6 +1179,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 typ="reaction",
                 msg={"emoji": emoji, "message_id": message_id},
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
         )
@@ -1162,6 +1190,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         message_id: str,
         *,
         tracker: str | CallbackData | None = None,
+        identity_key_hash: str | None = None,
         sender: str | int | None = None,
     ) -> SentMessage:
         """
@@ -1187,7 +1216,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Args:
             to: The phone ID of the WhatsApp user.
             message_id: The message ID to remove the reaction from.
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
@@ -1205,6 +1235,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 typ="reaction",
                 msg={"emoji": "", "message_id": message_id},
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
         )
@@ -1219,6 +1250,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         *,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
+        identity_key_hash: str | None = None,
         sender: str | int | None = None,
     ) -> SentMessage:
         """
@@ -1244,7 +1276,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             name: The name of the location (optional).
             address: The address of the location (optional).
             reply_to_message_id: The message ID to reply to (optional).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
@@ -1267,6 +1300,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 },
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
         )
@@ -1278,6 +1312,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         *,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
+        identity_key_hash: str | None = None,
         sender: str | int | None = None,
     ) -> SentMessage:
         """
@@ -1298,7 +1333,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             to: The phone ID of the WhatsApp user.
             text: The text to send with the button.
             reply_to_message_id: The message ID to reply to (optional).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
@@ -1320,6 +1356,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 ),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
         )
@@ -1331,6 +1368,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         *,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
+        identity_key_hash: str | None = None,
         sender: str | int | None = None,
     ) -> SentMessage:
         """
@@ -1358,7 +1396,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             to: The phone ID of the WhatsApp user.
             contact: The contact/s to send.
             reply_to_message_id: The message ID to reply to (optional).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
@@ -1378,6 +1417,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 else (contact.to_dict(),),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
         )
@@ -1391,6 +1431,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         thumbnail_product_sku: str | None = None,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
+        identity_key_hash: str | None = None,
         sender: str | int | None = None,
     ) -> SentMessage:
         """
@@ -1418,7 +1459,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
             thumbnail_product_sku: Item SKU number. Labeled as Content ID in the Commerce Manager. The thumbnail of this item will be used as the message's header image. If omitted, the product image of the first item in your catalog will be used.
             reply_to_message_id: The message ID to reply to (optional).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
@@ -1452,6 +1494,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 ),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
         )
@@ -1466,6 +1509,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         *,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
+        identity_key_hash: str | None = None,
         sender: str | int | None = None,
     ) -> SentMessage:
         """
@@ -1494,7 +1538,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
             reply_to_message_id: The message ID to reply to (optional).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
@@ -1520,6 +1565,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 ),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
         )
@@ -1535,6 +1581,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         *,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
+        identity_key_hash: str | None = None,
         sender: str | int | None = None,
     ) -> SentMessage:
         """
@@ -1575,7 +1622,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
             reply_to_message_id: The message ID to reply to (optional).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the message from (optional, overrides the client's phone ID).
 
         Returns:
@@ -1605,6 +1653,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 ),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
         )
@@ -2000,8 +2049,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
     def update_business_phone_number_settings(
         self,
-        settings: BusinessPhoneNumberSettings,
+        settings: None = None,
         *,
+        calling: CallingSettings | None = None,
+        storage_configuration: StorageConfiguration | None = None,
+        user_identity_change: UserIdentityChangeSettings | None = None,
         phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
@@ -2013,15 +2065,27 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             >>> wa = WhatsApp(...)
             >>> s = wa.get_business_phone_number_settings()
             >>> s.calling.status = CallingSettingsStatus.ENABLED
-            >>> wa.update_business_phone_number_settings(settings)
+            >>> wa.update_business_phone_number_settings(calling=s.calling)
 
         Args:
-            settings: The new settings to update.
+            calling: The calling settings to update (optional).
+            storage_configuration: The storage configuration to update (optional).
+            user_identity_change: The user identity change settings to update (optional).
+            settings: Deprecated, use `calling`, `storage_configuration`, and `user_identity_change` instead.
             phone_id: The phone ID to update the settings for (optional, if not provided, the client's phone ID will be used).
 
         Returns:
             Whether the settings were updated successfully.
         """
+        if settings is not None:
+            warnings.warn(
+                "The `settings` parameter is deprecated, use `calling`, `storage_configuration`, and `user_identity_change` instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            calling = settings.calling
+            storage_configuration = settings.storage_configuration
+            user_identity_change = settings.user_identity_change
         return SuccessResult.from_dict(
             self.api.update_business_phone_number_settings(
                 phone_id=helpers.resolve_arg(
@@ -2030,7 +2094,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     method_arg="phone_id",
                     client_arg="phone_id",
                 ),
-                settings=settings.to_dict(),
+                settings=BusinessPhoneNumberSettings(
+                    calling=calling,
+                    storage_configuration=storage_configuration,
+                    user_identity_change=user_identity_change,
+                ).to_dict(),
             )
         )
 
@@ -2499,6 +2567,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         message_activity_sharing: bool | None = None,
         reply_to_message_id: str | None = None,
         tracker: str | CallbackData | None = None,
+        identity_key_hash: str | None = None,
         sender: str | int | None = None,
     ) -> SentTemplate:
         """
@@ -2571,7 +2640,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             use_mm_lite_api: Whether to use `Marketing Messages Lite API <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api>`_ (optional, default: False).
             message_activity_sharing: Whether to share message activities (e.g. message read) for that specific marketing message to Meta to help optimize marketing messages (optional, only if ``use_mm_lite_api`` is True).
             reply_to_message_id: The ID of the message to reply to (optional).
-            tracker: A callback data to track the message (optional, can be a string or a :class:`CallbackData` object).
+            tracker: A callback data to track the message (optional, can be a string or a :class:`~pywa.types.callback.CallbackData` object).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             sender: The phone ID to send the template from (optional, if not provided, the client's phone ID will be used).
         """
         sender = helpers.resolve_arg(
@@ -2606,6 +2676,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 msg=template,
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                recipient_identity_key_hash=identity_key_hash,
             )
             if not use_mm_lite_api
             else self.api.send_marketing_message(
@@ -2615,6 +2686,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 message_activity_sharing=message_activity_sharing,
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
         )
@@ -3775,7 +3847,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Args:
             to: The number being called (callee)
             sdp: Contains the session description protocol (SDP) type and description language.
-            tracker: The data to track the call with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            tracker: The data to track the call with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
             phone_id: The phone ID to initiate the call from (optional, if not provided, the client's phone ID will be used).
 
         Returns:
@@ -3840,7 +3912,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Args:
             call_id: The ID of the call to accept.
             sdp: Contains the session description protocol (SDP) type and description language.
-            tracker: The data to track the call with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            tracker: The data to track the call with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
             phone_id: The phone ID to accept the call from (optional, if not provided, the client's phone ID will be used).
 
         Returns:

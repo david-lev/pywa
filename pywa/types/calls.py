@@ -52,6 +52,7 @@ from .others import (
     SuccessResult,
     ReplyToMessage,
     StorageConfiguration,
+    UserIdentityChangeSettings,
 )
 from .callback import _CallbackDataT, CallbackData
 from .. import utils
@@ -959,21 +960,39 @@ class BusinessPhoneNumberSettings(utils.APIObject):
     """
 
     calling: CallingSettings | None = None
-    storage_configuration: StorageConfiguration
+    storage_configuration: StorageConfiguration | None = None
+    user_identity_change: UserIdentityChangeSettings | None = None
+
+    _copied: bool = dataclasses.field(default=False, init=False, repr=False)
 
     @classmethod
     def from_dict(cls, data: dict) -> BusinessPhoneNumberSettings:
         return cls(
-            calling=CallingSettings.from_dict(data.get("calling"))
-            if data.get("calling")
+            calling=CallingSettings.from_dict(data["calling"])
+            if "calling" in data
             else None,
             storage_configuration=StorageConfiguration.from_dict(
                 data["storage_configuration"]
-            ),
+            )
+            if "storage_configuration" in data
+            else None,
+            user_identity_change=UserIdentityChangeSettings.from_dict(
+                data["user_identity_change"]
+            )
+            if "user_identity_change" in data
+            else None,
         )
 
     def to_dict(self) -> dict:
-        return {"calling": self.calling.to_dict() if self.calling else None}
+        return {
+            "calling": self.calling.to_dict() if self.calling else None,
+            "storage_configuration": dataclasses.asdict(self.storage_configuration)
+            if self.storage_configuration
+            else None,
+            "user_identity_change": self.user_identity_change.to_dict()
+            if self.user_identity_change
+            else None,
+        }
 
 
 class CallPermissionStatus(utils.StrEnum):

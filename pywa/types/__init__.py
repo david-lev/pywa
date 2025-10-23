@@ -48,6 +48,7 @@ from .others import (
     Result,
     Pagination,
     StorageConfiguration,
+    UserIdentityChangeSettings,
 )
 from .templates import (
     Template,

@@ -43,13 +43,15 @@ class User:
 
     Attributes:
         wa_id: The WhatsApp ID of the user (The phone number with the country code).
-        name: The name of the user (``None`` on :class:`MessageStatus` or when message type is :class:`MessageType.SYSTEM`).
+        name: The name of the user (``None`` on :class:`MessageStatus`).
+        identity_key_hash: The identity key hash of the user (Only if identity key check is enabled on the phone number settings).
         input: The input of the recipient is only available when sending a message.
     """
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
     wa_id: str
     name: str | None
+    identity_key_hash: str | None = None
     input: str | None = dataclasses.field(
         default=None, repr=False, hash=False, compare=False
     )
@@ -61,6 +63,7 @@ class User:
             wa_id=data["wa_id"],
             name=data.get("profile", {}).get("name"),
             input=data.get("input"),
+            identity_key_hash=data.get("identity_key_hash"),
         )
 
     def block(self) -> bool:
@@ -939,7 +942,7 @@ class StorageStatus(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-@dataclasses.dataclass(slots=True, kw_only=True)
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class StorageConfiguration:
     """
     Local storage offers an additional layer of data management control, by giving you the option to specify where your message data is stored at rest. If your company is in a regulated industry such as finance, government, or healthcare, you may prefer to have your message data stored in a specific country when at rest because of regulatory or company policies.
@@ -969,7 +972,7 @@ class StorageConfiguration:
 
     **Available Regions**
 
-    To see what regions are supported by local storage, see the ``data_localization_region`` parameter in the documentation on phone number registration.
+    To see what regions are supported by local storage, see the ``data_localization_region`` parameter in the `documentation on phone number registration <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/registration/#register>`_.
     """
 
     status: StorageStatus
@@ -981,6 +984,22 @@ class StorageConfiguration:
             status=StorageStatus(data["status"]),
             data_localization_region=data.get("data_localization_region"),
         )
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class UserIdentityChangeSettings:
+    """
+    You may want us to verify a customer's identity before we deliver your message to them. You can have us do this by enabling the identity change check setting on your business phone number.
+    """
+
+    enable_identity_key_check: bool
+
+    @classmethod
+    def from_dict(cls, data: dict) -> UserIdentityChangeSettings:
+        return cls(enable_identity_key_check=data["enable_identity_key_check"])
+
+    def to_dict(self) -> dict:
+        return {"enable_identity_key_check": self.enable_identity_key_check}
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
