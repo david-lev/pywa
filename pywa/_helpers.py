@@ -241,13 +241,14 @@ def resolve_media_param(
         media_type=media_type,
         mime_type=mime_type,
         filename=filename,
+        download_chunk_size=None,
         wa=wa,
         phone_id=phone_id,
     )
     return False, media_id, filename
 
 
-class GeneratorStreamer:
+class GeneratorStreamer(Iterable):
     """
     A MEMORY-EFFICIENT, buffer-free file-like wrapper that lets a bytes generator be
     used where httpx expects a file-like object for multipart/form-data uploads.
@@ -266,6 +267,9 @@ class GeneratorStreamer:
 
     Only use this to make httpx accept generator-based uploads that require a file-like object.
     """
+
+    def __iter__(self):
+        return self
 
     def __init__(self, generator: Iterator[bytes], length: int | None = None):
         self._iterator = itertools.chain(generator, [b""])
@@ -309,6 +313,7 @@ class MediaInfo(NamedTuple):
 def get_media_from_url(
     url: str,
     dl_session: httpx.Client,
+    download_chunk_size: int,
 ) -> MediaInfo:
     res = (cm := dl_session.stream("GET", url, follow_redirects=True)).__enter__()
     try:
@@ -316,7 +321,7 @@ def get_media_from_url(
         length: int | None = int(res.headers.get("Content-Length", 0)) or None
         return MediaInfo(
             content=GeneratorStreamer(
-                res.iter_bytes(chunk_size=DOWNLOAD_CHUNK_SIZE), length=length
+                res.iter_bytes(chunk_size=download_chunk_size), length=length
             ),
             filename=get_filename_from_httpx_response_headers(res.headers)
             or pathlib.Path(url).name,
@@ -398,6 +403,7 @@ def get_media_from_media_id_or_obj_or_url(
     wa: WhatsApp,
     media: str | Media,
     media_source: MediaSource,
+    download_chunk_size: int,
 ) -> MediaInfo:
     filename: str | None = None
     mime_type: str | None = None
@@ -416,7 +422,7 @@ def get_media_from_media_id_or_obj_or_url(
                 "media must be MediaSource.MEDIA_ID, MEDIA_OBJ or MEDIA_URL"
             )
 
-    res = (cm := wa.api.get_media_bytes(media_url=url)).__enter__()
+    res = (cm := wa.api.stream_media_bytes(media_url=url)).__enter__()
     try:
         res.raise_for_status()
     except httpx.HTTPError as e:
@@ -425,7 +431,7 @@ def get_media_from_media_id_or_obj_or_url(
     length: int | None = int(res.headers.get("Content-Length", 0)) or None
     return MediaInfo(
         content=GeneratorStreamer(
-            res.iter_bytes(chunk_size=DOWNLOAD_CHUNK_SIZE), length=length
+            res.iter_bytes(chunk_size=download_chunk_size), length=length
         ),
         filename=filename or get_filename_from_httpx_response_headers(res.headers),
         mime_type=mime_type or res.headers.get("Content-Type"),
@@ -441,6 +447,7 @@ def internal_upload_media(
     media_type: str | None,
     mime_type: str | None,
     filename: str | None,
+    download_chunk_size: int | None,
     wa: WhatsApp,
     phone_id: str,
     dl_session: httpx.Client | None = None,
@@ -456,7 +463,11 @@ def internal_upload_media(
             client, close_client = (
                 (dl_session, False) if dl_session else (httpx.Client(), True)
             )
-            media_info = get_media_from_url(url=media, dl_session=client)
+            media_info = get_media_from_url(
+                url=media,
+                dl_session=client,
+                download_chunk_size=download_chunk_size or DOWNLOAD_CHUNK_SIZE,
+            )
         case MediaSource.PATH:
             media_info = get_media_from_path(path=media)
         case MediaSource.BYTES:
@@ -467,7 +478,10 @@ def internal_upload_media(
             media_info = get_media_from_file_like_obj(file_obj=media)
         case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
             media_info = get_media_from_media_id_or_obj_or_url(
-                wa=wa, media=media, media_source=media_source
+                wa=wa,
+                media=media,
+                media_source=media_source,
+                download_chunk_size=download_chunk_size or DOWNLOAD_CHUNK_SIZE,
             )
         case MediaSource.BYTES_GEN:
             media_info = MediaInfo(
@@ -561,7 +575,7 @@ def upload_template_media_components(
 def _upload_comps_example(
     *,
     wa: WhatsApp,
-    example: str | Media | pathlib.Path | bytes | BinaryIO,
+    example: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
     comps: list[_BaseMediaHeaderComponent],
     app_id: int | str | None,
     stop_event: threading.Event,
@@ -576,12 +590,19 @@ def _upload_comps_example(
     match source:
         case MediaSource.EXTERNAL_URL:
             client = httpx.Client()
-            media_info = get_media_from_url(url=example, dl_session=client)
+            media_info = get_media_from_url(
+                url=example,
+                dl_session=client,
+                download_chunk_size=DOWNLOAD_CHUNK_SIZE,
+            )
         case MediaSource.PATH:
             media_info = get_media_from_path(path=example)
         case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
             media_info = get_media_from_media_id_or_obj_or_url(
-                wa=wa, media=example, media_source=source
+                wa=wa,
+                media=example,
+                media_source=source,
+                download_chunk_size=DOWNLOAD_CHUNK_SIZE,
             )
         case MediaSource.BYTES:
             media_info = MediaInfo(
@@ -589,6 +610,16 @@ def _upload_comps_example(
             )
         case MediaSource.FILE_OBJ:
             media_info = get_media_from_file_like_obj(example)
+        case MediaSource.BYTES_GEN:
+            all_bytes = b"".join(example)
+            media_info = MediaInfo(
+                content=all_bytes,
+                filename=None,
+                mime_type=None,
+                length=len(all_bytes),
+            )
+        case MediaSource.BASE64_DATA_URI | MediaSource.BASE64:
+            media_info = get_media_from_base64(base64_str=example)
         case MediaSource.FILE_HANDLE:
             for comp in comps:
                 comp._handle = example
@@ -689,7 +720,7 @@ def _upload_params_media(
     *,
     wa: WhatsApp,
     sender: str,
-    media: str | Media | pathlib.Path | bytes | BinaryIO,
+    media: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
     params: list[_BaseMediaParams],
 ) -> None:
     first_param = params[0]

@@ -14,7 +14,7 @@ import json
 import pathlib
 import dataclasses
 import datetime
-from typing import TYPE_CHECKING, BinaryIO, Iterable, ClassVar, NoReturn
+from typing import TYPE_CHECKING, BinaryIO, Iterable, ClassVar, NoReturn, Iterator
 
 from .others import Contact, Metadata, ProductsSection, User, SuccessResult
 from ..listeners import BaseListenerIdentifier, UserUpdateListenerIdentifier
@@ -314,7 +314,7 @@ class _ClientShortcuts(abc.ABC):
 
     def reply_image(
         self,
-        image: str | int | Media | pathlib.Path | bytes | BinaryIO,
+        image: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
@@ -372,7 +372,7 @@ class _ClientShortcuts(abc.ABC):
 
     def reply_video(
         self,
-        video: str | int | Media | pathlib.Path | bytes | BinaryIO,
+        video: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
@@ -430,7 +430,7 @@ class _ClientShortcuts(abc.ABC):
 
     def reply_document(
         self,
-        document: str | int | Media | pathlib.Path | bytes | BinaryIO,
+        document: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
         filename: str | None = None,
         caption: str | None = None,
         footer: str | None = None,
@@ -492,7 +492,7 @@ class _ClientShortcuts(abc.ABC):
 
     def reply_audio(
         self,
-        audio: str | int | Media | pathlib.Path | bytes | BinaryIO,
+        audio: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
         *,
         quote: bool = False,
         mime_type: str | None = None,
@@ -534,7 +534,7 @@ class _ClientShortcuts(abc.ABC):
 
     def reply_sticker(
         self,
-        sticker: str | int | Media | pathlib.Path | bytes | BinaryIO,
+        sticker: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
         *,
         quote: bool = False,
         mime_type: str | None = None,

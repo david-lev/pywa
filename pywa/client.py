@@ -6,6 +6,7 @@ __all__ = ["WhatsApp"]
 
 import bisect
 import collections
+import contextlib
 import datetime
 import functools
 import hashlib
@@ -15,7 +16,7 @@ import mimetypes
 import pathlib
 import warnings
 from types import NoneType, ModuleType
-from typing import BinaryIO, Iterable, Literal, Any, Callable, Iterator
+from typing import BinaryIO, Iterable, Literal, Any, Callable, Iterator, Generator
 
 import httpx
 
@@ -1726,6 +1727,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 wa=self,
                 phone_id=upload_to,
                 dl_session=dl_session,
+                download_chunk_size=download_chunk_size,
             )[0],
             uploaded_to=upload_to,
         )
@@ -1766,12 +1768,17 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         url: str,
         path: str | pathlib.Path | None = None,
         filename: str | None = None,
-        in_memory: bool = False,
+        in_memory: None = None,
+        chunk_size: int = helpers.DOWNLOAD_CHUNK_SIZE,
         **httpx_kwargs: Any,
-    ) -> pathlib.Path | bytes:
+    ) -> pathlib.Path:
         """
         Download a media file from WhatsApp servers.
 
+        - Use :py:func:`~pywa.client.WhatsApp.get_media_url` to get the media URL from a media ID.
+        - Use :py:func:`~pywa.types.Message.download_media` to download media directly from a message.
+        - Use :py:func:`~pywa.client.WhatsApp.get_media_bytes` to get the media as bytes.
+        - Use :py:func:`~pywa.client.WhatsApp.stream_media` to stream the media as bytes.
         - See `Download media <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#download-media>`_.
 
         Example:
@@ -1784,36 +1791,109 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             ... )
 
         Args:
-            url: The URL of the media file (from :py:func:`~pywa.client.WhatsApp.get_media_url`).
+            url: The URL of the media file.
             path: The path where to save the file (if not provided, the current working directory will be used).
             filename: The name of the file to save (if not provided, it will be extracted from the ``Content-Disposition`` header or a SHA256 hash of the URL will be used).
-            in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
+            chunk_size: The size (in bytes) of each chunk to read when downloading the media (default: ``64KB``).
+            in_memory: Deprecated: Use :py:func:`~pywa.client.WhatsApp.get_media_bytes` or :py:func:`~pywa.client.WhatsApp.stream_media` instead. If True, the file will be returned as bytes instead of being saved to disk.
             **httpx_kwargs: Additional arguments to pass to :py:func:`httpx.get`.
 
         Returns:
-            The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
+            The path of the saved file.
         """
-        content, headers = self.api.get_media_bytes(media_url=url, **httpx_kwargs)
-        mimetype = headers.get("Content-Type")
         if in_memory:
-            return content
-        if path is None:
-            path = pathlib.Path.cwd()
-        if filename is None:
-            filename = helpers.get_filename_from_httpx_response_headers(headers)
+            warnings.warn(
+                "`in_memory` parameter is deprecated and will be removed in future versions. "
+                "Use `get_media_bytes` or `stream_media` methods instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            return self.get_media_bytes(url=url, **httpx_kwargs)
+        with self.api.stream_media_bytes(media_url=url, **httpx_kwargs) as res:
+            res.raise_for_status()
+            mimetype = res.headers.get("Content-Type")
+            if path is None:
+                path = pathlib.Path.cwd()
             if filename is None:
-                clean_mimetype = mimetype.split(";")[0].strip() if mimetype else None
-                filename = hashlib.sha256(url.encode()).hexdigest() + (
-                    (
-                        mimetypes.guess_extension(clean_mimetype)
-                        if clean_mimetype
-                        else None
+                filename = helpers.get_filename_from_httpx_response_headers(res.headers)
+                if filename is None:
+                    clean_mimetype = (
+                        mimetype.split(";")[0].strip() if mimetype else None
                     )
-                    or ".bin"
-                )
-        path = pathlib.Path(path) / filename
-        path.write_bytes(content)
-        return path
+                    filename = hashlib.sha256(url.encode()).hexdigest() + (
+                        (
+                            mimetypes.guess_extension(clean_mimetype)
+                            if clean_mimetype
+                            else None
+                        )
+                        or ".bin"
+                    )
+            path = pathlib.Path(path) / filename
+            with path.open("wb") as f:
+                for chunk in res.iter_bytes(chunk_size=chunk_size):
+                    f.write(chunk)
+            return path
+
+    def get_media_bytes(self, url: str, **httpx_kwargs: Any) -> bytes:
+        """
+        Get media file as bytes from WhatsApp servers.
+
+        - Use :py:func:`~pywa.client.WhatsApp.get_media_url` to get the media URL from a media ID.
+        - Use :py:func:`~pywa.types.Message.get_media_bytes` to get the media directly from a message.
+        - Use :py:func:`~pywa.client.WhatsApp.download_media` to download the media to a file.
+        - Use :py:func:`~pywa.client.WhatsApp.stream_media` to stream the media as bytes.
+        - See `Download media <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#download-media>`_.
+
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> media_bytes = wa.get_media_bytes(
+            ...     url='https://mmg-fna.whatsapp.net/d/f/Amc.../v2/1234567890',
+            ... )
+
+        Args:
+            url: The URL of the media file.
+            **httpx_kwargs: Additional arguments to pass to :py:func:`httpx.get
+
+        Returns:
+            The media file as bytes.
+        """
+        with self.api.stream_media_bytes(media_url=url, **httpx_kwargs) as res:
+            res.raise_for_status()
+            return res.read()
+
+    def stream_media(
+        self,
+        url: str,
+        *,
+        chunk_size: int = helpers.DOWNLOAD_CHUNK_SIZE,
+        **httpx_kwargs: Any,
+    ) -> Generator[bytes]:
+        """
+        Stream media file as bytes from WhatsApp servers.
+
+        - Use :py:func:`~pywa.client.WhatsApp.get_media_url` to get the media URL from a media ID.
+        - Use :py:func:`~pywa.types.Message.stream_media` to stream the media directly from a message.
+        - Use :py:func:`~pywa.client.WhatsApp.download_media` to download the media to a file.
+        - Use :py:func:`~pywa.client.WhatsApp.get_media_bytes` to get the media as bytes.
+        - See `Download media <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#download-media>`_.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> with httpx.Client() as client:
+            >>>    client.post("https://my-server.com/upload", content=wa.stream_media()) # streaming upload
+
+        Args:
+            url: The URL of the media file.
+            chunk_size: The size (in bytes) of each chunk to read (default: ``64KB``).
+            **httpx_kwargs: Additional arguments to pass to :py:func:`httpx.get`.
+        """
+        with self.api.stream_media_bytes(media_url=url, **httpx_kwargs) as res:
+            res.raise_for_status()
+            for chunk in res.iter_bytes(chunk_size=chunk_size):
+                yield chunk
 
     def delete_media(
         self,

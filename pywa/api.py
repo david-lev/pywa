@@ -76,6 +76,7 @@ class GraphAPI:
             )
             raise
         if res.status_code >= 400:
+            print("ERROR123", res.json())
             raise WhatsAppError.from_dict(error=res.json()["error"], response=res)
         return res.json()
 
@@ -368,7 +369,7 @@ class GraphAPI:
                 "messaging_product": (None, "whatsapp"),
                 "type": (None, mime_type),
             },
-            log_kwargs=False,
+            # log_kwargs=False,
         )
 
     def get_media_url(self, media_id: str) -> dict:
@@ -396,11 +397,11 @@ class GraphAPI:
         """
         return self._make_request(method="GET", endpoint=f"/{media_id}")
 
-    def get_media_bytes(
+    def stream_media_bytes(
         self,
         media_url: str,
         **httpx_kwargs,
-    ):
+    ) -> _GeneratorContextManager[httpx.Response]:
         """
         Get media stream from WhatsApp servers.
 
@@ -417,6 +418,7 @@ class GraphAPI:
             method="GET",
             url=media_url,
             headers=self._session.headers.copy(),
+            follow_redirects=True,
             **httpx_kwargs,
         )
 
@@ -2029,7 +2031,7 @@ class GraphAPI:
             headers={
                 "file_offset": str(file_offset),
             },
-            data=file,
+            content=file,
             log_kwargs=False,
         )
 

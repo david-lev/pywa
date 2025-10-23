@@ -24,6 +24,7 @@ from pywa._helpers import (
     _filter_not_uploaded_params,
     _header_format_to_media_type,
     get_filename_from_httpx_response_headers,
+    DOWNLOAD_CHUNK_SIZE,
 )
 from pywa.types.templates import (
     TemplateBaseComponent,
@@ -114,7 +115,7 @@ async def _get_media_from_media_id_or_obj_or_url(
                 "media must be MediaSource.MEDIA_ID, MEDIA_OBJ or MEDIA_URL"
             )
 
-    content, headers = await wa.api.get_media_bytes(media_url=url)
+    content, headers = await wa.api.stream_media_bytes(media_url=url)
     return MediaInfo(
         content=content,
         filename=filename or get_filename_from_httpx_response_headers(headers),

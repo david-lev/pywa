@@ -1,5 +1,7 @@
 """The internal API for the WhatsApp client."""
 
+from contextlib import _AsyncGeneratorContextManager
+
 from pywa.api import *  # noqa MUST BE IMPORTED FIRST
 
 from typing import Any, TYPE_CHECKING
@@ -387,11 +389,11 @@ class GraphAPIAsync(GraphAPI):
         """
         return await self._make_request(method="GET", endpoint=f"/{media_id}")
 
-    async def get_media_bytes(
+    def stream_media_bytes(
         self,
         media_url: str,
         **httpx_kwargs,
-    ):
+    ) -> _AsyncGeneratorContextManager[httpx.Response]:
         """
         Get media stream from WhatsApp servers.
 
@@ -408,6 +410,7 @@ class GraphAPIAsync(GraphAPI):
             method="GET",
             url=media_url,
             headers=self._session.headers.copy(),
+            follow_redirects=True,
             **httpx_kwargs,
         )
 
@@ -2024,7 +2027,7 @@ class GraphAPIAsync(GraphAPI):
             headers={
                 "file_offset": str(file_offset),
             },
-            data=file,
+            content=file,
             log_kwargs=False,
         )
 
