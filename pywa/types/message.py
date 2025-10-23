@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pathlib
 import warnings
 
 """This module contains the types related to messages."""
@@ -227,7 +228,8 @@ class Message(BaseUserUpdate):
     ) -> Image | Video | Sticker | Document | Audio | None:
         """
         The media of the message, if any, otherwise ``None``. (image, video, sticker, document or audio)
-            - If you want to check whether the message has any media, use :attr:`~Message.has_media` instead.
+
+        - If you want to check whether the message has any media, use :attr:`~Message.has_media` instead.
         """
         return next(
             (
@@ -242,17 +244,23 @@ class Message(BaseUserUpdate):
         self,
         filepath: str | None = None,
         filename: str | None = None,
-        in_memory: bool = False,
-        **kwargs,
-    ) -> str | bytes:
+        in_memory: None = False,
+        *,
+        chunk_size: int | None = None,
+        **httpx_kwargs,
+    ) -> pathlib.Path:
         """
         Download a media file from WhatsApp servers (image, video, sticker, document or audio).
 
+        - Shortcut for ``message.media.download(...)``, ``message.image.download(...)`` etc.
+        - Use :py:func:`~pywa.client.WhatsApp.get_media_bytes` or :py:func:`~pywa.client.WhatsApp.stream_media` instead of ``in_memory=True``.
+
         Args:
             filepath: The path where to save the file (if not provided, the current working directory will be used).
-            filename: The name of the file (if not provided, it will be guessed from the URL + extension).
-            in_memory: Whether to return the file as bytes instead of saving it to disk (default: False).
-            **kwargs: Additional arguments to pass to httpx.get.
+            filename: The name of the file to save (if not provided, it will be extracted from the ``Content-Disposition`` header or a SHA256 hash of the URL will be used).
+            chunk_size: The size (in bytes) of each chunk to read when downloading the media (default: ``64KB``).
+            in_memory: Deprecated: Use :py:func:`~pywa.client.WhatsApp.get_media_bytes` or :py:func:`~pywa.client.WhatsApp.stream_media` instead. If True, the file will be returned as bytes instead of being saved to disk.
+            **httpx_kwargs: Additional arguments to pass to ``httpx.get(...)``.
 
         Returns:
             The path of the saved file if ``in_memory`` is False, the file as bytes otherwise.
@@ -262,7 +270,11 @@ class Message(BaseUserUpdate):
         """
         try:
             return self.media.download(
-                path=filepath, filename=filename, in_memory=in_memory, **kwargs
+                path=filepath,
+                filename=filename,
+                in_memory=in_memory,
+                chunk_size=chunk_size,
+                **httpx_kwargs,
             )
         except AttributeError:
             raise ValueError("Message does not contain any media.")
