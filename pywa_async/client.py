@@ -1566,7 +1566,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         if path is None:
             path = pathlib.Path.cwd()
         if filename is None:
-            filename = helpers._get_filename_from_httpx_response_headers(headers)
+            filename = helpers.get_filename_from_httpx_response_headers(headers)
             if filename is None:
                 clean_mimetype = mimetype.split(";")[0].strip() if mimetype else None
                 filename = hashlib.sha256(url.encode()).hexdigest() + (

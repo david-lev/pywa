@@ -17,13 +17,13 @@ from pywa._helpers import (
     _media_types_default_mime_types,
     detect_media_source,
     MediaSource,
-    _get_media_from_path,
+    get_media_from_path,
     MediaInfo,
-    _get_media_from_file_like_obj,
+    get_media_from_file_like_obj,
     _filter_not_uploaded_comps,
     _filter_not_uploaded_params,
     _header_format_to_media_type,
-    _get_filename_from_httpx_response_headers,
+    get_filename_from_httpx_response_headers,
 )
 from pywa.types.templates import (
     TemplateBaseComponent,
@@ -87,7 +87,7 @@ async def _get_media_from_url(
         raise ValueError(f"An error occurred while downloading from {url}") from e
     return MediaInfo(
         content=await res.aiter_bytes(),
-        filename=_get_filename_from_httpx_response_headers(res.headers)
+        filename=get_filename_from_httpx_response_headers(res.headers)
         or pathlib.Path(url).name,
         mime_type=res.headers.get("Content-Type") or mimetypes.guess_type(url)[0],
     )
@@ -117,7 +117,7 @@ async def _get_media_from_media_id_or_obj_or_url(
     content, headers = await wa.api.get_media_bytes(media_url=url)
     return MediaInfo(
         content=content,
-        filename=filename or _get_filename_from_httpx_response_headers(headers),
+        filename=filename or get_filename_from_httpx_response_headers(headers),
         mime_type=mime_type or headers.get("Content-Type"),
     )
 
@@ -146,14 +146,14 @@ async def internal_upload_media(
                 url=media, dl_session=dl_session
             )
         case MediaSource.PATH:
-            content, fallback_filename, fallback_mime_type = _get_media_from_path(
+            content, fallback_filename, fallback_mime_type = get_media_from_path(
                 path=media
             )
         case MediaSource.BYTES:
             content = media
         case MediaSource.FILE_OBJ:
             content, fallback_filename, fallback_mime_type = (
-                _get_media_from_file_like_obj(file_obj=media)
+                get_media_from_file_like_obj(file_obj=media)
             )
         case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
             (
@@ -244,7 +244,7 @@ async def _upload_comps_example(
             case MediaSource.EXTERNAL_URL:
                 raw_bytes, filename, mime_type = await _get_media_from_url(url=example)
             case MediaSource.PATH:
-                raw_bytes, filename, mime_type = _get_media_from_path(path=example)
+                raw_bytes, filename, mime_type = get_media_from_path(path=example)
             case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
                 (
                     raw_bytes,
@@ -256,7 +256,7 @@ async def _upload_comps_example(
             case MediaSource.BYTES:
                 raw_bytes = example
             case MediaSource.FILE_OBJ:
-                raw_bytes, filename, mime_type = _get_media_from_file_like_obj(example)
+                raw_bytes, filename, mime_type = get_media_from_file_like_obj(example)
             case MediaSource.FILE_HANDLE:
                 for comp in comps:
                     comp._handle = example

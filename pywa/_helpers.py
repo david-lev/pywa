@@ -68,7 +68,7 @@ if TYPE_CHECKING:
 
 _logger = logging.getLogger(__name__)
 
-CHUNK_SIZE = 64 * 1024
+DOWNLOAD_CHUNK_SIZE = 64 * 1024
 
 
 def resolve_buttons_param(
@@ -105,7 +105,9 @@ def resolve_buttons_param(
         return InteractiveType.BUTTON, {"buttons": tuple(b.to_dict() for b in buttons)}
 
 
-_header_format_to_media_type = {
+_header_format_to_media_type: dict[
+    HeaderFormatType, Literal["image", "video", "audio", "sticker", "document"]
+] = {
     HeaderFormatType.IMAGE: "image",
     HeaderFormatType.VIDEO: "video",
     HeaderFormatType.DOCUMENT: "document",
@@ -152,11 +154,14 @@ class MediaSource(enum.Enum):
     BASE64 = enum.auto()  # "iVBORw0KGgoAAAANSUhEUgAA..."
 
 
-_MEDIA_ID_PATTERN = re.compile(r"^\d:.*")
+_FILE_HANDLE_PATTERN = re.compile(r"^\d:.*")
 _BASE64_DATA_URI_PATTERN = re.compile(
     r"^data:(?P<mime>[\w/-]+);base64,(?P<data>[A-Za-z0-9+/]+={0,2})$"
 )
 _BASE64_PATTERN = re.compile(r"^[A-Za-z0-9+/]+={0,2}$")
+_WA_MEDIA_PATTERN = re.compile(
+    r"^https://lookaside\.fbsbx\.com/whatsapp_business/attachments/\?mid="
+)
 
 
 def detect_media_source(
@@ -166,7 +171,7 @@ def detect_media_source(
         media = str(media)
         if media.startswith(("https://", "http://")):
             if re.match(
-                r"^https://lookaside\.fbsbx\.com/whatsapp_business/attachments/\?mid=",
+                _WA_MEDIA_PATTERN,
                 media,
             ):
                 _logger.debug("Detected media source as WhatsApp media URL")
@@ -179,7 +184,7 @@ def detect_media_source(
         elif pathlib.Path(media).is_file():
             _logger.debug("Detected media source as file path")
             return MediaSource.PATH
-        elif re.match(_MEDIA_ID_PATTERN, media):
+        elif re.match(_FILE_HANDLE_PATTERN, media):
             _logger.debug("Detected media source as file handle")
             return MediaSource.FILE_HANDLE
         elif re.match(_BASE64_DATA_URI_PATTERN, media):
@@ -244,17 +249,22 @@ def resolve_media_param(
 
 class GeneratorStreamer:
     """
-    A MEMORY-EFFICIENT, buffer-free file-like wrapper for a byte generator.
-    Ignores read(size) to prevent buffering, relying on the fixed-chunk size
-    of the underlying generator.
+    A MEMORY-EFFICIENT, buffer-free file-like wrapper that lets a bytes generator be
+    used where httpx expects a file-like object for multipart/form-data uploads.
 
-    httpx supports streaming uploads from such file-like objects.
-    They also support generators directly, but not when using multipart/form-data.
-    This class allows streaming multipart/form-data uploads from a byte generator
-    without loading the entire content into memory.
+    This class intentionally "cheats" httpx by exposing a minimal file-like API
+    (read, limited seek, tell) so httpx will treat the underlying generator as a file.
+    It does not buffer or store the whole content in memory — it returns chunks
+    directly from the provided generator.
 
-    Note: seek() only supports seeking to the end to get the length,
-    and tell() to get the current read position.
+    Limitations:
+
+    - read(size) ignores the requested size and returns the next generator chunk.
+    - seek() only supports seeking to the end to obtain length (offset=0, whence=os.SEEK_END)
+      and a zero-offset SEEK_SET which returns the current read position.
+    - tell() returns the total bytes read so far.
+
+    Only use this to make httpx accept generator-based uploads that require a file-like object.
     """
 
     def __init__(self, generator: Iterator[bytes], length: int | None = None):
@@ -296,19 +306,19 @@ class MediaInfo(NamedTuple):
     cm: Any = None  # context manager to keep alive
 
 
-def _get_media_from_url(
+def get_media_from_url(
     url: str,
     dl_session: httpx.Client,
 ) -> MediaInfo:
-    res = (cm := dl_session.stream("GET", url)).__enter__()
+    res = (cm := dl_session.stream("GET", url, follow_redirects=True)).__enter__()
     try:
         res.raise_for_status()
         length: int | None = int(res.headers.get("Content-Length", 0)) or None
         return MediaInfo(
             content=GeneratorStreamer(
-                res.iter_bytes(chunk_size=CHUNK_SIZE), length=length
+                res.iter_bytes(chunk_size=DOWNLOAD_CHUNK_SIZE), length=length
             ),
-            filename=_get_filename_from_httpx_response_headers(res.headers)
+            filename=get_filename_from_httpx_response_headers(res.headers)
             or pathlib.Path(url).name,
             mime_type=res.headers.get("Content-Type") or mimetypes.guess_type(url)[0],
             length=length,
@@ -319,7 +329,7 @@ def _get_media_from_url(
         raise ValueError(f"An error occurred while downloading from {url}: {e}") from e
 
 
-def _get_media_from_base64(
+def get_media_from_base64(
     base64_str: str,
 ) -> MediaInfo:
     match = re.match(_BASE64_DATA_URI_PATTERN, base64_str)
@@ -340,7 +350,7 @@ def _get_media_from_base64(
     )
 
 
-def _get_media_from_path(
+def get_media_from_path(
     path: pathlib.Path | str,
 ) -> MediaInfo:
     p = pathlib.Path(path)
@@ -352,7 +362,7 @@ def _get_media_from_path(
     )
 
 
-def _get_media_from_file_like_obj(
+def get_media_from_file_like_obj(
     file_obj: BinaryIO,
 ) -> MediaInfo:
     try:
@@ -373,7 +383,7 @@ def _get_media_from_file_like_obj(
     )
 
 
-def _get_filename_from_httpx_response_headers(
+def get_filename_from_httpx_response_headers(
     headers: httpx.Headers,
 ) -> str | None:
     content_disposition = headers.get("Content-Disposition")
@@ -384,7 +394,7 @@ def _get_filename_from_httpx_response_headers(
     return None
 
 
-def _get_media_from_media_id_or_obj_or_url(
+def get_media_from_media_id_or_obj_or_url(
     wa: WhatsApp,
     media: str | Media,
     media_source: MediaSource,
@@ -414,8 +424,10 @@ def _get_media_from_media_id_or_obj_or_url(
         raise ValueError(f"An error occurred while downloading from {url}: {e}") from e
     length: int | None = int(res.headers.get("Content-Length", 0)) or None
     return MediaInfo(
-        content=GeneratorStreamer(res.iter_bytes(chunk_size=CHUNK_SIZE), length=length),
-        filename=filename or _get_filename_from_httpx_response_headers(res.headers),
+        content=GeneratorStreamer(
+            res.iter_bytes(chunk_size=DOWNLOAD_CHUNK_SIZE), length=length
+        ),
+        filename=filename or get_filename_from_httpx_response_headers(res.headers),
         mime_type=mime_type or res.headers.get("Content-Type"),
         length=length,
         cm=cm,
@@ -442,21 +454,19 @@ def internal_upload_media(
     match media_source:
         case MediaSource.EXTERNAL_URL:
             client, close_client = (
-                (dl_session, False)
-                if dl_session
-                else (httpx.Client(follow_redirects=True), True)
+                (dl_session, False) if dl_session else (httpx.Client(), True)
             )
-            media_info = _get_media_from_url(url=media, dl_session=client)
+            media_info = get_media_from_url(url=media, dl_session=client)
         case MediaSource.PATH:
-            media_info = _get_media_from_path(path=media)
+            media_info = get_media_from_path(path=media)
         case MediaSource.BYTES:
             media_info = MediaInfo(
                 content=media, filename=None, mime_type=None, length=len(media)
             )
         case MediaSource.FILE_OBJ:
-            media_info = _get_media_from_file_like_obj(file_obj=media)
+            media_info = get_media_from_file_like_obj(file_obj=media)
         case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
-            media_info = _get_media_from_media_id_or_obj_or_url(
+            media_info = get_media_from_media_id_or_obj_or_url(
                 wa=wa, media=media, media_source=media_source
             )
         case MediaSource.BYTES_GEN:
@@ -467,7 +477,7 @@ def internal_upload_media(
                 length=None,
             )
         case MediaSource.BASE64_DATA_URI, MediaSource.BASE64:
-            media_info = _get_media_from_base64(base64_str=media)
+            media_info = get_media_from_base64(base64_str=media)
         case _:
             raise ValueError(
                 "Media source must be URL, file path, bytes, file-like object, WhatsApp Media, or base64 string."
@@ -565,12 +575,12 @@ def _upload_comps_example(
     source = detect_media_source(example)
     match source:
         case MediaSource.EXTERNAL_URL:
-            client = httpx.Client(follow_redirects=True)
-            media_info = _get_media_from_url(url=example, dl_session=client)
+            client = httpx.Client()
+            media_info = get_media_from_url(url=example, dl_session=client)
         case MediaSource.PATH:
-            media_info = _get_media_from_path(path=example)
+            media_info = get_media_from_path(path=example)
         case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
-            media_info = _get_media_from_media_id_or_obj_or_url(
+            media_info = get_media_from_media_id_or_obj_or_url(
                 wa=wa, media=example, media_source=source
             )
         case MediaSource.BYTES:
@@ -578,7 +588,7 @@ def _upload_comps_example(
                 content=example, filename=None, mime_type=None, length=len(example)
             )
         case MediaSource.FILE_OBJ:
-            media_info = _get_media_from_file_like_obj(example)
+            media_info = get_media_from_file_like_obj(example)
         case MediaSource.FILE_HANDLE:
             for comp in comps:
                 comp._handle = example
