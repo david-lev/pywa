@@ -79,6 +79,48 @@
       }
     ]
   },
+  "media_with_url": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "1234567890987654321",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "972123456789",
+                "phone_number_id": "1122334455667"
+              },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321"
+                }
+              ],
+              "messages": [
+                {
+                  "from": "972987654321",
+                  "id": "wamid.xyzxyz",
+                  "timestamp": "1697043379",
+                  "type": "image",
+                  "image": {
+                    "mime_type": "image/jpeg",
+                    "sha256": "4654+8g=",
+                    "id": "65463453",
+                    "url": "https://lookaside.fbsbx.com/whatsapp_business/attachments/?mid=65463453&source=webhook&ext=487r9re&hash=heiwchueowbcew-dnedcw"
+                  }
+                }
+              ]
+            },
+            "field": "messages"
+          }
+        ]
+      }
+    ]
+  },
   "video": {
     "object": "whatsapp_business_account",
     "entry": [

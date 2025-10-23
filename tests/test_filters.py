@@ -160,6 +160,7 @@ FILTERS: dict[str, dict[str, list[tuple[Callable[[_T], _T], Filter]]]] = {
         "forwarded": [(same, fil.forwarded)],
         "forwarded_many_times": [(same, fil.forwarded)],
         "interactive_message_with_err": [],
+        "media_with_url": [],
     },
     "callback_button": {
         "button": [
