@@ -18,8 +18,7 @@
   <a href="https://pypi.org/project/pywa/"><img src="https://img.shields.io/pypi/v/pywa.svg" /></a>
   <a href="https://pypi.org/project/pywa/"><img src="https://static.pepy.tech/badge/pywa" /></a>
   <a href="https://github.com/david-lev/pywa/actions/workflows/tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/david-lev/pywa/tests.yml?label=Tests" /></a>
-  <a href="https://codecov.io/gh/david-lev/pywa"><img src="https://img.shields.io/codecov/c/github/david-lev/pywa" /></a>
-  <a href="https://pywa.readthedocs.io"><img src="https://readthedocs.org/projects/pywa/badge/?version=latest&" /></a>
+ <a href="https://pywa.readthedocs.io"><img src="https://readthedocs.org/projects/pywa/badge/?version=latest&" /></a>
   <a href="https://github.com/david-lev/pywa/blob/master/LICENSE"><img src="https://img.shields.io/github/license/david-lev/pywa" /></a>
   <a href="https://www.codefactor.io/repository/github/david-lev/pywa/overview/master"><img src="https://www.codefactor.io/repository/github/david-lev/pywa/badge/master" /></a>
   <a href="https://t.me/py_wa"><img src="https://badges.aleen42.com/src/telegram.svg" /></a>
