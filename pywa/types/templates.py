@@ -1199,14 +1199,23 @@ class _BaseMediaHeaderComponent(BaseHeaderComponent, abc.ABC):
         Initializes a media header component for a template.
 
         Args:
-            example: An example of the media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
+            example: An example of the media to be used in the header (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
         """
         self.example = example
 
     @property
     def example(
         self,
-    ) -> str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes]:
+    ) -> (
+        str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes]
+    ):
         """
         Returns the example media for the header component.
         """
@@ -1215,7 +1224,14 @@ class _BaseMediaHeaderComponent(BaseHeaderComponent, abc.ABC):
     @example.setter
     def example(
         self,
-        value: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
+        value: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
     ):
         """
         Sets the example media for the header component (and resets the handle).
@@ -1248,7 +1264,14 @@ class _BaseMediaParams(BaseParams, abc.ABC):
 
     def __init__(
         self,
-        media: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
+        media: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
         filename: str | None = None,
     ):
         self.media = media
@@ -1320,19 +1343,28 @@ class HeaderImage(_BaseMediaHeaderComponent):
             | pathlib.Path
             | bytes
             | BinaryIO
-            | Iterator[bytes],
+            | Iterator[bytes]
+            | AsyncIterator[bytes],
         ):
             super().__init__(media=image)
 
     @staticmethod
     def params(
-        *, image: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes]
+        *,
+        image: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
     ) -> HeaderImage._Params:
         """
         Fill the parameters for the header image component.
 
         Args:
-            image: The image media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
+            image: The image media to be used in the header (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
 
         Returns:
             An instance of BaseParams containing the media parameter.
@@ -1371,19 +1403,28 @@ class HeaderVideo(_BaseMediaHeaderComponent):
             | pathlib.Path
             | bytes
             | BinaryIO
-            | Iterator[bytes],
+            | Iterator[bytes]
+            | AsyncIterator[bytes],
         ):
             super().__init__(media=video)
 
     @staticmethod
     def params(
-        *, video: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes]
+        *,
+        video: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
     ) -> HeaderVideo._Params:
         """
         Fill the parameters for the header video component.
 
         Args:
-            video: The video media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
+            video: The video media to be used in the header (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
 
         Returns:
             An instance of BaseParams containing the media parameter.
@@ -1422,7 +1463,8 @@ class HeaderDocument(_BaseMediaHeaderComponent):
             | pathlib.Path
             | bytes
             | BinaryIO
-            | Iterator[bytes],
+            | Iterator[bytes]
+            | AsyncIterator[bytes],
             filename: str | None,
         ):
             super().__init__(media=document, filename=filename)
@@ -1430,14 +1472,21 @@ class HeaderDocument(_BaseMediaHeaderComponent):
     @staticmethod
     def params(
         *,
-        document: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
+        document: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
         filename: str | None = utils.MISSING,
     ) -> HeaderDocument._Params:
         """
         Fill the parameters for the header document component.
 
         Args:
-            document: The document media to be used in the header. This can be a media ID, a URL, a file path, or raw bytes.
+            document: The document media to be used in the header (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
             filename: Document filename, with extension. The WhatsApp client will use an appropriate file type icon based on the extension (Optional, if not provided, if possible, the filename will be extracted from the URL or file path. pass ``None`` to skip this behavior).
 
         Returns:
