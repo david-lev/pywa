@@ -24,6 +24,8 @@ Client Reference
 .. automethod:: WhatsApp.stop_listening
 .. automethod:: WhatsApp.upload_media
 .. automethod:: WhatsApp.download_media
+.. automethod:: WhatsApp.stream_media
+.. automethod:: WhatsApp.get_media_bytes
 .. automethod:: WhatsApp.get_media_url
 .. automethod:: WhatsApp.delete_media
 .. automethod:: WhatsApp.get_business_account
