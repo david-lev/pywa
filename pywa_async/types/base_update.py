@@ -82,18 +82,16 @@ class _ClientShortcutsAsync:
             ...     await msg.reply(f"Hello {msg.from_user.name}! This is a reply to your message.", quote=True)
 
         Args:
-            text: The text to reply with (markdown allowed, max 4096 characters).
-            header: The header of the reply (if buttons are provided, optional, up to 60 characters,
-             no markdown allowed).
-            footer: The footer of the reply (if buttons are provided, optional, up to 60 characters,
-             markdown has no effect).
+            text: The text to reply with (`markdown <https://faq.whatsapp.com/539178204879377>`_ allowed, max 4096 characters).
+            header: The header of the message (if ``buttons`` are provided, optional, up to 60 characters, no `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
+            footer: The footer of the message (if ``buttons`` are provided, optional, up to 60 characters, `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the message (optional).
             quote: Whether to quote the replied message (default: False).
             preview_url: Whether to show a preview of the URL in the message (if any).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
         Returns:
-            The sent message.
+            The sent text message.
         """
         return await self._client.send_message(
             sender=self._internal_recipient,
@@ -147,20 +145,16 @@ class _ClientShortcutsAsync:
             ...     )
 
         Args:
-            image: The image to reply (either a media ID, URL, file path, bytes, or an open file object. When buttons are
-             provided, only URL is supported).
-            caption: The caption of the image (required when buttons are provided,
-             `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
-            footer: The footer of the message (if buttons are provided, optional,
-             `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
+            image: The image to reply with (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
+            caption: The caption of the image (required when buttons are provided, `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
+            footer: The footer of the message (if buttons are provided, optional, `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the image (optional).
-            mime_type: The mime type of the image (optional, required when sending an image as bytes or a file object,
-             or file path that does not have an extension).
             quote: Whether to quote the replied message (default: False).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            mime_type: The mime type of the image (optional, required when sending an image as bytes, or file path that does not have an extension).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
         Returns:
-            The sent message.
+            The sent image message.
         """
         return await self._client.send_image(
             sender=self._internal_recipient,
@@ -212,20 +206,16 @@ class _ClientShortcutsAsync:
             ...     )
 
         Args:
-            video: The video to reply (either a media ID, URL, file path, bytes, or an open file object. When buttons
-             are provided, only URL is supported).
-            caption: The caption of the video (required when sending a video with buttons,
-             `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
-            footer: The footer of the message (if ``buttons`` are provided, optional,
-             `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
+            video: The video to reply with (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
+            caption: The caption of the video (required when sending a video with buttons, `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
+            footer: The footer of the message (if buttons are provided, optional, `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the video (optional).
-            mime_type: The mime type of the video (optional, required when sending a video as bytes or a file object,
-             or file path that does not have an extension).
             quote: Whether to quote the replied message (default: False).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            mime_type: The mime type of the video (optional, required when sending a video as bytes or file path that does not have an extension).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
         Returns:
-            The sent message.
+            The sent video message.
         """
         return await self._client.send_video(
             sender=self._internal_recipient,
@@ -278,22 +268,17 @@ class _ClientShortcutsAsync:
             ...     )
 
         Args:
-            document: The document to reply (either a media ID, URL, file path, bytes, or an open file object. When
-             buttons are provided, only URL is supported).
-            filename: The filename of the document (optional, The extension of the filename will specify what format the
-             document is displayed as in WhatsApp).
-            caption: The caption of the document (required when sending a document with buttons,
-             `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
-            footer: The footer of the message (if buttons are provided, optional,
-             `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
+            document: The document to reply with (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
+            filename: Document filename, with extension. The WhatsApp client will use an appropriate file type icon based on the extension (Optional, if not provided, if possible, the filename will be extracted from the media. pass ``None`` to skip this behavior).
+            caption: The caption of the document (required when sending a document with buttons, `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
+            footer: The footer of the message (if buttons are provided, optional, `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the document (optional).
-            mime_type: The mime type of the document (optional, required when sending a document as bytes or a file
-             object, or file path that does not have an extension).
             quote: Whether to quote the replied message (default: False).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            mime_type: The mime type of the document (optional, required when sending a document as bytes or file path that does not have an extension).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
         Returns:
-            The sent message.
+            The sent document message.
         """
         return await self._client.send_document(
             sender=self._internal_recipient,
@@ -340,15 +325,14 @@ class _ClientShortcutsAsync:
             ...     await msg.reply_audio(audio="https://example.com/audio.mp3")
 
         Args:
-            audio: The audio file to reply with (either a media ID, URL, file path, bytes, or an open file object).
+            audio: The audio file to reply with (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
             is_voice: Set to True if sending a voice message. `Voice messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/audio-messages#voice-messages>`_ must be Ogg files encoded with the ``OPUS`` codec.
+            mime_type: The mime type of the audio file (optional, required when sending an audio as bytes or file path that does not have an extension).
             quote: Whether to quote the replied message (default: False).
-            mime_type: The mime type of the audio (optional, required when sending an audio as bytes or a file object,
-             or file path that does not have an extension).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
         Returns:
-            The sent message.
+            The sent audio message.
         """
         return await self._client.send_audio(
             sender=self._internal_recipient,
@@ -393,14 +377,13 @@ class _ClientShortcutsAsync:
             ...     await msg.reply_sticker(sticker="https://example.com/sticker.webp")
 
         Args:
-            sticker: The sticker to reply with (either a media ID, URL, file path, bytes, or an open file object).
+            sticker: The sticker to reply with (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
+            mime_type: The mime type of the sticker (optional, required when sending a sticker as bytes or file path that does not have an extension).
             quote: Whether to quote the replied message (default: False).
-            mime_type: The mime type of the sticker (optional, required when sending a sticker as bytes or a file
-             object, or file path that does not have an extension).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
         Returns:
-            The sent message.
+            The sent sticker message.
         """
         return await self._client.send_sticker(
             sender=self._internal_recipient,
@@ -449,7 +432,7 @@ class _ClientShortcutsAsync:
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
-            The sent message.
+            The sent location message.
         """
         return await self._client.send_location(
             sender=self._internal_recipient,
@@ -490,7 +473,7 @@ class _ClientShortcutsAsync:
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
-            The sent message.
+            The sent location request message.
         """
         return await self._client.request_location(
             sender=self._internal_recipient,
@@ -536,7 +519,7 @@ class _ClientShortcutsAsync:
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
-            The sent message.
+            The sent contact/s message.
         """
         return await self._client.send_contact(
             sender=self._internal_recipient,
@@ -570,7 +553,7 @@ class _ClientShortcutsAsync:
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
-            The sent message (You can't use this message id to remove the reaction or perform any other
+            The sent reaction message (You can't use this message id to remove the reaction or perform any other
             action on it. instead, use the message ID of the message you reacted to).
         """
         return await self._client.send_reaction(
@@ -585,26 +568,26 @@ class _ClientShortcutsAsync:
         self, *, tracker: str | CallbackData | None = None
     ) -> SentMessage:
         """
-                Remove the reaction from the message.
+        Remove the reaction from the message.
 
-                - Shortcut for :py:func:`~pywa.client.WhatsApp.remove_reaction` with ``to`` and ``message_id``.
-                - You can remove reactions from incoming messages by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.unreact` method on every update.
-                - See `Reaction messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/reaction-messages>`_.
+        - Shortcut for :py:func:`~pywa.client.WhatsApp.remove_reaction` with ``to`` and ``message_id``.
+        - You can remove reactions from incoming messages by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.unreact` method on every update.
+        - See `Reaction messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/reaction-messages>`_.
 
-                Example:
+        Example:
 
-                    >>> wa = WhatsApp(...)
-                    >>> @wa.on_message
-                    ... async def callback(_: WhatsApp, msg: Message):
-                    ...     await msg.react("👍")
-                    ...     await msg.unreact()
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_message
+            ... async def callback(_: WhatsApp, msg: Message):
+            ...     await msg.react("👍")
+            ...     await msg.unreact()
 
-        =        Args:
-                    tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+        Args:
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
-                Returns:
-                    The sent message (You can't use this message id to remove the reaction or perform any other
-                    action on it. instead, use the message ID of the message you reacted to).
+        Returns:
+            The sent (un)reaction message (You can't use this message id to remove the reaction or perform any other
+            action on it. instead, use the message ID of the message you reacted to).
         """
         return await self._client.remove_reaction(
             sender=self._internal_recipient,
@@ -653,7 +636,7 @@ class _ClientShortcutsAsync:
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
-            The sent message.
+            The sent catalog message.
         """
         return await self._client.send_catalog(
             sender=self._internal_recipient,
@@ -705,7 +688,7 @@ class _ClientShortcutsAsync:
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
-            The sent message.
+            The sent product message.
         """
         return await self._client.send_product(
             sender=self._internal_recipient,
@@ -770,7 +753,7 @@ class _ClientShortcutsAsync:
             tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
 
         Returns:
-            The sent message.
+            The sent products message.
         """
         return await self._client.send_products(
             sender=self._internal_recipient,
