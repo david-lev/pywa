@@ -187,6 +187,10 @@ Manage media with ease:
      - Upload media to WhatsApp servers
    * - :meth:`~WhatsApp.download_media`
      - Download media
+   * - :meth:`~WhatsApp.stream_media`
+     - Stream media
+   * - :meth:`~WhatsApp.get_media_bytes`
+     - Get media as bytes
    * - :meth:`~WhatsApp.get_media_url`
      - Get direct media URL
    * - :meth:`~WhatsApp.delete_media`
