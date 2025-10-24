@@ -3,7 +3,23 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-#### 3.1.1 (2025-09-21) **Latest**
+
+#### 3.2.0 (2025-10-24) **Latest**
+
+- [media] adding `uploaded_by`, `uploaded_at` and more helpers to `Media` type
+- [client] implementing [Identity Change Check](https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check)
+- [client] adding `get_media_bytes` and `stream_media`
+- [client] adding support for voice messages
+- [client] updating `update_business_phone_number_settings` method to take specific settings
+- [base_update] adding method to handle the update again
+- [message] fix typing of `buttons` for `copy` and remove `'copy'` `system message`
+- - [templates] adding `image_background_gen` option to `CreativeFeaturesSpec`
+- [sent_update] moving the `input` from user to the `SentMessage` level
+- [helpers] stream downloads and uploads
+- [utils] bump `GRAPH_API` version to `24.0`
+
+
+#### 3.1.1 (2025-09-21)
 
 - [server] Fix `filter updates`
 
