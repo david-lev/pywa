@@ -3,8 +3,14 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+#### 3.3.0 (2025-10-26) **Latest**
 
-#### 3.2.0 (2025-10-24) **Latest**
+- [templates] allowing to override header example mime-type
+- [helpers] stream template examples when possible (sync/async)
+- [helpers] fix template example resolving for `Media` type
+
+
+#### 3.2.0 (2025-10-24)
 
 - [media] adding `uploaded_by`, `uploaded_at` and more helpers to `Media` type
 - [client] implementing [Identity Change Check](https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check)
