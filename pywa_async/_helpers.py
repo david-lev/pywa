@@ -408,8 +408,13 @@ async def _upload_comps_example(
             )
         )["h"]
 
+        is_media_obj = source == MediaSource.MEDIA_OBJ
         for comp in comps:
             comp._handle = handle
+            if is_media_obj:
+                comp._example = (
+                    comp._example.id
+                )  # prevent keeping Media obj in _example
 
     except Exception as e:
         raise ValueError(
