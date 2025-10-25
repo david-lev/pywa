@@ -187,7 +187,10 @@ class _MediaActions:
         )
 
 
-class Media(_MediaActions):
+class BaseMedia: ...
+
+
+class Media(BaseMedia, _MediaActions):
     """
     Base class for all media types.
 

@@ -250,6 +250,7 @@ def test_same_signature(overrides):
             (WhatsAppSync.send_sticker, ("sticker",)),
             (MessageSync.reply_sticker, ("sticker",)),
             (WhatsAppSync.upload_media, ("media", "download_chunk_size", "dl_session")),
+            (GraphAPISync.upload_file, ("file",)),
         )
     }
     for sync_obj, async_obj in overrides:

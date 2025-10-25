@@ -1180,7 +1180,7 @@ class _BaseMediaHeaderComponent(BaseHeaderComponent, abc.ABC):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#media-headers>`_.
     """
 
-    __slots__ = ("_example", "_handle")
+    __slots__ = ("_example", "_handle", "_mime_type")
 
     format: HeaderFormatType
 
@@ -1194,14 +1194,19 @@ class _BaseMediaHeaderComponent(BaseHeaderComponent, abc.ABC):
         | BinaryIO
         | Iterator[bytes]
         | AsyncIterator[bytes],
+        *,
+        mime_type: str | None = None,
     ):
         """
         Initializes a media header component for a template.
 
         Args:
             example: An example of the media to be used in the header (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
+            mime_type: The mime type of the example (optional, required when passing bytes, bytes generator, or path without extension).
         """
-        self.example = example
+        self._example = example
+        self._mime_type = mime_type
+        self._handle = None
 
     @property
     def example(
@@ -1237,7 +1242,7 @@ class _BaseMediaHeaderComponent(BaseHeaderComponent, abc.ABC):
         Sets the example media for the header component (and resets the handle).
         """
         self._example = value
-        self._handle = None
+        self._handle, self._mime_type = None, None
 
     @classmethod
     def from_dict(cls, data: dict) -> _BaseMediaHeaderComponent:

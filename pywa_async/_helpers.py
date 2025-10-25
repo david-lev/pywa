@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import itertools
 import mimetypes
+from contextlib import _AsyncGeneratorContextManager
 
 import httpx
 
@@ -85,18 +86,33 @@ async def resolve_media_param(
 async def get_media_from_url(
     url: str,
     dl_session: httpx.AsyncClient,
+    download_chunk_size: int | None,
+    stream: bool,
 ) -> MediaInfo:
-    res = await dl_session.get(url, follow_redirects=True)
+    if stream:
+        res = await (
+            cm := dl_session.stream("GET", url, follow_redirects=True)
+        ).__aenter__()
+
+    else:
+        res, cm = await dl_session.get(url, follow_redirects=True), None
     try:
         res.raise_for_status()
     except httpx.HTTPError as e:
+        if stream:
+            await res.aclose()
         raise ValueError(f"An error occurred while downloading from {url}") from e
+
+    content_length = int(res.headers.get("Content-Length", "0")) or None
     return MediaInfo(
-        content=res.content,
+        content=res.aiter_bytes(chunk_size=download_chunk_size)
+        if stream
+        else res.content,
         filename=get_filename_from_httpx_response_headers(res.headers)
         or pathlib.Path(url).name,
         mime_type=res.headers.get("Content-Type") or mimetypes.guess_type(url)[0],
-        length=len(res.content),
+        length=content_length if stream else (content_length or len(res.content)),
+        cm=cm,
     )
 
 
@@ -104,33 +120,47 @@ async def get_media_from_media_id_or_obj_or_url(
     wa: WhatsApp,
     media: str | Media,
     media_source: MediaSource,
+    download_chunk_size: int | None,
+    stream: bool,
 ) -> MediaInfo:
     filename: str | None = None
     mime_type: str | None = None
     url: str | None = None
+    cm: _AsyncGeneratorContextManager[httpx.Response] | None = None
     match media_source:
         case MediaSource.MEDIA_ID:
             url_res = await wa.get_media_url(media_id=str(media))
             url, mime_type = url_res.url, url_res.mime_type
         case MediaSource.MEDIA_OBJ:
-            url_res = await wa.get_media_url(media_id=media.id)
-            url, mime_type = url_res.url, url_res.mime_type
+            url, mime_type = (
+                await media.get_media_url(),
+                getattr(media, "mime_type", None),
+            )
         case MediaSource.MEDIA_URL:
             url, mime_type = media, None
-    if url is None:
-        raise ValueError("Failed to resolve media URL")
-
-    async with wa.api.stream_media_bytes(media_url=url) as res:
-        try:
-            res.raise_for_status()
-        except httpx.HTTPError as e:
-            raise ValueError(f"An error occurred while downloading from {url}") from e
-
+        case _:
+            raise ValueError(
+                "media must be MediaSource.MEDIA_ID, MEDIA_OBJ or MEDIA_URL"
+            )
+    if stream:
+        res = await (cm := wa.api.stream_media_bytes(media_url=url)).__aenter__()
+    else:
+        async with wa.api.stream_media_bytes(media_url=url) as res:
+            cm, _ = None, await res.aread()
+    try:
+        res.raise_for_status()
+    except httpx.HTTPError as e:
+        res.close()
+        raise ValueError(f"An error occurred while downloading from {url}: {e}") from e
+    content_length = int(res.headers.get("Content-Length", "0")) or None
     return MediaInfo(
-        content=await res.aread(),
+        content=res.aiter_bytes(chunk_size=download_chunk_size)
+        if stream
+        else res.content,
         filename=filename or get_filename_from_httpx_response_headers(res.headers),
         mime_type=mime_type or res.headers.get("Content-Type"),
-        length=int(res.headers.get("Content-Length", "0")) or None,
+        length=content_length if stream else (content_length or len(res.content)),
+        cm=cm,
     )
 
 
@@ -166,6 +196,8 @@ async def internal_upload_media(
             media_info = await get_media_from_url(
                 url=media,
                 dl_session=client,
+                download_chunk_size=None,
+                stream=False,
             )
         case MediaSource.PATH:
             media_info = get_media_from_path(path=media)
@@ -180,6 +212,8 @@ async def internal_upload_media(
                 wa=wa,
                 media=media,
                 media_source=media_source,
+                download_chunk_size=None,
+                stream=False,
             )
         case MediaSource.BYTES_GEN:
             media_info = MediaInfo(
@@ -250,7 +284,7 @@ async def upload_template_media_components(
                 app_id=app_id,
             )
             for example, comps in itertools.groupby(
-                not_uploaded, key=lambda x: x.example
+                not_uploaded, key=lambda x: x._example
             )
         ]
     )
@@ -294,6 +328,8 @@ async def _upload_comps_example(
             media_info = await get_media_from_url(
                 url=example,
                 dl_session=client,
+                download_chunk_size=DOWNLOAD_CHUNK_SIZE,
+                stream=True,
             )
         case MediaSource.PATH:
             media_info = get_media_from_path(path=example)
@@ -302,6 +338,8 @@ async def _upload_comps_example(
                 wa=wa,
                 media=example,
                 media_source=source,
+                download_chunk_size=DOWNLOAD_CHUNK_SIZE,
+                stream=True,
             )
         case MediaSource.BYTES:
             media_info = MediaInfo(
@@ -357,7 +395,8 @@ async def _upload_comps_example(
                             first_comp.format, "pywa-template-header"
                         ),
                         file_length=media_info.length,
-                        file_type=media_info.mime_type
+                        file_type=first_comp._mime_type
+                        or media_info.mime_type
                         or _template_header_formats_default_mime_types.get(
                             first_comp.format, "application/octet-stream"
                         ),
@@ -365,6 +404,7 @@ async def _upload_comps_example(
                 )["id"],
                 file=media_info.content,
                 file_offset=0,
+                content_length=media_info.length,
             )
         )["h"]
 

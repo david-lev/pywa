@@ -35,6 +35,7 @@ from typing import (
     Literal,
     Iterator,
     AsyncIterable,
+    AsyncIterator,
 )
 
 import httpx
@@ -53,7 +54,7 @@ from .types import (
     ButtonUrl,
 )
 from pywa.types.others import InteractiveType
-from .types.media import Media
+from .types.media import Media, BaseMedia
 from .types.templates import (
     TemplateBaseComponent,
     _BaseMediaHeaderComponent,
@@ -199,7 +200,9 @@ def detect_media_source(
             raise ValueError(
                 f"String media must be a valid URL, existing file path, WhatsApp media ID, file handle, or base64 string. not: {media[:30]}{'...' if len(media) > 30 else ''}"
             )
-    elif isinstance(media, Media):
+    elif isinstance(
+        media, BaseMedia
+    ):  # common base class for both Media and MediaAsync
         _logger.debug("Detected media source as WhatsApp Media object")
         return MediaSource.MEDIA_OBJ
     elif isinstance(media, bytes):
@@ -305,7 +308,7 @@ class GeneratorStreamer(Iterable):
 
 
 class MediaInfo(NamedTuple):
-    content: bytes | BinaryIO | GeneratorStreamer
+    content: bytes | BinaryIO | GeneratorStreamer | AsyncIterator[bytes]
     filename: str | None
     mime_type: str | None
     length: int | None
@@ -317,15 +320,15 @@ def get_media_from_url(
     url: str,
     dl_session: httpx.Client,
     download_chunk_size: int,
+    stream: bool,
 ) -> MediaInfo:
     res = (cm := dl_session.stream("GET", url, follow_redirects=True)).__enter__()
     try:
         res.raise_for_status()
         length: int | None = int(res.headers.get("Content-Length", 0)) or None
+        gen = res.iter_bytes(chunk_size=download_chunk_size)
         return MediaInfo(
-            content=GeneratorStreamer(
-                res.iter_bytes(chunk_size=download_chunk_size), length=length
-            ),
+            content=gen if stream else GeneratorStreamer(generator=gen, length=length),
             filename=get_filename_from_httpx_response_headers(res.headers)
             or pathlib.Path(url).name,
             mime_type=res.headers.get("Content-Type") or mimetypes.guess_type(url)[0],
@@ -407,6 +410,7 @@ def get_media_from_media_id_or_obj_or_url(
     media: str | Media,
     media_source: MediaSource,
     download_chunk_size: int,
+    stream: bool,
 ) -> MediaInfo:
     filename: str | None = None
     mime_type: str | None = None
@@ -416,8 +420,10 @@ def get_media_from_media_id_or_obj_or_url(
             url_res = wa.get_media_url(media_id=str(media))
             url, mime_type = url_res.url, url_res.mime_type
         case MediaSource.MEDIA_OBJ:
-            url_res = wa.get_media_url(media_id=media.id)
-            url, mime_type = url_res.url, url_res.mime_type
+            url, mime_type = (
+                media.get_media_url(),
+                getattr(media, "mime_type", None),
+            )
         case MediaSource.MEDIA_URL:
             url, mime_type = media, None
         case _:
@@ -432,10 +438,9 @@ def get_media_from_media_id_or_obj_or_url(
         res.close()
         raise ValueError(f"An error occurred while downloading from {url}: {e}") from e
     length: int | None = int(res.headers.get("Content-Length", 0)) or None
+    gen = res.iter_bytes(chunk_size=download_chunk_size)
     return MediaInfo(
-        content=GeneratorStreamer(
-            res.iter_bytes(chunk_size=download_chunk_size), length=length
-        ),
+        content=gen if stream else GeneratorStreamer(generator=gen, length=length),
         filename=filename or get_filename_from_httpx_response_headers(res.headers),
         mime_type=mime_type or res.headers.get("Content-Type"),
         length=length,
@@ -470,6 +475,7 @@ def internal_upload_media(
                 url=media,
                 dl_session=client,
                 download_chunk_size=download_chunk_size or DOWNLOAD_CHUNK_SIZE,
+                stream=False,
             )
         case MediaSource.PATH:
             media_info = get_media_from_path(path=media)
@@ -485,6 +491,7 @@ def internal_upload_media(
                 media=media,
                 media_source=media_source,
                 download_chunk_size=download_chunk_size or DOWNLOAD_CHUNK_SIZE,
+                stream=False,
             )
         case MediaSource.BYTES_GEN:
             media_info = MediaInfo(
@@ -566,7 +573,7 @@ def upload_template_media_components(
                 stop_event=stop_event,
             )
             for example, comps in itertools.groupby(
-                not_uploaded, key=lambda x: x.example
+                not_uploaded, key=lambda x: x._example
             )
         ]
         for future in futures.as_completed(tasks):
@@ -597,6 +604,7 @@ def _upload_comps_example(
                 url=example,
                 dl_session=client,
                 download_chunk_size=DOWNLOAD_CHUNK_SIZE,
+                stream=True,
             )
         case MediaSource.PATH:
             media_info = get_media_from_path(path=example)
@@ -606,6 +614,7 @@ def _upload_comps_example(
                 media=example,
                 media_source=source,
                 download_chunk_size=DOWNLOAD_CHUNK_SIZE,
+                stream=True,
             )
         case MediaSource.BYTES:
             media_info = MediaInfo(
@@ -651,13 +660,15 @@ def _upload_comps_example(
                     first_comp.format, "pywa-template-header"
                 ),
                 file_length=media_info.length,
-                file_type=media_info.mime_type
+                file_type=first_comp._mime_type
+                or media_info.mime_type
                 or _template_header_formats_default_mime_types.get(
                     first_comp.format, "application/octet-stream"
                 ),
             )["id"],
             file=media_info.content,
             file_offset=0,
+            content_length=media_info.length,
         )["h"]
 
         for comp in comps:

@@ -2017,8 +2017,9 @@ class GraphAPI:
     def upload_file(
         self,
         upload_session_id: str,
-        file: bytes,
+        file: bytes | Iterator[bytes],
         file_offset: int = 0,
+        content_length: int | None = None,
     ) -> dict[str, str]:
         """
         Upload a file to an upload session.
@@ -2029,6 +2030,7 @@ class GraphAPI:
             upload_session_id: The ID of the upload session to upload the file to (This is the ID returned by the ``create_upload_session`` method).
             file: The file to upload (as bytes).
             file_offset: The offset in the file to start uploading from. you can use this to resume an interrupted upload (use `get_upload_session` to get the current offset).
+            content_length: The file size in bytes (When using an AsyncGenerator, this parameter is required).
 
         Returns:
             The file handle of the uploaded file.
@@ -2038,6 +2040,11 @@ class GraphAPI:
             endpoint=f"/{upload_session_id}",
             headers={
                 "file_offset": str(file_offset),
+                **(
+                    {"Content-Length": str(content_length)}
+                    if content_length is not None
+                    else {}
+                ),
             },
             content=file,
             log_kwargs=False,

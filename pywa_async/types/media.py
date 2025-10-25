@@ -26,6 +26,7 @@ from pywa.types.media import (
     Audio as _Audio,
     MediaURL as _MediaURL,
     URL_EXPIRATION_MINUTES,
+    BaseMedia,
 )  # noqa MUST BE IMPORTED FIRST
 
 import dataclasses
@@ -183,7 +184,7 @@ class _MediaActionsAsync:
         )
 
 
-class Media(_MediaActionsAsync):
+class Media(BaseMedia, _MediaActionsAsync):
     """
     Base class for all media types.
 
