@@ -108,11 +108,12 @@ def resolve_buttons_param(
 
 
 _header_format_to_media_type: dict[
-    HeaderFormatType, Literal["image", "video", "audio", "sticker", "document"]
+    HeaderFormatType, Literal["image", "video", "audio", "sticker", "document", "gif"]
 ] = {
     HeaderFormatType.IMAGE: "image",
     HeaderFormatType.VIDEO: "video",
     HeaderFormatType.DOCUMENT: "document",
+    HeaderFormatType.GIF: "gif",
 }
 _media_types_default_filenames = {
     "image": "image.jpg",
@@ -120,6 +121,7 @@ _media_types_default_filenames = {
     "audio": "audio.mp3",
     "sticker": "sticker.webp",
     "document": "document.pdf",
+    "gif": "animation.gif",
 }
 _media_types_default_mime_types = {
     "image": "image/jpeg",
@@ -127,16 +129,19 @@ _media_types_default_mime_types = {
     "audio": "audio/mpeg",
     "sticker": "image/webp",
     "document": "application/pdf",
+    "gif": "image/gif",
 }
 _template_header_formats_filename = {
     HeaderFormatType.IMAGE: "image.jpg",
     HeaderFormatType.VIDEO: "video.mp4",
     HeaderFormatType.DOCUMENT: "document.pdf",
+    HeaderFormatType.GIF: "animation.gif",
 }
 _template_header_formats_default_mime_types = {
     HeaderFormatType.IMAGE: "image/jpeg",
     HeaderFormatType.VIDEO: "video/mp4",
     HeaderFormatType.DOCUMENT: "application/pdf",
+    HeaderFormatType.GIF: "image/gif",
 }
 
 
@@ -227,7 +232,7 @@ def resolve_media_param(
     media: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
     mime_type: str | None,
     filename: str | None,
-    media_type: Literal["image", "video", "audio", "sticker", "document"] | None,
+    media_type: Literal["image", "video", "audio", "sticker", "document", "gif"] | None,
     phone_id: str,
 ) -> tuple[bool, str, str]:
     """
@@ -523,10 +528,11 @@ def internal_upload_media(
             filename=final_filename,
         )["id"], final_filename
     finally:
-        try:  # close file or stream
-            media_info.content.close()  # type: ignore
+        try:
             if close_client:
-                client.close()  # type: ignore
+                client.close()
+            if media_source == MediaSource.PATH:
+                media_info.content.close()
         except Exception:
             pass
 
@@ -682,12 +688,17 @@ def _upload_comps_example(
     except Exception as e:
         stop_event.set()
         raise ValueError(
-            f"Failed to upload media for component {first_comp.__class__.__name__} with example: {example if not isinstance(example, bytes) else '<bytes>'}"
+            f"Failed to upload media for component {first_comp.__class__.__name__} with example: {example if not isinstance(example, bytes) else '<bytes>'}: {e}"
         ) from e
 
     finally:
-        if client:
-            client.close()
+        try:
+            if client:
+                client.close()
+            if source == MediaSource.PATH:
+                media_info.content.close()
+        except Exception:
+            pass
 
 
 def _filter_not_uploaded_params(
@@ -756,10 +767,9 @@ def _upload_params_media(
             p._is_url = is_url
             p._resolved_media = media_id_or_url
             p._fallback_filename = fallback_filename
-
     except Exception as e:
         raise ValueError(
-            f"Failed to upload media for parameter {first_param} with media: {media if not isinstance(media, bytes) else '<bytes>'}"
+            f"Failed to upload media for parameter {first_param} with media: {media if not isinstance(media, bytes) else '<bytes>'}: {e}"
         ) from e
 
 

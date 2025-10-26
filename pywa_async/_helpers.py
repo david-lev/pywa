@@ -255,9 +255,11 @@ async def internal_upload_media(
             )
         )["id"], final_filename
     finally:
-        try:  # close file or stream
+        try:
             if close_client:
-                client.close()  # type: ignore
+                await client.aclose()
+            if media_source == MediaSource.PATH:
+                media_info.content.close()
         except Exception:
             pass
 
@@ -418,12 +420,17 @@ async def _upload_comps_example(
 
     except Exception as e:
         raise ValueError(
-            f"Failed to upload media for component {first_comp.__class__.__name__} with example: {example if not isinstance(example, bytes) else '<bytes>'}"
+            f"Failed to upload media for component {first_comp.__class__.__name__} with example: {example if not isinstance(example, bytes) else '<bytes>'}: {e}"
         ) from e
 
     finally:
-        if client:
-            await client.aclose()
+        try:
+            if client:
+                await client.aclose()
+            if source == MediaSource.PATH:
+                media_info.content.close()
+        except Exception:
+            pass
 
 
 async def upload_template_media_params(
@@ -483,5 +490,5 @@ async def _upload_params_media(
             p._fallback_filename = fallback_filename
     except Exception as e:
         raise ValueError(
-            f"Failed to upload media for parameter {first_param} with media: {media if not isinstance(media, bytes) else '<bytes>'}"
+            f"Failed to upload media for parameter {first_param} with media: {media if not isinstance(media, bytes) else '<bytes>'}: {e}"
         ) from e
