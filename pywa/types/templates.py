@@ -1281,12 +1281,14 @@ class _BaseMediaParams(BaseParams, abc.ABC):
         | Iterator[bytes]
         | AsyncIterator[bytes],
         filename: str | None = None,
+        mime_type: str | None = None,
     ):
         self.media = media
         self._resolved_media: str | None = None
         self._is_url: bool | None = None
         self._filename = filename
         self._fallback_filename: str | None = None
+        self._mime_type = mime_type
 
     def to_dict(
         self,
@@ -1312,7 +1314,14 @@ class _BaseMediaParams(BaseParams, abc.ABC):
         """
         Clears the cached media for this media param (if you using the same params object more than 30 days, the media ID will be expired, so you need to reupload the media).
         """
-        self._resolved_media, self._is_url, self._filename, self._fallback_filename = (
+        (
+            self._resolved_media,
+            self._is_url,
+            self._filename,
+            self._fallback_filename,
+            self._mime_type,
+        ) = (
+            None,
             None,
             None,
             None,
@@ -1334,6 +1343,7 @@ class HeaderImage(_BaseMediaHeaderComponent):
 
     Attributes:
         example: An example of the header image media.
+        mime_type: The mime type of the example (optional, required when passing bytes, bytes generator, or path without extension).
     """
 
     format = HeaderFormatType.IMAGE
@@ -1353,8 +1363,9 @@ class HeaderImage(_BaseMediaHeaderComponent):
             | BinaryIO
             | Iterator[bytes]
             | AsyncIterator[bytes],
+            mime_type: str | None = None,
         ):
-            super().__init__(media=image)
+            super().__init__(media=image, mime_type=mime_type)
 
     @staticmethod
     def params(
@@ -1367,17 +1378,19 @@ class HeaderImage(_BaseMediaHeaderComponent):
         | BinaryIO
         | Iterator[bytes]
         | AsyncIterator[bytes],
+        mime_type: str | None = None,
     ) -> HeaderImage._Params:
         """
         Fill the parameters for the header image component.
 
         Args:
             image: The image media to be used in the header (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
+            mime_type: The mime type of the image (optional, required when passing bytes, bytes generator, or path without extension).
 
         Returns:
             An instance of BaseParams containing the media parameter.
         """
-        return HeaderImage._Params(image=image)
+        return HeaderImage._Params(image=image, mime_type=mime_type)
 
 
 class HeaderVideo(_BaseMediaHeaderComponent):
@@ -1394,6 +1407,7 @@ class HeaderVideo(_BaseMediaHeaderComponent):
 
     Attributes:
         example: An example of the header video media.
+        mime_type: The mime type of the example (optional, required when passing bytes, bytes generator, or path without extension).
     """
 
     format = HeaderFormatType.VIDEO
@@ -1413,8 +1427,9 @@ class HeaderVideo(_BaseMediaHeaderComponent):
             | BinaryIO
             | Iterator[bytes]
             | AsyncIterator[bytes],
+            mime_type: str | None = None,
         ):
-            super().__init__(media=video)
+            super().__init__(media=video, mime_type=mime_type)
 
     @staticmethod
     def params(
@@ -1427,17 +1442,19 @@ class HeaderVideo(_BaseMediaHeaderComponent):
         | BinaryIO
         | Iterator[bytes]
         | AsyncIterator[bytes],
+        mime_type: str | None = None,
     ) -> HeaderVideo._Params:
         """
         Fill the parameters for the header video component.
 
         Args:
             video: The video media to be used in the header (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
+            mime_type: The mime type of the image (optional, required when passing bytes, bytes generator, or path without extension).
 
         Returns:
             An instance of BaseParams containing the media parameter.
         """
-        return HeaderVideo._Params(video=video)
+        return HeaderVideo._Params(video=video, mime_type=mime_type)
 
 
 class HeaderGIF(_BaseMediaHeaderComponent):
@@ -1456,6 +1473,7 @@ class HeaderGIF(_BaseMediaHeaderComponent):
 
     Attributes:
         example: An example of the header GIF media.
+        mime_type: The mime type of the example (optional, required when passing bytes, bytes generator, or path without extension).
     """
 
     format = HeaderFormatType.GIF
@@ -1475,8 +1493,9 @@ class HeaderGIF(_BaseMediaHeaderComponent):
             | BinaryIO
             | Iterator[bytes]
             | AsyncIterator[bytes],
+            mime_type: str | None = None,
         ):
-            super().__init__(media=gif)
+            super().__init__(media=gif, mime_type=mime_type)
 
     @staticmethod
     def params(
@@ -1489,17 +1508,19 @@ class HeaderGIF(_BaseMediaHeaderComponent):
         | BinaryIO
         | Iterator[bytes]
         | AsyncIterator[bytes],
+        mime_type: str | None = None,
     ) -> HeaderGIF._Params:
         """
         Fill the parameters for the header GIF component.
 
         Args:
             gif: The GIF media to be used in the header (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
+            mime_type: The mime type of the image (optional, required when passing bytes, bytes generator, or path without extension).
 
         Returns:
             An instance of BaseParams containing the media parameter.
         """
-        return HeaderGIF._Params(gif=gif)
+        return HeaderGIF._Params(gif=gif, mime_type=mime_type)
 
 
 class HeaderDocument(_BaseMediaHeaderComponent):
@@ -1516,6 +1537,7 @@ class HeaderDocument(_BaseMediaHeaderComponent):
 
     Attributes:
         example: An example of the header document media.
+        mime_type: The mime type of the example (optional, required when passing bytes, bytes generator, or path without extension).
     """
 
     format = HeaderFormatType.DOCUMENT
@@ -1536,8 +1558,9 @@ class HeaderDocument(_BaseMediaHeaderComponent):
             | Iterator[bytes]
             | AsyncIterator[bytes],
             filename: str | None,
+            mime_type: str | None = None,
         ):
-            super().__init__(media=document, filename=filename)
+            super().__init__(media=document, filename=filename, mime_type=mime_type)
 
     @staticmethod
     def params(
@@ -1551,6 +1574,7 @@ class HeaderDocument(_BaseMediaHeaderComponent):
         | Iterator[bytes]
         | AsyncIterator[bytes],
         filename: str | None = utils.MISSING,
+        mime_type: str | None = None,
     ) -> HeaderDocument._Params:
         """
         Fill the parameters for the header document component.
@@ -1558,11 +1582,14 @@ class HeaderDocument(_BaseMediaHeaderComponent):
         Args:
             document: The document media to be used in the header (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
             filename: Document filename, with extension. The WhatsApp client will use an appropriate file type icon based on the extension (Optional, if not provided, if possible, the filename will be extracted from the URL or file path. pass ``None`` to skip this behavior).
+            mime_type: The mime type of the image (optional, required when passing bytes, bytes generator, or path without extension).
 
         Returns:
             An instance of BaseParams containing the media parameter.
         """
-        return HeaderDocument._Params(document=document, filename=filename)
+        return HeaderDocument._Params(
+            document=document, filename=filename, mime_type=mime_type
+        )
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)

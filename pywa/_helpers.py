@@ -747,7 +747,7 @@ def _upload_params_media(
         is_url, media_id_or_url, fallback_filename = resolve_media_param(
             wa=wa,
             media=media,
-            mime_type=None,
+            mime_type=first_param._mime_type,
             filename=None,
             media_type=_header_format_to_media_type[first_param.format],
             phone_id=sender,
