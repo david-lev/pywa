@@ -194,6 +194,20 @@ def test_comp_and_params_to_dict():
         "parameters": [{"type": "video", "video": {"id": "123456"}}],
     }
 
+    hv = HeaderGIF(example="1:gifhandle")
+    hv._handle = "1:gifhandle"
+    assert hv.to_dict() == {
+        "type": "HEADER",
+        "format": "GIF",
+        "example": {"header_handle": ["1:gifhandle"]},
+    }
+    hvp = hv.params(gif="123456")
+    hvp._resolved_media = "123456"
+    assert hvp.to_dict() == {
+        "type": "HEADER",
+        "parameters": [{"type": "gif", "gif": {"id": "123456"}}],
+    }
+
     hd = HeaderDocument(example="1:documenthandle")
     hd._handle = "1:documenthandle"
     assert hd.to_dict() == {

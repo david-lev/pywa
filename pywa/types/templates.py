@@ -19,6 +19,7 @@ __all__ = [
     "HeaderText",
     "HeaderImage",
     "HeaderVideo",
+    "HeaderGIF",
     "HeaderDocument",
     "HeaderLocation",
     "HeaderProduct",
@@ -576,6 +577,7 @@ class HeaderFormatType(utils.StrEnum):
     TEXT = "TEXT"
     IMAGE = "IMAGE"
     VIDEO = "VIDEO"
+    GIF = "GIF"
     DOCUMENT = "DOCUMENT"
     LOCATION = "LOCATION"
     PRODUCT = "PRODUCT"
@@ -599,6 +601,7 @@ class ParamType(utils.StrEnum):
     DOCUMENT = "document"
     IMAGE = "image"
     VIDEO = "video"
+    GIF = "gif"
     LOCATION = "location"
     BUTTON = "button"
     PRODUCT = "product"
@@ -1134,7 +1137,7 @@ class HeaderText(_BaseTextComponent, BaseHeaderComponent):
     Represents a header text component in a template.
 
     - All templates are limited to one header component
-    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#text-headers>`_.
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#text-header>`_.
 
     Example:
 
@@ -1177,7 +1180,7 @@ class _BaseMediaHeaderComponent(BaseHeaderComponent, abc.ABC):
     Base class for media components in templates.
 
     - Used in :class:`HeaderImage`, :class:`HeaderVideo`, and :class:`HeaderDocument` components.
-    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#media-headers>`_.
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#media-header>`_.
     """
 
     __slots__ = ("_example", "_handle", "_mime_type")
@@ -1322,7 +1325,7 @@ class HeaderImage(_BaseMediaHeaderComponent):
     Represents a header image component in a template.
 
     - All templates are limited to one header component.
-    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#media-headers>`_.
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#media-header>`_.
 
     Example:
 
@@ -1382,7 +1385,7 @@ class HeaderVideo(_BaseMediaHeaderComponent):
     Represents a header video component in a template.
 
     - All templates are limited to one header component.
-    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#media-headers>`_.
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#media-header>`_.
 
     Example:
 
@@ -1437,12 +1440,74 @@ class HeaderVideo(_BaseMediaHeaderComponent):
         return HeaderVideo._Params(video=video)
 
 
+class HeaderGIF(_BaseMediaHeaderComponent):
+    """
+    Represents a header GIF component in a template.
+
+    - All templates are limited to one header component.
+    - GIFs are currently only available for the MM Lite API.
+    - Max size: 3.5MB. Larger files will be displayed as video messages.
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#media-header>`_.
+
+    Example:
+
+        >>> header_gif = HeaderGIF(example="https://example.com/animation.gif")
+        >>> header_gif.params(gif="https://cdn.com/animation.gif")
+
+    Attributes:
+        example: An example of the header GIF media.
+    """
+
+    format = HeaderFormatType.GIF
+
+    class _Params(_BaseMediaParams):
+        format = HeaderFormatType.GIF
+        param_type = ParamType.GIF
+
+        def __init__(
+            self,
+            *,
+            gif: str
+            | int
+            | Media
+            | pathlib.Path
+            | bytes
+            | BinaryIO
+            | Iterator[bytes]
+            | AsyncIterator[bytes],
+        ):
+            super().__init__(media=gif)
+
+    @staticmethod
+    def params(
+        *,
+        gif: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
+    ) -> HeaderGIF._Params:
+        """
+        Fill the parameters for the header GIF component.
+
+        Args:
+            gif: The GIF media to be used in the header (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
+
+        Returns:
+            An instance of BaseParams containing the media parameter.
+        """
+        return HeaderGIF._Params(gif=gif)
+
+
 class HeaderDocument(_BaseMediaHeaderComponent):
     """
     Represents a header document component in a template.
 
     - All templates are limited to one header component.
-    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#media-headers>`_.
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#media-header>`_.
 
     Example:
 
@@ -1506,7 +1571,7 @@ class HeaderLocation(BaseHeaderComponent):
     Represents a header location component in a template.
 
     - All templates are limited to one header component.
-    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#location-headers>`_.
+    - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#location-header>`_.
 
     Example:
 
@@ -3369,6 +3434,7 @@ _header_formats_to_component: dict[HeaderFormatType, type[BaseHeaderComponent]] 
     HeaderFormatType.TEXT: HeaderText,
     HeaderFormatType.IMAGE: HeaderImage,
     HeaderFormatType.VIDEO: HeaderVideo,
+    HeaderFormatType.GIF: HeaderGIF,
     HeaderFormatType.DOCUMENT: HeaderDocument,
     HeaderFormatType.LOCATION: HeaderLocation,
     HeaderFormatType.PRODUCT: HeaderProduct,
