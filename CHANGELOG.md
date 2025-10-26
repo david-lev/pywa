@@ -3,7 +3,15 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-#### 3.3.0 (2025-10-26) **Latest**
+
+#### 3.4.0 (2025-10-26) **Latest**
+
+- [templates] adding support for `HeaderGIF`
+- [templates] override mimetype when sending template with media
+- [helpers] fix closing file
+
+
+#### 3.3.0 (2025-10-26)
 
 - [templates] allowing to override header example mime-type
 - [helpers] stream template examples when possible (sync/async)

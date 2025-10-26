@@ -80,6 +80,7 @@ Template Components
        :class:`HeaderImage`,
        :class:`HeaderVideo`,
        :class:`HeaderDocument`,
+       :class:`HeaderGIF`,
        :class:`HeaderLocation`,
        :class:`HeaderProduct`
    * - Bodies

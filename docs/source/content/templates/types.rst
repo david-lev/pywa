@@ -30,6 +30,8 @@ Template Types
     :members: params
 .. autoclass:: HeaderDocument()
     :members: params
+.. autoclass:: HeaderGIF()
+    :members: params
 .. autoclass:: HeaderLocation()
     :members: params
 .. autoclass:: HeaderProduct()
