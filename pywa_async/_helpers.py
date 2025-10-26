@@ -334,7 +334,14 @@ async def _upload_comps_example(
                 stream=True,
             )
         case MediaSource.PATH:
-            media_info = get_media_from_path(path=example)
+            p = pathlib.Path(example)
+            with p.open("rb") as f:
+                media_info = MediaInfo(
+                    content=f.read(),
+                    filename=p.name,
+                    mime_type=mimetypes.guess_type(p.as_posix())[0],
+                    length=p.stat().st_size,
+                )
         case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
             media_info = await get_media_from_media_id_or_obj_or_url(
                 wa=wa,
@@ -427,8 +434,6 @@ async def _upload_comps_example(
         try:
             if client:
                 await client.aclose()
-            if source == MediaSource.PATH:
-                media_info.content.close()
         except Exception:
             pass
 
