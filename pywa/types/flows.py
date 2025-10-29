@@ -192,7 +192,10 @@ class FlowCompletion(BaseUserUpdate):
         )
 
     def get_media(
-        self, media_cls: Type[_FlowResMediaType], key: str
+        self,
+        media_cls: Type[_FlowResMediaType],
+        key: str,
+        index: int = 0,
     ) -> _FlowResMediaType:
         """
         Get the media object from the response.
@@ -208,16 +211,19 @@ class FlowCompletion(BaseUserUpdate):
         Args:
             media_cls: The media class to create the media object (e.g. ``types.Image``).
             key: The key of the media in the response.
+            index: The index of the media in the response (default to ``0``).
 
         Returns:
             The media object.
 
         Raises:
             KeyError: If the key is not found in the response.
+            ValueError: If the response has no data.
+            IndexError: If the index is out of range.
         """
         return media_cls.from_dict(
             client=self._client,
-            data=self.response[key],
+            data=self.response[key][index],
             arrived_at=self.timestamp,
             received_to=self.recipient,
         )
