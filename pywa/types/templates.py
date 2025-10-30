@@ -730,11 +730,13 @@ class CreativeFeaturesSpec:
         Automatic Creative Optimizations are currently only available to businesses participating in early access. It will be made available to all businesses on a future date.
 
     Attributes:
-        image_brightness_and_contrast: Whether to apply brightness and contrast adjustments to images.
-        image_touchups: Whether to apply touch-ups to images.
-        add_text_overlay: Whether to add text overlays to images.
-        image_animation: Whether to apply animations to images.
-        image_background_gen: Whether to generate backgrounds for images.
+        image_brightness_and_contrast: Whether to apply brightness and contrast adjustments to images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-cropping>`_.
+        image_touchups: Whether to apply touch-ups to images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-filtering>`_.
+        add_text_overlay: Whether to add text overlays to images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#text-overlays>`_.
+        image_animation: Whether to apply animations to images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-animation>`_.
+        image_background_gen: Whether to generate backgrounds for images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-background-generation>`_.
+        text_extraction_for_headline: Whether to extract text from images for headlines. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#headline-extraction>`_.
+        text_extraction_for_tap_target: Whether to extract text from images for tap targets. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#tap-target-title-extraction>`_.
     """
 
     image_brightness_and_contrast: bool
@@ -742,60 +744,63 @@ class CreativeFeaturesSpec:
     add_text_overlay: bool
     image_animation: bool
     image_background_gen: bool
+    text_extraction_for_headline: bool
+    text_extraction_for_tap_target: bool
+
+    _fields = {
+        "image_brightness_and_contrast",
+        "image_touchups",
+        "add_text_overlay",
+        "image_animation",
+        "image_background_gen",
+        "text_extraction_for_headline",
+        "text_extraction_for_tap_target",
+    }
 
     def __init__(
         self,
-        image_brightness_and_contrast: bool,
-        image_touchups: bool,
-        add_text_overlay: bool,
-        image_animation: bool,
-        image_background_gen: bool,
+        *,
+        image_brightness_and_contrast: bool | None = None,
+        image_touchups: bool | None = None,
+        add_text_overlay: bool | None = None,
+        image_animation: bool | None = None,
+        image_background_gen: bool | None = None,
+        text_extraction_for_headline: bool | None = None,
+        text_extraction_for_tap_target: bool | None = None,
     ):
         """
-        Initializes the creative features specification.
+        Initializes a CreativeFeaturesSpec instance.
 
         Args:
-            image_brightness_and_contrast: Whether to apply brightness and contrast adjustments to images.
-            image_touchups: Whether to apply touch-ups to images.
-            add_text_overlay: Whether to add text overlays to images.
-            image_animation: Whether to apply animations to images.
-            image_background_gen: Whether to generate backgrounds for images.
+            image_brightness_and_contrast: Whether to apply brightness and contrast adjustments to images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-cropping>`_.
+            image_touchups: Whether to apply touch-ups to images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-filtering>`_.
+            add_text_overlay: Whether to add text overlays to images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#text-overlays>`_.
+            image_animation: Whether to apply animations to images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-animation>`_.
+            image_background_gen: Whether to generate backgrounds for images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-background-generation>`_.
+            text_extraction_for_headline: Whether to extract text from images for headlines. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#headline-extraction>`_.
+            text_extraction_for_tap_target: Whether to extract text from images for tap targets. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#tap-target-title-extraction>`_.
         """
-        self.image_brightness_and_contrast = image_brightness_and_contrast
-        self.image_touchups = image_touchups
-        self.add_text_overlay = add_text_overlay
-        self.image_animation = image_animation
-        self.image_background_gen = image_background_gen
+        for field_name, value in locals().items():
+            if field_name == "self":
+                continue
+            setattr(self, field_name, value)
 
     def to_dict(self) -> dict:
         return {
-            "image_brightness_and_contrast": {
-                "enroll_status": "OPT_IN"
-                if self.image_brightness_and_contrast
-                else "OPT_OUT"
-            },
-            "image_touchups": {
-                "enroll_status": "OPT_IN" if self.image_touchups else "OPT_OUT"
-            },
-            "add_text_overlay": {
-                "enroll_status": "OPT_IN" if self.add_text_overlay else "OPT_OUT"
-            },
-            "image_animation": {
-                "enroll_status": "OPT_IN" if self.image_animation else "OPT_OUT"
-            },
-            "image_background_gen": {
-                "enroll_status": "OPT_IN" if self.image_background_gen else "OPT_OUT"
-            },
+            k: "OPT_IN" if v else "OPT_OUT"
+            for k, v in {
+                field_name: getattr(self, field_name) for field_name in self._fields
+            }.items()
+            if v is not None
         }
 
     def __repr__(self) -> str:
-        return (
-            f"CreativeFeaturesSpec(image_brightness_and_contrast={self.image_brightness_and_contrast}, "
-            f"image_touchups={self.image_touchups}, "
-            f"add_text_overlay={self.add_text_overlay}, "
-            f"image_animation={self.image_animation}), "
-            f"image_background_gen={self.image_background_gen})"
-        )
+        return f"CreativeFeaturesSpec({
+            ', '.join(
+                f'{field_name}={getattr(self, field_name)}'
+                for field_name in self._fields
+            )
+        })"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
