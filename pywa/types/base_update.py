@@ -285,6 +285,7 @@ class _ClientShortcuts(abc.ABC):
         *,
         quote: bool = False,
         preview_url: bool = False,
+        identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
         """
@@ -310,6 +311,7 @@ class _ClientShortcuts(abc.ABC):
             buttons: The buttons to send with the message (optional).
             quote: Whether to quote the replied message (default: False).
             preview_url: Whether to show a preview of the URL in the message (if any).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
         Returns:
@@ -324,6 +326,7 @@ class _ClientShortcuts(abc.ABC):
             buttons=buttons,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             preview_url=preview_url,
+            identity_key_hash=identity_key_hash,
             tracker=tracker,
         )
 
@@ -338,6 +341,7 @@ class _ClientShortcuts(abc.ABC):
         *,
         quote: bool = False,
         mime_type: str | None = None,
+        identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
         """
@@ -366,6 +370,7 @@ class _ClientShortcuts(abc.ABC):
             buttons: The buttons to send with the image (optional).
             quote: Whether to quote the replied message (default: False).
             mime_type: The mime type of the image (optional, required when sending an image as bytes, or file path that does not have an extension).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
         Returns:
@@ -380,6 +385,7 @@ class _ClientShortcuts(abc.ABC):
             buttons=buttons,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             mime_type=mime_type,
+            identity_key_hash=identity_key_hash,
             tracker=tracker,
         )
 
@@ -392,6 +398,7 @@ class _ClientShortcuts(abc.ABC):
         *,
         quote: bool = False,
         mime_type: str | None = None,
+        identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
         """
@@ -420,6 +427,7 @@ class _ClientShortcuts(abc.ABC):
             buttons: The buttons to send with the video (optional).
             quote: Whether to quote the replied message (default: False).
             mime_type: The mime type of the video (optional, required when sending a video as bytes or file path that does not have an extension).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
         Returns:
@@ -434,6 +442,7 @@ class _ClientShortcuts(abc.ABC):
             buttons=buttons,
             footer=footer,
             mime_type=mime_type,
+            identity_key_hash=identity_key_hash,
             tracker=tracker,
         )
 
@@ -447,6 +456,7 @@ class _ClientShortcuts(abc.ABC):
         *,
         quote: bool = False,
         mime_type: str | None = None,
+        identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
         """
@@ -476,6 +486,7 @@ class _ClientShortcuts(abc.ABC):
             buttons: The buttons to send with the document (optional).
             quote: Whether to quote the replied message (default: False).
             mime_type: The mime type of the document (optional, required when sending a document as bytes or file path that does not have an extension).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
         Returns:
@@ -491,6 +502,7 @@ class _ClientShortcuts(abc.ABC):
             buttons=buttons,
             footer=footer,
             mime_type=mime_type,
+            identity_key_hash=identity_key_hash,
             tracker=tracker,
         )
 
@@ -501,6 +513,7 @@ class _ClientShortcuts(abc.ABC):
         is_voice: bool | None = None,
         quote: bool = False,
         mime_type: str | None = None,
+        identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
         """
@@ -523,6 +536,7 @@ class _ClientShortcuts(abc.ABC):
             is_voice: Set to True if sending a voice message (use :meth:`~pywa.types.base_update.BaseUserUpdate.reply_voice` instead for better type support).
             mime_type: The mime type of the audio file (optional, required when sending an audio as bytes or file path that does not have an extension).
             quote: Whether to quote the replied message (default: False).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
         Returns:
@@ -535,6 +549,7 @@ class _ClientShortcuts(abc.ABC):
             is_voice=is_voice,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             mime_type=mime_type,
+            identity_key_hash=identity_key_hash,
             tracker=tracker,
         )
 
@@ -588,6 +603,7 @@ class _ClientShortcuts(abc.ABC):
         *,
         quote: bool = False,
         mime_type: str | None = None,
+        identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
         """
@@ -611,6 +627,7 @@ class _ClientShortcuts(abc.ABC):
             sticker: The sticker to reply with (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
             mime_type: The mime type of the sticker (optional, required when sending a sticker as bytes or file path that does not have an extension).
             quote: Whether to quote the replied message (default: False).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
         Returns:
@@ -622,6 +639,7 @@ class _ClientShortcuts(abc.ABC):
             sticker=sticker,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             mime_type=mime_type,
+            identity_key_hash=identity_key_hash,
             tracker=tracker,
         )
 
@@ -633,6 +651,7 @@ class _ClientShortcuts(abc.ABC):
         address: str | None = None,
         *,
         quote: bool = False,
+        identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
         """
@@ -660,7 +679,8 @@ class _ClientShortcuts(abc.ABC):
             name: The name of the location (optional).
             address: The address of the location (optional).
             quote: Whether to quote the replied message (default: False).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
         Returns:
             The sent location message.
@@ -673,6 +693,7 @@ class _ClientShortcuts(abc.ABC):
             name=name,
             address=address,
             reply_to_message_id=self.message_id_to_reply if quote else None,
+            identity_key_hash=identity_key_hash,
             tracker=tracker,
         )
 
@@ -681,6 +702,7 @@ class _ClientShortcuts(abc.ABC):
         text: str,
         *,
         quote: bool = False,
+        identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
         """
@@ -701,7 +723,8 @@ class _ClientShortcuts(abc.ABC):
         Args:
             text: The text to send with the request.
             quote: Whether to quote the replied message (default: False).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
         Returns:
             The sent location request message.
@@ -711,6 +734,7 @@ class _ClientShortcuts(abc.ABC):
             to=self._internal_sender,
             text=text,
             reply_to_message_id=self.message_id_to_reply if quote else None,
+            identity_key_hash=identity_key_hash,
             tracker=tracker,
         )
 
@@ -719,6 +743,7 @@ class _ClientShortcuts(abc.ABC):
         contact: Contact | Iterable[Contact],
         *,
         quote: bool = False,
+        identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
         """
@@ -747,7 +772,8 @@ class _ClientShortcuts(abc.ABC):
         Args:
             contact: The contact/s to send.
             quote: Whether to quote the replied message (default: False).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
         Returns:
             The sent contact/s message.
@@ -757,11 +783,16 @@ class _ClientShortcuts(abc.ABC):
             to=self._internal_sender,
             contact=contact,
             reply_to_message_id=self.message_id_to_reply if quote else None,
+            identity_key_hash=identity_key_hash,
             tracker=tracker,
         )
 
     def react(
-        self, emoji: str, *, tracker: str | CallbackData | None = None
+        self,
+        emoji: str,
+        *,
+        identity_key_hash: str | None = None,
+        tracker: str | CallbackData | None = None,
     ) -> SentMessage:
         """
         React to the message with an emoji.
@@ -781,7 +812,8 @@ class _ClientShortcuts(abc.ABC):
 
         Args:
             emoji: The emoji to react with.
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
         Returns:
             The sent reaction message (You can't use this message id to remove the reaction or perform any other
@@ -792,10 +824,16 @@ class _ClientShortcuts(abc.ABC):
             to=self._internal_sender,
             emoji=emoji,
             message_id=self.message_id_to_reply,
+            identity_key_hash=identity_key_hash,
             tracker=tracker,
         )
 
-    def unreact(self, *, tracker: str | CallbackData | None = None) -> SentMessage:
+    def unreact(
+        self,
+        *,
+        identity_key_hash: str | None = None,
+        tracker: str | CallbackData | None = None,
+    ) -> SentMessage:
         """
         Remove the reaction from the message.
 
@@ -812,7 +850,8 @@ class _ClientShortcuts(abc.ABC):
             ...     msg.unreact()
 
         Args:
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
         Returns:
             The sent (un)reaction message (You can't use this message id to remove the reaction or perform any other
@@ -822,6 +861,7 @@ class _ClientShortcuts(abc.ABC):
             sender=self._internal_recipient,
             to=self._internal_sender,
             message_id=self.message_id_to_reply,
+            identity_key_hash=identity_key_hash,
             tracker=tracker,
         )
 
@@ -832,6 +872,7 @@ class _ClientShortcuts(abc.ABC):
         *,
         thumbnail_product_sku: str | None = None,
         quote: bool = False,
+        identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
         """
@@ -862,7 +903,8 @@ class _ClientShortcuts(abc.ABC):
             thumbnail_product_sku: The thumbnail of this item will be used as the message's header image (optional, if
                 not provided, the first item in the catalog will be used).
             quote: Whether to quote the replied message (default: False).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
         Returns:
             The sent catalog message.
@@ -874,6 +916,7 @@ class _ClientShortcuts(abc.ABC):
             footer=footer,
             thumbnail_product_sku=thumbnail_product_sku,
             reply_to_message_id=self.message_id_to_reply if quote else None,
+            identity_key_hash=identity_key_hash,
             tracker=tracker,
         )
 
@@ -885,6 +928,7 @@ class _ClientShortcuts(abc.ABC):
         footer: str | None = None,
         *,
         quote: bool = False,
+        identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
         """
@@ -914,7 +958,8 @@ class _ClientShortcuts(abc.ABC):
             body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
             quote: Whether to quote the replied message (default: False).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
         Returns:
             The sent product message.
@@ -927,6 +972,7 @@ class _ClientShortcuts(abc.ABC):
             body=body,
             footer=footer,
             reply_to_message_id=self.message_id_to_reply if quote else None,
+            identity_key_hash=identity_key_hash,
             tracker=tracker,
         )
 
@@ -939,6 +985,7 @@ class _ClientShortcuts(abc.ABC):
         footer: str | None = None,
         *,
         quote: bool = False,
+        identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
         """
@@ -979,7 +1026,8 @@ class _ClientShortcuts(abc.ABC):
             body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
             quote: Whether to quote the replied message (default: False).
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
         Returns:
             The sent products message.
@@ -993,6 +1041,7 @@ class _ClientShortcuts(abc.ABC):
             body=body,
             footer=footer,
             reply_to_message_id=self.message_id_to_reply if quote else None,
+            identity_key_hash=identity_key_hash,
             tracker=tracker,
         )
 
@@ -1005,6 +1054,7 @@ class _ClientShortcuts(abc.ABC):
         use_mm_lite_api: bool = False,
         message_activity_sharing: bool | None = None,
         quote: bool = False,
+        identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
     ) -> SentTemplate:
         """
@@ -1021,7 +1071,8 @@ class _ClientShortcuts(abc.ABC):
             use_mm_lite_api: Whether to use `Marketing Messages Lite API <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api>`_ (optional, default: False).
             message_activity_sharing: Whether to share message activities (e.g. message read) for that specific marketing message to Meta to help optimize marketing messages (optional, only if ``use_mm_lite_api`` is True).
             quote: Whether to quote the replied message (default: False).
-            tracker: A callback data to track the message (optional, can be a string or a :class:`CallbackData` object).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
         Returns:
             The sent template message.
@@ -1036,6 +1087,7 @@ class _ClientShortcuts(abc.ABC):
             use_mm_lite_api=use_mm_lite_api,
             message_activity_sharing=message_activity_sharing,
             reply_to_message_id=self.message_id_to_reply if quote else None,
+            identity_key_hash=identity_key_hash,
             tracker=tracker,
         )
 
@@ -1102,7 +1154,7 @@ class _ClientShortcuts(abc.ABC):
 
         Args:
             sdp: The SDP object containing the call information.
-            tracker: The data to track the message with (optional, up to 512 characters, for complex data You can use :class:`CallbackData`).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
         Returns:
             The initiated call.
