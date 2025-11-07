@@ -27,6 +27,7 @@ from .others import (
     ReplyToMessage,
     User,
     Referral,
+    Unsupported,
 )
 
 if TYPE_CHECKING:
@@ -62,6 +63,7 @@ class Message(BaseUserUpdate):
         contacts: The contacts of the message.
         order: The order of the message.
         referral: The referral information of the message (When a customer clicks an ad that redirects to WhatsApp).
+        unsupported: The unsupported content of the message.
         error: The error of the message.
         shared_data: Shared data between handlers.
     """
@@ -82,6 +84,7 @@ class Message(BaseUserUpdate):
     contacts: tuple[Contact, ...] | None = None
     order: Order | None = None
     referral: Referral | None = None
+    unsupported: Unsupported | None = None
     error: WhatsAppError | None = None
 
     _media_objs: ClassVar[dict] = {
@@ -116,7 +119,8 @@ class Message(BaseUserUpdate):
     def has_media(self) -> bool:
         """
         Whether the message has any media. (image, video, sticker, document or audio)
-            - If you want to get the media of the message, use :attr:`~Message.media` instead.
+
+        - If you want to get the media of the message, use :attr:`~Message.media` instead.
         """
         return self.media is not None
 
@@ -169,6 +173,12 @@ class Message(BaseUserUpdate):
                 }
             case MessageType.ORDER:
                 return {msg_type.value: Order.from_dict(msg[msg_type.value])}
+            case MessageType.UNSUPPORTED:
+                return (
+                    {msg_type.value: Unsupported(type=msg["unsupported"]["type"])}
+                    if "unsupported" in msg
+                    else {}
+                )
             case _:
                 return {}
 

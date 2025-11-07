@@ -142,6 +142,7 @@ FILTERS: dict[str, dict[str, list[tuple[Callable[[_T], _T], Filter]]]] = {
             (same, fil.order),
         ],
         "unsupported": [(same, fil.unsupported)],
+        "unsupported_with_type": [(same, fil.unsupported)],
         "reply": [(same, fil.reply)],
         "replays_to": [(lambda m: modify_replies_to(m, "123"), fil.replays_to("123"))],
         "sent_to": [

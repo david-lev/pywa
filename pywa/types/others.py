@@ -22,6 +22,7 @@ from typing import (
     Generic,
     Iterator,
     ClassVar,
+    Literal,
 )
 
 from .. import utils
@@ -625,6 +626,18 @@ class Referral(utils.FromDict):
     video_url: str | None = None
     thumbnail_url: str | None = None
     ctwa_clid: str | None = None
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class Unsupported:
+    """
+    Represents an unsupported message.
+
+    Attributes:
+        type: Contains the type of message that is unsupported (e.g., "edit", "poll", "button").
+    """
+
+    type: Literal["edit", "poll", "button"]
 
 
 @dataclasses.dataclass(slots=True)

@@ -58,6 +58,7 @@ class Message(BaseUserUpdateAsync, _Message):
         contacts: The contacts of the message.
         order: The order of the message.
         referral: The referral information of the message (When a customer clicks an ad that redirects to WhatsApp).
+        unsupported: The unsupported content of the message.
         error: The error of the message.
         shared_data: Shared data between handlers.
     """

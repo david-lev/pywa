@@ -54,6 +54,7 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
         "contacts": [lambda m: m.contacts is not None],
         "order": [lambda m: m.order is not None],
         "unsupported": [lambda m: m.error is not None],
+        "unsupported_with_type": [lambda m: m.unsupported is not None],
         "reply": [lambda m: m.is_reply],
         "forwarded": [lambda m: m.forwarded],
         "forwarded_many_times": [lambda m: m.forwarded_many_times],
