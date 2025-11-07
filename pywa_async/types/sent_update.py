@@ -7,6 +7,7 @@ from pywa.types.sent_update import (
     SentMessage as _SentMessage,
     SentTemplate as _SentTemplate,
     SentVoiceMessage as _SentVoiceMessage,
+    SentLocationRequest as _SentLocationRequest,
     InitiatedCall as _InitiatedCall,
     ignore_updates_canceler,
     failed_canceler,
@@ -26,6 +27,7 @@ from .. import filters as pywa_filters
 __all__ = [
     "SentMessage",
     "SentVoiceMessage",
+    "SentLocationRequest",
     "SentTemplate",
     "SentTemplateStatus",
     "InitiatedCall",
@@ -484,6 +486,67 @@ class SentVoiceMessage(SentMessage, _SentVoiceMessage):
                 to=self.listener_identifier,
                 filters=pywa_filters.update_id(self.id)
                 & pywa_filters.played
+                & (filters or pywa_filters.true),
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
+        )
+
+
+class SentLocationRequest(SentMessage, _SentLocationRequest):
+    """
+    Represents a location request message that was sent to WhatsApp user.
+
+    Attributes:
+        id: The ID of the message.
+        to_user: The user the message was sent to.
+        from_phone_id: The WhatsApp ID of the sender who sent the message.
+        input: The input (phone number) of the recipient.
+    """
+
+    async def wait_for_location(
+        self,
+        *,
+        force_current_location: bool = True,
+        filters: pywa_filters.Filter = None,
+        cancelers: pywa_filters.Filter = None,
+        ignore_updates: bool = True,
+        timeout: float | None = None,
+    ) -> Message:
+        """
+        Wait for a location message in response to the location request.
+
+        Args:
+            force_current_location: Whether to only accept current location messages.
+            filters: The filters to apply to the location message.
+            cancelers: The filters to cancel the listening.
+            ignore_updates: Whether to ignore user updates that do not pass the filters.
+            timeout: The time to wait for the location message.
+
+        Returns:
+            The location message.
+
+        Raises:
+            ListenerTimeout: If the listener timed out.
+            ListenerCanceled: If the listener was canceled by a filter.
+            ListenerStopped: If the listener was stopped manually.
+        """
+        if ignore_updates:
+            cancelers = (
+                (cancelers | ignore_updates_canceler)
+                if cancelers
+                else ignore_updates_canceler
+            )
+        return cast(
+            Message,
+            await self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.message
+                & (
+                    pywa_filters.current_location
+                    if force_current_location
+                    else pywa_filters.location
+                )
                 & (filters or pywa_filters.true),
                 cancelers=cancelers,
                 timeout=timeout,

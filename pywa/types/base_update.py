@@ -29,7 +29,12 @@ from ..listeners import BaseListenerIdentifier, UserUpdateListenerIdentifier
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
-    from .sent_update import SentMessage, SentTemplate, SentVoiceMessage
+    from .sent_update import (
+        SentMessage,
+        SentTemplate,
+        SentVoiceMessage,
+        SentLocationRequest,
+    )
     from .calls import SessionDescription
     from .sent_update import InitiatedCall
     from .callback import (
@@ -704,7 +709,7 @@ class _ClientShortcuts(abc.ABC):
         quote: bool = False,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
-    ) -> SentMessage:
+    ) -> SentLocationRequest:
         """
         Reply to the message with a request for the user's location.
 

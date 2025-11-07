@@ -154,6 +154,7 @@ from .types.sent_update import (
     SentTemplate,
     InitiatedCall,
     SentVoiceMessage,
+    SentLocationRequest,
 )
 from .utils import FastAPI, Flask
 
@@ -1156,7 +1157,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         tracker: str | CallbackData | None = None,
         identity_key_hash: str | None = None,
         sender: str | int | None = None,
-    ) -> SentMessage:
+    ) -> SentLocationRequest:
         """
         Location request messages display body text and a send location button. When a WhatsApp user taps the button, a location sharing screen appears which the user can then use to share their location.
 
@@ -1185,6 +1186,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
+        # noinspection PyProtectedMember
         return SentMessage.from_sent_update(
             client=self,
             update=await self.api.send_message(
@@ -1201,7 +1203,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
-        )
+        )._convert_to(subclass=SentLocationRequest)
 
     async def send_contact(
         self,

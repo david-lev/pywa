@@ -16,7 +16,12 @@ if TYPE_CHECKING:
     from ..client import WhatsApp
     from .calls import SessionDescription
     from pywa.types.sent_update import InitiatedCall
-    from .sent_update import SentMessage, SentTemplate, SentVoiceMessage
+    from .sent_update import (
+        SentMessage,
+        SentTemplate,
+        SentVoiceMessage,
+        SentLocationRequest,
+    )
     from .callback import (
         Button,
         URLButton,
@@ -534,7 +539,7 @@ class _ClientShortcutsAsync:
         quote: bool = False,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
-    ) -> SentMessage:
+    ) -> SentLocationRequest:
         """
         Reply to the message with a request for the user's location.
 

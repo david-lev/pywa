@@ -11,6 +11,9 @@ Others
 .. autoclass:: SentVoiceMessage()
     :show-inheritance:
 
+.. autoclass:: SentLocationRequest()
+    :show-inheritance:
+
 .. autoclass:: SentTemplateStatus()
 
 .. currentmodule:: pywa.types.others
