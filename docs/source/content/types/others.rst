@@ -8,6 +8,9 @@ Others
 .. autoclass:: SentTemplate()
     :show-inheritance:
 
+.. autoclass:: SentVoiceMessage()
+    :show-inheritance:
+
 .. autoclass:: SentTemplateStatus()
 
 .. currentmodule:: pywa.types.others

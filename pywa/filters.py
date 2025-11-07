@@ -65,6 +65,7 @@ __all__ = [
     "sent",
     "delivered",
     "read",
+    "played",
     "failed",
     "failed_with",
     "with_tracker",
@@ -738,6 +739,9 @@ read = new(lambda _, s: s.status == _Mst.READ, name="status_read")
 
 failed = new(lambda _, s: s.status == _Mst.FAILED, name="status_failed")
 """Filter for status updates of messages that have failed to send."""
+
+played = new(lambda _, s: s.status == _Mst.PLAYED, name="status_played")
+"""Filter for status updates of voice messages that have been played."""
 
 
 def failed_with(

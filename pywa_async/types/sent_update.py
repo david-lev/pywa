@@ -6,6 +6,7 @@ from pywa.types.sent_update import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.sent_update import (
     SentMessage as _SentMessage,
     SentTemplate as _SentTemplate,
+    SentVoiceMessage as _SentVoiceMessage,
     InitiatedCall as _InitiatedCall,
     ignore_updates_canceler,
     failed_canceler,
@@ -22,7 +23,13 @@ from .calls import _CallShortcutsAsync
 
 from .. import filters as pywa_filters
 
-__all__ = ["SentMessage", "SentTemplate", "SentTemplateStatus", "InitiatedCall"]
+__all__ = [
+    "SentMessage",
+    "SentVoiceMessage",
+    "SentTemplate",
+    "SentTemplateStatus",
+    "InitiatedCall",
+]
 
 from pywa_async.types.base_update import _ClientShortcutsAsync
 
@@ -201,7 +208,8 @@ class SentMessage(_ClientShortcutsAsync, _SentMessage):
             MessageStatus,
             await self._client.listen(
                 to=self.listener_identifier,
-                filters=pywa_filters.update_id(self.id) & pywa_filters.delivered,
+                filters=pywa_filters.update_id(self.id)
+                & (pywa_filters.read | pywa_filters.delivered),
                 cancelers=cancelers,
                 timeout=timeout,
             ),
@@ -418,6 +426,65 @@ class SentMessage(_ClientShortcutsAsync, _SentMessage):
                 to=self.listener_identifier,
                 filters=pywa_filters.flow_completion
                 & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
+        )
+
+
+class SentVoiceMessage(SentMessage, _SentVoiceMessage):
+    """
+    Represents a voice message that was sent to WhatsApp user.
+
+    Attributes:
+        id: The ID of the message.
+        to_user: The user the message was sent to.
+        from_phone_id: The WhatsApp ID of the sender who sent the message.
+        input: The input (phone number) of the recipient.
+    """
+
+    async def wait_until_played(
+        self,
+        *,
+        filters: pywa_filters.Filter = None,
+        cancelers: pywa_filters.Filter = None,
+        timeout: float | None = None,
+    ) -> MessageStatus:
+        """
+        Wait for the voice message to be played by the recipient.
+
+        Example:
+
+            .. code-block:: python
+
+                @wa.on_message(filters.command("start"))
+                def start(w: WhatsApp, m: Message):
+                    r = m.reply_voice(
+                        voice_url="https://example.com/voice.mp3",
+                    )
+                    r.wait_until_played()
+                    r.reply("You played the voice message", quote=True)
+
+        Args:
+            filters: The filters to apply to the played status.
+            cancelers: The filters to cancel the listening.
+            timeout: The time to wait for the voice message to be played.
+
+        Returns:
+            The message status.
+
+        Raises:
+            ListenerTimeout: If the listener timed out.
+            ListenerCanceled: If the listener was canceled by a filter.
+            ListenerStopped: If the listener was stopped manually.
+        """
+        return cast(
+            MessageStatus,
+            await self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.update_id(self.id)
+                & pywa_filters.played
+                & (filters or pywa_filters.true),
                 cancelers=cancelers,
                 timeout=timeout,
             ),

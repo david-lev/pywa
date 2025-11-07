@@ -7,6 +7,7 @@ Client Reference
 .. automethod:: WhatsApp.send_image
 .. automethod:: WhatsApp.send_video
 .. automethod:: WhatsApp.send_audio
+.. automethod:: WhatsApp.send_voice
 .. automethod:: WhatsApp.send_document
 .. automethod:: WhatsApp.send_location
 .. automethod:: WhatsApp.request_location

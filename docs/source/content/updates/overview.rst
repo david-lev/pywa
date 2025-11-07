@@ -147,6 +147,8 @@ All updates share common methods and properties:
      - Reply with a video message
    * - :meth:`~BaseUserUpdate.reply_audio`
      - Reply with an audio message
+   * - :meth:`~BaseUserUpdate.reply_voice`
+     - Reply with a voice message
    * - :meth:`~BaseUserUpdate.reply_document`
      - Reply with a document message
    * - :meth:`~BaseUserUpdate.reply_location`

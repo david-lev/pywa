@@ -66,6 +66,8 @@ The client allows you to send a wide variety of messages:
      - Send a video
    * - :meth:`~WhatsApp.send_audio`
      - Send an audio file
+   * - :meth:`~WhatsApp.send_voice`
+     - Send a voice message
    * - :meth:`~WhatsApp.send_document`
      - Send a document
    * - :meth:`~WhatsApp.send_location`

@@ -206,7 +206,7 @@ In the example above, we used the :meth:`~pywa.types.sent_update.SentMessage.wai
 
 In the example above, we used the :meth:`~pywa.types.sent_update.SentMessage.wait_until_delivered` method to create a listener that waits until the message is delivered to the user.
 
-Other shortcuts are available, such as :meth:`~pywa.types.sent_update.SentMessage.wait_for_click`, :meth:`~pywa.types.sent_update.SentMessage.wait_for_selection`, :meth:`~pywa.types.sent_update.SentMessage.wait_until_read`, and more.
+Other shortcuts are available, such as :meth:`~pywa.types.sent_update.SentMessage.wait_for_click`, :meth:`~pywa.types.sent_update.SentMessage.wait_for_selection`, :meth:`~pywa.types.sent_update.SentMessage.wait_until_read`, :meth:`~pywa.types.sent_update.SentVoiceMessage.wait_until_played`, and more.
 
 .. toctree::
 

@@ -16,6 +16,7 @@ Listeners reference
 .. automethod:: SentMessage.wait_for_completion
 .. automethod:: SentMessage.wait_until_read
 .. automethod:: SentMessage.wait_until_delivered
+.. automethod:: SentVoiceMessage.wait_until_played
 
 .. currentmodule:: pywa.types.templates
 

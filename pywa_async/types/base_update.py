@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from ..client import WhatsApp
     from .calls import SessionDescription
     from pywa.types.sent_update import InitiatedCall
-    from .sent_update import SentMessage, SentTemplate
+    from .sent_update import SentMessage, SentTemplate, SentVoiceMessage
     from .callback import (
         Button,
         URLButton,
@@ -313,8 +313,8 @@ class _ClientShortcutsAsync:
         Reply to the message with an audio.
 
         - Shortcut for :py:func:`~pywa.client.WhatsApp.send_audio` with ``to`` and ``reply_to_message_id``.
-        - Audio messages display an audio icon and a link to an audio file. When the WhatsApp user taps the icon, the WhatsApp client loads and plays the audio file.
-        - See `Audio messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/audio-messages>`_.
+        - Basic audio messages display a download icon and a music icon. When the WhatsApp user taps the play icon, the user must manually download the audio message for the WhatsApp client to load and then play the audio file.
+        - See `Audio messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/audio-messages#basic-audio-messages>`_.
         - See `Supported audio formats <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/audio-messages#supported-audio-formats>`_.
 
         Example:
@@ -326,7 +326,7 @@ class _ClientShortcutsAsync:
 
         Args:
             audio: The audio file to reply with (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
-            is_voice: Set to True if sending a voice message. `Voice messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/audio-messages#voice-messages>`_ must be Ogg files encoded with the ``OPUS`` codec.
+            is_voice: Set to True if sending a voice message (use :meth:`~pywa.types.base_update.BaseUserUpdate.reply_voice` instead for better type support).
             mime_type: The mime type of the audio file (optional, required when sending an audio as bytes or file path that does not have an extension).
             quote: Whether to quote the replied message (default: False).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
@@ -339,6 +339,57 @@ class _ClientShortcutsAsync:
             to=self._internal_sender,
             audio=audio,
             is_voice=is_voice,
+            reply_to_message_id=self.message_id_to_reply if quote else None,
+            mime_type=mime_type,
+            tracker=tracker,
+        )
+
+    async def reply_voice(
+        self,
+        voice: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
+        *,
+        quote: bool = False,
+        mime_type: str | None = None,
+        tracker: str | CallbackData | None = None,
+    ) -> SentVoiceMessage:
+        """
+        Reply to the message with a voice message.
+
+        - Shortcut for :py:func:`~pywa.client.WhatsApp.send_voice` with ``to`` and ``reply_to_message_id``.
+        - A voice message (sometimes referred to as a voice note, voice memo, or audio) is a recording of one or more persons speaking, and can include background sounds like music. Voice messages include features like automatic download, profile picture, and voice icon, not available with a basic audio message. If the user has set voice message transcripts to Automatic, a text transcription of the message will also be included.
+        - See `Voice messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/audio-messages#voice-messages>`_.
+        - Voice messages require .ogg files encoded with the OPUS codec. If you send a different file type or a file encoded with a different codec, voice message transcription will fail.
+        - The play icon will only appear if the file is 512KB or smaller, otherwise it will be replaced with a download icon (a downward facing arrow).
+        - Your business's profile image is used as the profile image, accompanied by a microphone icon.
+        - The text transcription appears if the user has enabled Automatic voice message transcripts. If the user has set this to Manual, the text "Transcribe" will appear instead, which will display the transcribed text once tapped. If the user has set voice message transcripts to Never, no text will appear.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_message
+            ... def callback(_: WhatsApp, msg: Message):
+            ...     msg.reply_voice(voice="https://example.com/voice.ogg")
+
+        Args:
+            voice: The voice file to reply with (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
+            mime_type: The mime type of the voice file (optional, required when sending an audio as bytes or file path that does not have an extension).
+            quote: Whether to quote the replied message (default: False).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
+
+        Returns:
+            The sent voice message.
+        """
+        return await self._client.send_voice(
+            sender=self._internal_recipient,
+            to=self._internal_sender,
+            voice=voice,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             mime_type=mime_type,
             tracker=tracker,

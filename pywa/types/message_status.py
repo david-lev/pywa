@@ -39,10 +39,11 @@ class MessageStatusType(utils.StrEnum):
     Message status type.
 
     Attributes:
-        SENT: The message was sent.
-        DELIVERED: The message was delivered.
-        READ: The message was read.
-        FAILED: The message failed to send (you can access the ``.error`` attribute for more information).
+        SENT: Indicates the message was successfully sent from our servers (WhatsApp UI equivalent: One checkmark).
+        DELIVERED: Indicates message was successfully delivered to the WhatsApp user's device (WhatsApp UI equivalent: Two checkmarks).
+        READ: Indicates the message was displayed in an open chat thread in the WhatsApp user's device (WhatsApp UI equivalent: Two blue checkmarks).
+        PLAYED: played — Indicates the first time a voice message is played to the WhatsApp user's device (WhatsApp UI equivalent: Blue microphone).
+        FAILED: failed — Indicates failure to send or deliver the message to the WhatsApp user's device (WhatsApp UI equivalent: Red error triangle).
     """
 
     _check_value = str.islower
@@ -52,6 +53,7 @@ class MessageStatusType(utils.StrEnum):
     DELIVERED = "delivered"
     READ = "read"
     FAILED = "failed"
+    PLAYED = "played"
 
     UNKNOWN = "UNKNOWN"
 
@@ -60,13 +62,16 @@ class ConversationCategory(utils.StrEnum):
     """
     Conversation category.
 
+    Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/pricing#conversation-categories>`_.
+
     Attributes:
-        AUTHENTICATION: The conversation is related to authentication.
-        MARKETING: The conversation is related to marketing.
-        MARKETING_LITE: The conversation is related to marketing lite.
-        UTILITY: The conversation is related to utility.
-        SERVICE: The conversation is related to service.
-        REFERRAL_CONVERSION: The conversation is related to referral conversion.
+        AUTHENTICATION: Indicates an authentication conversation.
+        AUTHENTICATION_INTERNATIONAL: Indicates an `authentication-international <https://developers.facebook.com/docs/whatsapp/pricing/authentication-international-rates/>`_ conversation.
+        MARKETING: Indicates a marketing conversation.
+        MARKETING_LITE: Indicates a `Marketing Messages Lite API <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/>`_ conversation.
+        UTILITY: Indicates a utility conversation.
+        SERVICE: Indicates a service conversation.
+        REFERRAL_CONVERSION: Indicates a free entry point conversation.
         UNKNOWN: The conversation category is unknown.
     """
 
@@ -74,6 +79,7 @@ class ConversationCategory(utils.StrEnum):
     _modify_value = str.lower
 
     AUTHENTICATION = "authentication"
+    AUTHENTICATION_INTERNATIONAL = "authentication_international"
     MARKETING = "marketing"
     MARKETING_LITE = "marketing_lite"
     UTILITY = "utility"
@@ -212,8 +218,8 @@ class PricingModel(utils.StrEnum):
     Pricing model.
 
     Attributes:
-        CBP: Indicates conversation-based pricing applies.
-        PMP: Indicates per-message pricing applies.
+        CBP: Indicates conversation-based pricing applies. Will only be set to this value if the webhook was sent before July 1, 2025.
+        PMP: Indicates `per-message pricing <https://developers.facebook.com/docs/whatsapp/pricing>`_ applies.
     """
 
     CBP = "CBP"
@@ -247,13 +253,13 @@ class PricingCategory(utils.StrEnum):
     Pricing category.
 
     Attributes:
-        AUTHENTICATION: Indicates an authentication template message.
-        AUTHENTICATION_INTERNATIONAL: Indicates an authentication template message sent to a WhatsApp user in a country or region that has authentication-international rates.
-        MARKETING: Indicates a marketing template message.
-        MARKETING_LITE: Indicates a marketing template message sent via MM Lite API.
-        UTILITY: Indicates a utility template message.
-        SERVICE: Indicates a non-template message.
-        REFERRAL_CONVERSION: Indicates the message is part of a `free entry point conversation <https://developers.facebook.com/docs/whatsapp/pricing#free-entry-point-conversations>`_.
+        AUTHENTICATION: Indicates authentication rate applied.
+        AUTHENTICATION_INTERNATIONAL: Indicates authentication-international rate applied.
+        MARKETING: Indicates marketing rate applied.
+        MARKETING_LITE: Indicates a `Marketing Messages Lite API <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/>`_ pricing applied.
+        UTILITY: Indicates utility rate applied.
+        SERVICE: Indicates service rate applied.
+        REFERRAL_CONVERSION: Indicates a `free entry point conversation <https://developers.facebook.com/docs/whatsapp/pricing#free-entry-point-conversations>`_.
     """
 
     _check_value = str.islower
