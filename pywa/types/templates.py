@@ -795,12 +795,12 @@ class CreativeFeaturesSpec:
         }
 
     def __repr__(self) -> str:
-        return f"CreativeFeaturesSpec({
-            ', '.join(
-                f'{field_name}={getattr(self, field_name)}'
-                for field_name in self._fields
-            )
-        })"
+        field_reprs = ", ".join(
+            f"{field_name}={getattr(self, field_name)!r}"
+            for field_name in self._fields
+            if getattr(self, field_name) is not None
+        )
+        return f"{self.__class__.__name__}({field_reprs})"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
