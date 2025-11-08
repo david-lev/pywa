@@ -3,8 +3,19 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+#### 3.5.0 (2025-11-08) **Latest**
 
-#### 3.4.0 (2025-10-26) **Latest**
+- [client] adding `send_voice` and `wait_until_played` listener
+- [listeners] adding `wait_for_location` when sending location request
+- [sent] adding `SentMediaMessage` with `uploaded_media` attr for sent messages
+- [message] adding `unsupported` attr
+- [message] adding support for copy `voice` message
+- [base_update] add `identity_key_hash` parameter to message methods for identity verification
+- [templates] adding `text_extraction_for_headline` and `text_extraction_for_tap_target` to `CreativeFeaturesSpec`
+- [flows] fixing `index` in `FlowCompletion.get_media`
+
+
+#### 3.4.0 (2025-10-26)
 
 - [templates] adding support for `HeaderGIF`
 - [templates] override mimetype when sending template with media
