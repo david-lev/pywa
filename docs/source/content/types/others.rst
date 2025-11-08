@@ -8,6 +8,9 @@ Others
 .. autoclass:: SentTemplate()
     :show-inheritance:
 
+.. autoclass:: SentMediaMessage()
+    :show-inheritance:
+
 .. autoclass:: SentVoiceMessage()
     :show-inheritance:
 
