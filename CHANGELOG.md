@@ -3,7 +3,13 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-#### 3.5.0 (2025-11-08) **Latest**
+#### 3.5.1 (2025-11-08) **Latest**
+
+- [helpers] Fix `get_media_msg` with `buttons`
+- [message] Fix `copy_message` with `buttons`
+
+
+#### 3.5.0 (2025-11-08)
 
 - [client] adding `send_voice` and `wait_until_played` listener
 - [listeners] adding `wait_for_location` when sending location request
