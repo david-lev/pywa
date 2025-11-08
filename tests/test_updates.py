@@ -76,6 +76,7 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
         "sent": [lambda s: s.status == MessageStatusType.SENT],
         "delivered": [lambda s: s.status == MessageStatusType.DELIVERED],
         "read": [lambda s: s.status == MessageStatusType.READ],
+        "played": [lambda s: s.status == MessageStatusType.PLAYED],
         "failed": [lambda s: s.error is not None],
         "with_tracker": [lambda s: s.tracker is not None],
     },

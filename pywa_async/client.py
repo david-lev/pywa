@@ -155,6 +155,7 @@ from .types.sent_update import (
     InitiatedCall,
     SentVoiceMessage,
     SentLocationRequest,
+    SentMediaMessage,
 )
 from .utils import FastAPI, Flask
 
@@ -444,7 +445,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         tracker: str | CallbackData | None = None,
         identity_key_hash: str | None = None,
         sender: str | int | None = None,
-    ) -> SentMessage:
+    ) -> SentMediaMessage:
         """
         Image messages are messages that display a single image and an optional caption.
 
@@ -479,7 +480,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
-        is_url, image, _ = await helpers.resolve_media_param(
+        is_url, uploaded, media, _ = await helpers.resolve_media_param(
             wa=self,
             media=image,
             mime_type=mime_type,
@@ -487,29 +488,28 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             media_type="image",
             phone_id=sender,
         )
-
+        media_msg = helpers.get_media_msg(media=media, is_url=is_url, caption=caption)
         if not buttons:
-            return SentMessage.from_sent_update(
+            return SentMediaMessage.from_sent_update(
                 client=self,
                 update=await self.api.send_message(
                     sender=sender,
                     to=str(to),
                     typ="image",
-                    msg=helpers.get_media_msg(
-                        media_id_or_url=image, is_url=is_url, caption=caption
-                    ),
+                    msg=media_msg,
                     reply_to_message_id=reply_to_message_id,
                     biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
                     recipient_identity_key_hash=identity_key_hash,
                 ),
                 from_phone_id=sender,
+                uploaded_media=media if uploaded else None,
             )
         if not caption:
             raise ValueError(
                 "A caption must be provided when sending an image with buttons."
             )
         typ, kb = helpers.resolve_buttons_param(buttons)
-        return SentMessage.from_sent_update(
+        return SentMediaMessage.from_sent_update(
             client=self,
             update=await self.api.send_message(
                 sender=sender,
@@ -520,9 +520,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                     action=kb,
                     header={
                         "type": "image",
-                        "image": {
-                            "link" if is_url else "id": image,
-                        },
+                        "image": media_msg,
                     },
                     body=caption,
                     footer=footer,
@@ -532,6 +530,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            uploaded_media=media if uploaded else None,
         )
 
     async def send_video(
@@ -554,7 +553,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         tracker: str | CallbackData | None = None,
         identity_key_hash: str | None = None,
         sender: str | int | None = None,
-    ) -> SentMessage:
+    ) -> SentMediaMessage:
         """
         Video messages display a thumbnail preview of a video image with an optional caption. When the WhatsApp user taps the preview, it loads the video and displays it to the user.
 
@@ -589,7 +588,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
-        is_url, video, _ = await helpers.resolve_media_param(
+        is_url, uploaded, media, _ = await helpers.resolve_media_param(
             wa=self,
             media=video,
             mime_type=mime_type,
@@ -597,28 +596,28 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             media_type="video",
             phone_id=sender,
         )
+        media_msg = helpers.get_media_msg(media=media, is_url=is_url, caption=caption)
         if not buttons:
-            return SentMessage.from_sent_update(
+            return SentMediaMessage.from_sent_update(
                 client=self,
                 update=await self.api.send_message(
                     sender=sender,
                     to=str(to),
                     typ="video",
-                    msg=helpers.get_media_msg(
-                        media_id_or_url=video, is_url=is_url, caption=caption
-                    ),
+                    msg=media_msg,
                     reply_to_message_id=reply_to_message_id,
                     biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
                     recipient_identity_key_hash=identity_key_hash,
                 ),
                 from_phone_id=sender,
+                uploaded_media=media if uploaded else None,
             )
         if not caption:
             raise ValueError(
                 "A caption must be provided when sending a video with buttons."
             )
         typ, kb = helpers.resolve_buttons_param(buttons)
-        return SentMessage.from_sent_update(
+        return SentMediaMessage.from_sent_update(
             client=self,
             update=await self.api.send_message(
                 sender=sender,
@@ -629,9 +628,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                     action=kb,
                     header={
                         "type": "video",
-                        "video": {
-                            "link" if is_url else "id": video,
-                        },
+                        "video": media_msg,
                     },
                     body=caption,
                     footer=footer,
@@ -641,6 +638,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            uploaded_media=media if uploaded else None,
         )
 
     async def send_document(
@@ -664,7 +662,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         tracker: str | CallbackData | None = None,
         identity_key_hash: str | None = None,
         sender: str | int | None = None,
-    ) -> SentMessage:
+    ) -> SentMediaMessage:
         """
         Document messages are messages that display a document icon, linked to a document, that a WhatsApp user can tap to download.
 
@@ -701,41 +699,43 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
-        is_url, document, fallback_filename = await helpers.resolve_media_param(
+        is_url, uploaded, media, fallback_filename = await helpers.resolve_media_param(
             wa=self,
             media=document,
             mime_type=mime_type,
-            filename="document",
-            media_type=None,
+            filename=filename,
+            media_type="document",
             phone_id=sender,
         )
         if filename is utils.MISSING:
             filename = fallback_filename
+        media_msg = helpers.get_media_msg(
+            media=media,
+            is_url=is_url,
+            caption=caption,
+            filename=filename,
+        )
         if not buttons:
-            return SentMessage.from_sent_update(
+            return SentMediaMessage.from_sent_update(
                 client=self,
                 update=await self.api.send_message(
                     sender=sender,
                     to=str(to),
                     typ="document",
-                    msg=helpers.get_media_msg(
-                        media_id_or_url=document,
-                        is_url=is_url,
-                        caption=caption,
-                        filename=filename,
-                    ),
+                    msg=media_msg,
                     reply_to_message_id=reply_to_message_id,
                     biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
                     recipient_identity_key_hash=identity_key_hash,
                 ),
                 from_phone_id=sender,
+                uploaded_media=media if uploaded else None,
             )
         if not caption:
             raise ValueError(
                 "A caption must be provided when sending a document with buttons."
             )
         typ, kb = helpers.resolve_buttons_param(buttons)
-        return SentMessage.from_sent_update(
+        return SentMediaMessage.from_sent_update(
             client=self,
             update=await self.api.send_message(
                 sender=sender,
@@ -746,10 +746,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                     action=kb,
                     header={
                         "type": "document",
-                        "document": {
-                            "link" if is_url else "id": document,
-                            "filename": filename,
-                        },
+                        "document": media_msg,
                     },
                     body=caption,
                     footer=footer,
@@ -759,6 +756,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            uploaded_media=media if uploaded else None,
         )
 
     async def send_audio(
@@ -779,7 +777,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         tracker: str | CallbackData | None = None,
         identity_key_hash: str | None = None,
         sender: str | int | None = None,
-    ) -> SentMessage:
+    ) -> SentMediaMessage:
         """
         Basic audio messages display a download icon and a music icon. When the WhatsApp user taps the play icon, the user must manually download the audio message for the WhatsApp client to load and then play the audio file.
 
@@ -811,7 +809,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
-        is_url, audio, _ = await helpers.resolve_media_param(
+        is_url, uploaded, media, _ = await helpers.resolve_media_param(
             wa=self,
             media=audio,
             mime_type=mime_type,
@@ -819,20 +817,21 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             media_type="audio",
             phone_id=sender,
         )
-        return SentMessage.from_sent_update(
+        return SentMediaMessage.from_sent_update(
             client=self,
             update=await self.api.send_message(
                 sender=sender,
                 to=str(to),
                 typ="audio",
                 msg=helpers.get_media_msg(
-                    media_id_or_url=audio, is_url=is_url, is_voice=is_voice
+                    media=media, is_url=is_url, is_voice=is_voice
                 ),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            uploaded_media=media if uploaded else None,
         )
 
     async def send_voice(
@@ -913,7 +912,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         tracker: str | CallbackData | None = None,
         identity_key_hash: str | None = None,
         sender: str | int | None = None,
-    ) -> SentMessage:
+    ) -> SentMediaMessage:
         """
         Sticker messages display animated or static sticker images in a WhatsApp message.
 
@@ -946,7 +945,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
-        is_url, sticker, _ = await helpers.resolve_media_param(
+        is_url, uploaded, media, _ = await helpers.resolve_media_param(
             wa=self,
             media=sticker,
             mime_type=mime_type,
@@ -954,18 +953,19 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             media_type="sticker",
             phone_id=sender,
         )
-        return SentMessage.from_sent_update(
+        return SentMediaMessage.from_sent_update(
             client=self,
             update=await self.api.send_message(
                 sender=sender,
                 to=str(to),
                 typ="sticker",
-                msg=helpers.get_media_msg(media_id_or_url=sticker, is_url=is_url),
+                msg=helpers.get_media_msg(media=media, is_url=is_url),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            uploaded_media=media if uploaded else None,
         )
 
     async def send_reaction(
@@ -1186,8 +1186,8 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
-        # noinspection PyProtectedMember
-        return SentMessage.from_sent_update(
+        # noinspection PyTypeChecker
+        return SentLocationRequest.from_sent_update(
             client=self,
             update=await self.api.send_message(
                 sender=sender,
@@ -1203,7 +1203,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
-        )._convert_to(subclass=SentLocationRequest)
+        )
 
     async def send_contact(
         self,
@@ -1629,27 +1629,20 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             The uploaded media.
         """
-        upload_to = helpers.resolve_arg(
+        return await helpers.internal_upload_media(
+            media=media,
+            media_source=helpers.detect_media_source(media),
+            media_type=media_type,
+            mime_type=mime_type,
+            filename=filename,
             wa=self,
-            value=phone_id,
-            method_arg="phone_id",
-            client_arg="phone_id",
-        )
-        return Media(
-            _client=self,
-            _id=(
-                await helpers.internal_upload_media(
-                    media=media,
-                    media_source=helpers.detect_media_source(media),
-                    media_type=media_type,
-                    mime_type=mime_type,
-                    filename=filename,
-                    wa=self,
-                    phone_id=upload_to,
-                    dl_session=dl_session,
-                )
-            )[0],
-            uploaded_to=upload_to,
+            phone_id=helpers.resolve_arg(
+                wa=self,
+                value=phone_id,
+                method_arg="phone_id",
+                client_arg="phone_id",
+            ),
+            dl_session=dl_session,
         )
 
     async def get_media_url(self, media_id: str | int) -> MediaURL:

@@ -33,6 +33,7 @@ from pywa.types import (
 )
 from pywa.types.base_update import _ClientShortcuts, BaseUpdate, BaseUserUpdate
 from pywa.types.calls import _CallShortcuts
+from pywa.types.media import Media
 
 if TYPE_CHECKING:
     from pywa import WhatsApp
@@ -124,18 +125,20 @@ class SentMessage(_SentUpdate):
 
     @classmethod
     def from_sent_update(
-        cls, *, client: WhatsApp, update: dict, from_phone_id: str
+        cls, *, client: WhatsApp, update: dict, from_phone_id: str, **kwargs
     ) -> SentMessage:
         msg_id, user = (
             update["messages"][0]["id"],
             client._usr_cls.from_dict(update["contacts"][0], client=client),
         )
+        # noinspection PyArgumentList
         return cls(
             _client=client,
             id=msg_id,
             to_user=user,
             from_phone_id=from_phone_id,
             input=update["contacts"][0]["input"],
+            **kwargs,
         )
 
     def _convert_to(self, subclass: type[_SentMessageType]) -> _SentMessageType:
@@ -534,7 +537,23 @@ class SentMessage(_SentUpdate):
         )
 
 
-class SentVoiceMessage(SentMessage):
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class SentMediaMessage(SentMessage):
+    """
+    Represents a media message that was sent to WhatsApp user.
+
+    Attributes:
+        id: The ID of the message.
+        to_user: The user the message was sent to.
+        from_phone_id: The WhatsApp ID of the sender who sent the message.
+        input: The input (phone number) of the recipient.
+        uploaded_media: The media that was uploaded and sent in the message (only available if the media was not Media ID or URL).
+    """
+
+    uploaded_media: Media | None = None
+
+
+class SentVoiceMessage(SentMediaMessage):
     """
     Represents a voice message that was sent to WhatsApp user.
 
@@ -543,6 +562,7 @@ class SentVoiceMessage(SentMessage):
         to_user: The user the message was sent to.
         from_phone_id: The WhatsApp ID of the sender who sent the message.
         input: The input (phone number) of the recipient.
+        uploaded_media: The media that was uploaded and sent in the message (only available if the media was not Media ID or URL).
     """
 
     def wait_until_played(

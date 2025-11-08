@@ -369,7 +369,7 @@ class GraphAPI:
                 "messaging_product": (None, "whatsapp"),
                 "type": (None, mime_type),
             },
-            # log_kwargs=False,
+            log_kwargs=False,
         )
 
     def get_media_url(self, media_id: str) -> dict:

@@ -212,6 +212,7 @@ FILTERS: dict[str, dict[str, list[tuple[Callable[[_T], _T], Filter]]]] = {
         "sent": [(same, fil.sent)],
         "delivered": [(same, fil.delivered)],
         "read": [(same, fil.read)],
+        "played": [(same, fil.played)],
         "failed": [
             (
                 lambda m: modify_status_err(

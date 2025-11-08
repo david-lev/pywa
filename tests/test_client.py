@@ -222,7 +222,7 @@ def test_get_interactive_msg():
 
 def test_get_media_msg():
     assert helpers.get_media_msg(
-        media_id_or_url="1234",
+        media="1234",
         is_url=False,
         caption="caption",
         filename="filename",
@@ -230,6 +230,16 @@ def test_get_media_msg():
         "id": "1234",
         "caption": "caption",
         "filename": "filename",
+    }
+    assert helpers.get_media_msg(
+        media="https://example.com/image.jpg",
+        is_url=True,
+        caption="caption",
+        filename="filename.jpg",
+    ) == {
+        "link": "https://example.com/image.jpg",
+        "caption": "caption",
+        "filename": "filename.jpg",
     }
 
 
@@ -402,7 +412,12 @@ def test_detect_media_source(wa):
     assert helpers.detect_media_source(1234567890) == MediaSource.MEDIA_ID
     assert (
         helpers.detect_media_source(
-            Media(_id="1234567890", _client=wa, uploaded_to=wa.phone_id)
+            Media(
+                _id="1234567890",
+                _client=wa,
+                uploaded_to=wa.phone_id,
+                filename="image.jpg",
+            )
         )
         == MediaSource.MEDIA_OBJ
     )

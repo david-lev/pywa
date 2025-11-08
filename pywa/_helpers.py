@@ -234,19 +234,19 @@ def resolve_media_param(
     filename: str | None,
     media_type: Literal["image", "video", "audio", "sticker", "document", "gif"] | None,
     phone_id: str,
-) -> tuple[bool, str, str]:
+) -> tuple[bool, bool, str | Media, str]:
     """
-    Internal method to resolve the ``media`` parameter. Returns a tuple of (``is_url``, ``media_id_or_url``, ``filename``).
+    Internal method to resolve the ``media`` parameter. Returns a tuple of (``is_url``, ``uploaded``, ``media/id/url``, ``filename``).
     """
     source = detect_media_source(media)
     match source:
         case MediaSource.EXTERNAL_URL:
-            return True, str(media), filename or pathlib.Path(media).name
+            return True, False, str(media), filename or pathlib.Path(media).name
         case MediaSource.MEDIA_ID:
-            return False, str(media), filename
+            return False, False, str(media), filename
         case MediaSource.MEDIA_OBJ:
-            return False, media.id, filename
-    media_id, filename = internal_upload_media(
+            return False, False, media, filename or media.filename
+    uploaded_media = internal_upload_media(
         media=media,
         media_source=source,
         media_type=media_type,
@@ -256,7 +256,7 @@ def resolve_media_param(
         wa=wa,
         phone_id=phone_id,
     )
-    return False, media_id, filename
+    return False, True, uploaded_media, filename
 
 
 class GeneratorStreamer(Iterable):
@@ -464,7 +464,7 @@ def internal_upload_media(
     wa: WhatsApp,
     phone_id: str,
     dl_session: httpx.Client | None = None,
-) -> tuple[str, str]:
+) -> Media:
     """
     Internal method to upload media to WhatsApp servers. Returns a tuple of (``media_id``, ``filename``).
     """
@@ -519,14 +519,20 @@ def internal_upload_media(
         or _media_types_default_filenames.get(media_type, "file.txt")
     )
     try:
-        return wa.api.upload_media(
-            phone_id=phone_id,
-            media=media_info.content,
-            mime_type=mime_type
-            or media_info.mime_type
-            or _media_types_default_mime_types.get(media_type, "text/plain"),
+        return Media(
+            _client=wa,
+            _id=wa.api.upload_media(
+                phone_id=phone_id,
+                media=media_info.content,
+                mime_type=mime_type
+                or media_info.mime_type
+                or _media_types_default_mime_types.get(media_type, "text/plain"),
+                filename=final_filename,
+            )["id"],
+            uploaded_to=phone_id,
             filename=final_filename,
-        )["id"], final_filename
+        )
+
     finally:
         try:
             if close_client:
@@ -755,7 +761,7 @@ def _upload_params_media(
 ) -> None:
     first_param = params[0]
     try:
-        is_url, media_id_or_url, fallback_filename = resolve_media_param(
+        is_url, uploaded, uploaded_media, fallback_filename = resolve_media_param(
             wa=wa,
             media=media,
             mime_type=first_param._mime_type,
@@ -765,7 +771,7 @@ def _upload_params_media(
         )
         for p in params:
             p._is_url = is_url
-            p._resolved_media = media_id_or_url
+            p._resolved_media = uploaded_media.id if uploaded else None
             p._fallback_filename = fallback_filename
     except Exception as e:
         raise ValueError(
@@ -843,14 +849,16 @@ def get_interactive_msg(
 
 
 def get_media_msg(
-    media_id_or_url: str,
+    media: str | BaseMedia,
     is_url: bool,
     caption: str | None = None,
     filename: str | None = None,
     is_voice: bool | None = None,
 ):
     return {
-        ("link" if is_url else "id"): media_id_or_url,
+        ("link" if is_url else "id"): media
+        if is_url or not isinstance(media, BaseMedia)
+        else media.id,
         **({"caption": caption} if caption else {}),
         **({"filename": filename} if filename else {}),
         **({"voice": is_voice} if is_voice is not None else {}),

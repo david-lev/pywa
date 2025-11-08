@@ -196,12 +196,14 @@ class Media(BaseMedia, _MediaActions):
 
     Attributes:
         id: The ID of the media.
+        filename: The filename of the media.
         uploaded_by: Who uploaded the media (business or user).
         uploaded_at: The timestamp when the media was uploaded (in UTC).
         uploaded_to: The phone ID the media was uploaded to.
     """
 
     id: str
+    filename: str | None
     uploaded_by: UploadedBy
     uploaded_at: datetime.datetime
     uploaded_to: str
@@ -210,16 +212,21 @@ class Media(BaseMedia, _MediaActions):
         self,
         _client: WhatsApp,
         _id: str,
+        filename: str | None,
         uploaded_to: str,
     ):
         self._client = _client
         self.id = _id
+        self.filename = filename
         self.uploaded_to = uploaded_to
         self.uploaded_at = datetime.datetime.now(datetime.timezone.utc)
         self.uploaded_by = UploadedBy.BUSINESS
 
     def __repr__(self) -> str:
-        return f"Media(id={self.id!r}, uploaded_by={self.uploaded_by!r}, uploaded_at={self.uploaded_at!r}, uploaded_to={self.uploaded_to!r})"
+        return (
+            f"Media(id={self.id!r}, filename={self.filename!r}, "
+            f"uploaded_by={self.uploaded_by!r}, uploaded_at={self.uploaded_at!r}, uploaded_to={self.uploaded_to!r})"
+        )
 
     @property
     def is_expired(self) -> bool:
@@ -250,6 +257,7 @@ def _get_arrived_media_dict(
     return dict(
         _client=client,
         id=data["id"],
+        filename=data.get("filename"),
         sha256=data["sha256"],
         mime_type=data["mime_type"],
         url=data.get("url"),
@@ -267,6 +275,7 @@ class ArrivedMedia(Media):
 
     Attributes:
         id: The ID of the file (can be used to download or re-send the media later, but only for 7 days after it was uploaded by the user).
+        filename: The filename of the media (only for documents or when arrived via flow completion).
         sha256: The SHA256 hash of the media.
         mime_type: The MIME type of the media.
         url: The URL of the media (may be None in webhook versions before 24.0, use :meth:`~pywa.types.ArrivedMedia.get_media_url` to get it).
@@ -277,6 +286,7 @@ class ArrivedMedia(Media):
 
     _client: WhatsApp = dataclasses.field(repr=False)
     id: str
+    filename: str | None = None
     sha256: str
     mime_type: str
     url: str | None
@@ -400,26 +410,6 @@ class Document(ArrivedMedia):
         mime_type: The MIME type of the document.
         filename: The filename of the document (optional).
     """
-
-    filename: str | None
-
-    @classmethod
-    def from_dict(
-        cls,
-        client: WhatsApp,
-        data: dict,
-        arrived_at: datetime.datetime | None = None,
-        received_to: str | None = None,
-    ) -> Document:
-        return cls(
-            **_get_arrived_media_dict(
-                client=client,
-                data=data,
-                arrived_at=arrived_at,
-                received_to=received_to,
-                additional_field="filename",
-            )
-        )
 
     @property
     def extension(self) -> str | None:

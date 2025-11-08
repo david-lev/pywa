@@ -6,6 +6,7 @@ from pywa.types.sent_update import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.sent_update import (
     SentMessage as _SentMessage,
     SentTemplate as _SentTemplate,
+    SentMediaMessage as _SentMediaMessage,
     SentVoiceMessage as _SentVoiceMessage,
     SentLocationRequest as _SentLocationRequest,
     InitiatedCall as _InitiatedCall,
@@ -21,6 +22,7 @@ from pywa_async.types import (
     FlowCompletion,
 )
 from .calls import _CallShortcutsAsync
+from .media import Media
 
 from .. import filters as pywa_filters
 
@@ -434,7 +436,22 @@ class SentMessage(_ClientShortcutsAsync, _SentMessage):
         )
 
 
-class SentVoiceMessage(SentMessage, _SentVoiceMessage):
+class SentMediaMessage(SentMessage, _SentMediaMessage):
+    """
+    Represents a media message that was sent to WhatsApp user.
+
+    Attributes:
+        id: The ID of the message.
+        to_user: The user the message was sent to.
+        from_phone_id: The WhatsApp ID of the sender who sent the message.
+        input: The input (phone number) of the recipient.
+        uploaded_media: The media that was uploaded and sent in the message (only available if the media was not Media ID or URL).
+    """
+
+    uploaded_media: Media | None = None
+
+
+class SentVoiceMessage(SentMediaMessage, _SentVoiceMessage):
     """
     Represents a voice message that was sent to WhatsApp user.
 

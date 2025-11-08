@@ -186,16 +186,18 @@ class _MediaActionsAsync:
 
 class Media(BaseMedia, _MediaActionsAsync):
     """
-    Base class for all media types.
+    Base class for all media types (async)
 
     Attributes:
         id: The ID of the media.
+        filename: The filename of the media.
         uploaded_by: Who uploaded the media (business or user).
         uploaded_at: The timestamp when the media was uploaded (in UTC).
         uploaded_to: The phone ID the media was uploaded to.
     """
 
     id: str
+    filename: str | None
     uploaded_by: UploadedBy
     uploaded_at: datetime.datetime
     uploaded_to: str
@@ -204,16 +206,21 @@ class Media(BaseMedia, _MediaActionsAsync):
         self,
         _client: WhatsApp,
         _id: str,
+        filename: str | None,
         uploaded_to: str,
     ):
         self._client = _client
         self.id = _id
+        self.filename = filename
         self.uploaded_to = uploaded_to
         self.uploaded_at = datetime.datetime.now(datetime.timezone.utc)
         self.uploaded_by = UploadedBy.BUSINESS
 
     def __repr__(self) -> str:
-        return f"MediaAsync(id={self.id!r}, uploaded_by={self.uploaded_by!r}, uploaded_at={self.uploaded_at!r}, uploaded_to={self.uploaded_to!r})"
+        return (
+            f"MediaAsync(id={self.id!r}, filename={self.filename!r}, "
+            f"uploaded_by={self.uploaded_by!r}, uploaded_at={self.uploaded_at!r}, uploaded_to={self.uploaded_to!r})"
+        )
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
