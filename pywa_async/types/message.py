@@ -242,7 +242,11 @@ class Message(BaseUserUpdateAsync, _Message):
                 )
             case MessageType.AUDIO:
                 return await self._client.send_audio(
-                    sender=sender, to=to, audio=self.audio.id, tracker=tracker
+                    sender=sender,
+                    to=to,
+                    audio=self.audio.id,
+                    tracker=tracker,
+                    is_voice=self.audio.voice,
                 )
             case MessageType.CONTACTS:
                 return await self._client.send_contact(
