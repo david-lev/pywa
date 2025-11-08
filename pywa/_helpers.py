@@ -854,12 +854,15 @@ def get_media_msg(
     caption: str | None = None,
     filename: str | None = None,
     is_voice: bool | None = None,
+    is_buttons: bool = False,
 ):
     return {
         ("link" if is_url else "id"): media
         if is_url or not isinstance(media, BaseMedia)
         else media.id,
-        **({"caption": caption} if caption else {}),
+        **(
+            {"caption": caption} if caption and not is_buttons else {}
+        ),  # when buttons, caption goes in interactive
         **({"filename": filename} if filename else {}),
         **({"voice": is_voice} if is_voice is not None else {}),
     }

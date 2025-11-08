@@ -428,14 +428,16 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def send_image(
         self,
         to: str | int,
-        image: str
-        | int
-        | Media
-        | pathlib.Path
-        | bytes
-        | BinaryIO
-        | Iterator[bytes]
-        | AsyncIterator[bytes],
+        image: (
+            str
+            | int
+            | Media
+            | pathlib.Path
+            | bytes
+            | BinaryIO
+            | Iterator[bytes]
+            | AsyncIterator[bytes]
+        ),
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
@@ -488,7 +490,13 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             media_type="image",
             phone_id=sender,
         )
-        media_msg = helpers.get_media_msg(media=media, is_url=is_url, caption=caption)
+        media_msg = helpers.get_media_msg(
+            media=media,
+            is_url=is_url,
+            caption=caption,
+            is_buttons=bool(buttons),
+        )
+        print(f"Sending image {media_msg=}, {buttons=}")
         if not buttons:
             return SentMediaMessage.from_sent_update(
                 client=self,
@@ -536,14 +544,16 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def send_video(
         self,
         to: str | int,
-        video: str
-        | int
-        | Media
-        | pathlib.Path
-        | bytes
-        | BinaryIO
-        | Iterator[bytes]
-        | AsyncIterator[bytes],
+        video: (
+            str
+            | int
+            | Media
+            | pathlib.Path
+            | bytes
+            | BinaryIO
+            | Iterator[bytes]
+            | AsyncIterator[bytes]
+        ),
         caption: str | None = None,
         footer: str | None = None,
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
@@ -596,7 +606,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             media_type="video",
             phone_id=sender,
         )
-        media_msg = helpers.get_media_msg(media=media, is_url=is_url, caption=caption)
+        media_msg = helpers.get_media_msg(
+            media=media,
+            is_url=is_url,
+            caption=caption,
+            is_buttons=bool(buttons),
+        )
         if not buttons:
             return SentMediaMessage.from_sent_update(
                 client=self,
@@ -644,14 +659,16 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def send_document(
         self,
         to: str | int,
-        document: str
-        | int
-        | Media
-        | pathlib.Path
-        | bytes
-        | BinaryIO
-        | Iterator[bytes]
-        | AsyncIterator[bytes],
+        document: (
+            str
+            | int
+            | Media
+            | pathlib.Path
+            | bytes
+            | BinaryIO
+            | Iterator[bytes]
+            | AsyncIterator[bytes]
+        ),
         filename: str | None = utils.MISSING,
         caption: str | None = None,
         footer: str | None = None,
@@ -714,6 +731,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             is_url=is_url,
             caption=caption,
             filename=filename,
+            is_buttons=bool(buttons),
         )
         if not buttons:
             return SentMediaMessage.from_sent_update(
@@ -762,14 +780,16 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def send_audio(
         self,
         to: str | int,
-        audio: str
-        | int
-        | Media
-        | pathlib.Path
-        | bytes
-        | BinaryIO
-        | Iterator[bytes]
-        | AsyncIterator[bytes],
+        audio: (
+            str
+            | int
+            | Media
+            | pathlib.Path
+            | bytes
+            | BinaryIO
+            | Iterator[bytes]
+            | AsyncIterator[bytes]
+        ),
         *,
         is_voice: bool | None = None,
         mime_type: str | None = None,
@@ -837,14 +857,16 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def send_voice(
         self,
         to: str | int,
-        voice: str
-        | int
-        | Media
-        | pathlib.Path
-        | bytes
-        | BinaryIO
-        | Iterator[bytes]
-        | AsyncIterator[bytes],
+        voice: (
+            str
+            | int
+            | Media
+            | pathlib.Path
+            | bytes
+            | BinaryIO
+            | Iterator[bytes]
+            | AsyncIterator[bytes]
+        ),
         *,
         mime_type: str | None = None,
         reply_to_message_id: str | None = None,
@@ -898,14 +920,16 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def send_sticker(
         self,
         to: str | int,
-        sticker: str
-        | int
-        | Media
-        | pathlib.Path
-        | bytes
-        | BinaryIO
-        | Iterator[bytes]
-        | AsyncIterator[bytes],
+        sticker: (
+            str
+            | int
+            | Media
+            | pathlib.Path
+            | bytes
+            | BinaryIO
+            | Iterator[bytes]
+            | AsyncIterator[bytes]
+        ),
         *,
         mime_type: str | None = None,
         reply_to_message_id: str | None = None,
