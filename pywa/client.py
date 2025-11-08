@@ -714,7 +714,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             media_type="image",
             phone_id=sender,
         )
-        media_msg = helpers.get_media_msg(media=media, is_url=is_url, caption=caption)
+        media_msg = helpers.get_media_msg(
+            media=media,
+            is_url=is_url,
+            caption=caption,
+            is_buttons=bool(buttons),
+        )
         if not buttons:
             return SentMediaMessage.from_sent_update(
                 client=self,
@@ -815,7 +820,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             media_type="video",
             phone_id=sender,
         )
-        media_msg = helpers.get_media_msg(media=media, is_url=is_url, caption=caption)
+        media_msg = helpers.get_media_msg(
+            media=media,
+            is_url=is_url,
+            caption=caption,
+            is_buttons=bool(buttons),
+        )
         if not buttons:
             return SentMediaMessage.from_sent_update(
                 client=self,
@@ -926,6 +936,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             is_url=is_url,
             caption=caption,
             filename=filename,
+            is_buttons=bool(buttons),
         )
         if not buttons:
             return SentMediaMessage.from_sent_update(
