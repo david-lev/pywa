@@ -777,11 +777,13 @@ template_status = new(lambda _, s: isinstance(s, _Ts), name="template_status")
 """Filters for template status updates."""
 
 template_status_approved = new(
-    lambda _, s: s.status == TemplateStatus.APPROVED, name="template_status_approved"
+    lambda _, s: s.new_status == TemplateStatus.APPROVED,
+    name="template_status_approved",
 )
 
 template_status_rejected = new(
-    lambda _, s: s.status == TemplateStatus.REJECTED, name="template_status_rejected"
+    lambda _, s: s.new_status == TemplateStatus.REJECTED,
+    name="template_status_rejected",
 )
 
 template_quality = new(lambda _, s: isinstance(s, _Tq), name="template_quality")
