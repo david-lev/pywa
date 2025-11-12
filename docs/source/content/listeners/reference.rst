@@ -13,9 +13,11 @@ Listeners reference
 .. automethod:: SentMessage.wait_for_reply
 .. automethod:: SentMessage.wait_for_click
 .. automethod:: SentMessage.wait_for_selection
-.. automethod:: SentMessage.wait_for_completion
 .. automethod:: SentMessage.wait_until_read
 .. automethod:: SentMessage.wait_until_delivered
+.. automethod:: SentMessage.wait_for_completion
+.. automethod:: SentMessage.wait_for_call_permission
+.. automethod:: SentMessage.wait_for_incoming_voice_call
 .. automethod:: SentVoiceMessage.wait_until_played
 .. automethod:: SentLocationRequest.wait_for_location
 

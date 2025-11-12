@@ -31,10 +31,13 @@ from pywa.types import (
     CallbackData,
     CallStatus,
     MessageStatusType,
+    CallPermissionUpdate,
+    CallConnect,
 )
 from pywa.types.base_update import _ClientShortcuts, BaseUpdate, BaseUserUpdate
 from pywa.types.calls import _CallShortcuts
 from pywa.types.media import Media
+from pywa.types.others import InteractiveType
 
 if TYPE_CHECKING:
     from pywa import WhatsApp
@@ -123,10 +126,19 @@ class SentMessage(_SentUpdate):
     """
 
     input: str
+    _interactive_type: InteractiveType | None = dataclasses.field(
+        default=None, repr=False, hash=False, compare=False
+    )
 
     @classmethod
     def from_sent_update(
-        cls, *, client: WhatsApp, update: dict, from_phone_id: str, **kwargs
+        cls,
+        *,
+        client: WhatsApp,
+        update: dict,
+        from_phone_id: str,
+        interactive_type: InteractiveType | None = None,
+        **kwargs,
     ) -> SentMessage:
         msg_id, user = (
             update["messages"][0]["id"],
@@ -135,6 +147,7 @@ class SentMessage(_SentUpdate):
         # noinspection PyArgumentList
         return cls(
             _client=client,
+            _interactive_type=interactive_type,
             id=msg_id,
             to_user=user,
             from_phone_id=from_phone_id,
@@ -425,6 +438,10 @@ class SentMessage(_SentUpdate):
             ListenerCanceled: If the listener was canceled by a filter.
             ListenerStopped: If the listener was stopped manually.
         """
+        if self._interactive_type != InteractiveType.BUTTON:
+            raise ValueError(
+                "`wait_for_click` can only be used with messages that have button interactions."
+            )
         if ignore_updates:
             cancelers = (
                 (cancelers | ignore_updates_canceler)
@@ -467,6 +484,10 @@ class SentMessage(_SentUpdate):
             ListenerCanceled: If the listener was canceled by a filter.
             ListenerStopped: If the listener was stopped manually.
         """
+        if self._interactive_type != InteractiveType.LIST:
+            raise ValueError(
+                "`wait_for_selection` can only be used with messages that have selection list interactions."
+            )
         if ignore_updates:
             cancelers = (
                 (cancelers | ignore_updates_canceler)
@@ -520,6 +541,10 @@ class SentMessage(_SentUpdate):
             ListenerCanceled: If the listener was canceled by a filter.
             ListenerStopped: If the listener was stopped manually.
         """
+        if self._interactive_type != InteractiveType.FLOW:
+            raise ValueError(
+                "`wait_for_completion` can only be used with messages that have flow interactions."
+            )
         if ignore_updates:
             cancelers = (
                 (cancelers | ignore_updates_canceler)
@@ -532,6 +557,129 @@ class SentMessage(_SentUpdate):
                 to=self.listener_identifier,
                 filters=pywa_filters.flow_completion
                 & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
+        )
+
+    def wait_for_call_permission(
+        self,
+        *,
+        filters: pywa_filters.Filter = None,
+        cancelers: pywa_filters.Filter = None,
+        ignore_updates: bool = True,
+        timeout: float | None = None,
+    ) -> CallPermissionUpdate:
+        """
+        Wait for a call permission update.
+
+
+        Example:
+
+            .. code-block:: python
+
+                @wa.on_message(filters.command("start"))
+                def start(w: WhatsApp, m: Message):
+                    r = m.reply(
+                        text="Do you allow calls?",
+                        buttons=types.CallPermissionRequestButton(),
+                    )
+                    call_permission = r.wait_for_call_permission()
+                    if call_permission:
+                        r.reply("You allowed calls", quote=True)
+                    else:
+                        r.reply("You denied calls", quote=True)
+
+        Args:
+            filters: The filters to apply to the call permission update.
+            cancelers: The filters to cancel the listening.
+            ignore_updates: Whether to ignore user updates that do not pass the filters.
+            timeout: The time to wait for the call permission update.
+
+        Returns:
+            The call permission update.
+
+        Raises:
+            ListenerTimeout: If the listener timed out.
+            ListenerCanceled: If the listener was canceled by a filter.
+            ListenerStopped: If the listener was stopped manually.
+        """
+        if self._interactive_type != InteractiveType.CALL_PERMISSION_REQUEST:
+            raise ValueError(
+                "`wait_for_call_permission` can only be used with messages that have call permission request interactions."
+            )
+        if ignore_updates:
+            cancelers = (
+                (cancelers | ignore_updates_canceler)
+                if cancelers
+                else ignore_updates_canceler
+            )
+        return cast(
+            CallPermissionUpdate,
+            self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.call_permission_update
+                & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
+        )
+
+    def wait_for_incoming_voice_call(
+        self,
+        *,
+        filters: pywa_filters.Filter = None,
+        cancelers: pywa_filters.Filter = None,
+        ignore_updates: bool = True,
+        timeout: float | None = None,
+    ) -> CallConnect:
+        """
+        Wait for an incoming call in response to a voice call button.
+
+        Example:
+
+            .. code-block:: python
+
+                @wa.on_message(filters.command("start"))
+                def start(w: WhatsApp, m: Message):
+                    r = m.reply(
+                        text="Click the button to call me",
+                        buttons=types.VoiceCallButton(),
+                    )
+                    call_connect = r.wait_for_incoming_voice_call()
+                    r.reply("You called me!", quote=True)
+
+        Args:
+            filters: The filters to apply to the incoming call.
+            cancelers: The filters to cancel the listening.
+            ignore_updates: Whether to ignore user updates that do not pass the filters.
+            timeout: The time to wait for the incoming call.
+
+        Returns:
+            The call connect update.
+
+        Raises:
+            ListenerTimeout: If the listener timed out.
+            ListenerCanceled: If the listener was canceled by a filter.
+            ListenerStopped: If the listener was stopped manually.
+        """
+        if self._interactive_type != InteractiveType.VOICE_CALL:
+            raise ValueError(
+                "`wait_for_incoming_call` can only be used with messages that have voice call button interactions."
+            )
+        if ignore_updates:
+            cancelers = (
+                (cancelers | ignore_updates_canceler)
+                if cancelers
+                else ignore_updates_canceler
+            )
+        return cast(
+            CallConnect,
+            self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.call_connect
+                & pywa_filters.incoming_call
+                & (filters or pywa_filters.true),
                 cancelers=cancelers,
                 timeout=timeout,
             ),
@@ -652,26 +800,18 @@ class SentLocationRequest(SentMessage):
             ListenerCanceled: If the listener was canceled by a filter.
             ListenerStopped: If the listener was stopped manually.
         """
-        if ignore_updates:
-            cancelers = (
-                (cancelers | ignore_updates_canceler)
-                if cancelers
-                else ignore_updates_canceler
-            )
-        return cast(
-            Message,
-            self._client.listen(
-                to=self.listener_identifier,
-                filters=pywa_filters.message
-                & (
+        return self.wait_for_reply(
+            filters=(
+                (
                     pywa_filters.current_location
                     if force_current_location
                     else pywa_filters.location
                 )
-                & (filters or pywa_filters.true),
-                cancelers=cancelers,
-                timeout=timeout,
+                & (filters or pywa_filters.true)
             ),
+            cancelers=cancelers,
+            ignore_updates=ignore_updates,
+            timeout=timeout,
         )
 
 

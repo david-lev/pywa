@@ -229,6 +229,8 @@ class _Listeners:
                 "You must initialize the WhatsApp client with an web app"
                 " (Flask or FastAPI or custom server by setting `server` to None) in order to listen to incoming updates."
             )
+        self._check_for_async_filters(filters)
+        self._check_for_async_filters(cancelers)
         if isinstance(to, str | int):
             warnings.warn(
                 "Using WhatsApp.listen(to, ...) with a user wa_id/phone number is deprecated. "

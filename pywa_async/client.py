@@ -421,6 +421,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            interactive_type=typ,
         )
 
     send_text = send_message  # alias
@@ -534,6 +535,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            interactive_type=typ,
             uploaded_media=media if uploaded else None,
         )
 
@@ -646,6 +648,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            interactive_type=typ,
             uploaded_media=media if uploaded else None,
         )
 
@@ -767,6 +770,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            interactive_type=typ,
             uploaded_media=media if uploaded else None,
         )
 
@@ -1220,6 +1224,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            interactive_type=InteractiveType.LOCATION_REQUEST_MESSAGE,
         )
 
     async def send_contact(
@@ -1358,6 +1363,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            interactive_type=InteractiveType.CATALOG_MESSAGE,
         )
 
     async def send_product(
@@ -1429,6 +1435,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            interactive_type=InteractiveType.PRODUCT,
         )
 
     async def send_products(
@@ -1517,6 +1524,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            interactive_type=InteractiveType.PRODUCT_LIST,
         )
 
     async def mark_message_as_read(
