@@ -28,6 +28,7 @@ from .. import filters as pywa_filters
 
 __all__ = [
     "SentMessage",
+    "SentMediaMessage",
     "SentVoiceMessage",
     "SentLocationRequest",
     "SentTemplate",

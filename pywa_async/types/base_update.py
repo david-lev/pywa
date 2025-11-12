@@ -21,6 +21,7 @@ if TYPE_CHECKING:
         SentTemplate,
         SentVoiceMessage,
         SentLocationRequest,
+        SentMediaMessage,
     )
     from .callback import (
         Button,
@@ -135,7 +136,7 @@ class _ClientShortcutsAsync:
         mime_type: str | None = None,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
-    ) -> SentMessage:
+    ) -> SentMediaMessage:
         """
         Reply to the message with an image.
 
@@ -201,7 +202,7 @@ class _ClientShortcutsAsync:
         mime_type: str | None = None,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
-    ) -> SentMessage:
+    ) -> SentMediaMessage:
         """
         Reply to the message with a video.
 
@@ -268,7 +269,7 @@ class _ClientShortcutsAsync:
         mime_type: str | None = None,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
-    ) -> SentMessage:
+    ) -> SentMediaMessage:
         """
         Reply to the message with a document.
 
@@ -334,7 +335,7 @@ class _ClientShortcutsAsync:
         mime_type: str | None = None,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
-    ) -> SentMessage:
+    ) -> SentMediaMessage:
         """
         Reply to the message with an audio.
 
@@ -440,7 +441,7 @@ class _ClientShortcutsAsync:
         mime_type: str | None = None,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
-    ) -> SentMessage:
+    ) -> SentMediaMessage:
         """
         Reply to the message with a sticker.
 

@@ -57,6 +57,7 @@ class Message(BaseUserUpdate):
         sticker: The sticker of the message.
         document: The document of the message.
         audio: The audio of the message.
+        voice: The voice note of the message (shorthand for ``audio`` if it's a voice note).
         caption: The caption of the message (Optional, only available for image video and document messages).
         reaction: The reaction of the message.
         location: The location of the message.
@@ -106,6 +107,13 @@ class Message(BaseUserUpdate):
             DeprecationWarning,
             stacklevel=2,
         )
+        return None
+
+    @property
+    def voice(self) -> Audio | None:
+        """Shorthand for the ``audio`` attribute, only if it's a voice note."""
+        if self.audio and self.audio.voice:
+            return self.audio
         return None
 
     @property

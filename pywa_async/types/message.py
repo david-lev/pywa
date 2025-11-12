@@ -52,6 +52,7 @@ class Message(BaseUserUpdateAsync, _Message):
         sticker: The sticker of the message.
         document: The document of the message.
         audio: The audio of the message.
+        voice: The voice note of the message (shorthand for ``audio`` if it's a voice note).
         caption: The caption of the message (Optional, only available for image video and document messages).
         reaction: The reaction of the message.
         location: The location of the message.
@@ -78,6 +79,11 @@ class Message(BaseUserUpdateAsync, _Message):
         "document": Document,
         "audio": Audio,
     }
+
+    @property
+    def voice(self) -> Audio | None:
+        """Shorthand for the ``audio`` attribute, only if it's a voice note."""
+        return super().voice
 
     @property
     def media(

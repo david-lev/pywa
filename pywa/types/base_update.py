@@ -34,6 +34,7 @@ if TYPE_CHECKING:
         SentTemplate,
         SentVoiceMessage,
         SentLocationRequest,
+        SentMediaMessage,
     )
     from .calls import SessionDescription
     from .sent_update import InitiatedCall
@@ -348,7 +349,7 @@ class _ClientShortcuts(abc.ABC):
         mime_type: str | None = None,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
-    ) -> SentMessage:
+    ) -> SentMediaMessage:
         """
         Reply to the message with an image.
 
@@ -405,7 +406,7 @@ class _ClientShortcuts(abc.ABC):
         mime_type: str | None = None,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
-    ) -> SentMessage:
+    ) -> SentMediaMessage:
         """
         Reply to the message with a video.
 
@@ -463,7 +464,7 @@ class _ClientShortcuts(abc.ABC):
         mime_type: str | None = None,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
-    ) -> SentMessage:
+    ) -> SentMediaMessage:
         """
         Reply to the message with a document.
 
@@ -520,7 +521,7 @@ class _ClientShortcuts(abc.ABC):
         mime_type: str | None = None,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
-    ) -> SentMessage:
+    ) -> SentMediaMessage:
         """
         Reply to the message with an audio.
 
@@ -610,7 +611,7 @@ class _ClientShortcuts(abc.ABC):
         mime_type: str | None = None,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
-    ) -> SentMessage:
+    ) -> SentMediaMessage:
         """
         Reply to the message with a sticker.
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 __all__ = [
     "SentMessage",
+    "SentMediaMessage",
     "SentVoiceMessage",
     "SentLocationRequest",
     "SentTemplate",
