@@ -439,10 +439,8 @@ class Server:
         except KeyError:  # no metadata in update
             pass
 
-        if handler := _complex_fields_handlers.get(update.field, lambda wa, v: None)(
-            self, update.value
-        ):
-            return handler
+        if update.field in _complex_fields_handlers:
+            return _complex_fields_handlers[update.field](self, update.value)
 
         # noinspection PyProtectedMember
         return handlers.Handler._handled_fields().get(update.field)
