@@ -222,10 +222,7 @@ def test_get_interactive_msg():
 
 def test_get_media_msg():
     assert helpers.get_media_msg(
-        media="1234",
-        is_url=False,
-        caption="caption",
-        filename="filename",
+        media="1234", is_url=False, caption="caption", filename="filename"
     ) == {
         "id": "1234",
         "caption": "caption",

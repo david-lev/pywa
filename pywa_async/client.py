@@ -491,12 +491,8 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             phone_id=sender,
         )
         media_msg = helpers.get_media_msg(
-            media=media,
-            is_url=is_url,
-            caption=caption,
-            is_buttons=bool(buttons),
+            media=media, is_url=is_url, caption=caption, is_interactive=bool(buttons)
         )
-        print(f"Sending image {media_msg=}, {buttons=}")
         if not buttons:
             return SentMediaMessage.from_sent_update(
                 client=self,
@@ -607,10 +603,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             phone_id=sender,
         )
         media_msg = helpers.get_media_msg(
-            media=media,
-            is_url=is_url,
-            caption=caption,
-            is_buttons=bool(buttons),
+            media=media, is_url=is_url, caption=caption, is_interactive=bool(buttons)
         )
         if not buttons:
             return SentMediaMessage.from_sent_update(
@@ -731,7 +724,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             is_url=is_url,
             caption=caption,
             filename=filename,
-            is_buttons=bool(buttons),
+            is_interactive=bool(buttons),
         )
         if not buttons:
             return SentMediaMessage.from_sent_update(
