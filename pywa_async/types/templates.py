@@ -68,6 +68,7 @@ class TemplateStatusUpdate(BaseTemplateUpdateAsync, _TemplateStatusUpdate):
         template_id: The ID of the template.
         template_name: The name of the template.
         template_language: The language of the template.
+        category: The category of the template.
         reason: The reason the template was rejected (if status is ``REJECTED``).
         disable_date: The date the template was disabled (if status is ``DISABLED``).
         title: Title of template pause or unpause event.

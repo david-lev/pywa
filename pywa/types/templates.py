@@ -205,6 +205,7 @@ class TemplateStatusUpdate(BaseTemplateUpdate):
         template_id: The ID of the template.
         template_name: The name of the template.
         template_language: The language of the template.
+        category: The category of the template.
         reason: The reason the template was rejected (if status is ``REJECTED``).
         disable_date: The date the template was disabled (if status is ``DISABLED``).
         title: Title of template pause or unpause event.
@@ -213,6 +214,7 @@ class TemplateStatusUpdate(BaseTemplateUpdate):
     """
 
     new_status: TemplateStatus
+    category: TemplateCategory | None = None
     reason: TemplateRejectionReason | None = None
     disable_date: datetime.datetime | None = None
     title: str | None = None
@@ -235,6 +237,9 @@ class TemplateStatusUpdate(BaseTemplateUpdate):
             template_id=str(value["message_template_id"]),
             template_name=value["message_template_name"],
             template_language=TemplateLanguage(value["message_template_language"]),
+            category=TemplateCategory(value["message_template_category"])
+            if value.get("message_template_category")
+            else None,
             reason=TemplateRejectionReason(value["reason"])
             if value.get("reason")
             else None,
