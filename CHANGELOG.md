@@ -3,7 +3,15 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-#### 3.5.1 (2025-11-08) **Latest**
+#### 3.5.2 (2025-11-17) **Latest**
+
+- [message] adding `voice` shortcut
+- [sent_message] adding `wait_for_call_permission` and `wait_for_incoming_voice_call` listeners and validate interactive types
+- [templates] added `category` to `TemplateStatusUpdate`
+- [filters] Fix filters `template_status_approved`, `template_status_rejected`
+
+
+#### 3.5.1 (2025-11-08)
 
 - [helpers] Fix `get_media_msg` with `buttons`
 - [message] Fix `copy_message` with `buttons`
