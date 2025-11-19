@@ -224,12 +224,10 @@ The simplest approach is with the ``on_...`` decorators such as :meth:`~pywa.cli
     .. code-block:: python
         :caption: my_handlers.py
         :linenos:
+        :emphasize-lines: 4
 
         from pywa import WhatsApp, types
         from fastapi import FastAPI
-
-        fastapi_app = FastAPI()
-        wa = WhatsApp(..., server=fastapi_app)
 
         @WhatsApp.on_message  # Register with the class itself
         def handle_message(client: WhatsApp, msg: types.Message):
@@ -441,11 +439,12 @@ By default, once a handler processes an update, no other handlers are called.
 .. tip::
 
     Handlers run in the order they’re registered, unless you set a ``priority``.
-    A lower number means higher priority:
+    A higher ``priority`` value means the handler runs earlier.
 
     .. code-block:: python
         :caption: main.py
         :linenos:
+        :emphasize-lines: 5, 9
 
         from pywa import WhatsApp, types
 
@@ -507,7 +506,7 @@ To enable validation, pass your ``app_secret`` when creating the client:
 .. code-block:: python
     :caption: main.py
     :linenos:
-    :emphasize-lines: 4
+    :emphasize-lines: 4, 5
 
     from pywa import WhatsApp
 
