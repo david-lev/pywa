@@ -301,6 +301,6 @@ class Pricing:
         return cls(
             billable=data.get("billable", data.get("type") == PricingType.REGULAR),
             model=PricingModel(data["pricing_model"]),
-            type=PricingType(data["pricing_type"]) if "pricing_type" in data else None,
+            type=PricingType(data["type"]) if "type" in data else None,
             category=PricingCategory(data["category"]),
         )
