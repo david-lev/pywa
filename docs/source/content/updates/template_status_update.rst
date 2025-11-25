@@ -6,3 +6,9 @@ Template Status Update
 .. autoclass:: TemplateStatusUpdate()
 
 .. autoclass:: TemplateRejectionReason()
+
+.. autoclass:: DisableInfo()
+
+.. autoclass:: OtherInfo()
+
+.. autoclass:: RejectionInfo()

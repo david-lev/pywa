@@ -1,5 +1,39 @@
 {
   "element": {
+    "all": {
+      "entry": [
+        {
+          "id": "102290129340398",
+          "time": 1751250234,
+          "changes": [
+            {
+              "value": {
+                "message_template_id": 1315502779341834,
+                "message_template_name": "order_confirmation",
+                "message_template_language": "en_US",
+                "message_template_title": "Your order is confirmed!",
+                "message_template_element": "Thank you for your order, {{1}}! Your order number is {{2}}. If you have any questions, contact support using the buttons below. Thanks again!",
+                "message_template_footer": "Lucky Shrub: the Succulent Specialists!",
+                "message_template_buttons": [
+                  {
+                    "message_template_button_type": "PHONE_NUMBER",
+                    "message_template_button_text": "Phone support",
+                    "message_template_button_phone_number": "+15550783881"
+                  },
+                  {
+                    "message_template_button_type": "URL",
+                    "message_template_button_text": "Email support",
+                    "message_template_button_url": "https://www.luckyshrub.com/support"
+                  }
+                ]
+              },
+              "field": "message_template_components_update"
+            }
+          ]
+        }
+      ],
+      "object": "whatsapp_business_account"
+    },
     "entry": [
       {
         "id": "57438975935",

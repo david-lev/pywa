@@ -233,7 +233,8 @@ FILTERS: dict[str, dict[str, list[tuple[Callable[[_T], _T], Filter]]]] = {
         ],
     },
     "template_status": {
-        "approved": [(same, fil.template_status)],
+        "approved": [(same, fil.template_status_approved)],
+        "rejected": [(same, fil.template_status_rejected)],
     },
     "flow_completion": {
         "completion": [

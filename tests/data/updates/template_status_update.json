@@ -2,18 +2,45 @@
   "approved": {
     "entry": [
       {
-        "id": "57438975935",
-        "time": 1698268000,
+        "id": "102290129340398",
+        "time": 1751247548,
         "changes": [
           {
-            "field": "message_template_status_update",
             "value": {
               "event": "APPROVED",
-              "message_template_id": 12345678,
-              "message_template_name": "my_message_template",
-              "message_template_language": "pt-BR",
-              "reason": null
-            }
+              "message_template_id": 1689556908129832,
+              "message_template_name": "order_confirmation",
+              "message_template_language": "en-US",
+              "reason": "NONE",
+              "message_template_category": "UTILITY"
+            },
+            "field": "message_template_status_update"
+          }
+        ]
+      }
+    ],
+    "object": "whatsapp_business_account"
+  },
+  "rejected": {
+    "entry": [
+      {
+        "id": "102290129340398",
+        "time": 1751247548,
+        "changes": [
+          {
+            "value": {
+              "event": "REJECTED",
+              "message_template_id": 1689556908129835,
+              "message_template_name": "abandoned_cart",
+              "message_template_language": "en",
+              "reason": "INVALID_FORMAT",
+              "message_template_category": "MARKETING",
+              "rejection_info": {
+                "reason": "Your template has parameters placed next to each other (like {{1}}{{2}}) without text or punctuation between them.",
+                "recommendation": "Separate parameters with descriptive text and ensure each parameter is clearly contextualized."
+              }
+            },
+            "field": "message_template_status_update"
           }
         ]
       }

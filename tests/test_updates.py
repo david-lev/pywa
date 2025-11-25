@@ -13,7 +13,7 @@ from pywa.types.calls import (
 )
 from pywa.types.media import Image, Video, Document, Audio
 from pywa.types.system import SystemType
-from pywa.types.templates import TemplateStatus, TemplateCategory
+from pywa.types.templates import TemplateStatus, TemplateCategory, QualityScoreType
 from .common import CLIENTS
 
 # {update_file: {update_name: [test_funcs]}}
@@ -82,11 +82,22 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
     },
     "template_status_update": {
         "approved": [lambda s: s.new_status == TemplateStatus.APPROVED],
+        "rejected": [
+            lambda s: s.new_status == TemplateStatus.REJECTED,
+            lambda s: s.reason is not None,
+            lambda s: s.rejection_info is not None,
+        ],
+    },
+    "template_quality_update": {
+        "yellow": [lambda q: q.new_quality_score == QualityScoreType.YELLOW],
     },
     "template_category_update": {
         "marketing": [lambda c: c.new_category == TemplateCategory.MARKETING],
     },
     "template_components_update": {
+        "all": [
+            lambda c: c.template_element is not None and c.template_footer is not None
+        ],
         "element": [lambda c: c.template_element is not None],
     },
     "flow_completion": {
