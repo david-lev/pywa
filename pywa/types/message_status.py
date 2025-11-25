@@ -298,9 +298,10 @@ class Pricing:
 
     @classmethod
     def from_dict(cls, data: dict):
+        pricing_type = data.get("type") or data.get("pricing_type")
         return cls(
             billable=data.get("billable", data.get("type") == PricingType.REGULAR),
             model=PricingModel(data["pricing_model"]),
-            type=PricingType(data["type"]) if "type" in data else None,
+            type=PricingType(pricing_type) if pricing_type else None,
             category=PricingCategory(data["category"]),
         )
