@@ -5,6 +5,7 @@ __all__ = [
     "SentMediaMessage",
     "SentVoiceMessage",
     "SentLocationRequest",
+    "SentReaction",
     "SentTemplate",
     "SentTemplateStatus",
     "InitiatedCall",
@@ -813,6 +814,27 @@ class SentLocationRequest(SentMessage):
             ignore_updates=ignore_updates,
             timeout=timeout,
         )
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class SentReaction(SentMessage):
+    """
+    Represents a reaction message that was sent to WhatsApp user.
+
+    Attributes:
+        id: The ID of the reaction.
+        message_id: The ID of the message that was reacted/unreacted to.
+        to_user: The user the message was sent to.
+        from_phone_id: The WhatsApp ID of the sender who sent the message.
+        input: The input (phone number) of the recipient.
+    """
+
+    message_id: str
+
+    @property
+    def message_id_to_reply(self):
+        """Returns the ID of the message that was reacted/unreacted to."""
+        return self.message_id
 
 
 class SentTemplateStatus(utils.StrEnum):

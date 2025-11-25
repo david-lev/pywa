@@ -10,6 +10,7 @@ from pywa.types.sent_update import (
     SentMediaMessage as _SentMediaMessage,
     SentVoiceMessage as _SentVoiceMessage,
     SentLocationRequest as _SentLocationRequest,
+    SentReaction as _SentReaction,
     InitiatedCall as _InitiatedCall,
     ignore_updates_canceler,
     failed_canceler,
@@ -34,6 +35,7 @@ __all__ = [
     "SentMediaMessage",
     "SentVoiceMessage",
     "SentLocationRequest",
+    "SentReaction",
     "SentTemplate",
     "SentTemplateStatus",
     "InitiatedCall",
@@ -700,6 +702,19 @@ class SentLocationRequest(SentMessage, _SentLocationRequest):
             ignore_updates=ignore_updates,
             timeout=timeout,
         )
+
+
+class SentReaction(SentMessage, _SentReaction):
+    """
+    Represents a reaction message that was sent to WhatsApp user.
+
+    Attributes:
+        id: The ID of the reaction.
+        message_id: The ID of the message that was reacted/unreacted to.
+        to_user: The user the message was sent to.
+        from_phone_id: The WhatsApp ID of the sender who sent the message.
+        input: The input (phone number) of the recipient.
+    """
 
 
 class SentTemplate(SentMessage, _SentTemplate):

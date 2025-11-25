@@ -17,6 +17,9 @@ Others
 .. autoclass:: SentLocationRequest()
     :show-inheritance:
 
+.. autoclass:: SentReaction()
+    :show-inheritance:
+
 .. autoclass:: SentTemplateStatus()
 
 .. currentmodule:: pywa.types.others

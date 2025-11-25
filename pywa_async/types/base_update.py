@@ -22,6 +22,7 @@ if TYPE_CHECKING:
         SentVoiceMessage,
         SentLocationRequest,
         SentMediaMessage,
+        SentReaction,
     )
     from .callback import (
         Button,
@@ -629,7 +630,7 @@ class _ClientShortcutsAsync:
         *,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
-    ) -> SentMessage:
+    ) -> SentReaction:
         """
         React to the message with an emoji.
 
@@ -669,7 +670,7 @@ class _ClientShortcutsAsync:
         *,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
-    ) -> SentMessage:
+    ) -> SentReaction:
         """
         Remove the reaction from the message.
 

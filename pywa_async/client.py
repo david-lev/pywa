@@ -156,6 +156,7 @@ from .types.sent_update import (
     SentVoiceMessage,
     SentLocationRequest,
     SentMediaMessage,
+    SentReaction,
 )
 from .utils import FastAPI, Flask
 
@@ -998,7 +999,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         tracker: str | CallbackData | None = None,
         identity_key_hash: str | None = None,
         sender: str | int | None = None,
-    ) -> SentMessage:
+    ) -> SentReaction:
         """
         Reaction messages are emoji-reactions that you can apply to a previous WhatsApp user message that you have received.
 
@@ -1035,7 +1036,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
-        return SentMessage.from_sent_update(
+        return SentReaction.from_sent_update(
             client=self,
             update=await self.api.send_message(
                 sender=sender,
@@ -1046,6 +1047,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            message_id=message_id,
         )
 
     async def remove_reaction(
@@ -1056,7 +1058,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         tracker: str | CallbackData | None = None,
         identity_key_hash: str | None = None,
         sender: str | int | None = None,
-    ) -> SentMessage:
+    ) -> SentReaction:
         """
         Remove reaction from a message.
 
@@ -1091,7 +1093,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
-        return SentMessage.from_sent_update(
+        return SentReaction.from_sent_update(
             client=self,
             update=await self.api.send_message(
                 sender=sender,
@@ -1102,6 +1104,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            message_id=message_id,
         )
 
     async def send_location(

@@ -35,6 +35,7 @@ if TYPE_CHECKING:
         SentVoiceMessage,
         SentLocationRequest,
         SentMediaMessage,
+        SentReaction,
     )
     from .calls import SessionDescription
     from .sent_update import InitiatedCall
@@ -799,7 +800,7 @@ class _ClientShortcuts(abc.ABC):
         *,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
-    ) -> SentMessage:
+    ) -> SentReaction:
         """
         React to the message with an emoji.
 
@@ -839,7 +840,7 @@ class _ClientShortcuts(abc.ABC):
         *,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
-    ) -> SentMessage:
+    ) -> SentReaction:
         """
         Remove the reaction from the message.
 
