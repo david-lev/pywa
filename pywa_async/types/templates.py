@@ -70,9 +70,9 @@ class TemplateStatusUpdate(BaseTemplateUpdateAsync, _TemplateStatusUpdate):
         template_language: The language of the template.
         category: The category of the template.
         reason: The reason the template was rejected (if status is ``REJECTED``).
-        disable_date: The date the template was disabled (if status is ``DISABLED``).
-        title: Title of template pause or unpause event.
-        description: String describing why the template was locked or unlocked.
+        disable_info: Information about the template disablement (if status is ``DISABLED``).
+        other_info: Additional information about the template status update (if status is ``LOCKED`` or ``UNLOCKED``).
+        rejection_info: Information about the template rejection (if status is ``REJECTED``).
         shared_data: Shared data between handlers.
     """
 

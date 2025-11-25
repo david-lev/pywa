@@ -71,6 +71,7 @@ import datetime
 import json
 import pathlib
 import re
+import warnings
 
 from . import CallbackData
 from .base_update import BaseUpdate, RawUpdate
@@ -207,18 +208,18 @@ class TemplateStatusUpdate(BaseTemplateUpdate):
         template_language: The language of the template.
         category: The category of the template.
         reason: The reason the template was rejected (if status is ``REJECTED``).
-        disable_date: The date the template was disabled (if status is ``DISABLED``).
-        title: Title of template pause or unpause event.
-        description: String describing why the template was locked or unlocked.
+        disable_info: Information about the template disablement (if status is ``DISABLED``).
+        other_info: Additional information about the template status update (if status is ``LOCKED`` or ``UNLOCKED``).
+        rejection_info: Information about the template rejection (if status is ``REJECTED``).
         shared_data: Shared data between handlers.
     """
 
     new_status: TemplateStatus
     category: TemplateCategory | None = None
     reason: TemplateRejectionReason | None = None
-    disable_date: datetime.datetime | None = None
-    title: str | None = None
-    description: str | None = None
+    disable_info: DisableInfo | None = None
+    other_info: OtherInfo | None = None
+    rejection_info: RejectionInfo | None = None
 
     _webhook_field = "message_template_status_update"
 
@@ -243,14 +244,15 @@ class TemplateStatusUpdate(BaseTemplateUpdate):
             reason=TemplateRejectionReason(value["reason"])
             if value.get("reason")
             else None,
-            disable_date=datetime.datetime.fromtimestamp(
-                value["disable_info"]["disable_date"],
-                datetime.timezone.utc,
-            )
+            disable_info=DisableInfo.from_dict(value["disable_info"])
             if "disable_info" in value
             else None,
-            title=value.get("other_info", {}).get("title"),
-            description=value.get("other_info", {}).get("description"),
+            other_info=OtherInfo.from_dict(value["other_info"])
+            if "other_info" in value
+            else None,
+            rejection_info=RejectionInfo.from_dict(value["rejection_info"])
+            if "rejection_info" in value
+            else None,
         )
 
     @property
@@ -270,6 +272,102 @@ class TemplateStatusUpdate(BaseTemplateUpdate):
             A TemplateUnpauseResult object containing the result of the unpause operation.
         """
         return self._client.unpause_template(template_id=self.template_id)
+
+    @property
+    def title(self) -> str | None:
+        """Deprecated. Use other_info.title instead."""
+        warnings.warn(
+            "The 'title' property is deprecated. Use 'other_info.title' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.other_info.title if self.other_info else None
+
+    @property
+    def description(self) -> str | None:
+        """Deprecated. Use other_info.description instead."""
+        warnings.warn(
+            "The 'description' property is deprecated. Use 'other_info.description' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.other_info.description if self.other_info else None
+
+    @property
+    def disable_date(self) -> datetime.datetime | None:
+        """Deprecated. Use disable_info.disable_date instead."""
+        warnings.warn(
+            "The 'disable_date' property is deprecated. Use 'disable_info.disable_date' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.disable_info.disable_date if self.disable_info else None
+
+
+@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
+class DisableInfo:
+    """
+    Information about the template disablement.
+
+    - Only present when a template is disabled.
+
+    Attributes:
+        disable_date: Timestamp indicating when the template was disabled.
+    """
+
+    disable_date: datetime.datetime
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            disable_date=datetime.datetime.fromtimestamp(
+                data["disable_date"], tz=datetime.timezone.utc
+            ),
+        )
+
+
+@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
+class OtherInfo:
+    """
+    Additional information about the template status update.
+
+    - Only present when a template is locked or unlocked.
+
+    Attributes:
+        title: Title of template pause or unpause event.
+        description: String describing why the template was locked or unlocked.
+    """
+
+    title: str | None
+    description: str | None
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            title=data.get("title"),
+            description=data.get("description"),
+        )
+
+
+@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
+class RejectionInfo:
+    """
+    Information about the template rejection.
+
+    Attributes:
+        reason: Provides a detailed explanation for why the template was rejected. This field describes the specific issue detected in the template content.
+        recommendation: Offers actionable guidance on how to modify the template to resolve the rejection reason. This field suggests best practices for editing the template content.
+    """
+
+    reason: str | None
+    recommendation: str | None
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            reason=data.get("reason"),
+            recommendation=data.get("recommendation"),
+        )
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
