@@ -171,7 +171,7 @@ class _MediaActions:
         - Useful for re-sending media from another business phone number or if you want to use the media more than 30 days after it was uploaded.
 
         Args:
-            to_phone_id: The phone ID to upload the media to (if not provided, the client's phone ID will be used).
+            to_phone_id: The phone ID to upload the media to (if not provided, the media owner's phone ID will be used).
             override_filename: The filename to use for the re-uploaded media (if not provided, the original filename will be used if available).
         """
         return self._client.upload_media(
@@ -182,15 +182,12 @@ class _MediaActions:
                 > datetime.timedelta(minutes=URL_EXPIRATION_MINUTES)
             )
             else self.url,
-            phone_id=to_phone_id,
+            phone_id=to_phone_id or self.uploaded_to,
             filename=override_filename,
         )
 
 
-class BaseMedia: ...
-
-
-class Media(BaseMedia, _MediaActions):
+class Media(_MediaActions):
     """
     Base class for all media types.
 
@@ -245,6 +242,12 @@ class Media(BaseMedia, _MediaActions):
         """Gets the number of days until the media expires."""
         delta = self.expires_at - datetime.datetime.now(datetime.timezone.utc)
         return max(delta.days, 0)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.delete()
 
 
 def _get_arrived_media_dict(

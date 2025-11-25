@@ -19,6 +19,7 @@ import pathlib
 from pywa.types.others import SuccessResult
 from pywa.types.media import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.media import (
+    Media as _Media,
     Image as _Image,
     Video as _Video,
     Sticker as _Sticker,
@@ -26,7 +27,6 @@ from pywa.types.media import (
     Audio as _Audio,
     MediaURL as _MediaURL,
     URL_EXPIRATION_MINUTES,
-    BaseMedia,
 )  # noqa MUST BE IMPORTED FIRST
 
 import dataclasses
@@ -168,7 +168,7 @@ class _MediaActionsAsync:
         - Useful for re-sending media from another business phone number or if you want to use the media more than 30 days after it was uploaded.
 
         Args:
-            to_phone_id: The phone ID to upload the media to (if not provided, the client's phone ID will be used).
+            to_phone_id: The phone ID to upload the media to (if not provided, the media owner's phone ID will be used).
             override_filename: The filename to use for the re-uploaded media (if not provided, the original filename will be used if available).
         """
         return await self._client.upload_media(
@@ -179,12 +179,12 @@ class _MediaActionsAsync:
                 > datetime.timedelta(minutes=URL_EXPIRATION_MINUTES)
             )
             else self.url,
-            phone_id=to_phone_id,
+            phone_id=to_phone_id or self.uploaded_to,
             filename=override_filename,
         )
 
 
-class Media(BaseMedia, _MediaActionsAsync):
+class Media(_MediaActionsAsync, _Media):
     """
     Base class for all media types (async)
 
@@ -196,31 +196,16 @@ class Media(BaseMedia, _MediaActionsAsync):
         uploaded_to: The phone ID the media was uploaded to.
     """
 
-    id: str
-    filename: str | None
-    uploaded_by: UploadedBy
-    uploaded_at: datetime.datetime
-    uploaded_to: str
-
-    def __init__(
-        self,
-        _client: WhatsApp,
-        _id: str,
-        filename: str | None,
-        uploaded_to: str,
-    ):
-        self._client = _client
-        self.id = _id
-        self.filename = filename
-        self.uploaded_to = uploaded_to
-        self.uploaded_at = datetime.datetime.now(datetime.timezone.utc)
-        self.uploaded_by = UploadedBy.BUSINESS
-
-    def __repr__(self) -> str:
-        return (
-            f"MediaAsync(id={self.id!r}, filename={self.filename!r}, "
-            f"uploaded_by={self.uploaded_by!r}, uploaded_at={self.uploaded_at!r}, uploaded_to={self.uploaded_to!r})"
+    def __enter__(self):
+        raise RuntimeError(
+            "Use 'async with' instead of 'with' for async context managers."
         )
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        await self.delete()
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)

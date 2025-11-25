@@ -1813,6 +1813,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             ...     filename='image.jpg',
             ... )
 
+            >>> with wa.upload_media("https://my-cdn.com/sensitive-image.png") as media: # will be deleted after use
+            ...     wa.send_image(to=..., image=media)
+
         Args:
             media: The media to upload (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
             mime_type: The MIME type of the media.

@@ -54,7 +54,7 @@ from .types import (
     ButtonUrl,
 )
 from pywa.types.others import InteractiveType
-from .types.media import Media, BaseMedia
+from .types.media import Media
 from .types.templates import (
     TemplateBaseComponent,
     _BaseMediaHeaderComponent,
@@ -205,9 +205,7 @@ def detect_media_source(
             raise ValueError(
                 f"String media must be a valid URL, existing file path, WhatsApp media ID, file handle, or base64 string. not: {media[:30]}{'...' if len(media) > 30 else ''}"
             )
-    elif isinstance(
-        media, BaseMedia
-    ):  # common base class for both Media and MediaAsync
+    elif isinstance(media, Media):
         _logger.debug("Detected media source as WhatsApp Media object")
         return MediaSource.MEDIA_OBJ
     elif isinstance(media, bytes):
@@ -849,7 +847,7 @@ def get_interactive_msg(
 
 
 def get_media_msg(
-    media: str | BaseMedia,
+    media: str | Media,
     is_url: bool,
     caption: str | None = None,
     filename: str | None = None,
@@ -858,7 +856,7 @@ def get_media_msg(
 ):
     return {
         ("link" if is_url else "id"): media
-        if is_url or not isinstance(media, BaseMedia)
+        if is_url or not isinstance(media, Media)
         else media.id,
         **(
             {"caption": caption} if caption and not is_interactive else {}
