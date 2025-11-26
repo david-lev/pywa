@@ -82,7 +82,7 @@ Now you are ready to start contributing!
    git commit -m "[listeners] add `.ask(...)` shortcut"
    ```
 
-4. Push your changes to your fork and submit a pull request:
+4. Push your changes to your fork and submit a pull request targeting the `dev` branch:
    ```bash
    git push origin my-new-feature
    ```

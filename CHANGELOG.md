@@ -3,7 +3,17 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-#### 3.5.2 (2025-11-17) **Latest**
+
+#### 3.6.0 (2025-11-27) **Latest**
+
+- [client] allow any media type in `update_business_profile(profile_picture=...)` arg`
+- [sent_message] adding new `SentReaction` type for replying and reacting to the original message
+- [media] allowing usage in context manager to delete media after use
+- [templates] moving `TemplateStatusUpdate` fields into objects
+- [message_status] fixing `MessageStatus.pricing.type` parsing
+- [utils] bump `flow_data_api` to `4.0`
+
+#### 3.5.2 (2025-11-17)
 
 - [message] adding `voice` shortcut
 - [sent_message] adding `wait_for_call_permission` and `wait_for_incoming_voice_call` listeners and validate interactive types
