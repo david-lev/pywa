@@ -592,6 +592,98 @@ def upload_template_media_components(
                 break
 
 
+def internal_upload_file(
+    *,
+    wa: WhatsApp,
+    file: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
+    app_id: int | str,
+    mime_type: str | None,
+    fallback_mime_type: str,
+    fallback_filename: str | None,
+) -> tuple[str, MediaSource]:
+    """Internal method to upload a file to Resumable Upload API. Returns a tuple of (``file_handle``, ``media_source``)."""
+    media_info: MediaInfo | None = None
+    client = None
+
+    source = detect_media_source(file)
+    match source:
+        case MediaSource.EXTERNAL_URL:
+            client = httpx.Client()
+            media_info = get_media_from_url(
+                url=file,
+                dl_session=client,
+                download_chunk_size=DOWNLOAD_CHUNK_SIZE,
+                stream=True,
+            )
+        case MediaSource.PATH:
+            media_info = get_media_from_path(path=file)
+        case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
+            media_info = get_media_from_media_id_or_obj_or_url(
+                wa=wa,
+                media=file,
+                media_source=source,
+                download_chunk_size=DOWNLOAD_CHUNK_SIZE,
+                stream=True,
+            )
+        case MediaSource.BYTES:
+            media_info = MediaInfo(
+                content=file, filename=None, mime_type=None, length=len(file)
+            )
+        case MediaSource.FILE_OBJ:
+            media_info = get_media_from_file_like_obj(file)
+        case MediaSource.BYTES_GEN:
+            all_bytes = b"".join(file)
+            media_info = MediaInfo(
+                content=all_bytes,
+                filename=None,
+                mime_type=None,
+                length=len(all_bytes),
+            )
+        case MediaSource.BASE64_DATA_URI | MediaSource.BASE64:
+            media_info = get_media_from_base64(base64_str=file)
+        case MediaSource.FILE_HANDLE:
+            return file, source
+
+    try:
+        if not media_info:
+            raise ValueError(
+                f"Invalid media example for file upload: {file}. "
+                "It must be a URL, file path, bytes, file-like object, WhatsApp Media, or file handle."
+            )
+        if media_info.length is None:
+            raise ValueError("Media must have a known length.")
+        return wa.api.upload_file(
+            upload_session_id=wa.api.create_upload_session(
+                app_id=resolve_arg(
+                    wa=wa,
+                    value=app_id,
+                    method_arg="app_id",
+                    client_arg="app_id",
+                ),
+                file_name=media_info.filename or fallback_filename,
+                file_length=media_info.length,
+                file_type=mime_type or media_info.mime_type or fallback_mime_type,
+            )["id"],
+            file=media_info.content,
+            file_offset=0,
+            content_length=media_info.length,
+        )["h"], source
+
+    except Exception as e:
+        raise ValueError(
+            f"Failed to upload media for file upload with file: {file if not isinstance(file, bytes) else '<bytes>'}: {e}"
+        ) from e
+
+    finally:
+        try:
+            if client:
+                client.close()
+            if source == MediaSource.PATH:
+                media_info.content.close()
+        except Exception:
+            pass
+
+
 def _upload_comps_example(
     *,
     wa: WhatsApp,
@@ -603,106 +695,41 @@ def _upload_comps_example(
     if stop_event.is_set():
         return
     first_comp = comps[0]
-    media_info: MediaInfo | None = None
-    client = None
-
-    source = detect_media_source(example)
-    match source:
-        case MediaSource.EXTERNAL_URL:
-            client = httpx.Client()
-            media_info = get_media_from_url(
-                url=example,
-                dl_session=client,
-                download_chunk_size=DOWNLOAD_CHUNK_SIZE,
-                stream=True,
-            )
-        case MediaSource.PATH:
-            media_info = get_media_from_path(path=example)
-        case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
-            media_info = get_media_from_media_id_or_obj_or_url(
-                wa=wa,
-                media=example,
-                media_source=source,
-                download_chunk_size=DOWNLOAD_CHUNK_SIZE,
-                stream=True,
-            )
-        case MediaSource.BYTES:
-            media_info = MediaInfo(
-                content=example, filename=None, mime_type=None, length=len(example)
-            )
-        case MediaSource.FILE_OBJ:
-            media_info = get_media_from_file_like_obj(example)
-        case MediaSource.BYTES_GEN:
-            all_bytes = b"".join(example)
-            media_info = MediaInfo(
-                content=all_bytes,
-                filename=None,
-                mime_type=None,
-                length=len(all_bytes),
-            )
-        case MediaSource.BASE64_DATA_URI | MediaSource.BASE64:
-            media_info = get_media_from_base64(base64_str=example)
-        case MediaSource.FILE_HANDLE:
-            for comp in comps:
-                comp._handle = example
-            return
 
     try:
-        if not media_info:
-            raise ValueError(
-                f"Invalid media example for component {first_comp.__class__.__name__}: {example}. "
-                "It must be a URL, file path, bytes, file-like object, WhatsApp Media, or file handle."
-            )
-        if media_info.length is None:
-            raise ValueError(
-                f"Media example for component {first_comp.__class__.__name__} must have a known length."
-            )
-        handle = wa.api.upload_file(
-            upload_session_id=wa.api.create_upload_session(
-                app_id=resolve_arg(
-                    wa=wa,
-                    value=app_id,
-                    method_arg="app_id",
-                    client_arg="app_id",
-                ),
-                file_name=media_info.filename
-                or _template_header_formats_filename.get(
-                    first_comp.format, "pywa-template-header"
-                ),
-                file_length=media_info.length,
-                file_type=first_comp._mime_type
-                or media_info.mime_type
-                or _template_header_formats_default_mime_types.get(
-                    first_comp.format, "application/octet-stream"
-                ),
-            )["id"],
-            file=media_info.content,
-            file_offset=0,
-            content_length=media_info.length,
-        )["h"]
-
+        handle, source = internal_upload_file(
+            wa=wa,
+            file=example,
+            app_id=app_id,
+            mime_type=first_comp._mime_type,
+            fallback_mime_type=_template_header_formats_default_mime_types.get(
+                first_comp.format, "application/octet-stream"
+            ),
+            fallback_filename=_template_header_formats_filename.get(
+                first_comp.format, "pywa-template-header"
+            ),
+        )
         is_media_obj = source == MediaSource.MEDIA_OBJ
+        is_open_file = source == MediaSource.FILE_OBJ
         for comp in comps:
             comp._handle = handle
             if is_media_obj:
                 comp._example = (
                     comp._example.id
                 )  # prevent keeping Media obj in _example
+            if is_open_file:
+                try:
+                    comp._example = (
+                        comp._example.name
+                    )  # prevent keeping file obj in _example
+                except AttributeError:
+                    pass
 
     except Exception as e:
         stop_event.set()
         raise ValueError(
             f"Failed to upload media for component {first_comp.__class__.__name__} with example: {example if not isinstance(example, bytes) else '<bytes>'}: {e}"
         ) from e
-
-    finally:
-        try:
-            if client:
-                client.close()
-            if source == MediaSource.PATH:
-                media_info.content.close()
-        except Exception:
-            pass
 
 
 def _filter_not_uploaded_params(

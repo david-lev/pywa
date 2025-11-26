@@ -2396,15 +2396,19 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
     def update_business_profile(
         self,
+        *,
         about: str | None = utils.MISSING,
         address: str | None = utils.MISSING,
         description: str | None = utils.MISSING,
         email: str | None = utils.MISSING,
-        profile_picture_handle: str | None = utils.MISSING,
+        profile_picture: (
+            str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes]
+        ) = utils.MISSING,
         industry: Industry | None = utils.MISSING,
         websites: Iterable[str] | None = utils.MISSING,
-        *,
         phone_id: str | int | None = None,
+        app_id: str | int | None = None,
+        profile_picture_handle: None = utils.MISSING,
     ) -> SuccessResult:
         """
         Update the business profile of the WhatsApp Business account.
@@ -2418,7 +2422,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             ...     address='Menlo Park, 1601 Willow Rd, United States',
             ...     description='This is a test business',
             ...     email='test@test.com',
-            ...     profile_picture_handle='1234567890',
+            ...     profile_picture='path/to/profile.jpg',
             ...     industry=Industry.NOT_A_BIZ,
             ...     websites=['https://example.com', 'https://google.com'],
             ... )
@@ -2431,18 +2435,25 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             address: Address of the business. Character limit 256.
             description: Description of the business. Character limit 512.
             email: The contact email address (in valid email format) of the business. Character limit 128.
-            profile_picture_handle: Handle of the profile picture. This handle is generated when you upload the binary
-             file for the profile picture to Meta using the `Resumable Upload API
-             <https://developers.facebook.com/docs/graph-api/guides/upload>`_.
+            profile_picture: The profile picture to set for the business (can be a media ID, URL, file path, bytes, bytes generator, or file-like object).
             industry: Industry of the business.
             websites: The URLs associated with the business. For instance, a website, Facebook Page, or Instagram.
              (You must include the ``http://`` or ``https://`` portion of the URL.
              There is a maximum of 2 websites with a maximum of 256 characters each.)
             phone_id: The phone ID to update the business profile for (optional, if not provided, the client's phone ID will be used).
+            app_id: The App ID to upload the profile picture to (optional, if not provided, the client's app ID will be used).
+            profile_picture_handle: Deprecated, use ``profile_picture`` instead.
 
         Returns:
             Whether the business profile was updated.
         """
+        if profile_picture_handle is not utils.MISSING:
+            warnings.warn(
+                "`profile_picture_handle` parameter is deprecated, use `profile_picture` instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            profile_picture = profile_picture_handle
         data = {
             key: value or ""
             for key, value in {
@@ -2450,7 +2461,21 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 "address": address,
                 "description": description,
                 "email": email,
-                "profile_picture_handle": profile_picture_handle,
+                "profile_picture_handle": helpers.internal_upload_file(
+                    wa=self,
+                    file=profile_picture,
+                    app_id=helpers.resolve_arg(
+                        wa=self,
+                        value=app_id,
+                        method_arg="app_id",
+                        client_arg="app_id",
+                    ),
+                    mime_type=None,
+                    fallback_mime_type="image/jpeg",
+                    fallback_filename="profile.jpg",
+                )[0]
+                if profile_picture not in (None, utils.MISSING)
+                else profile_picture,
                 "vertical": industry,
                 "websites": websites,
             }.items()
