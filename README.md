@@ -289,6 +289,38 @@ def handle_flow_response(_: WhatsApp, flow: types.FlowCompletion):
     )
 ```
 
+- **Django example**
+
+```python
+from django.http import HttpRequest, HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+
+from .service.whatsapp import WHATSAPP
+# WHATSAPP = WhatsApp(...)
+# Attach handlers to the WhatsApp instance using available methods
+# https://pywa.readthedocs.io/en/latest/content/handlers/overview.html#registering-callback-functions
+
+
+@csrf_exempt
+@require_http_methods(request_method_list=["GET", "POST"])
+def whatsapp_endpoint(request: HttpRequest) -> HttpResponse:
+    if request.method == "GET":
+        _response = WHATSAPP.webhook_challenge_handler(
+            vt=request.GET.get("hub.verify_token", ""),
+            ch=request.GET.get("hub.challenge", ""),
+        )
+        return HttpResponse(content=_response[0], status=_response[1])
+
+    elif request.method == "POST":
+        _response = WHATSAPP.webhook_update_handler(
+            update=request.body,
+            hmac_header=request.headers.get("X-Hub-Signature-256", ""),
+        )
+        return HttpResponse(content=_response[0], status=_response[1])
+
+```
+
 🎛 **Installation**
 --------------------
 
