@@ -532,7 +532,7 @@ async def _upload_params_media(
         )
         for p in params:
             p._is_url = is_url
-            p._resolved_media = uploaded_media.id if uploaded else None
+            p._resolved_media = uploaded_media.id if uploaded else uploaded_media
             p._fallback_filename = fallback_filename
     except Exception as e:
         raise ValueError(
