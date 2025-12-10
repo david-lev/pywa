@@ -31,8 +31,14 @@ def api(mocker):
 
 
 @pytest.fixture
-def wa():
-    return WhatsApp(phone_id=PHONE_ID, token=TOKEN)
+def client():
+    return WhatsApp(
+        phone_id=PHONE_ID,
+        token=TOKEN,
+        server=None,
+        verify_token="xyzxyz",
+        validate_updates=False,
+    )
 
 
 def test_api_usage_without_token():
@@ -95,14 +101,14 @@ def test_resolve_buttons_param():
     )
 
     assert helpers.resolve_buttons_param(
-        types.URLButton(title="PyWa Docs", url="https://pywa.readthedocs.io")
+        types.URLButton(title="PyWa Docs", url="https://pyclient.readthedocs.io")
     ) == (
         types.others.InteractiveType.CTA_URL,
         {
             "name": "cta_url",
             "parameters": {
                 "display_text": "PyWa Docs",
-                "url": "https://pywa.readthedocs.io",
+                "url": "https://pyclient.readthedocs.io",
             },
         },
     )
@@ -378,9 +384,7 @@ def test_resolve_waba_id_param():
         )
 
 
-def test_resolve_phone_id_param():
-    client = WhatsApp(phone_id=PHONE_ID)
-
+def test_resolve_phone_id_param(client):
     assert (
         helpers.resolve_arg(
             wa=client, value=None, method_arg="phone_id", client_arg="phone_id"
@@ -400,7 +404,7 @@ def test_resolve_phone_id_param():
         )
 
 
-def test_detect_media_source(wa):
+def test_detect_media_source(client):
     assert (
         helpers.detect_media_source("https://example.com/image.jpg")
         == MediaSource.EXTERNAL_URL
@@ -411,8 +415,8 @@ def test_detect_media_source(wa):
         helpers.detect_media_source(
             Media(
                 _id="1234567890",
-                _client=wa,
-                uploaded_to=wa.phone_id,
+                _client=client,
+                uploaded_to=client.phone_id,
                 filename="image.jpg",
             )
         )
@@ -462,7 +466,83 @@ def test_detect_media_source(wa):
     )
 
 
-def test_check_for_async_callback():
+def test_resolve_media_param(client):
+    media_obj = Media(
+        _client=client,
+        _id="12345",
+        filename="image.jpg",
+        uploaded_to=client.phone_id,
+    )
+    with mock.patch(
+        "pywa._helpers.internal_upload_media",
+        return_value=media_obj,
+    ) as internal_upload_media:
+        is_url, uploaded, media, filename = helpers.resolve_media_param(
+            wa=client,
+            media="https://example.com/image.jpg",
+            mime_type=None,
+            filename=None,
+            media_type="image",
+            phone_id=client.phone_id,
+        )
+        assert is_url
+        assert not uploaded
+        assert filename == "image.jpg"
+        internal_upload_media.assert_not_called()
+
+    with mock.patch(
+        "pywa._helpers.internal_upload_media",
+        return_value=media_obj,
+    ) as internal_upload_media:
+        is_url, uploaded, media, filename = helpers.resolve_media_param(
+            wa=client,
+            media="12345678",
+            mime_type=None,
+            filename=None,
+            media_type="image",
+            phone_id=client.phone_id,
+        )
+        assert not is_url
+        assert not uploaded
+        assert filename is None
+        internal_upload_media.assert_not_called()
+
+    with mock.patch(
+        "pywa._helpers.internal_upload_media",
+        return_value=media_obj,
+    ) as internal_upload_media:
+        is_url, uploaded, media, filename = helpers.resolve_media_param(
+            wa=client,
+            media=media_obj,
+            mime_type=None,
+            filename=None,
+            media_type="image",
+            phone_id=client.phone_id,
+        )
+        assert not uploaded
+        assert not is_url
+        assert filename == "image.jpg"
+        internal_upload_media.assert_not_called()
+
+    with mock.patch(
+        "pywa._helpers.internal_upload_media",
+        return_value=media_obj,
+    ) as internal_upload_media:
+        is_url, uploaded, media, filename = helpers.resolve_media_param(
+            wa=client,
+            media=b"mediabytes",
+            mime_type=None,
+            filename=None,
+            media_type="image",
+            phone_id=client.phone_id,
+        )
+        assert uploaded
+        assert not is_url
+        assert filename is None
+        internal_upload_media.assert_called_once()
+
+
+def test_check_for_async_callback(client):
     client = WhatsApp(server=None, verify_token="xyz")
 
     async def callback(): ...
@@ -480,16 +560,16 @@ def test_check_for_async_filters():
         client._check_for_async_filters(filters.new(callback))
 
 
-def test_token(wa):
-    assert wa.token == TOKEN
-    wa.token = "abc"
-    assert wa.token == "abc"
-    assert wa.api._session.headers["Authorization"] == "Bearer abc"
+def test_token(client):
+    assert client.token == TOKEN
+    client.token = "abc"
+    assert client.token == "abc"
+    assert client.api._session.headers["Authorization"] == "Bearer abc"
 
 
-def test_send_message(api, wa):
+def test_send_message(api, client):
     api.return_value.send_message.return_value = SENT_MESSAGE
-    wa.send_text(
+    client.send_text(
         to=TO,
         text="Hello",
         reply_to_message_id=MSG_ID,
@@ -505,9 +585,9 @@ def test_send_message(api, wa):
     )
 
 
-def test_send_image(api, wa):
+def test_send_image(api, client):
     api.return_value.send_message.return_value = SENT_MESSAGE
-    wa.send_image(
+    client.send_image(
         to=TO,
         image="https://example.com/image.jpg",
         caption="caption",
@@ -527,9 +607,9 @@ def test_send_image(api, wa):
     )
 
 
-def test_send_video(api, wa):
+def test_send_video(api, client):
     api.return_value.send_message.return_value = SENT_MESSAGE
-    wa.send_video(
+    client.send_video(
         to=TO,
         video="1234567890",
         caption="caption",
@@ -548,9 +628,9 @@ def test_send_video(api, wa):
     )
 
 
-def test_send_audio(api, wa):
+def test_send_audio(api, client):
     api.return_value.send_message.return_value = SENT_MESSAGE
-    wa.send_audio(
+    client.send_audio(
         to=TO,
         audio="1234567890",
     )
@@ -567,9 +647,9 @@ def test_send_audio(api, wa):
     )
 
 
-def test_send_document(api, wa):
+def test_send_document(api, client):
     api.return_value.send_message.return_value = SENT_MESSAGE
-    wa.send_document(
+    client.send_document(
         to=TO,
         document="1234567890",
         filename="filename",
@@ -588,9 +668,9 @@ def test_send_document(api, wa):
     )
 
 
-def test_send_location(api, wa):
+def test_send_location(api, client):
     api.return_value.send_message.return_value = SENT_MESSAGE
-    wa.send_location(
+    client.send_location(
         to=TO,
         latitude=12.34,
         longitude=56.78,
@@ -612,9 +692,9 @@ def test_send_location(api, wa):
     )
 
 
-def test_send_contact(api, wa):
+def test_send_contact(api, client):
     api.return_value.send_message.return_value = SENT_MESSAGE
-    wa.send_contact(
+    client.send_contact(
         to=TO,
         contact=types.Contact(
             name=Contact.Name(
@@ -672,9 +752,9 @@ def test_send_contact(api, wa):
     )
 
 
-def test_send_sticker(api, wa):
+def test_send_sticker(api, client):
     api.return_value.send_message.return_value = SENT_MESSAGE
-    wa.send_sticker(
+    client.send_sticker(
         to=TO,
         sticker="1234567890",
     )
@@ -691,9 +771,9 @@ def test_send_sticker(api, wa):
     )
 
 
-def test_send_reaction(api, wa):
+def test_send_reaction(api, client):
     api.return_value.send_message.return_value = SENT_MESSAGE
-    wa.send_reaction(
+    client.send_reaction(
         to=TO,
         emoji="😍",
         message_id=MSG_ID,
@@ -711,9 +791,9 @@ def test_send_reaction(api, wa):
     )
 
 
-def test_remove_reaction(api, wa):
+def test_remove_reaction(api, client):
     api.return_value.send_message.return_value = SENT_MESSAGE
-    wa.remove_reaction(
+    client.remove_reaction(
         to=TO,
         message_id=MSG_ID,
     )
@@ -730,9 +810,9 @@ def test_remove_reaction(api, wa):
     )
 
 
-def test_request_location(api, wa):
+def test_request_location(api, client):
     api.return_value.send_message.return_value = SENT_MESSAGE
-    wa.request_location(
+    client.request_location(
         to=TO,
         text="Send your location",
         reply_to_message_id=MSG_ID,
@@ -754,9 +834,9 @@ def test_request_location(api, wa):
     )
 
 
-def test_send_catalog(api, wa):
+def test_send_catalog(api, client):
     api.return_value.send_message.return_value = SENT_MESSAGE
-    wa.send_catalog(
+    client.send_catalog(
         to=TO,
         body="Hello",
         thumbnail_product_sku="IPHONE_8",
@@ -781,9 +861,9 @@ def test_send_catalog(api, wa):
     )
 
 
-def test_send_product(api, wa):
+def test_send_product(api, client):
     api.return_value.send_message.return_value = SENT_MESSAGE
-    wa.send_product(
+    client.send_product(
         to=TO,
         catalog_id="1234567890",
         sku="IPHONE_8",
@@ -805,9 +885,9 @@ def test_send_product(api, wa):
     )
 
 
-def test_send_products(api, wa):
+def test_send_products(api, client):
     api.return_value.send_message.return_value = SENT_MESSAGE
-    wa.send_products(
+    client.send_products(
         to=TO,
         title="Products",
         body="Hello",
