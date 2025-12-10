@@ -4,7 +4,12 @@
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
 
-#### 3.6.0 (2025-11-27) **Latest**
+#### 3.6.1 (2025-12-11) **Latest**
+
+- [helpers] fix media URL in template param
+- [tests] test resolve_media_param
+
+#### 3.6.0 (2025-11-27)
 
 - [client] allow any media type in `update_business_profile(profile_picture=...)` arg`
 - [sent_message] adding new `SentReaction` type for replying and reacting to the original message
