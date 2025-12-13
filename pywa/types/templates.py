@@ -849,6 +849,8 @@ class CreativeFeaturesSpec:
     image_background_gen: bool
     text_extraction_for_headline: bool
     text_extraction_for_tap_target: bool
+    product_extensions: bool
+    text_formatting_optimization: bool
 
     _fields = {
         "image_brightness_and_contrast",
@@ -858,6 +860,8 @@ class CreativeFeaturesSpec:
         "image_background_gen",
         "text_extraction_for_headline",
         "text_extraction_for_tap_target",
+        "product_extensions",
+        "text_formatting_optimization",
     }
 
     def __init__(
@@ -870,6 +874,8 @@ class CreativeFeaturesSpec:
         image_background_gen: bool | None = None,
         text_extraction_for_headline: bool | None = None,
         text_extraction_for_tap_target: bool | None = None,
+        product_extensions: bool | None = None,
+        text_formatting_optimization: bool | None = None,
     ):
         """
         Initializes a CreativeFeaturesSpec instance.
@@ -877,11 +883,13 @@ class CreativeFeaturesSpec:
         Args:
             image_brightness_and_contrast: Whether to apply brightness and contrast adjustments to images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-cropping>`_.
             image_touchups: Whether to apply touch-ups to images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-filtering>`_.
-            add_text_overlay: Whether to add text overlays to images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#text-overlays>`_.
-            image_animation: Whether to apply animations to images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-animation>`_.
+            add_text_overlay: Whether to automatically add a text overlay onto your image using your message content. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#text-overlays>`_.
+            image_animation: Whether to automatically transform your header image into an animated GIF. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-animation>`_.
             image_background_gen: Whether to generate backgrounds for images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-background-generation>`_.
-            text_extraction_for_headline: Whether to extract text from images for headlines. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#headline-extraction>`_.
-            text_extraction_for_tap_target: Whether to extract text from images for tap targets. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#tap-target-title-extraction>`_.
+            text_extraction_for_headline: Whether to extract keywords or phrases from your message to create a headline for your body text to highlight key information. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#headline-extraction>`_.
+            text_extraction_for_tap_target: Whether to extract keywords or phrases from your message to create a title for the tap-target area to highlight key information. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#tap-target-title-extraction>`_.
+            product_extensions: Whether to encourage users to explore more products by appending additional catalog products to single-image creatives. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#product-extensions>`_.
+            text_formatting_optimization: Whether to update the formatting of text (e.g. remove unnecessary spaces, bold phrases) to increase performance. No text content is changed - format only. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#text-formatting>`_.
         """
         for field_name, value in locals().items():
             if field_name == "self":
