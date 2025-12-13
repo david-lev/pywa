@@ -705,3 +705,95 @@ class FetchCallPermissionLimitHit(CallingError):
         138013,
         613,
     )  # WhatsApp changed the error code from 138013 to 613
+
+
+# ====================================================================================================
+
+
+class GroupsError(WhatsAppError):
+    """
+    Base exception for all groups errors.
+    """
+
+    __error_codes__ = None
+
+
+class BadGroup(GroupsError):
+    """Cannot send messages to single member groups."""
+
+    __error_codes__ = (131020,)
+
+
+class GroupUnknown(GroupsError):
+    """The group was not found, either because it doesn’t exist or you are not a member."""
+
+    __error_codes__ = (131041,)
+
+
+class GroupDuplicateParticipant(GroupsError):
+    """Duplicate participants in the participant array input."""
+
+    __error_codes__ = (131202,)
+
+
+class GroupParticipantOverLimit(GroupsError):
+    """Group participant size exceeds limit."""
+
+    __error_codes__ = (131204,)
+
+
+class GroupSuspended(GroupsError):
+    """The group violates platform policies."""
+
+    __error_codes__ = (131207,)
+
+
+class GroupRateLimitHit(GroupsError):
+    """Group operation failed because there were too many group operations from this phone number in a short period."""
+
+    __error_codes__ = (131208,)
+
+
+# Invalid Group Profile Picture Aspect Ratio
+
+
+class InvalidGroupProfilePictureAspectRatio(GroupsError):
+    """Width and height of the image must be equal."""
+
+    __error_codes__ = (131209,)
+
+
+class GroupProfilePictureTooSmall(GroupsError):
+    """Image width and height must be greater than 192px."""
+
+    __error_codes__ = (131210,)
+
+
+class GroupCreateLimitReach(GroupsError):
+    """Reached the limit for the maximum number of groups that can be created for this number."""
+
+    __error_codes__ = (131211,)
+
+
+class ParticipantNotPartOfGroup(GroupsError):
+    """Participant is not a part of the group."""
+
+    __error_codes__ = (131212,)
+
+
+class GroupJoinRequestNotExists(GroupsError):
+    """Group join request does not exist."""
+
+    __error_codes__ = (131213,)
+
+
+class GroupCreationIsTemporarilyDisabled(GroupsError):
+    """Group creation is temporarily disabled due to excessive marketing messages sent by the WABA in customer service window over the past 7 days."""
+
+    __error_codes__ = (131214,)
+
+
+class PhoneNumberNotEligibleForGroupsAPI(GroupsError):
+    """Groups APIs are only available for eligible phone numbers. Please check eligibility for Groups APIs in our documentation"""
+
+    __error_codes__ = (131215,)
