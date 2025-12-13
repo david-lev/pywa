@@ -211,31 +211,36 @@ class Media(_MediaActions):
         _id: str,
         filename: str | None,
         uploaded_to: str,
+        ttl_minutes: int | None = None,
     ):
         self._client = _client
         self.id = _id
         self.filename = filename
         self.uploaded_to = uploaded_to
         self.uploaded_at = datetime.datetime.now(datetime.timezone.utc)
+        self.ttl_minutes = ttl_minutes
         self.uploaded_by = UploadedBy.BUSINESS
 
     def __repr__(self) -> str:
         return (
             f"Media(id={self.id!r}, filename={self.filename!r}, "
-            f"uploaded_by={self.uploaded_by!r}, uploaded_at={self.uploaded_at!r}, uploaded_to={self.uploaded_to!r})"
+            f"uploaded_by={self.uploaded_by!r}, uploaded_at={self.uploaded_at!r}, expires_at={self.expires_at!r}, "
+            f"uploaded_to={self.uploaded_to!r})"
         )
 
     @property
     def is_expired(self) -> bool:
         """Checks if the media is expired (30 days for business uploaded media, 7 days for user uploaded media)."""
-        return datetime.datetime.now(datetime.timezone.utc) > (
-            self.uploaded_at + datetime.timedelta(days=self.uploaded_by.value)
-        )
+        return datetime.datetime.now(datetime.timezone.utc) > self.expires_at
 
     @property
     def expires_at(self) -> datetime.datetime:
-        """Gets the expiration date of the media."""
-        return self.uploaded_at + datetime.timedelta(days=self.uploaded_by.value)
+        """Gets the expiration date of the media (30 days for business uploaded media, 7 days for user uploaded media)."""
+        return self.uploaded_at + (
+            datetime.timedelta(days=self.uploaded_by.value)
+            if self.ttl_minutes is None
+            else datetime.timedelta(minutes=self.ttl_minutes)
+        )
 
     @property
     def days_until_expiration(self) -> int:

@@ -1789,6 +1789,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         filename: str | None = None,
         dl_session: httpx.Client | None = None,
         *,
+        ttl: datetime.timedelta | int | None = None,
         download_chunk_size: int = helpers.DOWNLOAD_CHUNK_SIZE,
         media_type: Literal["image", "video", "audio", "document", "sticker"]
         | None = None,
@@ -1823,6 +1824,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             media: The media to upload (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
             mime_type: The MIME type of the media.
             filename: The file name of the media.
+            ttl: Override the default 1-hour TTL for `No Storage-enabled <https://developers.facebook.com/documentation/business-messaging/whatsapp/no-storage>`_ business phone numbers. This value is in minutes from 1 hour (60) to 30 days (43200).
             dl_session: A httpx client to use when downloading the media from a URL (optional, for custom settings like proxies, headers, etc. If not provided, a new client will be created for the download).
             download_chunk_size: The size (in bytes) of each chunk to download when downloading media from a URL (default: ``64KB``). Defines the size of data read into memory at a time.
             media_type: The type of the media (optional, for default mimetype and filename).
@@ -1838,6 +1840,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             media_type=media_type,
             mime_type=mime_type,
             filename=filename,
+            ttl_minutes=int(ttl.total_seconds() // 60)
+            if isinstance(ttl, datetime.timedelta)
+            else ttl,
             wa=self,
             phone_id=helpers.resolve_arg(
                 wa=self,

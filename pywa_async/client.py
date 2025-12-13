@@ -1620,6 +1620,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         filename: str | None = None,
         dl_session: httpx.AsyncClient | None = None,
         *,
+        ttl: datetime.timedelta | int | None = None,
         media_type: Literal["image", "video", "audio", "document", "sticker"]
         | None = None,
         phone_id: str | int | None = None,
@@ -1653,6 +1654,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             media: The media to upload (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
             mime_type: The MIME type of the media.
             filename: The file name of the media.
+            ttl: Override the default 1-hour TTL for `No Storage-enabled <https://developers.facebook.com/documentation/business-messaging/whatsapp/no-storage>`_ business phone numbers. This value is in minutes from 1 hour (60) to 30 days (43200).
             dl_session: A httpx client to use when downloading the media from a URL (optional, for custom settings like proxies, headers, etc. If not provided, a new client will be created for the download).
             media_type: The type of the media (optional, for default mimetype and filename).
             phone_id: The phone ID to upload the media to (optional, if not provided, the client's phone ID will be used).
@@ -1666,6 +1668,9 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             media_type=media_type,
             mime_type=mime_type,
             filename=filename,
+            ttl_minutes=int(ttl.total_seconds() // 60)
+            if isinstance(ttl, datetime.timedelta)
+            else ttl,
             wa=self,
             phone_id=helpers.resolve_arg(
                 wa=self,

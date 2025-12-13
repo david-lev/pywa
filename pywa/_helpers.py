@@ -458,6 +458,7 @@ def internal_upload_media(
     media_type: str | None,
     mime_type: str | None,
     filename: str | None,
+    ttl_minutes: int | None = None,
     download_chunk_size: int | None,
     wa: WhatsApp,
     phone_id: str,
@@ -526,9 +527,11 @@ def internal_upload_media(
                 or media_info.mime_type
                 or _media_types_default_mime_types.get(media_type, "text/plain"),
                 filename=final_filename,
+                ttl_minutes=ttl_minutes,
             )["id"],
             uploaded_to=phone_id,
             filename=final_filename,
+            ttl_minutes=ttl_minutes,
         )
 
     finally:
