@@ -2926,10 +2926,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 ),
                 pagination=pagination.to_dict() if pagination else None,
             ),
-            item_factory=functools.partial(
-                TemplateDetails.from_dict,
-                client=self,
-            ),
         )
 
     def get_template(self, template_id: int | str) -> TemplateDetails:

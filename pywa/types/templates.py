@@ -68,6 +68,7 @@ __all__ = [
 ]
 
 import datetime
+import functools
 import json
 import pathlib
 import re
@@ -82,7 +83,7 @@ import logging
 from typing import TYPE_CHECKING, Literal, BinaryIO, cast, Iterator, AsyncIterator
 
 from .media import Media
-from .others import Result, SuccessResult, ProductsSection, _ItemFactory
+from .others import Result, SuccessResult, ProductsSection
 from .. import utils
 from .. import _helpers as helpers
 from ..listeners import TemplateStatusUpdateListenerIdentifier
@@ -3947,12 +3948,14 @@ class TemplatesResult(Result[TemplateDetails]):
         self,
         wa: WhatsApp,
         response: dict,
-        item_factory: _ItemFactory,
     ):
         super().__init__(
             wa=wa,
             response=response,
-            item_factory=item_factory,
+            item_factory=functools.partial(
+                TemplateDetails.from_dict,
+                client=wa,
+            ),
         )
         self.total_count = response["summary"]["total_count"]
         self.message_template_count = response["summary"]["message_template_count"]

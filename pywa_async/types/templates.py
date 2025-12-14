@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import dataclasses
 import datetime
+import functools
 from typing import TYPE_CHECKING, cast
 
 from pywa.listeners import TemplateStatusUpdateListenerIdentifier
 from pywa_async.types import CallbackData
-from pywa.types.others import _ItemFactory
 from pywa.types.templates import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.templates import (
     TemplateDetails as _TemplateDetails,
@@ -365,12 +365,14 @@ class TemplatesResult(Result[TemplateDetails]):
         self,
         wa: WhatsApp,
         response: dict,
-        item_factory: _ItemFactory,
     ):
         super().__init__(
             wa=wa,
             response=response,
-            item_factory=item_factory,
+            item_factory=functools.partial(
+                TemplateDetails.from_dict,
+                client=wa,
+            ),
         )
         self.total_count = response["summary"]["total_count"]
         self.message_template_count = response["summary"]["message_template_count"]
