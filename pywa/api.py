@@ -2329,7 +2329,7 @@ class GraphAPI:
         """
         Create a group.
 
-        - Read more at `https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#create-group>`_.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#create-group>`_.
 
         Args:
             phone_id: The ID of the phone number to create the group on.
@@ -2357,13 +2357,54 @@ class GraphAPI:
             json=data,
         )
 
+    def update_group_info(
+        self,
+        group_id: str,
+        subject: str | None = None,
+        description: str | None = None,
+        profile_picture_file: bytes | str | BinaryIO | Iterator[bytes] | None = None,
+    ) -> dict:
+        """
+        Update group info.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#update-group-info>`_.
+
+        Args:
+            group_id: The ID of the group to update.
+            subject: The new subject of the group.
+            description: The new description of the group.
+            profile_picture_file: The new profile picture file path of the group.
+
+        Returns:
+            A dictionary containing the result of the operation.
+        """
+        files: dict[str, tuple] = {
+            "messaging_product": (None, "whatsapp"),
+        }
+        if subject:
+            files["subject"] = (None, subject)
+        if description:
+            files["description"] = (None, description)
+        if profile_picture_file:
+            files["profile_picture_file"] = (
+                "profile.jpg",
+                profile_picture_file,
+                "image/jpeg",
+            )
+
+        return self._make_request(
+            method="POST",
+            endpoint=f"/{group_id}",
+            files=files,
+        )
+
     def get_group_join_requests(
         self, group_id: str, pagination: dict[str, str] | None = None
     ) -> dict:
         """
         Get all join requests for a group.
 
-        - Read more at `https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#get-join-requests>`_.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#get-join-requests>`_.
 
         Args:
             group_id: The ID of the group to get join requests from.
@@ -2384,7 +2425,7 @@ class GraphAPI:
         """
         Approve join requests for a group.
 
-        - Read more at `https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#approve-join-requests>`_.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#approve-join-requests>`_.
 
         Args:
             group_id: The ID of the group to approve join requests for.
@@ -2405,7 +2446,7 @@ class GraphAPI:
         """
         Reject join requests for a group.
 
-        - Read more at `https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#reject-join-requests>`_.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#reject-join-requests>`_.
 
         Args:
             group_id: The ID of the group to reject join requests for.
@@ -2424,7 +2465,7 @@ class GraphAPI:
         """
         Get the invite link for a group.
 
-        - Read more at `https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#get-group-invite-link>`_.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#get-group-invite-link>`_.
 
         Args:
             group_id: The ID of the group to get the invite link for.
@@ -2441,7 +2482,7 @@ class GraphAPI:
         """
         Reset the invite link for a group.
 
-        - Read more at `https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#reset-group-invite-link>`_.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#reset-group-invite-link>`_.
 
         Args:
             group_id: The ID of the group to reset the invite link for.
@@ -2459,7 +2500,7 @@ class GraphAPI:
         """
         Delete a group.
 
-        - Read more at `https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#delete-group>`_.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#delete-group>`_.
 
         Args:
             group_id: The ID of the group to delete.
@@ -2473,16 +2514,16 @@ class GraphAPI:
         )
 
     def remove_group_participants(
-        self, group_id: str, user_ids: tuple[str, ...]
+        self, group_id: str, participants: tuple[str, ...]
     ) -> dict:
         """
         Remove participants from a group.
 
-        - Read more at `https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#remove-participants>`_.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#remove-participants>`_.
 
         Args:
             group_id: The ID of the group to remove participants from.
-            user_ids: A tuple of user IDs to remove from the group.
+            participants: A tuple of user IDs to remove from the group.
 
         Returns:
             A dictionary containing the result of the operation.
@@ -2490,10 +2531,10 @@ class GraphAPI:
         return self._make_request(
             method="DELETE",
             endpoint=f"/{group_id}/participants",
-            json={"messaging_product": "whatsapp", "participants": user_ids},
+            json={"messaging_product": "whatsapp", "participants": participants},
         )
 
-    def get_group(
+    def get_group_info(
         self,
         group_id: str,
         fields: tuple[str, ...] | None = None,

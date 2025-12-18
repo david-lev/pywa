@@ -3,6 +3,8 @@ from __future__ import annotations
 import pathlib
 import warnings
 
+from .groups import Group
+
 """This module contains the types related to messages."""
 
 __all__ = ["Message"]
@@ -47,6 +49,7 @@ class Message(BaseUserUpdate):
         metadata: The metadata of the message (to which phone number it was sent).
         type: The message type (See :class:`MessageType`).
         from_user: The user who sent the message.
+        chat: The group where the message was sent (if any).
         timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
         reply_to_message: The message to which this message is a reply (if any).
         forwarded: Whether the message was forwarded.
@@ -71,6 +74,7 @@ class Message(BaseUserUpdate):
 
     type: MessageType
     reply_to_message: ReplyToMessage | None
+    chat: Group | None = None
     forwarded: bool
     forwarded_many_times: bool
     text: str | None = None
@@ -225,6 +229,9 @@ class Message(BaseUserUpdate):
             type=msg_type,
             **msg_content,
             from_user=usr,
+            chat=Group(_client=client, id=msg["group_id"])
+            if "group_id" in msg
+            else None,
             timestamp=timestamp,
             metadata=metadata,
             forwarded=context.get("forwarded", False)
@@ -458,3 +465,11 @@ class Message(BaseUserUpdate):
                 )
             case _:
                 raise ValueError(f"Message of type {self.type} cannot be copied.")
+
+    def pin(self, *, expiration: datetime.timedelta | int) -> SentMessage:
+        if self.group is None:
+            raise ValueError("Only messages in groups can be pinned.")
+
+    def unpin(self) -> SentMessage:
+        if self.group is None:
+            raise ValueError("Only messages in groups can be unpinned.")

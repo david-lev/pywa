@@ -100,6 +100,12 @@ from .types import (
 )
 from .types.base_update import BaseUpdate
 from .types.calls import CallPermissions, SessionDescription
+from .types.groups import (
+    GroupJoinApprovalMode,
+    GroupDetails,
+    GroupJoinApprovalsResult,
+    GroupInviteLink,
+)
 from .types.sent_update import (
     InitiatedCall,
     SentVoiceMessage,
@@ -3812,7 +3818,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             verify_token=verify_token,
         ))
 
-    def delete_waba_callback_url(self, *,waba_id: str | int | None = None) -> SuccessResult:
+    def delete_waba_callback_url(self, *, waba_id: str | int | None = None) -> SuccessResult:
         """
         Delete the callback URL for the WhatsApp Business account.
 
@@ -3851,7 +3857,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
         ))
 
-    def delete_phone_callback_url(self, *,phone_id: str | int | None = None) -> SuccessResult:
+    def delete_phone_callback_url(self, *, phone_id: str | int | None = None) -> SuccessResult:
         """
         Delete the callback URL for the phone.
 
@@ -4010,7 +4016,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             An InitiatedCall object containing the details of the initiated call.
         """
         return InitiatedCall.from_sent_update(client=self, update=self.api.initiate_call(
-            phone_id=(from_phone_id := helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id")),
+            phone_id=(from_phone_id := helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id",
+                                                           client_arg="phone_id")),
             to=(to_wa_id := str(to)),
             sdp=sdp.to_dict(),
             biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
@@ -4131,3 +4138,258 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
             call_id=call_id,
         ))
+
+    def create_group(
+            self,
+            *,
+            subject: str,
+            description: str | None = None,
+            join_approval_mode: GroupJoinApprovalMode | None = None,
+            phone_id: str | int | None = None,
+    ) -> None:
+        """
+        Create a new group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#create-group>`_.
+
+        Args:
+            subject: Group subject, Maximum 128 characters. Whitespace is trimmed.
+            description: Group description. Maximum 2048 characters.
+            join_approval_mode: Indicates if WhatsApp users who click the invitation link can join the group with or without being approved first. Default is ``AUTO_APPROVE``.
+            phone_id: The phone ID to create the group for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            None
+        """
+        self.api.create_group(
+            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
+            subject=subject,
+            description=description,
+            join_approval_mode=join_approval_mode.value if join_approval_mode else None,
+        )
+
+    def get_group(
+            self,
+            group_id: str,
+    ) -> GroupDetails:
+        """
+        Get details about a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#get-group-info>`_.
+
+        Args:
+            group_id: The ID of the group.
+
+        Returns:
+            The group details.
+        """
+        return GroupDetails.from_dict(
+            data=self.api.get_group_info(
+                group_id=group_id,
+                fields=GroupDetails._api_fields(),
+            ),
+            client=self,
+        )
+
+    def get_groups(
+            self,
+            *,
+            phone_id: str | int | None = None,
+            pagination: Pagination | None = None,
+    ) -> Result[GroupDetails]:
+        """
+        Get groups associated with the WhatsApp Business account.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> groups = wa.get_groups(pagination=Pagination(limit=10))
+            ... for group in groups:
+            ...     print(f'Group {group.id}: {group}')
+
+        Args:
+            phone_id: The phone ID to get the groups for (optional, if not provided, the client's phone ID will be used).
+            pagination: The pagination parameters (optional).
+
+        Returns:
+            Result object containing the groups.
+        """
+        return Result(
+            wa=self,
+            response=self.api.get_active_groups(
+                phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
+                pagination=pagination.to_dict() if pagination else None,
+            ),
+            item_factory=functools.partial(GroupDetails.from_dict, client=self),
+        )
+
+    def delete_group(
+            self,
+            group_id: str,
+    ) -> None:
+        """
+        Delete a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#delete-group>`_.
+
+        Args:
+            group_id: The ID of the group to delete.
+
+        Returns:
+            None
+        """
+        self.api.delete_group(
+            group_id=group_id,
+        )
+
+    def get_group_join_requests(
+            self,
+            group_id: str,
+            *,
+            pagination: Pagination | None = None,
+    ) -> GroupJoinApprovalsResult:
+        """
+        Get join requests for a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#get-join-requests>`_.
+
+        Args:
+            group_id: The ID of the group.
+            pagination: The pagination parameters (optional).
+
+        Returns:
+            A GroupJoinApprovalsResult object containing the join requests.
+        """
+        return GroupJoinApprovalsResult(
+            wa=self,
+            response=self.api.get_group_join_requests(
+                group_id=group_id,
+                pagination=pagination.to_dict() if pagination else None,
+            ),
+            group_id=group_id
+        )
+
+    def approve_group_join_requests(
+            self,
+            group_id: str,
+            request_ids: Iterable[str],
+    ) -> None:
+        """
+        Approve join requests for a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#approve-join-requests>`_.
+
+        Args:
+            group_id: The ID of the group.
+            request_ids: The IDs of the join requests to approve.
+
+        Returns:
+            None
+        """
+        self.api.approve_group_join_requests(
+            group_id=group_id,
+            request_ids=tuple(request_ids),
+        )
+
+    def reject_group_join_requests(
+            self,
+            group_id: str,
+            request_ids: Iterable[str],
+    ) -> None:
+        """
+        Reject join requests for a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#reject-join-requests>`_.
+
+        Args:
+            group_id: The ID of the group.
+            request_ids: The IDs of the join requests to reject.
+
+        Returns:
+            None
+        """
+        self.api.reject_group_join_requests(
+            group_id=group_id,
+            request_ids=tuple(request_ids),
+        )
+
+    def get_group_invite_link(
+            self,
+            group_id: str,
+    ) -> GroupInviteLink:
+        """
+        Get the invite link for a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#get-group-invite-link>`_.
+
+        Args:
+            group_id: The ID of the group.
+
+        Returns:
+            The group invite link.
+        """
+        return GroupInviteLink(
+            _client=self,
+            _group_id=group_id,
+            link=self.api.get_group_invite_link(group_id=group_id)["invite_link"]
+        )
+
+    def reset_group_invite_link(
+            self,
+            group_id: str,
+    ) -> GroupInviteLink:
+        """
+        Reset the invite link for a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#reset-group-invite-link>`_.
+
+        Args:
+            group_id: The ID of the group.
+
+        Returns:
+            The new group invite link.
+        """
+        return GroupInviteLink(
+            _client=self,
+            _group_id=group_id,
+            link=self.api.reset_group_invite_link(group_id=group_id)["invite_link"]
+        )
+
+    def remove_group_participants(
+            self,
+            group_id: str,
+            participants: Iterable[str],
+    ) -> None:
+        """
+        Remove participants from a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#remove-participants>`_.
+
+        Args:
+            group_id: The ID of the group.
+            participants: The WhatsApp IDs of the participants to remove.
+
+        Returns:
+            None
+        """
+        self.api.remove_group_participants(
+            group_id=group_id,
+            participants=tuple(participants),
+        )
+
+    def update_group_settings(
+            self,
+            group_id: str,
+            *,
+            subject: str | None = None,
+            description: str | None = None,
+            profile_picture: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
+
+    ) -> None:
+        """
+        Update group settings.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#update-group-settings>`_.
+
+
+        """

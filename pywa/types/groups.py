@@ -3,16 +3,37 @@ from __future__ import annotations
 import dataclasses
 import datetime
 import functools
+from typing import TYPE_CHECKING
 
-from pywa.types import User, Pagination, Result
-from pywa import utils, WhatsApp
+from pywa.types.others import User, Pagination, Result
+from .. import utils
+
+if TYPE_CHECKING:
+    from pywa import WhatsApp
 
 
-class JoinApprovalMode(utils.StrEnum):
+class GroupJoinApprovalMode(utils.StrEnum):
+    """
+    Indicates if WhatsApp users who click the invitation link can join the group with or without being approved first.
+
+    Attributes:
+        AUTO_APPROVE: Indicates WhatsApp users can join the group without approval.
+        APPROVAL_REQUIRED: Indicates WhatsApp users must be approved via `join request <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#groups-with-join-requests>`_ before they can access the group.
+    """
+
     AUTO_APPROVE = "auto_approve"
     APPROVAL_REQUIRED = "approval_required"
 
     UNKNOWN = "UNKNOWN"
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class Group:
+    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
+    id: str
+
+    def get_details(self) -> GroupDetails:
+        return self._client.get_group(group_id=self.id)
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -24,8 +45,8 @@ class GroupDetails(utils.APIObject):
     suspended: bool
     description: str | None
     total_participant_count: int
-    participants: list[Participant]
-    join_approval_mode: JoinApprovalMode
+    participants: list[GroupParticipant]
+    join_approval_mode: GroupJoinApprovalMode
 
     @classmethod
     def from_dict(cls, data: dict, client: WhatsApp) -> GroupDetails:
@@ -40,13 +61,13 @@ class GroupDetails(utils.APIObject):
             description=data.get("description"),
             total_participant_count=data["total_participant_count"],
             participants=[
-                Participant.from_dict(
+                GroupParticipant.from_dict(
                     participant_data | {"_group_id": data["id"]},
                     client,
                 )
                 for participant_data in data["participants"]
             ],
-            join_approval_mode=JoinApprovalMode(data["join_approval_mode"]),
+            join_approval_mode=GroupJoinApprovalMode(data["join_approval_mode"]),
         )
 
     def get_invite_link(self) -> GroupInviteLink: ...
@@ -66,7 +87,7 @@ class GroupDetails(utils.APIObject):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Participant(User):
+class GroupParticipant(User):
     _group_id: str = dataclasses.field(repr=False)
 
     def remove(self): ...
@@ -103,7 +124,7 @@ class GroupJoinRequest:
         )
 
 
-class JoinApprovalsResult(Result[GroupJoinRequest]):
+class GroupJoinApprovalsResult(Result[GroupJoinRequest]):
     def __init__(
         self,
         wa: WhatsApp,
