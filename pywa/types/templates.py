@@ -930,6 +930,7 @@ class TemplateBaseComponent(abc.ABC):
     """Base class for all template components"""
 
     type: ComponentType
+    _need_params: int = 0
 
     @classmethod
     def from_dict(cls, data: dict) -> TemplateBaseComponent:
@@ -1006,6 +1007,7 @@ class TapTargetConfiguration(BaseParams):
 class BaseHeaderComponent(TemplateBaseComponent, abc.ABC):
     type = ComponentType.HEADER
     format: HeaderFormatType
+    _need_params = 1
 
 
 class _TextParam(abc.ABC):
@@ -1062,7 +1064,7 @@ class DateTime(_TextParam):
 class _BaseTextComponent:
     type: Literal[ComponentType.HEADER, ComponentType.BODY]
 
-    __slots__ = ("text", "example", "param_format")
+    __slots__ = ("text", "example", "param_format", "_need_params")
 
     def __init__(self, text: str, *positionals_examples, **named_examples):
         """
@@ -1092,6 +1094,8 @@ class _BaseTextComponent:
             self.param_format = None
             self.example = None
             self.text = text
+
+        self._need_params = 1 if self.example is not None else 0
 
     def __repr__(self):
         if self.param_format == ParamFormat.POSITIONAL:
@@ -1839,9 +1843,10 @@ class HeaderProduct(BaseHeaderComponent):
 
 class BaseBodyComponent(TemplateBaseComponent, abc.ABC):
     type: ComponentType
+    _need_params = 1
 
 
-class BodyText(_BaseTextComponent):
+class BodyText(_BaseTextComponent, BaseBodyComponent):
     """
     The body component represents the core text of your message template and is a text-only template component. It is required for all templates.
 
@@ -1951,7 +1956,8 @@ class FooterText(BaseFooterComponent):
 # =========== BUTTONS ===========
 
 
-class BaseButtonComponent(TemplateBaseComponent, abc.ABC): ...
+class BaseButtonComponent(TemplateBaseComponent, abc.ABC):
+    _need_params = 1
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -1984,6 +1990,10 @@ class Buttons(TemplateBaseComponent):
     @classmethod
     def from_dict(cls, data: dict) -> Buttons:
         return cls(buttons=[_parse_component(button) for button in data["buttons"]])
+
+    @property
+    def _need_params(self) -> int:
+        return sum(button._need_params for button in self.buttons)
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -2235,6 +2245,7 @@ class PhoneNumberButton(BaseButtonComponent):
         phone_number: Alphanumeric string. Business phone number to be called when the user taps the button.
     """
 
+    _need_params = 0
     type: ComponentType = dataclasses.field(
         default=ComponentType.PHONE_NUMBER,
         init=False,
@@ -2280,6 +2291,7 @@ class VoiceCallButton(BaseButtonComponent):
         text: Button label text. 25 characters maximum.
     """
 
+    _need_params = 0
     type: ComponentType = dataclasses.field(
         default=ComponentType.VOICE_CALL,
         init=False,
@@ -2426,6 +2438,7 @@ class URLButton(BaseButtonComponent):
         self.url = url
         self.example = example
         self.app_deep_link = app_deep_link
+        self._need_params = 1 if self.example is not None else 0
 
     def to_dict(self) -> dict:
         data = {
@@ -2718,6 +2731,7 @@ class SPMButton(BaseButtonComponent):
         text: Button label text. 25 characters maximum.
     """
 
+    _need_params = 0
     type: ComponentType = dataclasses.field(
         default=ComponentType.SPM,
         init=False,
@@ -2738,6 +2752,7 @@ class CallPermissionRequestButton(BaseButtonComponent):
         >>> call_permission_button = CallPermissionRequestButton(text="Request Call Permission")
     """
 
+    _need_params = 0
     type: ComponentType = dataclasses.field(
         default=ComponentType.CALL_PERMISSION_REQUEST,
         init=False,
@@ -2834,6 +2849,7 @@ class BaseOTPButton(_BaseOTPButtonParams, BaseButtonComponent, abc.ABC):
     This class is not meant to be instantiated directly.
     """
 
+    _need_params = 1
     type: ComponentType = dataclasses.field(
         default=ComponentType.OTP,
         init=False,
@@ -3068,6 +3084,7 @@ class LimitedTimeOffer(TemplateBaseComponent):
     def __init__(self, *, text: str, has_expiration: bool | None = None):
         self.text = text
         self.has_expiration = has_expiration
+        self._need_params = 1 if has_expiration else 0
 
     def __repr__(self):
         return f"LimitedTimeOffer(text={self.text!r}, has_expiration={self.has_expiration!r})"
@@ -3220,6 +3237,10 @@ class Carousel(TemplateBaseComponent):
             for card in self.cards:
                 card.clear_media_cache()
 
+    @property
+    def _need_params(self) -> int:
+        return 1 if any(card._need_params for card in self.cards) else 0
+
     def params(self=None, *, cards: list[CarouselCard._Params]) -> Carousel._Params:
         """
         Fill the parameters for the carousel component.
@@ -3285,6 +3306,10 @@ class CarouselCard:
             for param in self.params:
                 if hasattr(param, "clear_media_cache"):
                     param.clear_media_cache()
+
+    @property
+    def _need_params(self) -> int:
+        return sum(comp._need_params for comp in self.components)
 
     @staticmethod
     def params(*, params: list[BaseParams], index: int) -> CarouselCard._Params:
