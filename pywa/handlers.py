@@ -64,7 +64,6 @@ import collections
 import dataclasses
 import functools
 import logging
-import warnings
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -93,8 +92,6 @@ from .types import (
     FlowResponse,
     ChatOpened,
     CallbackData,
-    FlowButton,
-    FlowActionType,
     CallConnect,
     CallTerminate,
     CallStatus,

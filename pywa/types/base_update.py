@@ -48,7 +48,6 @@ if TYPE_CHECKING:
         CallbackData,
         CallPermissionRequestButton,
     )
-    from .message import Message
     from .templates import TemplateLanguage, BaseParams
     from .media import Media
 

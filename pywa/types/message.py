@@ -25,7 +25,6 @@ from .others import (
     ProductsSection,
     Reaction,
     ReplyToMessage,
-    User,
     Referral,
     Unsupported,
 )

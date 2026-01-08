@@ -2,15 +2,12 @@
 
 import logging
 from contextlib import _GeneratorContextManager
-from typing import Any, TYPE_CHECKING, BinaryIO, Iterator
+from typing import Any, BinaryIO, Iterator
 
 import httpx
 
 import pywa
 from .errors import WhatsAppError
-
-if TYPE_CHECKING:
-    from .client import WhatsApp
 
 
 _logger = logging.getLogger(__name__)

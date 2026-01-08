@@ -6,7 +6,6 @@ __all__ = ["WhatsApp"]
 
 import bisect
 import collections
-import contextlib
 import datetime
 import functools
 import hashlib
@@ -15,7 +14,7 @@ import logging
 import mimetypes
 import pathlib
 import warnings
-from types import NoneType, ModuleType
+from types import ModuleType
 from typing import BinaryIO, Iterable, Literal, Any, Callable, Iterator, Generator
 
 import httpx
@@ -63,7 +62,6 @@ from .types import (
     ProductsSection,
     SectionList,
     FlowButton,
-    FlowStatus,
     BusinessPhoneNumber,
     Command,
     ChatOpened,
@@ -83,11 +81,6 @@ from .types import (
     TemplateCategoryUpdate,
     TemplateQualityUpdate,
     TemplateComponentsUpdate,
-    Image,
-    Video,
-    Sticker,
-    Document,
-    Audio,
     BusinessPhoneNumberSettings,
     CallConnect,
     CallTerminate,
@@ -110,7 +103,6 @@ from .types.sent_update import (
 from .types.flows import (
     FlowJSON,
     FlowDetails,
-    FlowValidationError,
     FlowAsset,
     CreatedFlow,
     FlowCompletion,
@@ -123,9 +115,6 @@ from .types.others import (
     InteractiveType,
     UsersBlockedResult,
     UsersUnblockedResult,
-    Reaction,
-    Location,
-    Order,
     SuccessResult,
     WhatsAppBusinessAccount,
     StorageConfiguration,

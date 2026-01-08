@@ -98,7 +98,7 @@ __all__ = [
 import re
 from typing import TYPE_CHECKING, Callable, Iterable, TypeVar, Awaitable, Any
 
-from .errors import ReEngagementMessage, WhatsAppError
+from .errors import WhatsAppError
 from . import utils
 from .types import Message as _Msg
 from .types import CallbackButton as _Clb

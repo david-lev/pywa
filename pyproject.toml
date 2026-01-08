@@ -50,8 +50,26 @@ cryptography = ["cryptography"]
 "Funding" = "https://github.com/sponsors/david-lev"
 "Changelog" = "https://github.com/david-lev/pywa/blob/master/CHANGELOG.md"
 
+
+[tool.ruff]
+extend-exclude = [
+    "pywa*/__init__.py",
+]
+
 [tool.ruff.lint]
-ignore = ["E731", "F401", "E402", "F405"]
+select = [
+    "E4",
+    "E7",
+    "E9",
+    "F",
+    "T",
+    "B",
+    "C4"
+]
+ignore = [
+    "E402",
+    "F405",
+]
 
 
 [tool.coverage.run]

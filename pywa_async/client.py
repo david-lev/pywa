@@ -71,11 +71,6 @@ from .types import (
     FlowCompletion,
     UserMarketingPreferences,
     TemplateStatusUpdate,
-    Image,
-    Video,
-    Document,
-    Sticker,
-    Audio,
     BusinessPhoneNumberSettings,
     CallConnect,
     CallTerminate,
@@ -139,7 +134,7 @@ from .types.templates import (
     Buttons,
     UpdatedTemplate,
 )
-from .types.media import Media, UploadedBy
+from .types.media import Media
 from .types.flows import FlowJSONUpdateResult
 from .types.calls import CallPermissions, SessionDescription
 from .types.others import (

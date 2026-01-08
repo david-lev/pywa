@@ -1,5 +1,4 @@
 import dataclasses
-import random
 from typing import Callable, TypeVar, cast
 
 import pytest

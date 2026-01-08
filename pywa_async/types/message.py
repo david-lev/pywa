@@ -11,7 +11,7 @@ from pywa.types.message import Message as _Message  # noqa MUST BE IMPORTED FIRS
 
 
 import dataclasses
-from typing import TYPE_CHECKING, Iterable, Callable, Any
+from typing import TYPE_CHECKING, Iterable
 
 from .base_update import BaseUserUpdateAsync  # noqa
 from .callback import Button, URLButton, SectionList, VoiceCallButton, FlowButton
@@ -19,10 +19,6 @@ from .media import Audio, Document, Image, Sticker, Video
 from .others import (
     MessageType,
     ProductsSection,
-    Location,
-    Order,
-    Reaction,
-    Contact,
 )
 
 if TYPE_CHECKING:

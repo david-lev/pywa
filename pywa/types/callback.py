@@ -26,7 +26,6 @@ from typing import (
     Generic,
     Iterable,
     TypeVar,
-    cast,
     get_origin,
     Union,
     get_args,
@@ -40,7 +39,6 @@ from .. import utils, _helpers as helpers
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
-    from .templates import Template
 
 
 class CallbackData:

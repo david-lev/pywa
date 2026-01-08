@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import warnings
 
 from .callback import _CallbackDataT
 
@@ -26,7 +25,7 @@ from .. import utils
 from ..errors import WhatsAppError
 
 from .base_update import BaseUserUpdate, RawUpdate  # noqa
-from .others import Metadata, User
+from .others import Metadata
 
 if TYPE_CHECKING:
     from ..client import WhatsApp

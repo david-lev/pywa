@@ -15,8 +15,6 @@ from pywa.types.flows import (
     Layout,
     Form,
     TextInput,
-    InputType,
-    FlowActionType,
     DataSource,
     ScreenDataRef,
     ComponentRef,

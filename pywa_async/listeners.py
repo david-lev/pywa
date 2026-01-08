@@ -10,19 +10,11 @@ from pywa.listeners import (
 )  # noqa MUST BE IMPORTED FIRST
 
 import asyncio
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING
 
-from pywa import utils, _helpers as helpers
+from pywa import utils
 from pywa.types.base_update import BaseUpdate
 from .filters import Filter
-from .types import (
-    Message,
-    CallbackButton,
-    CallbackSelection,
-    MessageStatus,
-    ChatOpened,
-    FlowCompletion,
-)
 from .types.base_update import BaseUserUpdateAsync
 
 if TYPE_CHECKING:

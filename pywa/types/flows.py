@@ -1297,7 +1297,8 @@ class FlowJSON:
         )
 
 
-_TO_DICT_FACTORY = lambda d: {k.replace("_", "-"): v for (k, v) in d if v is not None}
+def _to_dict_factory(d: list[tuple[str, Any]]) -> dict[str, Any]:
+    return {k.replace("_", "-"): v for (k, v) in d if v is not None}
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1341,7 +1342,7 @@ class DataSource:
         """Called when used in :class:`FlowResponse`."""
         return dataclasses.asdict(
             obj=self,
-            dict_factory=_TO_DICT_FACTORY,
+            dict_factory=_to_dict_factory,
         )
 
 
@@ -3034,7 +3035,7 @@ class NavigationItem:
     on_click_action: NavigateAction | DataExchangeAction | None = None
 
     def to_dict(self) -> dict:
-        return dataclasses.asdict(obj=self, dict_factory=_TO_DICT_FACTORY)
+        return dataclasses.asdict(obj=self, dict_factory=_to_dict_factory)
 
 
 _FlowResponseDataType: TypeAlias = dict[

@@ -1,6 +1,5 @@
 """This module contains the Server class, which is used to set up a webhook for receiving incoming updates."""
 
-import json
 import logging
 import threading
 from typing import TYPE_CHECKING, Callable

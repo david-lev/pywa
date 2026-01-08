@@ -18,13 +18,9 @@ from pywa.types.message_status import MessageStatus as _MessageStatus  # noqa MU
 
 
 import dataclasses
-from typing import TYPE_CHECKING
 
 from .base_update import BaseUserUpdateAsync  # noqa
 from .callback import _CallbackDataT
-
-if TYPE_CHECKING:
-    from pywa.client import WhatsApp
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
