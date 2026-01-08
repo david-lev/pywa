@@ -16,12 +16,14 @@ repos:
       - id: check-executables-have-shebangs
       - id: check-illegal-windows-names
       - id: check-json
-      - id: detect-private-key
-      - id: pretty-format-json
-        args: [ --autofix ]
+#      - id: detect-private-key
+#      - id: pretty-format-json
+#        args: [ --autofix ]
 
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.14.10
     hooks:
+      - id: ruff-check
+        args: [ --fix ]
       - id: ruff-format

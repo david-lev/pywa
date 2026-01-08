@@ -222,7 +222,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
                     continue
                 raise AssertionError(
                     f"Method {method_name} is not overwritten in {async_obj}"
-                )
+                ) from None
 
 
 def test_same_signature(overrides):
@@ -364,7 +364,7 @@ def _check_docs(
         except ValueError:  # different number of lines
             raise AssertionError(
                 f"Method {method_name} has different docstrings in {async_obj}"
-            )
+            ) from None
 
 
 def test_all_handlers_to_updates_are_overwritten_in_async(overrides):

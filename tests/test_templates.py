@@ -28,7 +28,7 @@ def test_templates_to_json(caplog):
             )
             for template_name, template_json in json_examples.items():
                 example_obj: Template = getattr(obj_examples, template_name)
-                example_dict: dict = json_examples[template_name]
+                # example_dict: dict = json_examples[template_name]
 
                 assert (
                     json.loads(
@@ -40,7 +40,7 @@ def test_templates_to_json(caplog):
                             )
                         ).to_json()
                     )
-                    == example_dict
+                    == template_json
                 ), (
                     f"Template {templates_dir.name=} {template_name=} does not match example JSON."
                 )

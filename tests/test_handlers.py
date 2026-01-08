@@ -125,7 +125,9 @@ def test_flow_request_handler():
     assert hasattr(on_flow_class, _flow_request_handler_attr)
 
     wa = WhatsApp(server=None, verify_token="1234567890", business_private_key="...")
-    on_flow = lambda _, __: ...
+
+    def on_flow(_, __): ...
+
     on_flow_instance = wa.get_flow_request_handler(
         endpoint="/flow",
         callback=on_flow,
@@ -161,7 +163,9 @@ def test_remove_handlers():
 
 def test_remove_callbacks():
     wa = WhatsApp(server=None, verify_token="xyzxyz")
-    c = lambda _, __: None
+
+    def c(_, __): ...
+
     mh = handlers.MessageHandler(
         callback=c,
         filters=filters.text,
@@ -177,7 +181,8 @@ def test_remove_callbacks():
 
 
 def test_get_flow_request_handler():
-    c = lambda _, __: None
+    def c(_, __): ...
+
     h = FlowRequestHandler(
         callback=c,
         endpoint="/flow",

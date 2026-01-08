@@ -45,9 +45,8 @@ def test_flows_to_json():
                 obj_examples = importlib.import_module(
                     f"tests.data.flows.{version.name}.examples"
                 )
-                for flow_name, flow_json in json_examples.items():
+                for flow_name, example_dict in json_examples.items():
                     obj_dict = json.loads(getattr(obj_examples, flow_name).to_json())
-                    example_dict = json_examples[flow_name]
                     assert obj_dict["version"] == version.name.replace("_", ".")
                     assert example_dict["version"] == version.name.replace("_", ".")
                     assert obj_dict == example_dict, (

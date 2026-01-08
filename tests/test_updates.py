@@ -150,7 +150,7 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
 
 
 def test_types():
-    for client, update_files in CLIENTS.items():
+    for update_files in CLIENTS.values():
         for file, updates in update_files.items():
             for update_name, update in updates.items():
                 for test_func in TESTS[file.stem][update_name]:
@@ -159,4 +159,4 @@ def test_types():
                     except AssertionError as e:
                         raise AssertionError(
                             f"Failed to assert update_name='{update_name}' error={e}"
-                        )
+                        ) from e

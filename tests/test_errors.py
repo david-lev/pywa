@@ -42,4 +42,6 @@ def test_error_codes():
             assert exc.fbtrace_id == data.get("fbtrace_id")
             assert exc.href == data.get("href")
         except AssertionError:
-            raise AssertionError(f"Failed to assert exc={exc!r}, data={data!r}")
+            raise AssertionError(
+                f"Failed to assert exc={exc!r}, data={data!r}"
+            ) from None
