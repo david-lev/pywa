@@ -4,17 +4,17 @@ import logging
 from typing import TYPE_CHECKING
 
 from pywa.types.base_update import BaseUpdate
-from . import errors, handlers
-from . import utils
+
+from . import errors, handlers, utils
 from .handlers import (
-    RawUpdateHandler,
-    Handler,
     EncryptedFlowRequestType,
+    Handler,
+    RawUpdateHandler,
 )
 from .types import (
     ContinueHandling,
-    StopHandling,
     RawUpdate,
+    StopHandling,
 )
 
 _logger = logging.getLogger(__name__)

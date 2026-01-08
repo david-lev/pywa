@@ -46,17 +46,17 @@ import dataclasses
 import datetime
 from typing import TYPE_CHECKING, Generic
 
-from .base_update import BaseUserUpdate, BaseUpdate, RawUpdate, _ClientShortcuts  # noqa
-from .others import (
-    Metadata,
-    SuccessResult,
-    ReplyToMessage,
-    StorageConfiguration,
-    UserIdentityChangeSettings,
-)
-from .callback import _CallbackDataT, CallbackData
 from .. import utils
 from ..errors import WhatsAppError
+from .base_update import BaseUpdate, BaseUserUpdate, RawUpdate, _ClientShortcuts  # noqa
+from .callback import CallbackData, _CallbackDataT
+from .others import (
+    Metadata,
+    ReplyToMessage,
+    StorageConfiguration,
+    SuccessResult,
+    UserIdentityChangeSettings,
+)
 
 if TYPE_CHECKING:
     from ..client import WhatsApp

@@ -96,30 +96,29 @@ __all__ = [
 ]
 
 import re
-from typing import TYPE_CHECKING, Callable, Iterable, TypeVar, Awaitable, Any
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterable, TypeVar
 
-from .errors import WhatsAppError
 from . import utils
-from .types import Message as _Msg
+from .errors import WhatsAppError
 from .types import CallbackButton as _Clb
 from .types import CallbackSelection as _Cls
+from .types import CallConnect as _Cc
+from .types import CallPermissionUpdate as _Cpu
+from .types import CallStatus as _Cst
+from .types import CallTerminate as _Ct
+from .types import ChatOpened as _Co
+from .types import FlowCompletion as _Fc
+from .types import IdentityChange as _Ic
+from .types import Message as _Msg
 from .types import MessageStatus as _Ms
 from .types import MessageStatusType as _Mst
 from .types import MessageType as _Mt
-from .types import TemplateStatusUpdate as _Ts
-from .types import TemplateQualityUpdate as _Tq
+from .types import PhoneNumberChange as _Pnc
 from .types import TemplateCategoryUpdate as _Tc
 from .types import TemplateComponentsUpdate as _Tcc
-from .types import FlowCompletion as _Fc
-from .types import ChatOpened as _Co
-from .types import CallConnect as _Cc
-from .types import CallStatus as _Cst
-from .types import CallPermissionUpdate as _Cpu
-from .types import CallTerminate as _Ct
-from .types import PhoneNumberChange as _Pnc
-from .types import IdentityChange as _Ic
+from .types import TemplateQualityUpdate as _Tq
+from .types import TemplateStatusUpdate as _Ts
 from .types import UserMarketingPreferences as _Mup
-
 from .types.base_update import (
     BaseUpdate as _BaseUpdate,
 )  # noqa

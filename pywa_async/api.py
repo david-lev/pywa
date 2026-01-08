@@ -1,12 +1,11 @@
 """The internal API for the WhatsApp client."""
 
 from contextlib import _AsyncGeneratorContextManager
-
-from pywa.api import *  # noqa MUST BE IMPORTED FIRST
-
 from typing import Any, AsyncIterator
 
 import httpx
+
+from pywa.api import *  # noqa MUST BE IMPORTED FIRST
 
 from .errors import WhatsAppError
 

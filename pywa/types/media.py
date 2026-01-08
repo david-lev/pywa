@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 __all__ = [
     "Media",
     "Image",
@@ -21,8 +20,8 @@ import mimetypes
 import pathlib
 from typing import TYPE_CHECKING, Generator
 
-from .others import SuccessResult
 from .. import utils
+from .others import SuccessResult
 
 if TYPE_CHECKING:
     from ..client import WhatsApp

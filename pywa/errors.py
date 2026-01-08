@@ -3,10 +3,10 @@ from __future__ import annotations
 """
 This module contains the errors that can be raised by the WhatsApp Cloud API or incoming error from the webhook.
 """
-import warnings
 import dataclasses
 import functools
-from typing import Iterable, ClassVar
+import warnings
+from typing import ClassVar, Iterable
 
 import httpx
 

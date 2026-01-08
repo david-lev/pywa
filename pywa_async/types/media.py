@@ -13,24 +13,37 @@ __all__ = [
     "UploadedBy",
 ]
 
+import dataclasses
 import datetime
 import pathlib
+from typing import TYPE_CHECKING, AsyncGenerator
 
-from pywa.types.others import SuccessResult
 from pywa.types.media import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.media import (
-    Media as _Media,
-    Image as _Image,
-    Video as _Video,
-    Sticker as _Sticker,
-    Document as _Document,
-    Audio as _Audio,
-    MediaURL as _MediaURL,
     URL_EXPIRATION_MINUTES,
+)
+from pywa.types.media import (
+    Audio as _Audio,
+)
+from pywa.types.media import (
+    Document as _Document,
+)
+from pywa.types.media import (
+    Image as _Image,
+)
+from pywa.types.media import (
+    Media as _Media,
 )  # noqa MUST BE IMPORTED FIRST
-
-import dataclasses
-from typing import TYPE_CHECKING, AsyncGenerator
+from pywa.types.media import (
+    MediaURL as _MediaURL,
+)
+from pywa.types.media import (
+    Sticker as _Sticker,
+)
+from pywa.types.media import (
+    Video as _Video,
+)
+from pywa.types.others import SuccessResult
 
 from .. import utils
 

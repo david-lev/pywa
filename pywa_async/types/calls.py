@@ -20,8 +20,8 @@ from .callback import CallbackData
 from .others import SuccessResult
 
 if TYPE_CHECKING:
-    from .sent_update import InitiatedCall
     from ..client import WhatsApp as WhatsAppAsync
+    from .sent_update import InitiatedCall
 
 
 class _CallShortcutsAsync:

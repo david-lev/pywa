@@ -10,33 +10,33 @@ import json
 import logging
 import pathlib
 import re
-from urllib import parse as urllib_parse
 import warnings
 from typing import (
-    Iterable,
     TYPE_CHECKING,
     Any,
     BinaryIO,
+    Generic,
+    Iterable,
     Literal,
     Type,
-    Generic,
     TypeAlias,
     TypeVar,
 )
+from urllib import parse as urllib_parse
 
 import httpx
 
-from .media import ArrivedMedia
 from .. import utils
 from .base_update import BaseUserUpdate, RawUpdate  # noqa
+from .media import ArrivedMedia
 from .others import (
-    WhatsAppBusinessAccount,
     FacebookApplication,
     MessageType,
     Metadata,
     ReplyToMessage,
     Result,
     SuccessResult,
+    WhatsAppBusinessAccount,
 )
 
 if TYPE_CHECKING:

@@ -8,9 +8,12 @@ import dataclasses
 
 from pywa.types.system import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.system import (
-    PhoneNumberChange as _UserChangedNumber,
     IdentityChange as _UserIdentityChanged,
 )
+from pywa.types.system import (
+    PhoneNumberChange as _UserChangedNumber,
+)
+
 from .base_update import BaseUserUpdateAsync  # noqa
 
 

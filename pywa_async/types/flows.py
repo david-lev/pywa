@@ -2,24 +2,27 @@
 
 from __future__ import annotations
 
+import dataclasses
+import pathlib
+from typing import TYPE_CHECKING, BinaryIO, Iterable
 
 import httpx
 
 from pywa.types.flows import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.flows import (
-    FlowDetails as _FlowDetails,
     FlowCompletion as _FlowCompletion,
-    FlowRequest as _FlowRequest,
+)
+from pywa.types.flows import (
+    FlowDetails as _FlowDetails,
 )  # noqa MUST BE IMPORTED FIRST
+from pywa.types.flows import (
+    FlowRequest as _FlowRequest,
+)
 from pywa.types.others import SuccessResult
-from .others import Result
-from .base_update import BaseUserUpdateAsync
-
-import dataclasses
-import pathlib
-from typing import Iterable, TYPE_CHECKING, BinaryIO
 
 from .. import utils
+from .base_update import BaseUserUpdateAsync
+from .others import Result
 
 if TYPE_CHECKING:
     from ..client import WhatsApp

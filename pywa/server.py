@@ -4,16 +4,14 @@ import logging
 import threading
 from typing import TYPE_CHECKING, Callable
 
-from . import utils, handlers, errors
-
-from .types import MessageType, UserPreferenceCategory, RawUpdate
+from . import errors, handlers, utils
+from .types import MessageType, RawUpdate, UserPreferenceCategory
 from .types.base_update import (
     BaseUpdate,
-    StopHandling,
     ContinueHandling,
+    StopHandling,
 )
 from .types.system import SystemType
-
 from .utils import FastAPI, Flask
 
 if TYPE_CHECKING:

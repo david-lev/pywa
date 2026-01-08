@@ -67,47 +67,47 @@ import logging
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
-    cast,
-    TypeAlias,
     Awaitable,
-    TypedDict,
+    Callable,
     Generic,
+    TypeAlias,
+    TypedDict,
     TypeVar,
+    cast,
 )
 
 from . import utils
-from .filters import Filter, new as new_filter
+from .filters import Filter
+from .filters import new as new_filter
 from .types import (
     CallbackButton,
+    CallbackData,
     CallbackSelection,
-    Message,
-    MessageStatus,
-    TemplateStatusUpdate,
-    TemplateQualityUpdate,
-    TemplateComponentsUpdate,
-    TemplateCategoryUpdate,
-    UserMarketingPreferences,
+    CallConnect,
+    CallPermissionUpdate,
+    CallStatus,
+    CallTerminate,
+    ChatOpened,
     FlowRequest,
     FlowResponse,
-    ChatOpened,
-    CallbackData,
-    CallConnect,
-    CallTerminate,
-    CallStatus,
-    PhoneNumberChange,
     IdentityChange,
-    CallPermissionUpdate,
+    Message,
+    MessageStatus,
+    PhoneNumberChange,
+    TemplateCategoryUpdate,
+    TemplateComponentsUpdate,
+    TemplateQualityUpdate,
+    TemplateStatusUpdate,
+    UserMarketingPreferences,
 )
+from .types.base_update import RawUpdate
 from .types.flows import (
     FlowCompletion,
-    FlowResponseError,
     FlowRequestActionType,
     FlowRequestCannotBeDecrypted,
+    FlowResponseError,
     Screen,
 )  # noqa
-
-from .types.base_update import RawUpdate
 
 if TYPE_CHECKING:
     from .client import WhatsApp

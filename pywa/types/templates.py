@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 __all__ = [
     "TemplateStatusUpdate",
     "TemplateStatus",
@@ -67,28 +66,28 @@ __all__ = [
     "TapTargetConfiguration",
 ]
 
+import abc
+import dataclasses
 import datetime
 import json
+import logging
 import pathlib
 import re
 import warnings
+from typing import TYPE_CHECKING, AsyncIterator, BinaryIO, Iterator, Literal, cast
 
+from .. import _helpers as helpers
+from .. import utils
+from ..listeners import TemplateStatusUpdateListenerIdentifier
 from . import CallbackData
 from .base_update import BaseUpdate, RawUpdate
 from .flows import FlowActionType, FlowJSON
-import abc
-import dataclasses
-import logging
-from typing import TYPE_CHECKING, Literal, BinaryIO, cast, Iterator, AsyncIterator
-
 from .media import Media
-from .others import Result, SuccessResult, ProductsSection, _ItemFactory
-from .. import utils
-from .. import _helpers as helpers
-from ..listeners import TemplateStatusUpdateListenerIdentifier
+from .others import ProductsSection, Result, SuccessResult, _ItemFactory
 
 if TYPE_CHECKING:
     from pywa import filters as pywa_filters
+
     from ..client import WhatsApp
     from .sent_update import SentTemplate
 

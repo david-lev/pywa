@@ -27,41 +27,42 @@ import re
 import threading
 from concurrent import futures
 from typing import (
-    Any,
-    BinaryIO,
-    Iterable,
     TYPE_CHECKING,
-    NamedTuple,
-    Literal,
-    Iterator,
+    Any,
     AsyncIterable,
     AsyncIterator,
+    BinaryIO,
+    Iterable,
+    Iterator,
+    Literal,
+    NamedTuple,
 )
 
 import httpx
 
+from pywa.types.others import InteractiveType
+
 from .types import (
-    FlowMetricName,
-    FlowMetricGranularity,
-    FlowJSON,
+    Button,
+    ButtonUrl,
     CallbackData,
+    CallPermissionRequestButton,
+    FlowButton,
+    FlowJSON,
+    FlowMetricGranularity,
+    FlowMetricName,
+    SectionList,
     URLButton,
     VoiceCallButton,
-    SectionList,
-    FlowButton,
-    Button,
-    CallPermissionRequestButton,
-    ButtonUrl,
 )
-from pywa.types.others import InteractiveType
 from .types.media import Media
 from .types.templates import (
+    BaseParams,
+    Carousel,
+    HeaderFormatType,
     TemplateBaseComponent,
     _BaseMediaHeaderComponent,
-    HeaderFormatType,
-    Carousel,
     _BaseMediaParams,
-    BaseParams,
 )
 
 if TYPE_CHECKING:

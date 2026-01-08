@@ -9,27 +9,26 @@ from ..errors import WhatsAppError
 """Types for other objects."""
 
 import dataclasses
-import math
-import logging
 import datetime
-
+import logging
+import math
 from typing import (
     TYPE_CHECKING,
     Any,
-    Iterable,
-    TypeVar,
-    Protocol,
-    Generic,
-    Iterator,
     ClassVar,
+    Generic,
+    Iterable,
+    Iterator,
     Literal,
+    Protocol,
+    TypeVar,
 )
 
 from .. import utils
 
 if TYPE_CHECKING:
-    from .calls import CallPermissions
     from ..client import WhatsApp
+    from .calls import CallPermissions
 
 _logger = logging.getLogger(__name__)
 

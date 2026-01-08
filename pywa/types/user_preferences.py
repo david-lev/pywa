@@ -14,7 +14,6 @@ import logging
 from typing import TYPE_CHECKING
 
 from .. import utils
-
 from .base_update import BaseUserUpdate, RawUpdate  # noqa
 from .others import Metadata
 

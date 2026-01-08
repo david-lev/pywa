@@ -25,17 +25,18 @@ from typing import (
     Any,
     Generic,
     Iterable,
+    Literal,
     TypeVar,
-    get_origin,
     Union,
     get_args,
-    Literal,
+    get_origin,
 )
 
+from .. import _helpers as helpers
+from .. import utils
 from .base_update import BaseUserUpdate, RawUpdate  # noqa
-from .flows import FlowStatus, FlowActionType
-from .others import MessageType, Metadata, ReplyToMessage, InteractiveType
-from .. import utils, _helpers as helpers
+from .flows import FlowActionType, FlowStatus
+from .others import InteractiveType, MessageType, Metadata, ReplyToMessage
 
 if TYPE_CHECKING:
     from ..client import WhatsApp

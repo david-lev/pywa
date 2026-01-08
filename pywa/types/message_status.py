@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 from .callback import _CallbackDataT
 
 __all__ = [
@@ -17,13 +16,12 @@ __all__ = [
 ]
 
 import dataclasses
-import logging
 import datetime
+import logging
 from typing import TYPE_CHECKING, Generic
 
 from .. import utils
 from ..errors import WhatsAppError
-
 from .base_update import BaseUserUpdate, RawUpdate  # noqa
 from .others import Metadata
 

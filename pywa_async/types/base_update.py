@@ -2,39 +2,39 @@
 
 from __future__ import annotations
 
-from pywa.types.base_update import *  # noqa MUST BE IMPORTED FIRST
-
-import pathlib
 import dataclasses
-from typing import TYPE_CHECKING, BinaryIO, Iterable, Iterator, AsyncIterator
+import pathlib
+from typing import TYPE_CHECKING, AsyncIterator, BinaryIO, Iterable, Iterator
 
+from pywa.types.base_update import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.templates import BaseParams
-from .others import Contact, ProductsSection, User, SuccessResult
 
+from .others import Contact, ProductsSection, SuccessResult, User
 
 if TYPE_CHECKING:
-    from ..client import WhatsApp
-    from .calls import SessionDescription
     from pywa.types.sent_update import InitiatedCall
-    from .sent_update import (
-        SentMessage,
-        SentTemplate,
-        SentVoiceMessage,
-        SentLocationRequest,
-        SentMediaMessage,
-        SentReaction,
-    )
+
+    from ..client import WhatsApp
     from .callback import (
         Button,
-        URLButton,
-        VoiceCallButton,
-        SectionList,
-        FlowButton,
         CallbackData,
         CallPermissionRequestButton,
+        FlowButton,
+        SectionList,
+        URLButton,
+        VoiceCallButton,
+    )
+    from .calls import SessionDescription
+    from .media import Media
+    from .sent_update import (
+        SentLocationRequest,
+        SentMediaMessage,
+        SentMessage,
+        SentReaction,
+        SentTemplate,
+        SentVoiceMessage,
     )
     from .templates import TemplateLanguage
-    from .media import Media
 
 
 class _ClientShortcutsAsync:

@@ -7,8 +7,8 @@ from typing import Any, BinaryIO, Iterator
 import httpx
 
 import pywa
-from .errors import WhatsAppError
 
+from .errors import WhatsAppError
 
 _logger = logging.getLogger(__name__)
 

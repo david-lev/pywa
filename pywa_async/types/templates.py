@@ -7,25 +7,43 @@ import datetime
 from typing import TYPE_CHECKING, cast
 
 from pywa.listeners import TemplateStatusUpdateListenerIdentifier
-from pywa_async.types import CallbackData
 from pywa.types.others import _ItemFactory
 from pywa.types.templates import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.templates import (
-    TemplateDetails as _TemplateDetails,
-    CreatedTemplate as _CreatedTemplate,
-    CreatedTemplates as _CreatedTemplates,
-    UpdatedTemplate as _UpdatedTemplate,
-    TemplateStatusUpdate as _TemplateStatusUpdate,
-    TemplateQualityUpdate as _TemplateQualityUpdate,
-    TemplateCategoryUpdate as _TemplateCategoryUpdate,
-    TemplateComponentsUpdate as _TemplateComponentsUpdate,
     BaseParams,
+)
+from pywa.types.templates import (
+    CreatedTemplate as _CreatedTemplate,
+)
+from pywa.types.templates import (
+    CreatedTemplates as _CreatedTemplates,
+)
+from pywa.types.templates import (
+    TemplateCategoryUpdate as _TemplateCategoryUpdate,
+)
+from pywa.types.templates import (
+    TemplateComponentsUpdate as _TemplateComponentsUpdate,
+)
+from pywa.types.templates import (
+    TemplateDetails as _TemplateDetails,
 )  # noqa MUST BE IMPORTED FIRST
-from .others import Result, SuccessResult
+from pywa.types.templates import (
+    TemplateQualityUpdate as _TemplateQualityUpdate,
+)
+from pywa.types.templates import (
+    TemplateStatusUpdate as _TemplateStatusUpdate,
+)
+from pywa.types.templates import (
+    UpdatedTemplate as _UpdatedTemplate,
+)
+from pywa_async.types import CallbackData
+
 from .. import filters as pywa_filters
+from .others import Result, SuccessResult
 
 if TYPE_CHECKING:
-    from ..client import WhatsApp as WhatsAppAsync, WhatsApp
+    from ..client import WhatsApp
+    from ..client import WhatsApp as WhatsAppAsync
     from .sent_update import SentTemplate
 
 

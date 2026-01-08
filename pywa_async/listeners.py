@@ -1,19 +1,22 @@
 from __future__ import annotations
 
-import warnings
-
-from pywa.listeners import *  # noqa MUST BE IMPORTED FIRST
-from pywa.listeners import (
-    Listener as _Listener,
-    ListenerCanceled as _ListenerCanceled,
-    BaseListenerIdentifier,
-)  # noqa MUST BE IMPORTED FIRST
-
 import asyncio
+import warnings
 from typing import TYPE_CHECKING
 
 from pywa import utils
+from pywa.listeners import *  # noqa MUST BE IMPORTED FIRST
+from pywa.listeners import (
+    BaseListenerIdentifier,
+)
+from pywa.listeners import (
+    Listener as _Listener,
+)  # noqa MUST BE IMPORTED FIRST
+from pywa.listeners import (
+    ListenerCanceled as _ListenerCanceled,
+)
 from pywa.types.base_update import BaseUpdate
+
 from .filters import Filter
 from .types.base_update import BaseUserUpdateAsync
 

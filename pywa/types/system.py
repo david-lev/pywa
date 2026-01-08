@@ -5,12 +5,11 @@ from __future__ import annotations
 __all__ = ["PhoneNumberChange", "IdentityChange", "SystemType", "Identity"]
 
 
-from .. import utils
-
 import dataclasses
 import datetime
 from typing import TYPE_CHECKING
 
+from .. import utils
 from .base_update import BaseUserUpdate, RawUpdate  # noqa
 from .others import (
     MessageType,

@@ -5,11 +5,19 @@ from typing import TYPE_CHECKING
 
 from pywa.types.others import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.others import (
-    Result as _Result,
-    User as _User,
-    UsersBlockedResult as _UsersBlockedResult,
-    UsersUnblockedResult as _UsersUnblockedResult,
     _T,
+)
+from pywa.types.others import (
+    Result as _Result,
+)
+from pywa.types.others import (
+    User as _User,
+)
+from pywa.types.others import (
+    UsersBlockedResult as _UsersBlockedResult,
+)
+from pywa.types.others import (
+    UsersUnblockedResult as _UsersUnblockedResult,
 )
 
 if TYPE_CHECKING:

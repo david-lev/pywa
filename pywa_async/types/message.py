@@ -4,17 +4,15 @@ from __future__ import annotations
 
 __all__ = ["Message"]
 
+import dataclasses
 import pathlib
+from typing import TYPE_CHECKING, Iterable
 
 from pywa.types.message import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.message import Message as _Message  # noqa MUST BE IMPORTED FIRST
 
-
-import dataclasses
-from typing import TYPE_CHECKING, Iterable
-
 from .base_update import BaseUserUpdateAsync  # noqa
-from .callback import Button, URLButton, SectionList, VoiceCallButton, FlowButton
+from .callback import Button, FlowButton, SectionList, URLButton, VoiceCallButton
 from .media import Audio, Document, Image, Sticker, Video
 from .others import (
     MessageType,

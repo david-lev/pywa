@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 __all__ = [
     "RawUpdate",
     "StopHandling",
@@ -10,46 +9,46 @@ __all__ = [
 ]
 
 import abc
-import json
-import pathlib
 import dataclasses
 import datetime
+import json
+import pathlib
 from typing import (
     TYPE_CHECKING,
-    BinaryIO,
-    Iterable,
-    ClassVar,
-    NoReturn,
     Awaitable,
+    BinaryIO,
+    ClassVar,
+    Iterable,
     Iterator,
+    NoReturn,
 )
 
-from .others import Contact, Metadata, ProductsSection, User, SuccessResult
 from ..listeners import BaseListenerIdentifier, UserUpdateListenerIdentifier
+from .others import Contact, Metadata, ProductsSection, SuccessResult, User
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
-    from .sent_update import (
-        SentMessage,
-        SentTemplate,
-        SentVoiceMessage,
-        SentLocationRequest,
-        SentMediaMessage,
-        SentReaction,
-    )
-    from .calls import SessionDescription
-    from .sent_update import InitiatedCall
     from .callback import (
         Button,
-        URLButton,
-        VoiceCallButton,
-        SectionList,
-        FlowButton,
         CallbackData,
         CallPermissionRequestButton,
+        FlowButton,
+        SectionList,
+        URLButton,
+        VoiceCallButton,
     )
-    from .templates import TemplateLanguage, BaseParams
+    from .calls import SessionDescription
     from .media import Media
+    from .sent_update import (
+        InitiatedCall,
+        SentLocationRequest,
+        SentMediaMessage,
+        SentMessage,
+        SentReaction,
+        SentTemplate,
+        SentVoiceMessage,
+    )
+    from .templates import BaseParams, TemplateLanguage
 
 
 class StopHandling(Exception):

@@ -17,8 +17,8 @@ from . import utils
 
 if TYPE_CHECKING:
     from .client import WhatsApp
-    from .types.base_update import BaseUpdate, BaseUserUpdate
     from .filters import Filter
+    from .types.base_update import BaseUpdate, BaseUserUpdate
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
