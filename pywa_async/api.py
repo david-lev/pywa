@@ -103,6 +103,46 @@ class GraphAPIAsync(GraphAPI):
             log_kwargs=False,
         )
 
+    async def get_business_access_token(
+        self,
+        app_id: int,
+        app_secret: str,
+        code: str,
+    ) -> dict[str, str]:
+        """
+        Exchange the Embedded Signup token code for a business token.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/onboarding-customers-as-a-tech-provider#step-1-exchange-the-token-code-for-a-business-token>`_.
+
+        Return example::
+
+            {
+                'business_token': 'xyzxyzxyz',
+                'token_type': 'bearer'
+            }
+
+
+        Args:
+            app_id: The ID of the app.
+            app_secret: The secret of the app.
+            code: The code `returned <https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/implementation#session-logging-message-event-listener>`_ by Embedded Signup when the customer successfully completed the flow.
+
+        Returns:
+            The access token and its type.
+
+        """
+
+        return await self._make_request(
+            method="GET",
+            endpoint="/oauth/access_token",
+            params={
+                "client_id": app_id,
+                "client_secret": app_secret,
+                "code": code,
+            },
+            log_kwargs=False,
+        )
+
     async def set_app_callback_url(
         self,
         app_id: int,
