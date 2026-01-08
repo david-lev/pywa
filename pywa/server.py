@@ -460,14 +460,14 @@ class Server:
         threading.Timer(
             interval=delay,
             function=self._register_callback_url,
-            kwargs=dict(
-                callback_url=callback_url,
-                callback_url_scope=callback_url_scope,
-                app_id=app_id,
-                app_secret=app_secret,
-                verify_token=verify_token,
-                fields=fields,
-            ),
+            kwargs={
+                "callback_url": callback_url,
+                "callback_url_scope": callback_url_scope,
+                "app_id": app_id,
+                "app_secret": app_secret,
+                "verify_token": verify_token,
+                "fields": fields,
+            },
         ).start()
 
     def _register_callback_url(

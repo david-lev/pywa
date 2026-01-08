@@ -162,8 +162,8 @@ class CallbackData:
                 raise TypeError(
                     f"Field `{field_name}` in `{cls.__name__}` must be an Enum that inherits from str."
                 )
-            if not issubclass(cast(type, field_type), cls.__allowed_types__):
-                unsupported_fields.add((field_name, cast(type, field_type)))
+            if not issubclass(field_type, cls.__allowed_types__):
+                unsupported_fields.add((field_name, field_type))
         if unsupported_fields:
             raise TypeError(
                 f"Unsupported types {unsupported_fields} in callback data. Use one of {cls.__allowed_types__}."
@@ -229,7 +229,7 @@ class CallbackData:
         values = [
             str(self.__callback_id__),
         ]
-        for field_name, field_type in self.__annotations__.items():
+        for field_name in self.__annotations__.keys():
             value = getattr(self, field_name)
             if value is None:
                 value = self.__callback_null__

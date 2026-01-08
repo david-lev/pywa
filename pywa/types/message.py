@@ -295,7 +295,7 @@ class Message(BaseUserUpdate):
                 **httpx_kwargs,
             )
         except AttributeError:
-            raise ValueError("Message does not contain any media.")
+            raise ValueError("Message does not contain any media.") from None
 
     def copy(
         self,

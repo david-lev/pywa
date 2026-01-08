@@ -2042,6 +2042,8 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         if settings is not None:
             warnings.warn(
                 "The `settings` parameter is deprecated, use `calling`, `storage_configuration`, and `user_identity_change` instead.",
+                DeprecationWarning,
+                stacklevel=2,
             )
             calling = settings.calling
             storage_configuration = settings.storage_configuration

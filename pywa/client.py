@@ -538,7 +538,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 self._handlers[handler.__class__].remove(handler)
             except ValueError:
                 if not silent:
-                    raise ValueError(f"Handler {handler} not registered.")
+                    raise ValueError(f"Handler {handler} not registered.") from None
 
     def remove_callbacks(self, *callbacks: Callable[[WhatsApp, Any], Any]) -> None:
         """

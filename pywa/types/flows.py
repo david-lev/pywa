@@ -1213,7 +1213,9 @@ class _FlowJSONEncoder(json.JSONEncoder):
             try:
                 first = next(iter(example))
             except StopIteration:
-                raise ValueError("At least one example is required when using Iterable")
+                raise ValueError(
+                    "At least one example is required when using Iterable"
+                ) from None
             if isinstance(first, (str, int, float, bool)):
                 return {
                     "type": "array",

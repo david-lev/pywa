@@ -382,12 +382,13 @@ def get_media_from_file_like_obj(
     try:
         length = os.fstat(file_obj.fileno()).st_size
     except (AttributeError, OSError):
-        pos = file_obj.tell()
-        file_obj.seek(0, io.SEEK_END)
-        length = file_obj.tell()
-        file_obj.seek(pos)
-    except (AttributeError, OSError):
-        length = None
+        try:
+            pos = file_obj.tell()
+            file_obj.seek(0, io.SEEK_END)
+            length = file_obj.tell()
+            file_obj.seek(pos)
+        except (AttributeError, OSError):
+            length = None
     filename = getattr(file_obj, "name", None)
     return MediaInfo(
         content=file_obj,

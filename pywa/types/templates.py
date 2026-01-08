@@ -600,7 +600,7 @@ class BaseLibraryButtonInput(abc.ABC):
     type: ComponentType
 
 
-class BaseLibraryBodyInput(abc.ABC): ...
+class BaseLibraryBodyInput: ...
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -3871,9 +3871,7 @@ class TemplateDetails(utils.APIObject):
         Returns:
             A TemplatesCompareResult object containing the comparison results.
         """
-        return self._client.compare_templates(
-            template_id=self.id, *to, start=start, end=end
-        )
+        return self._client.compare_templates(self.id, *to, start=start, end=end)
 
     def unpause(self) -> TemplateUnpauseResult:
         """

@@ -291,9 +291,7 @@ class TemplateDetails(_TemplateDetails):
         Returns:
             A TemplatesCompareResult object containing the comparison results.
         """
-        return await self._client.compare_templates(
-            template_id=self.id, *to, start=start, end=end
-        )
+        return await self._client.compare_templates(self.id, *to, start=start, end=end)
 
     async def unpause(self) -> TemplateUnpauseResult:
         """

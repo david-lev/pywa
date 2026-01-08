@@ -178,4 +178,4 @@ class _AsyncListeners:
         try:
             return await asyncio.wait_for(listener.future, timeout=timeout)
         except asyncio.TimeoutError:
-            raise ListenerTimeout(timeout)
+            raise ListenerTimeout(timeout) from None
