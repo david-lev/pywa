@@ -1,9 +1,14 @@
 name: Tests with pytest
 
-on: [ push, pull_request ]
+on:
+  push:
+  pull_request:
+  release:
+    types: [ published ]
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   build:
