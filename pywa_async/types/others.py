@@ -53,7 +53,7 @@ class User(_User):
             BlockUserError: If the user was not blocked
         """
         res = await self._client.block_users((self.wa_id,))
-        added = self.wa_id in {u.input for u in res.added_users}
+        added = self.wa_id in {u.wa_id for u in res.added_users}
         if not added:
             raise res.errors
         return added
@@ -68,7 +68,7 @@ class User(_User):
             bool: True if the user was unblocked, False otherwise.
         """
         return self.wa_id in {
-            u.input
+            u.wa_id
             for u in (await self._client.unblock_users((self.wa_id,))).removed_users
         }
 
