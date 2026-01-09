@@ -93,6 +93,7 @@ from .types import (
     PhoneNumberChange,
     ProductsSection,
     QRCode,
+    QRCodeImageType,
     Result,
     SectionList,
     StorageConfiguration,
@@ -3459,7 +3460,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def create_qr_code(
         self,
         prefilled_message: str,
-        image_type: Literal["PNG", "SVG"] = "PNG",
+        image_type: QRCodeImageType | Literal["PNG", "SVG"] = QRCodeImageType.PNG,
         *,
         phone_id: str | int | None = None,
     ) -> QRCode:
@@ -3470,25 +3471,28 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Args:
             prefilled_message: The prefilled message.
-            image_type: The type of the image (``PNG`` or ``SVG``. default: ``PNG``).
+            image_type: The type of the image (PNG or SVG. Default: PNG).
             phone_id: The phone ID to create the QR code for (optional, if not provided, the client's phone ID will be used).
 
         Returns:
             The QR code.
         """
+        phone_id = helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id")
         return QRCode.from_dict(
-            await self.api.create_qr_code(
-                phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
+            data=await self.api.create_qr_code(
+                phone_id=phone_id,
                 prefilled_message=prefilled_message,
                 generate_qr_image=image_type,
-            )
+            ),
+            client=self,
+            phone_id=phone_id
         )
 
     async def get_qr_code(
-        self,
+            self,
             code: str,
             *,
-            image_type: Literal["PNG", "SVG"] | None = None,
+            image_type: QRCodeImageType | Literal["PNG", "SVG"] | None = None,
             phone_id: str | int | None = None,
     ) -> QRCode | None:
         """
@@ -3502,19 +3506,22 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             The QR code if found, otherwise None.
         """
-        qrs = (
-            await self.api.get_qr_code(
-                phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-                code=code,
-                fields=QRCode._api_fields(image_type)
-            )
-        )["data"]
-        return QRCode.from_dict(qrs[0]) if qrs else None
+        phone_id = helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id")
+        qrs = (await self.api.get_qr_code(
+            phone_id=phone_id,
+            code=code,
+            fields=QRCode._api_fields(image_type)
+        ))["data"]
+        return QRCode.from_dict(
+            data=qrs[0],
+            client=self,
+            phone_id=phone_id,
+        ) if qrs else None
 
     async def get_qr_codes(
             self,
             *,
-            image_type: Literal["PNG", "SVG"] | None = None,
+            image_type: QRCodeImageType | Literal["PNG", "SVG"] | None = None,
             phone_id: str | int | None = None,
             pagination: Pagination | None = None,
     ) -> Result[QRCode]:
@@ -3529,14 +3536,19 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             Result object containing the QR codes.
         """
+        phone_id = helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id")
         return Result(
             wa=self,
             response=await self.api.get_qr_codes(
-                phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
+                phone_id=phone_id,
                 fields=QRCode._api_fields(image_type),
                 pagination=pagination.to_dict() if pagination else None,
             ),
-            item_factory=QRCode.from_dict,
+            item_factory=functools.partial(
+                QRCode.from_dict,
+                client=self,
+                phone_id=phone_id,
+            ),
         )
 
     async def update_qr_code(
@@ -3557,12 +3569,15 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             The updated QR code.
         """
+        phone_id = helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id")
         return QRCode.from_dict(
-            await self.api.update_qr_code(
-                phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
+            data=await self.api.update_qr_code(
+                phone_id=phone_id,
                 code=code,
                 prefilled_message=prefilled_message,
-            )
+            ),
+            client=self,
+            phone_id=phone_id
         )
 
     async def delete_qr_code(

@@ -8,6 +8,9 @@ from pywa.types.others import (
     _T,
 )
 from pywa.types.others import (
+    QRCode as _QRCode,
+)
+from pywa.types.others import (
     Result as _Result,
 )
 from pywa.types.others import (
@@ -105,6 +108,68 @@ class UsersUnblockedResult(_UsersUnblockedResult):
     """
 
     removed_users: tuple[User, ...]
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class QRCode(_QRCode):
+    """
+    Customers can scan a QR code from their phone to quickly begin a conversation with your business.
+    The WhatsApp Business Management API allows you to create and access these QR codes and associated short links.
+
+    Attributes:
+        code: The code of the QR code.
+        prefilled_message: The message that will be prefilled when the user starts a conversation with the business using the QR code.
+        deep_link_url: The deep link URL of the QR code.
+        qr_image_url: The URL of the QR code image (return only when creating a QR code).
+    """
+
+    _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)
+
+    async def fetch_image(self, image_type: QRCodeImageType) -> QRCode:
+        """
+        Returns the same QRCode object with the specified image type.
+
+        - Useful for getting different image formats or if the original QR code was retrieved without an image.
+
+        >>> from pywa_async import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> qr_codes = await wa.get_qr_codes() # image_type is None by default for faster retrieval
+        >>> svg_qr = await qr_codes[0].fetch_image(QRCodeImageType.SVG) # Get the SVG version of the QR code
+
+        Args:
+            image_type: The type of the image (e.g., PNG, SVG).
+
+        Returns:
+            A new QRCode object with the specified image type.
+        """
+        return await self._client.get_qr_code(
+            code=self.code, image_type=image_type, phone_id=self._phone_id
+        )
+
+    async def update(self, *, prefilled_message: str) -> QRCode:
+        """
+        Updates the QR code with a new prefilled message.
+
+        Args:
+            prefilled_message: The new prefilled message for the QR code.
+
+        Returns:
+            The updated QRCode object.
+        """
+        return await self._client.update_qr_code(
+            code=self.code, prefilled_message=prefilled_message, phone_id=self._phone_id
+        )
+
+    async def delete(self) -> SuccessResult:
+        """
+        Deletes the QR code.
+
+        Returns:
+            A SuccessResult indicating whether the deletion was successful.
+        """
+        return await self._client.delete_qr_code(
+            code=self.code, phone_id=self._phone_id
+        )
 
 
 class Result(_Result[_T]):

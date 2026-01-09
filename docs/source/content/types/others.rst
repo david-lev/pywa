@@ -50,6 +50,9 @@ Others
 .. autoclass:: ConversationalAutomation()
 
 .. autoclass:: QRCode()
+    :members: fetch_image, update, delete
+
+.. autoclass:: QRCodeImageType()
 
 .. autoclass:: Command()
 

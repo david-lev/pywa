@@ -4,90 +4,203 @@ import inspect
 import pytest
 
 from pywa import WhatsApp as WhatsAppSync
-from pywa.handlers import _HandlerDecorators
-from pywa.types.base_update import BaseUpdate
-from pywa_async import WhatsApp as WhatsAppAsync
 from pywa.api import GraphAPI as GraphAPISync
-from pywa_async.api import GraphAPIAsync
-from pywa.server import Server as ServerSync
+from pywa.handlers import _HandlerDecorators
 from pywa.listeners import _Listeners as ListenersSync
-from pywa.types.templates import (
-    TemplateDetails as TemplateDetailsSync,
-    TemplatesResult as TemplatesResultSync,
-    CreatedTemplate as CreatedTemplateSync,
-    CreatedTemplates as CreatedTemplatesSync,
-    UpdatedTemplate as UpdatedTemplateSync,
+from pywa.server import Server as ServerSync
+from pywa.types import (
+    CallbackButton as CallbackButtonSync,
 )
-from pywa_async.types.templates import (
-    TemplateDetails as TemplateDetailsAsync,
-    TemplatesResult as TemplatesResultAsync,
-    CreatedTemplate as CreatedTemplateAsync,
-    CreatedTemplates as CreatedTemplatesAsync,
-    UpdatedTemplate as UpdatedTemplateAsync,
+from pywa.types import (
+    CallbackSelection as CallbackSelectionSync,
 )
-
-
+from pywa.types import (
+    CallConnect as CallConnectSync,
+)
+from pywa.types import (
+    CallPermissionUpdate as CallPermissionUpdateSync,
+)
+from pywa.types import (
+    CallStatus as CallStatusSync,
+)
+from pywa.types import (
+    CallTerminate as CallTerminateSync,
+)
+from pywa.types import (
+    ChatOpened as ChatOpenedSync,
+)
+from pywa.types import (
+    FlowCompletion as FlowCompletionSync,
+)
+from pywa.types import (
+    FlowRequest as FlowRequestSync,
+)
+from pywa.types import (
+    FlowResponse as FlowResponseSync,
+)
+from pywa.types import (
+    IdentityChange as IdentityChangeSync,
+)
+from pywa.types import (
+    MediaURL as MediaUrlResponseSync,
+)
 from pywa.types import (
     Message as MessageSync,
-    CallbackButton as CallbackButtonSync,
-    CallbackSelection as CallbackSelectionSync,
+)
+from pywa.types import (
     MessageStatus as MessageStatusSync,
-    ChatOpened as ChatOpenedSync,
+)
+from pywa.types import (
     PhoneNumberChange as PhoneNumberChangeSync,
-    IdentityChange as IdentityChangeSync,
-    FlowCompletion as FlowCompletionSync,
-    TemplateStatusUpdate as TemplateStatusUpdateSync,
-    TemplateCategoryUpdate as TemplateCategoryUpdateSync,
-    TemplateQualityUpdate as TemplateQualityUpdateSync,
-    TemplateComponentsUpdate as TemplateComponentsUpdateSync,
-    CallConnect as CallConnectSync,
-    CallTerminate as CallTerminateSync,
-    CallStatus as CallStatusSync,
-    CallPermissionUpdate as CallPermissionUpdateSync,
-    UserMarketingPreferences as UserMarketingPreferencesSync,
-    FlowRequest as FlowRequestSync,
-    FlowResponse as FlowResponseSync,
-    MediaURL as MediaUrlResponseSync,
-    User as UserSync,
+)
+from pywa.types import (
+    QRCode as QRCodeSync,
+)
+from pywa.types import (
     Result as ResultSync,
+)
+from pywa.types import (
+    TemplateCategoryUpdate as TemplateCategoryUpdateSync,
+)
+from pywa.types import (
+    TemplateComponentsUpdate as TemplateComponentsUpdateSync,
+)
+from pywa.types import (
+    TemplateQualityUpdate as TemplateQualityUpdateSync,
+)
+from pywa.types import (
+    TemplateStatusUpdate as TemplateStatusUpdateSync,
+)
+from pywa.types import (
+    User as UserSync,
+)
+from pywa.types import (
+    UserMarketingPreferences as UserMarketingPreferencesSync,
+)
+from pywa.types.base_update import BaseUpdate
+from pywa.types.flows import FlowDetails as FlowDetailsSync
+from pywa.types.media import ArrivedMedia
+from pywa.types.media import Media as MediaSync
+from pywa.types.sent_update import (
+    InitiatedCall as InitiatedCallSync,
+)
+from pywa.types.sent_update import (
+    SentMessage as SentMessageSync,
+)
+from pywa.types.sent_update import (
+    SentTemplate as SentTemplateSync,
+)
+from pywa.types.templates import (
+    CreatedTemplate as CreatedTemplateSync,
+)
+from pywa.types.templates import (
+    CreatedTemplates as CreatedTemplatesSync,
+)
+from pywa.types.templates import (
+    TemplateDetails as TemplateDetailsSync,
+)
+from pywa.types.templates import (
+    TemplatesResult as TemplatesResultSync,
+)
+from pywa.types.templates import (
+    UpdatedTemplate as UpdatedTemplateSync,
+)
+from pywa_async import WhatsApp as WhatsAppAsync
+from pywa_async.api import GraphAPIAsync
+from pywa_async.types import (
+    CallbackButton as CallbackButtonAsync,
+)
+from pywa_async.types import (
+    CallbackSelection as CallbackSelectionAsync,
+)
+from pywa_async.types import (
+    CallConnect as CallConnectAsync,
+)
+from pywa_async.types import (
+    CallPermissionUpdate as CallPermissionUpdateAsync,
+)
+from pywa_async.types import (
+    CallStatus as CallStatusAsync,
+)
+from pywa_async.types import (
+    CallTerminate as CallTerminateAsync,
+)
+from pywa_async.types import (
+    ChatOpened as ChatOpenedAsync,
+)
+from pywa_async.types import (
+    FlowCompletion as FlowCompletionAsync,
+)
+from pywa_async.types import (
+    FlowRequest as FlowRequestAsync,
+)
+from pywa_async.types import (
+    FlowResponse as FlowResponseAsync,
+)
+from pywa_async.types import (
+    IdentityChange as IdentityChangeAsync,
+)
+from pywa_async.types import (
+    MediaURL as MediaUrlResponseAsync,
 )
 from pywa_async.types import (
     Message as MessageAsync,
-    CallbackButton as CallbackButtonAsync,
-    CallbackSelection as CallbackSelectionAsync,
+)
+from pywa_async.types import (
     MessageStatus as MessageStatusAsync,
-    ChatOpened as ChatOpenedAsync,
+)
+from pywa_async.types import (
     PhoneNumberChange as PhoneNumberChangeAsync,
-    IdentityChange as IdentityChangeAsync,
-    FlowCompletion as FlowCompletionAsync,
-    TemplateStatusUpdate as TemplateStatusUpdateAsync,
-    TemplateCategoryUpdate as TemplateCategoryUpdateAsync,
-    TemplateQualityUpdate as TemplateQualityUpdateAsync,
-    TemplateComponentsUpdate as TemplateComponentsUpdateAsync,
-    CallConnect as CallConnectAsync,
-    CallTerminate as CallTerminateAsync,
-    CallStatus as CallStatusAsync,
-    CallPermissionUpdate as CallPermissionUpdateAsync,
-    UserMarketingPreferences as UserMarketingPreferencesAsync,
-    FlowRequest as FlowRequestAsync,
-    FlowResponse as FlowResponseAsync,
-    MediaURL as MediaUrlResponseAsync,
-    User as UserAsync,
+)
+from pywa_async.types import (
+    QRCode as QRCodeAsync,
+)
+from pywa_async.types import (
     Result as ResultAsync,
 )
-from pywa.types.flows import FlowDetails as FlowDetailsSync
+from pywa_async.types import (
+    TemplateCategoryUpdate as TemplateCategoryUpdateAsync,
+)
+from pywa_async.types import (
+    TemplateComponentsUpdate as TemplateComponentsUpdateAsync,
+)
+from pywa_async.types import (
+    TemplateQualityUpdate as TemplateQualityUpdateAsync,
+)
+from pywa_async.types import (
+    TemplateStatusUpdate as TemplateStatusUpdateAsync,
+)
+from pywa_async.types import (
+    User as UserAsync,
+)
+from pywa_async.types import (
+    UserMarketingPreferences as UserMarketingPreferencesAsync,
+)
 from pywa_async.types.flows import FlowDetails as FlowDetailsAsync
-from pywa.types.media import Media as MediaSync, ArrivedMedia
 from pywa_async.types.media import Media as MediaAsync
-from pywa.types.sent_update import (
-    SentMessage as SentMessageSync,
-    SentTemplate as SentTemplateSync,
-    InitiatedCall as InitiatedCallSync,
+from pywa_async.types.sent_update import (
+    InitiatedCall as InitiatedCallAsync,
 )
 from pywa_async.types.sent_update import (
     SentMessage as SentMessageAsync,
+)
+from pywa_async.types.sent_update import (
     SentTemplate as SentTemplateAsync,
-    InitiatedCall as InitiatedCallAsync,
+)
+from pywa_async.types.templates import (
+    CreatedTemplate as CreatedTemplateAsync,
+)
+from pywa_async.types.templates import (
+    CreatedTemplates as CreatedTemplatesAsync,
+)
+from pywa_async.types.templates import (
+    TemplateDetails as TemplateDetailsAsync,
+)
+from pywa_async.types.templates import (
+    TemplatesResult as TemplatesResultAsync,
+)
+from pywa_async.types.templates import (
+    UpdatedTemplate as UpdatedTemplateAsync,
 )
 
 
@@ -128,6 +241,7 @@ def overrides() -> list[tuple[type, type]]:
         (CreatedTemplateSync, CreatedTemplateAsync),
         (CreatedTemplatesSync, CreatedTemplatesAsync),
         (UpdatedTemplateSync, UpdatedTemplateAsync),
+        (QRCodeSync, QRCodeAsync),
     ]
 
 

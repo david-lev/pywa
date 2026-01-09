@@ -1171,6 +1171,21 @@ class BusinessPhoneNumber(utils.APIObject):
         )
 
 
+class QRCodeImageType(utils.StrEnum):
+    """
+    Represents the image type of a QR code.
+
+    Attributes:
+        PNG: PNG image type.
+        SVG: SVG image type.
+    """
+
+    PNG = "PNG"
+    SVG = "SVG"
+
+    UNKNOWN = "UNKNOWN"
+
+
 @dataclasses.dataclass(frozen=True, slots=True)
 class QRCode(utils.APIObject):
     """
@@ -1184,14 +1199,62 @@ class QRCode(utils.APIObject):
         qr_image_url: The URL of the QR code image (return only when creating a QR code).
     """
 
+    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
+    _phone_id: str = dataclasses.field(repr=False, hash=False, compare=False)
     code: str
     prefilled_message: str
     deep_link_url: str
     qr_image_url: str | None
 
+    def fetch_image(self, image_type: QRCodeImageType) -> QRCode:
+        """
+        Returns the same QRCode object with the specified image type.
+
+        - Useful for getting different image formats or if the original QR code was retrieved without an image.
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> qr_codes = wa.get_qr_codes() # image_type is None by default for faster retrieval
+        >>> svg_qr = qr_codes[0].fetch_image(QRCodeImageType.SVG) # Get the SVG version of the QR code
+
+        Args:
+            image_type: The type of the image (e.g., PNG, SVG).
+
+        Returns:
+            A new QRCode object with the specified image type.
+        """
+        return self._client.get_qr_code(
+            code=self.code, image_type=image_type, phone_id=self._phone_id
+        )
+
+    def update(self, *, prefilled_message: str) -> QRCode:
+        """
+        Updates the QR code with a new prefilled message.
+
+        Args:
+            prefilled_message: The new prefilled message for the QR code.
+
+        Returns:
+            The updated QRCode object.
+        """
+        return self._client.update_qr_code(
+            code=self.code, prefilled_message=prefilled_message, phone_id=self._phone_id
+        )
+
+    def delete(self) -> SuccessResult:
+        """
+        Deletes the QR code.
+
+        Returns:
+            A SuccessResult indicating whether the deletion was successful.
+        """
+        return self._client.delete_qr_code(code=self.code, phone_id=self._phone_id)
+
     @classmethod
-    def from_dict(cls, data: dict):
+    def from_dict(cls, data: dict, client: WhatsApp, phone_id: str) -> QRCode:
         return cls(
+            _client=client,
+            _phone_id=phone_id,
             code=data["code"],
             prefilled_message=data["prefilled_message"],
             deep_link_url=data["deep_link_url"],

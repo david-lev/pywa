@@ -45,6 +45,7 @@ from .others import (
     Command,
     ConversationalAutomation,
     QRCode,
+    QRCodeImageType,
     Result,
     Pagination,
     StorageConfiguration,
