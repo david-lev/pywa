@@ -19,6 +19,7 @@ import dataclasses
 import datetime
 import enum
 import types
+import typing
 import warnings
 from typing import (
     TYPE_CHECKING,
@@ -111,133 +112,103 @@ class CallbackData:
         float,
     )
     """The allowed types in the callback data."""
+    __callback_fields__: dict[str, type] = {}
+    """The fields in the subclassed callback data."""
 
-    def __init_subclass__(cls, *args, **kwargs):
-        """Validate the callback data class and set a unique ID for it."""
-        super().__init_subclass__(*args, **kwargs)
-        if (
-            len(
-                set(
-                    (
-                        seps := {
-                            "Callback Separator": cls.__callback_sep__,
-                            "Data Separator": cls.__callback_data_sep__,
-                            "Boolean True": cls.__callback_bool_true__,
-                            "None Value": cls.__callback_null__,
-                        }
-                    ).values()
-                )
-            )
-            != 4
-        ):
-            raise ValueError(
-                f"Non-unique separators in callback data class `{cls.__name__}`: {seps}"
-            )
-        if not cls.__annotations__.items():
-            raise TypeError(
-                f"Callback data class `{cls.__name__}` must have at least one field."
-            )
-        if dataclasses.is_dataclass(cls) and getattr(
-            getattr(cls, "__dataclass_params__", None), "kw_only", False
-        ):
-            raise TypeError(
-                f"Callback data class `{cls.__name__}` cannot be a dataclass with `kw_only=True`. "
-                "Use positional arguments instead."
-            )
-        unsupported_fields = set[tuple[str, type]]()
-        for field_name, field_type in cls.__annotations__.items():
-            if get_origin(field_type) in (types.UnionType, Union):
-                if len(union_args := get_args(field_type)) > 2:
-                    raise TypeError(
-                        f"Field {field_name} in `{cls.__name__}` must be a Union of 2 types at most."
-                    )
-                if types.NoneType not in union_args:
-                    raise TypeError(
-                        f"Field `{field_name}` in `{cls.__name__}` must be an Optional[x] or Union[x, None]. "
-                        f"(e.g. int | None)"
-                    )
-                field_type = next((a for a in union_args if a is not types.NoneType))
-            if issubclass(field_type, enum.Enum) and not issubclass(field_type, str):
-                raise TypeError(
-                    f"Field `{field_name}` in `{cls.__name__}` must be an Enum that inherits from str."
-                )
-            if not issubclass(field_type, cls.__allowed_types__):
-                unsupported_fields.add((field_name, field_type))
-        if unsupported_fields:
-            raise TypeError(
-                f"Unsupported types {unsupported_fields} in callback data. Use one of {cls.__allowed_types__}."
-            )
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+
+        seps = [
+            cls.__callback_sep__,
+            cls.__callback_data_sep__,
+            cls.__callback_bool_true__,
+            cls.__callback_null__,
+        ]
+        if len(set(seps)) != 4:
+            raise ValueError(f"Separators must be unique: {seps}")
+
+        try:
+            all_hints = typing.get_type_hints(cls)
+        except Exception:
+            all_hints = getattr(cls, "__annotations__", {})
+
+        cls.__callback_fields__ = {
+            k: v for k, v in all_hints.items() if not k.startswith("_")
+        }
+
+        if not cls.__callback_fields__:
+            raise TypeError(f"Class {cls.__name__} must have at least one data field.")
+
+        if dataclasses.is_dataclass(cls):
+            params = getattr(cls, "__dataclass_params__", None)
+            if params and getattr(params, "kw_only", False):
+                raise TypeError(f"{cls.__name__} cannot use kw_only=True.")
+
+        for name, T in cls.__callback_fields__.items():
+            origin = get_origin(T)
+            if origin in (types.UnionType, Union):
+                args = get_args(T)
+                if len(args) > 2 or type(None) not in args:
+                    raise TypeError(f"Field {name} must be Optional[T].")
+                T = next(a for a in args if a is not type(None))
+
+            if isinstance(T, type) and issubclass(T, enum.Enum):
+                if not issubclass(T, str):
+                    raise TypeError(f"Enum {name} must inherit from str.")
+                continue
+
+            if not (isinstance(T, type) and issubclass(T, cls.__allowed_types__)):
+                raise TypeError(f"Unsupported type {T} for field {name}.")
 
         if cls.__callback_id__ == CallbackData.__callback_id__:
             cls.__callback_id__ = CallbackData.__callback_id__
             CallbackData.__callback_id__ += 1
 
     @classmethod
-    def from_str(
-        cls,
-        data: str,
-    ) -> "CallbackData":
-        """
-        Internal function to convert a callback string to a callback object.
-        """
+    def from_str(cls, data: str) -> "CallbackData":
         try:
-            positional_args = []
-            for annotation, value in zip(
-                cls.__annotations__.values(),
-                data.split(cls.__callback_data_sep__)[1:],
-                strict=True,
-            ):
-                if get_origin(annotation) in (types.UnionType, Union):
-                    if value == cls.__callback_null__:
-                        positional_args.append(None)
-                        continue
-                    annotation = next(
-                        a for a in get_args(annotation) if a is not types.NoneType
-                    )
-                if isinstance(annotation, bool):
-                    if value == cls.__callback_bool_true__:
-                        positional_args.append(True)
-                        continue
-                    elif value == "":
-                        positional_args.append(False)
-                        continue
-                    raise ValueError
-                positional_args.append(annotation(value))
+            payload = data.split(cls.__callback_data_sep__)[1:]
+            args = []
 
-            # noinspection PyArgumentList
-            return cls(*positional_args)
-        except (ValueError, TypeError) as e:
+            for (_, T), val in zip(
+                cls.__callback_fields__.items(), payload, strict=True
+            ):
+                if get_origin(T) in (types.UnionType, Union):
+                    if val == cls.__callback_null__:
+                        args.append(None)
+                        continue
+                    T = next(a for a in get_args(T) if a is not type(None))
+
+                if T is bool:
+                    args.append(True if val == cls.__callback_bool_true__ else False)
+                else:
+                    args.append(T(val))
+
+            return cls(*args)
+        except Exception as e:
             raise ValueError(f"Invalid callback data for {cls.__name__}: {data}") from e
 
-    @staticmethod
-    def _not_contains(value: Any, *not_) -> str:
-        """Internal function to validate that the value does not contain the separator."""
-        if any(sep in (str_val := str(value)) for sep in not_):
-            raise ValueError(
-                f"Callback data cannot contain the characters {not_} "
-                f"Because they are used as separators. \nYou can change the separators by overriding "
-                f"``__callback_data_sep__`` (for individual objects) and ``CallbackData.__callback_sep__`` "
-                f"(In the base class level, affects all child classes)."
-            )
-        return str_val
-
     def to_str(self) -> str:
-        """
-        Internal function to convert a callback object to a callback string.
-        """
-        values = [
-            str(self.__callback_id__),
-        ]
-        for field_name in self.__annotations__.keys():
-            value = getattr(self, field_name)
-            if value is None:
-                value = self.__callback_null__
-            if isinstance(value, bool):
-                value = self.__callback_bool_true__ if value else ""
-            if isinstance(value, enum.Enum):
-                value = value.value
-            values.append(self._not_contains(value, self.__callback_sep__))
-        return self.__callback_data_sep__.join(values)
+        parts = [str(self.__callback_id__)]
+
+        for name in self.__callback_fields__.keys():
+            val = getattr(self, name)
+            if val is None:
+                res = self.__callback_null__
+            elif isinstance(val, bool):
+                res = self.__callback_bool_true__ if val else ""
+            elif isinstance(val, enum.Enum):
+                res = val.value
+            else:
+                res = str(val)
+
+            if any(
+                s in res for s in (self.__callback_sep__, self.__callback_data_sep__)
+            ):
+                raise ValueError(f"Value '{res}' contains reserved separators.")
+            parts.append(res)
+
+        return self.__callback_data_sep__.join(parts)
 
 
 _CallbackDataT = TypeVar(

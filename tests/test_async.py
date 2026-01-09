@@ -1,4 +1,3 @@
-import asyncio
 import inspect
 
 import pytest
@@ -328,7 +327,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
                 getattr(sync_obj, method_name),
                 getattr(async_obj, method_name),
             )
-            if not asyncio.iscoroutinefunction(async_method):
+            if not inspect.iscoroutinefunction(async_method):
                 if method_name in non_async:
                     assert sync_method != async_method, (
                         f"Method/attr {method_name} is not overwritten in {async_obj}"

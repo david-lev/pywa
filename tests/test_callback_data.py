@@ -1,4 +1,5 @@
 import dataclasses
+from typing import Optional
 
 import pytest
 
@@ -46,32 +47,24 @@ def test_callback_class_not_empty():
         class User1(CallbackData):
             pass
 
-    with pytest.raises(TypeError):
-
-        @dataclasses.dataclass(slots=True, frozen=True)
-        class User2(CallbackData):
-            id: str
-            name: str
-            is_admin: bool
-            x: int
-
-        @dataclasses.dataclass(slots=True, frozen=True)
-        class UserChild(User2):
-            pass
-
 
 def test_callback_supported_types():
     """Test the supported types of the callback data."""
+
+    @dataclasses.dataclass(slots=True, frozen=True)
+    class AllowedTypes(CallbackData):
+        integer: int
+        string: str
+        boolean: bool
+        optional: Optional[str]
+        new_optional: str | None
+
     with pytest.raises(TypeError):
 
         @dataclasses.dataclass(slots=True, frozen=True)
-        class User(CallbackData):
-            id: int
-            name: str
-            is_admin: bool
-            x: dict
-            y: list
-            z: set
+        class UnallowedTypes(CallbackData):
+            dictionary: dict
+            array: list
 
 
 def test_data():

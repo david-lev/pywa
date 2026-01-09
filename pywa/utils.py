@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import base64
 import dataclasses
 import enum
@@ -8,6 +7,7 @@ import functools
 import hashlib
 import hmac
 import importlib
+import inspect
 import json
 import logging
 import warnings
@@ -484,9 +484,6 @@ def rename_func(extended_with: str) -> Callable:
 
 def is_async_callable(obj: Any) -> bool:
     """Check if an object is an async callable."""
-    while isinstance(obj, functools.partial):
-        obj = obj.func
-
-    return asyncio.iscoroutinefunction(obj) or (
-        callable(obj) and asyncio.iscoroutinefunction(obj.__call__)
+    return inspect.iscoroutinefunction(obj) or (
+        callable(obj) and inspect.iscoroutinefunction(obj.__call__)
     )
