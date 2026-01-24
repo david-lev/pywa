@@ -37,14 +37,14 @@ Fully **typed**, **documented**, and **production-ready** — build powerful bot
 --------------------------------
 
 > [Get Started](https://pywa.readthedocs.io/en/latest/content/getting-started.html)
-• [Client](https://pywa.readthedocs.io/en/latest/content/client/)
-• [Handlers](https://pywa.readthedocs.io/en/latest/content/handlers/)
-• [Listeners](https://pywa.readthedocs.io/en/latest/content/listeners/)
-• [Updates](https://pywa.readthedocs.io/en/latest/content/updates/)
-• [Filters](https://pywa.readthedocs.io/en/latest/content/filters/)
-• [Templates](https://pywa.readthedocs.io/en/latest/content/templates/)
-• [Flows](https://pywa.readthedocs.io/en/latest/content/flows/)
-• [Calls](https://pywa.readthedocs.io/en/latest/content/calls/)
+• [Client](https://pywa.readthedocs.io/en/latest/content/client/overview.html)
+• [Handlers](https://pywa.readthedocs.io/en/latest/content/handlers/overview.html)
+• [Listeners](https://pywa.readthedocs.io/en/latest/content/listeners/overview.html)
+• [Updates](https://pywa.readthedocs.io/en/latest/content/updates/overview.html)
+• [Filters](https://pywa.readthedocs.io/en/latest/content/filters/overview.html)
+• [Templates](https://pywa.readthedocs.io/en/latest/content/templates/overview.html)
+• [Flows](https://pywa.readthedocs.io/en/latest/content/flows/overview.html)
+• [Calls](https://pywa.readthedocs.io/en/latest/content/calls/overview.html)
 
 ------------------------
 
@@ -67,7 +67,7 @@ Fully **typed**, **documented**, and **production-ready** — build powerful bot
 ------------------
 
 - **Send a message**
-> See [WhatsApp Client](https://pywa.readthedocs.io/en/latest/content/client/) for all the options.
+> See [WhatsApp Client](https://pywa.readthedocs.io/en/latest/content/client/overview.html) for all the options.
 
 ```python
 from pywa import WhatsApp, types
@@ -97,7 +97,7 @@ wa.send_image(
 ```
 
 - **Handle incoming updates** (with [FastAPI](https://fastapi.tiangolo.com/) in this example)
-> See [Handlers](https://pywa.readthedocs.io/en/latest/content/handlers/) for fully detailed guide.
+> See [Handlers](https://pywa.readthedocs.io/en/latest/content/handlers/overview.html) for fully detailed guide.
 
 ```python
 # wa.py
@@ -168,7 +168,7 @@ async def hello(_: WhatsApp, msg: types.Message): # async callback
 ```
 
 - **Create and send template messages**
-> See [Templates](https://pywa.readthedocs.io/en/latest/content/templates/) for more details and examples.
+> See [Templates](https://pywa.readthedocs.io/en/latest/content/templates/overview.html) for more details and examples.
 
 ```python
 from pywa import WhatsApp
@@ -216,7 +216,7 @@ wa.send_template(
 ```
 
 - **Create and send flows**
-> See [Flows](https://pywa.readthedocs.io/en/latest/content/flows/) for much more details and examples.
+> See [Flows](https://pywa.readthedocs.io/en/latest/content/flows/overview.html) for much more details and examples.
 
 ```python
 from pywa import WhatsApp, types
