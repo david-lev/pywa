@@ -42,7 +42,7 @@ Update Types
 
 The supported fields are automatically handled by PyWa and converted into Python classes.
 
-👉 To learn how to handle them, see: `Handlers <../handlers/overview.html>`_
+👉 To learn how to handle them, see: `Handlers <../handlers/>`_
 
 **User-related updates:**
 
