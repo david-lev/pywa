@@ -18,21 +18,24 @@ See the full changelog `here <content/changelog.html>`_.
 ---------------
 
 .. toctree::
-   :maxdepth: 2
+   :hidden:
 
    📖 Home <self>
-   content/getting-started
-   content/client/index
-   content/handlers/index
-   content/listeners/index
-   content/updates/index
-   content/flows/index
-   content/templates/index
-   content/filters/index
-   content/errors/index
-   content/types/index
-   content/calls/index
-   content/examples/index
-   content/changelog
-   content/contributing
-   content/migration
+
+.. toctree::
+
+    /content/getting-started
+    /content/client/index
+    /content/handlers/index
+    /content/listeners/index
+    /content/updates/index
+    /content/flows/index
+    /content/templates/index
+    /content/filters/index
+    /content/errors/index
+    /content/types/index
+    /content/calls/index
+    /content/examples/index
+    /content/changelog
+    /content/contributing
+    /content/migration
