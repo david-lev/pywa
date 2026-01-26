@@ -1136,7 +1136,7 @@ The :class:`~pywa.client.WhatsApp` class takes a few parameters:
 - ``verify_token``: Used by WhatsApp to challenge the server when we register the webhook
 - ``app_id``: The ID of the WhatsApp App, needed to register the callback URL
 - ``app_secret``: The secret of the WhatsApp App, needed to register the callback URL
-- ``business_private_key``: The private key of the WhatsApp Business Account, needed to decrypt the flow requests (see `here <../flows/overview.html#handling-flow-requests-and-responding-to-them>`_ for more info)
+- ``business_private_key``: The private key of the WhatsApp Business Account, needed to decrypt the flow requests (see `here <../flows/#handling-flow-requests-and-responding-to-them>`_ for more info)
 - ``business_private_key_password``: The passphrase of the private_key, if it has one
 
 
