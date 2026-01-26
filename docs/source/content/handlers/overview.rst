@@ -384,7 +384,7 @@ This is useful when you only want to react to specific types of messages.
 .. tip::
 
     Explore the :mod:`~pywa.filters` module for built-in filters,
-    or create your own. See more in the `filters guide <../filters/>`_.
+    or create your own. See more in the `filters guide <../filters/overview.html>`_.
 
 
 Using listeners instead of handlers
@@ -410,7 +410,7 @@ you can use **listeners** instead of registering a new handler at runtime.
 
 .. note::
 
-    Read more about listeners in the `listeners guide <../listeners/>`_.
+    Read more about listeners in the `listeners guide <../listeners/overview.html>`_.
 
 
 Controlling handler flow
