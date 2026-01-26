@@ -210,4 +210,4 @@ Other shortcuts are available, such as :meth:`~pywa.types.sent_update.SentMessag
 
 .. toctree::
 
-    ./reference
+    reference
