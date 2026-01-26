@@ -56,7 +56,7 @@
 
 ### Migration steps
 
-1. Update all template usage to the new system ([docs here](https://pywa.readthedocs.io/en/latest/content/templates/)).
+1. Update all template usage to the new system ([docs here](https://pywa.readthedocs.io/en/latest/content/templates/overview.html)).
 
 ```python
 ########################## OLD CODE ##########################

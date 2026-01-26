@@ -157,11 +157,11 @@ Quick Start
 
 Here’s a quick overview of the ``pywa`` package:
 
-- `WhatsApp <client/>`_: Core client to send/receive messages, manage profile/business settings, and register callbacks.
-- `Handlers <handlers/>`_: Register callbacks to handle incoming updates (messages, callbacks, and more).
-- `Listeners <listeners/>`_: Listen for incoming user updates.
-- `Filters <filters/>`_: Filter and handle specific updates, e.g., text messages containing “Hello”.
-- `Updates <updates/>`_: Explore different update types, their attributes, and usage.
-- `Flows <flows/>`_: Create, update, and send flows.
-- `Errors <errors/>`_: Learn about package errors and how to handle them.
-- `Examples <examples/>`_: See practical usage examples.
+- `WhatsApp <client/overview.html>`_: Core client to send/receive messages, manage profile/business settings, and register callbacks.
+- `Handlers <handlers/overview.html>`_: Register callbacks to handle incoming updates (messages, callbacks, and more).
+- `Listeners <listeners/overview.html>`_: Listen for incoming user updates.
+- `Filters <filters/overview.html>`_: Filter and handle specific updates, e.g., text messages containing “Hello”.
+- `Updates <updates/overview.html>`_: Explore different update types, their attributes, and usage.
+- `Flows <flows/overview.html>`_: Create, update, and send flows.
+- `Errors <errors/overview.html>`_: Learn about package errors and how to handle them.
+- `Examples <examples/overview.html>`_: See practical usage examples.

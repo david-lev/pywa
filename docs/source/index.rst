@@ -25,17 +25,17 @@ See the full changelog `here <content/changelog.html>`_.
 .. toctree::
 
     /content/getting-started
-    /content/client/index
-    /content/handlers/index
-    /content/listeners/index
-    /content/updates/index
-    /content/flows/index
-    /content/templates/index
-    /content/filters/index
-    /content/errors/index
-    /content/types/index
-    /content/calls/index
-    /content/examples/index
+    /content/client/overview
+    /content/handlers/overview
+    /content/listeners/overview
+    /content/updates/overview
+    /content/flows/overview
+    /content/templates/overview
+    /content/filters/overview
+    /content/errors/overview
+    /content/types/overview
+    /content/calls/overview
+    /content/examples/overview
     /content/changelog
     /content/contributing
     /content/migration

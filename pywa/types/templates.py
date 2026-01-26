@@ -2130,7 +2130,7 @@ class FlowButtonIcon(utils.StrEnum):
 
 class FlowButton(BaseButtonComponent):
     """
-    Flows buttons are for sending `Flows Messages <https://pywa.readthedocs.io/en/latest/content/flows/>`_ as templates.
+    Flows buttons are for sending `Flows Messages <https://pywa.readthedocs.io/en/latest/content/flows/overview.html>`_ as templates.
 
     - Flows can quickly be built in the playground and attached as JSON, or an existing Flow ID can be specified.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#flows-buttons>`_.

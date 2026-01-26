@@ -61,20 +61,6 @@ master_doc = "index"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
-html_context = {
-    "is_latest": os.environ.get("READTHEDOCS_VERSION_TYPE") == "latest",
-    "current_version": os.environ.get("READTHEDOCS_VERSION", "unknown"),
-}
-html_sidebars = {
-    "**": [
-        "navbar-logo.html",
-        "icon-links.html",
-        "version-warning.html",
-        "search-button-field.html",
-        "sbt-sidebar-nav.html",
-    ]
-}
-
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
