@@ -39,6 +39,7 @@ from __future__ import annotations
 
 __all__ = [
     "MessageHandler",
+    "EditedMessageHandler",
     "CallbackButtonHandler",
     "CallbackSelectionHandler",
     "RawUpdateHandler",
@@ -88,6 +89,7 @@ from .types import (
     CallStatus,
     CallTerminate,
     ChatOpened,
+    EditedMessage,
     FlowRequest,
     FlowResponse,
     IdentityChange,
@@ -120,6 +122,9 @@ _FlowRequestHandlerT: TypeAlias = Callable[
 
 _RawUpdateCallback: TypeAlias = Callable[["WhatsApp", RawUpdate], Any | Awaitable[Any]]
 _MessageCallback: TypeAlias = Callable[["WhatsApp", Message], Any | Awaitable[Any]]
+_EditedMessageCallback: TypeAlias = Callable[
+    ["WhatsApp", EditedMessage], Any | Awaitable[Any]
+]
 _CallbackButtonCallback: TypeAlias = Callable[
     ["WhatsApp", CallbackButton], Any | Awaitable[Any]
 ]
@@ -284,6 +289,36 @@ class MessageHandler(Handler[Message]):
     def __init__(
         self,
         callback: _MessageCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class EditedMessageHandler(Handler[Message]):
+    """
+    Handler for :class:`~pywa.types.EditedMessage` updates (Text, media, etc...).
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_edited_message` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp, filters
+        >>> wa = WhatsApp(...)
+        >>> print_text_messages = lambda _, msg: print(msg)
+        >>> wa.add_handlers(MessageHandler(print_text_messages, filters.text))
+
+    Args:
+        callback: The callback function (Takes the :class:`~pywa.client.WhatsApp` client instance and a :class:`~pywa.types.EditedMessage` as positional arguments).
+        filters: The filters to apply to the callback
+        priority: The priority of the handler (default: ``0``)
+    """
+
+    _update = EditedMessage
+
+    def __init__(
+        self,
+        callback: _EditedMessageCallback,
         filters: Filter = None,
         priority: int = 0,
     ):
@@ -1288,6 +1323,54 @@ class _HandlerDecorators:
             return clb
 
         def deco(callback: _MessageCallback) -> _MessageCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=MessageHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_edited_message(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_EditedMessageCallback], _EditedMessageCallback]
+        | _EditedMessageCallback
+    ):
+        """
+        Decorator to register a function as a callback for incoming :class:`~pywa.types.EditedMessage`.
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.EditedMessageHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types, filters
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_edited_message(filters.matches("Hello", "Hi", ignore_case=True))
+            ... def hello_handler(_: WhatsApp, msg: types.EditedMessage):
+            ...     msg.react("👋")
+            ...     msg.reply_text(text="Hello from PyWa!", quote=True)
+
+        Args:
+            filters: Filters to apply to the incoming messages.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=EditedMessageHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(callback: _EditedMessageCallback) -> _EditedMessageCallback:
             return _registered_with_parentheses(
                 self=self,
                 handler_type=MessageHandler,

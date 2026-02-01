@@ -18,7 +18,10 @@ from .callback import (
     FlowButton,
 )
 from .media import MediaURL, Audio, Document, Image, Sticker, Video
-from .message import Message
+from .message import (
+    Message,
+    EditedMessage,
+)
 from .message_status import (
     Conversation,
     ConversationCategory,
