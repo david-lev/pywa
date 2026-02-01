@@ -31,6 +31,7 @@ from .handlers import (
     CallStatusHandler,
     CallTerminateHandler,
     ChatOpenedHandler,
+    DeletedMessageHandler,
     EditedMessageHandler,
     FlowCompletionHandler,
     FlowRequestCallbackWrapper,
@@ -69,6 +70,7 @@ from .types import (
     Command,
     CommerceSettings,
     Contact,
+    DeletedMessage,
     EditedMessage,
     FlowButton,
     FlowCategory,
@@ -173,6 +175,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     _handlers_to_updates: dict[type[Handler], type[BaseUpdate]] = {
         MessageHandler: Message,
         EditedMessageHandler: EditedMessage,
+        DeletedMessageHandler: DeletedMessage,
         MessageStatusHandler: MessageStatus,
         CallbackButtonHandler: CallbackButton,
         CallbackSelectionHandler: CallbackSelection,

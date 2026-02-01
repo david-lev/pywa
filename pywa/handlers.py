@@ -40,6 +40,7 @@ from __future__ import annotations
 __all__ = [
     "MessageHandler",
     "EditedMessageHandler",
+    "DeletedMessageHandler",
     "CallbackButtonHandler",
     "CallbackSelectionHandler",
     "RawUpdateHandler",
@@ -89,6 +90,7 @@ from .types import (
     CallStatus,
     CallTerminate,
     ChatOpened,
+    DeletedMessage,
     EditedMessage,
     FlowRequest,
     FlowResponse,
@@ -124,6 +126,9 @@ _RawUpdateCallback: TypeAlias = Callable[["WhatsApp", RawUpdate], Any | Awaitabl
 _MessageCallback: TypeAlias = Callable[["WhatsApp", Message], Any | Awaitable[Any]]
 _EditedMessageCallback: TypeAlias = Callable[
     ["WhatsApp", EditedMessage], Any | Awaitable[Any]
+]
+_DeletedMessageCallback: TypeAlias = Callable[
+    ["WhatsApp", DeletedMessage], Any | Awaitable[Any]
 ]
 _CallbackButtonCallback: TypeAlias = Callable[
     ["WhatsApp", CallbackButton], Any | Awaitable[Any]
@@ -295,7 +300,7 @@ class MessageHandler(Handler[Message]):
         super().__init__(callback=callback, filters=filters, priority=priority)
 
 
-class EditedMessageHandler(Handler[Message]):
+class EditedMessageHandler(Handler[EditedMessage]):
     """
     Handler for :class:`~pywa.types.EditedMessage` updates (Text, media, etc...).
 
@@ -319,6 +324,36 @@ class EditedMessageHandler(Handler[Message]):
     def __init__(
         self,
         callback: _EditedMessageCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class DeletedMessageHandler(Handler[DeletedMessage]):
+    """
+    Handler for :class:`~pywa.types.DeletedMessage` updates (Text, media, etc...).
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_deleted_message` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp, filters
+        >>> wa = WhatsApp(...)
+        >>> print_text_messages = lambda _, msg: print(msg)
+        >>> wa.add_handlers(DeletedMessageHandler(print_text_messages, filters.update_id("wamid.aaaaa")))
+
+    Args:
+        callback: The callback function (Takes the :class:`~pywa.client.WhatsApp` client instance and a :class:`~pywa.types.DeletedMessage` as positional arguments).
+        filters: The filters to apply to the callback
+        priority: The priority of the handler (default: ``0``)
+    """
+
+    _update = DeletedMessage
+
+    def __init__(
+        self,
+        callback: _DeletedMessageCallback,
         filters: Filter = None,
         priority: int = 0,
     ):
@@ -1373,7 +1408,54 @@ class _HandlerDecorators:
         def deco(callback: _EditedMessageCallback) -> _EditedMessageCallback:
             return _registered_with_parentheses(
                 self=self,
-                handler_type=MessageHandler,
+                handler_type=EditedMessageHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_deleted_message(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_DeletedMessageCallback], _DeletedMessageCallback]
+        | _DeletedMessageCallback
+    ):
+        """
+        Decorator to register a function as a callback for incoming :class:`~pywa.types.DeletedMessage`.
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.DeletedMessageHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types, filters
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_deleted_message()
+            ... def hello_handler(_: WhatsApp, msg: types.DeletedMessage):
+            ...     print("New message deleted", msg)
+
+        Args:
+            filters: Filters to apply to the incoming updates.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=DeletedMessageHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(callback: _DeletedMessageCallback) -> _DeletedMessageCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=DeletedMessageHandler,
                 callback=callback,
                 filters=filters,
                 priority=priority,

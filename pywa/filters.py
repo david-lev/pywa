@@ -107,6 +107,7 @@ from .types import CallPermissionUpdate as _Cpu
 from .types import CallStatus as _Cst
 from .types import CallTerminate as _Ct
 from .types import ChatOpened as _Co
+from .types import DeletedMessage as _DelMsg
 from .types import EditedMessage as _EditMsg
 from .types import FlowCompletion as _Fc
 from .types import IdentityChange as _Ic
@@ -721,6 +722,10 @@ unsupported = new(lambda _, m: m.type == _Mt.UNSUPPORTED, name="unsupported")
 
 edited_message = new(lambda _, m: isinstance(m, _EditMsg), name="edited_message")
 """Filter for edited messages."""
+
+
+deleted_message = new(lambda _, m: isinstance(m, _DelMsg), name="deleted_message")
+"""Filter for deleted messages."""
 
 callback_button = new(lambda _, c: isinstance(c, _Clb), name="callback_button")
 """Filter for callback buttons."""

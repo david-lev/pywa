@@ -629,11 +629,11 @@ def _handle_messages_field(
 ) -> type[handlers.Handler] | None:
     """Handle webhook updates with 'messages' field."""
     if "messages" in value:
-        message = value["messages"][0]
-        msg_type = message["type"]
+        msg_type = value["messages"][0]["type"]
         if msg_type == "edit":
-            msg_type = message["edit"]["message"]["type"]
-            return _MESSAGE_TYPES.get(msg_type, handlers.EditedMessageHandler)
+            return handlers.EditedMessageHandler
+        elif msg_type == "revoke":
+            return handlers.DeletedMessageHandler
 
         if msg_type == MessageType.INTERACTIVE:
             try:

@@ -167,6 +167,11 @@ FILTERS: dict[str, dict[str, list[tuple[Callable[[_T], _T], Filter]]]] = {
             (same, fil.edited_message),
         ],
     },
+    "deleted_message": {
+        "deleted_message": [
+            (same, fil.deleted_message),
+        ]
+    },
     "callback_button": {
         "button": [
             (

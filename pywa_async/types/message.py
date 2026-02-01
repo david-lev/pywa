@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-__all__ = ["Message", "EditedMessage"]
+__all__ = ["Message", "EditedMessage", "DeletedMessage"]
 
 import dataclasses
 import pathlib
 from typing import TYPE_CHECKING, Iterable
 
 from pywa.types.message import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.message import (
+    DeletedMessage as _DeletedMessage,  # noqa MUST BE IMPORTED FIRST
+)
 from pywa.types.message import (
     EditedMessage as _EditedMessage,  # noqa MUST BE IMPORTED FIRST
 )
@@ -335,5 +338,23 @@ class EditedMessage(Message, _EditedMessage):
         referral: The referral information of the message (When a customer clicks an ad that redirects to WhatsApp).
         unsupported: The unsupported content of the message.
         error: The error of the message.
+        shared_data: Shared data between handlers.
+    """
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class DeletedMessage(BaseUserUpdateAsync, _DeletedMessage):
+    """
+    A message that has been deleted by the user
+
+    - Available only for ``Coexistence``
+    - `'DeletedMessage' on developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/onboarding-business-app-users#revoke>`_
+
+    Attributes:
+        id: The message ID.
+        original_id: The original ID of the message.
+        metadata: The metadata of the message (to which phone number it was sent).
+        from_user: The user who sent the message.
+        timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
         shared_data: Shared data between handlers.
     """

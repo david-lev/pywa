@@ -8,6 +8,7 @@ import warnings
 __all__ = [
     "Message",
     "EditedMessage",
+    "DeletedMessage",
 ]
 
 import dataclasses
@@ -563,4 +564,67 @@ class EditedMessage(Message):
             error=WhatsAppError.from_dict(error=error) if error is not None else None,
             #
             original_id=msg["edit"]["original_message_id"],
+        )
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class DeletedMessage(BaseUserUpdate):
+    """
+    A message that has been deleted by the user
+
+    - Available only for ``Coexistence``
+    - `'DeletedMessage' on developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/onboarding-business-app-users#revoke>`_
+
+    Attributes:
+        id: The message ID.
+        original_id: The original ID of the message.
+        metadata: The metadata of the message (to which phone number it was sent).
+        from_user: The user who sent the message.
+        timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
+        shared_data: Shared data between handlers.
+    """
+
+    original_id: str
+
+    _webhook_field = "message"
+
+    @property
+    def message_id_to_reply(self) -> str:
+        """
+        The ID of the message to reply to.
+
+        If you want to ``wa.send_x`` with ``reply_to_message_id`` in order to reply to a message, use this property
+        instead of ``id`` to prevent errors.
+        """
+        return self.original_id
+
+    @classmethod
+    def from_update(cls, client: WhatsApp, update: RawUpdate) -> DeletedMessage:
+        value = (entry := update["entry"][0])["changes"][0]["value"]
+
+        msg = value["messages"][0]
+        content = msg["revoke"]  # REVOKE
+
+        metadata = Metadata.from_dict(value["metadata"])
+        timestamp = datetime.datetime.fromtimestamp(
+            int(msg["timestamp"]),
+            datetime.timezone.utc,
+        )
+
+        try:
+            usr = client._usr_cls.from_dict(value["contacts"][0], client=client)
+        except KeyError:
+            usr = client._usr_cls(
+                wa_id=content["from"], name=None, _client=client
+            )  # some messages don't have contacts
+        return cls(
+            _client=client,
+            raw=update,
+            waba_id=entry["id"],
+            id=msg["id"],
+            from_user=usr,
+            timestamp=timestamp,
+            metadata=metadata,
+            #
+            original_id=content["original_message_id"],
         )
