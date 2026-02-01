@@ -556,7 +556,7 @@ class EditedMessage(Message):
             reply_to_message=ReplyToMessage.from_dict(context)
             if context.get("id")
             else None,
-            caption=msg.get(msg_type, {}).get("caption")
+            caption=content.get(msg_type, {}).get("caption")
             if msg_type in cls._media_objs
             else None,
             referral=Referral.from_dict(msg["referral"]) if "referral" in msg else None,

@@ -47,6 +47,7 @@ from .handlers import (
     CallStatusHandler,
     CallTerminateHandler,
     ChatOpenedHandler,
+    EditedMessageHandler,
     FlowCompletionHandler,
     Handler,
     IdentityChangeHandler,
@@ -79,6 +80,7 @@ from .types import (
     Command,
     CommerceSettings,
     Contact,
+    EditedMessage,
     FlowButton,
     FlowCompletion,
     FlowMetricGranularity,
@@ -171,6 +173,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
     _handlers_to_updates: dict[type[Handler], BaseUpdate] = {
         MessageHandler: Message,
+        EditedMessageHandler: EditedMessage,
         MessageStatusHandler: MessageStatus,
         CallbackButtonHandler: CallbackButton,
         CallbackSelectionHandler: CallbackSelection,

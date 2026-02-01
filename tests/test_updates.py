@@ -65,6 +65,10 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
         "referral": [lambda m: m.referral is not None],
         "media_with_url": [lambda m: m.media.url is not None],
     },
+    "edited_message": {
+        "edit_text": [lambda m: m.text is not None],
+        "edit_caption": [lambda m: m.caption is not None],
+    },
     "callback_button": {
         "button": [lambda b: b.type == MessageType.INTERACTIVE],
         "quick_reply": [lambda b: b.type == MessageType.BUTTON],

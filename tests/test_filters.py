@@ -162,6 +162,11 @@ FILTERS: dict[str, dict[str, list[tuple[Callable[[_T], _T], Filter]]]] = {
         "interactive_message_with_err": [],
         "media_with_url": [],
     },
+    "edited_message": {
+        "text": [
+            (same, fil.edited_message),
+        ],
+    },
     "callback_button": {
         "button": [
             (

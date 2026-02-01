@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-__all__ = ["Message"]
+__all__ = ["Message", "EditedMessage"]
 
 import dataclasses
 import pathlib
 from typing import TYPE_CHECKING, Iterable
 
 from pywa.types.message import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.message import (
+    EditedMessage as _EditedMessage,  # noqa MUST BE IMPORTED FIRST
+)
 from pywa.types.message import Message as _Message  # noqa MUST BE IMPORTED FIRST
 
 from .base_update import BaseUserUpdateAsync  # noqa
@@ -297,3 +300,40 @@ class Message(BaseUserUpdateAsync, _Message):
                 )
             case _:
                 raise ValueError(f"Message of type {self.type} cannot be copied.")
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class EditedMessage(Message, _EditedMessage):
+    """
+    A message that has been edited by the user.
+
+    - Available only for ``Coexistence``
+    - `'EditedMessage' on developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/onboarding-business-app-users#edit>`_
+
+    Attributes:
+        id: The message ID (If you want to reply to the message, use ``message_id_to_reply`` instead).
+        original_id: The original ID of the message.
+        metadata: The metadata of the message (to which phone number it was sent).
+        type: The message type (See :class:`MessageType`).
+        from_user: The user who sent the message.
+        timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
+        reply_to_message: The message to which this message is a reply (if any).
+        forwarded: Whether the message was forwarded.
+        forwarded_many_times: Whether the message was forwarded more than 5 times. (when ``True``, ``forwarded`` will be ``True`` as well)
+        text: The text of the message.
+        image: The image of the message.
+        video: The video of the message.
+        sticker: The sticker of the message.
+        document: The document of the message.
+        audio: The audio of the message.
+        voice: The voice note of the message (shorthand for ``audio`` if it's a voice note).
+        caption: The caption of the message (Optional, only available for image video and document messages).
+        reaction: The reaction of the message.
+        location: The location of the message.
+        contacts: The contacts of the message.
+        order: The order of the message.
+        referral: The referral information of the message (When a customer clicks an ad that redirects to WhatsApp).
+        unsupported: The unsupported content of the message.
+        error: The error of the message.
+        shared_data: Shared data between handlers.
+    """

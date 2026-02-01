@@ -271,6 +271,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
             ServerSync._get_handler_type,
             ServerSync._register_flow_endpoint_callback,
             _HandlerDecorators.on_message,
+            _HandlerDecorators.on_edited_message,
             _HandlerDecorators.on_callback_button,
             _HandlerDecorators.on_callback_selection,
             _HandlerDecorators.on_message_status,
