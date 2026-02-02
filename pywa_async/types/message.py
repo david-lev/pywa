@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from .sent_update import SentMessage
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+@dataclasses.dataclass(frozen=True, kw_only=True)
 class Message(BaseUserUpdateAsync, _Message):
     """
     A message received from a user.
@@ -305,7 +305,7 @@ class Message(BaseUserUpdateAsync, _Message):
                 raise ValueError(f"Message of type {self.type} cannot be copied.")
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+@dataclasses.dataclass(frozen=True, kw_only=True)
 class EditedMessage(Message, _EditedMessage):
     """
     A message that has been edited by the user.
