@@ -311,7 +311,7 @@ class EditedMessageHandler(Handler[EditedMessage]):
         >>> from pywa import WhatsApp, filters
         >>> wa = WhatsApp(...)
         >>> print_text_messages = lambda _, msg: print(msg)
-        >>> wa.add_handlers(MessageHandler(print_text_messages, filters.text))
+        >>> wa.add_handlers(EditedMessageHandler(print_text_messages, filters.text))
 
     Args:
         callback: The callback function (Takes the :class:`~pywa.client.WhatsApp` client instance and a :class:`~pywa.types.EditedMessage` as positional arguments).
@@ -332,7 +332,7 @@ class EditedMessageHandler(Handler[EditedMessage]):
 
 class DeletedMessageHandler(Handler[DeletedMessage]):
     """
-    Handler for :class:`~pywa.types.DeletedMessage` updates (Text, media, etc...).
+    Handler for :class:`~pywa.types.DeletedMessage` updates (message deletion notifications identified by the original message ID).
 
     - You can use the :func:`~pywa.client.WhatsApp.on_deleted_message` decorator to register a handler for this type.
 
@@ -1434,7 +1434,7 @@ class _HandlerDecorators:
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
             >>> @wa.on_deleted_message()
-            ... def hello_handler(_: WhatsApp, msg: types.DeletedMessage):
+            ... def deleted_handler(_: WhatsApp, msg: types.DeletedMessage):
             ...     print("New message deleted", msg)
 
         Args:

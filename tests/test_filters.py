@@ -163,7 +163,7 @@ FILTERS: dict[str, dict[str, list[tuple[Callable[[_T], _T], Filter]]]] = {
         "media_with_url": [],
     },
     "edited_message": {
-        "text": [
+        "edit_text": [
             (same, fil.edited_message),
         ],
     },

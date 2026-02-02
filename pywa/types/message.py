@@ -200,7 +200,7 @@ class Message(BaseUserUpdate):
         content = msg
 
         error = value.get("errors", msg.get("errors", (None,)))[0]
-        msg_type = msg["type"]
+        msg_type = content["type"]
         context = msg.get("context", {})
         metadata = Metadata.from_dict(value["metadata"])
         timestamp = datetime.datetime.fromtimestamp(
@@ -211,7 +211,7 @@ class Message(BaseUserUpdate):
         msg_content = cls._resolve_msg_content(
             client=client,
             msg_type=msg_type,
-            msg=msg,
+            msg=content,
             timestamp=timestamp,
             recipient=metadata.phone_number_id,
         )
@@ -219,13 +219,13 @@ class Message(BaseUserUpdate):
             usr = client._usr_cls.from_dict(value["contacts"][0], client=client)
         except KeyError:
             usr = client._usr_cls(
-                wa_id=content["from"], name=None, _client=client
+                wa_id=msg["from"], name=None, _client=client
             )  # some messages don't have contacts
         return cls(
             _client=client,
             raw=update,
             waba_id=entry["id"],
-            id=content["id"],
+            id=msg["id"],
             type=msg_type,
             **msg_content,
             from_user=usr,
@@ -237,7 +237,7 @@ class Message(BaseUserUpdate):
             reply_to_message=ReplyToMessage.from_dict(context)
             if context.get("id")
             else None,
-            caption=msg.get(msg_type, {}).get("caption")
+            caption=content.get(msg_type, {}).get("caption")
             if msg_type in cls._media_objs
             else None,
             referral=Referral.from_dict(msg["referral"]) if "referral" in msg else None,
@@ -539,7 +539,7 @@ class EditedMessage(Message):
             usr = client._usr_cls.from_dict(value["contacts"][0], client=client)
         except KeyError:
             usr = client._usr_cls(
-                wa_id=content["from"], name=None, _client=client
+                wa_id=msg["from"], name=None, _client=client
             )  # some messages don't have contacts
         return cls(
             _client=client,
@@ -615,7 +615,7 @@ class DeletedMessage(BaseUserUpdate):
             usr = client._usr_cls.from_dict(value["contacts"][0], client=client)
         except KeyError:
             usr = client._usr_cls(
-                wa_id=content["from"], name=None, _client=client
+                wa_id=msg["from"], name=None, _client=client
             )  # some messages don't have contacts
         return cls(
             _client=client,
