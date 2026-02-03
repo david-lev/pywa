@@ -4,6 +4,7 @@ from __future__ import annotations
 
 __all__ = ["Message", "EditedMessage", "DeletedMessage"]
 
+import abc
 import dataclasses
 import pathlib
 from typing import TYPE_CHECKING, Iterable
@@ -16,6 +17,9 @@ from pywa.types.message import (
     EditedMessage as _EditedMessage,  # noqa MUST BE IMPORTED FIRST
 )
 from pywa.types.message import Message as _Message  # noqa MUST BE IMPORTED FIRST
+from pywa.types.message import (
+    _MessageShortcuts as _MessageShortcutsSync,  # noqa MUST BE IMPORTED FIRST
+)
 
 from .base_update import BaseUserUpdateAsync  # noqa
 from .callback import Button, FlowButton, SectionList, URLButton, VoiceCallButton
@@ -30,47 +34,16 @@ if TYPE_CHECKING:
     from .sent_update import SentMessage
 
 
-@dataclasses.dataclass(frozen=True, kw_only=True)
-class Message(BaseUserUpdateAsync, _Message):
+class _MessageShortcuts(BaseUserUpdateAsync, _MessageShortcutsSync, abc.ABC):
     """
-    A message received from a user.
-
-    - `'Message' on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/components#messages-object>`_
-
-    Attributes:
-        id: The message ID (If you want to reply to the message, use ``message_id_to_reply`` instead).
-        metadata: The metadata of the message (to which phone number it was sent).
-        type: The message type (See :class:`MessageType`).
-        from_user: The user who sent the message.
-        timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
-        reply_to_message: The message to which this message is a reply (if any).
-        forwarded: Whether the message was forwarded.
-        forwarded_many_times: Whether the message was forwarded more than 5 times. (when ``True``, ``forwarded`` will be ``True`` as well)
-        text: The text of the message.
-        image: The image of the message.
-        video: The video of the message.
-        sticker: The sticker of the message.
-        document: The document of the message.
-        audio: The audio of the message.
-        voice: The voice note of the message (shorthand for ``audio`` if it's a voice note).
-        caption: The caption of the message (Optional, only available for image video and document messages).
-        reaction: The reaction of the message.
-        location: The location of the message.
-        contacts: The contacts of the message.
-        order: The order of the message.
-        referral: The referral information of the message (When a customer clicks an ad that redirects to WhatsApp).
-        unsupported: The unsupported content of the message.
-        error: The error of the message.
-        shared_data: Shared data between handlers.
+    Shortcuts for replying to a message, downloading media, and other common operations related to messages.
     """
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
 
     image: Image | None = None
     video: Video | None = None
-    sticker: Sticker | None = None
     document: Document | None = None
-    audio: Audio | None = None
 
     _media_objs = {
         "image": Image,
@@ -79,11 +52,6 @@ class Message(BaseUserUpdateAsync, _Message):
         "document": Document,
         "audio": Audio,
     }
-
-    @property
-    def voice(self) -> Audio | None:
-        """Shorthand for the ``audio`` attribute, only if it's a voice note."""
-        return super().voice
 
     @property
     def media(
@@ -143,7 +111,7 @@ class Message(BaseUserUpdateAsync, _Message):
             raise ValueError("Message does not contain any media.") from None
 
     async def copy(
-        self,
+        self: Message,
         to: str,
         header: str | None = None,
         body: str | None = None,
@@ -305,8 +273,51 @@ class Message(BaseUserUpdateAsync, _Message):
                 raise ValueError(f"Message of type {self.type} cannot be copied.")
 
 
-@dataclasses.dataclass(frozen=True, kw_only=True)
-class EditedMessage(Message, _EditedMessage):
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class Message(_MessageShortcuts, _Message):
+    """
+    A message received from a user.
+
+    - `'Message' on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/components#messages-object>`_
+
+    Attributes:
+        id: The message ID (If you want to reply to the message, use ``message_id_to_reply`` instead).
+        metadata: The metadata of the message (to which phone number it was sent).
+        type: The message type (See :class:`MessageType`).
+        from_user: The user who sent the message.
+        timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
+        reply_to_message: The message to which this message is a reply (if any).
+        forwarded: Whether the message was forwarded.
+        forwarded_many_times: Whether the message was forwarded more than 5 times. (when ``True``, ``forwarded`` will be ``True`` as well)
+        text: The text of the message.
+        image: The image of the message.
+        video: The video of the message.
+        sticker: The sticker of the message.
+        document: The document of the message.
+        audio: The audio of the message.
+        voice: The voice note of the message (shorthand for ``audio`` if it's a voice note).
+        caption: The caption of the message (Optional, only available for image video and document messages).
+        reaction: The reaction of the message.
+        location: The location of the message.
+        contacts: The contacts of the message.
+        order: The order of the message.
+        referral: The referral information of the message (When a customer clicks an ad that redirects to WhatsApp).
+        unsupported: The unsupported content of the message.
+        error: The error of the message.
+        shared_data: Shared data between handlers.
+    """
+
+    sticker: Sticker | None = None
+    audio: Audio | None = None
+
+    @property
+    def voice(self) -> Audio | None:
+        """Shorthand for the ``audio`` attribute, only if it's a voice note."""
+        return super().voice
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class EditedMessage(_MessageShortcuts, _EditedMessage):
     """
     A message that has been edited by the user.
 
@@ -342,7 +353,7 @@ class EditedMessage(Message, _EditedMessage):
     """
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+@dataclasses.dataclass(frozen=True, kw_only=True)
 class DeletedMessage(BaseUserUpdateAsync, _DeletedMessage):
     """
     A message that has been deleted by the user

@@ -322,6 +322,8 @@ def test_all_methods_are_overwritten_in_async(overrides):
             UserSync.as_vcard,
             TemplateDetailsSync.to_json,
             MessageSync._resolve_msg_content,
+            MessageSync._extract_message_info,
+            MessageSync._extract_update,
         }
     ]
     non_async = {
