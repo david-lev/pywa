@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-__all__ = ["Message", "EditedMessage", "DeletedMessage"]
+__all__ = [
+    "Message",
+    "EditedMessage",
+    "DeletedMessage",
+    "CoexistenceMessage",
+    "CoexistenceEditedMessage",
+    "CoexistenceDeletedMessage",
+]
 
 import abc
 import dataclasses
@@ -10,6 +17,9 @@ import pathlib
 from typing import TYPE_CHECKING, Iterable
 
 from pywa.types.message import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.message import CoexistenceDeletedMessage as _CoexistenceDeletedMessage
+from pywa.types.message import CoexistenceEditedMessage as _CoexistenceEditedMessage
+from pywa.types.message import CoexistenceMessage as _CoexistenceMessage
 from pywa.types.message import (
     DeletedMessage as _DeletedMessage,  # noqa MUST BE IMPORTED FIRST
 )
@@ -332,6 +342,49 @@ class EditedMessage(_MessageShortcuts, _EditedMessage):
         from_user: The user who sent the message.
         timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
         reply_to_message: The message to which this message is a reply (if any).
+        text: The text of the message.
+        image: The image of the message.
+        video: The video of the message.
+        document: The document of the message.
+        caption: The caption of the message (Optional, only available for image, video and document messages).
+        shared_data: Shared data between handlers.
+    """
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class DeletedMessage(BaseUserUpdateAsync, _DeletedMessage):
+    """
+    A message that has been deleted by the user
+
+    - Available only for ``Coexistence``
+    - `'DeletedMessage' on developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/onboarding-business-app-users#revoke>`_
+
+    Attributes:
+        id: The message ID.
+        original_id: The original ID of the message.
+        metadata: The metadata of the message (to which phone number it was sent).
+        from_user: The user who sent the message.
+        timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
+        shared_data: Shared data between handlers.
+    """
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class CoexistenceMessage(_MessageShortcuts, _CoexistenceMessage):
+    """
+    A message that was sent by the coexistence.
+
+    - Available only for ``Coexistence``
+    - `'CoexistenceMessage' on developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/onboarding-business-app-users#smb-message-echoes>`_
+
+    Attributes:
+        id: The message ID (If you want to reply to the message, use ``message_id_to_reply`` instead).
+        metadata: The metadata of the message (to which phone number it was sent).
+        type: The message type (See :class:`MessageType`).
+        from_user: The user who sent the message.
+        sent_to: The chat the message was sent to.
+        timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
+        reply_to_message: The message to which this message is a reply (if any).
         forwarded: Whether the message was forwarded.
         forwarded_many_times: Whether the message was forwarded more than 5 times. (when ``True``, ``forwarded`` will be ``True`` as well)
         text: The text of the message.
@@ -352,20 +405,52 @@ class EditedMessage(_MessageShortcuts, _EditedMessage):
         shared_data: Shared data between handlers.
     """
 
+    sticker: Sticker | None = None
+    audio: Audio | None = None
 
-@dataclasses.dataclass(frozen=True, kw_only=True)
-class DeletedMessage(BaseUserUpdateAsync, _DeletedMessage):
+    @property
+    def voice(self) -> Audio | None:
+        """Shorthand for the ``audio`` attribute, only if it's a voice note."""
+        return super().voice
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class CoexistenceEditedMessage(_MessageShortcuts, _CoexistenceEditedMessage):
     """
-    A message that has been deleted by the user
+    A message that was edit by the coexistence.
 
     - Available only for ``Coexistence``
-    - `'DeletedMessage' on developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/onboarding-business-app-users#revoke>`_
+    - `'CoexistenceEditedMessage' on developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/onboarding-business-app-users#edit>`_
+
+    Attributes:
+        id: The message ID (If you want to reply to the message, use ``message_id_to_reply`` instead).
+        original_id: The original ID of the message.
+        metadata: The metadata of the message (to which phone number it was sent).
+        type: The message type (See :class:`MessageType`).
+        from_user: The user who sent the message.
+        sent_to: The chat the message was sent to.
+        timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
+        reply_to_message: The message to which this message is a reply (if any).
+        text: The text of the message.
+        image: The image of the message.
+        video: The video of the message.
+    """
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class CoexistenceDeletedMessage(BaseUserUpdateAsync, _CoexistenceDeletedMessage):
+    """
+    A message that was deleted by the coexistence.
+
+    - Available only for ``Coexistence``
+    - `'CoexistenceDeletedMessage' on developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/onboarding-business-app-users#revoke>`_
 
     Attributes:
         id: The message ID.
         original_id: The original ID of the message.
         metadata: The metadata of the message (to which phone number it was sent).
         from_user: The user who sent the message.
+        sent_to: The chat the message was sent to.
         timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
         shared_data: Shared data between handlers.
     """

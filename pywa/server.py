@@ -672,6 +672,18 @@ def _handle_messages_field(
     return None
 
 
+def _handle_coexistence_messages_field(
+    wa: "WhatsApp", value: dict
+) -> type[handlers.Handler] | None:
+    """Handle webhook updates with 'smb_message_echoes' field."""
+    msg_type = value["message_echoes"][0]["type"]
+    if msg_type == "edit":
+        return handlers.CoexistenceEditedMessageHandler
+    elif msg_type == "revoke":
+        return handlers.CoexistenceDeletedMessageHandler
+    return handlers.CoexistenceMessageHandler
+
+
 def _handle_calls_field(wa: "WhatsApp", value: dict) -> type[handlers.Handler] | None:
     """Handle webhook updates with 'calls' field."""
     if "calls" in value:
@@ -708,6 +720,7 @@ _complex_fields_handlers: dict[
     str, Callable[["WhatsApp", dict], type[handlers.Handler] | None]
 ] = {
     "messages": _handle_messages_field,
+    "smb_message_echoes": _handle_coexistence_messages_field,
     "calls": _handle_calls_field,
     "user_preferences": _handle_user_preferences_field,
 }

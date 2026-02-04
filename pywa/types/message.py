@@ -10,6 +10,9 @@ __all__ = [
     "Message",
     "EditedMessage",
     "DeletedMessage",
+    "CoexistenceMessage",
+    "CoexistenceEditedMessage",
+    "CoexistenceDeletedMessage",
 ]
 
 import dataclasses
@@ -536,23 +539,11 @@ class EditedMessage(_MessageShortcuts):
         from_user: The user who sent the message.
         timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
         reply_to_message: The message to which this message is a reply (if any).
-        forwarded: Whether the message was forwarded.
-        forwarded_many_times: Whether the message was forwarded more than 5 times. (when ``True``, ``forwarded`` will be ``True`` as well)
         text: The text of the message.
         image: The image of the message.
         video: The video of the message.
-        sticker: The sticker of the message.
         document: The document of the message.
-        audio: The audio of the message.
-        voice: The voice note of the message (shorthand for ``audio`` if it's a voice note).
-        caption: The caption of the message (Optional, only available for image video and document messages).
-        reaction: The reaction of the message.
-        location: The location of the message.
-        contacts: The contacts of the message.
-        order: The order of the message.
-        referral: The referral information of the message (When a customer clicks an ad that redirects to WhatsApp).
-        unsupported: The unsupported content of the message.
-        error: The error of the message.
+        caption: The caption of the message (Optional, only available for image, video and document messages).
         shared_data: Shared data between handlers.
     """
 
@@ -585,7 +576,7 @@ class EditedMessage(_MessageShortcuts):
         )
 
 
-@dataclasses.dataclass(frozen=True, kw_only=True)
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class DeletedMessage(BaseUserUpdate):
     """
     A message that has been deleted by the user
@@ -604,7 +595,7 @@ class DeletedMessage(BaseUserUpdate):
 
     original_id: str
 
-    _webhook_field = "message"
+    _webhook_field = "messages"
 
     @property
     def message_id_to_reply(self) -> str:
@@ -625,5 +616,223 @@ class DeletedMessage(BaseUserUpdate):
         message_info = _MessageShortcuts._extract_message_info(client, update, msg)
         return cls(
             **message_info,
+            original_id=content["original_message_id"],
+        )
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class CoexistenceMessage(_MessageShortcuts):
+    """
+    A message that was sent by the coexistence.
+
+    - Available only for ``Coexistence``
+    - `'CoexistenceMessage' on developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/onboarding-business-app-users#smb-message-echoes>`_
+
+    Attributes:
+        id: The message ID (If you want to reply to the message, use ``message_id_to_reply`` instead).
+        metadata: The metadata of the message (to which phone number it was sent).
+        type: The message type (See :class:`MessageType`).
+        from_user: The user who sent the message.
+        sent_to: The chat the message was sent to.
+        timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
+        reply_to_message: The message to which this message is a reply (if any).
+        forwarded: Whether the message was forwarded.
+        forwarded_many_times: Whether the message was forwarded more than 5 times. (when ``True``, ``forwarded`` will be ``True`` as well)
+        text: The text of the message.
+        image: The image of the message.
+        video: The video of the message.
+        sticker: The sticker of the message.
+        document: The document of the message.
+        audio: The audio of the message.
+        voice: The voice note of the message (shorthand for ``audio`` if it's a voice note).
+        caption: The caption of the message (Optional, only available for image video and document messages).
+        reaction: The reaction of the message.
+        location: The location of the message.
+        contacts: The contacts of the message.
+        order: The order of the message.
+        referral: The referral information of the message (When a customer clicks an ad that redirects to WhatsApp).
+        unsupported: The unsupported content of the message.
+        error: The error of the message.
+        shared_data: Shared data between handlers.
+    """
+
+    forwarded: bool
+    forwarded_many_times: bool
+    sticker: Sticker | None = None
+    audio: Audio | None = None
+    reaction: Reaction | None = None
+    location: Location | None = None
+    contacts: tuple[Contact, ...] | None = None
+    order: Order | None = None
+    referral: Referral | None = None
+    unsupported: Unsupported | None = None
+    error: WhatsAppError | None = None
+
+    sent_to: str
+
+    _webhook_field = "smb_message_echoes"
+
+    @property
+    def voice(self) -> Audio | None:
+        """Shorthand for the ``audio`` attribute, only if it's a voice note."""
+        if self.audio and self.audio.voice:
+            return self.audio
+        return None
+
+    @property
+    def _internal_sender(self) -> str:
+        """The internal sender of the message (the chat the message was sent to)."""
+        return self.sent_to
+
+    @property
+    def message_id_to_reply(self) -> str:
+        """The ID of the message to reply to."""
+        return (
+            self.id if self.type != MessageType.REACTION else self.reaction.message_id
+        )
+
+    @property
+    def is_reply(self) -> bool:
+        """
+        Whether the message is a reply to another message.
+
+        - Reaction messages are also considered as replies (But ``.reply_to_message`` will be ``None``).
+        """
+        return self.reply_to_message is not None or self.reaction is not None
+
+    @classmethod
+    def from_update(cls, client: WhatsApp, update: RawUpdate) -> CoexistenceMessage:
+        value = update["entry"][0]["changes"][0]["value"]
+        msg = value["message_echoes"][0]
+        content = msg
+
+        extract_update = cls._extract_update(
+            client=client, update=update, msg=msg, content=content
+        )
+        error = value.get("errors", msg.get("errors", (None,)))[0]
+        context = msg.get("context", {})
+        return cls(
+            **extract_update,
+            forwarded=context.get("forwarded", False)
+            or context.get("frequently_forwarded", False),
+            forwarded_many_times=context.get("frequently_forwarded", False),
+            referral=Referral.from_dict(msg["referral"]) if "referral" in msg else None,
+            error=WhatsAppError.from_dict(error=error) if error is not None else None,
+            #
+            sent_to=msg["to"],
+        )
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class CoexistenceEditedMessage(_MessageShortcuts):
+    """
+    A message that was edit by the coexistence.
+
+    - Available only for ``Coexistence``
+    - `'CoexistenceEditedMessage' on developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/onboarding-business-app-users#edit>`_
+
+    Attributes:
+        id: The message ID (If you want to reply to the message, use ``message_id_to_reply`` instead).
+        original_id: The original ID of the message.
+        metadata: The metadata of the message (to which phone number it was sent).
+        type: The message type (See :class:`MessageType`).
+        from_user: The user who sent the message.
+        sent_to: The chat the message was sent to.
+        timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
+        reply_to_message: The message to which this message is a reply (if any).
+        text: The text of the message.
+        image: The image of the message.
+        video: The video of the message.
+    """
+
+    sent_to: str
+    original_id: str
+
+    _webhook_field = "smb_message_echoes"
+
+    @property
+    def _internal_sender(self) -> str:
+        """The internal sender of the message (the chat the message was sent to)."""
+        return self.sent_to
+
+    @property
+    def message_id_to_reply(self) -> str:
+        """
+        The ID of the message to reply to.
+
+        If you want to ``wa.send_x`` with ``reply_to_message_id`` in order to reply to a message, use this property
+        instead of ``id`` to prevent errors.
+        """
+        return self.original_id
+
+    @classmethod
+    def from_update(
+        cls, client: WhatsApp, update: RawUpdate
+    ) -> CoexistenceEditedMessage:
+        value = update["entry"][0]["changes"][0]["value"]
+        msg = value["message_echoes"][0]
+        content = msg["edit"]["message"]  # EDIT
+
+        extract_update = cls._extract_update(
+            client=client, update=update, msg=msg, content=content
+        )
+        return cls(
+            **extract_update,
+            sent_to=msg["to"],
+            original_id=msg["edit"]["original_message_id"],
+        )
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class CoexistenceDeletedMessage(BaseUserUpdate):
+    """
+    A message that was deleted by the coexistence.
+
+    - Available only for ``Coexistence``
+    - `'CoexistenceDeletedMessage' on developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/onboarding-business-app-users#revoke>`_
+
+    Attributes:
+        id: The message ID.
+        original_id: The original ID of the message.
+        metadata: The metadata of the message (to which phone number it was sent).
+        from_user: The user who sent the message.
+        sent_to: The chat the message was sent to.
+        timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
+        shared_data: Shared data between handlers.
+    """
+
+    sent_to: str
+    original_id: str
+
+    _webhook_field = "smb_message_echoes"
+
+    @property
+    def _internal_sender(self) -> str:
+        """The internal sender of the message (the chat the message was sent to)."""
+        return self.sent_to
+
+    @property
+    def message_id_to_reply(self) -> str:
+        """
+        The ID of the message to reply to.
+
+        If you want to ``wa.send_x`` with ``reply_to_message_id`` in order to reply to a message, use this property
+        instead of ``id`` to prevent errors.
+        """
+        return self.original_id
+
+    @classmethod
+    def from_update(
+        cls, client: WhatsApp, update: RawUpdate
+    ) -> CoexistenceDeletedMessage:
+        value = update["entry"][0]["changes"][0]["value"]
+        msg = value["message_echoes"][0]
+        content = msg["revoke"]  # REVOKE
+
+        message_info = _MessageShortcuts._extract_message_info(client, update, msg)
+        return cls(
+            **message_info,
+            #
+            sent_to=msg["to"],
             original_id=content["original_message_id"],
         )

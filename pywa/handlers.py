@@ -41,6 +41,9 @@ __all__ = [
     "MessageHandler",
     "EditedMessageHandler",
     "DeletedMessageHandler",
+    "CoexistenceMessageHandler",
+    "CoexistenceEditedMessageHandler",
+    "CoexistenceDeletedMessageHandler",
     "CallbackButtonHandler",
     "CallbackSelectionHandler",
     "RawUpdateHandler",
@@ -90,6 +93,9 @@ from .types import (
     CallStatus,
     CallTerminate,
     ChatOpened,
+    CoexistenceDeletedMessage,
+    CoexistenceEditedMessage,
+    CoexistenceMessage,
     DeletedMessage,
     EditedMessage,
     FlowRequest,
@@ -129,6 +135,15 @@ _EditedMessageCallback: TypeAlias = Callable[
 ]
 _DeletedMessageCallback: TypeAlias = Callable[
     ["WhatsApp", DeletedMessage], Any | Awaitable[Any]
+]
+_CoexistenceMessageCallback: TypeAlias = Callable[
+    ["WhatsApp", CoexistenceMessage], Any | Awaitable[Any]
+]
+_CoexistenceEditedMessageCallback: TypeAlias = Callable[
+    ["WhatsApp", CoexistenceEditedMessage], Any | Awaitable[Any]
+]
+_CoexistenceDeletedMessageCallback: TypeAlias = Callable[
+    ["WhatsApp", CoexistenceDeletedMessage], Any | Awaitable[Any]
 ]
 _CallbackButtonCallback: TypeAlias = Callable[
     ["WhatsApp", CallbackButton], Any | Awaitable[Any]
@@ -354,6 +369,96 @@ class DeletedMessageHandler(Handler[DeletedMessage]):
     def __init__(
         self,
         callback: _DeletedMessageCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class CoexistenceMessageHandler(Handler[CoexistenceMessage]):
+    """
+    Handler for :class:`~pywa.types.CoexistenceMessage` updates.
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_coexistence_message` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp, filters
+        >>> wa = WhatsApp(...)
+        >>> print_coexistence_messages = lambda _, msg: print(msg)
+        >>> wa.add_handlers(CoexistenceMessageHandler(print_coexistence_messages, filters.text))
+
+    Args:
+        callback: The callback function (Takes the :class:`~pywa.client.WhatsApp` client instance and a :class:`~pywa.types.CoexistenceMessage` as positional arguments).
+        filters: The filters to apply to the callback
+        priority: The priority of the handler (default: ``0``)
+    """
+
+    _update = CoexistenceMessage
+
+    def __init__(
+        self,
+        callback: _CoexistenceMessageCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class CoexistenceEditedMessageHandler(Handler[CoexistenceEditedMessage]):
+    """
+    Handler for :class:`~pywa.types.CoexistenceEditedMessage` updates. (Text, media, etc...).
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_coexistence_edited_message` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp, filters
+        >>> wa = WhatsApp(...)
+        >>> print_coexistence_edited_messages = lambda _, msg: print(msg)
+        >>> wa.add_handlers(CoexistenceEditedMessageHandler(print_coexistence_edited_messages, filters.text))
+
+    Args:
+        callback: The callback function (Takes the :class:`~pywa.client.WhatsApp` client instance and a :class:`~pywa.types.CoexistenceEditedMessage` as positional arguments).
+        filters: The filters to apply to the callback
+        priority: The priority of the handler (default: ``0``)
+    """
+
+    _update = CoexistenceEditedMessage
+
+    def __init__(
+        self,
+        callback: _CoexistenceEditedMessageCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class CoexistenceDeletedMessageHandler(Handler[CoexistenceDeletedMessage]):
+    """
+    Handler for :class:`~pywa.types.CoexistenceDeletedMessage` updates.
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_coexistence_deleted_message` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp, filters
+        >>> wa = WhatsApp(...)
+        >>> print_coexistence_deleted_messages = lambda _, msg: print(msg)
+        >>> wa.add_handlers(CoexistenceDeletedMessageHandler(print_coexistence_deleted_messages, filters.update_id("wamid.aaaaa")))
+
+    Args:
+        callback: The callback function (Takes the :class:`~pywa.client.WhatsApp` client instance and a :class:`~pywa.types.CoexistenceDeletedMessage` as positional arguments).
+        filters: The filters to apply to the callback
+        priority: The priority of the handler (default: ``0``)
+    """
+
+    _update = CoexistenceDeletedMessage
+
+    def __init__(
+        self,
+        callback: _CoexistenceDeletedMessageCallback,
         filters: Filter = None,
         priority: int = 0,
     ):
@@ -1456,6 +1561,153 @@ class _HandlerDecorators:
             return _registered_with_parentheses(
                 self=self,
                 handler_type=DeletedMessageHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_coexistence_message(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_CoexistenceMessageCallback], _CoexistenceMessageCallback]
+        | _CoexistenceMessageCallback
+    ):
+        """
+        Decorator to register a function as a callback for incoming :class:`~pywa.types.CoexistenceMessage`.
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.CoexistenceMessageHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types, filters
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_coexistence_message()
+            ... def coexistence_handler(_: WhatsApp, msg: types.CoexistenceMessage):
+            ...     print("New coexistence message", msg)
+
+        Args:
+            filters: Filters to apply to the incoming updates.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=CoexistenceMessageHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(callback: _CoexistenceMessageCallback) -> _CoexistenceMessageCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=CoexistenceMessageHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_coexistence_edited_message(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_CoexistenceEditedMessageCallback], _CoexistenceEditedMessageCallback]
+        | _CoexistenceEditedMessageCallback
+    ):
+        """
+        Decorator to register a function as a callback for incoming :class:`~pywa.types.CoexistenceEditedMessage`.
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.CoexistenceEditedMessageHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types, filters
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_coexistence_edited_message()
+            ... def coexistence_edited_handler(_: WhatsApp, msg: types.CoexistenceEditedMessage):
+            ...     print("New coexistence edited message", msg)
+
+        Args:
+            filters: Filters to apply to the incoming updates.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=CoexistenceEditedMessageHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(
+            callback: _CoexistenceEditedMessageCallback,
+        ) -> _CoexistenceEditedMessageCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=CoexistenceEditedMessageHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_coexistence_deleted_message(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[
+            [_CoexistenceDeletedMessageCallback], _CoexistenceDeletedMessageCallback
+        ]
+        | _CoexistenceDeletedMessageCallback
+    ):
+        """
+        Decorator to register a function as a callback for incoming :class:`~pywa.types.CoexistenceDeletedMessage`.
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.CoexistenceDeletedMessageHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types, filters
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_coexistence_deleted_message()
+            ... def coexistence_deleted_handler(_: WhatsApp, msg: types.CoexistenceDeletedMessage):
+            ...     print("New coexistence deleted message", msg)
+
+        Args:
+            filters: Filters to apply to the incoming updates.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=CoexistenceDeletedMessageHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(
+            callback: _CoexistenceDeletedMessageCallback,
+        ) -> _CoexistenceDeletedMessageCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=CoexistenceDeletedMessageHandler,
                 callback=callback,
                 filters=filters,
                 priority=priority,
