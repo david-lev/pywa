@@ -11,6 +11,7 @@ from pywa.types.others import _ItemFactory
 from pywa.types.templates import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.templates import (
     BaseParams,
+    _validate_params,
 )
 from pywa.types.templates import (
     CreatedTemplate as _CreatedTemplate,
