@@ -40,6 +40,7 @@ from typing import (
 
 import httpx
 
+import pywa
 from pywa.types.others import InteractiveType
 
 from .types import (
@@ -927,3 +928,56 @@ def resolve_callback_data(data: str | CallbackData) -> str:
     elif isinstance(data, str):
         return data
     raise TypeError(f"Invalid callback data type {type(data)}")
+
+
+def run_ngrok(
+    host: str,
+    port: int,
+    auth_token: str,
+    **forward_options: Any,
+) -> str:
+    try:
+        import ngrok
+    except ImportError as e:
+        raise ImportError(
+            "To open an ngrok tunnel, you must install the 'ngrok' package.\n"
+            "You can install it using pip:\n"
+            "pip install ngrok"
+        ) from e
+
+    return ngrok.forward(
+        addr=f"{host}:{port}",
+        authtoken=auth_token,
+        metadata="PyWa Webhook Tunnel",
+        **forward_options,
+    ).url()
+
+
+def get_fastapi_app(options: dict[str, Any]):
+    try:
+        import fastapi
+    except ImportError as e:
+        raise ImportError(
+            "To run the WhatsApp client with the internal FastAPI server, you must install the 'fastapi' and 'uvicorn' packages.\n"
+            "You can install them using pip:\n"
+            "pip install fastapi uvicorn"
+        ) from e
+
+    fastapi_app = fastapi.FastAPI(
+        title="pywa",
+        description="A FastAPI server for receiving WhatsApp webhook updates using pywa.",
+        contact={
+            "name": "Pywa Documentation",
+            "url": "https://pywa.readthedocs.io",
+        },
+        version=str(pywa.__version__),
+        **(options or {}),
+    )
+
+    @fastapi_app.middleware("http")
+    async def _add_server_header(request: fastapi.Request, call_next):
+        response = await call_next(request)
+        response.headers["Server"] = f"pywa/{pywa.__version__}"
+        return response
+
+    return fastapi_app

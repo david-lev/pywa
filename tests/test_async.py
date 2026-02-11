@@ -252,6 +252,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
     skip_methods = [
         m.__name__
         for m in {
+            WhatsAppSync.run,
             WhatsAppSync.stream_media,
             WhatsAppSync.add_handlers,
             WhatsAppSync.remove_handlers,
@@ -262,14 +263,15 @@ def test_all_methods_are_overwritten_in_async(overrides):
             WhatsAppSync.load_handlers_modules,
             WhatsAppSync._check_for_async_callback,
             WhatsAppSync._check_for_async_filters,
-            WhatsAppSync._flow_req_cls,
+            WhatsAppSync._register_routes,
+            WhatsAppSync._register_flow_endpoint_callback,
+            WhatsAppSync._register_flow_callback_wrapper,
             GraphAPISync.stream_media_bytes,
             ServerSync._check_and_prepare_update,
             ServerSync._after_handling_update,
             ServerSync._delayed_register_callback_url,
             ServerSync._register_callback_url,
             ServerSync._get_handler_type,
-            ServerSync._register_flow_endpoint_callback,
             _HandlerDecorators.on_message,
             _HandlerDecorators.on_callback_button,
             _HandlerDecorators.on_callback_selection,
@@ -309,9 +311,6 @@ def test_all_methods_are_overwritten_in_async(overrides):
         }
     ]
     non_async = {
-        "_register_routes",
-        "_register_flow_endpoint_callback",
-        "_register_flow_callback_wrapper",
         "_api_cls",
         "_usr_cls",
         "_httpx_client",

@@ -2,8 +2,9 @@
 
 import logging
 import threading
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
+from . import _helpers as helpers
 from . import errors, handlers, utils
 from .types import MessageType, RawUpdate, UserPreferenceCategory
 from .types.base_update import (
@@ -66,8 +67,12 @@ class Server:
         validate_updates: bool,
     ):
         self._server = server
+        self._callback_url = callback_url
+        self._callback_url_scope = callback_url_scope
         self._verify_token = verify_token
         self._webhook_endpoint = webhook_endpoint
+        self._webhook_fields = webhook_fields
+        self._webhook_challenge_delay = webhook_challenge_delay
         self._private_key = business_private_key
         self._private_key_password = business_private_key_password
         self._flows_request_decryptor = flows_request_decryptor
@@ -82,57 +87,76 @@ class Server:
         ]()  # TODO use threading.Lock | asyncio.Lock
 
         if server is utils.MISSING:
-            return
-        self._server_type = utils.ServerType.from_app(server)
+            self._server = None
+            self._server_type = None
+        else:
+            self._server_type = utils.ServerType.from_app(server)
 
-        if not verify_token:
-            raise ValueError(
-                "When listening for incoming updates, a verify token must be provided.\n>> The verify token can "
-                "be any string. It is used to challenge the webhook endpoint to verify that the endpoint is valid."
-            )
-        if validate_updates and not app_secret:
-            _logger.warning(
-                "No `app_secret` provided. Signature validation will be disabled "
-                "(not recommended. set `validate_updates=False` to suppress this warning)"
-            )
-            self._validate_updates = False
+            if not verify_token:
+                raise ValueError(
+                    "When listening for incoming updates, a verify token must be provided.\n>> The verify token can "
+                    "be any string. It is used to challenge the webhook endpoint to verify that the endpoint is valid."
+                )
+            if validate_updates and not app_secret:
+                _logger.warning(
+                    "No `app_secret` provided. Signature validation will be disabled "
+                    "(not recommended. set `validate_updates=False` to suppress this warning)"
+                )
+                self._validate_updates = False
 
+            self._register_routes()
+
+            if callback_url is not None:
+                self._delayed_register_callback_url()
+
+    def run(
+        self: "WhatsApp",
+        *,
+        host: str = "127.0.0.1",
+        port: int = 8000,
+        workers: int | None = None,
+        use_ngrok: bool = False,
+        ngrok_authtoken: str | None = None,
+        ngrok_options: dict[str, Any] | None = None,
+        register_callback_url: bool = True,
+        uvicorn_options: dict[str, Any] | None = None,
+        fastapi_options: dict[str, Any] | None = None,
+    ) -> None:
+        if self._server is not None:
+            raise RuntimeError(
+                "When using a custom server, you must run the server manually."
+            )
+
+        self._server, self._server_type = (
+            helpers.get_fastapi_app(fastapi_options),
+            utils.ServerType.FASTAPI,
+        )
         self._register_routes()
 
-        if callback_url is not None:
-            if callback_url_scope == utils.CallbackURLScope.APP and (
-                app_id is None or app_secret is None
-            ):
-                raise ValueError(
-                    "When registering a callback URL in the app scope, the `app_id` and `app_secret` must be provided.\n>> See here how "
-                    "to get them: "
-                    "https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings/"
-                )
-            elif (
-                callback_url_scope == utils.CallbackURLScope.WABA
-                and not self.business_account_id
-            ):
-                raise ValueError(
-                    "When registering a callback URL in the WABA scope, the `business_account_id` must be provided."
-                )
-            elif (
-                callback_url_scope == utils.CallbackURLScope.PHONE and not self.phone_id
-            ):
-                raise ValueError(
-                    "When registering a callback URL in the PHONE scope, the `phone_id` must be provided."
-                )
+        if use_ngrok:
+            if workers is not None and workers > 1:
+                raise ValueError("Ngrok tunnels cannot be used with multiple workers.")
 
-            self._delayed_register_callback_url(
-                callback_url=f"{callback_url.rstrip('/')}/{self._webhook_endpoint.lstrip('/')}",
-                callback_url_scope=callback_url_scope,
-                app_id=app_id,
-                app_secret=app_secret,
-                verify_token=verify_token,
-                fields=tuple(
-                    webhook_fields or handlers.Handler._handled_fields().keys()
-                ),
-                delay=webhook_challenge_delay,
+            self._callback_url = helpers.run_ngrok(
+                host=host,
+                port=port,
+                auth_token=ngrok_authtoken,
+                **(ngrok_options or {}),
             )
+
+        if register_callback_url and self._callback_url is not None:
+            self._delayed_register_callback_url()
+
+        import uvicorn
+
+        uvicorn.run(
+            app=self._server,  # type: ignore
+            host=host,
+            port=port,
+            workers=workers,
+            server_header=False,
+            **(uvicorn_options or {}),
+        )
 
     def webhook_challenge_handler(self, vt: str, ch: str) -> tuple[str, int]:
         """
@@ -282,7 +306,6 @@ class Server:
                 import fastapi
 
                 @self._server.get(self._webhook_endpoint)
-                @utils.rename_func(f"('{self._webhook_endpoint}')")
                 def pywa_challenge(
                     vt: str = fastapi.Query(alias=utils.HUB_VT, examples=["xyzxyz"]),
                     ch: str = fastapi.Query(
@@ -307,7 +330,6 @@ class Server:
                     return await request.body()
 
                 @self._server.post(self._webhook_endpoint)
-                @utils.rename_func(f"('{self._webhook_endpoint}')")
                 def pywa_webhook(
                     update: bytes = fastapi.Depends(_get_body),
                     hmac_header: str = fastapi.Header(
@@ -446,63 +468,68 @@ class Server:
 
     def _delayed_register_callback_url(
         self: "WhatsApp",
-        callback_url: str,
-        callback_url_scope: utils.CallbackURLScope,
-        app_id: int,
-        app_secret: str,
-        verify_token: str,
-        fields: tuple[str, ...] | None,
-        delay: int,
     ) -> None:
+        match self._callback_url_scope:
+            case utils.CallbackURLScope.APP:
+                if self._app_id is None or self._app_secret is None:
+                    raise ValueError(
+                        "When registering a callback URL in the app scope, the `app_id` and `app_secret` must be provided.\n>> See here how "
+                        "to get them: "
+                        "https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings/"
+                    )
+            case utils.CallbackURLScope.WABA:
+                if not self.business_account_id:
+                    raise ValueError(
+                        "When registering a callback URL in the WABA scope, the `business_account_id` must be provided."
+                    )
+            case utils.CallbackURLScope.PHONE:
+                if not self.phone_id:
+                    raise ValueError(
+                        "When registering a callback URL in the PHONE scope, the `phone_id` must be provided."
+                    )
         threading.Timer(
-            interval=delay,
+            interval=self._webhook_challenge_delay,
             function=self._register_callback_url,
             kwargs={
-                "callback_url": callback_url,
-                "callback_url_scope": callback_url_scope,
-                "app_id": app_id,
-                "app_secret": app_secret,
-                "verify_token": verify_token,
-                "fields": fields,
+                "callback_url": self._callback_url,
+                "callback_url_scope": self._callback_url_scope,
+                "app_id": self._app_id,
+                "app_secret": self._app_secret,
+                "verify_token": self._verify_token,
+                "fields": self._webhook_fields,
             },
         ).start()
 
     def _register_callback_url(
         self: "WhatsApp",
-        callback_url: str,
-        callback_url_scope: utils.CallbackURLScope,
-        app_id: int,
-        app_secret: str,
-        verify_token: str,
-        fields: tuple[str, ...] | None,
     ) -> None:
         """
         This is a non-blocking function that registers the callback URL.
         It must be called after the server is running so that the challenge can be verified.
         """
         try:
-            match callback_url_scope:
+            match self._callback_url_scope:
                 case utils.CallbackURLScope.APP:
                     app_access_token = self.api.get_app_access_token(
-                        app_id=app_id, app_secret=app_secret
+                        app_id=self._app_id, app_secret=self._app_secret
                     )
                     res = self.api.set_app_callback_url(
-                        app_id=app_id,
+                        app_id=self._app_id,
                         app_access_token=app_access_token["access_token"],
-                        callback_url=callback_url,
-                        verify_token=verify_token,
-                        fields=fields,
+                        callback_url=self._callback_url,
+                        verify_token=self._verify_token,
+                        fields=self._webhook_fields,
                     )
                 case utils.CallbackURLScope.WABA:
                     res = self.api.set_waba_alternate_callback_url(
                         waba_id=self.business_account_id,
-                        callback_url=callback_url,
-                        verify_token=verify_token,
+                        callback_url=self._callback_url,
+                        verify_token=self._verify_token,
                     )
                 case utils.CallbackURLScope.PHONE:
                     res = self.api.set_phone_alternate_callback_url(
-                        callback_url=callback_url,
-                        verify_token=verify_token,
+                        callback_url=self._callback_url,
+                        verify_token=self._verify_token,
                         phone_id=self.phone_id,
                     )
                 case _:
@@ -510,10 +537,12 @@ class Server:
 
             if not res["success"]:
                 raise RuntimeError("Failed to register callback URL.")
-            _logger.info("Callback URL '%s' registered successfully", callback_url)
+            _logger.info(
+                "Callback URL '%s' registered successfully", self._callback_url
+            )
         except errors.WhatsAppError as e:
             raise RuntimeError(
-                f"Failed to register callback URL '{callback_url}'. if you are using a slow/custom server, you can "
+                f"Failed to register callback URL '{self._callback_url}'. if you are using a slow/custom server, you can "
                 "increase the delay using the `webhook_challenge_delay` parameter when initializing the WhatsApp client."
             ) from e
 
@@ -610,7 +639,6 @@ class Server:
                 import fastapi
 
                 @self._server.post(callback_wrapper._endpoint)
-                @utils.rename_func(f"('{callback_wrapper._endpoint}')")
                 def pywa_flow(
                     flow_req: handlers.EncryptedFlowRequestType,
                 ) -> fastapi.Response:

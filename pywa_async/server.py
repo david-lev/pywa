@@ -117,7 +117,6 @@ class Server:
                 import fastapi
 
                 @self._server.get(self._webhook_endpoint)
-                @utils.rename_func(f"('{self._webhook_endpoint}')")
                 async def pywa_challenge(
                     vt: str = fastapi.Query(alias=utils.HUB_VT, examples=["xyzxyz"]),
                     ch: str = fastapi.Query(
@@ -139,7 +138,6 @@ class Server:
                     )
 
                 @self._server.post(self._webhook_endpoint)
-                @utils.rename_func(f"('{self._webhook_endpoint}')")
                 async def pywa_webhook(
                     req: fastapi.Request,
                     hmac_header: str = fastapi.Header(
@@ -192,7 +190,6 @@ class Server:
                 import fastapi
 
                 @self._server.post(callback_wrapper._endpoint)
-                @utils.rename_func(f"('{callback_wrapper._endpoint}')")
                 async def pywa_flow(
                     flow_req: EncryptedFlowRequestType,
                 ) -> fastapi.Response:
@@ -288,12 +285,6 @@ class Server:
 
     def _register_callback_url(
         self: "WhatsApp",
-        callback_url: str,
-        callback_url_scope: utils.CallbackURLScope,
-        app_id: int,
-        app_secret: str,
-        verify_token: str,
-        fields: tuple[str, ...] | None,
     ) -> None:
         """
         This is a non-blocking function that registers the callback URL.
@@ -308,33 +299,35 @@ class Server:
         )
 
         try:
-            match callback_url_scope:
+            match self._callback_url_scope:
                 case utils.CallbackURLScope.APP:
                     app_access_token = loop.run_until_complete(
-                        api.get_app_access_token(app_id=app_id, app_secret=app_secret)
+                        api.get_app_access_token(
+                            app_id=self._app_id, app_secret=self._app_secret
+                        )
                     )
                     res = loop.run_until_complete(
                         api.set_app_callback_url(
-                            app_id=app_id,
+                            app_id=self._app_id,
                             app_access_token=app_access_token["access_token"],
-                            callback_url=callback_url,
-                            verify_token=verify_token,
-                            fields=fields,
+                            callback_url=self._callback_url,
+                            verify_token=self._verify_token,
+                            fields=self._webhook_fields,
                         )
                     )
                 case utils.CallbackURLScope.WABA:
                     res = loop.run_until_complete(
                         api.set_waba_alternate_callback_url(
                             waba_id=self.business_account_id,
-                            callback_url=callback_url,
-                            verify_token=verify_token,
+                            callback_url=self._callback_url,
+                            verify_token=self._verify_token,
                         )
                     )
                 case utils.CallbackURLScope.PHONE:
                     res = loop.run_until_complete(
                         api.set_phone_alternate_callback_url(
-                            callback_url=callback_url,
-                            verify_token=verify_token,
+                            callback_url=self._callback_url,
+                            verify_token=self._verify_token,
                             phone_id=self.phone_id,
                         )
                     )
@@ -343,9 +336,11 @@ class Server:
 
             if not res["success"]:
                 raise RuntimeError("Failed to register callback URL.")
-            _logger.info("Callback URL '%s' registered successfully", callback_url)
+            _logger.info(
+                "Callback URL '%s' registered successfully", self._callback_url
+            )
         except errors.WhatsAppError as e:
             raise RuntimeError(
-                f"Failed to register callback URL '{callback_url}'. if you are using a slow/custom server, you can "
+                f"Failed to register callback URL '{self._callback_url}'. if you are using a slow/custom server, you can "
                 "increase the delay using the `webhook_challenge_delay` parameter when initializing the WhatsApp client."
             ) from e
