@@ -417,7 +417,7 @@ class CoexistenceMessage(_MessageShortcuts, _CoexistenceMessage):
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class CoexistenceEditedMessage(_MessageShortcuts, _CoexistenceEditedMessage):
     """
-    A message that was edit by the coexistence.
+    A message that was edited by the coexistence.
 
     - Available only for ``Coexistence``
     - `'CoexistenceEditedMessage' on developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/onboarding-business-app-users#edit>`_
@@ -434,6 +434,7 @@ class CoexistenceEditedMessage(_MessageShortcuts, _CoexistenceEditedMessage):
         text: The text of the message.
         image: The image of the message.
         video: The video of the message.
+        document: The document of the message.
     """
 
 

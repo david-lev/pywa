@@ -176,10 +176,7 @@ class _MessageShortcuts(BaseUserUpdate, abc.ABC):
         msg_type = content["type"]
         context = msg.get("context", {})
         metadata: Metadata = message_info["metadata"]
-        timestamp = datetime.datetime.fromtimestamp(
-            int(msg["timestamp"]),
-            datetime.timezone.utc,
-        )
+        timestamp: datetime.datetime = message_info["timestamp"]
         msg_type = MessageType(msg_type)
         msg_content = cls._resolve_msg_content(
             client=client,
@@ -743,6 +740,7 @@ class CoexistenceEditedMessage(_MessageShortcuts):
         text: The text of the message.
         image: The image of the message.
         video: The video of the message.
+        document: The document of the message.
     """
 
     sent_to: str
