@@ -48,7 +48,7 @@ if TYPE_CHECKING:
         SentTemplate,
         SentVoiceMessage,
     )
-    from .templates import BaseParams, TemplateLanguage
+    from .templates import BaseParams, Template, TemplateLanguage
 
 
 class StopHandling(Exception):
@@ -1052,10 +1052,11 @@ class _ClientShortcuts(abc.ABC):
 
     def reply_template(
         self,
-        name: str,
-        language: TemplateLanguage,
-        params: list[BaseParams],
+        name: str | None = None,
+        language: TemplateLanguage | None = None,
+        params: list[BaseParams | dict] | None = None,
         *,
+        template: Template | None = None,
         use_mm_lite_api: bool = False,
         message_activity_sharing: bool | None = None,
         quote: bool = False,
@@ -1070,8 +1071,9 @@ class _ClientShortcuts(abc.ABC):
         - Read more about `Template Messages <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-message-templates>`_.
 
         Args:
-            name: The name of the template to send.
-            language: The language of the template to send.
+            name: The name of the template to send (optional when ``template`` is provided).
+            language: The language of the template to send (optional when ``template`` is provided).
+            template: The template object to validate the parameters against (optional, if not provided, ``name`` and ``language`` must be provided).
             params: The parameters to fill in the template.
             use_mm_lite_api: Whether to use `Marketing Messages Lite API <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api>`_ (optional, default: False).
             message_activity_sharing: Whether to share message activities (e.g. message read) for that specific marketing message to Meta to help optimize marketing messages (optional, only if ``use_mm_lite_api`` is True).
@@ -1088,6 +1090,7 @@ class _ClientShortcuts(abc.ABC):
             to=self._internal_sender,
             name=name,
             language=language,
+            template=template,
             params=params,
             use_mm_lite_api=use_mm_lite_api,
             message_activity_sharing=message_activity_sharing,
