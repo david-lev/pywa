@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import functools
 import time
-import warnings
 
 from ..errors import WhatsAppError
 
@@ -45,32 +44,34 @@ class User:
     """
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
-    wa_id: str
+    id: str
+    wa_id: str | None
+    username: str | None
     name: str | None
-    identity_key_hash: str | None = None
-    _input: str | None = dataclasses.field(
-        default=None, repr=False, hash=False, compare=False
-    )
+    identity_key_hash: str | None
+    parent_id: str | None
+
+    @classmethod
+    def from_contact(cls, data: dict, client: WhatsApp) -> User:
+        return cls(
+            _client=client,
+            id=data.get("user_id"),
+            wa_id=data.get("wa_id"),
+            identity_key_hash=data.get("identity_key_hash"),
+            name=data.get("profile", {}).get("name"),
+            username=data.get("profile", {}).get("username"),
+            parent_id=data.get("parent_user_id"),
+        )
 
     @classmethod
     def from_dict(cls, data: dict, client: WhatsApp) -> User:
-        return cls(
-            _client=client,
-            _input=data.get("input"),
-            wa_id=data["wa_id"],
-            identity_key_hash=data.get("identity_key_hash"),
-            name=data.get("profile", {}).get("name"),
-        )
+        raise NotImplementedError
 
-    @property
-    def input(self) -> None:
-        """Deprecated, access the input from the sent message instead."""
-        warnings.warn(
-            "User.input is deprecated, access the input from the sent message instead. e.g. wa.send_message(...).input",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self._input
+    @classmethod
+    def from_sent_update(
+        cls, data: dict, identity_key_hash: str | None, client: WhatsApp
+    ) -> User:
+        raise NotImplementedError
 
     def block(self) -> bool:
         """

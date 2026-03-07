@@ -137,7 +137,7 @@ class SentMessage(_SentUpdate):
     ) -> SentMessage:
         msg_id, user = (
             update["messages"][0]["id"],
-            client._usr_cls.from_dict(update["contacts"][0], client=client),
+            client._usr_cls.from_sent_update(update["contacts"][0], client=client),
         )
         # noinspection PyArgumentList
         return cls(
@@ -872,7 +872,7 @@ class SentTemplate(SentMessage):
     ) -> SentTemplate:
         msg, user = (
             update["messages"][0],
-            client._usr_cls.from_dict(update["contacts"][0], client=client),
+            client._usr_cls.from_sent_update(update["contacts"][0], client=client),
         )
         return cls(
             _client=client,

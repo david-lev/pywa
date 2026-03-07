@@ -210,7 +210,7 @@ class Message(BaseUserUpdate):
             recipient=metadata.phone_number_id,
         )
         try:
-            usr = client._usr_cls.from_dict(value["contacts"][0], client=client)
+            usr = client._usr_cls.from_contact(value["contacts"][0], client=client)
         except KeyError:
             usr = client._usr_cls(
                 wa_id=msg["from"], name=None, _client=client

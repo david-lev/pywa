@@ -70,7 +70,7 @@ class UserMarketingPreferences(BaseUserUpdate):
                 int(prefs["timestamp"]),
                 datetime.timezone.utc,
             ),
-            from_user=client._usr_cls.from_dict(value["contacts"][0], client=client),
+            from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
             value=MarketingPreference(prefs["value"]),
             detail=prefs["detail"],
             category=UserPreferenceCategory(prefs["category"]),
