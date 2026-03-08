@@ -593,12 +593,13 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
+        recipient, recipient_type = helpers.resolve_recipient(to)
         if not buttons:
             return SentMessage.from_sent_update(
                 client=self,
                 update=self.api.send_message(
                     sender=sender,
-                    to=str(to),
+                    **recipient,
                     typ="text",
                     msg={"body": text, "preview_url": preview_url},
                     reply_to_message_id=reply_to_message_id,
@@ -606,13 +607,14 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     recipient_identity_key_hash=identity_key_hash,
                 ),
                 from_phone_id=sender,
+                recipient_type=recipient_type,
             )
         typ, kb = helpers.resolve_buttons_param(buttons)
         return SentMessage.from_sent_update(
             client=self,
             update=self.api.send_message(
                 sender=sender,
-                to=str(to),
+                **recipient,
                 typ="interactive",
                 msg=helpers.get_interactive_msg(
                     typ=typ,
@@ -631,6 +633,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            recipient_type=recipient_type,
             interactive_type=typ,
         )
 
@@ -1013,7 +1016,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             update=self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ="audio",
+                type="audio",
                 msg=helpers.get_media_msg(
                     media=media, is_url=is_url, is_voice=is_voice
                 ),
@@ -1133,7 +1136,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             update=self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ="sticker",
+                type="sticker",
                 msg=helpers.get_media_msg(media=media, is_url=is_url),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
@@ -2818,7 +2821,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             update=self.api.send_message(
                 sender=sender,
                 to=str(to),
-                typ="template",
+                type="template",
                 msg=template,
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),

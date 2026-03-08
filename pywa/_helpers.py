@@ -56,6 +56,7 @@ from .types import (
     VoiceCallButton,
 )
 from .types.media import Media
+from .types.sent_update import RecipientType
 from .types.templates import (
     BaseParams,
     Carousel,
@@ -812,6 +813,26 @@ def _upload_params_media(
 def resolve_tracker_param(tracker: str | CallbackData | None) -> str | None:
     """Internal method to resolve the `tracker` parameter."""
     return tracker.to_str() if isinstance(tracker, CallbackData) else tracker
+
+
+_BSUID_RE = re.compile(r"^[A-Z]{2}\.\d+$")
+_WA_ID_RE = re.compile(r"^\d+$")
+
+
+def resolve_recipient(to: str | int) -> tuple[dict[str, str], RecipientType]:
+    recipient_type = RecipientType.from_recipient(to)
+    match recipient_type:
+        case RecipientType.WA_ID | RecipientType.PHONE_NUMBER:
+            return {"to": str(to), "recipient_type": "individual"}, recipient_type
+        case RecipientType.BSUID:
+            return {
+                "recipient": str(to),
+                "recipient_type": "individual",
+            }, recipient_type
+        case RecipientType.GROUP_ID:
+            return {"to": str(to), "recipient_type": "group"}, recipient_type
+        case _:
+            raise ValueError(f"Invalid recipient: {to}")
 
 
 def resolve_arg(

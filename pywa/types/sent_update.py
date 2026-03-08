@@ -14,6 +14,7 @@ __all__ = [
 import abc
 import dataclasses
 import enum
+import re
 from typing import TYPE_CHECKING, TypeVar, cast
 
 from pywa import filters as pywa_filters
@@ -37,11 +38,44 @@ from pywa.types.others import InteractiveType
 if TYPE_CHECKING:
     from pywa import WhatsApp
 
+_BSUID_RE = re.compile(r"^[A-Z]{2}\.\d+$")
+_WA_ID_RE = re.compile(r"^\d+$")
+_PHONE_CLEAN_RE = re.compile(r"[+\-\s()]")
+
 
 class RecipientType(enum.Enum):
+    """
+    Represents the type of the recipient of a sent update.
+
+    Attributes:
+        GROUP_ID: `Y2FwaV9ncm91cDoxNzA1NTU1MDEzOToxMjAzNjM0MDQ2OTQyMzM4MjAZD`
+        BSUID: `US.13491208655302741918`
+        WA_ID: `16315551234`
+        PHONE_NUMBER: `+16315551234` / `+1 (631) 555-1234` / `(631) 555-1234` / `1 (631) 555-1234`
+    """
+
     BSUID = enum.auto()
     WA_ID = enum.auto()
+    PHONE_NUMBER = enum.auto()
     GROUP_ID = enum.auto()
+
+    @classmethod
+    def from_recipient(cls, recipient: str | int) -> RecipientType:
+        if isinstance(recipient, int):
+            return cls.WA_ID
+
+        s = recipient.strip()
+
+        if _BSUID_RE.fullmatch(s):
+            return cls.BSUID
+
+        if _WA_ID_RE.fullmatch(s):
+            return cls.WA_ID
+
+        if re.sub(_PHONE_CLEAN_RE, "", s).isdigit():
+            return RecipientType.PHONE_NUMBER
+
+        return cls.GROUP_ID
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
