@@ -41,7 +41,6 @@ from .others import (
     ReplyToMessage,
     ReferredProduct,
     Referral,
-    User,
     Command,
     ConversationalAutomation,
     QRCode,
@@ -52,6 +51,7 @@ from .others import (
     UserIdentityChangeSettings,
     Unsupported,
 )
+from .user import User
 from .templates import (
     Template,
     TemplateStatusUpdate,
