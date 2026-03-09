@@ -862,6 +862,7 @@ class CreativeFeaturesSpec:
         image_background_gen: Whether to generate backgrounds for images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-background-generation>`_.
         text_extraction_for_headline: Whether to extract text from images for headlines. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#headline-extraction>`_.
         text_extraction_for_tap_target: Whether to extract text from images for tap targets. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#tap-target-title-extraction>`_.
+        auto_promotion_tag: Whether to automatically extract the promotion tag, like “30% off”, “50% discount”, “Free shipping” from messages to create a promotion tag and put it into the image to highlight promotion information. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#auto-promotion-tag>`_.
     """
 
     image_brightness_and_contrast: bool
@@ -873,6 +874,7 @@ class CreativeFeaturesSpec:
     text_extraction_for_tap_target: bool
     product_extensions: bool
     text_formatting_optimization: bool
+    auto_promotion_tag: bool
 
     _fields = {
         "image_brightness_and_contrast",
@@ -884,6 +886,7 @@ class CreativeFeaturesSpec:
         "text_extraction_for_tap_target",
         "product_extensions",
         "text_formatting_optimization",
+        "auto_promotion_tag",
     }
 
     def __init__(
@@ -898,6 +901,7 @@ class CreativeFeaturesSpec:
         text_extraction_for_tap_target: bool | None = None,
         product_extensions: bool | None = None,
         text_formatting_optimization: bool | None = None,
+        auto_promotion_tag: bool | None = None,
     ):
         """
         Initializes a CreativeFeaturesSpec instance.
@@ -912,6 +916,7 @@ class CreativeFeaturesSpec:
             text_extraction_for_tap_target: Whether to extract keywords or phrases from your message to create a title for the tap-target area to highlight key information. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#tap-target-title-extraction>`_.
             product_extensions: Whether to encourage users to explore more products by appending additional catalog products to single-image creatives. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#product-extensions>`_.
             text_formatting_optimization: Whether to update the formatting of text (e.g. remove unnecessary spaces, bold phrases) to increase performance. No text content is changed - format only. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#text-formatting>`_.
+            auto_promotion_tag: Whether to automatically extract the promotion tag, like “30% off”, “50% discount”, “Free shipping” from messages to create a promotion tag and put it into the image to highlight promotion information. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#auto-promotion-tag>`_.
         """
         for field_name, value in locals().items():
             if field_name == "self":
