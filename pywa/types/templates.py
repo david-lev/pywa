@@ -876,7 +876,7 @@ class CreativeFeaturesSpec:
     text_formatting_optimization: bool
     auto_promotion_tag: bool
 
-    _fields = {
+    __slots__ = (
         "image_brightness_and_contrast",
         "image_touchups",
         "add_text_overlay",
@@ -887,7 +887,7 @@ class CreativeFeaturesSpec:
         "product_extensions",
         "text_formatting_optimization",
         "auto_promotion_tag",
-    }
+    )
 
     def __init__(
         self,
@@ -918,24 +918,34 @@ class CreativeFeaturesSpec:
             text_formatting_optimization: Whether to update the formatting of text (e.g. remove unnecessary spaces, bold phrases) to increase performance. No text content is changed - format only. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#text-formatting>`_.
             auto_promotion_tag: Whether to automatically extract the promotion tag, like “30% off”, “50% discount”, “Free shipping” from messages to create a promotion tag and put it into the image to highlight promotion information. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#auto-promotion-tag>`_.
         """
-        for field_name, value in locals().items():
-            if field_name == "self":
-                continue
-            setattr(self, field_name, value)
+        locals_map = locals()
+        for field in self.__slots__:
+            setattr(self, field, locals_map[field])
 
     def to_dict(self) -> dict:
         return {
-            k: "OPT_IN" if v else "OPT_OUT"
+            k: {"enroll_status": "OPT_IN" if v else "OPT_OUT"}
             for k, v in {
-                field_name: getattr(self, field_name) for field_name in self._fields
+                field_name: getattr(self, field_name) for field_name in self.__slots__
             }.items()
             if v is not None
         }
 
+    @classmethod
+    def from_dict(cls, data: list[dict]) -> CreativeFeaturesSpec:
+        mapping = {"OPT_IN": True, "OPT_OUT": False}
+        return cls(
+            **{
+                item["key"].lower(): mapping.get(item["value"]["enroll_status"])
+                for item in data
+                if item["key"].lower() in cls.__slots__
+            }
+        )
+
     def __repr__(self) -> str:
         field_reprs = ", ".join(
             f"{field_name}={getattr(self, field_name)!r}"
-            for field_name in self._fields
+            for field_name in self.__slots__
             if getattr(self, field_name) is not None
         )
         return f"{self.__class__.__name__}({field_reprs})"
@@ -3965,6 +3975,7 @@ class TemplateDetails(utils.APIObject):
     quality_score: QualityScore | None
     cta_url_link_tracking_opted_out: bool | None
     sub_category: TemplateSubCategory | None
+    degrees_of_freedom_spec: DegreesOfFreedomSpec | None
 
     @classmethod
     def from_dict(cls, data: dict, client: WhatsApp) -> TemplateDetails:
@@ -3998,6 +4009,13 @@ class TemplateDetails(utils.APIObject):
             cta_url_link_tracking_opted_out=data.get("cta_url_link_tracking_opted_out"),
             sub_category=TemplateSubCategory(data["sub_category"])
             if "sub_category" in data
+            else None,
+            degrees_of_freedom_spec=DegreesOfFreedomSpec(
+                creative_features_spec=CreativeFeaturesSpec.from_dict(
+                    data["degrees_of_freedom_spec"]["creative_features_spec"]
+                )
+            )
+            if "degrees_of_freedom_spec" in data
             else None,
         )
 
