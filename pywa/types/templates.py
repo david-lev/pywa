@@ -94,8 +94,7 @@ from .media import Media
 from .others import ProductsSection, Result, SuccessResult, _ItemFactory
 
 if TYPE_CHECKING:
-    from pywa import filters as pywa_filters
-
+    from .. import filters as pywa_filters
     from ..client import WhatsApp
     from .sent_update import SentTemplate
 
@@ -740,6 +739,12 @@ class TemplateLanguage(utils.StrEnum):
     AFRIKAANS = "af"
     ALBANIAN = "sq"
     ARABIC = "ar"
+    ARABIC_EG = "ar_EG"
+    ARABIC_AE = "ar_AE"
+    ARABIC_LB = "ar_LB"
+    ARABIC_MA = "ar_MA"
+    ARABIC_QA = "ar_QA"
+    ARABIC_SA = "ar_SA"
     AZERBAIJANI = "az"
     BENGALI = "bn"
     BULGARIAN = "bg"
@@ -754,10 +759,15 @@ class TemplateLanguage(utils.StrEnum):
     ENGLISH = "en"
     ENGLISH_UK = "en_GB"
     ENGLISH_US = "en_US"
+    ENGLISH_AU = "en_AU"
+    ENGLISH_CA = "en_CA"
+    ENGLISH_IN = "en_IN"
     ESTONIAN = "et"
     FILIPINO = "fil"
     FINNISH = "fi"
     FRENCH = "fr"
+    FRENCH_CA = "fr_CA"
+    FRENCH_BE = "fr_BE"
     GEORGIAN = "ka"
     GERMAN = "de"
     GREEK = "el"
@@ -797,6 +807,10 @@ class TemplateLanguage(utils.StrEnum):
     SPANISH_ARG = "es_AR"
     SPANISH_SPA = "es_ES"
     SPANISH_MEX = "es_MX"
+    SPANISH_CL = "es_CL"
+    SPANISH_CO = "es_CO"
+    SPANISH_PE = "es_PE"
+    SPANISH_VE = "es_VE"
     SWAHILI = "sw"
     SWEDISH = "sv"
     TAMIL = "ta"
@@ -847,6 +861,7 @@ class CreativeFeaturesSpec:
         image_background_gen: Whether to generate backgrounds for images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-background-generation>`_.
         text_extraction_for_headline: Whether to extract text from images for headlines. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#headline-extraction>`_.
         text_extraction_for_tap_target: Whether to extract text from images for tap targets. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#tap-target-title-extraction>`_.
+        auto_promotion_tag: Whether to automatically extract the promotion tag, like “30% off”, “50% discount”, “Free shipping” from messages to create a promotion tag and put it into the image to highlight promotion information. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#auto-promotion-tag>`_.
     """
 
     image_brightness_and_contrast: bool
@@ -858,8 +873,9 @@ class CreativeFeaturesSpec:
     text_extraction_for_tap_target: bool
     product_extensions: bool
     text_formatting_optimization: bool
+    auto_promotion_tag: bool
 
-    _fields = {
+    __slots__ = (
         "image_brightness_and_contrast",
         "image_touchups",
         "add_text_overlay",
@@ -869,7 +885,8 @@ class CreativeFeaturesSpec:
         "text_extraction_for_tap_target",
         "product_extensions",
         "text_formatting_optimization",
-    }
+        "auto_promotion_tag",
+    )
 
     def __init__(
         self,
@@ -883,6 +900,7 @@ class CreativeFeaturesSpec:
         text_extraction_for_tap_target: bool | None = None,
         product_extensions: bool | None = None,
         text_formatting_optimization: bool | None = None,
+        auto_promotion_tag: bool | None = None,
     ):
         """
         Initializes a CreativeFeaturesSpec instance.
@@ -897,25 +915,36 @@ class CreativeFeaturesSpec:
             text_extraction_for_tap_target: Whether to extract keywords or phrases from your message to create a title for the tap-target area to highlight key information. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#tap-target-title-extraction>`_.
             product_extensions: Whether to encourage users to explore more products by appending additional catalog products to single-image creatives. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#product-extensions>`_.
             text_formatting_optimization: Whether to update the formatting of text (e.g. remove unnecessary spaces, bold phrases) to increase performance. No text content is changed - format only. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#text-formatting>`_.
+            auto_promotion_tag: Whether to automatically extract the promotion tag, like “30% off”, “50% discount”, “Free shipping” from messages to create a promotion tag and put it into the image to highlight promotion information. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#auto-promotion-tag>`_.
         """
-        for field_name, value in locals().items():
-            if field_name == "self":
-                continue
-            setattr(self, field_name, value)
+        locals_map = locals()
+        for field in self.__slots__:
+            setattr(self, field, locals_map[field])
 
     def to_dict(self) -> dict:
         return {
-            k: "OPT_IN" if v else "OPT_OUT"
+            k: {"enroll_status": "OPT_IN" if v else "OPT_OUT"}
             for k, v in {
-                field_name: getattr(self, field_name) for field_name in self._fields
+                field_name: getattr(self, field_name) for field_name in self.__slots__
             }.items()
             if v is not None
         }
 
+    @classmethod
+    def from_dict(cls, data: list[dict]) -> CreativeFeaturesSpec:
+        mapping = {"OPT_IN": True, "OPT_OUT": False}
+        return cls(
+            **{
+                item["key"].lower(): mapping.get(item["value"]["enroll_status"])
+                for item in data
+                if item["key"].lower() in cls.__slots__
+            }
+        )
+
     def __repr__(self) -> str:
         field_reprs = ", ".join(
             f"{field_name}={getattr(self, field_name)!r}"
-            for field_name in self._fields
+            for field_name in self.__slots__
             if getattr(self, field_name) is not None
         )
         return f"{self.__class__.__name__}({field_reprs})"
@@ -3945,6 +3974,7 @@ class TemplateDetails(utils.APIObject):
     quality_score: QualityScore | None
     cta_url_link_tracking_opted_out: bool | None
     sub_category: TemplateSubCategory | None
+    degrees_of_freedom_spec: DegreesOfFreedomSpec | None
 
     @classmethod
     def from_dict(cls, data: dict, client: WhatsApp) -> TemplateDetails:
@@ -3978,6 +4008,13 @@ class TemplateDetails(utils.APIObject):
             cta_url_link_tracking_opted_out=data.get("cta_url_link_tracking_opted_out"),
             sub_category=TemplateSubCategory(data["sub_category"])
             if "sub_category" in data
+            else None,
+            degrees_of_freedom_spec=DegreesOfFreedomSpec(
+                creative_features_spec=CreativeFeaturesSpec.from_dict(
+                    data["degrees_of_freedom_spec"]["creative_features_spec"]
+                )
+            )
+            if "degrees_of_freedom_spec" in data
             else None,
         )
 
@@ -4368,6 +4405,8 @@ class _CreatedAndUpdatedTemplateActions:
         Returns:
             TemplateStatusUpdate: An update containing the status of the template once it is approved.
         """
+        from pywa import filters as pywa_filters
+
         if cancel_on_rejection:
             cancelers = (
                 cancelers or pywa_filters.false | pywa_filters.template_status_rejected

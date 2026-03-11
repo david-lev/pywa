@@ -33,6 +33,21 @@ release = pywa.__version__
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
+
+html_context = {
+    "is_latest": os.environ.get("READTHEDOCS_VERSION_TYPE") == "latest",
+    "current_version": os.environ.get("READTHEDOCS_VERSION", "unknown"),
+}
+html_sidebars = {
+    "**": [
+        "navbar-logo.html",
+        "icon-links.html",
+        "version-warning.html",
+        "search-button-field.html",
+        "sbt-sidebar-nav.html",
+    ]
+}
+
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx_copybutton",
