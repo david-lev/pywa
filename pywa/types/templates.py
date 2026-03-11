@@ -85,6 +85,7 @@ from typing import (
 )
 
 from .. import _helpers as helpers
+from .. import filters as pywa_filters
 from .. import utils
 from ..listeners import TemplateStatusUpdateListenerIdentifier
 from . import CallbackData
@@ -94,8 +95,6 @@ from .media import Media
 from .others import ProductsSection, Result, SuccessResult, _ItemFactory
 
 if TYPE_CHECKING:
-    from pywa import filters as pywa_filters
-
     from ..client import WhatsApp
     from .sent_update import SentTemplate
 
