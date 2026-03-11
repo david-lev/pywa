@@ -94,8 +94,7 @@ from .media import Media
 from .others import ProductsSection, Result, SuccessResult, _ItemFactory
 
 if TYPE_CHECKING:
-    from pywa import filters as pywa_filters
-
+    from .. import filters as pywa_filters
     from ..client import WhatsApp
     from .sent_update import SentTemplate
 
@@ -4406,6 +4405,8 @@ class _CreatedAndUpdatedTemplateActions:
         Returns:
             TemplateStatusUpdate: An update containing the status of the template once it is approved.
         """
+        from pywa import filters as pywa_filters
+
         if cancel_on_rejection:
             cancelers = (
                 cancelers or pywa_filters.false | pywa_filters.template_status_rejected
