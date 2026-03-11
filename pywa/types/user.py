@@ -35,7 +35,7 @@ class User:
         return cls(
             _client=client,
             id=data["user_id"],
-            wa_id=data.get("wa_id"),
+            wa_id=data.get("wa_id") or None,  # avoid empty string
             name=data["profile"]["name"],
             username=data["profile"].get("username"),
             parent_id=data.get("parent_user_id"),
