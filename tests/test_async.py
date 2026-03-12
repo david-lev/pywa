@@ -29,6 +29,12 @@ from pywa.types import (
     ChatOpened as ChatOpenedSync,
 )
 from pywa.types import (
+    DeletedMessage as DeletedMessageSync,
+)
+from pywa.types import (
+    EditedMessage as EditedMessageSync,
+)
+from pywa.types import (
     FlowCompletion as FlowCompletionSync,
 )
 from pywa.types import (
@@ -128,6 +134,12 @@ from pywa_async.types import (
     ChatOpened as ChatOpenedAsync,
 )
 from pywa_async.types import (
+    DeletedMessage as DeletedMessageAsync,
+)
+from pywa_async.types import (
+    EditedMessage as EditedMessageAsync,
+)
+from pywa_async.types import (
     FlowCompletion as FlowCompletionAsync,
 )
 from pywa_async.types import (
@@ -208,6 +220,8 @@ def overrides() -> list[tuple[type, type]]:
     return [
         (WhatsAppSync, WhatsAppAsync),
         (MessageSync, MessageAsync),
+        (EditedMessageSync, EditedMessageAsync),
+        (DeletedMessageSync, DeletedMessageAsync),
         (CallbackButtonSync, CallbackButtonAsync),
         (CallbackSelectionSync, CallbackSelectionAsync),
         (MessageStatusSync, MessageStatusAsync),
@@ -271,6 +285,11 @@ def test_all_methods_are_overwritten_in_async(overrides):
             ServerSync._get_handler_type,
             ServerSync._register_flow_endpoint_callback,
             _HandlerDecorators.on_message,
+            _HandlerDecorators.on_edited_message,
+            _HandlerDecorators.on_deleted_message,
+            _HandlerDecorators.on_coexistence_message,
+            _HandlerDecorators.on_coexistence_edited_message,
+            _HandlerDecorators.on_coexistence_deleted_message,
             _HandlerDecorators.on_callback_button,
             _HandlerDecorators.on_callback_selection,
             _HandlerDecorators.on_message_status,
@@ -306,6 +325,8 @@ def test_all_methods_are_overwritten_in_async(overrides):
             UserSync.as_vcard,
             TemplateDetailsSync.to_json,
             MessageSync._resolve_msg_content,
+            MessageSync._extract_message_info,
+            MessageSync._extract_update,
         }
     ]
     non_async = {

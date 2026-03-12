@@ -64,6 +64,23 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
         ],
         "referral": [lambda m: m.referral is not None],
         "media_with_url": [lambda m: m.media.url is not None],
+        "coexistence_text": [lambda m: m.sent_to is not None],
+    },
+    "edit_message": {
+        "edit_text": [lambda m: m.text is not None],
+        "edit_caption": [lambda m: m.caption is not None],
+        "coexistence_edit_text": [
+            lambda m: m.sent_to is not None,
+            lambda m: m.original_id is not None,
+            lambda m: m.text is not None,
+        ],
+    },
+    "delete_message": {
+        "original_id": [lambda m: m.original_id is not None],
+        "coexistence_delete_message": [
+            lambda m: m.original_id is not None,
+            lambda m: m.sent_to is not None,
+        ],
     },
     "callback_button": {
         "button": [lambda b: b.type == MessageType.INTERACTIVE],
