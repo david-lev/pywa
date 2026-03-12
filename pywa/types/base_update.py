@@ -24,7 +24,8 @@ from typing import (
 )
 
 from ..listeners import BaseListenerIdentifier, UserUpdateListenerIdentifier
-from .others import Contact, Metadata, ProductsSection, SuccessResult, User
+from .others import Contact, Metadata, ProductsSection, SuccessResult
+from .user import User
 
 if TYPE_CHECKING:
     from ..client import WhatsApp

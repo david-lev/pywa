@@ -209,12 +209,6 @@ class Message(BaseUserUpdate):
             timestamp=timestamp,
             recipient=metadata.phone_number_id,
         )
-        try:
-            usr = client._usr_cls.from_dict(value["contacts"][0], client=client)
-        except KeyError:
-            usr = client._usr_cls(
-                wa_id=msg["from"], name=None, _client=client
-            )  # some messages don't have contacts
         return cls(
             _client=client,
             raw=update,
@@ -222,7 +216,7 @@ class Message(BaseUserUpdate):
             id=msg["id"],
             type=msg_type,
             **msg_content,
-            from_user=usr,
+            from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
             timestamp=timestamp,
             metadata=metadata,
             forwarded=context.get("forwarded", False)

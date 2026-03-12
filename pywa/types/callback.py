@@ -290,7 +290,7 @@ class CallbackButton(BaseUserUpdate, Generic[_CallbackDataT]):
             id=msg["id"],
             metadata=Metadata.from_dict(value["metadata"]),
             type=MessageType(msg_type),
-            from_user=client._usr_cls.from_dict(value["contacts"][0], client=client),
+            from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
             timestamp=datetime.datetime.fromtimestamp(
                 int(msg["timestamp"]),
                 datetime.timezone.utc,
@@ -381,7 +381,7 @@ class CallbackSelection(BaseUserUpdate, Generic[_CallbackDataT]):
             id=msg["id"],
             metadata=Metadata.from_dict(value["metadata"]),
             type=MessageType(msg["type"]),
-            from_user=client._usr_cls.from_dict(value["contacts"][0], client=client),
+            from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
             timestamp=datetime.datetime.fromtimestamp(
                 int(msg["timestamp"]),
                 datetime.timezone.utc,

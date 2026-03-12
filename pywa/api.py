@@ -530,21 +530,25 @@ class GraphAPI:
     def send_message(
         self,
         sender: str,
-        to: str,
+        to: str | None,
+        recipient: str | None,
+        recipient_type: str,
         typ: str,
-        msg: dict[str, str | list[str]] | tuple[dict],
+        msg: dict,
         reply_to_message_id: str | None = None,
         biz_opaque_callback_data: str | None = None,
         recipient_identity_key_hash: str | None = None,
-    ) -> dict[str, dict | list]:
+    ) -> dict:
         """
-        Send a message to a WhatsApp user.
+        Send a message to a WhatsApp user/group.
 
         - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages>`_.
 
         Args:
             sender: The phone id to send the message from.
-            to: The phone number to send the message to.
+            to: The WhatsApp ID to send the message to.
+            recipient: The recipient unique identifier (BSUID).
+            recipient_type: The type of the recipient (e.g. ``individual``, ``group``).
             typ: The type of the message (e.g. ``text``, ``image``, etc.).
             msg: The message object to send.
             reply_to_message_id: The ID of the message to reply to.
@@ -554,13 +558,18 @@ class GraphAPI:
         Returns:
             The response from the WhatsApp Cloud API.
         """
+        if not to and not recipient:
+            raise ValueError("Either 'to' or 'recipient' must be provided")
         data = {
             "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": to,
+            "recipient_type": recipient_type,
             "type": typ,
             typ: msg,
         }
+        if to:
+            data["to"] = to
+        if recipient:
+            data["recipient"] = recipient
         if reply_to_message_id:
             data["context"] = {"message_id": reply_to_message_id}
         if biz_opaque_callback_data:
@@ -577,7 +586,8 @@ class GraphAPI:
         self,
         sender: str,
         to: str,
-        template: dict[str, str | list[str]],
+        recipient: str,
+        template: dict,
         reply_to_message_id: str | None = None,
         message_activity_sharing: bool | None = None,
         biz_opaque_callback_data: str | None = None,

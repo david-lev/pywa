@@ -161,12 +161,7 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
                 int(status["timestamp"]),
                 datetime.timezone.utc,
             ),
-            from_user=client._usr_cls(
-                wa_id=status["recipient_id"],
-                identity_key_hash=status.get("recipient_identity_key_hash"),
-                name=None,
-                _client=client,
-            ),
+            from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
             tracker=status.get("biz_opaque_callback_data"),
             conversation=Conversation.from_dict(status["conversation"])
             if "conversation" in status

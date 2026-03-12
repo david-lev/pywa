@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import functools
 import time
-import warnings
 
 from ..errors import WhatsAppError
 
@@ -28,103 +27,9 @@ from .. import utils
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
-    from .calls import CallPermissions
+    from .user import User
 
 _logger = logging.getLogger(__name__)
-
-
-@dataclasses.dataclass(frozen=True, slots=True)
-class User:
-    """
-    Represents a WhatsApp user.
-
-    Attributes:
-        wa_id: The WhatsApp ID of the user (The phone number with the country code).
-        name: The name of the user (``None`` on :class:`MessageStatus`).
-        identity_key_hash: The identity key hash of the user (Only if identity key check is enabled on the phone number settings).
-    """
-
-    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
-    wa_id: str
-    name: str | None
-    identity_key_hash: str | None = None
-    _input: str | None = dataclasses.field(
-        default=None, repr=False, hash=False, compare=False
-    )
-
-    @classmethod
-    def from_dict(cls, data: dict, client: WhatsApp) -> User:
-        return cls(
-            _client=client,
-            _input=data.get("input"),
-            wa_id=data["wa_id"],
-            identity_key_hash=data.get("identity_key_hash"),
-            name=data.get("profile", {}).get("name"),
-        )
-
-    @property
-    def input(self) -> None:
-        """Deprecated, access the input from the sent message instead."""
-        warnings.warn(
-            "User.input is deprecated, access the input from the sent message instead. e.g. wa.send_message(...).input",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self._input
-
-    def block(self) -> bool:
-        """
-        Block the user.
-
-        - Shortcut for :meth:`~pywa.client.WhatsApp.block_users` with the user wa_id.
-
-        Returns:
-            bool: True if the user was blocked
-
-        Raises:
-            BlockUserError: If the user was not blocked
-        """
-        res = self._client.block_users((self.wa_id,))
-        added = self.wa_id in {u.wa_id for u in res.added_users}
-        if not added:
-            raise res.errors
-        return added
-
-    def unblock(self) -> bool:
-        """
-        Unblock the user.
-
-        - Shortcut for :meth:`~pywa.client.WhatsApp.unblock_users` with the user wa_id.
-
-        Returns:
-            bool: True if the user was unblocked, False otherwise.
-        """
-        return self.wa_id in {
-            u.wa_id for u in self._client.unblock_users((self.wa_id,)).removed_users
-        }
-
-    def get_call_permissions(self) -> CallPermissions:
-        """
-        Get the call permissions of the user.
-
-        - Shortcut for :meth:`~pywa.client.WhatsApp.get_call_permissions` with the user wa_id.
-
-        Returns:
-            CallPermissions: The call permissions of the user.
-        """
-        return self._client.get_call_permissions(wa_id=self.wa_id)
-
-    def as_vcard(self) -> str:
-        """Get the user as a vCard."""
-        return "\n".join(
-            (
-                "BEGIN:VCARD",
-                "VERSION:3.0",
-                f"FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:{self.name}",
-                f"TEL;type=CELL;type=VOICE:+{self.wa_id}",
-                "END:VCARD",
-            )
-        )
 
 
 class MessageType(utils.StrEnum):
