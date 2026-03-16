@@ -41,6 +41,7 @@ __all__ = [
     "MPMButton",
     "SPMButton",
     "CallPermissionRequestButton",
+    "ContactInfoRquestButton",
     "BaseOTPButton",
     "CopyCodeOTPButton",
     "OneTapOTPButton",
@@ -678,6 +679,7 @@ class ComponentType(utils.StrEnum):
     VOICE_CALL = "VOICE_CALL"
     APP = "APP"
     CALL_PERMISSION_REQUEST = "CALL_PERMISSION_REQUEST"
+    REQUEST_CONTACT_INFO = "REQUEST_CONTACT_INFO"
 
     UNKNOWN = "UNKNOWN"
 
@@ -2853,6 +2855,15 @@ class CallPermissionRequestButton(BaseButtonComponent):
     )
 
 
+@dataclasses.dataclass(kw_only=True, slots=True)
+class ContactInfoRquestButton(BaseButtonComponent):
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.CONTACT_INFO_REQUEST,
+        init=False,
+        repr=False,
+    )
+
+
 class OtpType(utils.StrEnum):
     """
     The type of the one-time password or code button.
@@ -3705,6 +3716,7 @@ _comp_types_to_component: dict[ComponentType, type[TemplateBaseComponent]] = {
     ComponentType.COPY_CODE: CopyCodeButton,
     ComponentType.FLOW: FlowButton,
     ComponentType.CALL_PERMISSION_REQUEST: CallPermissionRequestButton,
+    ComponentType.REQUEST_CONTACT_INFO: ContactInfoRquestButton,
     ComponentType.VOICE_CALL: VoiceCallButton,
 }
 
