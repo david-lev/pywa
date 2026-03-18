@@ -252,6 +252,7 @@ class PricingCategory(utils.StrEnum):
         UTILITY: Indicates utility rate applied.
         SERVICE: Indicates service rate applied.
         REFERRAL_CONVERSION: Indicates a `free entry point conversation <https://developers.facebook.com/docs/whatsapp/pricing#free-entry-point-conversations>`_.
+        GENERAL_PURPOSE_AI: Indicates a `general-purpose AI <https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing/ai-providers>`_ rate applied.
     """
 
     _check_value = str.islower
@@ -264,7 +265,7 @@ class PricingCategory(utils.StrEnum):
     UTILITY = "utility"
     SERVICE = "service"
     REFERRAL_CONVERSION = "referral_conversion"
-
+    GENERAL_PURPOSE_AI = "general_purpose_ai"
     UNKNOWN = "UNKNOWN"
 
 
