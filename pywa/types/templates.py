@@ -864,17 +864,6 @@ class CreativeFeaturesSpec:
         auto_promotion_tag: Whether to automatically extract the promotion tag, like “30% off”, “50% discount”, “Free shipping” from messages to create a promotion tag and put it into the image to highlight promotion information. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#auto-promotion-tag>`_.
     """
 
-    image_brightness_and_contrast: bool
-    image_touchups: bool
-    add_text_overlay: bool
-    image_animation: bool
-    image_background_gen: bool
-    text_extraction_for_headline: bool
-    text_extraction_for_tap_target: bool
-    product_extensions: bool
-    text_formatting_optimization: bool
-    auto_promotion_tag: bool
-
     __slots__ = (
         "image_brightness_and_contrast",
         "image_touchups",
@@ -917,17 +906,22 @@ class CreativeFeaturesSpec:
             text_formatting_optimization: Whether to update the formatting of text (e.g. remove unnecessary spaces, bold phrases) to increase performance. No text content is changed - format only. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#text-formatting>`_.
             auto_promotion_tag: Whether to automatically extract the promotion tag, like “30% off”, “50% discount”, “Free shipping” from messages to create a promotion tag and put it into the image to highlight promotion information. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#auto-promotion-tag>`_.
         """
-        locals_map = locals()
-        for field in self.__slots__:
-            setattr(self, field, locals_map[field])
+        self.image_brightness_and_contrast = image_brightness_and_contrast
+        self.image_touchups = image_touchups
+        self.add_text_overlay = add_text_overlay
+        self.image_animation = image_animation
+        self.image_background_gen = image_background_gen
+        self.text_extraction_for_headline = text_extraction_for_headline
+        self.text_extraction_for_tap_target = text_extraction_for_tap_target
+        self.product_extensions = product_extensions
+        self.text_formatting_optimization = text_formatting_optimization
+        self.auto_promotion_tag = auto_promotion_tag
 
     def to_dict(self) -> dict:
         return {
-            k: {"enroll_status": "OPT_IN" if v else "OPT_OUT"}
-            for k, v in {
-                field_name: getattr(self, field_name) for field_name in self.__slots__
-            }.items()
-            if v is not None
+            field: {"enroll_status": "OPT_IN" if value else "OPT_OUT"}
+            for field in self.__slots__
+            if (value := getattr(self, field)) is not None
         }
 
     @classmethod
@@ -942,12 +936,22 @@ class CreativeFeaturesSpec:
         )
 
     def __repr__(self) -> str:
-        field_reprs = ", ".join(
-            f"{field_name}={getattr(self, field_name)!r}"
-            for field_name in self.__slots__
-            if getattr(self, field_name) is not None
-        )
-        return f"{self.__class__.__name__}({field_reprs})"
+        parts = []
+        for field in self.__slots__:
+            value = getattr(self, field)
+            if value is not None:
+                parts.append(f"{field}={value!r}")
+        return f"{self.__class__.__name__}({', '.join(parts)})"
+
+    @classmethod
+    def all_enabled(cls) -> CreativeFeaturesSpec:
+        """Creates a CreativeFeaturesSpec instance with all features enabled."""
+        return cls(**dict.fromkeys(cls.__slots__, True))
+
+    @classmethod
+    def all_disabled(cls) -> CreativeFeaturesSpec:
+        """Creates a CreativeFeaturesSpec instance with all features disabled."""
+        return cls(**dict.fromkeys(cls.__slots__, False))
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
