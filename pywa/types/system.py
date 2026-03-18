@@ -70,7 +70,7 @@ class PhoneNumberChange(BaseUserUpdate):
             sys_type=SystemType(sys["type"]),
             from_user=client._usr_cls(
                 _client=client,
-                id=sys["user_id"],
+                bsuid=sys["user_id"],
                 wa_id=msg["from"],
                 parent_id=sys.get("parent_user_id"),
                 name=None,

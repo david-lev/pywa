@@ -7,6 +7,7 @@ __all__ = ["WhatsApp"]
 import bisect
 import collections
 import datetime
+import enum
 import functools
 import hashlib
 import json
@@ -156,6 +157,15 @@ _logger = logging.getLogger(__name__)
 _DEFAULT_VERIFY_DELAY_SEC = 3
 
 
+class UserIdentifier(enum.Enum):
+    BSUID = "bsuid"
+    WA_ID = "wa_id"
+
+    @property
+    def user_attr(self) -> str:
+        return self.value
+
+
 class WhatsApp(Server, _HandlerDecorators, _Listeners):
     phone_id: str | int | None
     business_account_id: str | int | None
@@ -218,6 +228,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             str | int | float | Literal[utils.Version.GRAPH_API]
         ) = utils.Version.GRAPH_API,
         handlers_modules: Iterable[ModuleType] | None = None,
+        user_identifier_priority: tuple[UserIdentifier, ...] = (
+            UserIdentifier.WA_ID,
+            UserIdentifier.BSUID,
+        ),
     ) -> None:
         """
         The WhatsApp client.
@@ -276,6 +290,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             skip_duplicate_updates: Whether to skip duplicate updates (default: ``True``).
             validate_updates: Whether to `validate <https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/create-webhook-endpoint#validation-1>`_ incoming update payloads (default: ``True``; requires ``app_secret``).
             handlers_modules: Python modules from which handlers should be automatically loaded.
+            user_identifier_priority: The priority order of user identifiers to use when replying to messages, blocking users, etc (default: ``wa_id`` > ``bsuid``).
         """
         try:
             utils.Version.GRAPH_API.validate_min_version(str(api_version))
@@ -293,6 +308,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )
         self.app_id = str(app_id) if app_id is not None else None
         self.filter_updates = filter_updates
+        if not all(i in user_identifier_priority for i in UserIdentifier):
+            raise ValueError(
+                f"user_identifier_priority must contain all UserIdentifier values. Got {user_identifier_priority}"
+            )
+        self._user_identifier_priority = user_identifier_priority
         self._handlers: dict[
             type[Handler] | None,
             list[Handler],
