@@ -41,7 +41,7 @@ __all__ = [
     "MPMButton",
     "SPMButton",
     "CallPermissionRequestButton",
-    "ContactInfoRquestButton",
+    "ContactInfoRequestButton",
     "BaseOTPButton",
     "CopyCodeOTPButton",
     "OneTapOTPButton",
@@ -263,9 +263,13 @@ class TemplateStatusUpdate(BaseTemplateUpdate):
         )
 
     @property
-    def listener_identifier(self) -> TemplateStatusUpdateListenerIdentifier:
-        return TemplateStatusUpdateListenerIdentifier(
-            template_id=self.template_id,
+    def listener_identifiers(
+        self,
+    ) -> tuple[TemplateStatusUpdateListenerIdentifier, ...] | None:
+        return (
+            TemplateStatusUpdateListenerIdentifier(
+                template_id=self.template_id,
+            ),
         )
 
     def unpause(self) -> TemplateUnpauseResult:
@@ -2856,9 +2860,9 @@ class CallPermissionRequestButton(BaseButtonComponent):
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class ContactInfoRquestButton(BaseButtonComponent):
+class ContactInfoRequestButton(BaseButtonComponent):
     type: ComponentType = dataclasses.field(
-        default=ComponentType.CONTACT_INFO_REQUEST,
+        default=ComponentType.REQUEST_CONTACT_INFO,
         init=False,
         repr=False,
     )
@@ -3716,7 +3720,7 @@ _comp_types_to_component: dict[ComponentType, type[TemplateBaseComponent]] = {
     ComponentType.COPY_CODE: CopyCodeButton,
     ComponentType.FLOW: FlowButton,
     ComponentType.CALL_PERMISSION_REQUEST: CallPermissionRequestButton,
-    ComponentType.REQUEST_CONTACT_INFO: ContactInfoRquestButton,
+    ComponentType.REQUEST_CONTACT_INFO: ContactInfoRequestButton,
     ComponentType.VOICE_CALL: VoiceCallButton,
 }
 
