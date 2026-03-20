@@ -2415,7 +2415,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     method_arg="phone_id",
                     client_arg="phone_id",
                 ),
-                public_key=public_key,
+                business_public_key=public_key,
             )
         )
 
@@ -3805,10 +3805,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The access token.
         """
-        return self.api.get_app_access_token(
-            app_id=app_id,
-            app_secret=app_secret,
-        )["access_token"]
+        return self.api.get_app_access_token(client_id=app_id, client_secret=app_secret)["access_token"]
 
     def set_app_callback_url(
             self,
@@ -3834,13 +3831,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             Whether the callback URL was set.
         """
-        return SuccessResult.from_dict(self.api.set_app_callback_url(
-            app_id=app_id,
-            app_access_token=app_access_token,
-            callback_url=callback_url,
-            verify_token=verify_token,
-            fields=tuple(fields),
-        ))
+        return SuccessResult.from_dict(
+            self.api.set_app_callback_url(app_id=app_id, access_token=app_access_token, callback_url=callback_url,
+                                          verify_token=verify_token, fields=tuple(fields)))
 
     def override_waba_callback_url(
             self, callback_url: str, verify_token: str, *, waba_id: str | int | None = None
@@ -3860,9 +3853,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         return SuccessResult.from_dict(self.api.set_waba_alternate_callback_url(
             waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="business_account_id"),
-            callback_url=callback_url,
-            verify_token=verify_token,
-        ))
+            override_callback_uri=callback_url, verify_token=verify_token))
 
     def delete_waba_callback_url(self, *,waba_id: str | int | None = None) -> SuccessResult:
         """
@@ -3897,11 +3888,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             Whether the callback URL was overridden.
         """
-        return SuccessResult.from_dict(self.api.set_phone_alternate_callback_url(
-            callback_url=callback_url,
-            verify_token=verify_token,
-            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-        ))
+        return SuccessResult.from_dict(
+            self.api.set_phone_alternate_callback_url(override_callback_uri=callback_url, verify_token=verify_token,
+                                                      phone_id=helpers.resolve_arg(wa=self, value=phone_id,
+                                                                                   method_arg="phone_id",
+                                                                                   client_arg="phone_id")))
 
     def delete_phone_callback_url(self, *,phone_id: str | int | None = None) -> SuccessResult:
         """
@@ -3951,7 +3942,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return UsersBlockedResult.from_dict(
             data=self.api.block_users(
                 phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-                users=tuple(str(phone_id) for phone_id in users),
+                **helpers.resolve_blocking_users(users),
             ),
         )
 
@@ -3978,7 +3969,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return UsersUnblockedResult.from_dict(
             data=self.api.unblock_users(
                 phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-                users=tuple(str(phone_id) for phone_id in users),
+                **helpers.resolve_blocking_users(users),
             ),
         )
 

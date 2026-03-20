@@ -4,6 +4,7 @@ __all__ = [
     "resolve_recipient",
     "resolve_callee",
     "resolve_call_permission_request_user",
+    "resolve_blocking_users",
     "clean_phone_number",
     "resolve_buttons_param",
     "resolve_media_param",
@@ -858,6 +859,20 @@ def resolve_call_permission_request_user(user_id: int | str) -> dict[str, str]:
         case RecipientType.BSUID | RecipientType.PARENT_BSUID:
             return {"recipient": str(user_id)}
     raise ValueError(f"Invalid recipient type: {recipient_type}")
+
+
+def resolve_blocking_users(users: Iterable[str | int]) -> dict[str, list[str]]:
+    resolved = {"users": [], "user_ids": []}
+    for user_id in users:
+        _, recipient_type = resolve_recipient(user_id)
+        match recipient_type:
+            case RecipientType.WA_ID | RecipientType.PHONE_NUMBER:
+                resolved["users"].append(str(user_id))
+            case RecipientType.BSUID | RecipientType.PARENT_BSUID:
+                resolved["user_ids"].append(str(user_id))
+            case _:
+                raise ValueError(f"Invalid recipient type: {recipient_type}")
+    return resolved
 
 
 def resolve_arg(

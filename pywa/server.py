@@ -485,11 +485,11 @@ class Server:
             match callback_url_scope:
                 case utils.CallbackURLScope.APP:
                     app_access_token = self.api.get_app_access_token(
-                        app_id=app_id, app_secret=app_secret
+                        client_id=app_id, client_secret=app_secret
                     )
                     res = self.api.set_app_callback_url(
                         app_id=app_id,
-                        app_access_token=app_access_token["access_token"],
+                        access_token=app_access_token["access_token"],
                         callback_url=callback_url,
                         verify_token=verify_token,
                         fields=fields,
@@ -497,12 +497,12 @@ class Server:
                 case utils.CallbackURLScope.WABA:
                     res = self.api.set_waba_alternate_callback_url(
                         waba_id=self.business_account_id,
-                        callback_url=callback_url,
+                        override_callback_uri=callback_url,
                         verify_token=verify_token,
                     )
                 case utils.CallbackURLScope.PHONE:
                     res = self.api.set_phone_alternate_callback_url(
-                        callback_url=callback_url,
+                        override_callback_uri=callback_url,
                         verify_token=verify_token,
                         phone_id=self.phone_id,
                     )

@@ -68,7 +68,7 @@ class GraphAPIAsync(GraphAPI):
         return res.json()
 
     async def get_app_access_token(
-        self, app_id: int, app_secret: str
+        self, client_id: int, client_secret: str
     ) -> dict[str, str]:
         """
         Get an access token for an app.
@@ -84,8 +84,8 @@ class GraphAPIAsync(GraphAPI):
 
 
         Args:
-            app_id: The ID of the app.
-            app_secret: The secret of the app.
+            client_id: The ID of the app.
+            client_secret: The secret of the app.
 
         Returns:
             The access token and its type.
@@ -96,17 +96,14 @@ class GraphAPIAsync(GraphAPI):
             endpoint="/oauth/access_token",
             params={
                 "grant_type": "client_credentials",
-                "client_id": app_id,
-                "client_secret": app_secret,
+                "client_id": client_id,
+                "client_secret": client_secret,
             },
             log_kwargs=False,
         )
 
     async def get_business_access_token(
-        self,
-        app_id: int,
-        app_secret: str,
-        code: str,
+        self, client_id: int, client_secret: str, code: str
     ) -> dict[str, str]:
         """
         Exchange the Embedded Signup token code for a business token.
@@ -122,8 +119,8 @@ class GraphAPIAsync(GraphAPI):
 
 
         Args:
-            app_id: The ID of the app.
-            app_secret: The secret of the app.
+            client_id: The ID of the app.
+            client_secret: The secret of the app.
             code: The code `returned <https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/implementation#session-logging-message-event-listener>`_ by Embedded Signup when the customer successfully completed the flow.
 
         Returns:
@@ -135,8 +132,8 @@ class GraphAPIAsync(GraphAPI):
             method="GET",
             endpoint="/oauth/access_token",
             params={
-                "client_id": app_id,
-                "client_secret": app_secret,
+                "client_id": client_id,
+                "client_secret": client_secret,
                 "code": code,
             },
             log_kwargs=False,
@@ -145,7 +142,7 @@ class GraphAPIAsync(GraphAPI):
     async def set_app_callback_url(
         self,
         app_id: int,
-        app_access_token: str,
+        access_token: str,
         callback_url: str,
         verify_token: str,
         fields: tuple[str, ...],
@@ -163,7 +160,7 @@ class GraphAPIAsync(GraphAPI):
 
         Args:
             app_id: The ID of the app.
-            app_access_token: The access token of the app (from ``get_app_access_token``).
+            access_token: The access token of the app (from ``get_app_access_token``).
             callback_url: The URL to set.
             verify_token: The verify token to challenge the webhook with.
             fields: The fields to subscribe to.
@@ -179,15 +176,12 @@ class GraphAPIAsync(GraphAPI):
                 "callback_url": callback_url,
                 "verify_token": verify_token,
                 "fields": ",".join(fields),
-                "access_token": app_access_token,
+                "access_token": access_token,
             },
         )
 
     async def set_waba_alternate_callback_url(
-        self,
-        waba_id: str,
-        callback_url: str,
-        verify_token: str,
+        self, waba_id: str, override_callback_uri: str, verify_token: str
     ) -> dict[str, bool]:
         """
         Set an alternate callback URL on a WABA.
@@ -202,7 +196,7 @@ class GraphAPIAsync(GraphAPI):
 
         Args:
             waba_id: The ID of the WhatsApp Business Account.
-            callback_url: The URL to set.
+            override_callback_uri: The URL to set.
             verify_token: The verify token to challenge the webhook with.
 
         Returns:
@@ -212,7 +206,7 @@ class GraphAPIAsync(GraphAPI):
             method="POST",
             endpoint=f"/{waba_id}/subscribed_apps",
             json={
-                "override_callback_uri": callback_url,
+                "override_callback_uri": override_callback_uri,
                 "verify_token": verify_token,
             },
         )
@@ -278,10 +272,7 @@ class GraphAPIAsync(GraphAPI):
         )
 
     async def set_phone_alternate_callback_url(
-        self,
-        callback_url: str,
-        verify_token: str,
-        phone_id: str,
+        self, override_callback_uri: str, verify_token: str, phone_id: str
     ) -> dict[str, bool]:
         """
         Set an alternate callback URL on the business phone number.
@@ -290,7 +281,7 @@ class GraphAPIAsync(GraphAPI):
 
         Args:
             phone_id: The ID of the phone number to set the callback URL on.
-            callback_url: The URL to set.
+            override_callback_uri: The URL to set.
             verify_token: The verify token to challenge the webhook with.
 
         Returns:
@@ -301,7 +292,7 @@ class GraphAPIAsync(GraphAPI):
             endpoint=f"/{phone_id}/",
             json={
                 "webhook_configuration": {
-                    "override_callback_uri": callback_url,
+                    "override_callback_uri": override_callback_uri,
                     "verify_token": verify_token,
                 }
             },
@@ -340,7 +331,7 @@ class GraphAPIAsync(GraphAPI):
     async def set_business_public_key(
         self,
         phone_id: str,
-        public_key: str,
+        business_public_key: str,
     ) -> dict[str, bool]:
         """
         Set the public key of the business.
@@ -355,7 +346,7 @@ class GraphAPIAsync(GraphAPI):
 
         Args:
             phone_id: The ID of the phone number to set the public key on.
-            public_key: The public key to set.
+            business_public_key: The public key to set.
 
         Returns:
             The success of the operation.
@@ -363,7 +354,7 @@ class GraphAPIAsync(GraphAPI):
         return await self._make_request(
             method="POST",
             endpoint=f"/{phone_id}/whatsapp_business_encryption",
-            data={"business_public_key": public_key},
+            data={"business_public_key": business_public_key},
         )
 
     async def upload_media(
@@ -1925,6 +1916,7 @@ class GraphAPIAsync(GraphAPI):
         self,
         phone_id: str,
         users: tuple[str, ...],
+        user_ids: tuple[str, ...],
     ) -> dict:
         """
         Block users from sending messages to the business.
@@ -1945,16 +1937,19 @@ class GraphAPIAsync(GraphAPI):
         Args:
             phone_id: The ID of the phone number to block users on.
             users: The list of phone numbers/wa_ids to block.
+            user_ids: The list of bsuids to block.
 
         Returns:
             The response from the WhatsApp Cloud API.
         """
+        block_users = [{"user": user} for user in users]
+        block_users.extend({"user_id": user_id} for user_id in user_ids)
         return await self._make_request(
             method="POST",
             endpoint=f"/{phone_id}/block_users",
             json={
                 "messaging_product": "whatsapp",
-                "block_users": [{"user": user} for user in users],
+                "block_users": block_users,
             },
         )
 
@@ -1962,6 +1957,7 @@ class GraphAPIAsync(GraphAPI):
         self,
         phone_id: str,
         users: tuple[str, ...],
+        user_ids: tuple[str, ...],
     ) -> dict:
         """
         Unblock users from sending messages to the business.
@@ -1981,16 +1977,19 @@ class GraphAPIAsync(GraphAPI):
         Args:
             phone_id: The ID of the phone number to unblock users on.
             users: The list of phone numbers/wa_ids to unblock.
+            user_ids: The list of bsuids to unblock.
 
         Returns:
             The response from the WhatsApp Cloud API.
         """
+        unblock_users = [{"user": user} for user in users]
+        unblock_users.extend({"user_id": user_id} for user_id in user_ids)
         return await self._make_request(
             method="DELETE",
             endpoint=f"/{phone_id}/block_users",
             json={
                 "messaging_product": "whatsapp",
-                "block_users": [{"user": user} for user in users],
+                "block_users": unblock_users,
             },
         )
 
