@@ -308,6 +308,20 @@ def test_resolve_recipient():
         },
         RecipientType.WA_ID,
     )
+    assert helpers.resolve_recipient("US.13491208655302741918") == (
+        {
+            "recipient": "US.13491208655302741918",
+            "recipient_type": "individual",
+        },
+        RecipientType.BSUID,
+    )
+    assert helpers.resolve_recipient("US.ENT.11815799212886844830") == (
+        {
+            "recipient": "US.ENT.11815799212886844830",
+            "recipient_type": "individual",
+        },
+        RecipientType.PARENT_BSUID,
+    )
     assert helpers.resolve_recipient("+16315551234") == (
         {
             "to": "+16315551234",

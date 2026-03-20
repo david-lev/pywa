@@ -40,7 +40,6 @@ if TYPE_CHECKING:
 
 _BSUID_RE = re.compile(r"^[A-Z]{2}\.\d+$")
 _PARENT_BSUID_RE = re.compile(r"^[A-Z]{2}\.ENT\.\d+$")
-_WA_ID_RE = re.compile(r"^\d+$")
 _PHONE_CLEAN_RE = re.compile(r"[+\-\s()]")
 
 
@@ -64,16 +63,13 @@ class RecipientType(enum.Enum):
 
     @classmethod
     def from_recipient(cls, recipient: str | int) -> RecipientType:
-        if isinstance(recipient, int):
+        if isinstance(recipient, int) or recipient.isdigit():
             return cls.WA_ID
 
         s = recipient.strip()
 
         if _BSUID_RE.fullmatch(s):
             return cls.BSUID
-
-        if _WA_ID_RE.fullmatch(s):
-            return cls.WA_ID
 
         if re.sub(_PHONE_CLEAN_RE, "", s).isdigit():
             return RecipientType.PHONE_NUMBER
