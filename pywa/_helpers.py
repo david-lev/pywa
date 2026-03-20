@@ -2,6 +2,9 @@ from __future__ import annotations
 
 __all__ = [
     "resolve_recipient",
+    "resolve_callee",
+    "resolve_call_permission_request_user",
+    "clean_phone_number",
     "resolve_buttons_param",
     "resolve_media_param",
     "resolve_tracker_param",
@@ -828,13 +831,33 @@ def resolve_recipient(to: str | int) -> tuple[dict[str, str], RecipientType]:
             return {"to": str(to), "recipient_type": "individual"}, recipient_type
         case RecipientType.BSUID:
             return {
-                "recipient": str(to),
+                "recipient": to,
                 "recipient_type": "individual",
             }, recipient_type
         case RecipientType.GROUP_ID:
-            return {"to": str(to), "recipient_type": "group"}, recipient_type
+            return {"to": to, "recipient_type": "group"}, recipient_type
         case _:
             raise ValueError(f"Invalid recipient: {to}")
+
+
+def clean_phone_number(phone_number: str | int) -> str:
+    return re.sub(r"\D", "", str(phone_number))
+
+
+def resolve_callee(to: str | int) -> tuple[dict[str, str], RecipientType]:
+    recipient, recipient_type = resolve_recipient(to)
+    recipient.pop("recipient_type", None)
+    return recipient, recipient_type
+
+
+def resolve_call_permission_request_user(user_id: int | str) -> dict[str, str]:
+    _, recipient_type = resolve_recipient(user_id)
+    match recipient_type:
+        case RecipientType.WA_ID | RecipientType.PHONE_NUMBER:
+            return {"user_wa_id": clean_phone_number(user_id)}
+        case RecipientType.BSUID:
+            return {"recipient": str(user_id)}
+    raise ValueError(f"Invalid recipient type: {recipient_type}")
 
 
 def resolve_arg(

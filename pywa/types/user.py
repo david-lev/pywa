@@ -19,7 +19,7 @@ class User:
         name: The name of the user.
         username: The username of the user.
         identity_key_hash: The identity key hash of the user (Only if identity key check is enabled on the phone number settings).
-        parent_id: The Parent business-scoped user ID. See `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#parent-business-scoped-user-ids>`_ for more information.
+        parent_bsuid: The Parent business-scoped user ID. See `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#parent-business-scoped-user-ids>`_ for more information.
     """
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
@@ -28,7 +28,7 @@ class User:
     wa_id: str | None
     username: str | None
     identity_key_hash: str | None
-    parent_id: str | None
+    parent_bsuid: str | None
 
     @property
     def preferred_id(self) -> str:
@@ -64,7 +64,7 @@ class User:
             wa_id=data.get("wa_id") or None,  # avoid empty string
             name=data["profile"]["name"],
             username=data["profile"].get("username"),
-            parent_id=data.get("parent_user_id"),
+            parent_bsuid=data.get("parent_user_id"),
             identity_key_hash=data.get("identity_key_hash"),
         )
 
@@ -76,7 +76,7 @@ class User:
             wa_id=data.get("wa_id"),
             name=None,
             username=None,
-            parent_id=None,
+            parent_bsuid=None,
             identity_key_hash=None,
         )
 
@@ -90,7 +90,7 @@ class User:
             wa_id=data.get("wa_id"),
             name=None,
             username=None,
-            parent_id=None,
+            parent_bsuid=None,
             identity_key_hash=identity_key_hash,
         )
 

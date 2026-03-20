@@ -7,7 +7,6 @@ __all__ = ["WhatsApp"]
 import bisect
 import collections
 import datetime
-import enum
 import functools
 import hashlib
 import json
@@ -150,20 +149,11 @@ from .types.templates import (
     _AuthenticationTemplates,
     _TemplateUpdate,
 )
-from .utils import FastAPI, Flask
+from .utils import FastAPI, Flask, UserIdentifier
 
 _logger = logging.getLogger(__name__)
 
 _DEFAULT_VERIFY_DELAY_SEC = 3
-
-
-class UserIdentifier(enum.Enum):
-    BSUID = "bsuid"
-    WA_ID = "wa_id"
-
-    @property
-    def user_attr(self) -> str:
-        return self.value
 
 
 class WhatsApp(Server, _HandlerDecorators, _Listeners):
@@ -231,6 +221,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         user_identifier_priority: tuple[UserIdentifier, ...] = (
             UserIdentifier.WA_ID,
             UserIdentifier.BSUID,
+            UserIdentifier.PARENT_BSUID,
         ),
     ) -> None:
         """
@@ -290,7 +281,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             skip_duplicate_updates: Whether to skip duplicate updates (default: ``True``).
             validate_updates: Whether to `validate <https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/create-webhook-endpoint#validation-1>`_ incoming update payloads (default: ``True``; requires ``app_secret``).
             handlers_modules: Python modules from which handlers should be automatically loaded.
-            user_identifier_priority: The priority order of user identifiers to use when replying to messages, blocking users, etc (default: ``wa_id`` > ``bsuid``).
+            user_identifier_priority: The priority order of user identifiers to use when replying to messages, blocking users, etc (default: ``wa_id`` > ``bsuid`` > ``parent_bsuid``)
         """
         try:
             utils.Version.GRAPH_API.validate_min_version(str(api_version))
@@ -4024,7 +4015,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
     def get_call_permissions(
             self,
-            wa_id: str | int,
+            from_user: str | int,
             *,
             phone_id: str | int | None = None,
     ) -> CallPermissions:
@@ -4034,7 +4025,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-call-permissions>`_.
 
         Args:
-            wa_id: The WhatsApp ID of the user to get the call permissions for.
+            from_user: The WhatsApp ID of the user to get the call permissions for.
             phone_id: The phone ID to get the call permissions from (optional, if not provided, the client's phone ID will be used).
 
         Returns:
@@ -4042,7 +4033,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         return CallPermissions.from_dict(
             self.api.get_call_permissions(
-                user_wa_id=str(wa_id),
+                **helpers.resolve_call_permission_request_user(from_user),
                 phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
             ),
         )
@@ -4069,12 +4060,13 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             An InitiatedCall object containing the details of the initiated call.
         """
+        recipient, recipient_type = helpers.resolve_callee(to)
         return InitiatedCall.from_sent_update(client=self, update=self.api.initiate_call(
             phone_id=(from_phone_id := helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id")),
-            to=(to_wa_id := str(to)),
+            **recipient,
             sdp=sdp.to_dict(),
             biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-        ), from_phone_id=from_phone_id, to_wa_id=to_wa_id)
+        ), from_phone_id=from_phone_id, callee=helpers.clean_phone_number(to), recipient_type=recipient_type)
 
     def pre_accept_call(
             self,

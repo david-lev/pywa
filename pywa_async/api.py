@@ -2111,7 +2111,12 @@ class GraphAPIAsync(GraphAPI):
             endpoint=f"/{upload_session_id}",
         )
 
-    async def get_call_permissions(self, phone_id: str, user_wa_id: str) -> dict:
+    async def get_call_permissions(
+        self,
+        phone_id: str,
+        user_wa_id: str | None,
+        recipient: str | None,
+    ) -> dict:
         """
         Get call permissions for a user.
 
@@ -2159,21 +2164,30 @@ class GraphAPIAsync(GraphAPI):
 
         Args:
             phone_id: The ID of the phone number to get call permissions for.
-            user_wa_id: The WhatsApp ID of the user to check permissions for.
+            user_wa_id: The WhatsApp ID to get call permissions for. Required if recipient is not provided.
+            recipient: The recipient unique identifier (BSUID). Required if recipient is not provided.
 
         Returns:
             The response from the WhatsApp Cloud API.
         """
+        if not user_wa_id and not recipient:
+            raise ValueError("Either 'user_wa_id' or 'recipient' must be provided")
+        data = {}
+        if user_wa_id:
+            data["user_wa_id"] = user_wa_id
+        if phone_id:
+            data["recipient"] = recipient
         return await self._make_request(
             method="GET",
             endpoint=f"/{phone_id}/call_permissions",
-            params={"user_wa_id": user_wa_id},
+            params=data,
         )
 
     async def initiate_call(
         self,
         phone_id: str,
-        to: str,
+        to: str | None,
+        recipient: str | None,
         sdp: dict[str, str],
         biz_opaque_callback_data: str | None = None,
     ) -> dict[str, str | bool]:
@@ -2193,27 +2207,33 @@ class GraphAPIAsync(GraphAPI):
 
         Args:
             phone_id: The ID of the phone number to initiate the call on.
-            to: The number being called (callee).
+            to: The WhatsApp ID to initiate the call to. Required if recipient is not provided.
+            recipient: The recipient unique identifier (BSUID). Required if recipient is not provided.
             sdp: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
             biz_opaque_callback_data: An arbitrary string you can pass in that is useful for tracking and logging purposes.
 
         Returns:
             The response from the WhatsApp Cloud API containing the call ID.
         """
+        if not to and not recipient:
+            raise ValueError("Either 'to' or 'recipient' must be provided")
+        data = {
+            "messaging_product": "whatsapp",
+            "to": to,
+            "recipient": recipient,
+            "action": "connect",
+            "session": sdp,
+        }
+        if to:
+            data["to"] = to
+        if recipient:
+            data["recipient"] = recipient
+        if biz_opaque_callback_data:
+            data["biz_opaque_callback_data"] = biz_opaque_callback_data
         return await self._make_request(
             method="POST",
             endpoint=f"{phone_id}/calls",
-            json={
-                "messaging_product": "whatsapp",
-                "to": to,
-                "action": "connect",
-                "session": sdp,
-                **(
-                    {"biz_opaque_callback_data": biz_opaque_callback_data}
-                    if biz_opaque_callback_data
-                    else {}
-                ),
-            },
+            json=data,
         )
 
     async def pre_accept_call(

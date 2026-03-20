@@ -72,7 +72,7 @@ class PhoneNumberChange(BaseUserUpdate):
                 _client=client,
                 bsuid=sys["user_id"],
                 wa_id=msg["from"],
-                parent_id=sys.get("parent_user_id"),
+                parent_bsuid=sys.get("parent_user_id"),
                 name=None,
                 username=None,
                 identity_key_hash=None,
