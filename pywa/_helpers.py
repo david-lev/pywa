@@ -829,7 +829,7 @@ def resolve_recipient(to: str | int) -> tuple[dict[str, str], RecipientType]:
     match recipient_type:
         case RecipientType.WA_ID | RecipientType.PHONE_NUMBER:
             return {"to": str(to), "recipient_type": "individual"}, recipient_type
-        case RecipientType.BSUID:
+        case RecipientType.BSUID | RecipientType.PARENT_BSUID:
             return {
                 "recipient": to,
                 "recipient_type": "individual",
@@ -855,7 +855,7 @@ def resolve_call_permission_request_user(user_id: int | str) -> dict[str, str]:
     match recipient_type:
         case RecipientType.WA_ID | RecipientType.PHONE_NUMBER:
             return {"user_wa_id": clean_phone_number(user_id)}
-        case RecipientType.BSUID:
+        case RecipientType.BSUID | RecipientType.PARENT_BSUID:
             return {"recipient": str(user_id)}
     raise ValueError(f"Invalid recipient type: {recipient_type}")
 

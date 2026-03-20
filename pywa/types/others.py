@@ -1202,6 +1202,7 @@ class _UnblockedOrBlockedUser:
     input: str
     wa_id: str | None
     bsuid: str | None
+    parent_bsuid: str | None
 
     @classmethod
     def from_dict(cls, data: dict):
@@ -1209,6 +1210,7 @@ class _UnblockedOrBlockedUser:
             input=data["input"],
             wa_id=data.get("wa_id"),
             bsuid=data.get("user_id"),
+            parent_bsuid=data.get("parent_user_id"),
         )
 
 
@@ -1221,6 +1223,7 @@ class BlockedUser(_UnblockedOrBlockedUser):
         input: The input that used when blocking the user (e.g., wa_id or bsuid).
         wa_id: Will be set to the user’s phone number if you used their phone number to block the user.
         bsuid: Will be set to the user’s BSUID or parent BSUID if you used the user’s BSUID or parent BSUID to block the user.
+        parent_bsuid: Will be set to the user’s parent BSUID if you have enabled parent BSUIDs. Otherwise, it will be omitted.
     """
 
 
@@ -1233,6 +1236,7 @@ class UnblockedUser(_UnblockedOrBlockedUser):
         input: The input that used when unblocking the user (e.g., wa_id or bsuid).
         wa_id: Will be set to the user’s phone number if you used their phone number to unblock the user.
         bsuid: Will be set to the user’s BSUID or parent BSUID if you used the user’s BSUID or parent BSUID to unblock the user.
+        parent_bsuid: Will be set to the user’s parent BSUID if you have enabled parent BSUIDs. Otherwise, it will be omitted.
     """
 
 

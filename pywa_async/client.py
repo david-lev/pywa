@@ -120,6 +120,7 @@ from .types.flows import (
 )
 from .types.media import Media
 from .types.others import (
+    BlockedUser,
     InteractiveType,
     SuccessResult,
     UsersBlockedResult,
@@ -3845,7 +3846,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         *,
         pagination: Pagination | None = None,
         phone_id: str | int | None = None,
-    ) -> Result[User]:
+    ) -> Result[BlockedUser]:
         """
         Get blocked users.
 
@@ -3867,7 +3868,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
                 pagination=pagination.to_dict() if pagination else None,
             ),
-            item_factory=functools.partial(self._usr_cls.from_dict, client=self)
+            item_factory=BlockedUser.from_dict,
         )
 
     async def get_call_permissions(
