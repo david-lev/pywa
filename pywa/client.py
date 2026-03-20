@@ -3952,7 +3952,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
                 users=tuple(str(phone_id) for phone_id in users),
             ),
-            client=self,
         )
 
     def unblock_users(
@@ -3980,7 +3979,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
                 users=tuple(str(phone_id) for phone_id in users),
             ),
-            client=self,
         )
 
     def get_blocked_users(

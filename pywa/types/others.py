@@ -27,7 +27,6 @@ from .. import utils
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
-    from .user import User
 
 _logger = logging.getLogger(__name__)
 
@@ -1199,6 +1198,45 @@ class BlockUserFailure:
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
+class _UnblockedOrBlockedUser:
+    input: str
+    wa_id: str | None
+    bsuid: str | None
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            input=data["input"],
+            wa_id=data.get("wa_id"),
+            bsuid=data.get("user_id"),
+        )
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class BlockedUser(_UnblockedOrBlockedUser):
+    """
+    Represents a blocked user.
+
+    Attributes:
+        input: The input that used when blocking the user (e.g., wa_id or bsuid).
+        wa_id: Will be set to the user’s phone number if you used their phone number to block the user.
+        bsuid: Will be set to the user’s BSUID or parent BSUID if you used the user’s BSUID or parent BSUID to block the user.
+    """
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class UnblockedUser(_UnblockedOrBlockedUser):
+    """
+    Represents a unblocked user.
+
+    Attributes:
+        input: The input that used when unblocking the user (e.g., wa_id or bsuid).
+        wa_id: Will be set to the user’s phone number if you used their phone number to unblock the user.
+        bsuid: Will be set to the user’s BSUID or parent BSUID if you used the user’s BSUID or parent BSUID to unblock the user.
+    """
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
 class UsersBlockedResult:
     """
     Represents the result of blocking users operation.
@@ -1209,15 +1247,15 @@ class UsersBlockedResult:
         errors: The errors that occurred during the operation (if any).
     """
 
-    added_users: tuple[User, ...]
+    added_users: tuple[BlockedUser, ...]
     failed_users: tuple[BlockUserFailure, ...]
     errors: WhatsAppError | None
 
     @classmethod
-    def from_dict(cls, data: dict, client: WhatsApp):
+    def from_dict(cls, data: dict):
         return cls(
             added_users=tuple(
-                client._usr_cls.from_dict(user, client=client)
+                BlockedUser.from_dict(user)
                 for user in data.get("block_users", {}).get("added_users", [])
             ),
             failed_users=tuple(
@@ -1239,13 +1277,13 @@ class UsersUnblockedResult:
         removed_users: The users that were successfully unblocked.
     """
 
-    removed_users: tuple[User, ...]
+    removed_users: tuple[UnblockedUser, ...]
 
     @classmethod
-    def from_dict(cls, data: dict, client: WhatsApp):
+    def from_dict(cls, data: dict):
         return cls(
             removed_users=tuple(
-                client._usr_cls.from_dict(user, client=client)
+                UnblockedUser.from_dict(user)
                 for user in data.get("block_users", {}).get("removed_users", [])
             )
         )
