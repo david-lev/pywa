@@ -2187,7 +2187,7 @@ class GraphAPIAsync(GraphAPI):
         phone_id: str,
         to: str | None,
         recipient: str | None,
-        sdp: dict[str, str],
+        session: dict[str, str],
         biz_opaque_callback_data: str | None = None,
     ) -> dict[str, str | bool]:
         """
@@ -2208,7 +2208,7 @@ class GraphAPIAsync(GraphAPI):
             phone_id: The ID of the phone number to initiate the call on.
             to: The WhatsApp ID to initiate the call to. Required if recipient is not provided.
             recipient: The recipient unique identifier (BSUID). Required if recipient is not provided.
-            sdp: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
+            session: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
             biz_opaque_callback_data: An arbitrary string you can pass in that is useful for tracking and logging purposes.
 
         Returns:
@@ -2221,7 +2221,7 @@ class GraphAPIAsync(GraphAPI):
             "to": to,
             "recipient": recipient,
             "action": "connect",
-            "session": sdp,
+            "session": session,
         }
         if to:
             data["to"] = to
@@ -2236,7 +2236,7 @@ class GraphAPIAsync(GraphAPI):
         )
 
     async def pre_accept_call(
-        self, phone_id: str, call_id: str, sdp: dict[str, str] | None = None
+        self, phone_id: str, call_id: str, session: dict[str, str] | None = None
     ) -> dict[str, str | bool]:
         """
         Pre-accept a call.
@@ -2253,7 +2253,7 @@ class GraphAPIAsync(GraphAPI):
         Args:
             phone_id: The ID of the phone number to pre-accept the call on.
             call_id: The ID of the call to pre-accept.
-            sdp: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
+            session: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
 
         Returns:
             The response from the WhatsApp Cloud API.
@@ -2265,7 +2265,7 @@ class GraphAPIAsync(GraphAPI):
                 "messaging_product": "whatsapp",
                 "call_id": call_id,
                 "action": "pre_accept",
-                **({"session": sdp} if sdp else {}),
+                **({"session": session} if session else {}),
             },
         )
 
@@ -2273,7 +2273,7 @@ class GraphAPIAsync(GraphAPI):
         self,
         phone_id: str,
         call_id: str,
-        sdp: dict[str, str] | None = None,
+        session: dict[str, str] | None = None,
         biz_opaque_callback_data: str | None = None,
     ) -> dict[str, str | bool]:
         """
@@ -2291,7 +2291,7 @@ class GraphAPIAsync(GraphAPI):
         Args:
             phone_id: The ID of the phone number to accept the call on.
             call_id: The ID of the call to accept.
-            sdp: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
+            session: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
             biz_opaque_callback_data: An arbitrary string you can pass in that is useful for tracking and logging purposes.
 
         Returns:
@@ -2304,7 +2304,7 @@ class GraphAPIAsync(GraphAPI):
                 "messaging_product": "whatsapp",
                 "call_id": call_id,
                 "action": "accept",
-                **({"session": sdp} if sdp else {}),
+                **({"session": session} if session else {}),
                 **(
                     {"biz_opaque_callback_data": biz_opaque_callback_data}
                     if biz_opaque_callback_data

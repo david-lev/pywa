@@ -4054,7 +4054,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return InitiatedCall.from_sent_update(client=self, update=self.api.initiate_call(
             phone_id=(from_phone_id := helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id")),
             **recipient,
-            sdp=sdp.to_dict(),
+            session=sdp.to_dict(),
             biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
         ), from_phone_id=from_phone_id, callee=helpers.clean_phone_number(to), recipient_type=recipient_type)
 
@@ -4089,7 +4089,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return SuccessResult.from_dict(self.api.pre_accept_call(
             phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
             call_id=call_id,
-            sdp=sdp.to_dict() if sdp else None,
+            session=sdp.to_dict() if sdp else None,
         ))
 
     def accept_call(
@@ -4119,7 +4119,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return SuccessResult.from_dict(self.api.accept_call(
             phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
             call_id=call_id,
-            sdp=sdp.to_dict() if sdp else None,
+            session=sdp.to_dict() if sdp else None,
             biz_opaque_callback_data=helpers.resolve_tracker_param(tracker)
         ))
 
