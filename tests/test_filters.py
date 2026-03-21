@@ -161,6 +161,25 @@ FILTERS: dict[str, dict[str, list[tuple[Callable[[_T], _T], Filter]]]] = {
         "forwarded_many_times": [(same, fil.forwarded)],
         "interactive_message_with_err": [],
         "media_with_url": [],
+        "coexistence_message": [
+            (lambda m: modify_send_to(m, "123"), fil.coexistence_message),
+        ],
+    },
+    "edited_message": {
+        "edit_text": [
+            (same, fil.edited_message),
+        ],
+        "coexistence_edit_text": [
+            (lambda m: modify_send_to(m, "123"), fil.coexistence_edited_message),
+        ],
+    },
+    "deleted_message": {
+        "deleted_message": [
+            (same, fil.deleted_message),
+        ],
+        "coexistence_deleted_message": [
+            (lambda m: modify_send_to(m, "123"), fil.coexistence_deleted_message),
+        ],
     },
     "callback_button": {
         "button": [

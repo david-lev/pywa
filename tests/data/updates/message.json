@@ -1052,5 +1052,37 @@
         ]
       }
     ]
+  },
+  "coexistence_text": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "1234567890987654321",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "972123456789",
+                "phone_number_id": "1122334455667"
+              },
+              "message_echoes": [
+                {
+                  "from": "972987654321",
+                  "to": "972123456789",
+                  "id": "wamid.xyzxyz",
+                  "timestamp": "1697043223",
+                  "text": {
+                    "body": "Body Text"
+                  },
+                  "type": "text"
+                }
+              ]
+            },
+            "field": "smb_message_echoes"
+          }
+        ]
+      }
+    ]
   }
 }
