@@ -30,32 +30,6 @@ class User:
     identity_key_hash: str | None
     parent_bsuid: str | None
 
-    @property
-    def preferred_id(self) -> str:
-        """
-        Returns the preferred identifier (``wa_id`` or ``bsuid``) for this user.
-
-        The identifier is selected according to the client's
-        ``user_identifier_priority`` configuration. For example, if the priority is
-        ``(WA_ID, BSUID)``, this will return ``wa_id`` if available, otherwise
-        ``bsuid``.
-
-        This property is used internally by pywa when performing user-related
-        actions such as replying to messages or blocking users, to determine which identifier to use.
-
-        Note:
-            This value is context-dependent and may change based on client
-            configuration. For deterministic behavior, use ``wa_id`` or
-            ``bsuid`` directly.
-        """
-        for identifier in self._client._user_identifier_priority:
-            value = getattr(self, identifier.user_attr, None)
-            if value is not None:
-                return value
-        raise ValueError(
-            f"User {self} does not have any identifier available based on the client's identifier priority configuration."
-        )
-
     @classmethod
     def from_contact(cls, data: dict, client: WhatsApp) -> User:
         return cls(

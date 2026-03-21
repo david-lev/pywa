@@ -352,12 +352,20 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             )
 
     def _check_for_async_filters(self, filters: Filter) -> None:
+        """Prevent async filters from being used in the sync version of pywa."""
         if not filters or self._async_allowed:
             return
         if filters.has_async():
             raise ValueError(
                 "Async filters are not supported in the sync version of pywa. import `WhatsApp` from `pywa_async` instead"
             )
+
+    def _resolve_user_identifier(self, user: User) -> Generator[str]:
+        """Resolve the user identifier based on the client's priority configuration."""
+        for ui in self._user_identifier_priority:
+            identifier = getattr(user, ui.user_attr)
+            if identifier is not None:
+                yield identifier
 
     def load_handlers_modules(self, *modules: ModuleType) -> None:
         """

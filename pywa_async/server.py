@@ -264,8 +264,13 @@ class Server:
 
     async def _process_listener(self: "WhatsApp", update: BaseUpdate) -> bool:
         """Process and answer a listener if present."""
-        listener = self._listeners.get(update.listener_identifier)
-        if not listener:
+        if not (listener_identifiers := update.listener_identifiers):
+            return False
+        for identifier in listener_identifiers:
+            listener = self._listeners.get(identifier)
+            if listener is not None:
+                break
+        else:
             return False
 
         try:

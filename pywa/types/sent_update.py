@@ -94,7 +94,7 @@ class _SentUpdate(_ClientShortcuts, abc.ABC):
 
     @staticmethod
     def _extract_recipient(contact: dict) -> str:
-        return contact.get("wa_id", contact["user_id"])
+        return contact.get("wa_id", contact["user_id"])  # only one exists
 
     @property
     def _internal_recipient(self) -> str:
@@ -919,16 +919,20 @@ class SentTemplate(SentMessage):
         **kwargs,
     ) -> SentTemplate:
         msg = update["messages"][0]
-        return cls(
-            _client=client,
-            _recipient=cls._extract_recipient(update["contacts"][0]),
-            _recipient_type=recipient_type,
-            id=msg["id"],
-            status=SentTemplateStatus(msg["message_status"])
-            if "message_status" in msg
-            else None,
-            from_phone_id=from_phone_id,
-            input=update["contacts"][0]["input"],
+        return cast(
+            SentTemplate,
+            super().from_sent_update(
+                client=client,
+                update=update,
+                from_phone_id=from_phone_id,
+                recipient_type=recipient_type,
+                status=(
+                    SentTemplateStatus(msg["message_status"])
+                    if "message_status" in msg
+                    else None
+                ),
+                **kwargs,
+            ),
         )
 
 

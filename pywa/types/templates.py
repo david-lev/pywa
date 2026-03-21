@@ -79,6 +79,7 @@ from typing import (
     TYPE_CHECKING,
     AsyncIterator,
     BinaryIO,
+    Generator,
     Iterator,
     Literal,
     NoReturn,
@@ -265,11 +266,9 @@ class TemplateStatusUpdate(BaseTemplateUpdate):
     @property
     def listener_identifiers(
         self,
-    ) -> tuple[TemplateStatusUpdateListenerIdentifier, ...] | None:
-        return (
-            TemplateStatusUpdateListenerIdentifier(
-                template_id=self.template_id,
-            ),
+    ) -> Generator[TemplateStatusUpdateListenerIdentifier, ...] | None:
+        yield TemplateStatusUpdateListenerIdentifier(
+            template_id=self.template_id,
         )
 
     def unpause(self) -> TemplateUnpauseResult:
