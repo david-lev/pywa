@@ -487,3 +487,13 @@ def is_async_callable(obj: Any) -> bool:
     return inspect.iscoroutinefunction(obj) or (
         callable(obj) and inspect.iscoroutinefunction(obj.__call__)
     )
+
+
+class UserIdentifier(enum.Enum):
+    WA_ID = "wa_id"
+    BSUID = "bsuid"
+    PARENT_BSUID = "parent_bsuid"
+
+    @property
+    def user_attr(self) -> str:
+        return self.value

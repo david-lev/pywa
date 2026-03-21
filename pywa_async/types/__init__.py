@@ -41,7 +41,6 @@ from .others import (
     ReplyToMessage,
     ReferredProduct,
     Referral,
-    User,
     Command,
     ConversationalAutomation,
     QRCode,
@@ -53,6 +52,7 @@ from .others import (
     Unsupported,
 
 )
+from pywa.types import User
 from .templates import (
     Template,
     TemplateStatusUpdate,

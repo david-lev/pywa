@@ -1,6 +1,11 @@
 from __future__ import annotations
 
 __all__ = [
+    "resolve_recipient",
+    "resolve_callee",
+    "resolve_call_permission_request_user",
+    "resolve_blocking_users",
+    "clean_phone_number",
     "resolve_buttons_param",
     "resolve_media_param",
     "resolve_tracker_param",
@@ -56,6 +61,7 @@ from .types import (
     VoiceCallButton,
 )
 from .types.media import Media
+from .types.sent_update import RecipientType
 from .types.templates import (
     BaseParams,
     Carousel,
@@ -812,6 +818,61 @@ def _upload_params_media(
 def resolve_tracker_param(tracker: str | CallbackData | None) -> str | None:
     """Internal method to resolve the `tracker` parameter."""
     return tracker.to_str() if isinstance(tracker, CallbackData) else tracker
+
+
+_BSUID_RE = re.compile(r"^[A-Z]{2}\.\d+$")
+_WA_ID_RE = re.compile(r"^\d+$")
+
+
+def resolve_recipient(to: str | int) -> tuple[dict[str, str], RecipientType]:
+    recipient_type = RecipientType.from_recipient(to)
+    _logger.debug(f"Resolved recipient {to} to type {recipient_type}")
+    match recipient_type:
+        case RecipientType.WA_ID | RecipientType.PHONE_NUMBER:
+            return {"to": str(to), "recipient_type": "individual"}, recipient_type
+        case RecipientType.BSUID | RecipientType.PARENT_BSUID:
+            return {
+                "recipient": to,
+                "recipient_type": "individual",
+            }, recipient_type
+        case RecipientType.GROUP_ID:
+            return {"to": to, "recipient_type": "group"}, recipient_type
+        case _:
+            raise ValueError(f"Invalid recipient: {to}")
+
+
+def clean_phone_number(phone_number: str | int) -> str:
+    return re.sub(r"\D", "", str(phone_number))
+
+
+def resolve_callee(to: str | int) -> tuple[dict[str, str], RecipientType]:
+    recipient, recipient_type = resolve_recipient(to)
+    recipient.pop("recipient_type", None)
+    return recipient, recipient_type
+
+
+def resolve_call_permission_request_user(user_id: int | str) -> dict[str, str]:
+    _, recipient_type = resolve_recipient(user_id)
+    match recipient_type:
+        case RecipientType.WA_ID | RecipientType.PHONE_NUMBER:
+            return {"user_wa_id": clean_phone_number(user_id)}
+        case RecipientType.BSUID | RecipientType.PARENT_BSUID:
+            return {"recipient": str(user_id)}
+    raise ValueError(f"Invalid recipient type: {recipient_type}")
+
+
+def resolve_blocking_users(users: Iterable[str | int]) -> dict[str, list[str]]:
+    resolved = {"users": [], "user_ids": []}
+    for user_id in users:
+        _, recipient_type = resolve_recipient(user_id)
+        match recipient_type:
+            case RecipientType.WA_ID | RecipientType.PHONE_NUMBER:
+                resolved["users"].append(str(user_id))
+            case RecipientType.BSUID | RecipientType.PARENT_BSUID:
+                resolved["user_ids"].append(str(user_id))
+            case _:
+                raise ValueError(f"Invalid recipient type: {recipient_type}")
+    return resolved
 
 
 def resolve_arg(

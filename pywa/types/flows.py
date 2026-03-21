@@ -178,7 +178,7 @@ class FlowCompletion(BaseUserUpdate):
             id=msg["id"],
             type=MessageType(msg["type"]),
             metadata=Metadata.from_dict(value["metadata"]),
-            from_user=client._usr_cls.from_dict(value["contacts"][0], client=client),
+            from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
             timestamp=datetime.datetime.fromtimestamp(
                 int(msg["timestamp"]),
                 datetime.timezone.utc,

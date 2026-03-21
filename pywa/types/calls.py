@@ -195,7 +195,7 @@ class CallConnect(BaseUserUpdate, _CallShortcuts):
             waba_id=entry["id"],
             id=call["id"],
             metadata=Metadata.from_dict(value["metadata"]),
-            from_user=client._usr_cls.from_dict(value["contacts"][0], client=client)
+            from_user=client._usr_cls.from_contact(value["contacts"][0], client=client)
             if "contacts" in value  # Only available for USER_INITIATED calls
             else client._usr_cls(_client=client, wa_id=call["to"], name=None),
             timestamp=datetime.datetime.fromtimestamp(

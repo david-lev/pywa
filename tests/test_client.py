@@ -12,6 +12,7 @@ from pywa import _helpers as helpers
 from pywa._helpers import MediaSource
 from pywa.types import Contact
 from pywa.types.media import Media
+from pywa.types.sent_update import RecipientType
 
 PHONE_ID = "123456789"
 TOKEN = "xyz"
@@ -290,6 +291,74 @@ def test_resolve_callback_data():
     assert helpers.resolve_callback_data(User(id="123", name="John")) == "user:123:John"
 
     assert helpers.resolve_callback_data("user:123:John") == "user:123:John"
+
+
+def test_resolve_recipient():
+    assert helpers.resolve_recipient(1234567890) == (
+        {
+            "to": "1234567890",
+            "recipient_type": "individual",
+        },
+        RecipientType.WA_ID,
+    )
+    assert helpers.resolve_recipient("1234567890") == (
+        {
+            "to": "1234567890",
+            "recipient_type": "individual",
+        },
+        RecipientType.WA_ID,
+    )
+    assert helpers.resolve_recipient("US.13491208655302741918") == (
+        {
+            "recipient": "US.13491208655302741918",
+            "recipient_type": "individual",
+        },
+        RecipientType.BSUID,
+    )
+    assert helpers.resolve_recipient("US.ENT.11815799212886844830") == (
+        {
+            "recipient": "US.ENT.11815799212886844830",
+            "recipient_type": "individual",
+        },
+        RecipientType.PARENT_BSUID,
+    )
+    assert helpers.resolve_recipient("+16315551234") == (
+        {
+            "to": "+16315551234",
+            "recipient_type": "individual",
+        },
+        RecipientType.PHONE_NUMBER,
+    )
+    assert helpers.resolve_recipient("+1 (631) 555-1234") == (
+        {
+            "to": "+1 (631) 555-1234",
+            "recipient_type": "individual",
+        },
+        RecipientType.PHONE_NUMBER,
+    )
+    assert helpers.resolve_recipient("(631) 555-1234") == (
+        {
+            "to": "(631) 555-1234",
+            "recipient_type": "individual",
+        },
+        RecipientType.PHONE_NUMBER,
+    )
+    assert helpers.resolve_recipient("1 (631) 555-1234") == (
+        {
+            "to": "1 (631) 555-1234",
+            "recipient_type": "individual",
+        },
+        RecipientType.PHONE_NUMBER,
+    )
+    assert helpers.resolve_recipient(
+        "Y2FwaV9ncm91cDoxNzA1NTU1MDEzOToxMjAzNjM0MDQ2OTQyMzM4MjAZD"
+    ) == (
+        {
+            "to": "Y2FwaV9ncm91cDoxNzA1NTU1MDEzOToxMjAzNjM0MDQ2OTQyMzM4MjAZD",
+            "recipient_type": "group",
+        },
+        RecipientType.GROUP_ID,
+    )
 
 
 def test_resolve_tracker_param():
