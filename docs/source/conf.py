@@ -34,9 +34,11 @@ release = pywa.__version__
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 
+readthedocs_version = os.environ.get("READTHEDOCS_VERSION", "unknown")
+
 html_context = {
-    "is_latest": os.environ.get("READTHEDOCS_VERSION_TYPE") == "latest",
-    "current_version": os.environ.get("READTHEDOCS_VERSION", "unknown"),
+    "is_latest": readthedocs_version == "latest",
+    "current_version": readthedocs_version,
 }
 html_sidebars = {
     "**": [
