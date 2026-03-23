@@ -1,38 +1,28 @@
 from __future__ import annotations
 
-import dataclasses
-import datetime
-import functools
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING
 
-from .. import utils
-from .others import Pagination, Result
-from .user import BaseUser
+from pywa.types.groups import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.groups import (
+    GroupDetails as _GroupDetails,
+)
+from pywa.types.groups import (
+    GroupInviteLink as _GroupInviteLink,
+)
+from pywa.types.groups import (
+    GroupJoinRequest as _GroupJoinRequest,
+)
+from pywa.types.groups import (
+    GroupParticipant as _GroupParticipant,
+)
+
+from .others import Result
 
 if TYPE_CHECKING:
-    from pywa import WhatsApp
+    from pywa_async import WhatsApp as WhatsAppAsync
 
 
-class GroupJoinApprovalMode(utils.StrEnum):
-    """
-    Indicates if WhatsApp users who click the invitation link can join the group with or without being approved first.
-
-    Attributes:
-        AUTO_APPROVE: Indicates WhatsApp users can join the group without approval.
-        APPROVAL_REQUIRED: Indicates WhatsApp users must be approved via `join request <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#groups-with-join-requests>`_ before they can access the group.
-    """
-
-    AUTO_APPROVE = "auto_approve"
-    APPROVAL_REQUIRED = "approval_required"
-
-    UNKNOWN = "UNKNOWN"
-
-    _check_value = str.islower
-    _modify_value = str.lower
-
-
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class GroupDetails(utils.APIObject):
+class GroupDetails(_GroupDetails):
     """
     Represents the details of a WhatsApp group.
 
@@ -47,57 +37,27 @@ class GroupDetails(utils.APIObject):
         join_approval_mode: Indicates if WhatsApp users who click the invitation link can join the group with or without being approved first.
     """
 
-    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
-    id: str
-    subject: str
-    creation_timestamp: datetime.datetime
-    suspended: bool
-    description: str | None
-    total_participant_count: int
-    participants: list[GroupParticipant]
-    join_approval_mode: GroupJoinApprovalMode
+    _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)
 
-    @classmethod
-    def from_dict(cls, data: dict, client: WhatsApp) -> GroupDetails:
-        return cls(
-            _client=client,
-            id=data["id"],
-            subject=data["subject"],
-            creation_timestamp=datetime.datetime.fromtimestamp(
-                data["creation_timestamp"],
-                datetime.timezone.utc,
-            ),
-            suspended=data["suspended"],
-            description=data.get("description"),
-            total_participant_count=data["total_participant_count"],
-            participants=[
-                client._group_participant_cls.from_dict(
-                    group_id=data["id"], client=client, data=participant
-                )
-                for participant in data["participants"]
-            ],
-            join_approval_mode=GroupJoinApprovalMode(data["join_approval_mode"]),
-        )
-
-    def get_invite_link(self) -> GroupInviteLink:
+    async def get_invite_link(self) -> GroupInviteLink:
         """
         Get the invite link for the group.
 
         Returns:
             The invite link for the group.
         """
-        return self._client.get_group_invite_link(group_id=self.id)
+        return await self._client.get_group_invite_link(group_id=self.id)
 
-    def reset_invite_link(self) -> GroupInviteLink:
+    async def reset_invite_link(self) -> GroupInviteLink:
         """
         Reset the invite link for the group.
 
         Returns:
             A new invite link for the group.
         """
-        return self._client.reset_group_invite_link(group_id=self.id)
+        return await self._client.reset_group_invite_link(group_id=self.id)
 
-    def get_join_requests(
+    async def get_join_requests(
         self, pagination: Pagination | None = None
     ) -> Result[GroupJoinRequest]:
         """
@@ -109,37 +69,37 @@ class GroupDetails(utils.APIObject):
         Returns:
             A Result iterable containing the join requests for the group.
         """
-        return self._client.get_group_join_requests(
+        return await self._client.get_group_join_requests(
             group_id=self.id,
             pagination=pagination,
         )
 
-    def delete(self) -> None:
+    async def delete(self) -> None:
         """
         Delete the group.
         """
-        return self._client.delete_group(group_id=self.id)
+        return await self._client.delete_group(group_id=self.id)
 
-    def remove_participants(self, participants: Iterable[str]) -> None:
+    async def remove_participants(self, participants: Iterable[str]) -> None:
         """
         Remove participants from the group.
 
         Args:
             participants: The participants to remove.
         """
-        return self._client.remove_group_participants(
+        return await self._client.remove_group_participants(
             group_id=self.id,
             participants=participants,
         )
 
-    def remove_all_participants(self) -> None:
+    async def remove_all_participants(self) -> None:
         """Remove all participants from the group."""
-        return self._client.remove_group_participants(
+        return await self._client.remove_group_participants(
             group_id=self.id,
             participants=(p.preferred_id for p in self.participants),
         )
 
-    def update(
+    async def update(
         self,
         *,
         profile_picture: str | None = None,
@@ -148,8 +108,7 @@ class GroupDetails(utils.APIObject):
     ) -> None: ...
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class GroupParticipant(BaseUser):
+class GroupParticipant(_GroupParticipant):
     """
     Represents an participant in a WhatsApp group.
 
@@ -160,51 +119,36 @@ class GroupParticipant(BaseUser):
         parent_bsuid: The Parent business-scoped user ID. See `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#parent-business-scoped-user-ids>`_ for more information.
     """
 
-    _group_id: str = dataclasses.field(repr=False)
+    _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)
 
-    @classmethod
-    def from_dict(cls, group_id: str, data: dict, client: WhatsApp) -> GroupParticipant:
-        return cls(
-            _client=client,
-            _group_id=group_id,
-            bsuid=data["user_id"],
-            wa_id=data.get("wa_id"),
-            parent_bsuid=data.get("parent_user_id"),
-            username=data.get("username"),
-        )
-
-    def remove(self) -> None:
+    async def remove(self) -> None:
         """
         Remove the participant from the group.
         """
-        return self._client.remove_group_participants(
+        return await self._client.remove_group_participants(
             group_id=self._group_id,
             participants=(self.preferred_id,),
         )
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class GroupInviteLink:
+class GroupInviteLink(_GroupInviteLink):
     """
     Represents an invite link for a WhatsApp group.
     """
 
-    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
-    _group_id: str = dataclasses.field(repr=False, hash=False, compare=False)
-    link: str
+    _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)
 
-    def reset(self) -> GroupInviteLink:
+    async def reset(self) -> GroupInviteLink:
         """
         Reset the invite link.
 
         Returns:
             A new invite link for the group.
         """
-        return self._client.reset_group_invite_link(group_id=self._group_id)
+        return await self._client.reset_group_invite_link(group_id=self._group_id)
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class GroupJoinRequest:
+class GroupJoinRequest(_GroupJoinRequest):
     """
     Represents a join request for a WhatsApp group.
 
@@ -214,36 +158,18 @@ class GroupJoinRequest:
         creation_timestamp: The timestamp when the join request was created.
     """
 
-    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
-    _group_id: str = dataclasses.field(repr=False, hash=False, compare=False)
-    id: str
-    user: GroupParticipant
-    creation_timestamp: datetime.datetime
+    _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)
 
-    @classmethod
-    def from_dict(cls, group_id: str, data: dict, client: WhatsApp) -> GroupJoinRequest:
-        return cls(
-            _client=client,
-            _group_id=group_id,
-            id=data["join_request_id"],
-            user=client._group_participant_cls.from_dict(
-                group_id=group_id, client=client, data=data
-            ),
-            creation_timestamp=datetime.datetime.fromtimestamp(
-                data["creation_timestamp"]
-            ),
-        )
-
-    def approve(self) -> None:
+    async def approve(self) -> None:
         """Approve the join request."""
-        return self._client.approve_group_join_requests(
+        return await self._client.approve_group_join_requests(
             group_id=self._group_id,
             request_ids=(self.id,),
         )
 
-    def reject(self) -> None:
+    async def reject(self) -> None:
         """Reject the join request."""
-        return self._client.reject_group_join_requests(
+        return await self._client.reject_group_join_requests(
             group_id=self._group_id,
             request_ids=(self.id,),
         )
@@ -254,7 +180,7 @@ class GroupJoinRequestsResult(Result[GroupJoinRequest]):
 
     def __init__(
         self,
-        wa: WhatsApp,
+        wa: WhatsAppAsync,
         response: dict,
         group_id: str,
     ):
@@ -267,7 +193,7 @@ class GroupJoinRequestsResult(Result[GroupJoinRequest]):
         )
         self._group_id = group_id
 
-    def approve_all(self, *, fetch_all: bool = False, sleep: float = 0.0) -> None:
+    async def approve_all(self, *, fetch_all: bool = False, sleep: float = 0.0) -> None:
         """
         Approve all join requests.
 
@@ -275,13 +201,13 @@ class GroupJoinRequestsResult(Result[GroupJoinRequest]):
             fetch_all: Whether to fetch all join requests before approving. If False, only the current page of join requests will be approved.
             sleep: The number of seconds to sleep between approving each join request when ``fetch_all`` is True. This can help avoid hitting rate limits.
         """
-        requests = self.all(sleep=sleep) if fetch_all else self
-        return self._wa.approve_group_join_requests(
+        requests = await self.all(sleep=sleep) if fetch_all else self
+        return await self._wa.approve_group_join_requests(
             group_id=self._group_id,
             request_ids=[request.id for request in requests],
         )
 
-    def reject_all(self, *, fetch_all: bool = False, sleep: float = 0.0) -> None:
+    async def reject_all(self, *, fetch_all: bool = False, sleep: float = 0.0) -> None:
         """
         Reject all join requests.
 
@@ -289,8 +215,8 @@ class GroupJoinRequestsResult(Result[GroupJoinRequest]):
             fetch_all: Whether to fetch all join requests before rejecting. If False, only the current page of join requests will be rejected.
             sleep: The number of seconds to sleep between rejecting each join request when ``fetch_all`` is True. This can help avoid hitting rate limits.
         """
-        requests = self.all(sleep=sleep) if fetch_all else self
-        return self._wa.reject_group_join_requests(
+        requests = await self.all(sleep=sleep) if fetch_all else self
+        return await self._wa.reject_group_join_requests(
             group_id=self._group_id,
             request_ids=[request.id for request in requests],
         )

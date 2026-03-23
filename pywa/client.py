@@ -73,8 +73,6 @@ from .types import (
     FlowMetricGranularity,
     FlowMetricName,
     FlowRequest,
-    GroupInviteLink,
-    GroupJoinApprovalMode,
     IdentityChange,
     Industry,
     MediaURL,
@@ -106,7 +104,13 @@ from .types.flows import (
     FlowJSONUpdateResult,
     MigrateFlowsResponse,
 )
-from .types.groups import GroupDetails, GroupJoinApprovalsResult
+from .types.groups import (
+    GroupDetails,
+    GroupInviteLink,
+    GroupJoinApprovalMode,
+    GroupJoinRequestsResult,
+    GroupParticipant,
+)
 from .types.media import Media
 from .types.others import (
     BlockedUser,
@@ -171,6 +175,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     _api_cls = GraphAPI
     _flow_req_cls = FlowRequest
     _usr_cls = User
+    _group_participant_cls = GroupParticipant
     _httpx_client = httpx.Client
     _async_allowed = False
     _handlers_to_updates: dict[type[Handler], type[BaseUpdate]] = {
@@ -4290,7 +4295,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             group_id: str,
             *,
             pagination: Pagination | None = None,
-    ) -> GroupJoinApprovalsResult:
+    ) -> GroupJoinRequestsResult:
         """
         Get join requests for a group.
 
@@ -4301,9 +4306,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             pagination: The pagination parameters (optional).
 
         Returns:
-            A GroupJoinApprovalsResult object containing the join requests.
+            A GroupJoinRequestsResult object containing the join requests.
         """
-        return GroupJoinApprovalsResult(
+        return GroupJoinRequestsResult(
             wa=self,
             response=self.api.get_group_join_requests(
                 group_id=group_id,

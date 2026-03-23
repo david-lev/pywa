@@ -2372,3 +2372,279 @@ class GraphAPIAsync(GraphAPI):
                 "action": "terminate",
             },
         )
+
+    async def create_group(
+        self,
+        phone_id: str,
+        subject: str,
+        description: str | None = None,
+        join_approval_mode: str | None = None,
+    ) -> dict:
+        """
+        Create a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#create-group>`_.
+
+        Args:
+            phone_id: The ID of the phone number to create the group on.
+            subject: The subject of the group.
+            description: The description of the group.
+            join_approval_mode: The join approval mode of the group. Valid values are: ``auto_approve``, ``approval_required``.
+
+        Return example::
+
+            {
+              "id": "123456789012345"
+            }
+        """
+        data = {
+            "messaging_product": "whatsapp",
+            "subject": subject,
+            **({"description": description} if description else {}),
+            **(
+                {"join_approval_mode": join_approval_mode} if join_approval_mode else {}
+            ),
+        }
+        return await self._make_request(
+            method="POST",
+            endpoint=f"/{phone_id}/groups",
+            json=data,
+        )
+
+    async def update_group_info(
+        self,
+        group_id: str,
+        subject: str | None = None,
+        description: str | None = None,
+        profile_picture_file: bytes | str | BinaryIO | Iterator[bytes] | None = None,
+    ) -> dict:
+        """
+        Update group info.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#update-group-info>`_.
+
+        Args:
+            group_id: The ID of the group to update.
+            subject: The new subject of the group.
+            description: The new description of the group.
+            profile_picture_file: The new profile picture file path of the group.
+
+        Returns:
+            A dictionary containing the result of the operation.
+        """
+        files: dict[str, tuple] = {
+            "messaging_product": (None, "whatsapp"),
+        }
+        if subject:
+            files["subject"] = (None, subject)
+        if description:
+            files["description"] = (None, description)
+        if profile_picture_file:
+            files["profile_picture_file"] = (
+                "profile.jpg",
+                profile_picture_file,
+                "image/jpeg",
+            )
+
+        return await self._make_request(
+            method="POST",
+            endpoint=f"/{group_id}",
+            files=files,
+        )
+
+    async def get_group_join_requests(
+        self, group_id: str, pagination: dict[str, str] | None = None
+    ) -> dict:
+        """
+        Get all join requests for a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#get-join-requests>`_.
+
+        Args:
+            group_id: The ID of the group to get join requests from.
+            pagination: The pagination parameters.
+
+        Returns:
+            A dictionary containing the join requests.
+        """
+        return await self._make_request(
+            method="GET",
+            endpoint=f"/{group_id}/join_requests",
+            params=pagination,
+        )
+
+    async def approve_group_join_requests(
+        self, group_id: str, request_ids: tuple[str, ...]
+    ) -> dict:
+        """
+        Approve join requests for a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#approve-join-requests>`_.
+
+        Args:
+            group_id: The ID of the group to approve join requests for.
+            request_ids: A tuple of join request IDs to approve.
+
+        Returns:
+            A dictionary containing the result of the operation.
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint=f"/{group_id}/join_requests",
+            json={"messaging_product": "whatsapp", "join_requests": request_ids},
+        )
+
+    async def reject_group_join_requests(
+        self, group_id: str, request_ids: tuple[str, ...]
+    ) -> dict:
+        """
+        Reject join requests for a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#reject-join-requests>`_.
+
+        Args:
+            group_id: The ID of the group to reject join requests for.
+            request_ids: A tuple of join request IDs to reject.
+
+        Returns:
+            A dictionary containing the result of the operation.
+        """
+        return await self._make_request(
+            method="DELETE",
+            endpoint=f"/{group_id}/join_requests",
+            json={"messaging_product": "whatsapp", "join_requests": request_ids},
+        )
+
+    async def get_group_invite_link(self, group_id: str) -> dict:
+        """
+        Get the invite link for a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#get-group-invite-link>`_.
+
+        Args:
+            group_id: The ID of the group to get the invite link for.
+
+        Returns:
+            A dictionary containing the invite link.
+        """
+        return await self._make_request(
+            method="GET",
+            endpoint=f"/{group_id}/invite_link",
+        )
+
+    async def reset_group_invite_link(self, group_id: str) -> dict:
+        """
+        Reset the invite link for a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#reset-group-invite-link>`_.
+
+        Args:
+            group_id: The ID of the group to reset the invite link for.
+
+        Returns:
+            A dictionary containing the new invite link.
+        """
+        return await self._make_request(
+            method="POST",
+            endpoint=f"/{group_id}/invite_link",
+            json={"messaging_product": "whatsapp"},
+        )
+
+    async def delete_group(self, group_id: str) -> dict:
+        """
+        Delete a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#delete-group>`_.
+
+        Args:
+            group_id: The ID of the group to delete.
+
+        Returns:
+            A dictionary containing the result of the operation.
+        """
+        return await self._make_request(
+            method="DELETE",
+            endpoint=f"/{group_id}",
+        )
+
+    async def remove_group_participants(
+        self, group_id: str, participants: tuple[str, ...]
+    ) -> dict:
+        """
+        Remove participants from a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#remove-participants>`_.
+
+        Args:
+            group_id: The ID of the group to remove participants from.
+            participants: A tuple of user IDs to remove from the group.
+
+        Returns:
+            A dictionary containing the result of the operation.
+        """
+        return await self._make_request(
+            method="DELETE",
+            endpoint=f"/{group_id}/participants",
+            json={"messaging_product": "whatsapp", "participants": participants},
+        )
+
+    async def get_group_info(
+        self,
+        group_id: str,
+        fields: tuple[str, ...] | None = None,
+    ) -> dict[str, Any]:
+        """
+        Get group info.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#get-group-info>`_.
+
+        Args:
+            group_id: The ID of the group to get info for.
+            fields: The fields to get.
+
+        Returns:
+            A dictionary containing the group info.
+        """
+        return await self._make_request(
+            method="GET",
+            endpoint=f"/{group_id}",
+            params={
+                k: v
+                for k, v in {
+                    "fields": ",".join(fields) if fields else None,
+                }.items()
+                if v is not None
+            },
+        )
+
+    async def get_active_groups(
+        self,
+        phone_id: str,
+        fields: tuple[str, ...] | None = None,
+        pagination: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        """
+        Get all active groups.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#get-active-groups>`_.
+
+        Args:
+            phone_id: The ID of the phone number to get active groups for.
+            fields: The fields to get.
+            pagination: The pagination parameters.
+
+        Returns:
+            A dictionary containing the active groups.
+        """
+        return await self._make_request(
+            method="GET",
+            endpoint=f"/{phone_id}/groups",
+            params={
+                k: v
+                for k, v in {
+                    "fields": ",".join(fields) if fields else None,
+                    **(pagination or {}),
+                }.items()
+                if v is not None
+            },
+        )
