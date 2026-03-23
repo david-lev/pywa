@@ -56,10 +56,15 @@ class WhatsAppError(Exception):
     ) -> WhatsAppError:
         """Create an error from a response."""
         # noinspection PyCallingNonCallable
+        error_data = error.get("error_data", {})
         return cls._get_exception(code=(int_code := int(error["code"])))(
             code=int_code,
             message=error["message"],
-            details=error.get("error_data", {}).get("details", None),
+            details=(
+                error_data.get("details", None)
+                if isinstance(error_data, dict)
+                else error_data
+            ),
             fbtrace_id=error.get("fbtrace_id"),
             href=error.get("href"),
             raw_response=response,
