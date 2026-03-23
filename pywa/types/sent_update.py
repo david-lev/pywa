@@ -13,6 +13,8 @@ __all__ = [
 
 import abc
 import dataclasses
+import enum
+import re
 from typing import TYPE_CHECKING, TypeVar, cast
 
 from pywa import filters as pywa_filters
@@ -27,7 +29,6 @@ from pywa.types import (
     Message,
     MessageStatus,
     MessageStatusType,
-    User,
 )
 from pywa.types.base_update import BaseUserUpdate, _ClientShortcuts
 from pywa.types.calls import _CallShortcuts
@@ -37,6 +38,47 @@ from pywa.types.others import InteractiveType
 if TYPE_CHECKING:
     from pywa import WhatsApp
 
+_BSUID_RE = re.compile(r"^[A-Z]{2}\.\d+$")
+_PARENT_BSUID_RE = re.compile(r"^[A-Z]{2}\.ENT\.\d+$")
+_PHONE_CLEAN_RE = re.compile(r"[+\-\s()]")
+
+
+class RecipientType(enum.Enum):
+    """
+    Represents the type of the recipient of a sent update.
+
+    Attributes:
+        GROUP_ID: `Y2FwaV9ncm91cDoxNzA1NTU1MDEzOToxMjAzNjM0MDQ2OTQyMzM4MjAZD`
+        BSUID: `US.13491208655302741918`
+        PARENT_BSUID: `US.ENT.11815799212886844830`
+        WA_ID: `16315551234`
+        PHONE_NUMBER: `+16315551234` / `+1 (631) 555-1234` / `(631) 555-1234` / `1 (631) 555-1234`
+    """
+
+    BSUID = enum.auto()
+    PARENT_BSUID = enum.auto()
+    WA_ID = enum.auto()
+    PHONE_NUMBER = enum.auto()
+    GROUP_ID = enum.auto()
+
+    @classmethod
+    def from_recipient(cls, recipient: str | int) -> RecipientType:
+        if isinstance(recipient, int) or recipient.isdigit():
+            return cls.WA_ID
+
+        s = recipient.strip()
+
+        if _BSUID_RE.fullmatch(s):
+            return cls.BSUID
+
+        if re.sub(_PHONE_CLEAN_RE, "", s).isdigit():
+            return RecipientType.PHONE_NUMBER
+
+        if re.match(_PARENT_BSUID_RE, s):
+            return cls.PARENT_BSUID
+
+        return cls.GROUP_ID
+
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class _SentUpdate(_ClientShortcuts, abc.ABC):
@@ -45,31 +87,22 @@ class _SentUpdate(_ClientShortcuts, abc.ABC):
     """
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
+    _recipient_type: RecipientType
+    _recipient: str
     id: str
-    to_user: User
     from_phone_id: str
 
-    @property
-    def recipient(self) -> str:
-        """
-        The recipient's WhatsApp ID.
-        """
-        return self._internal_sender
-
-    @property
-    def sender(self) -> str:
-        """
-        The sender's WhatsApp ID.
-        """
-        return self._internal_recipient
+    @staticmethod
+    def _extract_recipient(contact: dict) -> str:
+        return contact.get("wa_id", contact["user_id"])  # only one exists
 
     @property
     def _internal_recipient(self) -> str:
-        return self.from_phone_id
+        return self._recipient
 
     @property
     def _internal_sender(self) -> str:
-        return self.to_user.wa_id
+        return self.from_phone_id
 
     @classmethod
     @abc.abstractmethod
@@ -78,7 +111,7 @@ class _SentUpdate(_ClientShortcuts, abc.ABC):
     @property
     def listener_identifier(self) -> UserUpdateListenerIdentifier:
         return UserUpdateListenerIdentifier(
-            sender=self.recipient, recipient=self.sender
+            sender=self._recipient, recipient=self.from_phone_id
         )
 
 
@@ -115,7 +148,6 @@ class SentMessage(_SentUpdate):
 
     Attributes:
         id: The ID of the message.
-        to_user: The user the message was sent to.
         from_phone_id: The WhatsApp ID of the sender who sent the message.
         input: The input (phone number) of the recipient.
     """
@@ -125,6 +157,16 @@ class SentMessage(_SentUpdate):
         default=None, repr=False, hash=False, compare=False
     )
 
+    @property
+    def sender(self) -> str:
+        """The phone ID which sent the message"""
+        return self._internal_recipient
+
+    @property
+    def recipient(self) -> str:
+        """The recipient of the message, which can be a BSUID, phone number or group ID."""
+        return self._internal_sender
+
     @classmethod
     def from_sent_update(
         cls,
@@ -132,19 +174,17 @@ class SentMessage(_SentUpdate):
         client: WhatsApp,
         update: dict,
         from_phone_id: str,
+        recipient_type: RecipientType,
         interactive_type: InteractiveType | None = None,
         **kwargs,
     ) -> SentMessage:
-        msg_id, user = (
-            update["messages"][0]["id"],
-            client._usr_cls.from_dict(update["contacts"][0], client=client),
-        )
         # noinspection PyArgumentList
         return cls(
             _client=client,
+            _recipient=cls._extract_recipient(update["contacts"][0]),
+            _recipient_type=recipient_type,
             _interactive_type=interactive_type,
-            id=msg_id,
-            to_user=user,
+            id=update["messages"][0]["id"],
             from_phone_id=from_phone_id,
             input=update["contacts"][0]["input"],
             **kwargs,
@@ -153,8 +193,10 @@ class SentMessage(_SentUpdate):
     def _convert_to(self, subclass: type[_SentMessageType]) -> _SentMessageType:
         return subclass(
             _client=self._client,
+            _recipient=self._recipient,
+            _recipient_type=self._recipient_type,
+            _interactive_type=self._interactive_type,
             id=self.id,
-            to_user=self.to_user,
             from_phone_id=self.from_phone_id,
             input=self.input,
         )
@@ -858,7 +900,7 @@ class SentTemplate(SentMessage):
 
     Attributes:
         id: The ID of the message.
-        to_user: The user the message was sent to.
+        recipient: The user the message was sent to.
         from_phone_id: The WhatsApp ID of the sender who sent the message.
         status: The status of the sent template.
         input: The input (phone number) of the recipient.
@@ -868,21 +910,29 @@ class SentTemplate(SentMessage):
 
     @classmethod
     def from_sent_update(
-        cls, *, client: WhatsApp, update: dict, from_phone_id: str, **kwargs
+        cls,
+        *,
+        client: WhatsApp,
+        update: dict,
+        from_phone_id: str,
+        recipient_type: RecipientType,
+        **kwargs,
     ) -> SentTemplate:
-        msg, user = (
-            update["messages"][0],
-            client._usr_cls.from_dict(update["contacts"][0], client=client),
-        )
-        return cls(
-            _client=client,
-            id=msg["id"],
-            status=SentTemplateStatus(msg["message_status"])
-            if "message_status" in msg
-            else None,
-            to_user=user,
-            from_phone_id=from_phone_id,
-            input=update["contacts"][0]["input"],
+        msg = update["messages"][0]
+        return cast(
+            SentTemplate,
+            super().from_sent_update(
+                client=client,
+                update=update,
+                from_phone_id=from_phone_id,
+                recipient_type=recipient_type,
+                status=(
+                    SentTemplateStatus(msg["message_status"])
+                    if "message_status" in msg
+                    else None
+                ),
+                **kwargs,
+            ),
         )
 
 
@@ -893,7 +943,7 @@ class InitiatedCall(_SentUpdate, _CallShortcuts):
 
     Attributes:
         id: The call ID.
-        to_user: The user to whom the call was made.
+        recipient: The recipient of the call (phone number, group ID, or BSUID).
         from_phone_id: The WhatsApp ID of the business phone number that initiated the call.
         success: Whether the call was successfully initiated.
     """
@@ -902,12 +952,18 @@ class InitiatedCall(_SentUpdate, _CallShortcuts):
 
     @classmethod
     def from_sent_update(
-        cls, client: WhatsApp, update: dict, from_phone_id: str, to_wa_id: str
+        cls,
+        client: WhatsApp,
+        update: dict,
+        from_phone_id: str,
+        recipient_type: RecipientType,
+        callee: str,
     ) -> InitiatedCall:
         return cls(
             _client=client,
+            _recipient=callee,
+            _recipient_type=recipient_type,
             id=update["calls"][0]["id"],
-            to_user=client._usr_cls(_client=client, wa_id=to_wa_id, name=None),
             from_phone_id=from_phone_id,
             success=update["success"],
         )

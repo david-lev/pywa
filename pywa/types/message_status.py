@@ -161,12 +161,7 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
                 int(status["timestamp"]),
                 datetime.timezone.utc,
             ),
-            from_user=client._usr_cls(
-                wa_id=status["recipient_id"],
-                identity_key_hash=status.get("recipient_identity_key_hash"),
-                name=None,
-                _client=client,
-            ),
+            from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
             tracker=status.get("biz_opaque_callback_data"),
             conversation=Conversation.from_dict(status["conversation"])
             if "conversation" in status
@@ -257,6 +252,7 @@ class PricingCategory(utils.StrEnum):
         UTILITY: Indicates utility rate applied.
         SERVICE: Indicates service rate applied.
         REFERRAL_CONVERSION: Indicates a `free entry point conversation <https://developers.facebook.com/docs/whatsapp/pricing#free-entry-point-conversations>`_.
+        GENERAL_PURPOSE_AI: Indicates a `general-purpose AI <https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing/ai-providers>`_ rate applied.
     """
 
     _check_value = str.islower
@@ -269,7 +265,7 @@ class PricingCategory(utils.StrEnum):
     UTILITY = "utility"
     SERVICE = "service"
     REFERRAL_CONVERSION = "referral_conversion"
-
+    GENERAL_PURPOSE_AI = "general_purpose_ai"
     UNKNOWN = "UNKNOWN"
 
 

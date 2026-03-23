@@ -76,7 +76,9 @@ class GraphAPI:
             raise WhatsAppError.from_dict(error=res.json()["error"], response=res)
         return res.json()
 
-    def get_app_access_token(self, app_id: int, app_secret: str) -> dict[str, str]:
+    def get_app_access_token(
+        self, client_id: int, client_secret: str
+    ) -> dict[str, str]:
         """
         Get an access token for an app.
 
@@ -91,8 +93,8 @@ class GraphAPI:
 
 
         Args:
-            app_id: The ID of the app.
-            app_secret: The secret of the app.
+            client_id: The ID of the app.
+            client_secret: The secret of the app.
 
         Returns:
             The access token and its type.
@@ -103,16 +105,16 @@ class GraphAPI:
             endpoint="/oauth/access_token",
             params={
                 "grant_type": "client_credentials",
-                "client_id": app_id,
-                "client_secret": app_secret,
+                "client_id": client_id,
+                "client_secret": client_secret,
             },
             log_kwargs=False,
         )
 
     def get_business_access_token(
         self,
-        app_id: int,
-        app_secret: str,
+        client_id: int,
+        client_secret: str,
         code: str,
     ) -> dict[str, str]:
         """
@@ -129,8 +131,8 @@ class GraphAPI:
 
 
         Args:
-            app_id: The ID of the app.
-            app_secret: The secret of the app.
+            client_id: The ID of the app.
+            client_secret: The secret of the app.
             code: The code `returned <https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/implementation#session-logging-message-event-listener>`_ by Embedded Signup when the customer successfully completed the flow.
 
         Returns:
@@ -142,8 +144,8 @@ class GraphAPI:
             method="GET",
             endpoint="/oauth/access_token",
             params={
-                "client_id": app_id,
-                "client_secret": app_secret,
+                "client_id": client_id,
+                "client_secret": client_secret,
                 "code": code,
             },
             log_kwargs=False,
@@ -152,7 +154,7 @@ class GraphAPI:
     def set_app_callback_url(
         self,
         app_id: int,
-        app_access_token: str,
+        access_token: str,
         callback_url: str,
         verify_token: str,
         fields: tuple[str, ...],
@@ -170,7 +172,7 @@ class GraphAPI:
 
         Args:
             app_id: The ID of the app.
-            app_access_token: The access token of the app (from ``get_app_access_token``).
+            access_token: The access token of the app (from ``get_app_access_token``).
             callback_url: The URL to set.
             verify_token: The verify token to challenge the webhook with.
             fields: The fields to subscribe to.
@@ -186,14 +188,14 @@ class GraphAPI:
                 "callback_url": callback_url,
                 "verify_token": verify_token,
                 "fields": ",".join(fields),
-                "access_token": app_access_token,
+                "access_token": access_token,
             },
         )
 
     def set_waba_alternate_callback_url(
         self,
         waba_id: str,
-        callback_url: str,
+        override_callback_uri: str,
         verify_token: str,
     ) -> dict[str, bool]:
         """
@@ -209,7 +211,7 @@ class GraphAPI:
 
         Args:
             waba_id: The ID of the WhatsApp Business Account.
-            callback_url: The URL to set.
+            override_callback_uri: The URL to set.
             verify_token: The verify token to challenge the webhook with.
 
         Returns:
@@ -219,7 +221,7 @@ class GraphAPI:
             method="POST",
             endpoint=f"/{waba_id}/subscribed_apps",
             json={
-                "override_callback_uri": callback_url,
+                "override_callback_uri": override_callback_uri,
                 "verify_token": verify_token,
             },
         )
@@ -286,7 +288,7 @@ class GraphAPI:
 
     def set_phone_alternate_callback_url(
         self,
-        callback_url: str,
+        override_callback_uri: str,
         verify_token: str,
         phone_id: str,
     ) -> dict[str, bool]:
@@ -297,7 +299,7 @@ class GraphAPI:
 
         Args:
             phone_id: The ID of the phone number to set the callback URL on.
-            callback_url: The URL to set.
+            override_callback_uri: The URL to set.
             verify_token: The verify token to challenge the webhook with.
 
         Returns:
@@ -308,7 +310,7 @@ class GraphAPI:
             endpoint=f"/{phone_id}/",
             json={
                 "webhook_configuration": {
-                    "override_callback_uri": callback_url,
+                    "override_callback_uri": override_callback_uri,
                     "verify_token": verify_token,
                 }
             },
@@ -345,7 +347,7 @@ class GraphAPI:
     def set_business_public_key(
         self,
         phone_id: str,
-        public_key: str,
+        business_public_key: str,
     ) -> dict[str, bool]:
         """
         Set the public key of the business.
@@ -360,7 +362,7 @@ class GraphAPI:
 
         Args:
             phone_id: The ID of the phone number to set the public key on.
-            public_key: The public key to set.
+            business_public_key: The public key to set.
 
         Returns:
             The success of the operation.
@@ -368,7 +370,7 @@ class GraphAPI:
         return self._make_request(
             method="POST",
             endpoint=f"/{phone_id}/whatsapp_business_encryption",
-            data={"business_public_key": public_key},
+            data={"business_public_key": business_public_key},
         )
 
     def upload_media(
@@ -530,21 +532,25 @@ class GraphAPI:
     def send_message(
         self,
         sender: str,
-        to: str,
+        to: str | None,
+        recipient: str | None,
+        recipient_type: str,
         typ: str,
-        msg: dict[str, str | list[str]] | tuple[dict],
+        msg: dict,
         reply_to_message_id: str | None = None,
         biz_opaque_callback_data: str | None = None,
         recipient_identity_key_hash: str | None = None,
-    ) -> dict[str, dict | list]:
+    ) -> dict:
         """
-        Send a message to a WhatsApp user.
+        Send a message to a WhatsApp user/group.
 
         - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages>`_.
 
         Args:
             sender: The phone id to send the message from.
-            to: The phone number to send the message to.
+            to: The WhatsApp ID to send the message to.
+            recipient: The recipient unique identifier (BSUID).
+            recipient_type: The type of the recipient (e.g. ``individual``, ``group``).
             typ: The type of the message (e.g. ``text``, ``image``, etc.).
             msg: The message object to send.
             reply_to_message_id: The ID of the message to reply to.
@@ -554,13 +560,18 @@ class GraphAPI:
         Returns:
             The response from the WhatsApp Cloud API.
         """
+        if not to and not recipient:
+            raise ValueError("Either 'to' or 'recipient' must be provided")
         data = {
             "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": to,
+            "recipient_type": recipient_type,
             "type": typ,
             typ: msg,
         }
+        if to:
+            data["to"] = to
+        if recipient:
+            data["recipient"] = recipient
         if reply_to_message_id:
             data["context"] = {"message_id": reply_to_message_id}
         if biz_opaque_callback_data:
@@ -577,7 +588,8 @@ class GraphAPI:
         self,
         sender: str,
         to: str,
-        template: dict[str, str | list[str]],
+        recipient: str,
+        template: dict,
         reply_to_message_id: str | None = None,
         message_activity_sharing: bool | None = None,
         biz_opaque_callback_data: str | None = None,
@@ -591,7 +603,8 @@ class GraphAPI:
 
         Args:
             sender: The phone id to send the message from.
-            to: The phone number to send the message to.
+            to: The WhatsApp ID to send the message to.
+            recipient: The recipient unique identifier (BSUID).
             template: The template object to send.
             reply_to_message_id: The ID of the message to reply to.
             message_activity_sharing: Toggles on / off sharing message activities (e.g. message read) for that specific marketing message to Meta to help optimize marketing messages.
@@ -1928,6 +1941,7 @@ class GraphAPI:
         self,
         phone_id: str,
         users: tuple[str, ...],
+        user_ids: tuple[str, ...],
     ) -> dict:
         """
         Block users from sending messages to the business.
@@ -1948,16 +1962,19 @@ class GraphAPI:
         Args:
             phone_id: The ID of the phone number to block users on.
             users: The list of phone numbers/wa_ids to block.
+            user_ids: The list of bsuids to block.
 
         Returns:
             The response from the WhatsApp Cloud API.
         """
+        block_users = [{"user": user} for user in users]
+        block_users.extend({"user_id": user_id} for user_id in user_ids)
         return self._make_request(
             method="POST",
             endpoint=f"/{phone_id}/block_users",
             json={
                 "messaging_product": "whatsapp",
-                "block_users": [{"user": user} for user in users],
+                "block_users": block_users,
             },
         )
 
@@ -1965,6 +1982,7 @@ class GraphAPI:
         self,
         phone_id: str,
         users: tuple[str, ...],
+        user_ids: tuple[str, ...],
     ) -> dict:
         """
         Unblock users from sending messages to the business.
@@ -1984,16 +2002,19 @@ class GraphAPI:
         Args:
             phone_id: The ID of the phone number to unblock users on.
             users: The list of phone numbers/wa_ids to unblock.
+            user_ids: The list of bsuids to unblock.
 
         Returns:
             The response from the WhatsApp Cloud API.
         """
+        unblock_users = [{"user": user} for user in users]
+        unblock_users.extend({"user_id": user_id} for user_id in user_ids)
         return self._make_request(
             method="DELETE",
             endpoint=f"/{phone_id}/block_users",
             json={
                 "messaging_product": "whatsapp",
-                "block_users": [{"user": user} for user in users],
+                "block_users": unblock_users,
             },
         )
 
@@ -2112,7 +2133,12 @@ class GraphAPI:
             endpoint=f"/{upload_session_id}",
         )
 
-    def get_call_permissions(self, phone_id: str, user_wa_id: str) -> dict:
+    def get_call_permissions(
+        self,
+        phone_id: str,
+        user_wa_id: str | None,
+        recipient: str | None,
+    ) -> dict:
         """
         Get call permissions for a user.
 
@@ -2160,22 +2186,31 @@ class GraphAPI:
 
         Args:
             phone_id: The ID of the phone number to get call permissions for.
-            user_wa_id: The WhatsApp ID of the user to check permissions for.
+            user_wa_id: The WhatsApp ID to get call permissions for. Required if recipient is not provided.
+            recipient: The recipient unique identifier (BSUID). Required if recipient is not provided.
 
         Returns:
             The response from the WhatsApp Cloud API.
         """
+        if not user_wa_id and not recipient:
+            raise ValueError("Either 'user_wa_id' or 'recipient' must be provided")
+        data = {}
+        if user_wa_id:
+            data["user_wa_id"] = user_wa_id
+        if phone_id:
+            data["recipient"] = recipient
         return self._make_request(
             method="GET",
             endpoint=f"/{phone_id}/call_permissions",
-            params={"user_wa_id": user_wa_id},
+            params=data,
         )
 
     def initiate_call(
         self,
         phone_id: str,
-        to: str,
-        sdp: dict[str, str],
+        to: str | None,
+        recipient: str | None,
+        session: dict[str, str],
         biz_opaque_callback_data: str | None = None,
     ) -> dict[str, str | bool]:
         """
@@ -2194,31 +2229,37 @@ class GraphAPI:
 
         Args:
             phone_id: The ID of the phone number to initiate the call on.
-            to: The number being called (callee).
-            sdp: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
+            to: The WhatsApp ID to initiate the call to. Required if recipient is not provided.
+            recipient: The recipient unique identifier (BSUID). Required if recipient is not provided.
+            session: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
             biz_opaque_callback_data: An arbitrary string you can pass in that is useful for tracking and logging purposes.
 
         Returns:
             The response from the WhatsApp Cloud API containing the call ID.
         """
+        if not to and not recipient:
+            raise ValueError("Either 'to' or 'recipient' must be provided")
+        data = {
+            "messaging_product": "whatsapp",
+            "to": to,
+            "recipient": recipient,
+            "action": "connect",
+            "session": session,
+        }
+        if to:
+            data["to"] = to
+        if recipient:
+            data["recipient"] = recipient
+        if biz_opaque_callback_data:
+            data["biz_opaque_callback_data"] = biz_opaque_callback_data
         return self._make_request(
             method="POST",
             endpoint=f"{phone_id}/calls",
-            json={
-                "messaging_product": "whatsapp",
-                "to": to,
-                "action": "connect",
-                "session": sdp,
-                **(
-                    {"biz_opaque_callback_data": biz_opaque_callback_data}
-                    if biz_opaque_callback_data
-                    else {}
-                ),
-            },
+            json=data,
         )
 
     def pre_accept_call(
-        self, phone_id: str, call_id: str, sdp: dict[str, str] | None = None
+        self, phone_id: str, call_id: str, session: dict[str, str] | None = None
     ) -> dict[str, str | bool]:
         """
         Pre-accept a call.
@@ -2235,7 +2276,7 @@ class GraphAPI:
         Args:
             phone_id: The ID of the phone number to pre-accept the call on.
             call_id: The ID of the call to pre-accept.
-            sdp: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
+            session: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
 
         Returns:
             The response from the WhatsApp Cloud API.
@@ -2247,7 +2288,7 @@ class GraphAPI:
                 "messaging_product": "whatsapp",
                 "call_id": call_id,
                 "action": "pre_accept",
-                **({"session": sdp} if sdp else {}),
+                **({"session": session} if session else {}),
             },
         )
 
@@ -2255,7 +2296,7 @@ class GraphAPI:
         self,
         phone_id: str,
         call_id: str,
-        sdp: dict[str, str] | None = None,
+        session: dict[str, str] | None = None,
         biz_opaque_callback_data: str | None = None,
     ) -> dict[str, str | bool]:
         """
@@ -2273,7 +2314,7 @@ class GraphAPI:
         Args:
             phone_id: The ID of the phone number to accept the call on.
             call_id: The ID of the call to accept.
-            sdp: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
+            session: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
             biz_opaque_callback_data: An arbitrary string you can pass in that is useful for tracking and logging purposes.
 
         Returns:
@@ -2286,7 +2327,7 @@ class GraphAPI:
                 "messaging_product": "whatsapp",
                 "call_id": call_id,
                 "action": "accept",
-                **({"session": sdp} if sdp else {}),
+                **({"session": session} if session else {}),
                 **(
                     {"biz_opaque_callback_data": biz_opaque_callback_data}
                     if biz_opaque_callback_data

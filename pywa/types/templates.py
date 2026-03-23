@@ -41,6 +41,7 @@ __all__ = [
     "MPMButton",
     "SPMButton",
     "CallPermissionRequestButton",
+    "ContactInfoRequestButton",
     "BaseOTPButton",
     "CopyCodeOTPButton",
     "OneTapOTPButton",
@@ -78,6 +79,7 @@ from typing import (
     TYPE_CHECKING,
     AsyncIterator,
     BinaryIO,
+    Generator,
     Iterator,
     Literal,
     NoReturn,
@@ -262,8 +264,10 @@ class TemplateStatusUpdate(BaseTemplateUpdate):
         )
 
     @property
-    def listener_identifier(self) -> TemplateStatusUpdateListenerIdentifier:
-        return TemplateStatusUpdateListenerIdentifier(
+    def listener_identifiers(
+        self,
+    ) -> Generator[TemplateStatusUpdateListenerIdentifier, ...] | None:
+        yield TemplateStatusUpdateListenerIdentifier(
             template_id=self.template_id,
         )
 
@@ -678,6 +682,7 @@ class ComponentType(utils.StrEnum):
     VOICE_CALL = "VOICE_CALL"
     APP = "APP"
     CALL_PERMISSION_REQUEST = "CALL_PERMISSION_REQUEST"
+    REQUEST_CONTACT_INFO = "REQUEST_CONTACT_INFO"
 
     UNKNOWN = "UNKNOWN"
 
@@ -2857,6 +2862,15 @@ class CallPermissionRequestButton(BaseButtonComponent):
     )
 
 
+@dataclasses.dataclass(kw_only=True, slots=True)
+class ContactInfoRequestButton(BaseButtonComponent):
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.REQUEST_CONTACT_INFO,
+        init=False,
+        repr=False,
+    )
+
+
 class OtpType(utils.StrEnum):
     """
     The type of the one-time password or code button.
@@ -3709,6 +3723,7 @@ _comp_types_to_component: dict[ComponentType, type[TemplateBaseComponent]] = {
     ComponentType.COPY_CODE: CopyCodeButton,
     ComponentType.FLOW: FlowButton,
     ComponentType.CALL_PERMISSION_REQUEST: CallPermissionRequestButton,
+    ComponentType.REQUEST_CONTACT_INFO: ContactInfoRequestButton,
     ComponentType.VOICE_CALL: VoiceCallButton,
 }
 

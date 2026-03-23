@@ -30,17 +30,20 @@ class PhoneNumberChange(BaseUserUpdate):
         metadata: The metadata of the message (to which phone number it was sent).
         type: The type of the message (always ``MessageType.SYSTEM``).
         sys_type: The type of the system message (always ``SystemType.USER_CHANGED_NUMBER``).
-        from_user: The user who changed their phone number. THIS IS THE OLD WA ID!
+        from_user: The user who changed their phone number. The user will contain the old phone number in the ``wa_id`` field.
         timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
         old_wa_id: The old WhatsApp ID of the user.
         new_wa_id: The new WhatsApp ID of the user.
+        new_parent_id: he user’s new parent BSUID, if you have enabled parent BSUIDs
         body: The body of the system message (e.g., `John changed their phone number`).
     """
 
     type: MessageType
     sys_type: SystemType
     old_wa_id: str
-    new_wa_id: str
+    new_wa_id: str | None
+    new_user_id: str
+    new_parent_id: str | None
     body: str
 
     _webhook_field = "messages"
@@ -65,9 +68,19 @@ class PhoneNumberChange(BaseUserUpdate):
             metadata=Metadata.from_dict(value["metadata"]),
             type=MessageType(msg["type"]),
             sys_type=SystemType(sys["type"]),
-            from_user=client._usr_cls(_client=client, wa_id=msg["from"], name=None),
+            from_user=client._usr_cls(
+                _client=client,
+                bsuid=sys["user_id"],
+                wa_id=msg["from"],
+                parent_bsuid=sys.get("parent_user_id"),
+                name=None,
+                username=None,
+                identity_key_hash=None,
+            ),
             old_wa_id=sys.get("customer", msg["from"]),  # v12^ from
-            new_wa_id=sys.get("new_wa_id", sys["wa_id"]),  # v12^ wa_id
+            new_wa_id=sys.get("new_wa_id", sys.get("wa_id")),  # v12^ wa_id
+            new_user_id=sys["user_id"],
+            new_parent_id=sys.get("parent_user_id"),
             body=sys["body"],
         )
 
@@ -82,8 +95,8 @@ class SystemType(utils.StrEnum):
     """
 
     USER_CHANGED_NUMBER = "user_changed_number"
+    USER_CHANGED_USER_ID = "user_changed_user_id"
     CUSTOMER_IDENTITY_CHANGED = "customer_identity_changed"
-
     UNKNOWN = "UNKNOWN"
 
     @classmethod

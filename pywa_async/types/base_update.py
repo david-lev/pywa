@@ -8,7 +8,8 @@ from typing import TYPE_CHECKING, AsyncIterator, BinaryIO, Iterable, Iterator
 
 from pywa.types.base_update import *  # noqa MUST BE IMPORTED FIRST
 
-from .others import Contact, ProductsSection, SuccessResult, User
+from .others import Contact, ProductsSection, SuccessResult
+from .user import User
 
 if TYPE_CHECKING:
     from pywa.types.sent_update import InitiatedCall

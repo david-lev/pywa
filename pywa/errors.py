@@ -437,6 +437,12 @@ class RecipientIdentityKeyMismatch(SendMessageError):
     __error_codes__ = (137000,)
 
 
+class BSUIDRecipientNotSupported(SendMessageError):
+    """Business-scoped User ID (BSUID) recipients are not supported for this message."""
+
+    __error_codes__ = (131062,)
+
+
 # ====================================================================================================
 
 

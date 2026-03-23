@@ -18,13 +18,15 @@ from typing import (
     Awaitable,
     BinaryIO,
     ClassVar,
+    Generator,
     Iterable,
     Iterator,
     NoReturn,
 )
 
 from ..listeners import BaseListenerIdentifier, UserUpdateListenerIdentifier
-from .others import Contact, Metadata, ProductsSection, SuccessResult, User
+from .others import Contact, Metadata, ProductsSection, SuccessResult
+from .user import User
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
@@ -233,8 +235,8 @@ class BaseUpdate(abc.ABC, _HandlingFlow):
         return self.raw.shared_data
 
     @property
-    def listener_identifier(self) -> BaseListenerIdentifier | None:
-        """The identifier for the listener that this update is for."""
+    def listener_identifiers(self) -> Iterable[BaseListenerIdentifier] | None:
+        """The identifiers for the listener that this update is for."""
         return None
 
     @classmethod
@@ -1201,7 +1203,8 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
 
     @property
     def _internal_sender(self) -> str:
-        return self.from_user.wa_id
+        # noinspection PyProtectedMember
+        return next(self._client._resolve_user_identifier(self.from_user))
 
     @property
     def recipient(self) -> str:
@@ -1229,13 +1232,15 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
         return self.from_user.unblock()
 
     @property
-    def listener_identifier(self) -> UserUpdateListenerIdentifier:
+    def listener_identifiers(self) -> Generator[UserUpdateListenerIdentifier]:
         """
-        The listener identifier of the update.
+        The listener identifiers of the update.
         """
-        return UserUpdateListenerIdentifier(
-            sender=self.sender, recipient=self.recipient
-        )
+        # noinspection PyProtectedMember
+        for identifier in self._client._resolve_user_identifier(self.from_user):
+            yield UserUpdateListenerIdentifier(
+                sender=identifier, recipient=self.recipient
+            )
 
     @property
     def message_id_to_reply(self) -> str:
