@@ -17,7 +17,7 @@
 <p align="center">
   <a href="https://pypi.org/project/pywa/"><img src="https://img.shields.io/pypi/v/pywa.svg" /></a>
   <a href="https://pypi.org/project/pywa/"><img src="https://static.pepy.tech/badge/pywa" /></a>
-  <a href="https://github.com/david-lev/pywa/actions/workflows/tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/david-lev/pywa/tests.yml?label=Tests" /></a>
+  <a href="https://github.com/david-lev/pywa/actions/workflows/tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/david-lev/pywa/tests.yml?label=tests" /></a>
  <a href="https://pywa.readthedocs.io"><img src="https://readthedocs.org/projects/pywa/badge/?version=latest&" /></a>
   <a href="https://github.com/david-lev/pywa/blob/master/LICENSE"><img src="https://img.shields.io/github/license/david-lev/pywa" /></a>
   <a href="https://www.codefactor.io/repository/github/david-lev/pywa/overview/master"><img src="https://www.codefactor.io/repository/github/david-lev/pywa/badge/master" /></a>
@@ -28,7 +28,9 @@
 
 **💫 PyWa is an all-in-one Python framework for the WhatsApp Cloud API.**
 
-Send **rich media messages**, use **interactive buttons**, listen to **real-time events**, build and send **flows**, design and send **template messages**, and enjoy **blazing-fast async support** with full integration for **FastAPI, Flask**, and more.
+Send **rich media messages**, use **interactive buttons**, listen to **real-time events**, build and send **flows**,
+design and send **template messages**, and enjoy **blazing-fast async support** with full integration for **FastAPI,
+Flask**, and more.
 Fully **typed**, **documented**, and **production-ready** — build powerful bots in minutes.
 
 ---
@@ -37,19 +39,20 @@ Fully **typed**, **documented**, and **production-ready** — build powerful bot
 --------------------------------
 
 > [Get Started](https://pywa.readthedocs.io/en/latest/content/getting-started.html)
-• [Client](https://pywa.readthedocs.io/en/latest/content/client/overview.html)
-• [Handlers](https://pywa.readthedocs.io/en/latest/content/handlers/overview.html)
-• [Listeners](https://pywa.readthedocs.io/en/latest/content/listeners/overview.html)
-• [Updates](https://pywa.readthedocs.io/en/latest/content/updates/overview.html)
-• [Filters](https://pywa.readthedocs.io/en/latest/content/filters/overview.html)
-• [Templates](https://pywa.readthedocs.io/en/latest/content/templates/overview.html)
-• [Flows](https://pywa.readthedocs.io/en/latest/content/flows/overview.html)
-• [Calls](https://pywa.readthedocs.io/en/latest/content/calls/overview.html)
+> • [Client](https://pywa.readthedocs.io/en/latest/content/client/overview.html)
+> • [Handlers](https://pywa.readthedocs.io/en/latest/content/handlers/overview.html)
+> • [Listeners](https://pywa.readthedocs.io/en/latest/content/listeners/overview.html)
+> • [Updates](https://pywa.readthedocs.io/en/latest/content/updates/overview.html)
+> • [Filters](https://pywa.readthedocs.io/en/latest/content/filters/overview.html)
+> • [Templates](https://pywa.readthedocs.io/en/latest/content/templates/overview.html)
+> • [Flows](https://pywa.readthedocs.io/en/latest/content/flows/overview.html)
+> • [Calls](https://pywa.readthedocs.io/en/latest/content/calls/overview.html)
 
 ------------------------
 
 ⚡ **Why PyWa?**
 ---------------
+
 - **🚀 Fast & Simple** – Focus on building, not boilerplate.
 - **💬 Rich Messaging** – Text, images, files, audio, locations, contacts, buttons & more.
 - **📩 Real-Time Updates** – Messages, callbacks, delivery/read receipts, account updates, and more.
@@ -67,6 +70,7 @@ Fully **typed**, **documented**, and **production-ready** — build powerful bot
 ------------------
 
 - **Send a message**
+
 > See [WhatsApp Client](https://pywa.readthedocs.io/en/latest/content/client/overview.html) for all the options.
 
 ```python
@@ -97,6 +101,7 @@ wa.send_image(
 ```
 
 - **Handle incoming updates** (with [FastAPI](https://fastapi.tiangolo.com/) in this example)
+
 > See [Handlers](https://pywa.readthedocs.io/en/latest/content/handlers/overview.html) for fully detailed guide.
 
 ```python
@@ -104,29 +109,30 @@ wa.send_image(
 from pywa import WhatsApp, filters, types
 from fastapi import FastAPI
 
-fastapi_app = FastAPI() # FastAPI server
+fastapi_app = FastAPI()  # FastAPI server
 
 # Create a WhatsApp client
 wa = WhatsApp(
     phone_id=1234567890,
     token="************",
-    server=fastapi_app, # the server to listen to incoming updates
+    server=fastapi_app,  # the server to listen to incoming updates
     callback_url="https://yourdomain.com/",  # the public URL of your server
-    verify_token="xyz123", # some random string to verify the webhook
-    app_id=123456, # your app id
-    app_secret="*******" # your app secret
+    verify_token="xyz123",  # some random string to verify the webhook
+    app_id=123456,  # your app id
+    app_secret="*******"  # your app secret
 )
 
+
 # Register callback to handle incoming messages
-@wa.on_message(filters.matches("Hello", "Hi")) # Filter to match text messages that contain "Hello" or "Hi"
+@wa.on_message(filters.matches("Hello", "Hi"))  # Filter to match text messages that contain "Hello" or "Hi"
 def hello(client: WhatsApp, msg: types.Message):
-    msg.react("👋") # React to the message with a wave emoji
-    msg.reply_text( # Short reply to the message
-        text=f"Hello {msg.from_user.name}!", # Greet the user
-        buttons=[ # Add buttons to the reply
+    msg.react("👋")  # React to the message with a wave emoji
+    msg.reply_text(  # Short reply to the message
+        text=f"Hello {msg.from_user.name}!",  # Greet the user
+        buttons=[  # Add buttons to the reply
             types.Button(
                 title="About me",
-                callback_data="about_me" # Callback data to identify the click
+                callback_data="about_me"  # Callback data to identify the click
             )
         ]
     )
@@ -134,10 +140,11 @@ def hello(client: WhatsApp, msg: types.Message):
     age = msg.reply(text="What's your age?").wait_for_reply(filters=filters.text).text
     msg.reply_text(f"Your age is {age}.")
 
+
 # Register another callback to handle incoming button clicks
-@wa.on_callback_button(filters.matches("about_me")) # Filter to match the button click
+@wa.on_callback_button(filters.matches("about_me"))  # Filter to match the button click
 def click_me(client: WhatsApp, clb: types.CallbackButton):
-    clb.reply_text(f"Hello {clb.from_user.name}, I am a WhatsApp bot built with PyWa!") # Reply to the button click
+    clb.reply_text(f"Hello {clb.from_user.name}, I am a WhatsApp bot built with PyWa!")  # Reply to the button click
 ```
 
 - To run the server, use [fastapi-cli](https://fastapi.tiangolo.com/#run-it) (`pip install "fastapi[standard]"`):
@@ -148,7 +155,8 @@ fastapi dev wa.py  # see uvicorn docs for more options (port, host, etc.)
 
 - **Async Usage**
 
-- PyWa also supports async usage with the same API. This is useful if you want to use async/await in your code. To use the async version, replace **all** the imports from `pywa` to `pywa_async`:
+- PyWa also supports async usage with the same API. This is useful if you want to use async/await in your code. To use
+  the async version, replace **all** the imports from `pywa` to `pywa_async`:
 
 ```python
 # wa.py
@@ -158,16 +166,19 @@ from pywa_async import WhatsApp, types  # Same API, just different imports
 fastapi_app = fastapi.FastAPI()
 wa = WhatsApp(..., server=fastapi_app)
 
+
 async def main():
-    await wa.send_message(...) # async call
+    await wa.send_message(...)  # async call
+
 
 @wa.on_message
-async def hello(_: WhatsApp, msg: types.Message): # async callback
+async def hello(_: WhatsApp, msg: types.Message):  # async callback
     await msg.react("👋")
     await msg.reply("Hello from PyWa Async!")
 ```
 
 - **Create and send template messages**
+
 > See [Templates](https://pywa.readthedocs.io/en/latest/content/templates/overview.html) for more details and examples.
 
 ```python
@@ -216,6 +227,7 @@ wa.send_template(
 ```
 
 - **Create and send flows**
+
 > See [Flows](https://pywa.readthedocs.io/en/latest/content/flows/overview.html) for much more details and examples.
 
 ```python
@@ -249,7 +261,7 @@ my_flow_json = FlowJSON(
                     Footer(
                         label="Subscribe",
                         on_click_action=CompleteAction(
-                            payload={ # Payload to send to the server
+                            payload={  # Payload to send to the server
                                 "name": name.ref,
                                 "email": email.ref,
                             }
@@ -278,6 +290,7 @@ wa.send_text(
         flow_name="subscribe_to_newsletter",
     )
 )
+
 
 # Handle the flow response
 @wa.on_flow_completion
@@ -311,7 +324,8 @@ pip3 install -U "pywa[fastapi]"
 pip3 install -U "pywa[flask]"
 ```
 
-- **If you going to use the Flow features and want to use the default FlowRequestDecryptor and the default FlowResponseEncryptor, here is shortcut to install the required dependencies:**
+- **If you going to use the Flow features and want to use the default FlowRequestDecryptor and the default
+  FlowResponseEncryptor, here is shortcut to install the required dependencies:**
 
 ```bash
 pip3 install -U "pywa[cryptography]"
@@ -338,7 +352,8 @@ This project is licensed under the MIT License - see the
 🔱 **Contributing**
 --------------------
 
-Contributions are welcome! Please see the [Contributing Guide](https://github.com/david-lev/pywa/blob/master/CONTRIBUTING.md) for more information.
+Contributions are welcome! Please see
+the [Contributing Guide](https://github.com/david-lev/pywa/blob/master/CONTRIBUTING.md) for more information.
 
 🗣 **Community**
 --------------------

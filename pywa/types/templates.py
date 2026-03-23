@@ -70,6 +70,7 @@ __all__ = [
 import abc
 import dataclasses
 import datetime
+import functools
 import json
 import logging
 import pathlib
@@ -93,7 +94,7 @@ from . import CallbackData
 from .base_update import BaseUpdate, RawUpdate
 from .flows import FlowActionType, FlowJSON
 from .media import Media
-from .others import ProductsSection, Result, SuccessResult, _ItemFactory
+from .others import ProductsSection, Result, SuccessResult
 
 if TYPE_CHECKING:
     from .. import filters as pywa_filters
@@ -4228,19 +4229,15 @@ class TemplatesResult(Result[TemplateDetails]):
         self,
         wa: WhatsApp,
         response: dict,
-        item_factory: _ItemFactory,
     ):
         super().__init__(
             wa=wa,
             response=response,
-            item_factory=item_factory,
+            item_factory=functools.partial(
+                TemplateDetails.from_dict,
+                client=wa,
+            ),
         )
-        self.total_count = response["summary"]["total_count"]
-        self.message_template_count = response["summary"]["message_template_count"]
-        self.message_template_limit = response["summary"]["message_template_limit"]
-        self.are_translations_complete = response["summary"][
-            "are_translations_complete"
-        ]
 
     def __repr__(self) -> str:
         return (

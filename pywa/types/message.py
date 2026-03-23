@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, ClassVar, Iterable
 from ..errors import WhatsAppError
 from .base_update import BaseUserUpdate, RawUpdate  # noqa
 from .callback import Button, FlowButton, SectionList, URLButton, VoiceCallButton
+from .chat import Chat, ChatType
 from .media import Audio, Document, Image, Sticker, Video
 from .others import (
     Contact,
@@ -45,6 +46,7 @@ class Message(BaseUserUpdate):
         metadata: The metadata of the message (to which phone number it was sent).
         type: The message type (See :class:`MessageType`).
         from_user: The user who sent the message.
+        chat: The group where the message was sent (if any).
         timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
         reply_to_message: The message to which this message is a reply (if any).
         forwarded: Whether the message was forwarded.
@@ -69,6 +71,7 @@ class Message(BaseUserUpdate):
 
     type: MessageType
     reply_to_message: ReplyToMessage | None
+    chat: Chat
     forwarded: bool
     forwarded_many_times: bool
     text: str | None = None
@@ -209,6 +212,7 @@ class Message(BaseUserUpdate):
             timestamp=timestamp,
             recipient=metadata.phone_number_id,
         )
+        user = client._usr_cls.from_contact(value["contacts"][0], client=client)
         return cls(
             _client=client,
             raw=update,
@@ -216,7 +220,10 @@ class Message(BaseUserUpdate):
             id=msg["id"],
             type=msg_type,
             **msg_content,
-            from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
+            from_user=user,
+            chat=Chat(id=msg["group_id"], type=ChatType.GROUP)
+            if "group_id" in msg
+            else Chat(id=user.preferred_id, type=ChatType.PRIVATE),
             timestamp=timestamp,
             metadata=metadata,
             forwarded=context.get("forwarded", False)
@@ -450,3 +457,18 @@ class Message(BaseUserUpdate):
                 )
             case _:
                 raise ValueError(f"Message of type {self.type} cannot be copied.")
+
+    def pin(self, *, expiration_days: datetime.timedelta | int) -> SentMessage:
+        return self._client.pin_message(
+            chat_id=self.chat.id,
+            message_id=self.id,
+            expiration_days=expiration_days,
+            sender=self.recipient,
+        )
+
+    def unpin(self) -> SentMessage:
+        return self._client.unpin_message(
+            chat_id=self.chat.id,
+            message_id=self.id,
+            sender=self.recipient,
+        )
