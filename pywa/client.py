@@ -591,7 +591,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             >>> wa = WhatsApp(...)
             >>> wa.send_message(
             ...     to="1234567890",
-            ...     text="Hello from PyWa! (https://github.com/david-lev/pywa)",
+            ...     text="*Hello from PyWa!* (https://github.com/david-lev/pywa)",
             ...     preview_url=True,
             ... )
 

@@ -350,7 +350,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             >>> wa = WhatsApp(...)
             >>> await wa.send_message(
             ...     to="1234567890",
-            ...     text="Hello from PyWa! (https://github.com/david-lev/pywa)",
+            ...     text="*Hello from PyWa!* (https://github.com/david-lev/pywa)",
             ...     preview_url=True,
             ... )
 

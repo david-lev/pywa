@@ -98,11 +98,11 @@ class _SentUpdate(_ClientShortcuts, abc.ABC):
 
     @property
     def _internal_recipient(self) -> str:
-        return self.from_phone_id
+        return self._recipient
 
     @property
     def _internal_sender(self) -> str:
-        return self._recipient
+        return self.from_phone_id
 
     @classmethod
     @abc.abstractmethod
@@ -111,7 +111,7 @@ class _SentUpdate(_ClientShortcuts, abc.ABC):
     @property
     def listener_identifier(self) -> UserUpdateListenerIdentifier:
         return UserUpdateListenerIdentifier(
-            sender=self._internal_recipient, recipient=self._internal_sender
+            sender=self._recipient, recipient=self.from_phone_id
         )
 
 
