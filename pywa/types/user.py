@@ -21,6 +21,7 @@ class BaseUser:
         """
         Returns the preferred user ID according to the client's ``user_identifier_priority`` configuration.
         """
+        # noinspection PyProtectedMember
         return next(self._client._resolve_user_identifier(self))
 
     def block(self) -> bool:

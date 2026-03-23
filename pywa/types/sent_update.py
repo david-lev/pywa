@@ -96,13 +96,9 @@ class _SentUpdate(_ClientShortcuts, abc.ABC):
     def _extract_recipient(contact: dict) -> str:
         return contact.get("wa_id", contact["user_id"])  # only one exists
 
-    @property
-    def _internal_recipient(self) -> str:
+    def _get_reply_to(self, private: bool = False) -> str:
+        # noinspection PyProtectedMember
         return self._recipient
-
-    @property
-    def _internal_sender(self) -> str:
-        return self.from_phone_id
 
     @classmethod
     @abc.abstractmethod

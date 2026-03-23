@@ -142,6 +142,11 @@ class Message(BaseUserUpdate):
         """
         return self.reply_to_message is not None or self.reaction is not None
 
+    def _get_reply_to(self, private: bool = False) -> str:
+        if private and self.chat.type == ChatType.GROUP:
+            return self.chat.id
+        return super()._get_reply_to(private=private)
+
     @classmethod
     def _resolve_msg_content(
         cls,
