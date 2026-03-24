@@ -4,6 +4,7 @@ import functools
 import time
 
 from ..errors import WhatsAppError
+from .user import BaseUser
 
 """Types for other objects."""
 
@@ -1198,19 +1199,20 @@ class BlockUserFailure:
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
-class _UnblockedOrBlockedUser:
+class _UnblockedOrBlockedUser(BaseUser):
+    _client: WhatsApp
     input: str
-    wa_id: str | None
     bsuid: str | None
-    parent_bsuid: str | None
 
     @classmethod
-    def from_dict(cls, data: dict):
+    def from_dict(cls, client: WhatsApp, data: dict):
         return cls(
+            _client=client,
             input=data["input"],
             wa_id=data.get("wa_id"),
             bsuid=data.get("user_id"),
             parent_bsuid=data.get("parent_user_id"),
+            username=None,
         )
 
 
@@ -1256,10 +1258,10 @@ class UsersBlockedResult:
     errors: WhatsAppError | None
 
     @classmethod
-    def from_dict(cls, data: dict):
+    def from_dict(cls, client: WhatsApp, data: dict):
         return cls(
             added_users=tuple(
-                BlockedUser.from_dict(user)
+                BlockedUser.from_dict(client=client, data=user)
                 for user in data.get("block_users", {}).get("added_users", [])
             ),
             failed_users=tuple(
@@ -1284,10 +1286,10 @@ class UsersUnblockedResult:
     removed_users: tuple[UnblockedUser, ...]
 
     @classmethod
-    def from_dict(cls, data: dict):
+    def from_dict(cls, client: WhatsApp, data: dict):
         return cls(
             removed_users=tuple(
-                UnblockedUser.from_dict(user)
+                UnblockedUser.from_dict(client=client, data=user)
                 for user in data.get("block_users", {}).get("removed_users", [])
             )
         )

@@ -3940,6 +3940,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             A UsersBlockedResult object with the status of the block operation.
         """
         return UsersBlockedResult.from_dict(
+            client=self,
             data=self.api.block_users(
                 phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
                 **helpers.resolve_blocking_users(users),
@@ -3967,6 +3968,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             A UsersUnblockedResult object with the status of the unblock operation.
         """
         return UsersUnblockedResult.from_dict(
+            client=self,
             data=self.api.unblock_users(
                 phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
                 **helpers.resolve_blocking_users(users),
@@ -4000,7 +4002,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
                 pagination=pagination.to_dict() if pagination else None,
             ),
-            item_factory=BlockedUser.from_dict,
+            item_factory=functools.partial(
+                BlockedUser.from_dict,
+                client=self,
+            ),
         )
 
     def get_call_permissions(

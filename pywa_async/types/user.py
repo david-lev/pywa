@@ -11,8 +11,58 @@ if TYPE_CHECKING:
     from .calls import CallPermissions
 
 
+class BaseUserAsync:
+    _client: WhatsAppAsync
+    preferred_id: str
+
+    async def block(self) -> bool:
+        """
+        Block the user.
+
+        - Shortcut for :meth:`~pywa.client.WhatsApp.block_users` with the user.
+
+        Returns:
+            bool: True if the user was blocked
+
+        Raises:
+            BlockUserError: If the user was not blocked
+        """
+        res = await self._client.block_users((self.preferred_id,))
+        added = self.preferred_id in {u.wa_id for u in res.added_users}
+        if not added:
+            raise res.errors
+        return added
+
+    async def unblock(self) -> bool:
+        """
+        Unblock the user.
+
+        - Shortcut for :meth:`~pywa.client.WhatsApp.unblock_users` with the user.
+
+        Returns:
+            bool: True if the user was unblocked, False otherwise.
+        """
+        return self.preferred_id in {
+            u.preferred_id
+            for u in (
+                await self._client.unblock_users((self.preferred_id,))
+            ).removed_users
+        }
+
+    async def get_call_permissions(self) -> CallPermissions:
+        """
+        Get the call permissions of the user.
+
+        - Shortcut for :meth:`~pywa.client.WhatsApp.get_call_permissions` with the user.
+
+        Returns:
+            CallPermissions: The call permissions of the user.
+        """
+        return await self._client.get_call_permissions(from_user=self.preferred_id)
+
+
 @dataclasses.dataclass(frozen=True, slots=True)
-class User(_User):
+class User(BaseUserAsync, _User):
     """
     Represents a WhatsApp user.
 
@@ -26,46 +76,3 @@ class User(_User):
     """
 
     _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)
-
-    async def block(self) -> bool:
-        """
-        Block the user.
-
-        - Shortcut for :meth:`~pywa_async.client.WhatsApp.block_users` with the user wa_id.
-
-        Returns:
-            bool: True if the user was blocked
-
-        Raises:
-            BlockUserError: If the user was not blocked
-        """
-        res = await self._client.block_users((self.wa_id,))
-        added = self.wa_id in {u.wa_id for u in res.added_users}
-        if not added:
-            raise res.errors
-        return added
-
-    async def unblock(self) -> bool:
-        """
-        Unblock the user.
-
-        - Shortcut for :meth:`~pywa_async.client.WhatsApp.unblock_users` with the user wa_id.
-
-        Returns:
-            bool: True if the user was unblocked, False otherwise.
-        """
-        return self.wa_id in {
-            u.wa_id
-            for u in (await self._client.unblock_users((self.wa_id,))).removed_users
-        }
-
-    async def get_call_permissions(self) -> CallPermissions:
-        """
-        Get the call permissions of the user.
-
-        - Shortcut for :meth:`~pywa.client.WhatsApp.get_call_permissions` with the user wa_id.
-
-        Returns:
-            CallPermissions: The call permissions of the user.
-        """
-        return await self._client.get_call_permissions(wa_id=self.wa_id)

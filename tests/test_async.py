@@ -78,6 +78,7 @@ from pywa.types import (
 )
 from pywa.types.base_update import BaseUpdate, BaseUserUpdate
 from pywa.types.flows import FlowDetails as FlowDetailsSync
+from pywa.types.groups import GroupParticipant as GroupParticipantSync
 from pywa.types.media import ArrivedMedia
 from pywa.types.media import Media as MediaSync
 from pywa.types.sent_update import (
@@ -176,6 +177,7 @@ from pywa_async.types import (
     UserMarketingPreferences as UserMarketingPreferencesAsync,
 )
 from pywa_async.types.flows import FlowDetails as FlowDetailsAsync
+from pywa_async.types.groups import GroupParticipant as GroupParticipantAsync
 from pywa_async.types.media import Media as MediaAsync
 from pywa_async.types.sent_update import (
     InitiatedCall as InitiatedCallAsync,
@@ -241,6 +243,7 @@ def overrides() -> list[tuple[type, type]]:
         (CreatedTemplatesSync, CreatedTemplatesAsync),
         (UpdatedTemplateSync, UpdatedTemplateAsync),
         (QRCodeSync, QRCodeAsync),
+        (GroupParticipantSync, GroupParticipantAsync),
     ]
 
 

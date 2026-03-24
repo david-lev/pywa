@@ -3796,6 +3796,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             A UsersBlockedResult object with the status of the block operation.
         """
         return UsersBlockedResult.from_dict(
+            client=self,
             data=await self.api.block_users(
                 phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
                 **helpers.resolve_blocking_users(users),
@@ -3823,6 +3824,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             A UsersUnblockedResult object with the status of the unblock operation.
         """
         return UsersUnblockedResult.from_dict(
+            client=self,
             data=await self.api.unblock_users(
                 phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
                 **helpers.resolve_blocking_users(users),

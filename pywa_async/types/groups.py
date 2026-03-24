@@ -17,6 +17,7 @@ from pywa.types.groups import (
 )
 
 from .others import Result
+from .user import BaseUserAsync
 
 if TYPE_CHECKING:
     from pywa_async import WhatsApp as WhatsAppAsync
@@ -108,7 +109,7 @@ class GroupDetails(_GroupDetails):
     ) -> None: ...
 
 
-class GroupParticipant(_GroupParticipant):
+class GroupParticipant(BaseUserAsync, _GroupParticipant):
     """
     Represents an participant in a WhatsApp group.
 
