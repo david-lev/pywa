@@ -12,10 +12,12 @@ from pywa.types.groups import (
 from pywa.types.groups import (
     GroupJoinRequest as _GroupJoinRequest,
 )
+from pywa.types.groups import GroupMessageStatuses as _GroupMessageStatuses
 from pywa.types.groups import (
     GroupParticipant as _GroupParticipant,
 )
 
+from .message_status import MessageStatus as MessageStatusAsync
 from .others import Result
 from .user import BaseUserAsync
 
@@ -221,3 +223,13 @@ class GroupJoinRequestsResult(Result[GroupJoinRequest]):
             group_id=self._group_id,
             request_ids=[request.id for request in requests],
         )
+
+
+class GroupMessageStatuses(_GroupMessageStatuses):
+    _msg_status_cls: ClassVar[type[MessageStatusAsync]] = MessageStatusAsync
+
+    statuses: tuple[MessageStatusAsync, ...]
+
+    def __iter__(self) -> Iterator[MessageStatusAsync]:
+        """Iterate over the message statuses."""
+        return super().__iter__()

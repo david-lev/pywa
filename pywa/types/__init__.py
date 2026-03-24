@@ -89,4 +89,4 @@ from .calls import (
 )
 from .system import PhoneNumberChange, IdentityChange, Identity
 from .sent_update import SentMessage, SentTemplate, SentTemplateStatus, InitiatedCall
-from .groups import GroupInviteLink, GroupJoinApprovalMode
+from .groups import GroupInviteLink, GroupJoinApprovalMode, GroupMessageStatuses

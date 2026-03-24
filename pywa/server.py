@@ -663,6 +663,8 @@ def _handle_messages_field(
         return _MESSAGE_TYPES.get(msg_type, handlers.MessageHandler)
 
     elif "statuses" in value:  # status
+        if value["statuses"][0].get("recipient_type") == "group":
+            return handlers.GroupMessageStatusesHandler
         return handlers.MessageStatusHandler
 
     _logger.warning(

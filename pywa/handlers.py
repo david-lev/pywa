@@ -43,6 +43,7 @@ __all__ = [
     "CallbackSelectionHandler",
     "RawUpdateHandler",
     "MessageStatusHandler",
+    "GroupMessageStatusesHandler",
     "TemplateStatusUpdateHandler",
     "TemplateCategoryUpdateHandler",
     "TemplateQualityUpdateHandler",
@@ -90,6 +91,7 @@ from .types import (
     ChatOpened,
     FlowRequest,
     FlowResponse,
+    GroupMessageStatuses,
     IdentityChange,
     Message,
     MessageStatus,
@@ -128,6 +130,9 @@ _CallbackSelectionCallback: TypeAlias = Callable[
 ]
 _MessageStatusCallback: TypeAlias = Callable[
     ["WhatsApp", MessageStatus], Any | Awaitable[Any]
+]
+_GroupMessageStatusesCallback: TypeAlias = Callable[
+    ["WhatsApp", GroupMessageStatuses], Any | Awaitable[Any]
 ]
 _ChatOpenedCallback: TypeAlias = Callable[
     ["WhatsApp", ChatOpened], Any | Awaitable[Any]
@@ -450,6 +455,35 @@ class MessageStatusHandler(_FactoryHandler[MessageStatus]):
             factory=factory,
             priority=priority,
         )
+
+
+class GroupMessageStatusesHandler(Handler[GroupMessageStatuses]):
+    """
+    Handler for :class:`~pywa.types.groups.GroupMessageStatuses` updates (Group message status updates, e.g. ``sent``, ``delivered``, ``read``).
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_group_message_status` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp, filters
+        >>> wa = WhatsApp(...)
+        >>> wa.add_handlers(GroupMessageStatusHandler(lambda _, status: print(status)))
+
+    Args:
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.groups.GroupMessageStatuses` as positional arguments).
+        filters: The filters to apply to the handler
+        priority: The priority of the handler (default: ``0``)
+    """
+
+    _update = GroupMessageStatuses
+
+    def __init__(
+        self,
+        callback: _GroupMessageStatusesCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
 
 
 class ChatOpenedHandler(Handler[ChatOpened]):
@@ -1450,6 +1484,57 @@ class _HandlerDecorators:
                 filters=filters,
                 priority=priority,
                 factory=factory,
+            )
+
+        return deco
+
+    def on_group_message_statuses(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_GroupMessageStatusesCallback], _GroupMessageStatusesCallback]
+        | _GroupMessageStatusesCallback
+    ):
+        """
+        Decorator to register a function as a callback for incoming :class:`~pywa.types.group_message_status.GroupMessageStatus` (when a group message status changes, e.g. ``sent``, ``delivered``, ``read``, ``failed``).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.GroupMessageStatusHandler`.
+
+        **DO NOT USE THIS HANDLER WITHOUT FILTERS TO SEND MESSAGES, IT WILL CAUSE AN INFINITE LOOP!**
+
+        Example:
+
+            >>> from pywa import WhatsApp, types, filters
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_group_message_statuses
+            ... def callback(client: WhatsApp, statuses: types.GroupMessageStatuses):
+            ...     for status in statuses: print(f"Message {status.id} to {statuses.group_id} is {status.status}")
+
+        Args:
+            filters: Filters to apply to the incoming group message status changes.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=GroupMessageStatusesHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(
+            callback: _GroupMessageStatusesCallback,
+        ) -> _GroupMessageStatusesCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=GroupMessageStatusesHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
             )
 
         return deco

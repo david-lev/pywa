@@ -34,6 +34,7 @@ from .handlers import (
     FlowCompletionHandler,
     FlowRequestCallbackWrapper,
     FlowRequestHandler,
+    GroupMessageStatusesHandler,
     Handler,
     IdentityChangeHandler,
     MessageHandler,
@@ -73,6 +74,7 @@ from .types import (
     FlowMetricGranularity,
     FlowMetricName,
     FlowRequest,
+    GroupMessageStatuses,
     IdentityChange,
     Industry,
     MediaURL,
@@ -181,6 +183,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     _handlers_to_updates: dict[type[Handler], type[BaseUpdate]] = {
         MessageHandler: Message,
         MessageStatusHandler: MessageStatus,
+        GroupMessageStatusesHandler: GroupMessageStatuses,
         CallbackButtonHandler: CallbackButton,
         CallbackSelectionHandler: CallbackSelection,
         ChatOpenedHandler: ChatOpened,

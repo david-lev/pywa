@@ -295,5 +295,48 @@
         ]
       }
     ]
+  },
+  "group": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "<WHATSAPP_BUSINESS_ACCOUNT_ID>",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "<BUSINESS_DISPLAY_PHONE_NUMBER>",
+                "phone_number_id": "<BUSINESS_PHONE_NUMBER_ID>"
+              },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "<USER_DISPLAY_NAME>",
+                    "username": "<USERNAME>"
+                  },
+                  "wa_id": "<USER_PHONE_NUMBER>",
+                  "user_id": "US.123456",
+                  "parent_user_id": "<PARENT_BSUID>"
+                }
+              ],
+              "statuses": [
+                {
+                  "id": "<WHATSAPP_MESSAGE_ID>",
+                  "status": "read",
+                  "timestamp": "1698266945",
+                  "recipient_id": "fowefinoewcnw",
+                  "recipient_type": "group",
+                  "recipient_participant_id": "<GROUP_PARTICIPANT_USER_PHONE_NUMBER>",
+                  "recipient_participant_user_id": "US.123456",
+                  "recipient_participant_parent_user_id": "<PARENT_BSUID>"
+                }
+              ]
+            },
+            "field": "messages"
+          }
+        ]
+      }
+    ]
   }
 }

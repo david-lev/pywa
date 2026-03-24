@@ -48,6 +48,7 @@ from .handlers import (
     CallTerminateHandler,
     ChatOpenedHandler,
     FlowCompletionHandler,
+    GroupMessageStatusesHandler,
     Handler,
     IdentityChangeHandler,
     MessageHandler,
@@ -122,6 +123,7 @@ from .types.groups import (
     GroupInviteLink,
     GroupJoinApprovalMode,
     GroupJoinRequestsResult,
+    GroupMessageStatuses,
     GroupParticipant,
 )
 from .types.media import Media
@@ -181,6 +183,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     _handlers_to_updates: dict[type[Handler], BaseUpdate] = {
         MessageHandler: Message,
         MessageStatusHandler: MessageStatus,
+        GroupMessageStatusesHandler: GroupMessageStatuses,
         CallbackButtonHandler: CallbackButton,
         CallbackSelectionHandler: CallbackSelection,
         ChatOpenedHandler: ChatOpened,

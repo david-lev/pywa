@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import datetime
 import functools
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING, ClassVar, Iterable, Iterator
 
 from .. import utils
 from . import MessageStatus, RawUpdate
@@ -299,7 +299,9 @@ class GroupJoinRequestsResult(Result[GroupJoinRequest]):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class GroupMessageStatus(BaseUpdate):
+class GroupMessageStatuses(BaseUpdate):
+    _msg_status_cls: ClassVar[type[MessageStatus]] = MessageStatus
+
     group_id: str
     statuses: tuple[MessageStatus, ...]
 
@@ -323,14 +325,16 @@ class GroupMessageStatus(BaseUpdate):
             ),
             group_id=status["recipient_id"],
             statuses=tuple(
-                MessageStatus.from_update(
+                cls._msg_status_cls.from_update(
                     client=client,
                     update=update,
-                    contact_idx=contact_map[
-                        status.get["recipient_participant_user_id"]
-                    ],
+                    contact_idx=contact_map[status["recipient_participant_user_id"]],
                     status_idx=s_idx,
                 )
                 for s_idx, status in enumerate(value["statuses"])
             ),
         )
+
+    def __iter__(self) -> Iterator[MessageStatus]:
+        """Iterate over the message statuses."""
+        return iter(self.statuses)

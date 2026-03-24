@@ -277,6 +277,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
             _HandlerDecorators.on_callback_button,
             _HandlerDecorators.on_callback_selection,
             _HandlerDecorators.on_message_status,
+            _HandlerDecorators.on_group_message_statuses,
             _HandlerDecorators.on_chat_opened,
             _HandlerDecorators.on_phone_number_change,
             _HandlerDecorators.on_identity_change,

@@ -80,6 +80,7 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
         "played": [lambda s: s.status == MessageStatusType.PLAYED],
         "failed": [lambda s: s.error is not None],
         "with_tracker": [lambda s: s.tracker is not None],
+        "group": [lambda s: s.group_id is not None],
     },
     "template_status_update": {
         "approved": [lambda s: s.new_status == TemplateStatus.APPROVED],
