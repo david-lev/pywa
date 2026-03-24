@@ -5,8 +5,9 @@ from __future__ import annotations
 __all__ = ["Message"]
 
 import dataclasses
+import datetime
 import pathlib
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING, AsyncGenerator, Iterable
 
 from pywa.types.message import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.message import Message as _Message  # noqa MUST BE IMPORTED FIRST
@@ -36,6 +37,7 @@ class Message(BaseUserUpdateAsync, _Message):
         metadata: The metadata of the message (to which phone number it was sent).
         type: The message type (See :class:`MessageType`).
         from_user: The user who sent the message.
+        chat: The chat where the message was sent (private or group).
         timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
         reply_to_message: The message to which this message is a reply (if any).
         forwarded: Whether the message was forwarded.
@@ -101,22 +103,27 @@ class Message(BaseUserUpdateAsync, _Message):
         self,
         filepath: str | None = None,
         filename: str | None = None,
-        in_memory: None = False,
         *,
         chunk_size: int | None = None,
         **httpx_kwargs,
     ) -> pathlib.Path:
         """
-        Download a media file from WhatsApp servers (image, video, sticker, document or audio).
+        Download the media of the message to the specified path.
 
         - Shortcut for ``message.media.download(...)``, ``message.image.download(...)`` etc.
-        - Use :py:func:`~pywa.client.WhatsApp.get_media_bytes` or :py:func:`~pywa.client.WhatsApp.stream_media` instead of ``in_memory=True``.
+        - Use :py:meth:`~pywa.types.message.Message.get_media_bytes` if you want to get the file as bytes instead of saving it to disk.
+
+        >>> from pywa_async import WhatsApp, types, filters
+        >>> wa = WhatsApp(...)
+
+        >>> @wa.on_message(filters.image)
+        ... async def on_message(_: WhatsApp, msg: types.Message):
+        ...     await msg.download_media(path=pathlib.Path('/path/to/save'), filename='my_image.jpg')
 
         Args:
             filepath: The path where to save the file (if not provided, the current working directory will be used).
             filename: The name of the file to save (if not provided, it will be extracted from the ``Content-Disposition`` header or a SHA256 hash of the URL will be used).
             chunk_size: The size (in bytes) of each chunk to read when downloading the media (default: ``64KB``).
-            in_memory: Deprecated: Use :py:func:`~pywa.client.WhatsApp.get_media_bytes` or :py:func:`~pywa.client.WhatsApp.stream_media` instead. If True, the file will be returned as bytes instead of being saved to disk.
             **httpx_kwargs: Additional arguments to pass to ``httpx.get(...)``.
 
         Returns:
@@ -129,10 +136,74 @@ class Message(BaseUserUpdateAsync, _Message):
             return await self.media.download(
                 path=filepath,
                 filename=filename,
-                in_memory=in_memory,
                 chunk_size=chunk_size,
                 **httpx_kwargs,
             )
+        except AttributeError:
+            raise ValueError("Message does not contain any media.") from None
+
+    async def stream_media(
+        self, chunk_size: int | None = None, **httpx_kwargs
+    ) -> AsyncGenerator[bytes]:
+        """
+        Stream the media of the message as bytes.
+
+        - Shortcut for ``message.media.stream(...)``, ``message.image.stream(...)`` etc.
+        - Use :py:meth:`~pywa.types.message.Message.get_media_bytes` if you want to get the whole file as bytes.
+
+        >>> from pywa_async import WhatsApp, types, filters
+        >>> import httpx
+
+        >>> wa = WhatsApp(...)
+
+        >>> @wa.on_message(filters.document)
+        ... async def on_message(_: WhatsApp, msg: types.Message):
+        ...     async with httpx.AsyncClient() as client:
+        ...        await client.post('https://example.com/upload', content=await msg.stream_media())
+
+        Args:
+            chunk_size: The size (in bytes) of each chunk to read (default: ``64KB``).
+            **httpx_kwargs: Additional arguments to pass to ``httpx.get(...)``.
+
+        Returns:
+            An iterator that yields chunks of the media file as bytes.
+
+        Raises:
+            ValueError: If the message does not contain any media.
+        """
+        try:
+            return await self.media.stream(
+                chunk_size=chunk_size,
+                **httpx_kwargs,
+            )
+        except AttributeError:
+            raise ValueError("Message does not contain any media.") from None
+
+    async def get_media_bytes(self, **httpx_kwargs) -> bytes:
+        """
+        Get the media of the message as bytes.
+
+        - Shortcut for ``message.media.get_bytes(...)``, ``message.image.get_bytes(...)`` etc.
+        - Use :py:meth:`~pywa.types.message.Message.stream_media` if you want to stream the file as bytes instead of getting it all at once.
+
+        >>> from pywa_async import WhatsApp, types, filters
+        >>> wa = WhatsApp(...)
+
+        >>> @wa.on_message(filters.document)
+        ... async def on_message(_: WhatsApp, msg: types.Message):
+        ...     doc_bytes = await msg.get_media_bytes()
+
+        Args:
+            **httpx_kwargs: Additional arguments to pass to ``httpx.get(...)``.
+
+        Returns:
+            The media file as bytes.
+
+        Raises:
+            ValueError: If the message does not contain any media.
+        """
+        try:
+            return await self.media.get_bytes(**httpx_kwargs)
         except AttributeError:
             raise ValueError("Message does not contain any media.") from None
 
@@ -297,3 +368,39 @@ class Message(BaseUserUpdateAsync, _Message):
                 )
             case _:
                 raise ValueError(f"Message of type {self.type} cannot be copied.")
+
+    async def pin(self, *, expiration_days: datetime.timedelta | int) -> SentMessage:
+        """
+        Pin the message in the chat.
+
+        - Note that currently only group chats support pinning messages.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/groups-messaging#pin-and-unpin-group-message>`_.
+
+        Args:
+            expiration_days: The number of days until the pinned message expires. Must be between 1 and 30 days.
+
+        Returns:
+            The pinned message.
+        """
+        return await self._client.pin_message(
+            chat_id=self.chat.id,
+            message_id=self.id,
+            expiration_days=expiration_days,
+            sender=self.recipient,
+        )
+
+    async def unpin(self) -> SentMessage:
+        """
+        Unpin the message from the chat.
+
+        - Note that currently only group chats support pinning messages.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/groups-messaging#pin-and-unpin-group-message>`_.
+
+        Returns:
+            The unpinned message.
+        """
+        return await self._client.unpin_message(
+            chat_id=self.chat.id,
+            message_id=self.id,
+            sender=self.recipient,
+        )

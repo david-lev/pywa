@@ -1462,7 +1462,7 @@ class Result(Generic[_T]):
         """
         if self.has_next:
             # noinspection PyProtectedMember
-            response = self._wa.api._make_request(method="GET", endpoint=self._next_url)
+            response = self._wa.api._request(method="GET", endpoint=self._next_url)
             return self.__class__(
                 wa=self._wa, response=response, item_factory=self._item_factory
             )
@@ -1476,9 +1476,7 @@ class Result(Generic[_T]):
         """
         if self.has_previous:
             # noinspection PyProtectedMember
-            response = self._wa.api._make_request(
-                method="GET", endpoint=self._previous_url
-            )
+            response = self._wa.api._request(method="GET", endpoint=self._previous_url)
             return self.__class__(
                 wa=self._wa, response=response, item_factory=self._item_factory
             )

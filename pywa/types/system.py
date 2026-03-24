@@ -42,7 +42,7 @@ class PhoneNumberChange(BaseUserUpdate):
     sys_type: SystemType
     old_wa_id: str
     new_wa_id: str | None
-    new_user_id: str
+    new_user_id: str | None
     new_parent_id: str | None
     body: str
 
@@ -70,7 +70,7 @@ class PhoneNumberChange(BaseUserUpdate):
             sys_type=SystemType(sys["type"]),
             from_user=client._usr_cls(
                 _client=client,
-                bsuid=sys["user_id"],
+                bsuid=sys.get("user_id"),
                 wa_id=msg["from"],
                 parent_bsuid=sys.get("parent_user_id"),
                 name=None,
@@ -79,7 +79,7 @@ class PhoneNumberChange(BaseUserUpdate):
             ),
             old_wa_id=sys.get("customer", msg["from"]),  # v12^ from
             new_wa_id=sys.get("new_wa_id", sys.get("wa_id")),  # v12^ wa_id
-            new_user_id=sys["user_id"],
+            new_user_id=sys.get("user_id"),
             new_parent_id=sys.get("parent_user_id"),
             body=sys["body"],
         )

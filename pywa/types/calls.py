@@ -195,9 +195,7 @@ class CallConnect(BaseUserUpdate, _CallShortcuts):
             waba_id=entry["id"],
             id=call["id"],
             metadata=Metadata.from_dict(value["metadata"]),
-            from_user=client._usr_cls.from_contact(value["contacts"][0], client=client)
-            if "contacts" in value  # Only available for USER_INITIATED calls
-            else client._usr_cls(_client=client, wa_id=call["to"], name=None),
+            from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
             timestamp=datetime.datetime.fromtimestamp(
                 int(call["timestamp"]),
                 datetime.timezone.utc,
@@ -267,11 +265,7 @@ class CallPermissionUpdate(BaseUserUpdate):
             id=msg["id"],
             type=MessageType(msg["type"]),
             metadata=Metadata.from_dict(value["metadata"]),
-            from_user=client._usr_cls(
-                _client=client,
-                wa_id=msg["from"],
-                name=None,
-            ),
+            from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
             timestamp=datetime.datetime.fromtimestamp(
                 int(msg["timestamp"]),
                 datetime.timezone.utc,
@@ -437,13 +431,7 @@ class CallTerminate(BaseUserUpdate, _CallShortcuts, Generic[_CallbackDataT]):
             waba_id=entry["id"],
             id=call["id"],
             metadata=Metadata.from_dict(value["metadata"]),
-            from_user=client._usr_cls(
-                _client=client,
-                wa_id=call["from"]
-                if direction == CallDirection.BUSINESS_INITIATED
-                else call["to"],
-                name=None,
-            ),
+            from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
             timestamp=datetime.datetime.fromtimestamp(
                 int(call["timestamp"]),
                 datetime.timezone.utc,
@@ -542,9 +530,7 @@ class CallStatus(BaseUserUpdate, _CallShortcuts, Generic[_CallbackDataT]):
                 int(status["timestamp"]),
                 datetime.timezone.utc,
             ),
-            from_user=client._usr_cls(
-                wa_id=status["recipient_id"], name=None, _client=client
-            ),
+            from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
             type=status["type"],
             status=CallStatusType(status["status"]),
             tracker=status.get("biz_opaque_callback_data"),

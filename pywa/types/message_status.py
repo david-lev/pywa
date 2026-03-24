@@ -145,10 +145,16 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
     _is_user_action = False
 
     @classmethod
-    def from_update(cls, client: WhatsApp, update: RawUpdate) -> MessageStatus:
+    def from_update(
+        cls,
+        client: WhatsApp,
+        update: RawUpdate,
+        contact_idx: int = 0,
+        status_idx: int = 0,
+    ) -> MessageStatus:
         status = (value := (entry := update["entry"][0])["changes"][0]["value"])[
             "statuses"
-        ][0]
+        ][status_idx]
         error = value.get("errors", status.get("errors", (None,)))[0]
         return cls(
             _client=client,
@@ -161,7 +167,9 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
                 int(status["timestamp"]),
                 datetime.timezone.utc,
             ),
-            from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
+            from_user=client._usr_cls.from_contact(
+                value["contacts"][contact_idx], client=client
+            ),
             tracker=status.get("biz_opaque_callback_data"),
             conversation=Conversation.from_dict(status["conversation"])
             if "conversation" in status
@@ -261,9 +269,12 @@ class PricingCategory(utils.StrEnum):
     AUTHENTICATION = "authentication"
     AUTHENTICATION_INTERNATIONAL = "authentication_international"
     MARKETING = "marketing"
+    GROUP_MARKETING = "group_marketing"
     MARKETING_LITE = "marketing_lite"
     UTILITY = "utility"
+    GROUP_UTILITY = "group_utility"
     SERVICE = "service"
+    GROUP_SERVICE = "group_service"
     REFERRAL_CONVERSION = "referral_conversion"
     GENERAL_PURPOSE_AI = "general_purpose_ai"
     UNKNOWN = "UNKNOWN"
@@ -293,7 +304,7 @@ class Pricing:
     def from_dict(cls, data: dict):
         pricing_type = data.get("type") or data.get("pricing_type")
         return cls(
-            billable=data.get("billable", data.get("type") == PricingType.REGULAR),
+            billable=data.get("billable", pricing_type == PricingType.REGULAR),
             model=PricingModel(data["pricing_model"]),
             type=PricingType(pricing_type) if pricing_type else None,
             category=PricingCategory(data["category"]),

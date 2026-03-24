@@ -69,7 +69,6 @@ class _MediaActionsAsync:
         *,
         path: str | pathlib.Path | None = None,
         filename: str | None = None,
-        in_memory: None = None,
         chunk_size: int | None = None,
         **httpx_kwargs,
     ) -> pathlib.Path:
@@ -77,6 +76,7 @@ class _MediaActionsAsync:
         Download a media file from WhatsApp servers.
 
         - Same as :func:`~pywa.client.WhatsApp.download_media` with ``media_url=media.get_media_url()``
+        - Use :func:`~pywa.types.media.Media.get_media_bytes` if you want to get the file as bytes instead of saving it to disk.
 
         >>> from pywa_async import WhatsApp, types, filters
         >>> wa = WhatsApp(...)
@@ -89,7 +89,6 @@ class _MediaActionsAsync:
             path: The path where to save the file (if not provided, the current working directory will be used).
             filename: The name of the file to save (if not provided, it will be extracted from the ``Content-Disposition`` header or a SHA256 hash of the URL will be used).
             chunk_size: The size (in bytes) of each chunk to read when downloading the media (default: ``64KB``).
-            in_memory: Deprecated: Use :py:func:`~pywa.client.WhatsApp.get_media_bytes` or :py:func:`~pywa.client.WhatsApp.stream_media` instead. If True, the file will be returned as bytes instead of being saved to disk.
             **httpx_kwargs: Additional arguments to pass to ``httpx.get(...)``.
 
         Returns:
@@ -99,7 +98,6 @@ class _MediaActionsAsync:
             url=await self.get_media_url(),
             path=path,
             filename=filename,
-            in_memory=in_memory,
             chunk_size=chunk_size,
             **httpx_kwargs,
         )
@@ -109,6 +107,7 @@ class _MediaActionsAsync:
         Get the media file as bytes.
 
         - Same as :func:`~pywa.client.WhatsApp.get_media_bytes` with ``media_url=media.get_media_url()``
+        - Use :func:`~pywa.types.media.Media.stream` if you want to stream the file as bytes instead of getting it all at once.
 
         >>> from pywa_async import WhatsApp, types, filters
         >>> wa = WhatsApp(...)
@@ -135,15 +134,17 @@ class _MediaActionsAsync:
         Stream the media file as bytes.
 
         - Same as :func:`~pywa.client.WhatsApp.stream_media` with ``media_url=media.get_media_url()``
+        - Use :func:`~pywa.types.media.Media.get_bytes` if you want to get the whole file as bytes.
 
         >>> from pywa_async import WhatsApp, types, filters
+        >>> import httpx
 
         >>> wa = WhatsApp(...)
 
         >>> @wa.on_message(filters.document)
         ... async def on_message(_: WhatsApp, msg: types.Message):
         ...     async with httpx.AsyncClient() as client:
-        ...        await client.post('http://example.com/upload', content=msg.document.stream())
+        ...        await client.post('https://example.com/upload', content=await msg.document.stream())
 
         Args:
             chunk_size: The size (in bytes) of each chunk to read (default: ``64KB``).

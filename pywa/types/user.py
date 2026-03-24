@@ -90,7 +90,7 @@ class User(BaseUser):
             _client=client,
             bsuid=data["user_id"],
             wa_id=data.get("wa_id") or None,  # avoid empty string
-            name=data["profile"]["name"],
+            name=data["profile"].get("name"),
             username=data["profile"].get("username"),
             parent_bsuid=data.get("parent_user_id"),
             identity_key_hash=data.get("identity_key_hash"),

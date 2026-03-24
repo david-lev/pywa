@@ -12,6 +12,16 @@
                 "display_phone_number": "16315553602",
                 "phone_number_id": "37489742"
               },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321",
+                  "user_id": "US.13491208655302741918",
+                  "parent_user_id": "US.ENT.11815799212886844830"
+                }
+              ],
               "calls": [
                 {
                   "id": "wacid.ABGGFjFVU2AfAgo6V-Hc5eCgK5Gh",

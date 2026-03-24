@@ -319,7 +319,7 @@ def fake_item_factory():
 @pytest.fixture
 def wa_result():
     _wa = MagicMock()
-    _wa.api._make_request = MagicMock()
+    _wa.api._request = MagicMock()
     return _wa
 
 
@@ -380,16 +380,14 @@ def test_result_empty(wa_result, fake_item_factory, response_data):
 
 
 def test_result_next(wa_result, fake_item_factory, response_data):
-    wa_result.api._make_request.return_value = {
+    wa_result.api._request.return_value = {
         "data": [{"name": "Charlie"}],
         "paging": {},
     }
 
     result = Result(wa_result, response_data, fake_item_factory)
     next_result = result.next()
-    wa_result.api._make_request.assert_called_once_with(
-        method="GET", endpoint="/next-url"
-    )
+    wa_result.api._request.assert_called_once_with(method="GET", endpoint="/next-url")
     assert list(next_result) == [{"name": "Charlie"}]
 
 
@@ -402,16 +400,14 @@ def test_next_result_when_no_next(wa_result, fake_item_factory, response_data):
 
 
 def test_previous_result(wa_result, fake_item_factory, response_data):
-    wa_result.api._make_request.return_value = {
+    wa_result.api._request.return_value = {
         "data": [{"name": "Dave"}],
         "paging": {},
     }
 
     result = Result(wa_result, response_data, fake_item_factory)
     prev_result = result.previous()
-    wa_result.api._make_request.assert_called_once_with(
-        method="GET", endpoint="/prev-url"
-    )
+    wa_result.api._request.assert_called_once_with(method="GET", endpoint="/prev-url")
     assert list(prev_result) == [{"name": "Dave"}]
 
 
@@ -425,10 +421,10 @@ def test_previous_result_when_no_previous(wa_result, fake_item_factory, response
 
 def test_all_on_first_page(wa_result, fake_item_factory, pages):
     first_page, second_page, third_page = pages
-    wa_result.api._make_request.side_effect = [second_page, third_page]
+    wa_result.api._request.side_effect = [second_page, third_page]
     first_result = Result(wa_result, first_page, fake_item_factory)
     all_results = first_result.all()
-    wa_result.api._make_request.assert_has_calls(
+    wa_result.api._request.assert_has_calls(
         [call(method="GET", endpoint="/page2"), call(method="GET", endpoint="/page3")],
         any_order=False,
     )
@@ -437,10 +433,10 @@ def test_all_on_first_page(wa_result, fake_item_factory, pages):
 
 def test_all_on_middle_page(wa_result, fake_item_factory, pages):
     first_page, second_page, third_page = pages
-    wa_result.api._make_request.side_effect = [first_page, third_page]
+    wa_result.api._request.side_effect = [first_page, third_page]
     second_result = Result(wa_result, second_page, fake_item_factory)
     all_results = second_result.all()
-    wa_result.api._make_request.assert_has_calls(
+    wa_result.api._request.assert_has_calls(
         [
             call(method="GET", endpoint="/page1"),
             call(method="GET", endpoint="/page3"),
@@ -452,10 +448,10 @@ def test_all_on_middle_page(wa_result, fake_item_factory, pages):
 
 def test_all_on_last_page(wa_result, fake_item_factory, pages):
     first_page, second_page, third_page = pages
-    wa_result.api._make_request.side_effect = [second_page, first_page]
+    wa_result.api._request.side_effect = [second_page, first_page]
     third_result = Result(wa_result, third_page, fake_item_factory)
     all_results = third_result.all()
-    wa_result.api._make_request.assert_has_calls(
+    wa_result.api._request.assert_has_calls(
         [
             call(method="GET", endpoint="/page2"),
             call(method="GET", endpoint="/page1"),

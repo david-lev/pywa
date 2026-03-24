@@ -41,7 +41,7 @@ class GraphAPI:
     def __repr__(self) -> str:
         return self.__str__()
 
-    def _make_request(
+    def _request(
         self, method: str, endpoint: str, log_kwargs: bool = True, **kwargs
     ) -> dict:
         """
@@ -100,15 +100,15 @@ class GraphAPI:
             The access token and its type.
 
         """
-        return self._make_request(
+        return self._request(
             method="GET",
             endpoint="/oauth/access_token",
+            log_kwargs=False,
             params={
                 "grant_type": "client_credentials",
                 "client_id": client_id,
                 "client_secret": client_secret,
             },
-            log_kwargs=False,
         )
 
     def get_business_access_token(
@@ -140,15 +140,15 @@ class GraphAPI:
 
         """
 
-        return self._make_request(
+        return self._request(
             method="GET",
             endpoint="/oauth/access_token",
+            log_kwargs=False,
             params={
                 "client_id": client_id,
                 "client_secret": client_secret,
                 "code": code,
             },
-            log_kwargs=False,
         )
 
     def set_app_callback_url(
@@ -180,7 +180,7 @@ class GraphAPI:
         Returns:
             The success of the operation.
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{app_id}/subscriptions",
             params={
@@ -217,7 +217,7 @@ class GraphAPI:
         Returns:
             The success of the operation.
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{waba_id}/subscribed_apps",
             json={
@@ -260,10 +260,7 @@ class GraphAPI:
         Returns:
             The subscribed apps of the WABA.
         """
-        return self._make_request(
-            method="GET",
-            endpoint=f"/{waba_id}/subscribed_apps",
-        )
+        return self._request(method="GET", endpoint=f"/{waba_id}/subscribed_apps")
 
     def delete_waba_alternate_callback_url(self, waba_id: str) -> dict[str, bool]:
         """
@@ -281,10 +278,7 @@ class GraphAPI:
         Returns:
             The success of the operation.
         """
-        return self._make_request(
-            method="POST",
-            endpoint=f"/{waba_id}/subscribed_apps",
-        )
+        return self._request(method="POST", endpoint=f"/{waba_id}/subscribed_apps")
 
     def set_phone_alternate_callback_url(
         self,
@@ -305,7 +299,7 @@ class GraphAPI:
         Returns:
             The success of the operation.
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{phone_id}/",
             json={
@@ -334,7 +328,7 @@ class GraphAPI:
         Returns:
             The success of the operation.
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{phone_id}/",
             json={
@@ -367,7 +361,7 @@ class GraphAPI:
         Returns:
             The success of the operation.
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{phone_id}/whatsapp_business_encryption",
             data={"business_public_key": business_public_key},
@@ -409,11 +403,8 @@ class GraphAPI:
         }
         if ttl_minutes is not None:
             files["ttl_minutes"] = (None, str(ttl_minutes))
-        return self._make_request(
-            method="POST",
-            endpoint=f"/{phone_id}/media",
-            files=files,
-            log_kwargs=False,
+        return self._request(
+            method="POST", endpoint=f"/{phone_id}/media", log_kwargs=False, files=files
         )
 
     def get_media_url(self, media_id: str) -> dict:
@@ -439,7 +430,7 @@ class GraphAPI:
         Returns:
             A dict with the URL and other info about the media file.
         """
-        return self._make_request(method="GET", endpoint=f"/{media_id}")
+        return self._request(method="GET", endpoint=f"/{media_id}")
 
     def stream_media_bytes(
         self,
@@ -486,9 +477,7 @@ class GraphAPI:
             True if the media file was deleted successfully, False otherwise.
         """
         params = {"phone_number_id": phone_number_id} if phone_number_id else None
-        return self._make_request(
-            method="DELETE", endpoint=f"/{media_id}", params=params
-        )
+        return self._request(method="DELETE", endpoint=f"/{media_id}", params=params)
 
     def send_raw_request(
         self, method: str, endpoint: str, log_kwargs: bool = True, **kwargs
@@ -522,11 +511,8 @@ class GraphAPI:
         Returns:
             The response from the WhatsApp Cloud API.
         """
-        return self._make_request(
-            method=method,
-            endpoint=endpoint,
-            log_kwargs=log_kwargs,
-            **kwargs,
+        return self._request(
+            method=method, endpoint=endpoint, log_kwargs=log_kwargs, **kwargs
         )
 
     def send_message(
@@ -578,11 +564,7 @@ class GraphAPI:
             data["biz_opaque_callback_data"] = biz_opaque_callback_data
         if recipient_identity_key_hash:
             data["recipient_identity_key_hash"] = recipient_identity_key_hash
-        return self._make_request(
-            method="POST",
-            endpoint=f"/{sender}/messages",
-            json=data,
-        )
+        return self._request(method="POST", endpoint=f"/{sender}/messages", json=data)
 
     def send_marketing_message(
         self,
@@ -594,7 +576,7 @@ class GraphAPI:
         message_activity_sharing: bool | None = None,
         biz_opaque_callback_data: str | None = None,
         recipient_identity_key_hash: str | None = None,
-    ) -> dict[str, dict | list]:
+    ) -> dict:
         """
         Send marketing template messages via MM Lite API.
 
@@ -629,10 +611,8 @@ class GraphAPI:
             body["biz_opaque_callback_data"] = biz_opaque_callback_data
         if recipient_identity_key_hash:
             body["recipient_identity_key_hash"] = recipient_identity_key_hash
-        return self._make_request(
-            method="POST",
-            endpoint=f"/{sender}/marketing_messages",
-            json=body,
+        return self._request(
+            method="POST", endpoint=f"/{sender}/marketing_messages", json=body
         )
 
     def register_phone_number(
@@ -660,7 +640,7 @@ class GraphAPI:
             The success of the operation.
         """
 
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{phone_id}/register",
             json={
@@ -695,10 +675,7 @@ class GraphAPI:
         Returns:
             The success of the operation.
         """
-        return self._make_request(
-            method="POST",
-            endpoint=f"/{phone_id}/deregister",
-        )
+        return self._request(method="POST", endpoint=f"/{phone_id}/deregister")
 
     def mark_message_as_read(
         self,
@@ -723,7 +700,7 @@ class GraphAPI:
         Returns:
             The success of the operation.
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{phone_id}/messages",
             json={
@@ -737,7 +714,7 @@ class GraphAPI:
         self,
         waba_id: str,
         fields: tuple[str, ...] | None = None,
-    ) -> dict[str, Any]:
+    ) -> dict:
         """
         Get the WhatsApp Business Account information.
 
@@ -750,7 +727,7 @@ class GraphAPI:
         Returns:
             The WhatsApp Business Account information.
         """
-        return self._make_request(
+        return self._request(
             method="GET",
             endpoint=f"/{waba_id}",
             params={"fields": ",".join(fields)} if fields else None,
@@ -760,7 +737,7 @@ class GraphAPI:
         self,
         phone_id: str,
         fields: tuple[str, ...] | None = None,
-    ) -> dict[str, Any]:
+    ) -> dict:
         """
         Get the business phone number.
 
@@ -785,7 +762,7 @@ class GraphAPI:
         Returns:
             The business phone number.
         """
-        return self._make_request(
+        return self._request(
             method="GET",
             endpoint=f"/{phone_id}",
             params={"fields": ",".join(fields)} if fields else None,
@@ -796,7 +773,7 @@ class GraphAPI:
         waba_id: str,
         fields: tuple[str, ...] | None = None,
         pagination: dict[str, str] | None = None,
-    ) -> dict[str, list[dict[str, Any]]]:
+    ) -> dict:
         """
         Get business phone numbers.
 
@@ -833,18 +810,14 @@ class GraphAPI:
             }.items()
             if v
         } | (pagination or {})
-        return self._make_request(
-            method="GET",
-            endpoint=endpoint,
-            params=params,
-        )
+        return self._request(method="GET", endpoint=endpoint, params=params)
 
     def get_business_phone_number_settings(
         self,
         phone_id: str,
         fields: tuple[str, ...] | None = None,
         include_sip_credentials: bool | None = None,
-    ) -> dict[str, Any]:
+    ) -> dict:
         """
         Get the business phone number settings.
 
@@ -861,16 +834,14 @@ class GraphAPI:
         }
         if include_sip_credentials is not None:
             params["include_sip_credentials"] = include_sip_credentials
-        return self._make_request(
-            method="GET",
-            endpoint=f"/{phone_id}/settings",
-            params=params,
+        return self._request(
+            method="GET", endpoint=f"/{phone_id}/settings", params=params
         )
 
     def update_business_phone_number_settings(
         self,
         phone_id: str,
-        settings: dict[str, Any],
+        settings: dict,
     ) -> dict[str, bool]:
         """
         Update the business phone number settings.
@@ -882,10 +853,8 @@ class GraphAPI:
         Returns:
             The success of the operation.
         """
-        return self._make_request(
-            method="POST",
-            endpoint=f"/{phone_id}/settings",
-            json=settings,
+        return self._request(
+            method="POST", endpoint=f"/{phone_id}/settings", json=settings
         )
 
     def update_conversational_automation(
@@ -915,7 +884,7 @@ class GraphAPI:
         Returns:
             The success of the operation.
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{phone_id}/conversational_automation",
             json={
@@ -949,7 +918,7 @@ class GraphAPI:
             phone_id: The ID of the phone number to update.
             new_display_name: The new display name to set.
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{phone_id}",
             json={
@@ -962,7 +931,7 @@ class GraphAPI:
         self,
         phone_id: str,
         fields: tuple[str, ...] | None = None,
-    ) -> dict[str, list[dict[str, str | list[str]]]]:
+    ) -> dict:
         """
         Get the business profile.
 
@@ -990,15 +959,13 @@ class GraphAPI:
             phone_id: The ID of the phone number to get.
             fields: The fields to get.
         """
-        return self._make_request(
+        return self._request(
             method="GET",
             endpoint=f"/{phone_id}/whatsapp_business_profile",
             params={"fields": ",".join(fields)} if fields else None,
         )
 
-    def update_business_profile(
-        self, phone_id: str, data: dict[str, str | list[str]]
-    ) -> dict[str, bool]:
+    def update_business_profile(self, phone_id: str, data: dict) -> dict[str, bool]:
         """
         Update the business profile.
 
@@ -1015,10 +982,8 @@ class GraphAPI:
             }
         """
         data.update(messaging_product="whatsapp")
-        return self._make_request(
-            method="POST",
-            endpoint=f"/{phone_id}/whatsapp_business_profile",
-            json=data,
+        return self._request(
+            method="POST", endpoint=f"/{phone_id}/whatsapp_business_profile", json=data
         )
 
     def get_commerce_settings(
@@ -1048,7 +1013,7 @@ class GraphAPI:
         Returns:
             The commerce settings of the business catalog.
         """
-        return self._make_request(
+        return self._request(
             method="GET",
             endpoint=f"/{phone_id}/whatsapp_commerce_settings",
             params={"fields": ",".join(fields)} if fields else None,
@@ -1074,7 +1039,7 @@ class GraphAPI:
               "success": True
             }
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{phone_id}/whatsapp_commerce_settings",
             params=data,
@@ -1083,7 +1048,7 @@ class GraphAPI:
     def create_template(
         self,
         waba_id: str,
-        template: str,
+        template: dict | str,
     ) -> dict:
         """
         Create a message template.
@@ -1102,7 +1067,7 @@ class GraphAPI:
                 "category": "MARKETING"
             }
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{waba_id}/message_templates",
             data=template,
@@ -1113,7 +1078,7 @@ class GraphAPI:
         self,
         template_id: str,
         fields: tuple[str, ...] | None = None,
-    ) -> dict[str, Any]:
+    ) -> dict:
         """
         Get a message template.
 
@@ -1132,7 +1097,7 @@ class GraphAPI:
         Returns:
             The template data.
         """
-        return self._make_request(
+        return self._request(
             method="GET",
             endpoint=f"/{template_id}",
             params={"fields": ",".join(fields)} if fields else None,
@@ -1142,10 +1107,10 @@ class GraphAPI:
         self,
         waba_id: str,
         fields: tuple[str, ...] | None = None,
-        filters: dict[str, Any] | None = None,
+        filters: dict | None = None,
         summary_fields: tuple[str, ...] | None = None,
-        pagination: dict[str, str] | None = None,
-    ) -> dict[str, list[dict[str, Any]]]:
+        pagination: dict | None = None,
+    ) -> dict:
         """
         Get a list of message templates.
 
@@ -1167,7 +1132,7 @@ class GraphAPI:
             **(pagination if pagination else {}),
             **({"summary": ",".join(summary_fields)} if summary_fields else {}),
         }
-        return self._make_request(
+        return self._request(
             method="GET",
             endpoint=f"/{waba_id}/message_templates",
             params={k: v for k, v in params.items() if v is not None},
@@ -1190,7 +1155,7 @@ class GraphAPI:
         Returns:
             A dict with the success status of the operation.
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{template_id}",
             data=template,
@@ -1216,7 +1181,7 @@ class GraphAPI:
         Returns:
             A dict with the success status of the operation.
         """
-        return self._make_request(
+        return self._request(
             method="DELETE",
             endpoint=f"/{waba_id}/message_templates",
             params={
@@ -1246,7 +1211,7 @@ class GraphAPI:
         Returns:
             A dict with the comparison results.
         """
-        return self._make_request(
+        return self._request(
             method="GET",
             endpoint=f"/{template_id}/compare",
             params={
@@ -1275,7 +1240,7 @@ class GraphAPI:
         Returns:
             A dict with the migration results.
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{dest_waba_id}/migrate_message_templates",
             params={
@@ -1296,10 +1261,7 @@ class GraphAPI:
         Returns:
             A dict with the success status of the operation.
         """
-        return self._make_request(
-            method="POST",
-            endpoint=f"/{template_id}/unpause",
-        )
+        return self._request(method="POST", endpoint=f"/{template_id}/unpause")
 
     def upsert_message_templates(
         self,
@@ -1329,7 +1291,7 @@ class GraphAPI:
             waba_id: The ID of the WhatsApp Business Account.
             template: A dict containing the template to create or update to all languages listed in the template.
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{waba_id}/upsert_message_templates",
             json=template,
@@ -1344,7 +1306,7 @@ class GraphAPI:
         endpoint_uri: str | None = None,
         flow_json: str = None,
         publish: bool = None,
-    ) -> dict[str, str]:
+    ) -> dict:
         """
         Create or clone a flow.
 
@@ -1400,11 +1362,7 @@ class GraphAPI:
                 if v is not None
             },
         }
-        return self._make_request(
-            method="POST",
-            endpoint=f"/{waba_id}/flows",
-            json=data,
-        )
+        return self._request(method="POST", endpoint=f"/{waba_id}/flows", json=data)
 
     def update_flow_metadata(
         self,
@@ -1438,11 +1396,7 @@ class GraphAPI:
             **({"categories": categories} if categories else {}),
             **({"application_id": application_id} if application_id else {}),
         }
-        return self._make_request(
-            method="POST",
-            endpoint=f"/{flow_id}",
-            json=data,
-        )
+        return self._request(method="POST", endpoint=f"/{flow_id}", json=data)
 
     def update_flow_json(self, flow_id: str, flow_json: str) -> dict:
         """
@@ -1471,16 +1425,16 @@ class GraphAPI:
               ]
             }
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{flow_id}/assets",
+            log_kwargs=False,
             files={
                 "file": ("flow.json", flow_json, "application/json"),
                 "name": (None, "flow.json"),
                 "asset_type": (None, "FLOW_JSON"),
                 "messaging_product": (None, "whatsapp"),
             },
-            log_kwargs=False,
         )
 
     def publish_flow(
@@ -1501,10 +1455,7 @@ class GraphAPI:
               "success": true
             }
         """
-        return self._make_request(
-            method="POST",
-            endpoint=f"/{flow_id}/publish",
-        )
+        return self._request(method="POST", endpoint=f"/{flow_id}/publish")
 
     def delete_flow(
         self,
@@ -1525,7 +1476,7 @@ class GraphAPI:
             }
         """
 
-        return self._make_request(
+        return self._request(
             method="DELETE",
             endpoint=f"/{flow_id}",
         )
@@ -1549,7 +1500,7 @@ class GraphAPI:
             }
         """
 
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{flow_id}/deprecate",
         )
@@ -1558,7 +1509,7 @@ class GraphAPI:
         self,
         flow_id: str,
         fields: tuple[str, ...] | None = None,
-    ) -> dict[str, Any]:
+    ) -> dict:
         """
         Get a flow.
 
@@ -1594,7 +1545,7 @@ class GraphAPI:
         endpoint = f"/{flow_id}"
         if fields:
             endpoint += f"?fields={','.join(fields)}"
-        return self._make_request(
+        return self._request(
             method="GET",
             endpoint=endpoint,
         )
@@ -1604,7 +1555,7 @@ class GraphAPI:
         waba_id: str,
         fields: tuple[str, ...] | None = None,
         pagination: dict[str, str] | None = None,
-    ) -> dict[str, list[dict[str, Any]]]:
+    ) -> dict:
         """
         Get all flows.
 
@@ -1642,7 +1593,7 @@ class GraphAPI:
             }.items()
             if v
         } | (pagination or {})
-        return self._make_request(
+        return self._request(
             method="GET",
             endpoint=endpoint,
             params=params,
@@ -1652,7 +1603,7 @@ class GraphAPI:
         self,
         flow_id: str,
         pagination: dict[str, str] | None = None,
-    ) -> dict[str, list | dict]:
+    ) -> dict:
         """
         Get all assets of a flow.
 
@@ -1680,7 +1631,7 @@ class GraphAPI:
               }
             }
         """
-        return self._make_request(
+        return self._request(
             method="GET",
             endpoint=f"/{flow_id}/assets?fields=name,asset_type,download_url",
             params=pagination,
@@ -1691,7 +1642,7 @@ class GraphAPI:
         dest_waba_id: str,
         source_waba_id: str,
         source_flow_names: tuple[str, ...],
-    ) -> dict[str, list[dict[str, str]]]:
+    ) -> dict:
         """
         Migrate Flows from one WhatsApp Business Account (WABA) to another.
 
@@ -1733,7 +1684,7 @@ class GraphAPI:
         Returns:
             Result of the migration request.
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{dest_waba_id}/migrate_flows?source_waba_id={source_waba_id}&source_flow_names={','.join(source_flow_names)}",
         )
@@ -1760,7 +1711,7 @@ class GraphAPI:
               "qr_image_url": "https://scontent-iad3-2.xx.fbcdn.net/..."
             }
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{phone_id}/message_qrdls",
             json={
@@ -1797,7 +1748,7 @@ class GraphAPI:
               ]
             }
         """
-        return self._make_request(
+        return self._request(
             method="GET",
             endpoint=f"/{phone_id}/message_qrdls/{code}",
             params={"fields": ",".join(fields)} if fields else None,
@@ -1838,7 +1789,7 @@ class GraphAPI:
             fields: The fields to get. If None, default fields will be returned.
             pagination: The pagination parameters.
         """
-        return self._make_request(
+        return self._request(
             method="GET",
             endpoint=f"/{phone_id}/message_qrdls",
             params={
@@ -1875,7 +1826,7 @@ class GraphAPI:
             code: The code of the QR code.
             prefilled_message: The prefilled message to set.
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{phone_id}/message_qrdls",
             json={"code": code, "prefilled_message": prefilled_message},
@@ -1897,7 +1848,7 @@ class GraphAPI:
             phone_id: The ID of the phone number to delete the QR code from.
             code: The code of the QR code.
         """
-        return self._make_request(
+        return self._request(
             method="DELETE",
             endpoint=f"/{phone_id}/message_qrdls/{code}",
         )
@@ -1924,7 +1875,7 @@ class GraphAPI:
         Returns:
             The success of the operation.
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{phone_id}/messages",
             json={
@@ -1969,7 +1920,7 @@ class GraphAPI:
         """
         block_users = [{"user": user} for user in users]
         block_users.extend({"user_id": user_id} for user_id in user_ids)
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{phone_id}/block_users",
             json={
@@ -2009,7 +1960,7 @@ class GraphAPI:
         """
         unblock_users = [{"user": user} for user in users]
         unblock_users.extend({"user_id": user_id} for user_id in user_ids)
-        return self._make_request(
+        return self._request(
             method="DELETE",
             endpoint=f"/{phone_id}/block_users",
             json={
@@ -2045,7 +1996,7 @@ class GraphAPI:
         Returns:
             The response from the WhatsApp Cloud API.
         """
-        return self._make_request(
+        return self._request(
             method="GET",
             endpoint=f"/{phone_id}/block_users",
             params=pagination,
@@ -2057,7 +2008,7 @@ class GraphAPI:
         file_name: str,
         file_length: int,
         file_type: str,
-    ) -> dict[str, str]:
+    ) -> dict:
         """
         Create an upload session for a file.
 
@@ -2072,7 +2023,7 @@ class GraphAPI:
         Returns:
             The ID of the upload session
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{app_id}/uploads?file_name={file_name}&file_length={file_length}&file_type={file_type}",
         )
@@ -2083,7 +2034,7 @@ class GraphAPI:
         file: bytes | Iterator[bytes],
         file_offset: int = 0,
         content_length: int | None = None,
-    ) -> dict[str, str]:
+    ) -> dict:
         """
         Upload a file to an upload session.
 
@@ -2098,7 +2049,7 @@ class GraphAPI:
         Returns:
             The file handle of the uploaded file.
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{upload_session_id}",
             headers={
@@ -2116,7 +2067,7 @@ class GraphAPI:
     def get_upload_session(
         self,
         upload_session_id: str,
-    ) -> dict[str, str | int]:
+    ) -> dict:
         """
         Get the status of an upload session (resuming an interrupted upload).
 
@@ -2128,7 +2079,7 @@ class GraphAPI:
         Returns:
             The status of the upload session (ID and current offset)
         """
-        return self._make_request(
+        return self._request(
             method="GET",
             endpoint=f"/{upload_session_id}",
         )
@@ -2199,7 +2150,7 @@ class GraphAPI:
             data["user_wa_id"] = user_wa_id
         if phone_id:
             data["recipient"] = recipient
-        return self._make_request(
+        return self._request(
             method="GET",
             endpoint=f"/{phone_id}/call_permissions",
             params=data,
@@ -2212,7 +2163,7 @@ class GraphAPI:
         recipient: str | None,
         session: dict[str, str],
         biz_opaque_callback_data: str | None = None,
-    ) -> dict[str, str | bool]:
+    ) -> dict:
         """
         Initiate a call.
 
@@ -2252,7 +2203,7 @@ class GraphAPI:
             data["recipient"] = recipient
         if biz_opaque_callback_data:
             data["biz_opaque_callback_data"] = biz_opaque_callback_data
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"{phone_id}/calls",
             json=data,
@@ -2260,7 +2211,7 @@ class GraphAPI:
 
     def pre_accept_call(
         self, phone_id: str, call_id: str, session: dict[str, str] | None = None
-    ) -> dict[str, str | bool]:
+    ) -> dict:
         """
         Pre-accept a call.
 
@@ -2281,7 +2232,7 @@ class GraphAPI:
         Returns:
             The response from the WhatsApp Cloud API.
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"{phone_id}/calls",
             json={
@@ -2298,7 +2249,7 @@ class GraphAPI:
         call_id: str,
         session: dict[str, str] | None = None,
         biz_opaque_callback_data: str | None = None,
-    ) -> dict[str, str | bool]:
+    ) -> dict:
         """
         Accept a call.
 
@@ -2320,7 +2271,7 @@ class GraphAPI:
         Returns:
             The response from the WhatsApp Cloud API.
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"{phone_id}/calls",
             json={
@@ -2356,7 +2307,7 @@ class GraphAPI:
         Returns:
             The response from the WhatsApp Cloud API.
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"{phone_id}/calls",
             json={
@@ -2386,7 +2337,7 @@ class GraphAPI:
         Returns:
             The response from the WhatsApp Cloud API.
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"{phone_id}/calls",
             json={
@@ -2428,7 +2379,7 @@ class GraphAPI:
                 {"join_approval_mode": join_approval_mode} if join_approval_mode else {}
             ),
         }
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{phone_id}/groups",
             json=data,
@@ -2469,7 +2420,7 @@ class GraphAPI:
                 "image/jpeg",
             )
 
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{group_id}",
             files=files,
@@ -2490,7 +2441,7 @@ class GraphAPI:
         Returns:
             A dictionary containing the join requests.
         """
-        return self._make_request(
+        return self._request(
             method="GET",
             endpoint=f"/{group_id}/join_requests",
             params=pagination,
@@ -2511,7 +2462,7 @@ class GraphAPI:
         Returns:
             A dictionary containing the result of the operation.
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{group_id}/join_requests",
             json={"messaging_product": "whatsapp", "join_requests": request_ids},
@@ -2532,7 +2483,7 @@ class GraphAPI:
         Returns:
             A dictionary containing the result of the operation.
         """
-        return self._make_request(
+        return self._request(
             method="DELETE",
             endpoint=f"/{group_id}/join_requests",
             json={"messaging_product": "whatsapp", "join_requests": request_ids},
@@ -2550,7 +2501,7 @@ class GraphAPI:
         Returns:
             A dictionary containing the invite link.
         """
-        return self._make_request(
+        return self._request(
             method="GET",
             endpoint=f"/{group_id}/invite_link",
         )
@@ -2567,7 +2518,7 @@ class GraphAPI:
         Returns:
             A dictionary containing the new invite link.
         """
-        return self._make_request(
+        return self._request(
             method="POST",
             endpoint=f"/{group_id}/invite_link",
             json={"messaging_product": "whatsapp"},
@@ -2585,7 +2536,7 @@ class GraphAPI:
         Returns:
             A dictionary containing the result of the operation.
         """
-        return self._make_request(
+        return self._request(
             method="DELETE",
             endpoint=f"/{group_id}",
         )
@@ -2605,7 +2556,7 @@ class GraphAPI:
         Returns:
             A dictionary containing the result of the operation.
         """
-        return self._make_request(
+        return self._request(
             method="DELETE",
             endpoint=f"/{group_id}/participants",
             json={"messaging_product": "whatsapp", "participants": participants},
@@ -2615,7 +2566,7 @@ class GraphAPI:
         self,
         group_id: str,
         fields: tuple[str, ...] | None = None,
-    ) -> dict[str, Any]:
+    ) -> dict:
         """
         Get group info.
 
@@ -2628,7 +2579,7 @@ class GraphAPI:
         Returns:
             A dictionary containing the group info.
         """
-        return self._make_request(
+        return self._request(
             method="GET",
             endpoint=f"/{group_id}",
             params={
@@ -2645,7 +2596,7 @@ class GraphAPI:
         phone_id: str,
         fields: tuple[str, ...] | None = None,
         pagination: dict[str, str] | None = None,
-    ) -> dict[str, Any]:
+    ) -> dict:
         """
         Get all active groups.
 
@@ -2659,7 +2610,7 @@ class GraphAPI:
         Returns:
             A dictionary containing the active groups.
         """
-        return self._make_request(
+        return self._request(
             method="GET",
             endpoint=f"/{phone_id}/groups",
             params={

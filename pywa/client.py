@@ -1927,7 +1927,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         url: str,
         path: str | pathlib.Path | None = None,
         filename: str | None = None,
-        in_memory: None = None,
         chunk_size: int = helpers.DOWNLOAD_CHUNK_SIZE,
         **httpx_kwargs: Any,
     ) -> pathlib.Path:
@@ -1954,20 +1953,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             path: The path where to save the file (if not provided, the current working directory will be used).
             filename: The name of the file to save (if not provided, it will be extracted from the ``Content-Disposition`` header or a SHA256 hash of the URL will be used).
             chunk_size: The size (in bytes) of each chunk to read when downloading the media (default: ``64KB``).
-            in_memory: Deprecated: Use :py:func:`~pywa.client.WhatsApp.get_media_bytes` or :py:func:`~pywa.client.WhatsApp.stream_media` instead. If True, the file will be returned as bytes instead of being saved to disk.
             **httpx_kwargs: Additional arguments to pass to :py:func:`httpx.get`.
 
         Returns:
             The path of the saved file.
         """
-        if in_memory:
-            warnings.warn(
-                "`in_memory` parameter is deprecated and will be removed in future versions. "
-                "Use `get_media_bytes` or `stream_media` methods instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            return self.get_media_bytes(url=url, **httpx_kwargs)
         with self.api.stream_media_bytes(media_url=url, **httpx_kwargs) as res:
             res.raise_for_status()
             mimetype = res.headers.get("Content-Type")
@@ -4448,6 +4438,21 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             message_id: str, *, expiration_days: datetime.timedelta | int,
             sender: str | int | None = None
         ) -> SentMessage:
+        """
+        Pin a message in a chat.
+
+        - Note that currently only group chats support pinning messages.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/groups-messaging#pin-and-unpin-group-message>`_.
+
+        Args:
+            chat_id: The ID of the chat to pin the message in.
+            message_id: The ID of the message to pin.
+            expiration_days: The number of days until the pinned message expires. Must be between 1 and 30 days.
+            sender: The phone ID to pin the message from (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            The pinned message.
+        """
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
@@ -4472,8 +4477,23 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def unpin_message(
             self,
             chat_id: str | int,
-            message_id: str, *, sender: str | int | None = None
+            message_id: str, *,
+            sender: str | int | None = None
     ) -> SentMessage:
+        """
+        Unpin a message in a chat.
+
+        - Note that currently only group chats support pinning messages.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/groups-messaging#pin-and-unpin-group-message>`_.
+
+        Args:
+            chat_id: The ID of the chat to unpin the message in.
+            message_id: The ID of the message to unpin.
+            sender: The phone ID to unpin the message from (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            The unpinned message.
+        """
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )

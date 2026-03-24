@@ -26,6 +26,10 @@ CallbackButtonOnlyDataIsNeeded = functools.partial(
     from_user=types.User(
         _client=FAKE_WA,
         wa_id="1234567890",
+        bsuid="US.13491208655302741918",
+        parent_bsuid="US.ENT.11815799212886844830",
+        username=None,
+        identity_key_hash=None,
         name="John",
     ),
     timestamp=datetime.datetime.now(datetime.timezone.utc),

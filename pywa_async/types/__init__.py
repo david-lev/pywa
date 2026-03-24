@@ -50,9 +50,8 @@ from .others import (
     StorageConfiguration,
     UserIdentityChangeSettings,
     Unsupported,
-
 )
-from pywa.types import User
+from .user import User
 from .templates import (
     Template,
     TemplateStatusUpdate,
@@ -90,3 +89,4 @@ from .calls import (
 )
 from .system import PhoneNumberChange, IdentityChange, Identity
 from .sent_update import SentMessage, SentTemplate, SentTemplateStatus, InitiatedCall
+from .groups import GroupInviteLink, GroupJoinApprovalMode

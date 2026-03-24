@@ -6,6 +6,8 @@ import functools
 from typing import TYPE_CHECKING, Iterable
 
 from .. import utils
+from . import MessageStatus, RawUpdate
+from .base_update import BaseUpdate
 from .others import Pagination, Result
 from .user import BaseUser
 
@@ -293,4 +295,42 @@ class GroupJoinRequestsResult(Result[GroupJoinRequest]):
         return self._wa.reject_group_join_requests(
             group_id=self._group_id,
             request_ids=[request.id for request in requests],
+        )
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class GroupMessageStatus(BaseUpdate):
+    group_id: str
+    statuses: tuple[MessageStatus, ...]
+
+    _webhook_field = "messages"
+
+    @classmethod
+    def from_update(cls, client: WhatsApp, update: RawUpdate) -> BaseUpdate:
+        status = (value := (entry := update["entry"][0])["changes"][0]["value"])[
+            "statuses"
+        ][0]
+        contact_map = {
+            contact["user_id"]: idx for idx, contact in enumerate(value["contacts"])
+        }
+        return cls(
+            _client=client,
+            raw=update,
+            id=entry["id"],
+            timestamp=datetime.datetime.fromtimestamp(
+                int(status["timestamp"]),
+                datetime.timezone.utc,
+            ),
+            group_id=status["recipient_id"],
+            statuses=tuple(
+                MessageStatus.from_update(
+                    client=client,
+                    update=update,
+                    contact_idx=contact_map[
+                        status.get["recipient_participant_user_id"]
+                    ],
+                    status_idx=s_idx,
+                )
+                for s_idx, status in enumerate(value["statuses"])
+            ),
         )

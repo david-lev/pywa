@@ -12,6 +12,16 @@
                 "display_phone_number": "972123456789",
                 "phone_number_id": "1122334455667"
               },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321",
+                  "user_id": "US.13491208655302741918",
+                  "parent_user_id": "US.ENT.11815799212886844830"
+                }
+              ],
               "statuses": [
                 {
                   "id": "wamid.xyzxyz",
@@ -52,6 +62,16 @@
                 "display_phone_number": "972123456789",
                 "phone_number_id": "1122334455667"
               },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321",
+                  "user_id": "US.13491208655302741918",
+                  "parent_user_id": "US.ENT.11815799212886844830"
+                }
+              ],
               "statuses": [
                 {
                   "id": "wamid.xyzxyz",
@@ -91,6 +111,16 @@
                 "display_phone_number": "972123456789",
                 "phone_number_id": "1122334455667"
               },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321",
+                  "user_id": "US.13491208655302741918",
+                  "parent_user_id": "US.ENT.11815799212886844830"
+                }
+              ],
               "statuses": [
                 {
                   "id": "wamid.xyzxyz",
@@ -130,6 +160,16 @@
                 "display_phone_number": "972123456789",
                 "phone_number_id": "1122334455667"
               },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321",
+                  "user_id": "US.13491208655302741918",
+                  "parent_user_id": "US.ENT.11815799212886844830"
+                }
+              ],
               "statuses": [
                 {
                   "id": "wamid.xyzxyz",
@@ -169,6 +209,16 @@
                 "display_phone_number": "972123456789",
                 "phone_number_id": "1122334455667"
               },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321",
+                  "user_id": "US.13491208655302741918",
+                  "parent_user_id": "US.ENT.11815799212886844830"
+                }
+              ],
               "statuses": [
                 {
                   "id": "wamid.xyzxyz",
@@ -208,6 +258,16 @@
                 "display_phone_number": "972123456789",
                 "phone_number_id": "1122334455667"
               },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321",
+                  "user_id": "US.13491208655302741918",
+                  "parent_user_id": "US.ENT.11815799212886844830"
+                }
+              ],
               "statuses": [
                 {
                   "id": "wamid.xyzxyz",
@@ -252,11 +312,11 @@
               "contacts": [
                 {
                   "profile": {
-                    "name": "Pablo M.",
-                    "username": "@pablomorales"
+                    "name": "Test Name"
                   },
+                  "wa_id": "972987654321",
                   "user_id": "US.13491208655302741918",
-                  "parent_user_id": "US.11815799212886844830"
+                  "parent_user_id": "US.ENT.11815799212886844830"
                 }
               ],
               "statuses": [

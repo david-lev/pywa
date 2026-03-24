@@ -76,7 +76,7 @@ from pywa.types import (
 from pywa.types import (
     UserMarketingPreferences as UserMarketingPreferencesSync,
 )
-from pywa.types.base_update import BaseUpdate
+from pywa.types.base_update import BaseUpdate, BaseUserUpdate
 from pywa.types.flows import FlowDetails as FlowDetailsSync
 from pywa.types.media import ArrivedMedia
 from pywa.types.media import Media as MediaSync
@@ -262,7 +262,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
             WhatsAppSync.load_handlers_modules,
             WhatsAppSync._check_for_async_callback,
             WhatsAppSync._check_for_async_filters,
-            WhatsAppSync._flow_req_cls,
+            WhatsAppSync._resolve_user_identifier,
             GraphAPISync.stream_media_bytes,
             ServerSync._check_and_prepare_update,
             ServerSync._after_handling_update,
@@ -294,15 +294,18 @@ def test_all_methods_are_overwritten_in_async(overrides):
             BaseUpdate.stop_handling,
             BaseUpdate.continue_handling,
             BaseUpdate.handle_again,
+            BaseUserUpdate._get_reply_to,
             ArrivedMedia.from_flow_completion,
             SentMessageSync.from_sent_update,
             SentMessageSync._convert_to,
+            SentMessageSync._extract_recipient,
             FlowRequestSync.decrypt_media,
             FlowRequestSync.token_no_longer_valid,
             FlowRequestSync.respond,
             FlowRequestSync.from_dict,
             FlowResponseSync.to_dict,
             FlowCompletionSync.get_media,
+            UserSync.from_contact,
             UserSync.as_vcard,
             TemplateDetailsSync.to_json,
             MessageSync._resolve_msg_content,
@@ -314,6 +317,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
         "_register_flow_callback_wrapper",
         "_api_cls",
         "_usr_cls",
+        "_group_participant_cls",
         "_httpx_client",
         "_flow_req_cls",
         "_api_fields",

@@ -12,41 +12,9 @@ from pywa.types.others import (
 from pywa.types.others import (
     Result as _Result,
 )
-from pywa.types.others import (
-    UsersBlockedResult as _UsersBlockedResult,
-)
-from pywa.types.others import (
-    UsersUnblockedResult as _UsersUnblockedResult,
-)
 
 if TYPE_CHECKING:
     from ..client import WhatsApp as WhatsAppAsync
-
-
-@dataclasses.dataclass(slots=True, frozen=True)
-class UsersBlockedResult(_UsersBlockedResult):
-    """
-    Represents the result of blocking users operation.
-
-    Attributes:
-        added_users: The users that were successfully blocked.
-        failed_users: The users that failed to be blocked. You can access the .errors attribute in each failure to get the error details.
-        errors: The errors that occurred during the operation (if any).
-    """
-
-    added_users: tuple[User, ...]
-
-
-@dataclasses.dataclass(frozen=True, slots=True)
-class UsersUnblockedResult(_UsersUnblockedResult):
-    """
-    Represents the result of unblocking users operation.
-
-    Attributes:
-        removed_users: The users that were successfully unblocked.
-    """
-
-    removed_users: tuple[User, ...]
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -154,7 +122,7 @@ class Result(_Result[_T]):
         """
         if self.has_next:
             # noinspection PyProtectedMember
-            response = await self._wa.api._make_request(
+            response = await self._wa.api._request(
                 method="GET", endpoint=self._next_url
             )
             return Result(
@@ -170,7 +138,7 @@ class Result(_Result[_T]):
         """
         if self.has_previous:
             # noinspection PyProtectedMember
-            response = await self._wa.api._make_request(
+            response = await self._wa.api._request(
                 method="GET", endpoint=self._previous_url
             )
             return Result(
