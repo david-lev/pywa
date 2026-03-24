@@ -6,7 +6,6 @@ from .base_update import StopHandling, ContinueHandling, RawUpdate
 from .callback import (
     Button,
     URLButton,
-    ButtonUrl,  # Deprecated, use URLButton instead
     VoiceCallButton,
     CallPermissionRequestButton,
     CallbackButton,

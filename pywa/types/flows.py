@@ -118,7 +118,6 @@ __all__ = [
     "CompleteAction",
     "UpdateDataAction",
     "OpenURLAction",
-    "OpenUrlAction",  # Deprecated, use OpenURLAction instead
     "FlowActionType",
     "FlowRequestActionType",
     "Next",
@@ -3869,24 +3868,6 @@ class OpenURLAction(BaseAction):
     )
     payload: None = dataclasses.field(default=None, init=False, repr=False)
     url: str
-
-
-@dataclasses.dataclass(slots=True, kw_only=True)
-class OpenUrlAction:
-    """Deprecated: Use :class:`OpenURLAction` instead."""
-
-    name: FlowActionType = dataclasses.field(
-        default=FlowActionType.OPEN_URL, init=False, repr=False
-    )
-    payload: None = dataclasses.field(default=None, init=False, repr=False)
-    url: str
-
-    def __post_init__(self):
-        warnings.warn(
-            "OpenUrlAction is deprecated. Use OpenURLAction instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)

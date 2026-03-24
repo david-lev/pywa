@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import warnings
 from typing import TYPE_CHECKING
 
 from pywa import utils
@@ -151,17 +150,6 @@ class _AsyncListeners:
             raise ValueError(
                 "You must initialize the WhatsApp client with an web app"
                 " (Flask or FastAPI or custom server by setting `server` to None) in order to listen to incoming updates."
-            )
-        if isinstance(to, str | int):
-            warnings.warn(
-                "Using WhatsApp.listen(to, ...) with a user wa_id/phone number is deprecated. "
-                "Please use `UserUpdateListenerIdentifier` instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            to = UserUpdateListenerIdentifier(
-                sender=to,
-                recipient=self.phone_id,
             )
         listener = Listener(
             wa=self,

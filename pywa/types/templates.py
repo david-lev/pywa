@@ -75,7 +75,6 @@ import json
 import logging
 import pathlib
 import re
-import warnings
 from typing import (
     TYPE_CHECKING,
     AsyncIterator,
@@ -283,36 +282,6 @@ class TemplateStatusUpdate(BaseTemplateUpdate):
             A TemplateUnpauseResult object containing the result of the unpause operation.
         """
         return self._client.unpause_template(template_id=self.template_id)
-
-    @property
-    def title(self) -> str | None:
-        """Deprecated. Use other_info.title instead."""
-        warnings.warn(
-            "The 'title' property is deprecated. Use 'other_info.title' instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.other_info.title if self.other_info else None
-
-    @property
-    def description(self) -> str | None:
-        """Deprecated. Use other_info.description instead."""
-        warnings.warn(
-            "The 'description' property is deprecated. Use 'other_info.description' instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.other_info.description if self.other_info else None
-
-    @property
-    def disable_date(self) -> datetime.datetime | None:
-        """Deprecated. Use disable_info.disable_date instead."""
-        warnings.warn(
-            "The 'disable_date' property is deprecated. Use 'disable_info.disable_date' instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.disable_info.disable_date if self.disable_info else None
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)

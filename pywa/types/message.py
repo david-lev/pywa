@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pathlib
-import warnings
 
 """This module contains the types related to messages."""
 
@@ -98,17 +97,6 @@ class Message(BaseUserUpdate):
     }
     _txt_fields = ("text", "caption")
     _webhook_field = "messages"
-
-    @property
-    def system(self) -> None:
-        """Backwards compatibility for the ``system`` attr."""
-        warnings.warn(
-            "The `system` property is deprecated and will be removed in a future version. "
-            "Listen to `PhoneNumberChange` and `IdentityChange` updates instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return None
 
     @property
     def voice(self) -> Audio | None:

@@ -11,7 +11,6 @@ import json
 import logging
 import mimetypes
 import pathlib
-import warnings
 from types import ModuleType
 from typing import (
     Any,
@@ -2032,7 +2031,6 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
     async def update_business_phone_number_settings(
         self,
-        settings: None = None,
         *,
         calling: CallingSettings | None = None,
         storage_configuration: StorageConfiguration | None = None,
@@ -2054,21 +2052,11 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             calling: The calling settings to update (optional).
             storage_configuration: The storage configuration to update (optional).
             user_identity_change: The user identity change settings to update (optional).
-            settings: Deprecated, use `calling`, `storage_configuration`, and `user_identity_change` instead.
             phone_id: The phone ID to update the settings for (optional, if not provided, the client's phone ID will be used).
 
         Returns:
             Whether the settings were updated successfully.
         """
-        if settings is not None:
-            warnings.warn(
-                "The `settings` parameter is deprecated, use `calling`, `storage_configuration`, and `user_identity_change` instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            calling = settings.calling
-            storage_configuration = settings.storage_configuration
-            user_identity_change = settings.user_identity_change
         return SuccessResult.from_dict(
             await self.api.update_business_phone_number_settings(
                 phone_id=helpers.resolve_arg(
@@ -2267,7 +2255,6 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         websites: Iterable[str] | None = utils.MISSING,
         phone_id: str | int | None = None,
         app_id: str | int | None = None,
-        profile_picture_handle: None = utils.MISSING,
     ) -> SuccessResult:
         """
         Update the business profile of the WhatsApp Business account.
@@ -2301,18 +2288,10 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
              There is a maximum of 2 websites with a maximum of 256 characters each.)
             phone_id: The phone ID to update the business profile for (optional, if not provided, the client's phone ID will be used).
             app_id: The App ID to upload the profile picture to (optional, if not provided, the client's app ID will be used).
-            profile_picture_handle: Deprecated, use ``profile_picture`` instead.
 
         Returns:
             Whether the business profile was updated.
         """
-        if profile_picture_handle is not utils.MISSING:
-            warnings.warn(
-                "`profile_picture_handle` parameter is deprecated, use `profile_picture` instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            profile_picture = profile_picture_handle
         data = {
             key: value or ""
             for key, value in {

@@ -49,7 +49,6 @@ from pywa.types.others import InteractiveType
 
 from .types import (
     Button,
-    ButtonUrl,
     CallbackData,
     CallPermissionRequestButton,
     FlowButton,
@@ -102,7 +101,7 @@ def resolve_buttons_param(
             InteractiveType.LIST,
             data,
         )
-    elif isinstance(buttons, (URLButton, ButtonUrl)):
+    elif isinstance(buttons, URLButton):
         return InteractiveType.CTA_URL, buttons.to_dict()
     elif isinstance(buttons, VoiceCallButton):
         return InteractiveType.VOICE_CALL, buttons.to_dict()

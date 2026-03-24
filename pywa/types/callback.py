@@ -5,7 +5,6 @@ __all__ = [
     "CallbackSelection",
     "Button",
     "URLButton",
-    "ButtonUrl",  # Deprecated, use URLButton instead
     "VoiceCallButton",
     "CallPermissionRequestButton",
     "SectionRow",
@@ -20,7 +19,6 @@ import datetime
 import enum
 import types
 import typing
-import warnings
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -430,27 +428,6 @@ class URLButton:
 
     title: str
     url: str
-
-    def to_dict(self) -> dict:
-        return {
-            "name": InteractiveType.CTA_URL,
-            "parameters": {"display_text": self.title, "url": self.url},
-        }
-
-
-@dataclasses.dataclass(slots=True)
-class ButtonUrl:
-    """Deprecated. Use :class:`URLButton` instead."""
-
-    title: str
-    url: str
-
-    def __post_init__(self):
-        warnings.warn(
-            "`ButtonUrl` is deprecated, use `URLButton` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
 
     def to_dict(self) -> dict:
         return {

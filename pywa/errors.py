@@ -5,8 +5,7 @@ This module contains the errors that can be raised by the WhatsApp Cloud API or 
 """
 import dataclasses
 import functools
-import warnings
-from typing import ClassVar, Iterable
+from typing import ClassVar, Iterable, Type
 
 import httpx
 
@@ -81,29 +80,9 @@ class WhatsAppError(Exception):
         return self.raw_response.status_code if self.raw_response is not None else None
 
     @classmethod
-    def _get_exception(cls, code: int) -> type[WhatsAppError]:
+    def _get_exception(cls, code: int) -> Type[WhatsAppError]:
         """Get the exception class from the error code."""
         return _all_exceptions().get(code, WhatsAppError)
-
-    @property
-    def error_code(self) -> int:
-        """Deprecated, use `code` instead."""
-        warnings.warn(
-            "WhatsAppError.error_code is deprecated, use WhatsAppError.code instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.code
-
-    @property
-    def error_subcode(self) -> int | None:
-        """Deprecated, use `subcode` instead."""
-        warnings.warn(
-            "WhatsAppError.error_subcode is deprecated, use WhatsAppError.subcode instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.subcode
 
     def __str__(self) -> str:
         """Return a string representation of the error."""
