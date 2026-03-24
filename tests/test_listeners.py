@@ -17,8 +17,8 @@ from pywa_async import WhatsApp as WhatsAppAsync
 
 class DummyUpdate:
     @property
-    def listener_identifier(self):
-        return UserUpdateListenerIdentifier(sender="123456789", recipient="987654321")
+    def listener_identifiers(self):
+        yield UserUpdateListenerIdentifier(sender="123456789", recipient="987654321")
 
 
 @pytest.fixture
@@ -32,7 +32,8 @@ def wa_async():
 
 
 def test_listener_success_sync(wa_sync: WhatsAppSync):
-    identifier = DummyUpdate().listener_identifier
+    identifiers = DummyUpdate().listener_identifiers
+    first_id = next(identifiers)
 
     def emit_update():
         time.sleep(0.1)
@@ -41,14 +42,15 @@ def test_listener_success_sync(wa_sync: WhatsAppSync):
 
     threading.Thread(target=emit_update).start()
     result = wa_sync.listen(
-        to=identifier, filters=filters.true, cancelers=filters.false, timeout=1
+        to=first_id, filters=filters.true, cancelers=filters.false, timeout=1
     )
     assert isinstance(result, DummyUpdate)
 
 
 @pytest.mark.asyncio
 async def test_listener_success_async(wa_async: WhatsAppAsync):
-    identifier = DummyUpdate().listener_identifier
+    identifiers = DummyUpdate().listener_identifiers
+    first_id = next(identifiers)
 
     async def emit_update():
         await asyncio.sleep(0.1)
@@ -57,16 +59,18 @@ async def test_listener_success_async(wa_async: WhatsAppAsync):
 
     asyncio.create_task(emit_update())
     result = await wa_async.listen(
-        to=identifier, filters=filters.true, cancelers=filters.false, timeout=1
+        to=first_id, filters=filters.true, cancelers=filters.false, timeout=1
     )
     assert isinstance(result, DummyUpdate)
 
 
 def test_listener_timeout_sync(wa_sync: WhatsAppSync):
-    identifier = DummyUpdate().listener_identifier
+    identifiers = DummyUpdate().listener_identifiers
+    first_id = next(identifiers)
+
     with pytest.raises(ListenerTimeout):
         wa_sync.listen(
-            to=identifier,
+            to=first_id,
             filters=filters.true,
             cancelers=filters.false,
             timeout=0.000001,
@@ -75,10 +79,11 @@ def test_listener_timeout_sync(wa_sync: WhatsAppSync):
 
 @pytest.mark.asyncio
 async def test_listener_timeout_async(wa_async: WhatsAppAsync):
-    identifier = DummyUpdate().listener_identifier
+    identifiers = DummyUpdate().listener_identifiers
+    first_id = next(identifiers)
     with pytest.raises(ListenerTimeout):
         await wa_async.listen(
-            to=identifier,
+            to=first_id,
             filters=filters.true,
             cancelers=filters.false,
             timeout=0.000001,
@@ -86,7 +91,8 @@ async def test_listener_timeout_async(wa_async: WhatsAppAsync):
 
 
 def test_listener_canceled_sync(wa_sync: WhatsAppSync):
-    identifier = DummyUpdate().listener_identifier
+    identifiers = DummyUpdate().listener_identifiers
+    first_id = next(identifiers)
 
     def emit_update():
         time.sleep(0.1)
@@ -96,13 +102,14 @@ def test_listener_canceled_sync(wa_sync: WhatsAppSync):
     threading.Thread(target=emit_update).start()
     with pytest.raises(ListenerCanceled):
         wa_sync.listen(
-            to=identifier, filters=filters.false, cancelers=filters.true, timeout=0.3
+            to=first_id, filters=filters.false, cancelers=filters.true, timeout=0.3
         )
 
 
 @pytest.mark.asyncio
 async def test_listener_canceled_async(wa_async: WhatsAppAsync):
-    identifier = DummyUpdate().listener_identifier
+    identifiers = DummyUpdate().listener_identifiers
+    first_id = next(identifiers)
 
     async def emit_update():
         await asyncio.sleep(0.1)
@@ -112,36 +119,38 @@ async def test_listener_canceled_async(wa_async: WhatsAppAsync):
     asyncio.create_task(emit_update())
     with pytest.raises(ListenerCanceled):
         await wa_async.listen(
-            to=identifier, filters=filters.false, cancelers=filters.true, timeout=0.3
+            to=first_id, filters=filters.false, cancelers=filters.true, timeout=0.3
         )
 
 
 def test_listener_stopped_sync(wa_sync: WhatsAppSync):
-    identifier = DummyUpdate().listener_identifier
+    identifiers = DummyUpdate().listener_identifiers
+    first_id = next(identifiers)
 
     def stop_listener():
         time.sleep(0.1)
-        wa_sync.stop_listening(to=identifier, reason="manual")
+        wa_sync.stop_listening(to=first_id, reason="manual")
 
     threading.Thread(target=stop_listener).start()
     with pytest.raises(ListenerStopped) as exc_info:
         wa_sync.listen(
-            to=identifier, filters=filters.true, cancelers=filters.false, timeout=0.3
+            to=first_id, filters=filters.true, cancelers=filters.false, timeout=0.3
         )
     assert exc_info.value.reason == "manual"
 
 
 @pytest.mark.asyncio
 async def test_listener_stopped_async(wa_async: WhatsAppAsync):
-    identifier = DummyUpdate().listener_identifier
+    identifiers = DummyUpdate().listener_identifiers
+    first_id = next(identifiers)
 
     async def stop_listener():
         await asyncio.sleep(0.1)
-        wa_async.stop_listening(to=identifier, reason="manual")
+        wa_async.stop_listening(to=first_id, reason="manual")
 
     asyncio.create_task(stop_listener())
     with pytest.raises(ListenerStopped) as exc_info:
         await wa_async.listen(
-            to=identifier, filters=filters.true, cancelers=filters.false, timeout=0.3
+            to=first_id, filters=filters.true, cancelers=filters.false, timeout=0.3
         )
     assert exc_info.value.reason == "manual"

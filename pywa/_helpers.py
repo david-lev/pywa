@@ -829,14 +829,23 @@ def resolve_recipient(to: str | int) -> tuple[dict[str, str], RecipientType]:
     _logger.debug(f"Resolved recipient {to} to type {recipient_type}")
     match recipient_type:
         case RecipientType.WA_ID | RecipientType.PHONE_NUMBER:
-            return {"to": str(to), "recipient_type": "individual"}, recipient_type
+            return {
+                "to": str(to),
+                "recipient": None,
+                "recipient_type": "individual",
+            }, recipient_type
         case RecipientType.BSUID | RecipientType.PARENT_BSUID:
             return {
+                "to": None,
                 "recipient": to,
                 "recipient_type": "individual",
             }, recipient_type
         case RecipientType.GROUP_ID:
-            return {"to": to, "recipient_type": "group"}, recipient_type
+            return {
+                "to": to,
+                "recipient": None,
+                "recipient_type": "group",
+            }, recipient_type
         case _:
             raise ValueError(f"Invalid recipient: {to}")
 

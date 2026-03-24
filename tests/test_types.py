@@ -8,6 +8,7 @@ from pywa.types import Result
 from pywa.types.flows import FlowDetails
 from pywa.types.sent_update import (
     InitiatedCall,
+    RecipientType,
     SentMessage,
     SentTemplate,
     SentTemplateStatus,
@@ -255,16 +256,18 @@ def test_sent_message():
             ],
         },
         from_phone_id=wa.phone_id,
+        recipient_type=RecipientType.WA_ID,
     )
     assert sm == SentMessage(
         _client=wa,
+        recipient="16505555555",
+        _recipient_type=RecipientType.WA_ID,
         id="wamid.HBgLMTY1MDUwNzY1MjAVAgARGBI5QTNDQTVCM0Q0Q0Q2RTY3RTcA",
-        to_user=types.User(wa_id="16505555555", name=None, _client=wa),
         from_phone_id=wa.phone_id,
         input="16505555555",
     )
     assert sm.sender == wa.phone_id
-    assert sm.recipient == sm.to_user.wa_id
+    assert sm.recipient == "16505555555"
 
     assert SentTemplate.from_sent_update(
         client=wa,
@@ -279,10 +282,12 @@ def test_sent_message():
             ],
         },
         from_phone_id=wa.phone_id,
+        recipient_type=RecipientType.WA_ID,
     ) == SentTemplate(
         _client=wa,
+        recipient="16505555555",
+        _recipient_type=RecipientType.WA_ID,
         id="wamid.HBgLMTY1MDUwNzY1MjAVAgARGBI5QTNDQTVCM0Q0Q0Q2RTY3RTcA",
-        to_user=types.User(wa_id="16505555555", name=None, _client=wa),
         from_phone_id=wa.phone_id,
         status=SentTemplateStatus.ACCEPTED,
         input="16505555555",
@@ -298,14 +303,17 @@ def test_initiated_call():
             "success": True,
         },
         from_phone_id=wa.phone_id,
-        to_wa_id="16506666666",
+        recipient_type=RecipientType.WA_ID,
+        callee="16506666666",
     )
     assert c.caller == wa.phone_id
+    assert c.recipient == "16506666666"
     assert c.callee == "16506666666"
     assert c == InitiatedCall(
         _client=wa,
+        recipient="16506666666",
+        _recipient_type=RecipientType.WA_ID,
         id="wacid.fiurefh8e=",
-        to_user=types.User(wa_id="16506666666", name=None, _client=wa),
         from_phone_id=wa.phone_id,
         success=True,
     )

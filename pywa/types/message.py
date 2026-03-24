@@ -145,7 +145,7 @@ class Message(BaseUserUpdate):
     def _get_reply_to(self, private: bool = False) -> str:
         if private and self.chat.type == ChatType.GROUP:
             return self.chat.id
-        return super()._get_reply_to(private=private)
+        return self._internal_sender
 
     @classmethod
     def _resolve_msg_content(

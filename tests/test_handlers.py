@@ -7,6 +7,7 @@ import pytest
 from pywa import WhatsApp, filters, handlers, types
 from pywa.handlers import FlowRequestHandler, _flow_request_handler_attr
 from pywa.types import Message
+from pywa.types.chat import Chat, ChatType
 from pywa_async import WhatsApp as WhatsAppAsync
 
 FAKE_WA = WhatsApp(phone_id="1234567890", token="1234567890:1234567890")
@@ -210,6 +211,7 @@ def test_shared_data():
         raw=Raw(),
         waba_id="456",
         id="123",
+        chat=Chat(id="456", type=ChatType.PRIVATE),
         type=types.MessageType.TEXT,
         forwarded=False,
         forwarded_many_times=False,
@@ -221,6 +223,10 @@ def test_shared_data():
         from_user=types.User(
             _client=wa,
             wa_id="1234567890",
+            bsuid="US.13491208655302741918",
+            parent_bsuid="US.ENT.11815799212886844830",
+            username=None,
+            identity_key_hash=None,
             name="John",
         ),
         timestamp=datetime.datetime.now(datetime.timezone.utc),

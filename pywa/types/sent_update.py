@@ -87,18 +87,32 @@ class _SentUpdate(_ClientShortcuts, abc.ABC):
     """
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
-    _recipient_type: RecipientType
-    _recipient: str
+    _recipient_type: RecipientType = dataclasses.field(repr=False)
     id: str
+    recipient: str
     from_phone_id: str
+
+    @property
+    def to(self) -> str:
+        """
+        Return the recipient of the message.
+
+        - Same as :attr:`recipient`
+        """
+        return self.recipient
 
     @staticmethod
     def _extract_recipient(contact: dict) -> str:
-        return contact.get("wa_id", contact["user_id"])  # only one exists
+        return contact.get("wa_id") or contact["user_id"]  # only one exists
 
-    def _get_reply_to(self, private: bool = False) -> str:
+    @property
+    def _internal_sender(self) -> str:
         # noinspection PyProtectedMember
-        return self._recipient
+        return self.recipient
+
+    @property
+    def _internal_recipient(self) -> str:
+        return self.from_phone_id
 
     @classmethod
     @abc.abstractmethod
@@ -107,7 +121,7 @@ class _SentUpdate(_ClientShortcuts, abc.ABC):
     @property
     def listener_identifier(self) -> UserUpdateListenerIdentifier:
         return UserUpdateListenerIdentifier(
-            sender=self._recipient, recipient=self.from_phone_id
+            sender=self.recipient, recipient=self.from_phone_id
         )
 
 
@@ -140,12 +154,13 @@ _SentMessageType = TypeVar("_SentMessageType", bound="SentMessage")
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class SentMessage(_SentUpdate):
     """
-    Represents a message that was sent to WhatsApp user.
+    Represents a message that was sent to WhatsApp user/group.
 
     Attributes:
         id: The ID of the message.
-        from_phone_id: The WhatsApp ID of the sender who sent the message.
-        input: The input (phone number) of the recipient.
+        from_phone_id: The WhatsApp Phone ID of the sender who sent the message.
+        recipient: The recipient of the message.
+        input: The input of the recipient.
     """
 
     input: str
@@ -157,11 +172,6 @@ class SentMessage(_SentUpdate):
     def sender(self) -> str:
         """The phone ID which sent the message"""
         return self._internal_recipient
-
-    @property
-    def recipient(self) -> str:
-        """The recipient of the message, which can be a BSUID, phone number or group ID."""
-        return self._internal_sender
 
     @classmethod
     def from_sent_update(
@@ -177,10 +187,10 @@ class SentMessage(_SentUpdate):
         # noinspection PyArgumentList
         return cls(
             _client=client,
-            _recipient=cls._extract_recipient(update["contacts"][0]),
             _recipient_type=recipient_type,
             _interactive_type=interactive_type,
             id=update["messages"][0]["id"],
+            recipient=cls._extract_recipient(update["contacts"][0]),
             from_phone_id=from_phone_id,
             input=update["contacts"][0]["input"],
             **kwargs,
@@ -189,10 +199,10 @@ class SentMessage(_SentUpdate):
     def _convert_to(self, subclass: type[_SentMessageType]) -> _SentMessageType:
         return subclass(
             _client=self._client,
-            _recipient=self._recipient,
             _recipient_type=self._recipient_type,
             _interactive_type=self._interactive_type,
             id=self.id,
+            recipient=self.recipient,
             from_phone_id=self.from_phone_id,
             input=self.input,
         )
@@ -722,13 +732,13 @@ class SentMessage(_SentUpdate):
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class SentMediaMessage(SentMessage):
     """
-    Represents a media message that was sent to WhatsApp user.
+    Represents a media message that was sent to WhatsApp user/group.
 
     Attributes:
         id: The ID of the message.
-        to_user: The user the message was sent to.
-        from_phone_id: The WhatsApp ID of the sender who sent the message.
-        input: The input (phone number) of the recipient.
+        from_phone_id: The phone id of the sender (you).
+        recipient: The recipient of the message.
+        input: The input of the recipient.
         uploaded_media: The media that was uploaded and sent in the message (only available if the media was not Media ID or URL).
     """
 
@@ -737,14 +747,14 @@ class SentMediaMessage(SentMessage):
 
 class SentVoiceMessage(SentMediaMessage):
     """
-    Represents a voice message that was sent to WhatsApp user.
+    Represents a voice message that was sent to WhatsApp user/group.
 
     Attributes:
         id: The ID of the message.
-        to_user: The user the message was sent to.
-        from_phone_id: The WhatsApp ID of the sender who sent the message.
-        input: The input (phone number) of the recipient.
-        uploaded_media: The media that was uploaded and sent in the message (only available if the media was not Media ID or URL).
+        from_phone_id: The phone id of the sender (you).
+        recipient: The recipient of the message.
+        input: The input of the recipient.
+        uploaded_media: The voice media that was uploaded and sent in the message (only available if the media was not Media ID or URL).
     """
 
     def wait_until_played(
@@ -797,13 +807,13 @@ class SentVoiceMessage(SentMediaMessage):
 
 class SentLocationRequest(SentMessage):
     """
-    Represents a location request message that was sent to WhatsApp user.
+    Represents a location request message that was sent to WhatsApp user/group.
 
     Attributes:
         id: The ID of the message.
-        to_user: The user the message was sent to.
-        from_phone_id: The WhatsApp ID of the sender who sent the message.
-        input: The input (phone number) of the recipient.
+        from_phone_id: The phone id of the sender (you).
+        recipient: The recipient of the message.
+        input: The input of the recipient.
     """
 
     def wait_for_location(
@@ -851,14 +861,14 @@ class SentLocationRequest(SentMessage):
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class SentReaction(SentMessage):
     """
-    Represents a reaction message that was sent to WhatsApp user.
+    Represents a reaction message that was sent to WhatsApp user/group.
 
     Attributes:
         id: The ID of the reaction.
         message_id: The ID of the message that was reacted/unreacted to.
-        to_user: The user the message was sent to.
-        from_phone_id: The WhatsApp ID of the sender who sent the message.
-        input: The input (phone number) of the recipient.
+        from_phone_id: The phone id of the sender (you).
+        recipient: The recipient of the message.
+        input: The input of the recipient.
     """
 
     message_id: str
@@ -892,14 +902,14 @@ class SentTemplateStatus(utils.StrEnum):
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class SentTemplate(SentMessage):
     """
-    Represents a template message that was sent to WhatsApp user.
+    Represents a template message that was sent to WhatsApp user/group.
 
     Attributes:
         id: The ID of the message.
-        recipient: The user the message was sent to.
-        from_phone_id: The WhatsApp ID of the sender who sent the message.
+        from_phone_id: The phone id of the sender (you).
+        recipient: The recipient of the message.
+        input: The input of the recipient.
         status: The status of the sent template.
-        input: The input (phone number) of the recipient.
     """
 
     status: SentTemplateStatus | None
@@ -917,7 +927,7 @@ class SentTemplate(SentMessage):
         msg = update["messages"][0]
         return cast(
             SentTemplate,
-            super().from_sent_update(
+            super(SentTemplate, cls).from_sent_update(
                 client=client,
                 update=update,
                 from_phone_id=from_phone_id,
@@ -939,8 +949,8 @@ class InitiatedCall(_SentUpdate, _CallShortcuts):
 
     Attributes:
         id: The call ID.
-        recipient: The recipient of the call (phone number, group ID, or BSUID).
-        from_phone_id: The WhatsApp ID of the business phone number that initiated the call.
+        from_phone_id: The phone id of the caller (you).
+        recipient: The recipient of the call.
         success: Whether the call was successfully initiated.
     """
 
@@ -957,7 +967,7 @@ class InitiatedCall(_SentUpdate, _CallShortcuts):
     ) -> InitiatedCall:
         return cls(
             _client=client,
-            _recipient=callee,
+            recipient=callee,
             _recipient_type=recipient_type,
             id=update["calls"][0]["id"],
             from_phone_id=from_phone_id,

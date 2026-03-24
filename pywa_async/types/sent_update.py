@@ -60,13 +60,13 @@ from pywa_async.types.base_update import _ClientShortcutsAsync
 
 class SentMessage(_ClientShortcutsAsync, _SentMessage):
     """
-    Represents a message that was sent to WhatsApp user.
+    Represents a message that was sent to WhatsApp user/group.
 
     Attributes:
         id: The ID of the message.
-        to_user: The user the message was sent to.
-        from_phone_id: The WhatsApp ID of the sender who sent the message.
-        input: The input (phone number) of the recipient.
+        from_phone_id: The WhatsApp Phone ID of the sender who sent the message.
+        recipient: The recipient of the message.
+        input: The input of the recipient.
     """
 
     async def wait_for_reply(
@@ -593,13 +593,13 @@ class SentMessage(_ClientShortcutsAsync, _SentMessage):
 
 class SentMediaMessage(SentMessage, _SentMediaMessage):
     """
-    Represents a media message that was sent to WhatsApp user.
+    Represents a media message that was sent to WhatsApp user/group.
 
     Attributes:
         id: The ID of the message.
-        to_user: The user the message was sent to.
-        from_phone_id: The WhatsApp ID of the sender who sent the message.
-        input: The input (phone number) of the recipient.
+        from_phone_id: The phone id of the sender (you).
+        recipient: The recipient of the message.
+        input: The input of the recipient.
         uploaded_media: The media that was uploaded and sent in the message (only available if the media was not Media ID or URL).
     """
 
@@ -608,13 +608,14 @@ class SentMediaMessage(SentMessage, _SentMediaMessage):
 
 class SentVoiceMessage(SentMediaMessage, _SentVoiceMessage):
     """
-    Represents a voice message that was sent to WhatsApp user.
+    Represents a voice message that was sent to WhatsApp user/group.
 
     Attributes:
         id: The ID of the message.
-        to_user: The user the message was sent to.
-        from_phone_id: The WhatsApp ID of the sender who sent the message.
-        input: The input (phone number) of the recipient.
+        from_phone_id: The phone id of the sender (you).
+        recipient: The recipient of the message.
+        input: The input of the recipient.
+        uploaded_media: The voice media that was uploaded and sent in the message (only available if the media was not Media ID or URL).
     """
 
     async def wait_until_played(
@@ -667,13 +668,13 @@ class SentVoiceMessage(SentMediaMessage, _SentVoiceMessage):
 
 class SentLocationRequest(SentMessage, _SentLocationRequest):
     """
-    Represents a location request message that was sent to WhatsApp user.
+    Represents a location request message that was sent to WhatsApp user/group.
 
     Attributes:
         id: The ID of the message.
-        to_user: The user the message was sent to.
-        from_phone_id: The WhatsApp ID of the sender who sent the message.
-        input: The input (phone number) of the recipient.
+        from_phone_id: The phone id of the sender (you).
+        recipient: The recipient of the message.
+        input: The input of the recipient.
     """
 
     async def wait_for_location(
@@ -720,27 +721,27 @@ class SentLocationRequest(SentMessage, _SentLocationRequest):
 
 class SentReaction(SentMessage, _SentReaction):
     """
-    Represents a reaction message that was sent to WhatsApp user.
+    Represents a reaction message that was sent to WhatsApp user/group.
 
     Attributes:
         id: The ID of the reaction.
         message_id: The ID of the message that was reacted/unreacted to.
-        to_user: The user the message was sent to.
-        from_phone_id: The WhatsApp ID of the sender who sent the message.
-        input: The input (phone number) of the recipient.
+        from_phone_id: The phone id of the sender (you).
+        recipient: The recipient of the message.
+        input: The input of the recipient.
     """
 
 
 class SentTemplate(SentMessage, _SentTemplate):
     """
-    Represents a template message that was sent to WhatsApp user.
+    Represents a template message that was sent to WhatsApp user/group.
 
     Attributes:
         id: The ID of the message.
-        to_user: The user the message was sent to.
-        from_phone_id: The WhatsApp ID of the sender who sent the message.
+        from_phone_id: The phone id of the sender (you).
+        recipient: The recipient of the message.
+        input: The input of the recipient.
         status: The status of the sent template.
-        input: The input (phone number) of the recipient.
     """
 
 
@@ -750,7 +751,7 @@ class InitiatedCall(_CallShortcutsAsync, _ClientShortcutsAsync, _InitiatedCall):
 
     Attributes:
         id: The call ID.
-        to_user: The user to whom the call was made.
-        from_phone_id: The WhatsApp ID of the business phone number that initiated the call.
+        from_phone_id: The phone id of the caller (you).
+        recipient: The recipient of the call.
         success: Whether the call was successfully initiated.
     """

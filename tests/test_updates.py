@@ -134,14 +134,18 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
     },
     "call_permission_update": {
         "accept": [
-            lambda c: c.response == CallPermissionResponse.ACCEPT
-            and c.response_source == CallPermissionResponseSource.USER_ACTION
-            and c.expiration_timestamp is not None,
+            lambda c: (
+                c.response == CallPermissionResponse.ACCEPT
+                and c.response_source == CallPermissionResponseSource.USER_ACTION
+                and c.expiration_timestamp is not None
+            ),
         ],
         "reject": [
-            lambda c: c.response == CallPermissionResponse.REJECT
-            and c.response_source == CallPermissionResponseSource.USER_ACTION
-            and c.expiration_timestamp is None,
+            lambda c: (
+                c.response == CallPermissionResponse.REJECT
+                and c.response_source == CallPermissionResponseSource.USER_ACTION
+                and c.expiration_timestamp is None
+            ),
         ],
     },
     "user_marketing_preferences": {

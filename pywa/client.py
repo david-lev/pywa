@@ -425,9 +425,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             )
         return self._api
 
-    def __str__(self) -> str:
-        return super().__repr__()
-
     def __repr__(self) -> str:
         return f"WhatsApp(phone_id={self.phone_id!r})"
 
@@ -1055,7 +1052,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             update=self.api.send_message(
                 sender=sender,
                 **recipient,
-                type="audio",
+                typ="audio",
                 msg=helpers.get_media_msg(
                     media=media, is_url=is_url, is_voice=is_voice
                 ),
@@ -1177,7 +1174,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             update=self.api.send_message(
                 sender=sender,
                 **recipient,
-                type="sticker",
+                typ="sticker",
                 msg=helpers.get_media_msg(media=media, is_url=is_url),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),

@@ -542,7 +542,7 @@ class GraphAPIAsync(GraphAPI):
             recipient_identity_key_hash: message would only be delivered if the hash value matches the customer's current hash.
 
         Returns:
-            The resp
+            The response from the WhatsApp Cloud API.
         """
         if not to and not recipient:
             raise ValueError("Either 'to' or 'recipient' must be provided")

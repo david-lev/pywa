@@ -280,8 +280,9 @@ def replays_to(*msg_ids: str) -> Filter:
     >>> replays_to("wamid.HBKHUIyNTM4NjAfiefhwojfMTNFQ0Q2MERGRjVDMUHUIGGA=")
     """
     return new(
-        lambda _, m: m.reply_to_message is not None
-        and m.reply_to_message.message_id in msg_ids
+        lambda _, m: (
+            m.reply_to_message is not None and m.reply_to_message.message_id in msg_ids
+        )
     )
 
 
@@ -385,13 +386,15 @@ def matches(*strings: str, ignore_case: bool = False) -> Filter:
     """
     strings = tuple(m.lower() for m in strings) if ignore_case else strings
     return new(
-        lambda _, m: any(
-            (txt.lower() if ignore_case else txt) in strings
-            for txt_field in m._txt_fields
-            if (txt := getattr(m, txt_field)) is not None
-        )
-        if getattr(m, "_txt_fields", None)
-        else False,
+        lambda _, m: (
+            any(
+                (txt.lower() if ignore_case else txt) in strings
+                for txt_field in m._txt_fields
+                if (txt := getattr(m, txt_field)) is not None
+            )
+            if getattr(m, "_txt_fields", None)
+            else False
+        ),
         name="matches",
     )
 
@@ -415,13 +418,15 @@ def startswith(*prefixes: str, ignore_case: bool = False) -> Filter:
     """
     prefixes = tuple(m.lower() for m in prefixes) if ignore_case else prefixes
     return new(
-        lambda _, u: any(
-            (txt.lower() if ignore_case else txt).startswith(prefixes)
-            for txt_field in u._txt_fields
-            if (txt := getattr(u, txt_field)) is not None
-        )
-        if getattr(u, "_txt_fields", None)
-        else False,
+        lambda _, u: (
+            any(
+                (txt.lower() if ignore_case else txt).startswith(prefixes)
+                for txt_field in u._txt_fields
+                if (txt := getattr(u, txt_field)) is not None
+            )
+            if getattr(u, "_txt_fields", None)
+            else False
+        ),
         name="startswith",
     )
 
@@ -445,13 +450,15 @@ def endswith(*suffixes: str, ignore_case: bool = False) -> Filter:
     """
     suffixes = tuple(m.lower() for m in suffixes) if ignore_case else suffixes
     return new(
-        lambda _, u: any(
-            (txt.lower() if ignore_case else txt).endswith(suffixes)
-            for txt_field in u._txt_fields
-            if (txt := getattr(u, txt_field)) is not None
-        )
-        if getattr(u, "_txt_fields", None)
-        else False,
+        lambda _, u: (
+            any(
+                (txt.lower() if ignore_case else txt).endswith(suffixes)
+                for txt_field in u._txt_fields
+                if (txt := getattr(u, txt_field)) is not None
+            )
+            if getattr(u, "_txt_fields", None)
+            else False
+        ),
         name="endswith",
     )
 
@@ -475,14 +482,16 @@ def contains(*words: str, ignore_case: bool = False) -> Filter:
     """
     words = tuple(m.lower() for m in words) if ignore_case else words
     return new(
-        lambda _, u: any(
-            word in (txt.lower() if ignore_case else txt)
-            for word in words
-            for txt_field in u._txt_fields
-            if (txt := getattr(u, txt_field)) is not None
-        )
-        if getattr(u, "_txt_fields", None)
-        else False,
+        lambda _, u: (
+            any(
+                word in (txt.lower() if ignore_case else txt)
+                for word in words
+                for txt_field in u._txt_fields
+                if (txt := getattr(u, txt_field)) is not None
+            )
+            if getattr(u, "_txt_fields", None)
+            else False
+        ),
         name="contains",
     )
 
@@ -508,14 +517,16 @@ def regex(*patterns: str | re.Pattern, flags: int = 0) -> Filter:
         p if isinstance(p, re.Pattern) else re.compile(p, flags) for p in patterns
     )
     return new(
-        lambda _, u: any(
-            re.match(p, txt)
-            for p in patterns
-            for txt_field in u._txt_fields
-            if (txt := getattr(u, txt_field)) is not None
-        )
-        if getattr(u, "_txt_fields", None)
-        else False,
+        lambda _, u: (
+            any(
+                re.match(p, txt)
+                for p in patterns
+                for txt_field in u._txt_fields
+                if (txt := getattr(u, txt_field)) is not None
+            )
+            if getattr(u, "_txt_fields", None)
+            else False
+        ),
         name="regex",
     )
 
@@ -582,10 +593,12 @@ def command(
     """
     cmds = tuple(c.lower() for c in cmds) if ignore_case else cmds
     return new(
-        lambda _, m: m.type == _Mt.TEXT
-        and (
-            m.text[0] in prefixes
-            and (m.text[1:].lower() if ignore_case else m.text[1:]).startswith(cmds)
+        lambda _, m: (
+            m.type == _Mt.TEXT
+            and (
+                m.text[0] in prefixes
+                and (m.text[1:].lower() if ignore_case else m.text[1:]).startswith(cmds)
+            )
         ),
         name="command",
     )
@@ -656,8 +669,10 @@ def location_in_radius(lat: float, lon: float, radius: float | int) -> Filter:
     """
 
     return new(
-        lambda _, m: m.type == _Mt.LOCATION
-        and m.location.in_radius(lat=lat, lon=lon, radius=radius),
+        lambda _, m: (
+            m.type == _Mt.LOCATION
+            and m.location.in_radius(lat=lat, lon=lon, radius=radius)
+        ),
         name="location_in_radius",
     )
 
@@ -697,12 +712,16 @@ contacts = new(lambda _, m: m.type == _Mt.CONTACTS, name="contacts")
 
 
 contacts_has_wa = new(
-    lambda _, m: m.type == _Mt.CONTACTS
-    and (
-        any(
-            (
-                p.wa_id
-                for p in (phone for contact in m.contacts for phone in contact.phones)
+    lambda _, m: (
+        m.type == _Mt.CONTACTS
+        and (
+            any(
+                (
+                    p.wa_id
+                    for p in (
+                        phone for contact in m.contacts for phone in contact.phones
+                    )
+                )
             )
         )
     ),
@@ -760,10 +779,12 @@ def failed_with(
         e for e in errors if e not in error_codes and issubclass(e, WhatsAppError)
     )
     return new(
-        lambda _, s: s.status == _Mst.FAILED
-        and (
-            any((isinstance(s.error, e) for e in exceptions))
-            or s.error.code in error_codes
+        lambda _, s: (
+            s.status == _Mst.FAILED
+            and (
+                any((isinstance(s.error, e) for e in exceptions))
+                or s.error.code in error_codes
+            )
         ),
         name="status_failed_with",
     )

@@ -77,8 +77,8 @@ class PhoneNumberChange(BaseUserUpdate):
                 username=None,
                 identity_key_hash=None,
             ),
-            old_wa_id=sys.get("customer", msg["from"]),  # v12^ from
-            new_wa_id=sys.get("new_wa_id", sys.get("wa_id")),  # v12^ wa_id
+            old_wa_id=sys.get("customer") or msg["from"],  # v12^ from
+            new_wa_id=sys.get("wa_id") or sys.get("new_wa_id"),  # v12^ wa_id
             new_user_id=sys.get("user_id"),
             new_parent_id=sys.get("parent_user_id"),
             body=sys["body"],
