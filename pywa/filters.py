@@ -361,10 +361,28 @@ def from_countries(
     It is always recommended to restrict the countries that can use your bot. remember that you pay for
     every conversation that you reply to.
 
-    >>> from_countries("972", "1") # Israel and USA
+    >>> from_countries("972", "1", "+972", "US") # Israel and USA
     """
     codes = tuple(str(p) for p in prefixes)
-    return new(lambda _, m: m.from_user.wa_id.startswith(codes), name="from_countries")
+    country_codes = []
+    phone_numbers = []
+    for code in codes:
+        if code.isalpha():
+            country_codes.append(code.upper())
+        else:
+            if code.startswith("+"):
+                code = code[1:]
+            phone_numbers.append(code)
+
+    phone_prefixes = tuple(phone_numbers)  # startswith supports tuple of prefixes
+
+    return new(
+        lambda _, m: (
+            m.from_user.wa_id.startswith(phone_prefixes)
+            or m.from_user.country_code in country_codes
+        ),
+        name="from_countries",
+    )
 
 
 def matches(*strings: str, ignore_case: bool = False) -> Filter:
