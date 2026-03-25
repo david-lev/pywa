@@ -78,21 +78,25 @@ class User(BaseUser):
         wa_id: The user's phone number in international format (without the '+' sign). Will be unavailable if the user enables the username feature. See `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#phone-numbers>`_ for more information.
         name: The name of the user.
         username: The username of the user.
+        country_code: The country code of the user phone number.
         identity_key_hash: The identity key hash of the user (Only if identity key check is enabled on the phone number settings).
         parent_bsuid: The Parent business-scoped user ID. See `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#parent-business-scoped-user-ids>`_ for more information.
     """
 
     name: str
+    country_code: str
     identity_key_hash: str | None
 
     @classmethod
     def from_contact(cls, data: dict, client: WhatsApp) -> User:
+        user_id = data["user_id"]
         return cls(
             _client=client,
-            bsuid=data["user_id"],
+            bsuid=user_id,
             wa_id=data.get("wa_id") or None,  # avoid empty string
             name=data["profile"].get("name"),
             username=data["profile"].get("username"),
+            country_code=user_id.split(".")[0],
             parent_bsuid=data.get("parent_user_id"),
             identity_key_hash=data.get("identity_key_hash"),
         )
@@ -105,6 +109,9 @@ class User(BaseUser):
             wa_id=data.get("wa_id"),
             name=None,
             username=None,
+            country_code=data.get("user_id", "").split(".")[0]
+            if data.get("user_id")
+            else "",
             parent_bsuid=None,
             identity_key_hash=None,
         )

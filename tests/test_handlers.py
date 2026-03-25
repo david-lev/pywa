@@ -32,6 +32,7 @@ CallbackButtonOnlyDataIsNeeded = functools.partial(
         username=None,
         identity_key_hash=None,
         name="John",
+        country_code="US",
     ),
     timestamp=datetime.datetime.now(datetime.timezone.utc),
     reply_to_message=types.ReplyToMessage(
@@ -228,6 +229,7 @@ def test_shared_data():
             username=None,
             identity_key_hash=None,
             name="John",
+            country_code="US",
         ),
         timestamp=datetime.datetime.now(datetime.timezone.utc),
     )
