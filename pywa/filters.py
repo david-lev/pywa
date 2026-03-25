@@ -123,6 +123,7 @@ from .types.base_update import (
     BaseUpdate as _BaseUpdate,
 )  # noqa
 from .types.calls import CallDirection, CallPermissionResponse, CallStatusType
+from .types.chat import ChatType
 from .types.templates import TemplateStatus
 
 if TYPE_CHECKING:
@@ -300,6 +301,14 @@ Filter for messages that user sends to ask about a product
 """
 
 
+private = new(lambda _, m: m.chat.type == ChatType.PRIVATE, name="private")
+"""Filter for messages that are sent in private chats."""
+
+
+group = new(lambda _, m: m.chat.type == ChatType.GROUP, name="group")
+"""Filter for messages that are sent in group chats."""
+
+
 def sent_to(*, display_phone_number: str = None, phone_number_id: str = None) -> Filter:
     """
     Filter for updates that are sent to the given phone number.
@@ -383,6 +392,15 @@ def from_countries(
         ),
         name="from_countries",
     )
+
+
+def from_groups(*group_ids: str) -> Filter:
+    """
+    Filter for updates that are sent from the given group ids.
+
+    >>> from_groups("Y2FwaV9ncm91cDoxNzA1NTU1MDEzOToxMjAzNjM0MDQ2OTQyMzM4MjAZD")
+    """
+    return new(lambda _, m: m.chat.id in group_ids, name="from_groups")
 
 
 def matches(*strings: str, ignore_case: bool = False) -> Filter:

@@ -15,6 +15,7 @@ from pywa.types import (
     ReplyToMessage,
 )
 from pywa.types.base_update import BaseUpdate
+from pywa.types.chat import ChatType
 from tests.common import CLIENTS
 
 _T = TypeVar("_T", bound=BaseUpdate)
@@ -150,9 +151,23 @@ FILTERS: dict[str, dict[str, list[tuple[Callable[[_T], _T], Filter]]]] = {
         "sent_to_me": [
             (lambda m: modify_send_to(m, CLIENTS.keys()[0].phone_id), fil.sent_to_me)
         ],
-        "from_users": [(lambda m: modify_send_from(m, "123"), fil.from_users("123"))],
+        "from_users": [
+            (lambda m: modify_send_from_user(m, "123"), fil.from_users("123"))
+        ],
         "from_countries": [
-            (lambda m: modify_send_from(m, "97212345678"), fil.from_countries("972"))
+            (
+                lambda m: modify_send_from_user(m, "97212345678"),
+                fil.from_countries("972"),
+            )
+        ],
+        "from_groups": [
+            (lambda m: modify_send_from_group(m, "Y2F"), fil.from_groups("V9nc"))
+        ],
+        "private": [
+            (same, fil.private),
+        ],
+        "group": [
+            (same, fil.group),
         ],
         "has_referred_product": [
             (lambda m: modify_referred_product(m, "IPHONE"), fil.has_referred_product)
@@ -345,9 +360,15 @@ def modify_status_err(status: MessageStatus, err: WhatsAppError):
     return dataclasses.replace(status, error=err)
 
 
-def modify_send_from(msg: Message, wa_id: str):
+def modify_send_from_user(msg: Message, wa_id: str):
     return dataclasses.replace(
         msg, from_user=dataclasses.replace(msg.from_user, wa_id=wa_id)
+    )
+
+
+def modify_send_from_group(msg: Message, group_id: str):
+    return dataclasses.replace(
+        msg, chat=dataclasses.replace(msg.chat, id=group_id, type=ChatType.GROUP)
     )
 
 
