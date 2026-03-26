@@ -87,15 +87,21 @@ class User(BaseUser):
 
     @classmethod
     def from_contact(cls, data: dict, client: WhatsApp) -> User:
+        user_id = data["user_id"]
         return cls(
             _client=client,
-            bsuid=data["user_id"],
+            bsuid=user_id,
             wa_id=data.get("wa_id") or None,  # avoid empty string
             name=data["profile"].get("name"),
             username=data["profile"].get("username"),
             parent_bsuid=data.get("parent_user_id"),
             identity_key_hash=data.get("identity_key_hash"),
         )
+
+    @property
+    def country_code(self) -> str:
+        """The user’s `ISO 3166 alpha-2 <https://www.iso.org/iso-3166-country-codes.html>`_ two-letter country code"""
+        return self.bsuid.split(".")[0]
 
     @classmethod
     def from_dict(cls, data: dict, client: WhatsApp) -> User:

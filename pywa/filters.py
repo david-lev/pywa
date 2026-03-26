@@ -123,6 +123,7 @@ from .types.base_update import (
     BaseUpdate as _BaseUpdate,
 )  # noqa
 from .types.calls import CallDirection, CallPermissionResponse, CallStatusType
+from .types.chat import ChatType
 from .types.templates import TemplateStatus
 
 if TYPE_CHECKING:
@@ -300,6 +301,14 @@ Filter for messages that user sends to ask about a product
 """
 
 
+private = new(lambda _, m: m.chat.type == ChatType.PRIVATE, name="private")
+"""Filter for messages that are sent in private chats."""
+
+
+group = new(lambda _, m: m.chat.type == ChatType.GROUP, name="group")
+"""Filter for messages that are sent in group chats."""
+
+
 def sent_to(*, display_phone_number: str = None, phone_number_id: str = None) -> Filter:
     """
     Filter for updates that are sent to the given phone number.
@@ -351,20 +360,35 @@ def from_users(
 
 
 def from_countries(
-    *prefixes: str | int,
+    *prefixes_or_codes: str | int,
 ) -> Filter:
     """
     Filter for updates that are sent from the given country codes.
 
+    - You can pass either country codes (e.g. "US", "IL") or phone number prefixes (e.g. "+1", "972").
     - See https://countrycode.org/ for a list of country codes.
 
-    It is always recommended to restrict the countries that can use your bot. remember that you pay for
-    every conversation that you reply to.
-
-    >>> from_countries("972", "1") # Israel and USA
+    >>> from_countries("972", "1", "+972", "US", "IL") # Israel and USA
     """
-    codes = tuple(str(p) for p in prefixes)
-    return new(lambda _, m: m.from_user.wa_id.startswith(codes), name="from_countries")
+    codes = tuple(str(p) for p in prefixes_or_codes)
+    country_codes = [c.upper() for c in codes if c.isalpha()]
+    phone_prefixes = tuple((c.lstrip("+")) for c in codes if not c.isalpha())
+    return new(
+        lambda _, m: (
+            m.from_user.country_code in country_codes  # country_code always exists
+            or (m.from_user.wa_id and m.from_user.wa_id.startswith(phone_prefixes))
+        ),
+        name="from_countries",
+    )
+
+
+def from_groups(*group_ids: str) -> Filter:
+    """
+    Filter for updates that are sent from the given group ids.
+
+    >>> from_groups("Y2FwaV9ncm91cDoxNzA1NTU1MDEzOToxMjAzNjM0MDQ2OTQyMzM4MjAZD")
+    """
+    return new(lambda _, m: m.chat.id in group_ids, name="from_groups")
 
 
 def matches(*strings: str, ignore_case: bool = False) -> Filter:
