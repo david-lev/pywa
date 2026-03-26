@@ -76,9 +76,6 @@ class PhoneNumberChange(BaseUserUpdate):
                 name=None,
                 username=None,
                 identity_key_hash=None,
-                country_code=sys.get("user_id", "").split(".")[0]
-                if sys.get("user_id")
-                else "",
             ),
             old_wa_id=sys.get("customer") or msg["from"],  # v12^ from
             new_wa_id=sys.get("wa_id") or sys.get("new_wa_id"),  # v12^ wa_id

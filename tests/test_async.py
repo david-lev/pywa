@@ -326,6 +326,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
         "_flow_req_cls",
         "_api_fields",
         "is_quick_reply",
+        "country_code",
     }
     for sync_obj, async_obj in overrides:
         for method_name in filter(

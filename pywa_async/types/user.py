@@ -71,7 +71,6 @@ class User(BaseUserAsync, _User):
         wa_id: The user's phone number in international format (without the '+' sign). Will be unavailable if the user enables the username feature. See `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#phone-numbers>`_ for more information.
         name: The name of the user.
         username: The username of the user.
-        country_code: The country code of the user phone number.
         identity_key_hash: The identity key hash of the user (Only if identity key check is enabled on the phone number settings).
         parent_bsuid: The Parent business-scoped user ID. See `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#parent-business-scoped-user-ids>`_ for more information.
     """
