@@ -360,35 +360,23 @@ def from_users(
 
 
 def from_countries(
-    *prefixes: str | int,
+    *prefixes_or_codes: str | int,
 ) -> Filter:
     """
     Filter for updates that are sent from the given country codes.
 
+    - You can pass either country codes (e.g. "US", "IL") or phone number prefixes (e.g. "+1", "972").
     - See https://countrycode.org/ for a list of country codes.
 
-    It is always recommended to restrict the countries that can use your bot. remember that you pay for
-    every conversation that you reply to.
-
-    >>> from_countries("972", "1", "+972", "US") # Israel and USA
+    >>> from_countries("972", "1", "+972", "US", "IL") # Israel and USA
     """
-    codes = tuple(str(p) for p in prefixes)
-    country_codes = []
-    phone_numbers = []
-    for code in codes:
-        if code.isalpha():
-            country_codes.append(code.upper())
-        else:
-            if code.startswith("+"):
-                code = code[1:]
-            phone_numbers.append(code)
-
-    phone_prefixes = tuple(phone_numbers)  # startswith supports tuple of prefixes
-
+    codes = tuple(str(p) for p in prefixes_or_codes)
+    country_codes = [c.upper() for c in codes if c.isalpha()]
+    phone_prefixes = tuple((c.lstrip("+")) for c in codes if not c.isalpha())
     return new(
         lambda _, m: (
-            m.from_user.wa_id.startswith(phone_prefixes)
-            or m.from_user.country_code in country_codes
+            m.from_user.country_code in country_codes  # country_code always exists
+            or (m.from_user.wa_id and m.from_user.wa_id.startswith(phone_prefixes))
         ),
         name="from_countries",
     )
