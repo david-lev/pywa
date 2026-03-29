@@ -3,6 +3,22 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+#### 4.0.0b1 (2026-03-30) **Beta**
+
+- [user]
+  implement [BSUID](https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids)
+  changes
+- [user] added `country_code` field
+- [groups] add group management features
+- [handlers] implement `GroupMessageStatuses` class and handler for group message status updates
+- [message_status] add new `PricingCategory`: `general_purpose_ai`
+- [filters] update `from_countries` to support `country_code`
+- [filters] add filters for `private` and `group` chat messages
+- [templates] add `ContactInfoRequestButton` component
+- [templates] add to `CreativeFeaturesSpec` two classmethods: `all_enabled` and `all_disabled`
+- [others] add `BlockedUser` and `UnblockedUser` for user blocking functionality
+- [types] remove `ChatOpened` references and related code
+
 #### 3.9.0 (2026-03-11) **Latest**
 
 - [base_update] edit `reply_template` to accept `Template` obj
