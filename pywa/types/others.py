@@ -51,7 +51,6 @@ class MessageType(utils.StrEnum):
         UNSUPPORTED: An unsupported message (message type not supported by WhatsApp Cloud API).
         INTERACTIVE: Only used in :class:`CallbackButton`, :class:`CallbackSelection` and :class:`~pywa.types.calls.CallPermissionUpdate`.
         BUTTON: Only used in :class:`CallbackButton`.
-        REQUEST_WELCOME: Only used in :class:`ChatOpened`.
         SYSTEM: Only used in :class:`~pywa.types.system.PhoneNumberChange` and :class:`~pywa.types.system.IdentityChange`
     """
 
@@ -947,13 +946,11 @@ class ConversationalAutomation:
 
     Attributes:
         id: The ID of the WhatsApp Business Phone Number.
-        chat_opened_enabled: Whether the welcome message is enabled (if so, you can listen to the :class:`~pywa.types.chat_opened.ChatOpened` event).
         ice_breakers: See `Ice Breakers <https://developers.facebook.com/docs/whatsapp/cloud-api/phone-numbers/conversational-components/#ice-breakers>`_.
         commands: The `commands <https://developers.facebook.com/docs/whatsapp/cloud-api/phone-numbers/conversational-components/#commands>`_.
     """
 
     id: str
-    chat_opened_enabled: bool
     ice_breakers: tuple[str] | None
     commands: tuple[Command, ...] | None
 
@@ -961,7 +958,6 @@ class ConversationalAutomation:
     def from_dict(cls, data: dict):
         return cls(
             id=data.get("id"),
-            chat_opened_enabled=data.get("enable_welcome_message", False),
             ice_breakers=tuple(data.get("prompts", ())) or None,
             commands=tuple(
                 Command.from_dict(command) for command in data.get("commands", ())

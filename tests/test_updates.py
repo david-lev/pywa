@@ -109,9 +109,6 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
         ],
         "without_flow_token": [lambda f: f.token is None],
     },
-    "chat_opened": {
-        "chat_opened": [lambda c: c.type == MessageType.REQUEST_WELCOME],
-    },
     "system": {
         "phone_number_change": [
             lambda s: s.sys_type == SystemType.USER_CHANGED_NUMBER,

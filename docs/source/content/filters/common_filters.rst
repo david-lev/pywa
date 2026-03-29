@@ -10,7 +10,6 @@ Common filters
 .. autoattribute:: pywa.filters.callback_selection
 .. autoattribute:: pywa.filters.message_status
 .. autoattribute:: pywa.filters.flow_completion
-.. autoattribute:: pywa.filters.chat_opened
 .. autoattribute:: pywa.filters.call_connect
 .. autoattribute:: pywa.filters.call_terminate
 .. autoattribute:: pywa.filters.call_status

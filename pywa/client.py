@@ -30,7 +30,6 @@ from .handlers import (
     CallPermissionUpdateHandler,
     CallStatusHandler,
     CallTerminateHandler,
-    ChatOpenedHandler,
     FlowCompletionHandler,
     FlowRequestCallbackWrapper,
     FlowRequestHandler,
@@ -65,7 +64,6 @@ from .types import (
     CallPermissionUpdate,
     CallStatus,
     CallTerminate,
-    ChatOpened,
     Command,
     CommerceSettings,
     Contact,
@@ -186,7 +184,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         GroupMessageStatusesHandler: GroupMessageStatuses,
         CallbackButtonHandler: CallbackButton,
         CallbackSelectionHandler: CallbackSelection,
-        ChatOpenedHandler: ChatOpened,
         PhoneNumberChangeHandler: PhoneNumberChange,
         IdentityChangeHandler: IdentityChange,
         FlowCompletionHandler: FlowCompletion,
@@ -2255,7 +2252,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
     def update_conversational_automation(
         self,
-        enable_chat_opened: bool,
         ice_breakers: Iterable[str] | None = None,
         commands: Iterable[Command] | None = None,
         *,
@@ -2270,7 +2266,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             >>> from pywa.types import Command
             >>> wa = WhatsApp(...)
             >>> wa.update_conversational_automation(
-            ...     enable_chat_opened=True,
             ...     ice_breakers=['Plan a trip', 'Create a workout plan'],
             ...     commands=[
             ...         Command(
@@ -2285,9 +2280,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             ... )
 
         Args:
-            enable_chat_opened: You can be notified whenever a WhatsApp user opens a chat with you for
-             the first time. This can be useful if you want to reply to these users with a special welcome message of
-             your own design (When enabled, you'll start receiving the :class:`ChatOpened` event).
             ice_breakers: Ice Breakers are customizable, tappable text strings that appear in a message thread the
              first time you chat with a user. For example, `Plan a trip` or `Create a workout plan`.
             commands: Commands are text strings that WhatsApp users can see by typing a forward slash in a message
@@ -2305,7 +2297,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     method_arg="phone_id",
                     client_arg="phone_id",
                 ),
-                enable_welcome_message=enable_chat_opened,
                 prompts=tuple(ice_breakers) if ice_breakers else None,
                 commands=json.dumps([c.to_dict() for c in commands])
                 if commands

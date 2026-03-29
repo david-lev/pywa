@@ -9,7 +9,6 @@ Handler Decorators
 .. automethod:: WhatsApp.on_flow_completion
 .. automethod:: WhatsApp.on_flow_request
 .. automethod:: WhatsApp.on_message_status
-.. automethod:: WhatsApp.on_chat_opened
 .. automethod:: WhatsApp.on_phone_number_change
 .. automethod:: WhatsApp.on_identity_change
 .. automethod:: WhatsApp.on_call_connect

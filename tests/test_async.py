@@ -26,9 +26,6 @@ from pywa.types import (
     CallTerminate as CallTerminateSync,
 )
 from pywa.types import (
-    ChatOpened as ChatOpenedSync,
-)
-from pywa.types import (
     FlowCompletion as FlowCompletionSync,
 )
 from pywa.types import (
@@ -126,9 +123,6 @@ from pywa_async.types import (
     CallTerminate as CallTerminateAsync,
 )
 from pywa_async.types import (
-    ChatOpened as ChatOpenedAsync,
-)
-from pywa_async.types import (
     FlowCompletion as FlowCompletionAsync,
 )
 from pywa_async.types import (
@@ -213,7 +207,6 @@ def overrides() -> list[tuple[type, type]]:
         (CallbackButtonSync, CallbackButtonAsync),
         (CallbackSelectionSync, CallbackSelectionAsync),
         (MessageStatusSync, MessageStatusAsync),
-        (ChatOpenedSync, ChatOpenedAsync),
         (PhoneNumberChangeSync, PhoneNumberChangeAsync),
         (IdentityChangeSync, IdentityChangeAsync),
         (FlowCompletionSync, FlowCompletionAsync),
@@ -278,7 +271,6 @@ def test_all_methods_are_overwritten_in_async(overrides):
             _HandlerDecorators.on_callback_selection,
             _HandlerDecorators.on_message_status,
             _HandlerDecorators.on_group_message_statuses,
-            _HandlerDecorators.on_chat_opened,
             _HandlerDecorators.on_phone_number_change,
             _HandlerDecorators.on_identity_change,
             _HandlerDecorators.on_flow_completion,

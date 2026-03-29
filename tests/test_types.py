@@ -124,7 +124,6 @@ def test_business_phone_number():
                     {"command_name": "start", "command_description": "Start"},
                     {"command_name": "help", "command_description": "Help"},
                 ],
-                "enable_welcome_message": False,
                 "id": "47328947638",
             },
             "status": "CONNECTED",
@@ -183,7 +182,6 @@ def test_business_phone_number():
         display_phone_number="+1 123-456-7890",
         conversational_automation=types.others.ConversationalAutomation(
             id="47328947638",
-            chat_opened_enabled=False,
             ice_breakers=("Hi man",),
             commands=(
                 types.others.Command(name="start", description="Start"),

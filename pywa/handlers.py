@@ -50,7 +50,6 @@ __all__ = [
     "TemplateComponentsUpdateHandler",
     "FlowCompletionHandler",
     "FlowRequestHandler",
-    "ChatOpenedHandler",
     "PhoneNumberChangeHandler",
     "IdentityChangeHandler",
     "CallConnectHandler",
@@ -88,7 +87,6 @@ from .types import (
     CallPermissionUpdate,
     CallStatus,
     CallTerminate,
-    ChatOpened,
     FlowRequest,
     FlowResponse,
     GroupMessageStatuses,
@@ -133,9 +131,6 @@ _MessageStatusCallback: TypeAlias = Callable[
 ]
 _GroupMessageStatusesCallback: TypeAlias = Callable[
     ["WhatsApp", GroupMessageStatuses], Any | Awaitable[Any]
-]
-_ChatOpenedCallback: TypeAlias = Callable[
-    ["WhatsApp", ChatOpened], Any | Awaitable[Any]
 ]
 _TemplateStatusUpdateCallback: TypeAlias = Callable[
     ["WhatsApp", TemplateStatusUpdate], Any | Awaitable[Any]
@@ -480,36 +475,6 @@ class GroupMessageStatusesHandler(Handler[GroupMessageStatuses]):
     def __init__(
         self,
         callback: _GroupMessageStatusesCallback,
-        filters: Filter = None,
-        priority: int = 0,
-    ):
-        super().__init__(callback=callback, filters=filters, priority=priority)
-
-
-class ChatOpenedHandler(Handler[ChatOpened]):
-    """
-    Handler for :class:`~pywa.types.ChatOpened` updates (Chat is opened).
-
-    - You can use the :func:`~pywa.client.WhatsApp.on_chat_opened` decorator to register a handler for this type.
-
-    Example:
-
-        >>> from pywa import WhatsApp
-        >>> wa = WhatsApp(...)
-        >>> print_chat_opened = lambda _, msg: print(msg)
-        >>> wa.add_handlers(ChatOpenedHandler(print_chat_opened))
-
-    Args:
-        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.ChatOpened` as positional arguments)
-        filters: The filters to apply to the handler
-        priority: The priority of the handler (default: ``0``)
-    """
-
-    _update = ChatOpened
-
-    def __init__(
-        self,
-        callback: _ChatOpenedCallback,
         filters: Filter = None,
         priority: int = 0,
     ):
@@ -1532,50 +1497,6 @@ class _HandlerDecorators:
             return _registered_with_parentheses(
                 self=self,
                 handler_type=GroupMessageStatusesHandler,
-                callback=callback,
-                filters=filters,
-                priority=priority,
-            )
-
-        return deco
-
-    def on_chat_opened(
-        self: WhatsApp | Filter = None,
-        filters: Filter = None,
-        priority: int = 0,
-    ) -> Callable[[_ChatOpenedCallback], _ChatOpenedCallback] | _ChatOpenedCallback:
-        """
-        Decorator to register a function as a callback for incoming :class:`~pywa.types.ChatOpened` (when a user opens a chat with the business).
-
-        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.ChatOpenedHandler`.
-
-        Example:
-
-            >>> from pywa import WhatsApp, types
-            >>> wa = WhatsApp(...)
-            >>> @wa.on_chat_opened
-            ... def chat_opened_handler(client: WhatsApp, chat_opened: types.ChatOpened):
-            ...     print(f"The user {chat_opened.from_user.wa_id} just opened a chat with us!")
-
-        Args:
-            filters: Filters to apply to the incoming chat opened events.
-            priority: The priority of the handler (default: ``0``).
-        """
-
-        if (
-            clb := _registered_without_parentheses(
-                self=self,
-                handler_type=ChatOpenedHandler,
-                filters=filters,
-                priority=priority,
-            )
-        ) is not None:
-            return clb
-
-        def deco(callback: _ChatOpenedCallback) -> _ChatOpenedCallback:
-            return _registered_with_parentheses(
-                self=self,
-                handler_type=ChatOpenedHandler,
                 callback=callback,
                 filters=filters,
                 priority=priority,

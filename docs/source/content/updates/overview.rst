@@ -62,8 +62,6 @@ The supported fields are automatically handled by PyWa and converted into Python
      - A flow completed by a user
    * - :py:class:`~pywa.types.message_status.MessageStatus`
      - A message status update (delivered, seen, etc.)
-   * - :py:class:`~pywa.types.chat_opened.ChatOpened`
-     - A chat opened by a user
    * - :py:class:`~pywa.types.system.PhoneNumberChange`
      - A user's phone number changed
    * - :py:class:`~pywa.types.system.IdentityChange`

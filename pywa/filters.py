@@ -76,7 +76,6 @@ __all__ = [
     "template_quality",
     "template_category",
     "template_components",
-    "chat_opened",
     "call_connect",
     "outgoing_call",
     "incoming_call",
@@ -106,7 +105,6 @@ from .types import CallConnect as _Cc
 from .types import CallPermissionUpdate as _Cpu
 from .types import CallStatus as _Cst
 from .types import CallTerminate as _Ct
-from .types import ChatOpened as _Co
 from .types import FlowCompletion as _Fc
 from .types import IdentityChange as _Ic
 from .types import Message as _Msg
@@ -841,9 +839,6 @@ template_components = new(lambda _, s: isinstance(s, _Tcc), name="template_compo
 
 flow_completion = new(lambda _, f: isinstance(f, _Fc), name="flow_completion")
 """Filter for flow completion updates."""
-
-chat_opened = new(lambda _, c: isinstance(c, _Co), name="chat_opened")
-"""Filter for chat opened updates."""
 
 call_connect = new(lambda _, c: isinstance(c, _Cc), name="call_connect")
 """Filter for call connect updates."""

@@ -115,8 +115,6 @@ Register event handlers to listen for updates:
      - Handle list or menu selections
    * - :meth:`~WhatsApp.on_message_status`
      - Track message delivery, read, and failure statuses
-   * - :meth:`~WhatsApp.on_chat_opened`
-     - Detect when a user opens a chat
    * - :meth:`~WhatsApp.on_flow_request`
      - Handle incoming flow requests
    * - :meth:`~WhatsApp.on_flow_completion`

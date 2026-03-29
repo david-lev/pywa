@@ -71,7 +71,6 @@ from .flows import (
     FlowMetricName,
     FlowMetricGranularity,
 )
-from .chat_opened import ChatOpened
 from .user_preferences import (
     UserMarketingPreferences,
     UserPreferenceCategory,

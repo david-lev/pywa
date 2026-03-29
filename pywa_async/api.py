@@ -873,7 +873,6 @@ class GraphAPIAsync(GraphAPI):
     async def update_conversational_automation(
         self,
         phone_id: str,
-        enable_welcome_message: bool | None = None,
         prompts: tuple[dict] | None = None,
         commands: str | None = None,
     ) -> dict[str, bool]:
@@ -890,7 +889,6 @@ class GraphAPIAsync(GraphAPI):
 
         Args:
             phone_id: The ID of the phone number to update.
-            enable_welcome_message: Enable the welcome message.
             prompts: The prompts (ice breakers) to set.
             commands: The commands to set.
 
@@ -903,7 +901,6 @@ class GraphAPIAsync(GraphAPI):
             json={
                 k: v
                 for k, v in {
-                    "enable_welcome_message": enable_welcome_message,
                     "prompts": prompts,
                     "commands": commands,
                 }.items()

@@ -20,7 +20,6 @@ if TYPE_CHECKING:
 
 _MESSAGE_TYPES: dict[MessageType, type[handlers.Handler]] = {
     MessageType.BUTTON: handlers.CallbackButtonHandler,
-    MessageType.REQUEST_WELCOME: handlers.ChatOpenedHandler,
 }
 _SYSTEM_TYPES: dict[SystemType | str, type[handlers.Handler]] = {
     SystemType.USER_CHANGED_NUMBER: handlers.PhoneNumberChangeHandler,

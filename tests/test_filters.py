@@ -255,7 +255,6 @@ FILTERS: dict[str, dict[str, list[tuple[Callable[[_T], _T], Filter]]]] = {
             (same, fil.flow_completion),
         ]
     },
-    "chat_opened": {"chat_opened": [(same, fil.chat_opened)]},
 }
 
 
