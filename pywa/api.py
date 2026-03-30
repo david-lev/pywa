@@ -30,7 +30,7 @@ class GraphAPI:
         session.headers.update(
             {
                 "Authorization": f"Bearer {token}",
-                "User-Agent": f"PyWa/{pywa.__version__}",
+                "User-Agent": f"pywa/{pywa.__version__}",
             }
         )
         self._session = session

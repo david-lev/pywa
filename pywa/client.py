@@ -314,6 +314,22 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 f"user_identifier_priority must contain all UserIdentifier values. Got {user_identifier_priority}"
             )
         self._user_identifier_priority = user_identifier_priority
+        self._server = server
+        self._callback_url = callback_url
+        self._callback_url_scope = callback_url_scope
+        self._verify_token = verify_token
+        self._webhook_endpoint = webhook_endpoint
+        self._webhook_fields = webhook_fields
+        self._webhook_challenge_delay = webhook_challenge_delay
+        self._private_key = business_private_key
+        self._private_key_password = business_private_key_password
+        self._flows_request_decryptor = flows_request_decryptor
+        self._app_id = app_id
+        self._app_secret = app_secret
+        self._flows_response_encryptor = flows_response_encryptor
+        self._validate_updates = validate_updates
+        self._continue_handling = continue_handling
+        self._skip_duplicate_updates = skip_duplicate_updates
         self._handlers: dict[
             type[Handler] | None,
             list[Handler],
@@ -331,21 +347,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         super().__init__(
             server=server,
-            webhook_endpoint=webhook_endpoint,
             callback_url=callback_url,
-            callback_url_scope=callback_url_scope,
-            webhook_fields=tuple(webhook_fields) if webhook_fields else None,
-            app_id=app_id,
             app_secret=app_secret,
             verify_token=verify_token,
-            webhook_challenge_delay=webhook_challenge_delay
-            or _DEFAULT_VERIFY_DELAY_SEC,
-            business_private_key=business_private_key,
-            business_private_key_password=business_private_key_password,
-            flows_request_decryptor=flows_request_decryptor,
-            flows_response_encryptor=flows_response_encryptor,
-            continue_handling=continue_handling,
-            skip_duplicate_updates=skip_duplicate_updates,
             validate_updates=validate_updates,
         )
         if handlers_modules:

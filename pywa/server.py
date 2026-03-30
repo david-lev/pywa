@@ -2,7 +2,7 @@
 
 import logging
 import threading
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 from . import errors, handlers, utils
 from .types import MessageType, RawUpdate, UserPreferenceCategory
@@ -12,7 +12,6 @@ from .types.base_update import (
     StopHandling,
 )
 from .types.system import SystemType
-from .utils import FastAPI, Flask
 
 if TYPE_CHECKING:
     from .client import WhatsApp
@@ -48,91 +47,123 @@ class Server:
 
     def __init__(
         self: "WhatsApp",
-        server: Flask | FastAPI | None,
-        webhook_endpoint: str,
+        server: utils.Flask | utils.FastAPI | None,
         callback_url: str | None,
-        callback_url_scope: utils.CallbackURLScope,
-        webhook_fields: tuple[str, ...] | None,
-        app_id: int | None,
         app_secret: str | None,
         verify_token: str | None,
-        webhook_challenge_delay: int | None,
-        business_private_key: str | None,
-        business_private_key_password: str | None,
-        flows_request_decryptor: utils.FlowRequestDecryptor | None,
-        flows_response_encryptor: utils.FlowResponseEncryptor | None,
-        continue_handling: bool,
-        skip_duplicate_updates: bool,
         validate_updates: bool,
     ):
-        self._server = server
-        self._verify_token = verify_token
-        self._webhook_endpoint = webhook_endpoint
-        self._private_key = business_private_key
-        self._private_key_password = business_private_key_password
-        self._flows_request_decryptor = flows_request_decryptor
-        self._app_id = app_id
-        self._app_secret = app_secret
-        self._flows_response_encryptor = flows_response_encryptor
-        self._validate_updates = validate_updates
-        self._continue_handling = continue_handling
-        self._skip_duplicate_updates = skip_duplicate_updates
         self._updates_in_process = set[
             str | int
         ]()  # TODO use threading.Lock | asyncio.Lock
 
         if server is utils.MISSING:
-            return
-        self._server_type = utils.ServerType.from_app(server)
+            self._server = None
+            self._server_type = None
+        else:
+            self._server_type = utils.ServerType.from_app(server)
 
-        if not verify_token:
-            raise ValueError(
-                "When listening for incoming updates, a verify token must be provided.\n>> The verify token can "
-                "be any string. It is used to challenge the webhook endpoint to verify that the endpoint is valid."
+            if not verify_token:
+                raise ValueError(
+                    "When listening for incoming updates, a verify token must be provided.\n>> The verify token can "
+                    "be any string. It is used to challenge the webhook endpoint to verify that the endpoint is valid."
+                )
+            if validate_updates and not app_secret:
+                _logger.warning(
+                    "No `app_secret` provided. Signature validation will be disabled "
+                    "(not recommended. set `validate_updates=False` to suppress this warning)"
+                )
+                self._validate_updates = False
+
+            self._register_routes()
+
+            if callback_url is not None:
+                self._delayed_register_callback_url()
+
+    def run(self, *, host: str = "127.0.0.1", port: int = 8000, **options: Any) -> None:
+        """
+        Run the server to listen for incoming updates.
+
+        Args:
+            host: The host to listen on (default: ``127.0.0.1``)
+            port: The port to listen on (default: ``8000``)
+            **options: Additional options to pass to ``uvicorn.run`` (e.g. ``ssl_keyfile``, ``ssl_certfile``, etc.). See the `uvicorn documentation <https://uvicorn.dev/settings/>`_ for more details.
+        """
+        try:
+            from starlette.applications import Starlette as StarletteApp
+            from starlette.background import BackgroundTask as StarletteBackgroundTask
+            from starlette.requests import Request as StarletteRequest
+            from starlette.responses import Response as StarletteResponse
+            from starlette.routing import Route as StarletteRoute
+        except ImportError:
+            raise ImportError(
+                'Starlette is required to run the server. Please install it using `pip install "pywa[server"]`.'
+            ) from None
+
+        try:
+            import uvicorn
+        except ImportError:
+            raise ImportError(
+                'Uvicorn is required to run the server. Please install it using `pip install "pywa[server"]`.'
+            ) from None
+
+        is_webhook_challenge_handler_async = utils.is_async_callable(
+            self.webhook_challenge_handler
+        )
+
+        async def _webhook_challenge_handler(
+            req: StarletteRequest,
+        ) -> StarletteResponse:
+            params = req.query_params
+            vt, ch = params.get(utils.HUB_VT), params.get(utils.HUB_CH)
+            content, status = (
+                (
+                    await self.webhook_challenge_handler(
+                        vt=vt,
+                        ch=ch,
+                    )
+                )
+                if is_webhook_challenge_handler_async
+                else self.webhook_challenge_handler(vt=vt, ch=ch)
             )
-        if validate_updates and not app_secret:
-            _logger.warning(
-                "No `app_secret` provided. Signature validation will be disabled "
-                "(not recommended. set `validate_updates=False` to suppress this warning)"
+            return StarletteResponse(
+                content=content,
+                status_code=status,
             )
-            self._validate_updates = False
 
-        self._register_routes()
+        async def _webhook_update_handler(req: StarletteRequest) -> StarletteResponse:
+            task = StarletteBackgroundTask(
+                self.webhook_update_handler,
+                await req.body(),
+                req.headers.get(utils.HUB_SIG),
+            )
+            return StarletteResponse(content="OK", status_code=200, background=task)
 
-        if callback_url is not None:
-            if callback_url_scope == utils.CallbackURLScope.APP and (
-                app_id is None or app_secret is None
-            ):
-                raise ValueError(
-                    "When registering a callback URL in the app scope, the `app_id` and `app_secret` must be provided.\n>> See here how "
-                    "to get them: "
-                    "https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings/"
-                )
-            elif (
-                callback_url_scope == utils.CallbackURLScope.WABA
-                and not self.business_account_id
-            ):
-                raise ValueError(
-                    "When registering a callback URL in the WABA scope, the `business_account_id` must be provided."
-                )
-            elif (
-                callback_url_scope == utils.CallbackURLScope.PHONE and not self.phone_id
-            ):
-                raise ValueError(
-                    "When registering a callback URL in the PHONE scope, the `phone_id` must be provided."
-                )
-
-            self._delayed_register_callback_url(
-                callback_url=f"{callback_url.rstrip('/')}/{self._webhook_endpoint.lstrip('/')}",
-                callback_url_scope=callback_url_scope,
-                app_id=app_id,
-                app_secret=app_secret,
-                verify_token=verify_token,
-                fields=tuple(
-                    webhook_fields or handlers.Handler._handled_fields().keys()
+        self._server = StarletteApp(
+            routes=[
+                StarletteRoute(
+                    path=self._webhook_endpoint,
+                    endpoint=_webhook_challenge_handler,
+                    methods=["GET"],
                 ),
-                delay=webhook_challenge_delay,
-            )
+                StarletteRoute(
+                    path=self._webhook_endpoint,
+                    endpoint=_webhook_update_handler,
+                    methods=["POST"],
+                ),
+            ]
+        )
+
+        uvicorn.run(
+            self._server,
+            host=host,
+            port=port,
+            headers=[
+                ("server", "pywa"),
+                ("X-Content-Type-Options", "nosniff"),
+            ],
+            **options,
+        )
 
     def webhook_challenge_handler(self, vt: str, ch: str) -> tuple[str, int]:
         """
@@ -282,7 +313,6 @@ class Server:
                 import fastapi
 
                 @self._server.get(self._webhook_endpoint)
-                @utils.rename_func(f"('{self._webhook_endpoint}')")
                 def pywa_challenge(
                     vt: str = fastapi.Query(alias=utils.HUB_VT, examples=["xyzxyz"]),
                     ch: str = fastapi.Query(
@@ -307,21 +337,22 @@ class Server:
                     return await request.body()
 
                 @self._server.post(self._webhook_endpoint)
-                @utils.rename_func(f"('{self._webhook_endpoint}')")
                 def pywa_webhook(
+                    bg_tasks: fastapi.BackgroundTasks,
                     update: bytes = fastapi.Depends(_get_body),
                     hmac_header: str = fastapi.Header(
                         alias=utils.HUB_SIG, examples=["sha256=..."]
                     ),
                 ) -> fastapi.Response:
                     """Automatically generated by pywa to handle incoming updates."""
-                    content, status_code = self.webhook_update_handler(
+                    bg_tasks.add_task(
+                        self.webhook_update_handler,
                         update=update,
                         hmac_header=hmac_header,
                     )
                     return fastapi.Response(
-                        content=content,
-                        status_code=status_code,
+                        content="ok",
+                        status_code=200,
                         media_type="text/plain",
                         headers={
                             "X-Content-Type-Options": "nosniff",
@@ -451,63 +482,68 @@ class Server:
 
     def _delayed_register_callback_url(
         self: "WhatsApp",
-        callback_url: str,
-        callback_url_scope: utils.CallbackURLScope,
-        app_id: int,
-        app_secret: str,
-        verify_token: str,
-        fields: tuple[str, ...] | None,
-        delay: int,
     ) -> None:
+        match self._callback_url_scope:
+            case utils.CallbackURLScope.APP:
+                if self._app_id is None or self._app_secret is None:
+                    raise ValueError(
+                        "When registering a callback URL in the app scope, the `app_id` and `app_secret` must be provided.\n>> See here how "
+                        "to get them: "
+                        "https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings/"
+                    )
+            case utils.CallbackURLScope.WABA:
+                if not self.business_account_id:
+                    raise ValueError(
+                        "When registering a callback URL in the WABA scope, the `business_account_id` must be provided."
+                    )
+            case utils.CallbackURLScope.PHONE:
+                if not self.phone_id:
+                    raise ValueError(
+                        "When registering a callback URL in the PHONE scope, the `phone_id` must be provided."
+                    )
         threading.Timer(
-            interval=delay,
+            interval=self._webhook_challenge_delay,
             function=self._register_callback_url,
             kwargs={
-                "callback_url": callback_url,
-                "callback_url_scope": callback_url_scope,
-                "app_id": app_id,
-                "app_secret": app_secret,
-                "verify_token": verify_token,
-                "fields": fields,
+                "callback_url": self._callback_url,
+                "callback_url_scope": self._callback_url_scope,
+                "app_id": self._app_id,
+                "app_secret": self._app_secret,
+                "verify_token": self._verify_token,
+                "fields": self._webhook_fields,
             },
         ).start()
 
     def _register_callback_url(
         self: "WhatsApp",
-        callback_url: str,
-        callback_url_scope: utils.CallbackURLScope,
-        app_id: int,
-        app_secret: str,
-        verify_token: str,
-        fields: tuple[str, ...] | None,
     ) -> None:
         """
         This is a non-blocking function that registers the callback URL.
         It must be called after the server is running so that the challenge can be verified.
         """
         try:
-            match callback_url_scope:
+            match self._callback_url_scope:
                 case utils.CallbackURLScope.APP:
                     app_access_token = self.api.get_app_access_token(
-                        client_id=app_id, client_secret=app_secret
+                        client_id=self._app_id, client_secret=self._app_secret
                     )
                     res = self.api.set_app_callback_url(
-                        app_id=app_id,
+                        app_id=self._app_id,
                         access_token=app_access_token["access_token"],
-                        callback_url=callback_url,
-                        verify_token=verify_token,
-                        fields=fields,
+                        callback_url=self._callback_url,
+                        verify_token=self._verify_token,
+                        fields=tuple(self._webhook_fields),
                     )
                 case utils.CallbackURLScope.WABA:
                     res = self.api.set_waba_alternate_callback_url(
                         waba_id=self.business_account_id,
-                        override_callback_uri=callback_url,
-                        verify_token=verify_token,
+                        override_callback_uri=self._callback_url,
+                        verify_token=self._verify_token,
                     )
                 case utils.CallbackURLScope.PHONE:
                     res = self.api.set_phone_alternate_callback_url(
-                        override_callback_uri=callback_url,
-                        verify_token=verify_token,
+                        override_callback_uri=self._callback_url,
+                        verify_token=self._verify_token,
                         phone_id=self.phone_id,
                     )
                 case _:
@@ -515,10 +551,12 @@ class Server:
 
             if not res["success"]:
                 raise RuntimeError("Failed to register callback URL.")
-            _logger.info("Callback URL '%s' registered successfully", callback_url)
+            _logger.info(
+                "Callback URL '%s' registered successfully", self._callback_url
+            )
         except errors.WhatsAppError as e:
             raise RuntimeError(
-                f"Failed to register callback URL '{callback_url}'. if you are using a slow/custom server, you can "
+                f"Failed to register callback URL '{self._callback_url}'. if you are using a slow/custom server, you can "
                 "increase the delay using the `webhook_challenge_delay` parameter when initializing the WhatsApp client."
             ) from e
 
@@ -615,7 +653,6 @@ class Server:
                 import fastapi
 
                 @self._server.post(callback_wrapper._endpoint)
-                @utils.rename_func(f"('{callback_wrapper._endpoint}')")
                 def pywa_flow(
                     flow_req: handlers.EncryptedFlowRequestType,
                 ) -> fastapi.Response:
