@@ -395,6 +395,12 @@ class TemplatesResult(Result[TemplateDetails]):
                 client=wa,
             ),
         )
+        self.total_count = response["summary"]["total_count"]
+        self.message_template_count = response["summary"]["message_template_count"]
+        self.message_template_limit = response["summary"]["message_template_limit"]
+        self.are_translations_complete = response["summary"][
+            "are_translations_complete"
+        ]
 
     def __repr__(self) -> str:
         return (
