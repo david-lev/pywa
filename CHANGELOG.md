@@ -3,7 +3,13 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-#### 4.0.0b1 (2026-03-30) **Beta**
+#### 4.0.0b3 (2026-04-01) **Beta**
+
+- [client] add `SUPPORTS_BSUID_API` flag and update user identifier resolution logic
+- [templates] fix summary fields in `TemplatesResult`
+- [ci] update checkout action to use workflow_run head_sha reference
+
+#### 4.0.0b1 (2026-03-30)
 
 - [user]
   implement [BSUID](https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids)
