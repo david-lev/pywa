@@ -28,7 +28,7 @@ class BaseUserAsync:
             BlockUserError: If the user was not blocked
         """
         res = await self._client.block_users((self.preferred_id,))
-        added = self.preferred_id in {u.wa_id for u in res.added_users}
+        added = self.preferred_id in {u.preferred_id for u in res.added_users}
         if not added:
             raise res.errors
         return added

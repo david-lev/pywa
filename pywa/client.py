@@ -163,6 +163,7 @@ from .utils import FastAPI, Flask, UserIdentifier
 _logger = logging.getLogger(__name__)
 
 _DEFAULT_VERIFY_DELAY_SEC = 3
+SUPPORTS_BSUID_API = False  # TODO should be set to True when the API supports BSUID-based endpoints (e.g. send message/block user by BSUID)
 
 
 class WhatsApp(Server, _HandlerDecorators, _Listeners):
@@ -372,8 +373,13 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def _resolve_user_identifier(self, user: BaseUser) -> Generator[str]:
         """Resolve the user identifier based on the client's priority configuration."""
         for ui in self._user_identifier_priority:
+            if (
+                ui in {UserIdentifier.BSUID, UserIdentifier.PARENT_BSUID}
+                and not SUPPORTS_BSUID_API
+            ):
+                continue
             identifier = getattr(user, ui.user_attr)
-            if identifier is not None:
+            if identifier:
                 yield identifier
 
     def load_handlers_modules(self, *modules: ModuleType) -> None:

@@ -828,6 +828,16 @@ class SentLocationRequest(SentMessage):
         """
         Wait for a location message in response to the location request.
 
+        Example:
+
+            .. code-block:: python
+
+                @wa.on_message(filters.command("start"))
+                def start(w: WhatsApp, m: Message):
+                    r = m.reply_location_request(text="Please share your location",)
+                    location_message = r.wait_for_location()
+                    r.reply(f"You shared your location: {location_message.location}", quote=True)
+
         Args:
             force_current_location: Whether to only accept current location messages.
             filters: The filters to apply to the location message.

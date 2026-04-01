@@ -18,6 +18,7 @@ from typing import (
     Generic,
     Iterable,
     Literal,
+    NoReturn,
     Type,
     TypeAlias,
     TypeVar,
@@ -315,7 +316,7 @@ class FlowRequest:
             close_flow=close_flow,
         )
 
-    def token_no_longer_valid(self, error_message: str):
+    def token_no_longer_valid(self, error_message: str) -> NoReturn:
         """
         Raise a :class:`FlowTokenNoLongerValid` exception with the provided error message.
 
