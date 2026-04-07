@@ -76,6 +76,7 @@ from typing import (
     cast,
 )
 
+from . import _helpers as helpers
 from . import utils
 from .filters import Filter
 from .filters import new as new_filter
@@ -209,7 +210,7 @@ class Handler(Generic[_UpdateType]):
         self._callback = callback
         self._filters = filters
         self._priority = priority
-        self._is_async_callback = utils.is_async_callable(callback)
+        self._is_async_callback = helpers.is_async_callable(callback)
 
     def check(self, wa: WhatsApp, update: _UpdateType) -> bool:
         return self._filters is None or self._filters.check_sync(wa, update)

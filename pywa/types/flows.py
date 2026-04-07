@@ -27,6 +27,7 @@ from urllib import parse as urllib_parse
 
 import httpx
 
+from .. import _helpers as helpers
 from .. import utils
 from .base_update import BaseUserUpdate, RawUpdate  # noqa
 from .media import ArrivedMedia
@@ -229,7 +230,7 @@ class FlowCompletion(BaseUserUpdate):
         )
 
 
-class FlowRequestActionType(utils.StrEnum):
+class FlowRequestActionType(helpers.StrEnum):
     """
     The type the action that triggered the :class:`FlowRequest`.
 
@@ -559,7 +560,7 @@ class FlowTokenNoLongerValid(FlowResponseError):
         self.body = {"error_msg": error_message}
 
 
-class FlowStatus(utils.StrEnum):
+class FlowStatus(helpers.StrEnum):
     """
     The status of the flow
 
@@ -590,7 +591,7 @@ class FlowStatus(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class FlowCategory(utils.StrEnum):
+class FlowCategory(helpers.StrEnum):
     """
     The category of the flow
 
@@ -649,7 +650,7 @@ class FlowJSONUpdateResult(SuccessResult):
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
-class FlowValidationError(Exception, utils.FromDict):
+class FlowValidationError(Exception, helpers.FromDict):
     """
     Represents a validation error of a :class:`FlowJSON`.
 
@@ -749,7 +750,7 @@ class FlowPreview:
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
-class FlowDetails(utils.APIObject):
+class FlowDetails(helpers.APIObject):
     """
     Represents the details of a flow.
 
@@ -977,7 +978,7 @@ class FlowDetails(utils.APIObject):
         return res
 
 
-class FlowMetricName(utils.StrEnum):
+class FlowMetricName(helpers.StrEnum):
     """
     The name of the metric
 
@@ -1000,7 +1001,7 @@ class FlowMetricName(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class FlowMetricGranularity(utils.StrEnum):
+class FlowMetricGranularity(helpers.StrEnum):
     """
     The granularity of the metric
 
@@ -1072,7 +1073,7 @@ class CreatedFlow:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class MigratedFlow(utils.FromDict):
+class MigratedFlow(helpers.FromDict):
     """
     Successfully migrated flow.
 
@@ -1088,7 +1089,7 @@ class MigratedFlow(utils.FromDict):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class MigratedFlowError(Exception, utils.FromDict):
+class MigratedFlowError(Exception, helpers.FromDict):
     """
     Failed to migrate flow.
 
@@ -1605,7 +1606,7 @@ class Screen:
         return ref.__class__(ref._field, screen=self.id)  # type: ignore
 
 
-class LayoutType(utils.StrEnum):
+class LayoutType(helpers.StrEnum):
     """
     The type of layout that is used to display the components.
         - Currently, only ``LayoutType.SINGLE_COLUMN`` is supported.
@@ -1651,7 +1652,7 @@ class Component(abc.ABC):
     def visible(self) -> bool | str | Condition | None: ...
 
 
-class FlowComponentType(utils.StrEnum):
+class FlowComponentType(helpers.StrEnum):
     """Internal component types"""
 
     _check_value = None
@@ -2250,7 +2251,7 @@ class TextComponent(Component, abc.ABC):
     def text(self) -> str | FlowStr | ScreenDataRef[str] | ComponentRef[str]: ...
 
 
-class FontWeight(utils.StrEnum):
+class FontWeight(helpers.StrEnum):
     """
     The text weight
 
@@ -2474,7 +2475,7 @@ class TextEntryComponent(FormComponent[str], abc.ABC):
     def error_message(self) -> str | ScreenDataRef[str] | ComponentRef[str] | None: ...
 
 
-class InputType(utils.StrEnum):
+class InputType(helpers.StrEnum):
     """
     The input type of the text entry component.
 
@@ -2502,7 +2503,7 @@ class InputType(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class LabelVariant(utils.StrEnum):
+class LabelVariant(helpers.StrEnum):
     """
     The label variant of the text entry component.
 
@@ -2622,7 +2623,7 @@ class TextArea(TextEntryComponent):
     error_message: str | ScreenDataRef[str] | ComponentRef[str] | None = None
 
 
-class MediaSize(utils.StrEnum):
+class MediaSize(helpers.StrEnum):
     """
     The media size of the image.
 
@@ -3178,7 +3179,7 @@ class DatePicker(FormComponent[str]):
     on_select_action: DataExchangeAction | None = None
 
 
-class CalendarPickerMode(utils.StrEnum):
+class CalendarPickerMode(helpers.StrEnum):
     """
     The mode of the calendar picker.
 
@@ -3196,7 +3197,7 @@ class CalendarPickerMode(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class CalendarDay(utils.StrEnum):
+class CalendarDay(helpers.StrEnum):
     """
     The days of the week.
 
@@ -3365,7 +3366,7 @@ class CalendarPicker(FormComponent[str]):
     ) = None
 
 
-class ScaleType(utils.StrEnum):
+class ScaleType(helpers.StrEnum):
     """
     The scale type of the image.
 
@@ -3489,7 +3490,7 @@ class ImageCarousel(Component):
     visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
 
 
-class PhotoSource(utils.StrEnum):
+class PhotoSource(helpers.StrEnum):
     """
     The source where the image can be selected from.
 
@@ -3704,7 +3705,7 @@ class Switch(Component):
     cases: dict[str, list[Component | dict[str, Any]]]
 
 
-class FlowActionType(utils.StrEnum):
+class FlowActionType(helpers.StrEnum):
     """
     Flow JSON provides a generic way to trigger asynchronous actions handled by a client through interactive UI elements.
 
@@ -3736,7 +3737,7 @@ class FlowActionType(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class NextType(utils.StrEnum):
+class NextType(helpers.StrEnum):
     """
     The type of the next action
 

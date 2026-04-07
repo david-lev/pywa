@@ -19,8 +19,12 @@ __all__ = [
 ]
 
 import base64
+import dataclasses
 import datetime
 import enum
+import functools
+import importlib
+import inspect
 import io
 import itertools
 import json
@@ -37,6 +41,8 @@ from typing import (
     AsyncIterable,
     AsyncIterator,
     BinaryIO,
+    Callable,
+    ClassVar,
     Iterable,
     Iterator,
     Literal,
@@ -45,31 +51,6 @@ from typing import (
 
 import httpx
 
-from pywa.types.others import InteractiveType
-
-from .types import (
-    Button,
-    CallbackData,
-    CallPermissionRequestButton,
-    FlowButton,
-    FlowJSON,
-    FlowMetricGranularity,
-    FlowMetricName,
-    SectionList,
-    URLButton,
-    VoiceCallButton,
-)
-from .types.media import Media
-from .types.sent_update import RecipientType
-from .types.templates import (
-    BaseParams,
-    Carousel,
-    HeaderFormatType,
-    TemplateBaseComponent,
-    _BaseMediaHeaderComponent,
-    _BaseMediaParams,
-)
-
 if TYPE_CHECKING:
     from pywa import WhatsApp
 
@@ -77,6 +58,109 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 DOWNLOAD_CHUNK_SIZE = 64 * 1024
+
+
+class StrEnum(str, enum.Enum):
+    """A string-based enum that allows for custom handling of missing values."""
+
+    _check_value: Callable[[str], bool] | None = str.isupper
+    """Check if the value needs to be modified or not."""
+    _modify_value: Callable[[str], str] | None = str.upper
+    """Modify the value if needed."""
+
+    def __str__(self):
+        """Return the string representation of the enum member."""
+        return self.value
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}.{self.name}"
+
+    def __init_subclass__(cls, *args, **kwargs):
+        """Ensure that the enum has an 'UNKNOWN' member to handle missing values."""
+        if list(cls) and not hasattr(
+            cls, "UNKNOWN"
+        ):  # in python3.10 __init_subclass__ does not have access to enum members
+            raise TypeError(
+                f"Enum {cls.__name__} must have an 'UNKNOWN' member to handle missing values."
+            )
+        return super().__init_subclass__(*args, **kwargs)
+
+    @classmethod
+    def _missing_(cls, value: str):
+        """Handle missing values in the enum."""
+        if callable(cls._check_value) and not cls._check_value(value):
+            return cls(cls._modify_value(value))
+
+        _logger.warning(
+            "Unknown value '%s' for enum '%s'. Defaulting to `%s.UNKNOWN`.",
+            value,
+            cls.__name__,
+            cls.__name__,
+        )
+        # noinspection PyUnresolvedReferences
+        return cls.UNKNOWN
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class FromDict:
+    """Allows to ignore extra fields when creating a dataclass from a dict."""
+
+    # noinspection PyArgumentList
+    @classmethod
+    def from_dict(cls, data: dict, **kwargs):
+        return cls(
+            **{
+                k: v
+                for k, v in (data | kwargs).items()
+                if k in (f.name for f in dataclasses.fields(cls))
+            }
+        )
+
+
+class APIObject:
+    """Base class for API objects that allows overriding field names."""
+
+    _override_api_fields: ClassVar[dict[str, str]] = {}
+    """Override API field names for this object."""
+
+    @classmethod
+    @functools.cache
+    def _api_fields(cls, *args, **kwargs) -> tuple[str, ...]:
+        return tuple(
+            cls._override_api_fields.get(f.name, f.name)
+            for f in dataclasses.fields(cls)
+            if not f.name.startswith("_")
+        )
+
+
+def is_async_callable(obj: Any) -> bool:
+    """Check if an object is an async callable."""
+    return inspect.iscoroutinefunction(obj) or (
+        callable(obj) and inspect.iscoroutinefunction(obj.__call__)
+    )
+
+
+from .types.callback import (  # noqa: E402
+    Button,
+    CallbackData,
+    CallPermissionRequestButton,
+    FlowButton,
+    SectionList,
+    URLButton,
+    VoiceCallButton,
+)
+from .types.flows import FlowJSON, FlowMetricGranularity, FlowMetricName  # noqa: E402
+from .types.media import Media  # noqa: E402
+from .types.others import InteractiveType  # noqa: E402
+from .types.sent_update import RecipientType  # noqa: E402
+from .types.templates import (  # noqa: E402
+    BaseParams,
+    Carousel,
+    HeaderFormatType,
+    TemplateBaseComponent,
+    _BaseMediaHeaderComponent,
+    _BaseMediaParams,
+)
 
 
 def resolve_buttons_param(
@@ -996,3 +1080,22 @@ def resolve_callback_data(data: str | CallbackData) -> str:
     elif isinstance(data, str):
         return data
     raise TypeError(f"Invalid callback data type {type(data)}")
+
+
+def is_installed(lib: str) -> bool:
+    """Check if the library is installed."""
+    try:
+        importlib.import_module(lib)
+        return True
+    except ImportError:
+        return False
+
+
+def rename_func(extended_with: str) -> Callable:
+    """Rename function to avoid conflicts when registering the same function multiple times."""
+
+    def inner(func: Callable):
+        func.__name__ = f"{func.__name__}{extended_with}"
+        return func
+
+    return inner

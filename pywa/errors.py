@@ -87,6 +87,9 @@ class WhatsAppError(Exception):
         """Get the exception class from the error code."""
         return _all_exceptions().get(code, WhatsAppError)
 
+    def __str__(self) -> str:
+        return self.__repr__()
+
 
 @functools.cache
 def _all_exceptions() -> dict[int, type[WhatsAppError]]:

@@ -9,7 +9,7 @@ import dataclasses
 import datetime
 from typing import TYPE_CHECKING
 
-from .. import utils
+from .. import _helpers as helpers
 from .base_update import BaseUserUpdate, RawUpdate  # noqa
 from .others import (
     MessageType,
@@ -85,7 +85,7 @@ class PhoneNumberChange(BaseUserUpdate):
         )
 
 
-class SystemType(utils.StrEnum):
+class SystemType(helpers.StrEnum):
     """
     The type of the system message.
 

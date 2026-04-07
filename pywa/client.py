@@ -356,7 +356,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """Prevent async functions from being used in the sync version of pywa."""
         if self._async_allowed:
             return
-        if utils.is_async_callable(func):
+        if helpers.is_async_callable(func):
             raise ValueError(
                 f"Async callbacks ({func}) are not supported in the sync version of pywa. import `WhatsApp` from `pywa_async` instead"
             )

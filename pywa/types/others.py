@@ -24,7 +24,7 @@ from typing import (
     TypeVar,
 )
 
-from .. import utils
+from .. import _helpers as helpers
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 
-class MessageType(utils.StrEnum):
+class MessageType(helpers.StrEnum):
     """
     Message types.
 
@@ -76,7 +76,7 @@ class MessageType(utils.StrEnum):
     _modify_value = str.lower
 
 
-class InteractiveType(utils.StrEnum):
+class InteractiveType(helpers.StrEnum):
     """
     Interactive types.
 
@@ -127,7 +127,7 @@ class Reaction:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class Location(utils.FromDict):
+class Location(helpers.FromDict):
     """
     Represents a location.
 
@@ -267,7 +267,7 @@ class Contact:
         )
 
     @dataclasses.dataclass(frozen=True, slots=True)
-    class Name(utils.FromDict):
+    class Name(helpers.FromDict):
         """
         Represents a contact's name.
 
@@ -290,7 +290,7 @@ class Contact:
         prefix: str | None = None
 
     @dataclasses.dataclass(frozen=True, slots=True)
-    class Phone(utils.FromDict):
+    class Phone(helpers.FromDict):
         """
         Represents a contact's phone number.
 
@@ -305,7 +305,7 @@ class Contact:
         wa_id: str | None = None
 
     @dataclasses.dataclass(frozen=True, slots=True)
-    class Email(utils.FromDict):
+    class Email(helpers.FromDict):
         """
         Represents a contact's email address.
 
@@ -318,7 +318,7 @@ class Contact:
         type: str | None = None
 
     @dataclasses.dataclass(frozen=True, slots=True)
-    class Url(utils.FromDict):
+    class Url(helpers.FromDict):
         """
         Represents a contact's URL.
 
@@ -331,7 +331,7 @@ class Contact:
         type: str | None = None
 
     @dataclasses.dataclass(frozen=True, slots=True)
-    class Org(utils.FromDict):
+    class Org(helpers.FromDict):
         """
         Represents a contact's organization.
 
@@ -346,7 +346,7 @@ class Contact:
         title: str | None = None
 
     @dataclasses.dataclass(frozen=True, slots=True)
-    class Address(utils.FromDict):
+    class Address(helpers.FromDict):
         """
         Represents a contact's address.
 
@@ -418,7 +418,7 @@ class ReplyToMessage:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class Metadata(utils.FromDict):
+class Metadata(helpers.FromDict):
     """
     Represents the metadata of a message.
 
@@ -496,7 +496,7 @@ class Order:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class Referral(utils.FromDict):
+class Referral(helpers.FromDict):
     """
     Represents a referral object in a message.
 
@@ -559,7 +559,7 @@ class ProductsSection:
         }
 
 
-class Industry(utils.StrEnum):
+class Industry(helpers.StrEnum):
     """
     Represents the industry of a business.
 
@@ -609,7 +609,7 @@ class Industry(utils.StrEnum):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class BusinessProfile(utils.APIObject):
+class BusinessProfile(helpers.APIObject):
     """
     Represents a business profile.
 
@@ -648,7 +648,7 @@ class BusinessProfile(utils.APIObject):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class CommerceSettings(utils.APIObject):
+class CommerceSettings(helpers.APIObject):
     """
     Represents the WhatsApp commerce settings.
 
@@ -671,7 +671,7 @@ class CommerceSettings(utils.APIObject):
         )
 
 
-class BusinessVerificationStatus(utils.StrEnum):
+class BusinessVerificationStatus(helpers.StrEnum):
     """
     Represents the business verification status.
 
@@ -702,7 +702,7 @@ class BusinessVerificationStatus(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class MarketingMessagesLiteAPIStatus(utils.StrEnum):
+class MarketingMessagesLiteAPIStatus(helpers.StrEnum):
     """
     Represents the WhatsApp Business Account's status for onboarding onto Marketing Messages Lite.
 
@@ -719,7 +719,7 @@ class MarketingMessagesLiteAPIStatus(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class MarketingMessagesOnboardingStatus(utils.StrEnum):
+class MarketingMessagesOnboardingStatus(helpers.StrEnum):
     """
     Represents the WhatsApp Business Account's status for onboarding onto Marketing Messages Lite API.
 
@@ -747,7 +747,7 @@ class MarketingMessagesOnboardingStatus(utils.StrEnum):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class BusinessInfo(utils.APIObject, utils.FromDict):
+class BusinessInfo(helpers.APIObject, helpers.FromDict):
     id: str
     name: str
     status: str
@@ -755,7 +755,7 @@ class BusinessInfo(utils.APIObject, utils.FromDict):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class WhatsAppBusinessAccount(utils.APIObject):
+class WhatsAppBusinessAccount(helpers.APIObject):
     """
     Represents a WhatsApp Business Account.
 
@@ -834,7 +834,7 @@ class WhatsAppBusinessAccount(utils.APIObject):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class FacebookApplication(utils.FromDict, utils.APIObject):
+class FacebookApplication(helpers.FromDict, helpers.APIObject):
     """
     Represents a Facebook Application.
 
@@ -849,7 +849,7 @@ class FacebookApplication(utils.FromDict, utils.APIObject):
     link: str
 
 
-class StorageStatus(utils.StrEnum):
+class StorageStatus(helpers.StrEnum):
     """
     Represents the storage status of a WhatsApp Business Phone Number.
 
@@ -967,7 +967,7 @@ class ConversationalAutomation:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class BusinessPhoneNumber(utils.APIObject):
+class BusinessPhoneNumber(helpers.APIObject):
     """
     Represents a WhatsApp Business Phone Number.
 
@@ -1072,7 +1072,7 @@ class BusinessPhoneNumber(utils.APIObject):
         )
 
 
-class QRCodeImageType(utils.StrEnum):
+class QRCodeImageType(helpers.StrEnum):
     """
     Represents the image type of a QR code.
 
@@ -1088,7 +1088,7 @@ class QRCodeImageType(utils.StrEnum):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class QRCode(utils.APIObject):
+class QRCode(helpers.APIObject):
     """
     Customers can scan a QR code from their phone to quickly begin a conversation with your business.
     The WhatsApp Business Management API allows you to create and access these QR codes and associated short links.
@@ -1533,7 +1533,7 @@ class Result(Generic[_T]):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class SuccessResult(utils.FromDict):
+class SuccessResult(helpers.FromDict):
     """
     Represents a simple success result.
 

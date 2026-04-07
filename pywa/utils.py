@@ -3,15 +3,13 @@ from __future__ import annotations
 import base64
 import dataclasses
 import enum
-import functools
 import hashlib
 import hmac
 import importlib
-import inspect
 import json
 import logging
 import warnings
-from typing import Any, Callable, ClassVar, Protocol, TypeAlias
+from typing import Any, Callable, Protocol, TypeAlias
 
 import httpx
 
@@ -82,15 +80,6 @@ class ServerType(enum.Enum):
         return tuple(server_type.protocol.__name__ for server_type in cls)
 
 
-def is_installed(lib: str) -> bool:
-    """Check if the library is installed."""
-    try:
-        importlib.import_module(lib)
-        return True
-    except ImportError:
-        return False
-
-
 class Version(enum.Enum):
     """
     Enum for the latest and minimum versions of the `Graph API <https://developers.facebook.com/docs/graph-api>`_ and
@@ -108,7 +97,7 @@ class Version(enum.Enum):
     """
 
     # KEY = (MIN_VERSION: str, LATEST_VERSION: str)
-    GRAPH_API = ("17.0", "24.0")
+    GRAPH_API = ("17.0", "25.0")
     FLOW_JSON = ("2.1", "7.3")
     FLOW_DATA_API = ("3.0", "4.0")
     FLOW_MSG = ("3", "3")
@@ -144,79 +133,6 @@ class CallbackURLScope(enum.Enum):
     APP = enum.auto()
     WABA = enum.auto()
     PHONE = enum.auto()
-
-
-class StrEnum(str, enum.Enum):
-    """A string-based enum that allows for custom handling of missing values."""
-
-    _check_value: Callable[[str], bool] | None = str.isupper
-    """Check if the value needs to be modified or not."""
-    _modify_value: Callable[[str], str] | None = str.upper
-    """Modify the value if needed."""
-
-    def __str__(self):
-        """Return the string representation of the enum member."""
-        return self.value
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}.{self.name}"
-
-    def __init_subclass__(cls, *args, **kwargs):
-        """Ensure that the enum has an 'UNKNOWN' member to handle missing values."""
-        if list(cls) and not hasattr(
-            cls, "UNKNOWN"
-        ):  # in python3.10 __init_subclass__ does not have access to enum members
-            raise TypeError(
-                f"Enum {cls.__name__} must have an 'UNKNOWN' member to handle missing values."
-            )
-        return super().__init_subclass__(*args, **kwargs)
-
-    @classmethod
-    def _missing_(cls, value: str):
-        """Handle missing values in the enum."""
-        if callable(cls._check_value) and not cls._check_value(value):
-            return cls(cls._modify_value(value))
-
-        _logger.warning(
-            "Unknown value '%s' for enum '%s'. Defaulting to `%s.UNKNOWN`.",
-            value,
-            cls.__name__,
-            cls.__name__,
-        )
-        # noinspection PyUnresolvedReferences
-        return cls.UNKNOWN
-
-
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class FromDict:
-    """Allows to ignore extra fields when creating a dataclass from a dict."""
-
-    # noinspection PyArgumentList
-    @classmethod
-    def from_dict(cls, data: dict, **kwargs):
-        return cls(
-            **{
-                k: v
-                for k, v in (data | kwargs).items()
-                if k in (f.name for f in dataclasses.fields(cls))
-            }
-        )
-
-
-class APIObject:
-    """Base class for API objects that allows overriding field names."""
-
-    _override_api_fields: ClassVar[dict[str, str]] = {}
-    """Override API field names for this object."""
-
-    @classmethod
-    @functools.cache
-    def _api_fields(cls, *args, **kwargs) -> tuple[str, ...]:
-        return tuple(
-            cls._override_api_fields.get(f.name, f.name)
-            for f in dataclasses.fields(cls)
-            if not f.name.startswith("_")
-        )
 
 
 FlowRequestDecryptor: TypeAlias = Callable[
@@ -470,23 +386,6 @@ def _flow_request_media_decryptor(
     ):
         raise ValueError("Decrypted data hash verification failed")
     return decrypted_data
-
-
-def rename_func(extended_with: str) -> Callable:
-    """Rename function to avoid conflicts when registering the same function multiple times."""
-
-    def inner(func: Callable):
-        func.__name__ = f"{func.__name__}{extended_with}"
-        return func
-
-    return inner
-
-
-def is_async_callable(obj: Any) -> bool:
-    """Check if an object is an async callable."""
-    return inspect.iscoroutinefunction(obj) or (
-        callable(obj) and inspect.iscoroutinefunction(obj.__call__)
-    )
 
 
 class UserIdentifier(enum.Enum):

@@ -89,8 +89,8 @@ from typing import (
 from .. import _helpers as helpers
 from .. import utils
 from ..listeners import TemplateStatusUpdateListenerIdentifier
-from . import CallbackData
 from .base_update import BaseUpdate, RawUpdate
+from .callback import CallbackData
 from .flows import FlowActionType, FlowJSON
 from .media import Media
 from .others import ProductsSection, Result, SuccessResult
@@ -103,7 +103,7 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 
-class TemplateStatus(utils.StrEnum):
+class TemplateStatus(helpers.StrEnum):
     """
     The status of the template.
 
@@ -145,7 +145,7 @@ class TemplateStatus(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class TemplateRejectionReason(utils.StrEnum):
+class TemplateRejectionReason(helpers.StrEnum):
     """
     The reason the template was rejected.
 
@@ -528,7 +528,7 @@ class TemplateQualityUpdate(BaseTemplateUpdate):
         )
 
 
-class QualityScoreType(utils.StrEnum):
+class QualityScoreType(helpers.StrEnum):
     """
     Every message template has a quality rating based on usage, customer feedback and engagement. A message template's rating will appear in the WhatsApp Manager whenever it has an Active status, and will be displayed after a hyphen in the message template's status:
 
@@ -606,7 +606,7 @@ class QualityScore:
         )
 
 
-class TemplateCategory(utils.StrEnum):
+class TemplateCategory(helpers.StrEnum):
     """
     Template category.
 
@@ -627,13 +627,13 @@ class TemplateCategory(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class TemplateSubCategory(utils.StrEnum):
+class TemplateSubCategory(helpers.StrEnum):
     CALL_PERMISSIONS_REQUEST = "CALL_PERMISSIONS_REQUEST"
 
     UNKNOWN = "UNKNOWN"
 
 
-class ComponentType(utils.StrEnum):
+class ComponentType(helpers.StrEnum):
     HEADER = "HEADER"
     BODY = "BODY"
     FOOTER = "FOOTER"
@@ -657,7 +657,7 @@ class ComponentType(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class HeaderFormatType(utils.StrEnum):
+class HeaderFormatType(helpers.StrEnum):
     TEXT = "TEXT"
     IMAGE = "IMAGE"
     VIDEO = "VIDEO"
@@ -669,7 +669,7 @@ class HeaderFormatType(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class ParamType(utils.StrEnum):
+class ParamType(helpers.StrEnum):
     """
     Parameter types for template parameters
 
@@ -699,7 +699,7 @@ class ParamType(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class TemplateLanguage(utils.StrEnum):
+class TemplateLanguage(helpers.StrEnum):
     """
     Template language and locale code.
 
@@ -801,7 +801,7 @@ class TemplateLanguage(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class ParamFormat(utils.StrEnum):
+class ParamFormat(helpers.StrEnum):
     """
     The type of parameter formatting the HEADER and BODY components of the template will use.
 
@@ -2119,7 +2119,7 @@ class CopyCodeButton(BaseButtonComponent):
         return CopyCodeButton._Params(coupon_code=coupon_code, index=index)
 
 
-class FlowButtonIcon(utils.StrEnum):
+class FlowButtonIcon(helpers.StrEnum):
     """
     The icon for the Flow button.
 
@@ -2841,7 +2841,7 @@ class ContactInfoRequestButton(BaseButtonComponent):
     )
 
 
-class OtpType(utils.StrEnum):
+class OtpType(helpers.StrEnum):
     """
     The type of the one-time password or code button.
 
@@ -3925,7 +3925,7 @@ def _validate_params(
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class TemplateDetails(utils.APIObject):
+class TemplateDetails(helpers.APIObject):
     """
     Represents the details of an existing WhatsApp Template.
 
@@ -4224,7 +4224,7 @@ class TemplatesResult(Result[TemplateDetails]):
         )
 
 
-class TopBlockReasonType(utils.StrEnum):
+class TopBlockReasonType(helpers.StrEnum):
     """
     The top reason that customers reported when they blocked your WhatsApp phone number after receiving one of your message templates. The reasons include: Spam, Didn’t sign up, No longer needed, Offensive messages. Note that Top block reason is only visible when a significant number of customers block your number.
 

@@ -13,7 +13,7 @@ import datetime
 import logging
 from typing import TYPE_CHECKING
 
-from .. import utils
+from .. import _helpers as helpers
 from .base_update import BaseUserUpdate, RawUpdate  # noqa
 from .others import Metadata
 
@@ -81,7 +81,7 @@ class UserMarketingPreferences(BaseUserUpdate):
         return self.value != MarketingPreference.STOP
 
 
-class MarketingPreference(utils.StrEnum):
+class MarketingPreference(helpers.StrEnum):
     """
     The marketing preference chosen by the user.
 
@@ -99,7 +99,7 @@ class MarketingPreference(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class UserPreferenceCategory(utils.StrEnum):
+class UserPreferenceCategory(helpers.StrEnum):
     """
     The category of the user preference.
 

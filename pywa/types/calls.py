@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from . import MessageType
-
 """This module contains types related to WhatsApp calls, including call connection, termination, and status updates."""
 
 __all__ = [
@@ -46,11 +44,12 @@ import dataclasses
 import datetime
 from typing import TYPE_CHECKING, Generic
 
-from .. import utils
+from .. import _helpers as helpers
 from ..errors import WhatsAppError
 from .base_update import BaseUpdate, BaseUserUpdate, RawUpdate, _ClientShortcuts  # noqa
 from .callback import CallbackData, _CallbackDataT
 from .others import (
+    MessageType,
     Metadata,
     ReplyToMessage,
     StorageConfiguration,
@@ -284,7 +283,7 @@ class CallPermissionUpdate(BaseUserUpdate):
         )
 
 
-class CallPermissionResponse(utils.StrEnum):
+class CallPermissionResponse(helpers.StrEnum):
     """
     Represents the response to a call permission request.
 
@@ -302,7 +301,7 @@ class CallPermissionResponse(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class CallPermissionResponseSource(utils.StrEnum):
+class CallPermissionResponseSource(helpers.StrEnum):
     """
     Represents the source of the call permission response.
 
@@ -321,7 +320,7 @@ class CallPermissionResponseSource(utils.StrEnum):
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
-class SessionDescription(utils.FromDict):
+class SessionDescription(helpers.FromDict):
     """
     Contains the Session Description Protocol (SDP) type and description language.
 
@@ -343,7 +342,7 @@ class SessionDescription(utils.FromDict):
         }
 
 
-class CallEvent(utils.StrEnum):
+class CallEvent(helpers.StrEnum):
     """
     Represents the type of call event.
 
@@ -361,7 +360,7 @@ class CallEvent(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class CallDirection(utils.StrEnum):
+class CallDirection(helpers.StrEnum):
     """
     Represents the direction of a call (who initiated the call).
 
@@ -477,7 +476,7 @@ class CallTerminate(BaseUserUpdate, _CallShortcuts, Generic[_CallbackDataT]):
         )
 
 
-class CallTerminateStatus(utils.StrEnum):
+class CallTerminateStatus(helpers.StrEnum):
     """
     Represents the status of a call termination event.
 
@@ -537,7 +536,7 @@ class CallStatus(BaseUserUpdate, _CallShortcuts, Generic[_CallbackDataT]):
         )
 
 
-class CallStatusType(utils.StrEnum):
+class CallStatusType(helpers.StrEnum):
     """
     Represents the type of call status.
 
@@ -554,7 +553,7 @@ class CallStatusType(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class CallingSettingsStatus(utils.StrEnum):
+class CallingSettingsStatus(helpers.StrEnum):
     """
     Represents the status of calling settings.
     """
@@ -565,7 +564,7 @@ class CallingSettingsStatus(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class CallIconVisibility(utils.StrEnum):
+class CallIconVisibility(helpers.StrEnum):
     """
     Represents the visibility of the call icon.
     """
@@ -576,7 +575,7 @@ class CallIconVisibility(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class CallbackPermissionStatus(utils.StrEnum):
+class CallbackPermissionStatus(helpers.StrEnum):
     """
     Represents the status of callback permission.
     """
@@ -587,7 +586,7 @@ class CallbackPermissionStatus(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class SIPStatus(utils.StrEnum):
+class SIPStatus(helpers.StrEnum):
     """
     Represents the status of SIP (Session Initiation Protocol).
     """
@@ -632,7 +631,7 @@ class SIPSettings:
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
-class SIPServer(utils.FromDict):
+class SIPServer(helpers.FromDict):
     """
     Represents a SIP server configuration.
 
@@ -858,7 +857,7 @@ class CallHours:
         )
 
 
-class STRPKeyExchangeProtocol(utils.StrEnum):
+class STRPKeyExchangeProtocol(helpers.StrEnum):
     """
     Represents the SRTP key exchange protocol.
 
@@ -964,7 +963,7 @@ class CallingSettings:
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
-class BusinessPhoneNumberSettings(utils.APIObject):
+class BusinessPhoneNumberSettings(helpers.APIObject):
     """
     Represents the settings of a WhatsApp Business Phone Number.
 
@@ -1013,7 +1012,7 @@ class BusinessPhoneNumberSettings(utils.APIObject):
         }
 
 
-class CallPermissionStatus(utils.StrEnum):
+class CallPermissionStatus(helpers.StrEnum):
     """
     Represents the status of a call permission.
 

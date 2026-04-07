@@ -5,9 +5,9 @@ import datetime
 import functools
 from typing import TYPE_CHECKING, ClassVar, Iterable, Iterator
 
-from .. import utils
-from . import MessageStatus, RawUpdate
-from .base_update import BaseUpdate
+from .. import _helpers as helpers
+from .base_update import BaseUpdate, RawUpdate
+from .message_status import MessageStatus
 from .others import Pagination, Result
 from .user import BaseUser
 
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from pywa import WhatsApp
 
 
-class GroupJoinApprovalMode(utils.StrEnum):
+class GroupJoinApprovalMode(helpers.StrEnum):
     """
     Indicates if WhatsApp users who click the invitation link can join the group with or without being approved first.
 
@@ -34,7 +34,7 @@ class GroupJoinApprovalMode(utils.StrEnum):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class GroupDetails(utils.APIObject):
+class GroupDetails(helpers.APIObject):
     """
     Represents the details of a WhatsApp group.
 

@@ -20,7 +20,7 @@ import datetime
 import logging
 from typing import TYPE_CHECKING, Generic
 
-from .. import utils
+from .. import _helpers as helpers
 from ..errors import WhatsAppError
 from .base_update import BaseUserUpdate, RawUpdate  # noqa
 from .others import Metadata
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 
-class MessageStatusType(utils.StrEnum):
+class MessageStatusType(helpers.StrEnum):
     """
     Message status type.
 
@@ -55,7 +55,7 @@ class MessageStatusType(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class ConversationCategory(utils.StrEnum):
+class ConversationCategory(helpers.StrEnum):
     """
     Conversation category.
 
@@ -213,7 +213,7 @@ class Conversation:
         )
 
 
-class PricingModel(utils.StrEnum):
+class PricingModel(helpers.StrEnum):
     """
     Pricing model.
 
@@ -228,7 +228,7 @@ class PricingModel(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class PricingType(utils.StrEnum):
+class PricingType(helpers.StrEnum):
     """
     Pricing type.
 
@@ -248,7 +248,7 @@ class PricingType(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class PricingCategory(utils.StrEnum):
+class PricingCategory(helpers.StrEnum):
     """
     Pricing category.
 

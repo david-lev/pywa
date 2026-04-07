@@ -97,32 +97,52 @@ __all__ = [
 import re
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterable, TypeVar
 
-from . import utils
+from . import _helpers as helpers
 from .errors import WhatsAppError
-from .types import CallbackButton as _Clb
-from .types import CallbackSelection as _Cls
-from .types import CallConnect as _Cc
-from .types import CallPermissionUpdate as _Cpu
-from .types import CallStatus as _Cst
-from .types import CallTerminate as _Ct
-from .types import FlowCompletion as _Fc
-from .types import IdentityChange as _Ic
-from .types import Message as _Msg
-from .types import MessageStatus as _Ms
-from .types import MessageStatusType as _Mst
-from .types import MessageType as _Mt
-from .types import PhoneNumberChange as _Pnc
-from .types import TemplateCategoryUpdate as _Tc
-from .types import TemplateComponentsUpdate as _Tcc
-from .types import TemplateQualityUpdate as _Tq
-from .types import TemplateStatusUpdate as _Ts
-from .types import UserMarketingPreferences as _Mup
 from .types.base_update import (
     BaseUpdate as _BaseUpdate,
 )  # noqa
-from .types.calls import CallDirection, CallPermissionResponse, CallStatusType
+from .types.callback import CallbackButton as _Clb
+from .types.callback import CallbackSelection as _Cls
+from .types.calls import (
+    CallConnect as _Cc,
+)
+from .types.calls import (
+    CallDirection,
+    CallPermissionResponse,
+    CallStatusType,
+)
+from .types.calls import (
+    CallPermissionUpdate as _Cpu,
+)
+from .types.calls import (
+    CallStatus as _Cst,
+)
+from .types.calls import (
+    CallTerminate as _Ct,
+)
 from .types.chat import ChatType
+from .types.flows import FlowCompletion as _Fc
+from .types.message import Message as _Msg
+from .types.message_status import MessageStatus as _Ms
+from .types.message_status import MessageStatusType as _Mst
+from .types.others import MessageType as _Mt
+from .types.system import IdentityChange as _Ic
+from .types.system import PhoneNumberChange as _Pnc
+from .types.templates import (
+    TemplateCategoryUpdate as _Tc,
+)
+from .types.templates import (
+    TemplateComponentsUpdate as _Tcc,
+)
+from .types.templates import (
+    TemplateQualityUpdate as _Tq,
+)
 from .types.templates import TemplateStatus
+from .types.templates import (
+    TemplateStatusUpdate as _Ts,
+)
+from .types.user_preferences import UserMarketingPreferences as _Mup
 
 if TYPE_CHECKING:
     from pywa import WhatsApp as _Wa
@@ -206,7 +226,7 @@ def new(
 ) -> Filter:
     """Factory function to create a filter from a function (sync or async)."""
 
-    is_async = utils.is_async_callable(func)
+    is_async = helpers.is_async_callable(func)
 
     def check_sync(self, wa: _Wa, update: _T) -> bool:
         return func(wa, update)
