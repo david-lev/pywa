@@ -441,20 +441,29 @@ class VoiceCallButton:
     """
     Represents a button that initiates a voice call on WhatsApp.
 
+    >>> VoiceCallButton(
+    ...     title='Call us',
+    ...     ttl_minutes=datetime.timedelta(days=3),
+    ... )
+
     Attributes:
         title: The text to display on the button (up to 20 characters) default is `Call Now`.
         ttl_minutes: The time-to-live for the call in minutes (up to ``43200`` minutes (30 days)), default is ``10080``  minutes (7 days).
     """
 
     title: str | None = None
-    ttl_minutes: int | None = None
+    ttl_minutes: datetime.timedelta | int | None = None
 
     def to_dict(self) -> dict:
         params = {}
         if self.title:
             params["display_text"] = self.title
         if self.ttl_minutes:
-            params["ttl_minutes"] = self.ttl_minutes
+            params["ttl_minutes"] = (
+                (self.ttl_minutes.total_seconds() // 60)
+                if isinstance(self.ttl_minutes, datetime.timedelta)
+                else self.ttl_minutes
+            )
 
         return {
             "name": InteractiveType.VOICE_CALL,
