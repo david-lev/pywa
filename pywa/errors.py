@@ -26,6 +26,7 @@ class WhatsAppError(Exception):
         details: The error details (optional).
         fbtrace_id: The Facebook trace ID (optional).
         href: The href to the documentation (optional).
+        raw: The raw error.
         raw_response: The :class:`httpx.Response` obj that returned the error (optional, only if the error was raised
             from an API call).
         subcode: The error subcode (optional).
@@ -37,6 +38,7 @@ class WhatsAppError(Exception):
 
     __error_codes__: ClassVar[Iterable[int] | None] = None
 
+    raw: dict = dataclasses.field(repr=False, compare=False)
     code: int
     message: str
     details: str | None = None
@@ -57,6 +59,7 @@ class WhatsAppError(Exception):
         # noinspection PyCallingNonCallable
         error_data = error.get("error_data", {})
         return cls._get_exception(code=(int_code := int(error["code"])))(
+            raw=error,
             code=int_code,
             message=error["message"],
             details=(
@@ -83,10 +86,6 @@ class WhatsAppError(Exception):
     def _get_exception(cls, code: int) -> Type[WhatsAppError]:
         """Get the exception class from the error code."""
         return _all_exceptions().get(code, WhatsAppError)
-
-    def __str__(self) -> str:
-        """Return a string representation of the error."""
-        return self.__repr__()
 
 
 @functools.cache
@@ -695,3 +694,161 @@ class FetchCallPermissionLimitHit(CallingError):
         138013,
         613,
     )  # WhatsApp changed the error code from 138013 to 613
+
+
+# ====================================================================================================
+
+
+class GroupError(WhatsAppError):
+    """
+    Base exception for all group errors.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/error-codes>`_.
+    """
+
+    __error_codes__ = None
+
+
+class BadGroup(GroupError):
+    """Cannot send messages to single member groups."""
+
+    __error_codes__ = (131020,)
+
+
+class GroupUnknown(GroupError):
+    """The group was not found, either because it doesn’t exist or you are not a member."""
+
+    __error_codes__ = (131041,)
+
+
+class GroupInvalidCursor(GroupError):
+    """The cursor has either expired or become corrupted. Start pagination from the beginning again."""
+
+    __error_codes__ = (131059,)
+
+
+class GroupRequestPartiallySucceeded(GroupError):
+    """Not all participant-level operations in the request succeeded."""
+
+    __error_codes__ = (131201,)
+
+
+class GroupDuplicateParticipant(GroupError):
+    """Duplicate participants in the participant array input."""
+
+    __error_codes__ = (131202,)
+
+
+class GroupParticipantOverlimit(GroupError):
+    """Group participant size exceeds limit."""
+
+    __error_codes__ = (131204,)
+
+
+class GroupSuspended(GroupError):
+    """The group violates platform policies."""
+
+    __error_codes__ = (131207,)
+
+
+class GroupRateLimitHit(GroupError):
+    """Group operation failed because there were too many group operations from this phone number in a short period."""
+
+    __error_codes__ = (131208,)
+
+
+class GroupInvalidProfilePictureAspectRatio(GroupError):
+    """Width and height of the image must be equal."""
+
+    __error_codes__ = (131209,)
+
+
+class GroupImageTooSmall(GroupError):
+    """Image width and height must be greater than 192px."""
+
+    __error_codes__ = (131210,)
+
+
+class GroupCreationLimitReached(GroupError):
+    """Reached the limit for the maximum number of groups that can be created for this number."""
+
+    __error_codes__ = (131211,)
+
+
+class GroupParticipantNotInGroup(GroupError):
+    """Participant is not a part of the group."""
+
+    __error_codes__ = (131212,)
+
+
+class GroupJoinRequestDoesNotExist(GroupError):
+    """Group join request does not exist."""
+
+    __error_codes__ = (131213,)
+
+
+class GroupCreationTemporarilyDisabled(GroupError):
+    """Group creation is temporarily disabled due to excessive marketing messages sent by the WABA in customer service window over the past 7 days."""
+
+    __error_codes__ = (131214,)
+
+
+class GroupAPINotEligible(GroupError):
+    """Groups APIs are only available for eligible phone numbers. Please check eligibility for Groups APIs in our documentation - /documentation/business-messaging/whatsapp/groups/get-started"""
+
+    __error_codes__ = (131215,)
+
+
+# ====================================================================================================
+
+
+class TemplateCreationError(WhatsAppError):
+    """
+    Base exception for all template creation errors.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/support/error-codes#template-creation-errors>`_.
+    """
+
+    __error_codes__ = None
+
+
+class TemplateCharacterLimitExceeded(TemplateCreationError):
+    """A field in your template has exceeded the maximum character limit allowed."""
+
+    __error_codes__ = (2388040,)
+
+
+class TemplateHeaderFormatIncorrect(TemplateCreationError):
+    """Your message header contains invalid formatting."""
+
+    __error_codes__ = (2388047,)
+
+
+class TemplateBodyFormatIncorrect(TemplateCreationError):
+    """Your message body contains invalid formatting."""
+
+    __error_codes__ = (2388048,)
+
+
+class TemplateFooterFormatIncorrect(TemplateCreationError):
+    """Your message footer contains invalid formatting."""
+
+    __error_codes__ = (2388073,)
+
+
+class TemplateParametersWordsRatioExceedsLimit(TemplateCreationError):
+    """This template has too many variables for its length. Reduce the number of variables or increase the message length."""
+
+    __error_codes__ = (2388293,)
+
+
+class TemplateLeadingOrTrailingParametersNotAllowed(TemplateCreationError):
+    """Variables cannot be at the start or end of the template."""
+
+    __error_codes__ = (2388299,)
+
+
+class TemplateLimitExceeded(TemplateCreationError):
+    """You have exceeded the maximum number of message templates you can have for this WhatsApp business account."""
+
+    __error_codes__ = (2388019,)
