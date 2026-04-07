@@ -35,7 +35,7 @@ Fully **typed**, **documented**, and **production-ready** — build powerful bot
 
 > [!IMPORTANT]
 > **Action Required: WhatsApp BSUID Migration**
-> 
+>
 > WhatsApp is transitioning to [Business-Scoped User IDs](https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids) (BSUID). This is a breaking change in how user IDs are handled and will be rolled out by Meta in the near future.
 >
 > pywa `4.0.0` (Beta) includes full support for BSUID and is required to ensure compatibility once the change takes effect.
