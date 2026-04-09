@@ -42,5 +42,95 @@
         ]
       }
     ]
+  },
+  "delete": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "1234567890987654321",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "972123456789",
+                "phone_number_id": "1122334455667"
+              },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321",
+                  "user_id": "US.13491208655302741918",
+                  "parent_user_id": "US.ENT.11815799212886844830"
+                }
+              ],
+              "message_echoes": [
+                {
+                  "from": "972987654321",
+                  "to": "972123456789",
+                  "id": "wamid.yyyyyy",
+                  "timestamp": "1697044968",
+                  "type": "revoke",
+                  "revoke": {
+                    "original_message_id": "wamid.zzzzzz"
+                  }
+                }
+              ]
+            },
+            "field": "smb_message_echoes"
+          }
+        ]
+      }
+    ]
+  },
+  "edit": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "1234567890987654321",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "972123456789",
+                "phone_number_id": "1122334455667"
+              },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321",
+                  "user_id": "US.13491208655302741918",
+                  "parent_user_id": "US.ENT.11815799212886844830"
+                }
+              ],
+              "message_echoes": [
+                {
+                  "from": "972987654321",
+                  "to": "972123456789",
+                  "id": "wamid.yyyyyy",
+                  "timestamp": "1697044968",
+                  "type": "edit",
+                  "edit": {
+                    "original_message_id": "wamid.zzzzzz",
+                    "message": {
+                      "type": "text",
+                      "text": {
+                        "body": "Text was edited"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "field": "smb_message_echoes"
+          }
+        ]
+      }
+    ]
   }
 }

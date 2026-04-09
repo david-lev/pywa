@@ -4,7 +4,14 @@ import pathlib
 
 """This module contains the types related to messages."""
 
-__all__ = ["Message", "EditedMessage", "DeletedMessage", "OutgoingMessage"]
+__all__ = [
+    "Message",
+    "EditedMessage",
+    "DeletedMessage",
+    "OutgoingMessage",
+    "OutgoingEditedMessage",
+    "OutgoingDeletedMessage",
+]
 
 import dataclasses
 import datetime
@@ -98,7 +105,7 @@ class Message(BaseUserUpdate):
     }
     _txt_fields = ("text", "caption")
     _webhook_field = "messages"
-    _messages_field = "messages"
+    _messages_field: ClassVar[str] = "messages"
 
     @property
     def voice(self) -> Audio | None:
@@ -582,11 +589,12 @@ class EditedMessage(BaseUserUpdate):
     message: Message
 
     _webhook_field = "messages"
+    _messages_field: ClassVar[str] = "messages"
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: RawUpdate) -> EditedMessage:
         msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
-            "messages"
+            cls._messages_field
         ][0]
         user = client._usr_cls.from_contact(value["contacts"][0], client=client)
         return cls(
@@ -627,11 +635,12 @@ class DeletedMessage(BaseUserUpdate):
     original_message_id: str
 
     _webhook_field = "messages"
+    _messages_field: ClassVar[str] = "messages"
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: RawUpdate) -> DeletedMessage:
         msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
-            "messages"
+            cls._messages_field
         ][0]
         user = client._usr_cls.from_contact(value["contacts"][0], client=client)
         return cls(
@@ -650,8 +659,17 @@ class DeletedMessage(BaseUserUpdate):
         )
 
 
+class _Outgoing:
+    from_user: User
+
+    @property
+    def to_user(self) -> User:
+        """The recipient of the message."""
+        return self.from_user
+
+
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class OutgoingMessage(Message):
+class OutgoingMessage(_Outgoing, Message):
     """
     A message that is sent by the business (Also known as `Echo message`).
 
@@ -682,10 +700,43 @@ class OutgoingMessage(Message):
         shared_data: Shared data between handlers.
     """
 
-    @property
-    def to_user(self) -> User:
-        """The recipient of the message."""
-        return self.from_user
+    _webhook_field = "smb_message_echoes"
+    _messages_field = "message_echoes"
+
+
+class OutgoingEditedMessage(_Outgoing, EditedMessage):
+    """
+    An edited message that is sent by the business (Also known as `Echo message`).
+
+    Attributes:
+        id: The ID of the edit event (not the original message ID).
+        original_message_id: The original message ID before the edit.
+        type: The type of the edit (See :class:`MessageType`).
+        chat: The chat where the message was edited (private or group).
+        metadata: The metadata of the message (to which phone number it was sent).
+        to_user: The recipient of the message.
+        timestamp: The timestamp when the message was edited (in UTC).
+        message: The updated version of the message after the edit.
+    """
+
+    _msg_cls: ClassVar[Type[OutgoingMessage]] = OutgoingMessage
+    _webhook_field = "smb_message_echoes"
+    _messages_field = "message_echoes"
+
+
+class OutgoingDeletedMessage(_Outgoing, DeletedMessage):
+    """
+    A deleted message that is sent by the business (Also known as `Echo message`).
+
+    Attributes:
+        id: The ID of the revoke event (not the original message ID).
+        original_message_id: The ID of the message that was deleted.
+        type: The type of the update (always :class:`MessageType.REVOKE`).
+        chat: The chat where the message was deleted (private or group).
+        metadata: The metadata of the message (to which phone number it was sent).
+        to_user: The recipient of the message.
+        timestamp: The timestamp when the message was deleted (in UTC).
+    """
 
     _webhook_field = "smb_message_echoes"
     _messages_field = "message_echoes"

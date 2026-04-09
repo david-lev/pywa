@@ -53,6 +53,12 @@ from pywa.types import (
     MessageStatus as MessageStatusSync,
 )
 from pywa.types import (
+    OutgoingDeletedMessage as OutgoingDeletedMessageSync,
+)
+from pywa.types import (
+    OutgoingEditedMessage as OutgoingEditedMessageSync,
+)
+from pywa.types import (
     OutgoingMessage as OutgoingMessageSync,
 )
 from pywa.types import (
@@ -159,6 +165,12 @@ from pywa_async.types import (
     MessageStatus as MessageStatusAsync,
 )
 from pywa_async.types import (
+    OutgoingDeletedMessage as OutgoingDeletedMessageAsync,
+)
+from pywa_async.types import (
+    OutgoingEditedMessage as OutgoingEditedMessageAsync,
+)
+from pywa_async.types import (
     OutgoingMessage as OutgoingMessageAsync,
 )
 from pywa_async.types import (
@@ -236,6 +248,8 @@ def overrides() -> list[tuple[type, type]]:
         (EditedMessageSync, EditedMessageAsync),
         (DeletedMessageSync, DeletedMessageAsync),
         (OutgoingMessageSync, OutgoingMessageAsync),
+        (OutgoingEditedMessageSync, OutgoingEditedMessageAsync),
+        (OutgoingDeletedMessageSync, OutgoingDeletedMessageAsync),
         (CallConnectSync, CallConnectAsync),
         (CallTerminateSync, CallTerminateAsync),
         (CallStatusSync, CallStatusAsync),
@@ -308,6 +322,8 @@ def test_all_methods_are_overwritten_in_async(overrides):
             _HandlerDecorators.on_edited_message,
             _HandlerDecorators.on_deleted_message,
             _HandlerDecorators.on_outgoing_message,
+            _HandlerDecorators.on_outgoing_edited_message,
+            _HandlerDecorators.on_outgoing_deleted_message,
             _HandlerDecorators.on_raw_update,
             ListenersSync._remove_listener,
             BaseUpdate.from_update,
