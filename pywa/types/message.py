@@ -4,11 +4,11 @@ import pathlib
 
 """This module contains the types related to messages."""
 
-__all__ = ["Message"]
+__all__ = ["Message", "EditedMessage", "RevokedMessage"]
 
 import dataclasses
 import datetime
-from typing import TYPE_CHECKING, ClassVar, Generator, Iterable
+from typing import TYPE_CHECKING, ClassVar, Generator, Iterable, Type
 
 from ..errors import WhatsAppError
 from .base_update import BaseUserUpdate, RawUpdate  # noqa
@@ -141,13 +141,13 @@ class Message(BaseUserUpdate):
         *,
         client: WhatsApp,
         msg_type: MessageType,
-        msg: dict,
+        content: dict,
         timestamp: datetime.datetime,
         recipient: str,
     ) -> dict:
         match msg_type:
             case MessageType.TEXT:
-                return {msg_type.value: msg[msg_type.value]["body"]}
+                return {msg_type.value: content[msg_type.value]["body"]}
             case (
                 MessageType.IMAGE
                 | MessageType.VIDEO
@@ -158,65 +158,65 @@ class Message(BaseUserUpdate):
                 return {
                     msg_type.value: cls._media_objs[msg_type.value].from_dict(
                         client=client,
-                        data=msg[msg_type.value],
+                        data=content[msg_type.value],
                         arrived_at=timestamp,
                         received_to=recipient,
                     )
                 }
             case MessageType.REACTION:
-                return {msg_type.value: Reaction.from_dict(msg[msg_type.value])}
+                return {msg_type.value: Reaction.from_dict(content[msg_type.value])}
             case MessageType.LOCATION:
-                return {msg_type.value: Location.from_dict(msg[msg_type.value])}
+                return {msg_type.value: Location.from_dict(content[msg_type.value])}
             case MessageType.CONTACTS:
                 return {
                     msg_type.value: tuple(
-                        Contact.from_dict(c) for c in msg[msg_type.value]
+                        Contact.from_dict(c) for c in content[msg_type.value]
                     )
                 }
             case MessageType.ORDER:
-                return {msg_type.value: Order.from_dict(msg[msg_type.value])}
+                return {msg_type.value: Order.from_dict(content[msg_type.value])}
             case MessageType.UNSUPPORTED:
                 return (
-                    {msg_type.value: Unsupported(type=msg["unsupported"]["type"])}
-                    if "unsupported" in msg
+                    {msg_type.value: Unsupported(type=content["unsupported"]["type"])}
+                    if "unsupported" in content
                     else {}
                 )
             case _:
                 return {}
 
     @classmethod
-    def from_update(cls, client: WhatsApp, update: RawUpdate) -> Message:
+    def from_update(
+        cls, client: WhatsApp, update: RawUpdate, *, is_edit: bool = False
+    ) -> Message:
         msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
             "messages"
         ][0]
+        content = msg["edit"]["message"] if is_edit else msg
         error = value.get("errors", msg.get("errors", (None,)))[0]
-        msg_type = msg["type"]
-        context = msg.get("context", {})
+        msg_type = content["type"]
+        context = content.get("context", {})
         metadata = Metadata.from_dict(value["metadata"])
         timestamp = datetime.datetime.fromtimestamp(
             int(msg["timestamp"]),
             datetime.timezone.utc,
         )
         msg_type = MessageType(msg_type)
-        msg_content = cls._resolve_msg_content(
-            client=client,
-            msg_type=msg_type,
-            msg=msg,
-            timestamp=timestamp,
-            recipient=metadata.phone_number_id,
-        )
         user = client._usr_cls.from_contact(value["contacts"][0], client=client)
         return cls(
             _client=client,
             raw=update,
             waba_id=entry["id"],
-            id=msg["id"],
+            id=msg["edit"]["original_message_id"] if is_edit else content["id"],
             type=msg_type,
-            **msg_content,
+            **cls._resolve_msg_content(
+                client=client,
+                msg_type=msg_type,
+                content=content,
+                timestamp=timestamp,
+                recipient=metadata.phone_number_id,
+            ),
             from_user=user,
-            chat=Chat(id=msg["group_id"], type=ChatType.GROUP)
-            if "group_id" in msg
-            else Chat(id=user.preferred_id, type=ChatType.PRIVATE),
+            chat=Chat.from_message(msg=msg, user=user),
             timestamp=timestamp,
             metadata=metadata,
             forwarded=context.get("forwarded", False)
@@ -225,7 +225,7 @@ class Message(BaseUserUpdate):
             reply_to_message=ReplyToMessage.from_dict(context)
             if context.get("id")
             else None,
-            caption=msg.get(msg_type, {}).get("caption")
+            caption=content.get(msg_type, {}).get("caption")
             if msg_type in cls._media_objs
             else None,
             referral=Referral.from_dict(msg["referral"]) if "referral" in msg else None,
@@ -554,4 +554,95 @@ class Message(BaseUserUpdate):
             chat_id=self.chat.id,
             message_id=self.id,
             sender=self.recipient,
+        )
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class EditedMessage(BaseUserUpdate):
+    """
+    A message that has been edited.
+
+    Attributes:
+        id: The ID of the edit event (not the original message ID).
+        original_message_id: The original message ID before the edit.
+        type: The type of the edit (See :class:`MessageType`).
+        chat: The chat where the message was edited (private or group).
+        metadata: The metadata of the message (to which phone number it was sent).
+        from_user: The user who edit the message.
+        timestamp: The timestamp when the message was edited (in UTC).
+        message: The updated version of the message after the edit.
+    """
+
+    _msg_cls: ClassVar[Type[Message]] = Message
+    type: MessageType
+    chat: Chat
+    original_message_id: str
+    message: Message
+
+    _webhook_field = "messages"
+
+    @classmethod
+    def from_update(cls, client: WhatsApp, update: RawUpdate) -> EditedMessage:
+        msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
+            "messages"
+        ][0]
+        user = client._usr_cls.from_contact(value["contacts"][0], client=client)
+        return cls(
+            _client=client,
+            raw=update,
+            waba_id=entry["id"],
+            id=msg["id"],
+            original_message_id=msg["edit"]["original_message_id"],
+            type=MessageType(msg["edit"]["message"]["type"]),
+            from_user=user,
+            chat=Chat.from_message(msg=msg, user=user),
+            timestamp=datetime.datetime.fromtimestamp(
+                int(msg["timestamp"]),
+                datetime.timezone.utc,
+            ),
+            metadata=Metadata.from_dict(value["metadata"]),
+            message=cls._msg_cls.from_update(client, update, is_edit=True),
+        )
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class RevokedMessage(BaseUserUpdate):
+    """
+    A message that has been revoked (deleted) by a user.
+
+    Attributes:
+        id: The ID of the revoke event (not the original message ID).
+        original_message_id: The ID of the message that was revoked.
+        type: The type of the update (always :class:`MessageType.REVOKE`).
+        chat: The chat where the message was revoked (private or group).
+        metadata: The metadata of the message (to which phone number it was sent).
+        from_user: The user who revoked the message.
+        timestamp: The timestamp when the message was revoked (in UTC).
+    """
+
+    type: MessageType
+    chat: Chat
+    original_message_id: str
+
+    _webhook_field = "messages"
+
+    @classmethod
+    def from_update(cls, client: WhatsApp, update: RawUpdate) -> RevokedMessage:
+        msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
+            "messages"
+        ][0]
+        user = client._usr_cls.from_contact(value["contacts"][0], client=client)
+        return cls(
+            _client=client,
+            raw=update,
+            waba_id=entry["id"],
+            id=msg["id"],
+            original_message_id=msg["revoke"]["original_message_id"],
+            type=MessageType.REVOKE,
+            from_user=user,
+            chat=Chat.from_message(msg=msg, user=user),
+            timestamp=datetime.datetime.fromtimestamp(
+                int(msg["timestamp"]), datetime.timezone.utc
+            ),
+            metadata=Metadata.from_dict(value["metadata"]),
         )

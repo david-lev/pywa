@@ -2,15 +2,23 @@
 
 from __future__ import annotations
 
-__all__ = ["Message"]
+__all__ = ["Message", "EditedMessage", "RevokedMessage"]
 
 import dataclasses
 import datetime
 import pathlib
-from typing import TYPE_CHECKING, AsyncGenerator, Iterable
+from typing import TYPE_CHECKING, AsyncGenerator, ClassVar, Iterable
 
 from pywa.types.message import *  # noqa MUST BE IMPORTED FIRST
-from pywa.types.message import Message as _Message  # noqa MUST BE IMPORTED FIRST
+from pywa.types.message import (
+    EditedMessage as _EditedMessage,
+)  # noqa MUST BE IMPORTED FIRST
+from pywa.types.message import (
+    Message as _Message,
+)  # noqa MUST BE IMPORTED FIRST
+from pywa.types.message import (
+    RevokedMessage as _RevokedMessage,
+)  # noqa MUST BE IMPORTED FIRST
 
 from .base_update import BaseUserUpdateAsync  # noqa
 from .callback import Button, FlowButton, SectionList, URLButton, VoiceCallButton
@@ -404,3 +412,39 @@ class Message(BaseUserUpdateAsync, _Message):
             message_id=self.id,
             sender=self.recipient,
         )
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class EditedMessage(BaseUserUpdateAsync, _EditedMessage):
+    """
+    A message that has been edited.
+
+    Attributes:
+        id: The ID of the edit event (not the original message ID).
+        original_message_id: The original message ID before the edit.
+        type: The type of the edit (See :class:`MessageType`).
+        chat: The chat where the message was edited (private or group).
+        metadata: The metadata of the message (to which phone number it was sent).
+        from_user: The user who edit the message.
+        timestamp: The timestamp when the message was edited (in UTC).
+        message: The updated version of the message after the edit.
+    """
+
+    _msg_cls: ClassVar[type[Message]] = Message
+    message: Message
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class RevokedMessage(BaseUserUpdateAsync, _RevokedMessage):
+    """
+    A message that has been revoked (deleted) by a user.
+
+    Attributes:
+        id: The ID of the revoke event (not the original message ID).
+        original_message_id: The ID of the message that was revoked.
+        type: The type of the update (always :class:`MessageType.REVOKE`).
+        chat: The chat where the message was revoked (private or group).
+        metadata: The metadata of the message (to which phone number it was sent).
+        from_user: The user who revoked the message.
+        timestamp: The timestamp when the message was revoked (in UTC).
+    """

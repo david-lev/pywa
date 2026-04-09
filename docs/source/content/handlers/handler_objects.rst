@@ -28,4 +28,6 @@ Handler Objects
 .. autoclass:: TemplateCategoryUpdateHandler
 .. autoclass:: TemplateQualityUpdateHandler
 .. autoclass:: TemplateComponentsUpdateHandler
+.. autoclass:: EditedMessageHandler
+.. autoclass:: RevokedMessageHandler
 .. autoclass:: RawUpdateHandler

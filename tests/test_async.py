@@ -26,6 +26,9 @@ from pywa.types import (
     CallTerminate as CallTerminateSync,
 )
 from pywa.types import (
+    EditedMessage as EditedMessageSync,
+)
+from pywa.types import (
     FlowCompletion as FlowCompletionSync,
 )
 from pywa.types import (
@@ -54,6 +57,9 @@ from pywa.types import (
 )
 from pywa.types import (
     Result as ResultSync,
+)
+from pywa.types import (
+    RevokedMessage as RevokedMessageSync,
 )
 from pywa.types import (
     TemplateCategoryUpdate as TemplateCategoryUpdateSync,
@@ -123,6 +129,9 @@ from pywa_async.types import (
     CallTerminate as CallTerminateAsync,
 )
 from pywa_async.types import (
+    EditedMessage as EditedMessageAsync,
+)
+from pywa_async.types import (
     FlowCompletion as FlowCompletionAsync,
 )
 from pywa_async.types import (
@@ -151,6 +160,9 @@ from pywa_async.types import (
 )
 from pywa_async.types import (
     Result as ResultAsync,
+)
+from pywa_async.types import (
+    RevokedMessage as RevokedMessageAsync,
 )
 from pywa_async.types import (
     TemplateCategoryUpdate as TemplateCategoryUpdateAsync,
@@ -215,6 +227,8 @@ def overrides() -> list[tuple[type, type]]:
         (TemplateQualityUpdateSync, TemplateQualityUpdateAsync),
         (TemplateComponentsUpdateSync, TemplateComponentsUpdateAsync),
         (UserMarketingPreferencesSync, UserMarketingPreferencesAsync),
+        (EditedMessageSync, EditedMessageAsync),
+        (RevokedMessageSync, RevokedMessageAsync),
         (CallConnectSync, CallConnectAsync),
         (CallTerminateSync, CallTerminateAsync),
         (CallStatusSync, CallStatusAsync),
@@ -284,6 +298,8 @@ def test_all_methods_are_overwritten_in_async(overrides):
             _HandlerDecorators.on_call_status,
             _HandlerDecorators.on_call_permission_update,
             _HandlerDecorators.on_user_marketing_preferences,
+            _HandlerDecorators.on_edited_message,
+            _HandlerDecorators.on_revoked_message,
             _HandlerDecorators.on_raw_update,
             ListenersSync._remove_listener,
             BaseUpdate.from_update,
@@ -313,6 +329,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
         "_register_flow_callback_wrapper",
         "_api_cls",
         "_usr_cls",
+        "_msg_cls",
         "_group_participant_cls",
         "_httpx_client",
         "_flow_req_cls",

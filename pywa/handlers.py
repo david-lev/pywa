@@ -57,6 +57,8 @@ __all__ = [
     "CallStatusHandler",
     "CallPermissionUpdateHandler",
     "UserMarketingPreferencesHandler",
+    "EditedMessageHandler",
+    "RevokedMessageHandler",
 ]
 
 import abc
@@ -88,6 +90,7 @@ from .types import (
     CallPermissionUpdate,
     CallStatus,
     CallTerminate,
+    EditedMessage,
     FlowRequest,
     FlowResponse,
     GroupMessageStatuses,
@@ -95,6 +98,7 @@ from .types import (
     Message,
     MessageStatus,
     PhoneNumberChange,
+    RevokedMessage,
     TemplateCategoryUpdate,
     TemplateComponentsUpdate,
     TemplateQualityUpdate,
@@ -121,6 +125,12 @@ _FlowRequestHandlerT: TypeAlias = Callable[
 
 _RawUpdateCallback: TypeAlias = Callable[["WhatsApp", RawUpdate], Any | Awaitable[Any]]
 _MessageCallback: TypeAlias = Callable[["WhatsApp", Message], Any | Awaitable[Any]]
+_EditedMessageCallback: TypeAlias = Callable[
+    ["WhatsApp", EditedMessage], Any | Awaitable[Any]
+]
+_RevokedMessageCallback: TypeAlias = Callable[
+    ["WhatsApp", RevokedMessage], Any | Awaitable[Any]
+]
 _CallbackButtonCallback: TypeAlias = Callable[
     ["WhatsApp", CallbackButton], Any | Awaitable[Any]
 ]
@@ -846,6 +856,66 @@ class CallPermissionUpdateHandler(Handler[CallPermissionUpdate]):
     def __init__(
         self,
         callback: _CallPermissionUpdateCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class EditedMessageHandler(Handler[EditedMessage]):
+    """
+    Handler for :class:`~pywa.types.EditedMessage` updates (When a user edits a message).
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_edited_message` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_edited_message = lambda _, msg: print(msg)
+        >>> wa.add_handlers(EditedMessageHandler(print_edited_message))
+
+    Args:
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.EditedMessage` as positional arguments)
+        filters: The filters to apply to the handler
+        priority: The priority of the handler (default: ``0``)
+    """
+
+    _update = EditedMessage
+
+    def __init__(
+        self,
+        callback: _EditedMessageCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class RevokedMessageHandler(Handler[RevokedMessage]):
+    """
+    Handler for :class:`~pywa.types.RevokedMessage` updates (When a user revokes a message).
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_revoked_message` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_revoked_message = lambda _, msg: print(msg)
+        >>> wa.add_handlers(RevokedMessageHandler(print_revoked_message))
+
+    Args:
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.RevokedMessage` as positional arguments)
+        filters: The filters to apply to the handler
+        priority: The priority of the handler (default: ``0``)
+    """
+
+    _update = RevokedMessage
+
+    def __init__(
+        self,
+        callback: _RevokedMessageCallback,
         filters: Filter = None,
         priority: int = 0,
     ):
@@ -2076,6 +2146,100 @@ class _HandlerDecorators:
             return _registered_with_parentheses(
                 self=self,
                 handler_type=UserMarketingPreferencesHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_edited_message(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_EditedMessageCallback], _EditedMessageCallback]
+        | _EditedMessageCallback
+    ):
+        """
+        Decorator to register a function as a callback for incoming :class:`~pywa.types.EditedMessage` (when a user edits a message).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.EditedMessageHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types, filters
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_edited_message(filters.text)
+            ... def edited_message_handler(client: WhatsApp, edited_msg: types.EditedMessage):
+            ...     print(f"The user {edited_msg.from_user.wa_id} just edited their message to: {edited_msg.message.text}")
+
+        Args:
+            filters: Filters to apply to the incoming edited messages.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=EditedMessageHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(callback: _EditedMessageCallback) -> _EditedMessageCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=EditedMessageHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_revoked_message(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_RevokedMessageCallback], _RevokedMessageCallback]
+        | _RevokedMessageCallback
+    ):
+        """
+        Decorator to register a function as a callback for incoming :class:`~pywa.types.RevokedMessage` (when a user deletes a message).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.RevokedMessageHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types, filters
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_revoked_message
+            ... def revoked_message_handler(client: WhatsApp, revoked_msg: types.RevokedMessage):
+            ...     print(f"The user {revoked_msg.from_user.wa_id} just deleted their message with id {revoked_msg.original_message_id}")
+
+        Args:
+            filters: Filters to apply to the incoming revoked messages.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=RevokedMessageHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(callback: _RevokedMessageCallback) -> _RevokedMessageCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=RevokedMessageHandler,
                 callback=callback,
                 filters=filters,
                 priority=priority,

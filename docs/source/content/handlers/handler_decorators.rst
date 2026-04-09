@@ -20,6 +20,8 @@ Handler Decorators
 .. automethod:: WhatsApp.on_template_category_update
 .. automethod:: WhatsApp.on_template_quality_update
 .. automethod:: WhatsApp.on_template_components_update
+.. automethod:: WhatsApp.on_edited_message
+.. automethod:: WhatsApp.on_revoked_message
 .. automethod:: WhatsApp.on_raw_update
 
 .. automethod:: WhatsApp.remove_callbacks

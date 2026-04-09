@@ -71,6 +71,8 @@ class MessageType(helpers.StrEnum):
     BUTTON = "button"
     REQUEST_WELCOME = "request_welcome"
     SYSTEM = "system"
+    EDIT = "edit"
+    REVOKE = "revoke"
 
     _check_value = str.islower
     _modify_value = str.lower
@@ -403,14 +405,14 @@ class ReplyToMessage:
     """
 
     message_id: str
-    from_user_id: str
+    from_user_id: str | None
     referred_product: ReferredProduct | None
 
     @classmethod
     def from_dict(cls, data: dict) -> ReplyToMessage:
         return cls(
             message_id=data["id"],
-            from_user_id=data["from"],
+            from_user_id=data.get("from"),
             referred_product=ReferredProduct.from_dict(data["referred_product"])
             if "referred_product" in data
             else None,
