@@ -82,6 +82,10 @@ The supported fields are automatically handled by PyWa and converted into Python
      - A user revoked (deleted) a message
    * - :py:class:`~pywa.types.message.OutgoingMessage`
      - A message sent from the business app (only available in Coexistence)
+   * - :py:class:`~pywa.types.message.OutgoingEditedMessage`
+     - A message edited from the business app (only available in Coexistence)
+   * - :py:class:`~pywa.types.message.OutgoingDeletedMessage`
+     - A message deleted from the business app (only available in Coexistence)
 
 **Account-related updates:**
 

@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-__all__ = ["Message", "EditedMessage", "DeletedMessage", "OutgoingMessage"]
+__all__ = [
+    "Message",
+    "EditedMessage",
+    "DeletedMessage",
+    "OutgoingMessage",
+    "OutgoingEditedMessage",
+    "OutgoingDeletedMessage",
+]
 
 import dataclasses
 import datetime
@@ -451,7 +458,16 @@ class DeletedMessage(BaseUserUpdateAsync, _DeletedMessage):
     """
 
 
-class OutgoingMessage(Message):
+class _Outgoing:
+    from_user: User
+
+    @property
+    def to_user(self) -> User:
+        """The recipient of the message."""
+        return self.from_user
+
+
+class OutgoingMessage(_Outgoing, Message):
     """
     A message that is sent by the business (Also known as `Echo message`).
 
@@ -482,10 +498,43 @@ class OutgoingMessage(Message):
         shared_data: Shared data between handlers.
     """
 
-    @property
-    def to_user(self) -> User:
-        """The recipient of the message."""
-        return self.from_user
+    _webhook_field = "smb_message_echoes"
+    _messages_field = "message_echoes"
+
+
+class OutgoingEditedMessage(_Outgoing, EditedMessage):
+    """
+    An edited message that is sent by the business (Also known as `Echo message`).
+
+    Attributes:
+        id: The ID of the edit event (not the original message ID).
+        original_message_id: The original message ID before the edit.
+        type: The type of the edit (See :class:`MessageType`).
+        chat: The chat where the message was edited (private or group).
+        metadata: The metadata of the message (to which phone number it was sent).
+        to_user: The recipient of the message.
+        timestamp: The timestamp when the message was edited (in UTC).
+        message: The updated version of the message after the edit.
+    """
+
+    _msg_cls: ClassVar[type[OutgoingMessage]] = OutgoingMessage
+    _webhook_field = "smb_message_echoes"
+    _messages_field = "message_echoes"
+
+
+class OutgoingDeletedMessage(_Outgoing, DeletedMessage):
+    """
+    A deleted message that is sent by the business (Also known as `Echo message`).
+
+    Attributes:
+        id: The ID of the revoke event (not the original message ID).
+        original_message_id: The ID of the message that was deleted.
+        type: The type of the update (always :class:`MessageType.REVOKE`).
+        chat: The chat where the message was deleted (private or group).
+        metadata: The metadata of the message (to which phone number it was sent).
+        to_user: The recipient of the message.
+        timestamp: The timestamp when the message was deleted (in UTC).
+    """
 
     _webhook_field = "smb_message_echoes"
     _messages_field = "message_echoes"

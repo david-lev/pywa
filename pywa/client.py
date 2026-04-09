@@ -40,6 +40,8 @@ from .handlers import (
     IdentityChangeHandler,
     MessageHandler,
     MessageStatusHandler,
+    OutgoingDeletedMessageHandler,
+    OutgoingEditedMessageHandler,
     OutgoingMessageHandler,
     PhoneNumberChangeHandler,
     TemplateCategoryUpdateHandler,
@@ -83,6 +85,8 @@ from .types import (
     MediaURL,
     Message,
     MessageStatus,
+    OutgoingDeletedMessage,
+    OutgoingEditedMessage,
     OutgoingMessage,
     Pagination,
     PhoneNumberChange,
@@ -206,6 +210,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         EditedMessageHandler: EditedMessage,
         DeletedMessageHandler: DeletedMessage,
         OutgoingMessageHandler: OutgoingMessage,
+        OutgoingEditedMessageHandler: OutgoingEditedMessage,
+        OutgoingDeletedMessageHandler: OutgoingDeletedMessage,
     }
 
     def __init__(

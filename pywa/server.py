@@ -24,6 +24,10 @@ _MESSAGE_TYPES: dict[MessageType, type[handlers.Handler]] = {
     MessageType.EDIT: handlers.EditedMessageHandler,
     MessageType.REVOKE: handlers.DeletedMessageHandler,
 }
+_OUTGOING_MESSAGE_TYPES: dict[MessageType, type[handlers.Handler]] = {
+    MessageType.EDIT: handlers.OutgoingEditedMessageHandler,
+    MessageType.REVOKE: handlers.OutgoingDeletedMessageHandler,
+}
 _SYSTEM_TYPES: dict[SystemType | str, type[handlers.Handler]] = {
     SystemType.USER_CHANGED_NUMBER: handlers.PhoneNumberChangeHandler,
     SystemType.USER_CHANGED_USER_ID: handlers.PhoneNumberChangeHandler,  # That's the new system message type for phone number changes, according to BSUID documentation
@@ -709,10 +713,20 @@ def _handle_user_preferences_field(
     return None
 
 
+def _handle_smb_message_echoes_field(
+    wa: "WhatsApp", value: dict
+) -> type[handlers.Handler] | None:
+    """Handle webhook updates with 'smb_message_echoes' field."""
+    return _OUTGOING_MESSAGE_TYPES.get(
+        value["message_echoes"][0]["type"], handlers.OutgoingMessageHandler
+    )
+
+
 _complex_fields_handlers: dict[
     str, Callable[["WhatsApp", dict], type[handlers.Handler] | None]
 ] = {
     "messages": _handle_messages_field,
     "calls": _handle_calls_field,
     "user_preferences": _handle_user_preferences_field,
+    "smb_message_echoes": _handle_smb_message_echoes_field,
 }

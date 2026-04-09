@@ -17,7 +17,7 @@ from .callback import (
     FlowButton,
 )
 from .media import MediaURL, Audio, Document, Image, Sticker, Video
-from .message import Message, EditedMessage, DeletedMessage, OutgoingMessage
+from .message import Message, EditedMessage, DeletedMessage, OutgoingMessage, OutgoingEditedMessage, OutgoingDeletedMessage
 from .message_status import (
     Conversation,
     ConversationCategory,

@@ -83,13 +83,18 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
         "group": [lambda s: s.group_id is not None],
     },
     "edited_message": {
-        "image": [lambda m: m.message is not None],
+        "image": [
+            lambda m: m.message.image is not None,
+            lambda m: m.original_message_id == m.message.id,
+        ],
     },
     "deleted_message": {
         "revoke": [lambda m: m.original_message_id is not None],
     },
     "outgoing_message": {
         "text": [lambda m: m.to_user == m.from_user],
+        "edit": [lambda m: m.original_message_id == m.message.id],
+        "delete": [lambda m: m.original_message_id is not None],
     },
     "template_status_update": {
         "approved": [lambda s: s.new_status == TemplateStatus.APPROVED],
