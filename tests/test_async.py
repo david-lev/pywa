@@ -7,6 +7,7 @@ from pywa.api import GraphAPI as GraphAPISync
 from pywa.handlers import _HandlerDecorators
 from pywa.listeners import _Listeners as ListenersSync
 from pywa.server import Server as ServerSync
+from pywa.types import Audio as AudioSync
 from pywa.types import (
     CallbackButton as CallbackButtonSync,
 )
@@ -28,6 +29,7 @@ from pywa.types import (
 from pywa.types import (
     DeletedMessage as DeletedMessageSync,
 )
+from pywa.types import Document as DocumentSync
 from pywa.types import (
     EditedMessage as EditedMessageSync,
 )
@@ -43,9 +45,8 @@ from pywa.types import (
 from pywa.types import (
     IdentityChange as IdentityChangeSync,
 )
-from pywa.types import (
-    MediaURL as MediaUrlResponseSync,
-)
+from pywa.types import Image as ImageSync
+from pywa.types import MediaURL as MediaUrlResponseSync
 from pywa.types import (
     Message as MessageSync,
 )
@@ -70,6 +71,7 @@ from pywa.types import (
 from pywa.types import (
     Result as ResultSync,
 )
+from pywa.types import Sticker as StickerSync
 from pywa.types import (
     TemplateCategoryUpdate as TemplateCategoryUpdateSync,
 )
@@ -88,6 +90,7 @@ from pywa.types import (
 from pywa.types import (
     UserMarketingPreferences as UserMarketingPreferencesSync,
 )
+from pywa.types import Video as VideoSync
 from pywa.types.base_update import BaseUpdate, BaseUserUpdate
 from pywa.types.flows import FlowDetails as FlowDetailsSync
 from pywa.types.groups import GroupParticipant as GroupParticipantSync
@@ -202,7 +205,12 @@ from pywa_async.types import (
 )
 from pywa_async.types.flows import FlowDetails as FlowDetailsAsync
 from pywa_async.types.groups import GroupParticipant as GroupParticipantAsync
+from pywa_async.types.media import Audio as AudioAsync
+from pywa_async.types.media import Document as DocumentAsync
+from pywa_async.types.media import Image as ImageAsync
 from pywa_async.types.media import Media as MediaAsync
+from pywa_async.types.media import Sticker as StickerAsync
+from pywa_async.types.media import Video as VideoAsync
 from pywa_async.types.sent_update import (
     InitiatedCall as InitiatedCallAsync,
 )
@@ -259,6 +267,11 @@ def overrides() -> list[tuple[type, type]]:
         (FlowDetailsSync, FlowDetailsAsync),
         (MediaUrlResponseSync, MediaUrlResponseAsync),
         (MediaSync, MediaAsync),
+        (ImageSync, ImageAsync),
+        (VideoSync, VideoAsync),
+        (DocumentSync, DocumentAsync),
+        (AudioSync, AudioAsync),
+        (StickerSync, StickerAsync),
         (SentMessageSync, SentMessageAsync),
         (SentTemplateSync, SentTemplateAsync),
         (InitiatedCallSync, InitiatedCallAsync),

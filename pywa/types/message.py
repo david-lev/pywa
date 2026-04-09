@@ -65,7 +65,7 @@ class Message(BaseUserUpdate):
         document: The document of the message.
         audio: The audio of the message.
         voice: The voice note of the message (shorthand for ``audio`` if it's a voice note).
-        caption: The caption of the message (Optional, only available for image video and document messages).
+        caption: The caption of the message media (Optional, only available for image video and document messages).
         reaction: The reaction of the message.
         location: The location of the message.
         contacts: The contacts of the message.
@@ -87,7 +87,6 @@ class Message(BaseUserUpdate):
     sticker: Sticker | None = None
     document: Document | None = None
     audio: Audio | None = None
-    caption: str | None = None
     reaction: Reaction | None = None
     location: Location | None = None
     contacts: tuple[Contact, ...] | None = None
@@ -113,6 +112,14 @@ class Message(BaseUserUpdate):
         if self.audio and self.audio.voice:
             return self.audio
         return None
+
+    @property
+    def caption(self) -> str | None:
+        """The caption of the message media (if any). Only available for image, video and document messages."""
+        try:
+            return self.media.caption
+        except AttributeError:
+            return None
 
     @property
     def message_id_to_reply(self) -> str:
@@ -233,9 +240,6 @@ class Message(BaseUserUpdate):
             forwarded_many_times=context.get("frequently_forwarded", False),
             reply_to_message=ReplyToMessage.from_dict(context)
             if context.get("id")
-            else None,
-            caption=content.get(msg_type, {}).get("caption")
-            if msg_type in cls._media_objs
             else None,
             referral=Referral.from_dict(msg["referral"]) if "referral" in msg else None,
             error=WhatsAppError.from_dict(error=error) if error is not None else None,
@@ -690,7 +694,7 @@ class OutgoingMessage(_Outgoing, Message):
         document: The document of the message.
         audio: The audio of the message.
         voice: The voice note of the message (shorthand for ``audio`` if it's a voice note).
-        caption: The caption of the message (Optional, only available for image video and document messages).
+        caption: The caption of the message media (Optional, only available for image video and document messages).
         reaction: The reaction of the message.
         location: The location of the message.
         contacts: The contacts of the message.

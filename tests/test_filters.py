@@ -81,7 +81,7 @@ FILTERS: dict[str, dict[str, list[tuple[Callable[[_T], _T], Filter]]]] = {
         ],
         "image": [
             (same, fil.image),
-            (lambda m: add_caption(m, "caption"), fil.has_caption),
+            (lambda m: add_caption_to_image(m, "caption"), fil.has_caption),
             (
                 lambda m: modify_img_mime_type(m, "image/jpeg"),
                 fil.mimetypes("image/jpeg"),
@@ -331,8 +331,10 @@ def modify_text(msg: Message, to: str):
     return dataclasses.replace(msg, text=to)
 
 
-def add_caption(msg: Message, caption: str):
-    return dataclasses.replace(msg, caption=caption)
+def add_caption_to_image(msg: Message, caption: str):
+    return dataclasses.replace(
+        msg, image=dataclasses.replace(msg.image, caption=caption)
+    )
 
 
 def modify_img_mime_type(msg: Message, mime_type: str):

@@ -225,12 +225,17 @@ class Media(_MediaActionsAsync, _Media):
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Image(Media, _Image):
     """
-    Represents an received image.
+    Represents a received image.
 
     Attributes:
         id: The ID of the file (can be used to download or re-send the image).
         sha256: The SHA256 hash of the image.
         mime_type: The MIME type of the image.
+        url: The URL of the image (Use :meth:`~pywa.types.media.Media.get_bytes`/:meth:`~pywa.types.media.Media.stream`/:meth:`~pywa.types.media.Media.download` to access the image file).
+        caption: The caption of the image.
+        uploaded_by: Who uploaded the image.
+        uploaded_at: The timestamp when the image was uploaded (in UTC).
+        uploaded_to: The phone ID the image was uploaded to (optional).
     """
 
 
@@ -243,6 +248,11 @@ class Video(Media, _Video):
         id: The ID of the file (can be used to download or re-send the video).
         sha256: The SHA256 hash of the video.
         mime_type: The MIME type of the video.
+        url: The URL of the video (Use :meth:`~pywa.types.media.Media.get_bytes`/:meth:`~pywa.types.media.Media.stream`/:meth:`~pywa.types.media.Media.download` to access the video file).
+        caption: The caption of the video.
+        uploaded_by: Who uploaded the video.
+        uploaded_at: The timestamp when the video was uploaded (in UTC).
+        uploaded_to: The phone ID the video was uploaded to (optional).
     """
 
 
@@ -256,6 +266,10 @@ class Sticker(Media, _Sticker):
         sha256: The SHA256 hash of the sticker.
         mime_type: The MIME type of the sticker.
         animated: Whether the sticker is animated.
+        url: The URL of the sticker (Use :meth:`~pywa.types.media.Media.get_bytes`/:meth:`~pywa.types.media.Media.stream`/:meth:`~pywa.types.media.Media.download` to access the sticker file).
+        uploaded_by: Who uploaded the sticker.
+        uploaded_at: The timestamp when the sticker was uploaded (in UTC).
+        uploaded_to: The phone ID the sticker was uploaded to (optional).
     """
 
 
@@ -269,6 +283,11 @@ class Document(Media, _Document):
         sha256: The SHA256 hash of the document.
         mime_type: The MIME type of the document.
         filename: The filename of the document (optional).
+        url: The URL of the document (Use :meth:`~pywa.types.media.Media.get_bytes`/:meth:`~pywa.types.media.Media.stream`/:meth:`~pywa.types.media.Media.download` to access the document file).
+        caption: The caption of the document.
+        uploaded_by: Who uploaded the document.
+        uploaded_at: The timestamp when the document was uploaded (in UTC).
+        uploaded_to: The phone ID the document was uploaded to (optional).
     """
 
 
@@ -282,6 +301,10 @@ class Audio(Media, _Audio):
         sha256: The SHA256 hash of the audio.
         mime_type: The MIME type of the audio.
         voice: Whether the audio is a voice message or just an audio file.
+        url: The URL of the audio (Use :meth:`~pywa.types.media.Media.get_bytes`/:meth:`~pywa.types.media.Media.stream`/:meth:`~pywa.types.media.Media.download` to access the audio file).
+        uploaded_by: Who uploaded the audio.
+        uploaded_at: The timestamp when the audio was uploaded (in UTC).
+        uploaded_to: The phone ID the audio was uploaded to (optional).
     """
 
 

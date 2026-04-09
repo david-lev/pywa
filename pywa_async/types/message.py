@@ -65,7 +65,7 @@ class Message(BaseUserUpdateAsync, _Message):
         document: The document of the message.
         audio: The audio of the message.
         voice: The voice note of the message (shorthand for ``audio`` if it's a voice note).
-        caption: The caption of the message (Optional, only available for image video and document messages).
+        caption: The caption of the message media (Optional, only available for image video and document messages).
         reaction: The reaction of the message.
         location: The location of the message.
         contacts: The contacts of the message.
@@ -488,7 +488,7 @@ class OutgoingMessage(_Outgoing, Message):
         document: The document of the message.
         audio: The audio of the message.
         voice: The voice note of the message (shorthand for ``audio`` if it's a voice note).
-        caption: The caption of the message (Optional, only available for image video and document messages).
+        caption: The caption of the message media (Optional, only available for image video and document messages).
         reaction: The reaction of the message.
         location: The location of the message.
         contacts: The contacts of the message.

@@ -358,16 +358,16 @@ Available Handlers
      - :class:`~pywa.types.calls.EditedMessage`
    * - :meth:`~pywa.client.WhatsApp.on_deleted_message`
      - :class:`DeletedMessageHandler`
-     - :class:`~pywa.types.message.RevokedMessage`
+     - :class:`~pywa.types.message.DeletedMessage`
    * - :meth:`~pywa.client.WhatsApp.on_outgoing_message`
      - :class:`OutgoingMessageHandler`
-     - :class:`~pywa.types.OutgoingMessage`
+     - :class:`~pywa.types.message.OutgoingMessage`
    * - :meth:`~pywa.client.WhatsApp.on_outgoing_edited_message`
      - :class:`OutgoingEditedMessageHandler`
-     - :class:`~pywa.types.OutgoingEditedMessage`
+     - :class:`~pywa.types.message.OutgoingEditedMessage`
    * - :meth:`~pywa.client.WhatsApp.on_outgoing_deleted_message`
      - :class:`OutgoingDeletedMessageHandler`
-     - :class:`~pywa.types.OutgoingDeletedMessage`
+     - :class:`~pywa.types.message.OutgoingDeletedMessage`
    * - :meth:`~pywa.client.WhatsApp.on_raw_update`
      - :class:`RawUpdateHandler`
      - :class:`~pywa.types.base_update.RawUpdate`

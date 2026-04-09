@@ -76,10 +76,10 @@ The supported fields are automatically handled by PyWa and converted into Python
      - A call permission update (permission granted or denied)
    * - :py:class:`~pywa.types.message.UserMarketingPreferences`
      - A user marketing preferences update (e.g. opted in, opted out)
-   * - :py:class:`~pywa.types.calls.EditedMessage`
+   * - :py:class:`~pywa.types.message.EditedMessage`
      - A user edited a message
    * - :py:class:`~pywa.types.message.DeletedMessage`
-     - A user revoked (deleted) a message
+     - A user deleted (revoked) a message
    * - :py:class:`~pywa.types.message.OutgoingMessage`
      - A message sent from the business app (only available in Coexistence)
    * - :py:class:`~pywa.types.message.OutgoingEditedMessage`
