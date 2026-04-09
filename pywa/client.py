@@ -30,6 +30,7 @@ from .handlers import (
     CallPermissionUpdateHandler,
     CallStatusHandler,
     CallTerminateHandler,
+    DeletedMessageHandler,
     EditedMessageHandler,
     FlowCompletionHandler,
     FlowRequestCallbackWrapper,
@@ -40,7 +41,6 @@ from .handlers import (
     MessageHandler,
     MessageStatusHandler,
     PhoneNumberChangeHandler,
-    RevokedMessageHandler,
     TemplateCategoryUpdateHandler,
     TemplateComponentsUpdateHandler,
     TemplateQualityUpdateHandler,
@@ -69,6 +69,7 @@ from .types import (
     Command,
     CommerceSettings,
     Contact,
+    DeletedMessage,
     EditedMessage,
     FlowButton,
     FlowCategory,
@@ -86,7 +87,6 @@ from .types import (
     ProductsSection,
     QRCode,
     Result,
-    RevokedMessage,
     SectionList,
     TemplateCategoryUpdate,
     TemplateComponentsUpdate,
@@ -202,7 +202,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         CallStatusHandler: CallStatus,
         CallPermissionUpdateHandler: CallPermissionUpdate,
         EditedMessageHandler: EditedMessage,
-        RevokedMessageHandler: RevokedMessage,
+        DeletedMessageHandler: DeletedMessage,
     }
 
     def __init__(

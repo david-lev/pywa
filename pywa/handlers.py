@@ -58,7 +58,7 @@ __all__ = [
     "CallPermissionUpdateHandler",
     "UserMarketingPreferencesHandler",
     "EditedMessageHandler",
-    "RevokedMessageHandler",
+    "DeletedMessageHandler",
 ]
 
 import abc
@@ -90,6 +90,7 @@ from .types import (
     CallPermissionUpdate,
     CallStatus,
     CallTerminate,
+    DeletedMessage,
     EditedMessage,
     FlowRequest,
     FlowResponse,
@@ -98,7 +99,6 @@ from .types import (
     Message,
     MessageStatus,
     PhoneNumberChange,
-    RevokedMessage,
     TemplateCategoryUpdate,
     TemplateComponentsUpdate,
     TemplateQualityUpdate,
@@ -128,8 +128,8 @@ _MessageCallback: TypeAlias = Callable[["WhatsApp", Message], Any | Awaitable[An
 _EditedMessageCallback: TypeAlias = Callable[
     ["WhatsApp", EditedMessage], Any | Awaitable[Any]
 ]
-_RevokedMessageCallback: TypeAlias = Callable[
-    ["WhatsApp", RevokedMessage], Any | Awaitable[Any]
+_DeletedMessageCallback: TypeAlias = Callable[
+    ["WhatsApp", DeletedMessage], Any | Awaitable[Any]
 ]
 _CallbackButtonCallback: TypeAlias = Callable[
     ["WhatsApp", CallbackButton], Any | Awaitable[Any]
@@ -892,30 +892,30 @@ class EditedMessageHandler(Handler[EditedMessage]):
         super().__init__(callback=callback, filters=filters, priority=priority)
 
 
-class RevokedMessageHandler(Handler[RevokedMessage]):
+class DeletedMessageHandler(Handler[DeletedMessage]):
     """
-    Handler for :class:`~pywa.types.RevokedMessage` updates (When a user revokes a message).
+    Handler for :class:`~pywa.types.DeletedMessage` updates (When a user revokes a message).
 
-    - You can use the :func:`~pywa.client.WhatsApp.on_revoked_message` decorator to register a handler for this type.
+    - You can use the :func:`~pywa.client.WhatsApp.on_deleted_message` decorator to register a handler for this type.
 
     Example:
 
         >>> from pywa import WhatsApp
         >>> wa = WhatsApp(...)
-        >>> print_revoked_message = lambda _, msg: print(msg)
-        >>> wa.add_handlers(RevokedMessageHandler(print_revoked_message))
+        >>> print_deleted_message = lambda _, msg: print(msg)
+        >>> wa.add_handlers(DeletedMessageHandler(print_deleted_message))
 
     Args:
-        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.RevokedMessage` as positional arguments)
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.DeletedMessage` as positional arguments)
         filters: The filters to apply to the handler
         priority: The priority of the handler (default: ``0``)
     """
 
-    _update = RevokedMessage
+    _update = DeletedMessage
 
     def __init__(
         self,
-        callback: _RevokedMessageCallback,
+        callback: _DeletedMessageCallback,
         filters: Filter = None,
         priority: int = 0,
     ):
@@ -2200,46 +2200,46 @@ class _HandlerDecorators:
 
         return deco
 
-    def on_revoked_message(
+    def on_deleted_message(
         self: WhatsApp | Filter = None,
         filters: Filter = None,
         priority: int = 0,
     ) -> (
-        Callable[[_RevokedMessageCallback], _RevokedMessageCallback]
-        | _RevokedMessageCallback
+        Callable[[_DeletedMessageCallback], _DeletedMessageCallback]
+        | _DeletedMessageCallback
     ):
         """
-        Decorator to register a function as a callback for incoming :class:`~pywa.types.RevokedMessage` (when a user deletes a message).
+        Decorator to register a function as a callback for incoming :class:`~pywa.types.DeletedMessage` (when a user deletes a message).
 
-        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.RevokedMessageHandler`.
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.DeletedMessageHandler`.
 
         Example:
 
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
-            >>> @wa.on_revoked_message
-            ... def revoked_message_handler(client: WhatsApp, revoked_msg: types.RevokedMessage):
-            ...     print(f"The user {revoked_msg.from_user.wa_id} just deleted their message with id {revoked_msg.original_message_id}")
+            >>> @wa.on_deleted_message
+            ... def deleted_message_handler(client: WhatsApp, delete_msg: types.DeletedMessage):
+            ...     print(f"The user {delete_msg.from_user.wa_id} just deleted their message with id {delete_msg.original_message_id}")
 
         Args:
-            filters: Filters to apply to the incoming revoked messages.
+            filters: Filters to apply to the incoming deleted messages.
             priority: The priority of the handler (default: ``0``).
         """
 
         if (
             clb := _registered_without_parentheses(
                 self=self,
-                handler_type=RevokedMessageHandler,
+                handler_type=DeletedMessageHandler,
                 filters=filters,
                 priority=priority,
             )
         ) is not None:
             return clb
 
-        def deco(callback: _RevokedMessageCallback) -> _RevokedMessageCallback:
+        def deco(callback: _DeletedMessageCallback) -> _DeletedMessageCallback:
             return _registered_with_parentheses(
                 self=self,
-                handler_type=RevokedMessageHandler,
+                handler_type=DeletedMessageHandler,
                 callback=callback,
                 filters=filters,
                 priority=priority,

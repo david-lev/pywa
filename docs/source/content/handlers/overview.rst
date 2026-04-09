@@ -356,8 +356,8 @@ Available Handlers
    * - :meth:`~pywa.client.WhatsApp.on_edited_message`
      - :class:`EditedMessageHandler`
      - :class:`~pywa.types.calls.EditedMessage`
-   * - :meth:`~pywa.client.WhatsApp.on_revoked_message`
-     - :class:`RevokedMessageHandler`
+   * - :meth:`~pywa.client.WhatsApp.on_deleted_message`
+     - :class:`DeletedMessageHandler`
      - :class:`~pywa.types.message.RevokedMessage`
    * - :meth:`~pywa.client.WhatsApp.on_raw_update`
      - :class:`RawUpdateHandler`

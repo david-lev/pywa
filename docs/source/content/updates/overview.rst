@@ -78,7 +78,7 @@ The supported fields are automatically handled by PyWa and converted into Python
      - A user marketing preferences update (e.g. opted in, opted out)
    * - :py:class:`~pywa.types.calls.EditedMessage`
      - A user edited a message
-   * - :py:class:`~pywa.types.message.RevokedMessage`
+   * - :py:class:`~pywa.types.message.DeletedMessage`
      - A user revoked (deleted) a message
 
 **Account-related updates:**
@@ -203,6 +203,6 @@ All updates share common methods and properties:
     template_quality_update
     template_components_update
     edited_message
-    revoked_message
+    deleted_message
     raw_update
     common_methods

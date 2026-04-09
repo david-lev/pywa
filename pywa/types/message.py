@@ -4,7 +4,7 @@ import pathlib
 
 """This module contains the types related to messages."""
 
-__all__ = ["Message", "EditedMessage", "RevokedMessage"]
+__all__ = ["Message", "EditedMessage", "DeletedMessage"]
 
 import dataclasses
 import datetime
@@ -606,18 +606,18 @@ class EditedMessage(BaseUserUpdate):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class RevokedMessage(BaseUserUpdate):
+class DeletedMessage(BaseUserUpdate):
     """
-    A message that has been revoked (deleted) by a user.
+    A message that has been deleted (revoked) by a user.
 
     Attributes:
         id: The ID of the revoke event (not the original message ID).
-        original_message_id: The ID of the message that was revoked.
+        original_message_id: The ID of the message that was deleted.
         type: The type of the update (always :class:`MessageType.REVOKE`).
-        chat: The chat where the message was revoked (private or group).
+        chat: The chat where the message was deleted (private or group).
         metadata: The metadata of the message (to which phone number it was sent).
-        from_user: The user who revoked the message.
-        timestamp: The timestamp when the message was revoked (in UTC).
+        from_user: The user who deleted the message.
+        timestamp: The timestamp when the message was deleted (in UTC).
     """
 
     type: MessageType
@@ -627,7 +627,7 @@ class RevokedMessage(BaseUserUpdate):
     _webhook_field = "messages"
 
     @classmethod
-    def from_update(cls, client: WhatsApp, update: RawUpdate) -> RevokedMessage:
+    def from_update(cls, client: WhatsApp, update: RawUpdate) -> DeletedMessage:
         msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
             "messages"
         ][0]

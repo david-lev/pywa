@@ -85,7 +85,7 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
     "edited_message": {
         "image": [lambda m: m.message is not None],
     },
-    "revoked_message": {
+    "deleted_message": {
         "revoke": [lambda m: m.original_message_id is not None],
     },
     "template_status_update": {

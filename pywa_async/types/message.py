@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__all__ = ["Message", "EditedMessage", "RevokedMessage"]
+__all__ = ["Message", "EditedMessage", "DeletedMessage"]
 
 import dataclasses
 import datetime
@@ -11,13 +11,13 @@ from typing import TYPE_CHECKING, AsyncGenerator, ClassVar, Iterable
 
 from pywa.types.message import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.message import (
+    DeletedMessage as _DeletedMessage,
+)  # noqa MUST BE IMPORTED FIRST
+from pywa.types.message import (
     EditedMessage as _EditedMessage,
 )  # noqa MUST BE IMPORTED FIRST
 from pywa.types.message import (
     Message as _Message,
-)  # noqa MUST BE IMPORTED FIRST
-from pywa.types.message import (
-    RevokedMessage as _RevokedMessage,
 )  # noqa MUST BE IMPORTED FIRST
 
 from .base_update import BaseUserUpdateAsync  # noqa
@@ -435,16 +435,16 @@ class EditedMessage(BaseUserUpdateAsync, _EditedMessage):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class RevokedMessage(BaseUserUpdateAsync, _RevokedMessage):
+class DeletedMessage(BaseUserUpdateAsync, _DeletedMessage):
     """
-    A message that has been revoked (deleted) by a user.
+    A message that has been deleted (revoked) by a user.
 
     Attributes:
         id: The ID of the revoke event (not the original message ID).
-        original_message_id: The ID of the message that was revoked.
+        original_message_id: The ID of the message that was deleted.
         type: The type of the update (always :class:`MessageType.REVOKE`).
-        chat: The chat where the message was revoked (private or group).
+        chat: The chat where the message was deleted (private or group).
         metadata: The metadata of the message (to which phone number it was sent).
-        from_user: The user who revoked the message.
-        timestamp: The timestamp when the message was revoked (in UTC).
+        from_user: The user who deleted the message.
+        timestamp: The timestamp when the message was deleted (in UTC).
     """

@@ -45,6 +45,7 @@ from .handlers import (
     CallPermissionUpdateHandler,
     CallStatusHandler,
     CallTerminateHandler,
+    DeletedMessageHandler,
     EditedMessageHandler,
     FlowCompletionHandler,
     GroupMessageStatusesHandler,
@@ -53,7 +54,6 @@ from .handlers import (
     MessageHandler,
     MessageStatusHandler,
     PhoneNumberChangeHandler,
-    RevokedMessageHandler,
     TemplateCategoryUpdateHandler,
     TemplateComponentsUpdateHandler,
     TemplateQualityUpdateHandler,
@@ -79,6 +79,7 @@ from .types import (
     Command,
     CommerceSettings,
     Contact,
+    DeletedMessage,
     EditedMessage,
     FlowButton,
     FlowCompletion,
@@ -96,7 +97,6 @@ from .types import (
     QRCode,
     QRCodeImageType,
     Result,
-    RevokedMessage,
     SectionList,
     StorageConfiguration,
     Template,
@@ -200,7 +200,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         CallStatusHandler: CallStatus,
         CallPermissionUpdateHandler: CallPermissionUpdate,
         EditedMessageHandler: EditedMessage,
-        RevokedMessageHandler: RevokedMessage,
+        DeletedMessageHandler: DeletedMessage,
     }
     """A dictionary that maps handler types to their respective update constructors."""
 
