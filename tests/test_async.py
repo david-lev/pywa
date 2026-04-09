@@ -26,6 +26,12 @@ from pywa.types import (
     CallTerminate as CallTerminateSync,
 )
 from pywa.types import (
+    DeletedMessage as DeletedMessageSync,
+)
+from pywa.types import (
+    EditedMessage as EditedMessageSync,
+)
+from pywa.types import (
     FlowCompletion as FlowCompletionSync,
 )
 from pywa.types import (
@@ -45,6 +51,9 @@ from pywa.types import (
 )
 from pywa.types import (
     MessageStatus as MessageStatusSync,
+)
+from pywa.types import (
+    OutgoingMessage as OutgoingMessageSync,
 )
 from pywa.types import (
     PhoneNumberChange as PhoneNumberChangeSync,
@@ -123,6 +132,12 @@ from pywa_async.types import (
     CallTerminate as CallTerminateAsync,
 )
 from pywa_async.types import (
+    DeletedMessage as DeletedMessageAsync,
+)
+from pywa_async.types import (
+    EditedMessage as EditedMessageAsync,
+)
+from pywa_async.types import (
     FlowCompletion as FlowCompletionAsync,
 )
 from pywa_async.types import (
@@ -142,6 +157,9 @@ from pywa_async.types import (
 )
 from pywa_async.types import (
     MessageStatus as MessageStatusAsync,
+)
+from pywa_async.types import (
+    OutgoingMessage as OutgoingMessageAsync,
 )
 from pywa_async.types import (
     PhoneNumberChange as PhoneNumberChangeAsync,
@@ -215,6 +233,9 @@ def overrides() -> list[tuple[type, type]]:
         (TemplateQualityUpdateSync, TemplateQualityUpdateAsync),
         (TemplateComponentsUpdateSync, TemplateComponentsUpdateAsync),
         (UserMarketingPreferencesSync, UserMarketingPreferencesAsync),
+        (EditedMessageSync, EditedMessageAsync),
+        (DeletedMessageSync, DeletedMessageAsync),
+        (OutgoingMessageSync, OutgoingMessageAsync),
         (CallConnectSync, CallConnectAsync),
         (CallTerminateSync, CallTerminateAsync),
         (CallStatusSync, CallStatusAsync),
@@ -284,6 +305,9 @@ def test_all_methods_are_overwritten_in_async(overrides):
             _HandlerDecorators.on_call_status,
             _HandlerDecorators.on_call_permission_update,
             _HandlerDecorators.on_user_marketing_preferences,
+            _HandlerDecorators.on_edited_message,
+            _HandlerDecorators.on_deleted_message,
+            _HandlerDecorators.on_outgoing_message,
             _HandlerDecorators.on_raw_update,
             ListenersSync._remove_listener,
             BaseUpdate.from_update,
@@ -313,6 +337,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
         "_register_flow_callback_wrapper",
         "_api_cls",
         "_usr_cls",
+        "_msg_cls",
         "_group_participant_cls",
         "_httpx_client",
         "_flow_req_cls",

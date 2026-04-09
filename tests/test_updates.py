@@ -82,6 +82,15 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
         "with_tracker": [lambda s: s.tracker is not None],
         "group": [lambda s: s.group_id is not None],
     },
+    "edited_message": {
+        "image": [lambda m: m.message is not None],
+    },
+    "deleted_message": {
+        "revoke": [lambda m: m.original_message_id is not None],
+    },
+    "outgoing_message": {
+        "text": [lambda m: m.to_user == m.from_user],
+    },
     "template_status_update": {
         "approved": [lambda s: s.new_status == TemplateStatus.APPROVED],
         "rejected": [

@@ -1,0 +1,46 @@
+{
+  "text": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "<WHATSAPP_BUSINESS_ACCOUNT_ID>",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "972123456789",
+                "phone_number_id": "1122334455667"
+              },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321",
+                  "user_id": "US.13491208655302741918",
+                  "parent_user_id": "US.ENT.11815799212886844830"
+                }
+              ],
+              "message_echoes": [
+                {
+                  "from": "<BUSINESS_DISPLAY_PHONE_NUMBER>",
+                  "to": "<WHATSAPP_USER_PHONE_NUMBER>",
+                  "to_user_id": "<BSUID>",
+                  "to_parent_user_id": "<PARENT_BSUID>",
+                  "id": "<WHATSAPP_MESSAGE_ID>",
+                  "timestamp": "1697043223",
+                  "type": "text",
+                  "text": {
+                    "body": "Test message"
+                  }
+                }
+              ]
+            },
+            "field": "smb_message_echoes"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -3,6 +3,8 @@ from __future__ import annotations
 import dataclasses
 import enum
 
+from .user import User
+
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Chat:
@@ -16,6 +18,14 @@ class Chat:
 
     id: str
     type: ChatType
+
+    @classmethod
+    def from_message(cls, msg: dict, user: User) -> Chat:
+        return (
+            cls(id=msg["group_id"], type=ChatType.GROUP)
+            if "group_id" in msg
+            else Chat(id=user.preferred_id, type=ChatType.PRIVATE)
+        )
 
 
 class ChatType(enum.Enum):

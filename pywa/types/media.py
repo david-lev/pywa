@@ -350,6 +350,26 @@ class ArrivedMedia(Media):
         return cls.from_dict(client=client, data=media)
 
 
+class _WithCaption:
+    @classmethod
+    def from_dict(
+        cls: type[ArrivedMedia],
+        client: WhatsApp,
+        data: dict,
+        arrived_at: datetime.datetime | None = None,
+        received_to: str | None = None,
+    ) -> ArrivedMedia:
+        return cls(
+            **_get_arrived_media_dict(
+                client=client,
+                data=data,
+                arrived_at=arrived_at,
+                received_to=received_to,
+                additional_field="caption",
+            )
+        )
+
+
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Image(ArrivedMedia):
     """
@@ -360,6 +380,26 @@ class Image(ArrivedMedia):
         sha256: The SHA256 hash of the image.
         mime_type: The MIME type of the image.
     """
+
+    caption: str | None
+
+    @classmethod
+    def from_dict(
+        cls,
+        client: WhatsApp,
+        data: dict,
+        arrived_at: datetime.datetime | None = None,
+        received_to: str | None = None,
+    ) -> Image:
+        return cls(
+            **_get_arrived_media_dict(
+                client=client,
+                data=data,
+                arrived_at=arrived_at,
+                received_to=received_to,
+                additional_field="caption",
+            )
+        )
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -372,6 +412,44 @@ class Video(ArrivedMedia):
         sha256: The SHA256 hash of the video.
         mime_type: The MIME type of the video.
     """
+
+    caption: str | None
+
+    @classmethod
+    def from_dict(
+        cls,
+        client: WhatsApp,
+        data: dict,
+        arrived_at: datetime.datetime | None = None,
+        received_to: str | None = None,
+    ) -> Video:
+        return cls(
+            **_get_arrived_media_dict(
+                client=client,
+                data=data,
+                arrived_at=arrived_at,
+                received_to=received_to,
+                additional_field="caption",
+            )
+        )
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class Document(ArrivedMedia):
+    """
+    Represents a document.
+
+    Attributes:
+        id: The ID of the file (can be used to download or re-send the document).
+        sha256: The SHA256 hash of the document.
+        mime_type: The MIME type of the document.
+        filename: The filename of the document (optional).
+    """
+
+    @property
+    def extension(self) -> str | None:
+        """Gets the extension of the document (with dot.)"""
+        return pathlib.Path(self.filename or "").suffix or super().extension
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -405,24 +483,6 @@ class Sticker(ArrivedMedia):
                 additional_field="animated",
             )
         )
-
-
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Document(ArrivedMedia):
-    """
-    Represents a document.
-
-    Attributes:
-        id: The ID of the file (can be used to download or re-send the document).
-        sha256: The SHA256 hash of the document.
-        mime_type: The MIME type of the document.
-        filename: The filename of the document (optional).
-    """
-
-    @property
-    def extension(self) -> str | None:
-        """Gets the extension of the document (with dot.)"""
-        return pathlib.Path(self.filename or "").suffix or super().extension
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)

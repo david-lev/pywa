@@ -373,6 +373,42 @@ Calls
    * - :meth:`~WhatsApp.terminate_call`
      - Terminate a call
 
+Groups
+------
+
+.. list-table::
+   :widths: 40 60
+   :header-rows: 1
+
+   * - Method
+     - Description
+   * - :meth:`~WhatsApp.create_group`
+     - Create a group
+   * - :meth:`~WhatsApp.get_group`
+     - Get details of a group
+   * - :meth:`~WhatsApp.get_groups`
+     - List all groups
+   * - :meth:`~WhatsApp.delete_group`
+     - Delete a group
+   * - :meth:`~WhatsApp.get_group_join_requests`
+     - Get pending group join requests
+   * - :meth:`~WhatsApp.approve_group_join_request`
+     - Approve a group join request
+   * - :meth:`~WhatsApp.reject_group_join_requests`
+     - Reject a group join request
+   * - :meth:`~WhatsApp.update_group_settings`
+     - Update group details (name, description, picture, etc.)
+   * - :meth:`~WhatsApp.remove_group_participants`
+     - Remove participants from a group
+   * - :meth:`~WhatsApp.get_group_invite_link`
+     - Get group invite link
+   * - :meth:`~WhatsApp.reset_group_invite_link`
+     - Reset group invite link
+   * - :meth:`~WhatsApp.pin_message`
+     - Pin a message in a group
+   * - :meth:`~WhatsApp.unpin_message`
+     - Unpin a message in a group
+
 
 Server
 ------

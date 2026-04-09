@@ -255,6 +255,22 @@ FILTERS: dict[str, dict[str, list[tuple[Callable[[_T], _T], Filter]]]] = {
             (same, fil.flow_completion),
         ]
     },
+    "edited_message": {
+        "image": [
+            (same, fil.image),
+        ]
+    },
+    "deleted_message": {
+        "revoke": [
+            (same, fil.new(lambda _, m: m.id != m.original_message_id)),
+        ]
+    },
+    "outgoing_message": {
+        "text": [
+            (same, fil.text),
+            (same, fil.new(lambda _, m: m.to_user == m.from_user)),
+        ]
+    },
 }
 
 
@@ -380,15 +396,13 @@ def modify_send_to(msg: Message, wa_id: str):
 def modify_replies_to(msg: Message, message_id: str):
     return dataclasses.replace(
         msg,
-        reply_to_message=dataclasses.replace(
-            msg.reply_to_message, message_id=message_id
-        ),
+        reply_to_message=dataclasses.replace(msg.reply_to_message, id=message_id),
     )
 
 
 def modify_referred_product(msg: Message, product: str):
     reply_to_msg = ReplyToMessage(
-        message_id=msg.id,
+        id=msg.id,
         from_user_id=msg.from_user.wa_id,
         referred_product=ReferredProduct(catalog_id="123", sku=product),
     )
