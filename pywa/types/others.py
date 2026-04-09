@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import functools
 import time
+import warnings
 
 from ..errors import WhatsAppError
 from .user import BaseUser
@@ -399,19 +400,28 @@ class ReplyToMessage:
     Represents a message that was replied to.
 
     Attributes:
-        message_id: The ID of the message that was replied to.
+        id: The ID of the message that was replied to.
         from_user_id: The ID of the user who sent the message that was replied to.
         referred_product: Referred product describing the product the user is requesting information about.
     """
 
-    message_id: str
+    id: str
     from_user_id: str | None
     referred_product: ReferredProduct | None
+
+    @property
+    def message_id(self) -> str:
+        warnings.warn(
+            "ReplyToMessage.message_id is deprecated, use ReplyToMessage.id instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.id
 
     @classmethod
     def from_dict(cls, data: dict) -> ReplyToMessage:
         return cls(
-            message_id=data["id"],
+            id=data["id"],
             from_user_id=data.get("from"),
             referred_product=ReferredProduct.from_dict(data["referred_product"])
             if "referred_product" in data

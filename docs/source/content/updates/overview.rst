@@ -80,6 +80,8 @@ The supported fields are automatically handled by PyWa and converted into Python
      - A user edited a message
    * - :py:class:`~pywa.types.message.DeletedMessage`
      - A user revoked (deleted) a message
+   * - :py:class:`~pywa.types.message.OutgoingMessage`
+     - A message sent from the business app (only available in Coexistence)
 
 **Account-related updates:**
 
@@ -204,5 +206,6 @@ All updates share common methods and properties:
     template_components_update
     edited_message
     deleted_message
+    outgoing_message
     raw_update
     common_methods

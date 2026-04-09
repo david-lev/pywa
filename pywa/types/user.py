@@ -87,10 +87,9 @@ class User(BaseUser):
 
     @classmethod
     def from_contact(cls, data: dict, client: WhatsApp) -> User:
-        user_id = data["user_id"]
         return cls(
             _client=client,
-            bsuid=user_id,
+            bsuid=data["user_id"],
             wa_id=data.get("wa_id") or None,  # avoid empty string
             name=data["profile"].get("name"),
             username=data["profile"].get("username"),

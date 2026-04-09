@@ -22,6 +22,8 @@ Common filters
 .. autoattribute:: pywa.filters.phone_number_change
 .. autoattribute:: pywa.filters.identity_change
 
+.. autoattribute:: pywa.filters.private
+.. autoattribute:: pywa.filters.group
 .. autofunction:: sent_to
 .. autoattribute:: pywa.filters.sent_to_me
 .. autofunction:: from_users

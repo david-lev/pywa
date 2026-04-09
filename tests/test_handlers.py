@@ -35,7 +35,7 @@ CallbackButtonOnlyDataIsNeeded = functools.partial(
     ),
     timestamp=datetime.datetime.now(datetime.timezone.utc),
     reply_to_message=types.ReplyToMessage(
-        message_id="123",
+        id="123",
         from_user_id="1234567890",
         referred_product=None,
     ),

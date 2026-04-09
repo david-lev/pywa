@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__all__ = ["Message", "EditedMessage", "DeletedMessage"]
+__all__ = ["Message", "EditedMessage", "DeletedMessage", "OutgoingMessage"]
 
 import dataclasses
 import datetime
@@ -27,6 +27,7 @@ from .others import (
     MessageType,
     ProductsSection,
 )
+from .user import User
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
@@ -448,3 +449,43 @@ class DeletedMessage(BaseUserUpdateAsync, _DeletedMessage):
         from_user: The user who deleted the message.
         timestamp: The timestamp when the message was deleted (in UTC).
     """
+
+
+class OutgoingMessage(Message):
+    """
+    A message that is sent by the business (Also known as `Echo message`).
+
+    Attributes:
+        id: The message ID (If you want to reply to the message, use ``message_id_to_reply`` instead).
+        metadata: The metadata of the message (which phone number was sent from).
+        type: The message type (See :class:`MessageType`).
+        to_user: The recipient of the message.
+        chat: The chat where the message was sent to (private or group).
+        timestamp: The timestamp when the message was sent (in UTC).
+        reply_to_message: The message to which this message is a reply (if any).
+        forwarded: Whether the message was forwarded.
+        forwarded_many_times: Whether the message was forwarded more than 5 times. (when ``True``, ``forwarded`` will be ``True`` as well)
+        text: The text of the message.
+        image: The image of the message.
+        video: The video of the message.
+        sticker: The sticker of the message.
+        document: The document of the message.
+        audio: The audio of the message.
+        voice: The voice note of the message (shorthand for ``audio`` if it's a voice note).
+        caption: The caption of the message (Optional, only available for image video and document messages).
+        reaction: The reaction of the message.
+        location: The location of the message.
+        contacts: The contacts of the message.
+        order: The order of the message.
+        unsupported: The unsupported content of the message.
+        error: The error of the message.
+        shared_data: Shared data between handlers.
+    """
+
+    @property
+    def to_user(self) -> User:
+        """The recipient of the message."""
+        return self.from_user
+
+    _webhook_field = "smb_message_echoes"
+    _messages_field = "message_echoes"

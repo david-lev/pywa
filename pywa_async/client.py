@@ -53,6 +53,7 @@ from .handlers import (
     IdentityChangeHandler,
     MessageHandler,
     MessageStatusHandler,
+    OutgoingMessageHandler,
     PhoneNumberChangeHandler,
     TemplateCategoryUpdateHandler,
     TemplateComponentsUpdateHandler,
@@ -91,6 +92,7 @@ from .types import (
     MediaURL,
     Message,
     MessageStatus,
+    OutgoingMessage,
     Pagination,
     PhoneNumberChange,
     ProductsSection,
@@ -201,6 +203,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         CallPermissionUpdateHandler: CallPermissionUpdate,
         EditedMessageHandler: EditedMessage,
         DeletedMessageHandler: DeletedMessage,
+        OutgoingMessageHandler: OutgoingMessage,
     }
     """A dictionary that maps handler types to their respective update constructors."""
 

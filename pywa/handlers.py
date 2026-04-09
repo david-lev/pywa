@@ -59,6 +59,7 @@ __all__ = [
     "UserMarketingPreferencesHandler",
     "EditedMessageHandler",
     "DeletedMessageHandler",
+    "OutgoingMessageHandler",
 ]
 
 import abc
@@ -98,6 +99,7 @@ from .types import (
     IdentityChange,
     Message,
     MessageStatus,
+    OutgoingMessage,
     PhoneNumberChange,
     TemplateCategoryUpdate,
     TemplateComponentsUpdate,
@@ -130,6 +132,9 @@ _EditedMessageCallback: TypeAlias = Callable[
 ]
 _DeletedMessageCallback: TypeAlias = Callable[
     ["WhatsApp", DeletedMessage], Any | Awaitable[Any]
+]
+_OutgoingMessageCallback: TypeAlias = Callable[
+    ["WhatsApp", OutgoingMessage], Any | Awaitable[Any]
 ]
 _CallbackButtonCallback: TypeAlias = Callable[
     ["WhatsApp", CallbackButton], Any | Awaitable[Any]
@@ -916,6 +921,36 @@ class DeletedMessageHandler(Handler[DeletedMessage]):
     def __init__(
         self,
         callback: _DeletedMessageCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class OutgoingMessageHandler(Handler[OutgoingMessage]):
+    """
+    Handler for :class:`~pywa.types.OutgoingMessage` updates (When you send a message using the WhatsApp Business App)
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_outgoing_message` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_outgoing_message = lambda _, msg: print(msg)
+        >>> wa.add_handlers(OutgoingMessageHandler(print_outgoing_message))
+
+    Args:
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.OutgoingMessage` as positional arguments)
+        filters: The filters to apply to the handler
+        priority: The priority of the handler (default: ``0``)
+    """
+
+    _update = OutgoingMessage
+
+    def __init__(
+        self,
+        callback: _OutgoingMessageCallback,
         filters: Filter = None,
         priority: int = 0,
     ):
@@ -2240,6 +2275,53 @@ class _HandlerDecorators:
             return _registered_with_parentheses(
                 self=self,
                 handler_type=DeletedMessageHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_outgoing_message(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_OutgoingMessageCallback], _OutgoingMessageCallback]
+        | _OutgoingMessageCallback
+    ):
+        """
+        Decorator to register a function as a callback for outgoing :class:`~pywa.types.OutgoingMessage` (when a message is sent by the business).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.OutgoingMessageHandler`.
+
+        Example:
+
+            >>> from pywa import WhatsApp, types, filters
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_outgoing_message(filters.text)
+            ... def outgoing_message_handler(client: WhatsApp, msg: types.OutgoingMessage):
+            ...     print(f"You just sent a message to {msg.to_user.wa_id} with content: {msg.text}")
+
+        Args:
+            filters: Filters to apply to the outgoing messages.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=OutgoingMessageHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(callback: _OutgoingMessageCallback) -> _OutgoingMessageCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=OutgoingMessageHandler,
                 callback=callback,
                 filters=filters,
                 priority=priority,

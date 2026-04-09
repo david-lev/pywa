@@ -16,6 +16,8 @@ __all__ = [
     "new",
     "true",
     "false",
+    "private",
+    "group",
     "update_id",
     "forwarded",
     "forwarded_many_times",
@@ -389,7 +391,7 @@ def from_countries(
     >>> from_countries("972", "1", "+972", "US", "IL") # Israel and USA
     """
     codes = tuple(str(p) for p in prefixes_or_codes)
-    country_codes = [c.upper() for c in codes if c.isalpha()]
+    country_codes = {c.upper() for c in codes if c.isalpha()}
     phone_prefixes = tuple((c.lstrip("+")) for c in codes if not c.isalpha())
     return new(
         lambda _, m: (

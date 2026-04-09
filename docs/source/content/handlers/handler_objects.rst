@@ -30,4 +30,5 @@ Handler Objects
 .. autoclass:: TemplateComponentsUpdateHandler
 .. autoclass:: EditedMessageHandler
 .. autoclass:: DeletedMessageHandler
+.. autoclass:: OutgoingMessageHandler
 .. autoclass:: RawUpdateHandler

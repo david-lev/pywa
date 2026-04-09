@@ -53,6 +53,9 @@ from pywa.types import (
     MessageStatus as MessageStatusSync,
 )
 from pywa.types import (
+    OutgoingMessage as OutgoingMessageSync,
+)
+from pywa.types import (
     PhoneNumberChange as PhoneNumberChangeSync,
 )
 from pywa.types import (
@@ -156,6 +159,9 @@ from pywa_async.types import (
     MessageStatus as MessageStatusAsync,
 )
 from pywa_async.types import (
+    OutgoingMessage as OutgoingMessageAsync,
+)
+from pywa_async.types import (
     PhoneNumberChange as PhoneNumberChangeAsync,
 )
 from pywa_async.types import (
@@ -229,6 +235,7 @@ def overrides() -> list[tuple[type, type]]:
         (UserMarketingPreferencesSync, UserMarketingPreferencesAsync),
         (EditedMessageSync, EditedMessageAsync),
         (DeletedMessageSync, DeletedMessageAsync),
+        (OutgoingMessageSync, OutgoingMessageAsync),
         (CallConnectSync, CallConnectAsync),
         (CallTerminateSync, CallTerminateAsync),
         (CallStatusSync, CallStatusAsync),
@@ -300,6 +307,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
             _HandlerDecorators.on_user_marketing_preferences,
             _HandlerDecorators.on_edited_message,
             _HandlerDecorators.on_deleted_message,
+            _HandlerDecorators.on_outgoing_message,
             _HandlerDecorators.on_raw_update,
             ListenersSync._remove_listener,
             BaseUpdate.from_update,
