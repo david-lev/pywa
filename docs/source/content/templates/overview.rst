@@ -119,7 +119,7 @@ After defining your template, you can create it using the :meth:`~pywa.client.Wh
 
     from pywa import WhatsApp
 
-    wa = WhatsApp(business_account_id=...)
+    wa = WhatsApp(waba_id=...)
 
     wa.create_template(order_confirmation)
     # CreatedTemplate(id='...', category=TemplateCategory.MARKETING, status=TemplateStatus.PENDING)
@@ -137,7 +137,7 @@ You can also :meth:`~pywa.types.templates.CreatedTemplate.wait_until_approved` f
 
     from pywa import WhatsApp
 
-    wa = WhatsApp(business_account_id=...)
+    wa = WhatsApp(waba_id=...)
 
     template = wa.create_template(order_confirmation)
     template.wait_until_approved()
@@ -152,7 +152,7 @@ Or you can handle the template status using the :meth:`~pywa.client.WhatsApp.on_
     from pywa.types import TemplateStatusUpdate
     from pywa.types.templates import TemplateStatus
 
-    wa = WhatsApp(business_account_id=..., token=...)
+    wa = WhatsApp(waba_id=..., token=...)
 
     @wa.on_template_status_update
     def handle_template_status_update(_: WhatsApp, update: TemplateStatusUpdate):
@@ -309,7 +309,7 @@ The ``example`` parameter can be a URL, file path, :class:`~pywa.types.media.Med
         from pywa.types.media import Media
         from pywa.types.templates import *
 
-        wa = WhatsApp(token=..., business_account_id=..., app_id=...)
+        wa = WhatsApp(token=..., waba_id=..., app_id=...)
 
         image = pathlib.Path("path/to/image.jpg")
         header_image = HeaderImage(example=image)
@@ -371,7 +371,7 @@ When sending a media template, you can use the same approach as before, but now 
         from pywa import WhatsApp
         from pywa.types.templates import *
 
-        wa = WhatsApp(token=..., business_account_id=..., app_id=...)
+        wa = WhatsApp(token=..., waba_id=..., app_id=...)
 
         media_template = Template(
             name="media_template",
@@ -530,7 +530,7 @@ When sending an authentication template you need to provide the OTP code as a pa
         from pywa import WhatsApp
         from pywa.types.templates import *
 
-        wa = WhatsApp(business_account_id=..., token=...)
+        wa = WhatsApp(waba_id=..., token=...)
 
         templates = wa.upsert_authentication_template(
             name='one_tap_authentication',
@@ -567,7 +567,7 @@ To create a template from the library, you need to get the template library name
 
     from pywa import WhatsApp
 
-    wa = WhatsApp(business_account_id=..., token=...)
+    wa = WhatsApp(waba_id=..., token=...)
 
     # Define the template
     order_update = LibraryTemplate(
@@ -591,7 +591,7 @@ If the library template requires parameters, you need to provide them when creat
     from pywa import WhatsApp
     from pywa.types.templates import *
 
-    wa = WhatsApp(business_account_id=..., token=...)
+    wa = WhatsApp(waba_id=..., token=...)
 
     # Define the template with parameters
     order_update = LibraryTemplate(

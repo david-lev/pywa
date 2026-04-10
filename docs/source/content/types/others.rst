@@ -83,3 +83,5 @@ Others
 .. currentmodule:: pywa.utils
 
 .. autoclass:: CallbackURLScope()
+
+.. autoclass:: WebhookFields()

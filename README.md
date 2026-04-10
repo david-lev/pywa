@@ -38,9 +38,12 @@ Fully **typed**, **documented**, and **production-ready** — build powerful bot
 > [!IMPORTANT]
 > **Action Required: WhatsApp BSUID Migration**
 >
-> WhatsApp is transitioning to [Business-Scoped User IDs](https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids) (BSUID). This is a breaking change in how user IDs are handled and will be rolled out by Meta in the near future.
+> WhatsApp is transitioning
+> to [Business-Scoped User IDs](https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids) (
+> BSUID). This is a breaking change in how user IDs are handled and will be rolled out by Meta in the near future.
 >
-> pywa `4.0.0` (Beta) includes full support for BSUID and is required to ensure compatibility once the change takes effect.
+> pywa `4.0.0` (Beta) includes full support for BSUID and is required to ensure compatibility once the change takes
+> effect.
 >
 > * **Install Beta:** `pip install -U pywa --pre`
 > * **Migration Guide:** https://pywa.readthedocs.io/en/dev/content/migration.html#migration-from-3-x-to-4-x
@@ -201,7 +204,7 @@ async def hello(_: WhatsApp, msg: types.Message):  # async callback
 from pywa import WhatsApp
 from pywa.types.templates import *
 
-wa = WhatsApp(..., business_account_id=123456)
+wa = WhatsApp(..., waba_id=123456)
 
 # Create a template
 wa.create_template(
@@ -251,7 +254,7 @@ from pywa import WhatsApp, types
 from pywa.types.flows import *
 
 # Create a WhatsApp client
-wa = WhatsApp(..., business_account_id=123456)
+wa = WhatsApp(..., waba_id=123456)
 
 # Build a flow
 my_flow_json = FlowJSON(

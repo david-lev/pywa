@@ -59,30 +59,30 @@ def test_warning_when_version_lower_than_min():
 def test_wa_callback_scopes():
     with pytest.raises(ValueError):
         WhatsApp(
+            server=None,
+            verify_token="xyzxyz",
+            callback_url="https://exmaple.com",
             callback_url_scope=utils.CallbackURLScope.APP,
             app_id=None,
             app_secret=None,
-            server=None,
-            callback_url="https://exmaple.com",
-            verify_token="xyzxyz",
         )
 
     with pytest.raises(ValueError):
         WhatsApp(
+            server=None,
+            verify_token="xyzxyz",
+            waba_id=None,
+            callback_url="https://exmaple.com",
             callback_url_scope=utils.CallbackURLScope.WABA,
-            business_account_id=None,
-            server=None,
-            callback_url="https://exmaple.com",
-            verify_token="xyzxyz",
         )
 
     with pytest.raises(ValueError):
         WhatsApp(
-            callback_url_scope=utils.CallbackURLScope.PHONE,
             phone_id=None,
             server=None,
-            callback_url="https://exmaple.com",
             verify_token="xyzxyz",
+            callback_url="https://exmaple.com",
+            callback_url_scope=utils.CallbackURLScope.PHONE,
         )
 
 
@@ -433,14 +433,14 @@ def test_resolve_flow_json_param():
 
 
 def test_resolve_waba_id_param():
-    client = WhatsApp(business_account_id=WABA_ID)
+    client = WhatsApp(waba_id=WABA_ID)
 
     assert (
         helpers.resolve_arg(
             wa=client,
             value=None,
             method_arg="waba_id",
-            client_arg="business_account_id",
+            client_arg="waba_id",
         )
         == WABA_ID
     )
@@ -449,7 +449,7 @@ def test_resolve_waba_id_param():
             wa=client,
             value=987654321,
             method_arg="waba_id",
-            client_arg="business_account_id",
+            client_arg="waba_id",
         )
         == "987654321"
     )
@@ -459,7 +459,7 @@ def test_resolve_waba_id_param():
             wa=WhatsApp(),
             value=None,
             method_arg="waba_id",
-            client_arg="business_account_id",
+            client_arg="waba_id",
         )
 
 

@@ -74,7 +74,7 @@ The supported fields are automatically handled by PyWa and converted into Python
      - A call status update (ringing, busy, etc.)
    * - :py:class:`~pywa.types.calls.CallPermissionUpdate`
      - A call permission update (permission granted or denied)
-   * - :py:class:`~pywa.types.message.UserMarketingPreferences`
+   * - :py:class:`~pywa.types.user_preferences.UserMarketingPreferences`
      - A user marketing preferences update (e.g. opted in, opted out)
    * - :py:class:`~pywa.types.message.EditedMessage`
      - A user edited a message
@@ -211,5 +211,7 @@ All updates share common methods and properties:
     edited_message
     deleted_message
     outgoing_message
+    outgoing_edited_message
+    outgoing_deleted_message
     raw_update
     common_methods

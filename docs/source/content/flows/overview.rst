@@ -35,7 +35,7 @@ First you need to create the flow, give it a name and set the categories by call
     from pywa.types import FlowCategory
 
     # WhatsApp Business Account ID (WABA) is required
-    wa = WhatsApp(..., business_account_id="1234567890123456")
+    wa = WhatsApp(..., waba_id="1234567890123456")
 
     created = wa.create_flow(
         name="My New Flow",
@@ -257,7 +257,7 @@ After you have the flow json, you can update the flow with :meth:`~pywa.client.W
     your_flow_json = FlowJSON(...)  # keep edit your flow
 
     if __name__ == "__main__":
-        wa = WhatsApp(..., business_account_id="1234567890123456") # waba id is required for creating flows
+        wa = WhatsApp(..., waba_id="1234567890123456") # waba id is required for creating flows
         # created = wa.create_flow(name="Newsletter Flow", categories=[FlowCategory.CONTACT_US])
 
         res = wa.update_flow_json(flow_id=created.id, flow_json=newsletter_flow)

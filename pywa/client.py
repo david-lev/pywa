@@ -178,7 +178,7 @@ SUPPORTS_BSUID_API = False  # TODO should be set to True when the API supports B
 
 class WhatsApp(Server, _HandlerDecorators, _Listeners):
     phone_id: str | int | None
-    business_account_id: str | int | None
+    waba_id: str | int | None
     app_id: str | int | None
     filter_updates: bool
     api: GraphAPI
@@ -227,7 +227,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         continue_handling: bool = False,
         skip_duplicate_updates: bool = True,
         validate_updates: bool = True,
-        business_account_id: str | int | None = None,
+        waba_id: str | int | None = None,
         callback_url: str | None = None,
         callback_url_scope: utils.CallbackURLScope = utils.CallbackURLScope.APP,
         webhook_fields: utils.WebhookFields | Iterable[str] | None = None,
@@ -249,6 +249,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             UserIdentifier.WA_ID,
             UserIdentifier.PARENT_BSUID,
         ),
+        business_account_id: None = None,
     ) -> None:
         """
         The WhatsApp client.
@@ -297,8 +298,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             app_id: The app ID from the `App Basic Settings <https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings>`_ (optional; required when registering a ``callback_url`` with ``APP`` scope).
             app_secret: The app secret from the `App Basic Settings <https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings>`_ (optional; recommended for validating updates and required when registering a ``callback_url`` with ``APP`` scope).
             webhook_endpoint: The endpoint path used to receive incoming webhook requests (default: ``/``); change this to avoid conflicts if the server is used for other purposes.
-            filter_updates: Whether to filter out updates that do not belong to this ``phone_id`` or ``business_account_id`` (default: ``True``; does not apply to raw updates).
-            business_account_id: The `WhatsApp Business Account <https://developers.facebook.com/documentation/business-messaging/whatsapp/whatsapp-business-accounts>`_ ID (WABA ID) that owns the phone number (optional; required for some API methods).
+            filter_updates: Whether to filter out updates that do not belong to this ``phone_id`` or ``waba_id`` (default: ``True``; does not apply to raw updates).
+            waba_id: The `WhatsApp Business Account <https://developers.facebook.com/documentation/business-messaging/whatsapp/whatsapp-business-accounts>`_ ID (WABA ID) that owns the phone number (optional; required for some API methods).
             business_private_key: The global private key used by the ``flows_request_decryptor`` to decrypt incoming Flows requests.
             business_private_key_password: The password for the global private key, if required by the ``flows_request_decryptor``.
             flows_request_decryptor: The global Flows request decryptor implementation used to decrypt incoming Flows requests.
@@ -320,11 +321,18 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             )
 
         self.phone_id = str(phone_id) if phone_id is not None else None
-        self.business_account_id = (
-            str(business_account_id) if business_account_id is not None else None
-        )
         self.app_id = str(app_id) if app_id is not None else None
         self.filter_updates = filter_updates
+
+        if business_account_id is not None:
+            warnings.warn(
+                "The `business_account_id` parameter is deprecated to avoid confusion with the Business Portfolio ID, please use `waba_id` instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            waba_id = business_account_id
+        self.waba_id = str(waba_id) if waba_id is not None else None
+
         if not all(i in user_identifier_priority for i in UserIdentifier):
             raise ValueError(
                 f"user_identifier_priority must contain all UserIdentifier values. Got {user_identifier_priority}"
@@ -466,6 +474,15 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """Update the token in API calls."""
         self.api._session.headers["Authorization"] = f"Bearer {value}"
 
+    @property
+    def business_account_id(self) -> None:
+        warnings.warn(
+            "The `business_account_id` property is deprecated to avoid confusion with the Business Portfolio ID, please use `waba_id` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.waba_id
+
     def add_flow_request_handler(
         self, handler: FlowRequestHandler
     ) -> FlowRequestCallbackWrapper:
@@ -476,7 +493,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
                 >>> from pywa.handlers import FlowRequestHandler
                 >>> from pywa import filters as fil
-                >>> wa = WhatsApp(...)
+                >>> wa = WhatsApp()
                 >>> wa.add_flow_request_handler(
                 ...     FlowRequestHandler(
                 ...         endpoint="/flow",
@@ -519,7 +536,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             >>> from pywa.handlers import MessageHandler, CallbackButtonHandler
             >>> from pywa import filters as fil
             >>> print_message = lambda _, msg: print(msg)
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.add_handlers(
             ...     MessageHandler(print_message, fil.text),
             ...     CallbackButtonHandler(print_message),
@@ -551,7 +568,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             >>> from pywa.handlers import MessageHandler, CallbackButtonHandler
             >>> from pywa import filters as fil
             >>> print_message = lambda _, msg: print(msg)
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> message_handler = MessageHandler(print_message, fil.text)
             >>> wa.add_handlers(message_handler)
             >>> wa.remove_handlers(message_handler)
@@ -578,7 +595,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
             >>> from pywa.handlers import MessageHandler, CallbackButtonHandler
             >>> from pywa import filters as fil
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> @wa.on_message(fil.text)
             ... def message_handler(_: WhatsApp, msg: Message): print(msg)
             >>> wa.remove_callbacks(message_handler)
@@ -622,7 +639,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_message(
             ...     to="1234567890",
             ...     text="*Hello from PyWa!* (https://github.com/david-lev/pywa)",
@@ -716,7 +733,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_image(
             ...     to="1234567890",
             ...     image="https://example.com/image.png",
@@ -823,7 +840,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_video(
             ...     to="1234567890",
             ...     video="https://example.com/video.mp4",
@@ -930,7 +947,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_document(
             ...     to="1234567890",
             ...     document="https://example.com/example_123.pdf",
@@ -1043,7 +1060,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_audio(
             ...     to='1234567890',
             ...     audio='https://example.com/audio.mp3',
@@ -1115,7 +1132,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_voice(
             ...     to='1234567890',
             ...     voice='https://example.com/voice.ogg',
@@ -1166,7 +1183,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_sticker(
             ...     to='1234567890',
             ...     sticker='https://example.com/sticker.webp',
@@ -1230,14 +1247,14 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         - You can react to incoming messages by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.react` method on every update.
         - See `Reaction messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/reaction-messages>`_.
 
-        >>> wa = WhatsApp(...)
+        >>> wa = WhatsApp()
         >>> @wa.on_message
         ... def message_handler(_: WhatsApp, msg: Message):
         ...     msg.react('👍')
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_reaction(
             ...     to='1234567890',
             ...     emoji='👍',
@@ -1290,7 +1307,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         - You can remove reactions from incoming messages by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.unreact` method on every update.
         - See `Reaction messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/reaction-messages>`_.
 
-        >>> wa = WhatsApp(...)
+        >>> wa = WhatsApp()
         >>> @wa.on_message
         ... def message_handler(_: WhatsApp, msg: Message):
         ...     msg.react('👍')
@@ -1298,7 +1315,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.remove_reaction(
             ...     to='1234567890',
             ...     message_id='wamid.XXX='
@@ -1354,7 +1371,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_location(
             ...     to='1234567890',
             ...     latitude=37.4847483695049,
@@ -1419,7 +1436,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.request_location(
             ...     to='1234567890',
             ...     text='Please share your location with us.',
@@ -1481,7 +1498,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> from pywa.types import Contact
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_contact(
             ...     to='1234567890',
             ...     contact=Contact(
@@ -1547,7 +1564,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_catalog(
             ...     to='1234567890',
             ...     body='Check out our catalog!',
@@ -1625,7 +1642,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_product(
             ...     to='1234567890',
             ...     catalog_id='1234567890',
@@ -1701,7 +1718,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> from pywa.types import ProductsSection
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_products(
             ...     to='1234567890',
             ...     catalog_id='1234567890',
@@ -1784,7 +1801,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.mark_message_as_read(message_id='wamid.XXX=')
 
         Args:
@@ -1821,7 +1838,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.indicate_typing(message_id='wamid.XXX=')
 
         Args:
@@ -1867,7 +1884,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.upload_media(media='https://example.com/image.jpg')
 
             >>> wa.upload_media(media=pathlib.Path('image.jpg'))
@@ -1927,7 +1944,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.get_media_url(media_id='wamid.XXX=')
 
         Args:
@@ -1966,7 +1983,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.download_media(
             ...     url='https://mmg-fna.whatsapp.net/d/f/Amc.../v2/1234567890',
             ...     path=pathlib.Path('/path/to/save'),
@@ -2021,7 +2038,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> media_bytes = wa.get_media_bytes(
             ...     url='https://mmg-fna.whatsapp.net/d/f/Amc.../v2/1234567890',
             ... )
@@ -2055,7 +2072,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> with httpx.Client() as client:
             >>>    client.post("https://my-server.com/upload", content=wa.stream_media()) # streaming upload
 
@@ -2082,7 +2099,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.delete_media(media_id='wamid.XXX=')
 
         Args:
@@ -2126,7 +2143,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     wa=self,
                     value=waba_id,
                     method_arg="waba_id",
-                    client_arg="business_account_id",
+                    client_arg="waba_id",
                 ),
                 fields=WhatsAppBusinessAccount._api_fields(),
             )
@@ -2142,7 +2159,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.get_business_phone_number()
 
         Args:
@@ -2174,7 +2191,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> for phone_number in wa.get_business_phone_numbers():
             ...     print(phone_number)
 
@@ -2192,7 +2209,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     wa=self,
                     value=waba_id,
                     method_arg="waba_id",
-                    client_arg="business_account_id",
+                    client_arg="waba_id",
                 ),
                 pagination=pagination.to_dict() if pagination else None,
                 fields=BusinessPhoneNumber._api_fields(),
@@ -2211,7 +2228,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.get_business_phone_number_settings()
 
         Args:
@@ -2248,7 +2265,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> from pywa.types.calls import CallingSettingsStatus
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> s = wa.get_business_phone_number_settings()
             >>> s.calling.status = CallingSettingsStatus.ENABLED
             >>> wa.update_business_phone_number_settings(calling=s.calling)
@@ -2292,7 +2309,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         - Read more about `Conversational Automation <https://developers.facebook.com/docs/whatsapp/cloud-api/phone-numbers/conversational-components>`_.
 
             >>> from pywa.types import Command
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.update_conversational_automation(
             ...     ice_breakers=['Plan a trip', 'Create a workout plan'],
             ...     commands=[
@@ -2347,7 +2364,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.update_display_name(new_display_name="Pizza Bot")
 
         Args:
@@ -2377,7 +2394,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.get_business_profile()
 
         Args:
@@ -2413,7 +2430,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.set_business_public_key(
             ...     public_key=\"\"\"-----BEGIN PUBLIC KEY-----...\"\"\"
             ... )
@@ -2455,7 +2472,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> from pywa.types import Industry
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.update_business_profile(
             ...     about='This is a test business',
             ...     address='Menlo Park, 1601 Willow Rd, United States',
@@ -2534,7 +2551,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.get_commerce_settings()
 
         Returns:
@@ -2564,7 +2581,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.update_commerce_settings(
             ...     is_catalog_visible=True,
             ...     is_cart_enabled=True,
@@ -2620,7 +2637,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
             from pywa.types import template as t
 
-            wa = WhatsApp(..., business_account_id='1234567890')
+            wa = WhatsApp(..., waba_id='1234567890')
 
             created = wa.create_template(
                 template=t.Template(
@@ -2665,7 +2682,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     wa=self,
                     value=waba_id,
                     method_arg="waba_id",
-                    client_arg="business_account_id",
+                    client_arg="waba_id",
                 ),
                 template=template.to_json(),
             ),
@@ -2694,7 +2711,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> from pywa.types.templates import *
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> templates = wa.upsert_authentication_template(
             ...     name='one_tap_authentication',
             ...     languages=[TemplateLanguage.ENGLISH_US, TemplateLanguage.FRENCH, TemplateLanguage.SPANISH],
@@ -2723,7 +2740,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     wa=self,
                     value=waba_id,
                     method_arg="waba_id",
-                    client_arg="business_account_id",
+                    client_arg="waba_id",
                 ),
                 template=_AuthenticationTemplates(
                     name=name,
@@ -2907,7 +2924,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> templates = wa.get_templates(
             ...     statuses=[TemplateStatus.APPROVED],
             ...     categories=[TemplateCategory.MARKETING],
@@ -2938,7 +2955,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     wa=self,
                     value=waba_id,
                     method_arg="waba_id",
-                    client_arg="business_account_id",
+                    client_arg="waba_id",
                 ),
                 fields=TemplateDetails._api_fields(),
                 filters={
@@ -2972,7 +2989,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> template_details = wa.get_template(template_id='1234567890')
 
         Args:
@@ -3011,7 +3028,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> from pywa.types.templates import *
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> updated_template = wa.update_template(
             ...     template_id='1234567890',
             ...     new_category=TemplateCategory.MARKETING,
@@ -3067,7 +3084,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.delete_template(template_name='seasonal_promotion') # Deletes all templates with that name
             >>> wa.delete_template(template_name='seasonal_promotion', template_id='1234567890') # Deletes only the template with that ID
 
@@ -3085,7 +3102,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     wa=self,
                     value=waba_id,
                     method_arg="waba_id",
-                    client_arg="business_account_id",
+                    client_arg="waba_id",
                 ),
                 template_name=template_name,
                 template_id=template_id,
@@ -3110,7 +3127,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> now = datetime.datetime.now()
             >>> result = wa.compare_templates(
             ...     '1234567890', '0987654321',
@@ -3174,7 +3191,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     wa=self,
                     value=destination_waba_id,
                     method_arg="destination_waba_id",
-                    client_arg="business_account_id",
+                    client_arg="waba_id",
                 ),
                 page_number=page_number,
             )
@@ -3235,7 +3252,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> from pywa.types.flows import *
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.create_flow(
             ...     name='Feedback',
             ...     categories=[FlowCategory.SURVEY, FlowCategory.OTHER],
@@ -3255,7 +3272,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 categories=tuple(map(str, categories)),
                 clone_flow_id=clone_flow_id,
                 endpoint_uri=endpoint_uri,
-                waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="business_account_id"),
+                waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"),
                 flow_json=helpers.resolve_flow_json_param(flow_json)
                 if flow_json
                 else None,
@@ -3286,7 +3303,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> from pywa.types.flows import FlowCategory
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.update_flow_metadata(
             ...     flow_id='1234567890',
             ...     name='Feedback',
@@ -3325,7 +3342,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Examples:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
 
             - Using a Flow object:
 
@@ -3466,7 +3483,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> flows = wa.get_flows(
             ...     invalidate_preview=True,
             ...     phone_number_id='1234567890',
@@ -3487,7 +3504,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return Result(
             wa=self,
             response=self.api.get_flows(
-                waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="business_account_id"),
+                waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"),
                 fields=FlowDetails._api_fields(
                     invalidate_preview=invalidate_preview,
                     phone_number_id=phone_number_id,
@@ -3582,7 +3599,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     wa=self,
                     value=destination_waba_id,
                     method_arg="destination_waba_id",
-                    client_arg="business_account_id",
+                    client_arg="waba_id",
                 ),
                 source_waba_id=str(source_waba_id),
                 source_flow_names=tuple(source_flow_names),
@@ -3603,7 +3620,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.register_phone_number(password='111111', data_localization_region='US')
 
         Args:
@@ -3854,7 +3871,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             Whether the callback URL was overridden.
         """
         return SuccessResult.from_dict(self.api.set_waba_alternate_callback_url(
-            waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="business_account_id"),
+            waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"),
             override_callback_uri=callback_url, verify_token=verify_token))
 
     def delete_waba_callback_url(self, *,waba_id: str | int | None = None) -> SuccessResult:
@@ -3870,7 +3887,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             Whether the callback URL was deleted.
         """
         return SuccessResult.from_dict(self.api.delete_waba_alternate_callback_url(
-            waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="business_account_id"),
+            waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"),
         ))
 
     def override_phone_callback_url(
@@ -3930,7 +3947,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> res = wa.block_users(users=['1234567890', '0987654321'])
             >>> if res.errors: print(res.failed_users)
 
@@ -3958,7 +3975,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/block-users#unblock-users>`_.
 
         Example:
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> res = wa.unblock_users(users=['1234567890', '0987654321'])
             >>> print(res.removed_users)
 
@@ -3988,7 +4005,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> for user in wa.get_blocked_users(): print(user)
 
         Args:
@@ -4244,7 +4261,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> groups = wa.get_groups(pagination=Pagination(limit=10))
             ... for group in groups:
             ...     print(f'Group {group.id}: {group}')

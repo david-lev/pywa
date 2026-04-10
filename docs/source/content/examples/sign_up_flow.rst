@@ -1023,7 +1023,7 @@ Creating the flow is very simple using the :meth:`~pywa.client.WhatsApp.create_f
     wa = WhatsApp(
         phone_id="1234567890",
         token="abcdefg",
-        business_account_id="1234567890",  # the ID of the WhatsApp Business Account
+        waba_id="1234567890",  # the ID of the WhatsApp Business Account
     )
 
     flow_id = wa.create_flow(

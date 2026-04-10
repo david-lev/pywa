@@ -627,7 +627,7 @@ def flow_request():
 
 def get_flow_callback_wrapper(callback: Callable):
     wa = WhatsApp(
-        token="xxx", server=None, business_private_key="xxx", verify_token="fdfd"
+        token="xxx", server=None, verify_token="fdfd", business_private_key="xxx"
     )
     wrapper = wa.get_flow_request_handler(
         endpoint="/flow",

@@ -112,12 +112,9 @@ class Server:
                     "to get them: "
                     "https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings/"
                 )
-            elif (
-                callback_url_scope == utils.CallbackURLScope.WABA
-                and not self.business_account_id
-            ):
+            elif callback_url_scope == utils.CallbackURLScope.WABA and not self.waba_id:
                 raise ValueError(
-                    "When registering a callback URL in the WABA scope, the `business_account_id` must be provided."
+                    "When registering a callback URL in the WABA scope, the `waba_id` must be provided."
                 )
             elif (
                 callback_url_scope == utils.CallbackURLScope.PHONE and not self.phone_id
@@ -427,11 +424,7 @@ class Server:
     ) -> type[handlers.Handler] | None:
         """Get the handler for the given update."""
 
-        if (
-            self.filter_updates
-            and self.business_account_id
-            and update.id != self.business_account_id
-        ):
+        if self.filter_updates and self.waba_id and update.id != self.waba_id:
             return None
 
         try:
@@ -500,7 +493,7 @@ class Server:
                     )
                 case utils.CallbackURLScope.WABA:
                     res = self.api.set_waba_alternate_callback_url(
-                        waba_id=self.business_account_id,
+                        waba_id=self.waba_id,
                         override_callback_uri=callback_url,
                         verify_token=verify_token,
                     )
