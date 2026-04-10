@@ -63,9 +63,9 @@ DOWNLOAD_CHUNK_SIZE = 64 * 1024
 class StrEnum(str, enum.Enum):
     """A string-based enum that allows for custom handling of missing values."""
 
-    _check_value: Callable[[str], bool] | None = str.isupper
+    _check_value: ClassVar[Callable[[str], bool] | None] = str.isupper
     """Check if the value needs to be modified or not."""
-    _modify_value: Callable[[str], str] | None = str.upper
+    _modify_value: ClassVar[Callable[[str], str] | None] = str.upper
     """Modify the value if needed."""
 
     def __str__(self):

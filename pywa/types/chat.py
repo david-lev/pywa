@@ -31,3 +31,6 @@ class Chat:
 class ChatType(enum.Enum):
     PRIVATE = enum.auto()
     GROUP = enum.auto()
+
+    def __repr__(self) -> str:
+        return f"ChatType.{self.name}"

@@ -372,6 +372,54 @@ class Contact:
         type: str | None = None
 
 
+class ContactsOrigin(helpers.StrEnum):
+    """
+    Represents an origin of a contact.
+
+    Attributes:
+        CONTACT_REQUEST: The contacts were shared as a contact request.
+        OTHER: The contacts were shared in another way.
+    """
+
+    CONTACT_REQUEST = "contact_request"
+    OTHER = "other"
+
+    UNKNOWN = "UNKNOWN"
+
+    _check_value = str.islower
+    _modify_value = str.lower
+
+
+class ContactList(tuple[Contact, ...]):
+    """
+    Represents an shared contacts in a message, which can be iterated over to get the individual contacts.
+
+    Attributes:
+        origin: The origin of the shared contacts (e.g. ``contact_request`` if the contacts were shared as a contact request, ``other`` otherwise).
+    """
+
+    origin: ContactsOrigin
+
+    def __new__(cls, contacts: dict):
+        inst = super().__new__(
+            cls, (Contact.from_dict(c) for c in contacts["contacts"])
+        )
+        inst.origin = (
+            ContactsOrigin(contacts["origin"])
+            if "origin" in contacts
+            else ContactsOrigin.OTHER
+        )
+        return inst
+
+    def __repr__(self) -> str:
+        return f"ContactList(origin={self.origin}, contacts={super().__repr__()})"
+
+    @property
+    def first(self) -> Contact:
+        """Get the first contact in the list."""
+        return self[0]
+
+
 @dataclasses.dataclass(frozen=True, slots=True)
 class ReferredProduct:
     """
@@ -712,6 +760,9 @@ class BusinessVerificationStatus(helpers.StrEnum):
     VERIFIED = "verified"
 
     UNKNOWN = "UNKNOWN"
+
+    _check_value = str.islower
+    _modify_value = str.lower
 
 
 class MarketingMessagesLiteAPIStatus(helpers.StrEnum):

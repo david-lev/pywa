@@ -43,6 +43,12 @@ The :class:`Message` type is used to represent incoming messages from WhatsApp u
 .. autoclass:: Location()
     :members: current_location, in_radius
 
+.. autoclass:: pywa.types.others.ContactList()
+    :show-inheritance:
+    :members: first
+
+.. autoclass:: pywa.types.others.ContactsOrigin()
+
 .. autoclass:: Contact()
     :members: as_vcard, Name, Phone, Email, Url, Address, Org
 

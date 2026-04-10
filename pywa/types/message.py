@@ -23,7 +23,7 @@ from .callback import Button, FlowButton, SectionList, URLButton, VoiceCallButto
 from .chat import Chat, ChatType
 from .media import Audio, Document, Image, Sticker, Video
 from .others import (
-    Contact,
+    ContactList,
     Location,
     MessageType,
     Metadata,
@@ -89,7 +89,7 @@ class Message(BaseUserUpdate):
     audio: Audio | None = None
     reaction: Reaction | None = None
     location: Location | None = None
-    contacts: tuple[Contact, ...] | None = None
+    contacts: ContactList | None = None
     order: Order | None = None
     referral: Referral | None = None
     unsupported: Unsupported | None = None
@@ -184,11 +184,7 @@ class Message(BaseUserUpdate):
             case MessageType.LOCATION:
                 return {msg_type.value: Location.from_dict(content[msg_type.value])}
             case MessageType.CONTACTS:
-                return {
-                    msg_type.value: tuple(
-                        Contact.from_dict(c) for c in content[msg_type.value]
-                    )
-                }
+                return {msg_type.value: ContactList(contacts=content)}
             case MessageType.ORDER:
                 return {msg_type.value: Order.from_dict(content[msg_type.value])}
             case MessageType.UNSUPPORTED:
