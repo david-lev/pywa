@@ -358,6 +358,8 @@ def test_all_methods_are_overwritten_in_async(overrides):
             UserSync.as_vcard,
             TemplateDetailsSync.to_json,
             MessageSync._resolve_msg_content,
+            ResultSync.index,
+            ResultSync.count,
         }
     ]
     non_async = {

@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import time
 import warnings
+from collections.abc import Sequence
 
 from ..errors import WhatsAppError
 from .user import BaseUser
@@ -23,6 +24,7 @@ from typing import (
     Literal,
     Protocol,
     TypeVar,
+    overload,
 )
 
 from .. import _helpers as helpers
@@ -1447,7 +1449,7 @@ class _ItemFactory(Protocol):
     def __call__(self, data: dict) -> _T: ...
 
 
-class Result(Generic[_T]):
+class Result(Generic[_T], Sequence[_T]):
     """
     This class is used to handle paginated results from the WhatsApp API. You can iterate over the results, and also access the next and previous pages of results.
 
@@ -1476,7 +1478,7 @@ class Result(Generic[_T]):
     ) -> None:
         self._wa = wa
         self._item_factory = item_factory
-        self._data = [item_factory(item) for item in response.get("data", [])]
+        self._data: list[_T] = [item_factory(item) for item in response.get("data", [])]
         self._next_url, self._previous_url = (
             response.get("paging", {}).get("next"),
             response.get("paging", {}).get("previous"),
@@ -1585,7 +1587,13 @@ class Result(Generic[_T]):
     def __len__(self) -> int:
         return len(self._data)
 
-    def __getitem__(self, index: int) -> _T:
+    @overload
+    def __getitem__(self, index: int) -> _T: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> list[_T]: ...
+
+    def __getitem__(self, index: int | slice) -> _T | list[_T]:
         return self._data[index]
 
     def __bool__(self) -> bool:

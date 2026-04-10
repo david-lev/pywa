@@ -79,7 +79,7 @@ class QRCode(_QRCode):
         )
 
 
-class Result(_Result[_T]):
+class Result(_Result[_T], Sequence[_T]):
     """
     This class is used to handle paginated results from the WhatsApp API. You can iterate over the results, and also access the next and previous pages of results.
 
