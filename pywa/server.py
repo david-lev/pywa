@@ -59,8 +59,6 @@ class Server:
         webhook_endpoint: str,
         callback_url: str | None,
         callback_url_scope: utils.CallbackURLScope,
-        webhook_fields: tuple[str, ...] | None,
-        app_id: int | None,
         app_secret: str | None,
         verify_token: str | None,
         webhook_challenge_delay: int | None,
@@ -78,7 +76,6 @@ class Server:
         self._private_key = business_private_key
         self._private_key_password = business_private_key_password
         self._flows_request_decryptor = flows_request_decryptor
-        self._app_id = app_id
         self._app_secret = app_secret
         self._flows_response_encryptor = flows_response_encryptor
         self._validate_updates = validate_updates
@@ -108,7 +105,7 @@ class Server:
 
         if callback_url is not None:
             if callback_url_scope == utils.CallbackURLScope.APP and (
-                app_id is None or app_secret is None
+                self.app_id is None or app_secret is None
             ):
                 raise ValueError(
                     "When registering a callback URL in the app scope, the `app_id` and `app_secret` must be provided.\n>> See here how "
@@ -132,12 +129,9 @@ class Server:
             self._delayed_register_callback_url(
                 callback_url=f"{callback_url.rstrip('/')}/{self._webhook_endpoint.lstrip('/')}",
                 callback_url_scope=callback_url_scope,
-                app_id=app_id,
+                app_id=self.app_id,
                 app_secret=app_secret,
                 verify_token=verify_token,
-                fields=tuple(
-                    webhook_fields or handlers.Handler._handled_fields().keys()
-                ),
                 delay=webhook_challenge_delay,
             )
 
@@ -463,7 +457,6 @@ class Server:
         app_id: int,
         app_secret: str,
         verify_token: str,
-        fields: tuple[str, ...] | None,
         delay: int,
     ) -> None:
         threading.Timer(
@@ -475,7 +468,7 @@ class Server:
                 "app_id": app_id,
                 "app_secret": app_secret,
                 "verify_token": verify_token,
-                "fields": fields,
+                "fields": self._webhook_fields,
             },
         ).start()
 

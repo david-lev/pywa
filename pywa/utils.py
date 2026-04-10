@@ -9,7 +9,7 @@ import importlib
 import json
 import logging
 import warnings
-from typing import Any, Callable, Protocol, TypeAlias
+from typing import Any, Callable, Iterable, Protocol, TypeAlias
 
 import httpx
 
@@ -133,6 +133,16 @@ class CallbackURLScope(enum.Enum):
     APP = enum.auto()
     WABA = enum.auto()
     PHONE = enum.auto()
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class WebhookFields:
+    """
+    Represents the fields to add or remove from the webhook subscription.
+    """
+
+    add: Iterable[str] = dataclasses.field(default_factory=tuple)
+    remove: Iterable[str] = dataclasses.field(default_factory=tuple)
 
 
 FlowRequestDecryptor: TypeAlias = Callable[

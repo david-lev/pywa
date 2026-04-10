@@ -230,7 +230,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         business_account_id: str | int | None = None,
         callback_url: str | None = None,
         callback_url_scope: utils.CallbackURLScope = utils.CallbackURLScope.APP,
-        webhook_fields: Iterable[str] | None = None,
+        webhook_fields: utils.WebhookFields | Iterable[str] | None = None,
         app_id: int | str | None = None,
         app_secret: str | None = None,
         webhook_challenge_delay: int = _DEFAULT_VERIFY_DELAY_SEC,
@@ -330,6 +330,15 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 f"user_identifier_priority must contain all UserIdentifier values. Got {user_identifier_priority}"
             )
         self._user_identifier_priority = user_identifier_priority
+
+        self._webhook_fields: set[str] = set(Handler._handled_fields().keys())
+        if isinstance(webhook_fields, utils.WebhookFields):
+            self._webhook_fields = (
+                self._webhook_fields | set(webhook_fields.add)
+            ) - set(webhook_fields.remove)
+        elif webhook_fields is not None:
+            self._webhook_fields = set(webhook_fields)
+
         self._handlers: dict[
             type[Handler] | None,
             list[Handler],
@@ -350,8 +359,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             webhook_endpoint=webhook_endpoint,
             callback_url=callback_url,
             callback_url_scope=callback_url_scope,
-            webhook_fields=tuple(webhook_fields) if webhook_fields else None,
-            app_id=app_id,
             app_secret=app_secret,
             verify_token=verify_token,
             webhook_challenge_delay=webhook_challenge_delay
