@@ -715,6 +715,70 @@ class GraphAPIAsync(GraphAPI):
             },
         )
 
+    async def get_shared_wabas(
+        self,
+        business_portfolio_id: str,
+        fields: tuple[str, ...] | None = None,
+        pagination: dict | None = None,
+    ) -> dict:
+        """
+        The client_whatsapp_business_accounts endpoint retrieves a list of all the WABAS assigned to/shared with your Business Manager account once the embedded signup flow is completed.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/solution-providers/manage-accounts#get-list-of-shared-wabas>`_.
+
+        Args:
+            business_portfolio_id: The ID of the business portfolio.
+            fields: The fields to get for each shared WABA.
+            pagination: The pagination of the API.
+
+        Returns:
+            A dict with the shared WABAs data.
+        """
+        params = {
+            k: v
+            for k, v in {
+                "fields": ",".join(fields) if fields else None,
+            }.items()
+            if v
+        } | (pagination or {})
+        return await self._request(
+            method="GET",
+            endpoint=f"/{business_portfolio_id}/client_whatsapp_business_accounts",
+            params=params,
+        )
+
+    async def get_owned_wabas(
+        self,
+        business_portfolio_id: str,
+        fields: tuple[str, ...] | None = None,
+        pagination: dict | None = None,
+    ) -> dict:
+        """
+        Use the owned_whatsapp_business_accounts endpoint to get a list of the WABAs that your business owns
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/solution-providers/manage-accounts#get-list-of-owned-whatsapp-business-accounts>`_.
+
+        Args:
+            business_portfolio_id: The ID of the business portfolio.
+            fields: The fields to get for each owned WABA.
+            pagination: The pagination of the API.
+
+        Returns:
+            A dict with the owned WABAs data.
+        """
+        params = {
+            k: v
+            for k, v in {
+                "fields": ",".join(fields) if fields else None,
+            }.items()
+            if v
+        } | (pagination or {})
+        return await self._request(
+            method="GET",
+            endpoint=f"/{business_portfolio_id}/owned_whatsapp_business_accounts",
+            params=params,
+        )
+
     async def get_waba_info(
         self,
         waba_id: str,

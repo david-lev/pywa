@@ -228,6 +228,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         skip_duplicate_updates: bool = True,
         validate_updates: bool = True,
         waba_id: str | int | None = None,
+        business_portfolio_id: str | int | None = None,
         callback_url: str | None = None,
         callback_url_scope: utils.CallbackURLScope = utils.CallbackURLScope.APP,
         webhook_fields: utils.WebhookFields | Iterable[str] | None = None,
@@ -299,7 +300,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             app_secret: The app secret from the `App Basic Settings <https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings>`_ (optional; recommended for validating updates and required when registering a ``callback_url`` with ``APP`` scope).
             webhook_endpoint: The endpoint path used to receive incoming webhook requests (default: ``/``); change this to avoid conflicts if the server is used for other purposes.
             filter_updates: Whether to filter out updates that do not belong to this ``phone_id`` or ``waba_id`` (default: ``True``; does not apply to raw updates).
-            waba_id: The `WhatsApp Business Account <https://developers.facebook.com/documentation/business-messaging/whatsapp/whatsapp-business-accounts>`_ ID (WABA ID) that owns the phone number (optional; required for some API methods).
+            waba_id: The `WhatsApp Business Account <https://developers.facebook.com/documentation/business-messaging/whatsapp/whatsapp-business-accounts>`_ ID that owns the phone number (optional; required for some API methods).
+            business_portfolio_id: The `Business Portfolio ID <https://www.facebook.com/business/help/486932075688253>`_ that owns the assets. Also known as `Business ID or Busines Manager ID` (optional; required for some API methods).
             business_private_key: The global private key used by the ``flows_request_decryptor`` to decrypt incoming Flows requests.
             business_private_key_password: The password for the global private key, if required by the ``flows_request_decryptor``.
             flows_request_decryptor: The global Flows request decryptor implementation used to decrypt incoming Flows requests.
@@ -309,6 +311,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             validate_updates: Whether to `validate <https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/create-webhook-endpoint#validation-1>`_ incoming update payloads (default: ``True``; requires ``app_secret``).
             handlers_modules: Python modules from which handlers should be automatically loaded.
             user_identifier_priority: The priority order of user identifiers to use when replying to messages, blocking users, etc (default: ``bsuid`` > ``wa_id`` > ``parent_bsuid``)
+            business_account_id: Deprecated alias for ``waba_id`` (the WhatsApp Business Account ID that owns the phone number).
         """
         try:
             utils.Version.GRAPH_API.validate_min_version(str(api_version))
@@ -321,6 +324,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             )
 
         self.phone_id = str(phone_id) if phone_id is not None else None
+        self.business_portfolio_id = (
+            str(business_portfolio_id) if business_portfolio_id is not None else None
+        )
         self.app_id = str(app_id) if app_id is not None else None
         self.filter_updates = filter_updates
 
@@ -2121,6 +2127,72 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 if phone_id is not utils.MISSING
                 else None,
             )
+        )
+
+    def get_shared_business_accounts(
+        self,
+        *,
+        business_portfolio_id: str | int | None = None,
+        pagination: Pagination | None = None,
+    ) -> Result[WhatsAppBusinessAccount]:
+        """
+        Get the WhatsApp Business Accounts (WABAs) in a business portfolio.
+
+        - See `Get List of Shared WABAs <https://developers.facebook.com/documentation/business-messaging/whatsapp/solution-providers/manage-accounts#get-list-of-shared-wabas>`_.
+
+        Args:
+            business_portfolio_id: The business portfolio ID to get the WABAs from (optional, if not provided, the client's business portfolio ID will be used).
+            pagination: Pagination object to paginate through the results (optional).
+
+        Returns:
+            A Result object containing WhatsAppBusinessAccount objects.
+        """
+        return Result(
+            wa=self,
+            response=self.api.get_shared_wabas(
+                business_portfolio_id=helpers.resolve_arg(
+                    wa=self,
+                    value=business_portfolio_id,
+                    method_arg="business_portfolio_id",
+                    client_arg="business_portfolio_id",
+                ),
+                pagination=pagination.to_dict() if pagination else None,
+                fields=WhatsAppBusinessAccount._api_fields(),
+            ),
+            item_factory=WhatsAppBusinessAccount.from_dict,
+        )
+
+    def get_owned_business_account(
+        self,
+        *,
+        business_portfolio_id: str | int | None = None,
+        pagination: Pagination | None = None,
+    ) -> Result[WhatsAppBusinessAccount]:
+        """
+        Get the WhatsApp Business Accounts (WABAs) owned by a business portfolio.
+
+        - See `Get List of Owned WhatsApp Business Accounts <https://developers.facebook.com/documentation/business-messaging/whatsapp/solution-providers/manage-accounts#get-list-of-owned-whatsapp-business-accounts>`_.
+
+        Args:
+            business_portfolio_id: The business portfolio ID to get the WABAs from (optional, if not provided, the client's business portfolio ID will be used).
+            pagination: Pagination object to paginate through the results (optional).
+
+        Returns:
+            A Result object containing WhatsAppBusinessAccount objects.
+        """
+        return Result(
+            wa=self,
+            response=self.api.get_owned_wabas(
+                business_portfolio_id=helpers.resolve_arg(
+                    wa=self,
+                    value=business_portfolio_id,
+                    method_arg="business_portfolio_id",
+                    client_arg="business_portfolio_id",
+                ),
+                pagination=pagination.to_dict() if pagination else None,
+                fields=WhatsAppBusinessAccount._api_fields(),
+            ),
+            item_factory=WhatsAppBusinessAccount.from_dict,
         )
 
     def get_business_account(

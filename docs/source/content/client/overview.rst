@@ -450,6 +450,10 @@ Others
      - Override phone callback URL
    * - :meth:`~WhatsApp.delete_phone_callback_url`
      - Delete phone callback URL
+   * - :meth:`~WhatsApp.get_shared_business_accounts`
+     - Get shared business accounts
+   * - :meth:`~WhatsApp.get_owned_business_account`
+     - Get owned business account
 
 
 .. toctree::
