@@ -3,7 +3,7 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-ver#### 4.0.0b4 (2026-04-11) **Beta**
+#### 4.0.0b4 (2026-04-11) **Beta**
 
 - [client] update `webhook_fields` type to support `utils.WebhookFields` and enhance handling logic
 - [client] replace `business_account_id` with `waba_id` across the codebase
