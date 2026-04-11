@@ -2464,7 +2464,7 @@ class GraphAPIAsync(GraphAPI):
         Return example::
 
             {
-              "id": "123456789012345"
+              "request_id": "123456789012345"
             }
         """
         data = {
@@ -2486,7 +2486,9 @@ class GraphAPIAsync(GraphAPI):
         group_id: str,
         subject: str | None = None,
         description: str | None = None,
-        profile_picture_file: bytes | str | BinaryIO | Iterator[bytes] | None = None,
+        profile_picture_file: (
+            bytes | str | pathlib.Path | BinaryIO | Iterator[bytes] | None
+        ) = None,
     ) -> dict:
         """
         Update group info.

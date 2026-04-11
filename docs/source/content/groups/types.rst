@@ -21,3 +21,5 @@ Groups Types
     :members: approve_all, reject_all
 
 .. autoclass:: GroupJoinApprovalMode()
+
+.. autoclass:: GroupOperation()

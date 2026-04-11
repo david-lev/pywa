@@ -131,6 +131,7 @@ from .types.groups import (
     GroupJoinApprovalMode,
     GroupJoinRequestsResult,
     GroupMessageStatuses,
+    GroupOperation,
     GroupParticipant,
 )
 from .types.media import Media
@@ -4101,7 +4102,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             description: str | None = None,
             join_approval_mode: GroupJoinApprovalMode | None = None,
             phone_id: str | int | None = None,
-    ) -> None:
+    ) -> GroupOperation:
         """
         Create a new group.
 
@@ -4114,14 +4115,14 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             phone_id: The phone ID to create the group for (optional, if not provided, the client's phone ID will be used).
 
         Returns:
-            None
+            The response of the group creation request, containing the request ID to track the status of the group creation.
         """
-        await self.api.create_group(
+        return GroupOperation(request_id=(await self.api.create_group(
             phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
             subject=subject,
             description=description,
             join_approval_mode=join_approval_mode.value if join_approval_mode else None,
-        )
+        ))["request_id"])
 
     async def get_group(
             self,
@@ -4181,7 +4182,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     async def delete_group(
             self,
             group_id: str,
-    ) -> None:
+    ) -> GroupOperation:
         """
         Delete a group.
 
@@ -4191,11 +4192,11 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             group_id: The ID of the group to delete.
 
         Returns:
-            None
+            The response of the group deletion request, containing the request ID to track the status of the group deletion.
         """
-        await self.api.delete_group(
+        return GroupOperation(request_id=(await self.api.delete_group(
             group_id=group_id,
-        )
+        ))["request_id"])
 
     async def get_group_join_requests(
             self,
@@ -4228,7 +4229,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             self,
             group_id: str,
             request_ids: Iterable[str],
-    ) -> None:
+    ) -> GroupOperation:
         """
         Approve join requests for a group.
 
@@ -4239,18 +4240,18 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             request_ids: The IDs of the join requests to approve.
 
         Returns:
-            None
+            The response of the join request approval, containing the request ID to track the status of the approval.
         """
-        await self.api.approve_group_join_requests(
+        return GroupOperation(request_id=(await self.api.approve_group_join_requests(
             group_id=group_id,
             request_ids=tuple(request_ids),
-        )
+        ))["request_id"])
 
     async def reject_group_join_requests(
             self,
             group_id: str,
             request_ids: Iterable[str],
-    ) -> None:
+    ) -> GroupOperation:
         """
         Reject join requests for a group.
 
@@ -4261,12 +4262,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             request_ids: The IDs of the join requests to reject.
 
         Returns:
-            None
+            The response of the join request rejection, containing the request ID to track the status of the rejection.
         """
-        await self.api.reject_group_join_requests(
+        return GroupOperation(request_id=(await self.api.reject_group_join_requests(
             group_id=group_id,
             request_ids=tuple(request_ids),
-        )
+        ))["request_id"])
 
     async def get_group_invite_link(
             self,
@@ -4307,14 +4308,14 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         return GroupInviteLink(
             _client=self,
             _group_id=group_id,
-            link=await self.api.reset_group_invite_link(group_id=group_id)["invite_link"]
+            link=(await self.api.reset_group_invite_link(group_id=group_id))["invite_link"]
         )
 
     async def remove_group_participants(
             self,
             group_id: str,
             participants: Iterable[str],
-    ) -> None:
+    ) -> GroupOperation:
         """
         Remove participants from a group.
 
@@ -4325,29 +4326,41 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             participants: The WhatsApp IDs of the participants to remove.
 
         Returns:
-            None
+            The response of the remove participants request, containing the request ID to track the status of the removal.
         """
-        await self.api.remove_group_participants(
+        return GroupOperation(request_id=(await self.api.remove_group_participants(
             group_id=group_id,
             participants=tuple(participants),
-        )
+        ))["request_id"])
 
     async def update_group_settings(
             self,
             group_id: str,
             *,
-                subject: str | None = None,
+            subject: str | None = None,
             description: str | None = None,
-            profile_picture: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
-
-    ) -> None:
+            profile_picture: bytes | str | pathlib.Path | BinaryIO | AsyncIterator[bytes],
+    ) -> GroupOperation:
         """
         Update group settings.
 
         - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#update-group-settings>`_.
 
+        Args:
+            group_id: The ID of the group.
+            subject: Group subject, Maximum 128 characters.
+            description: Group description. Maximum 2048 characters.
+            profile_picture: The new group profile picture. Can be a bytes object, a file path, a file-like object, or an iterator that yields bytes.
 
+        Returns:
+            The response of the update group settings request, containing the request ID to track the status of the update.
         """
+        return GroupOperation(request_id=(await self.api.update_group_info(
+            group_id=group_id,
+            subject=subject,
+            description=description,
+            profile_picture_file=profile_picture,
+        ))["request_id"])
 
     async def pin_message(
             self,

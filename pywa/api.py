@@ -1,6 +1,7 @@
 """The internal API for the WhatsApp client."""
 
 import logging
+import pathlib
 from contextlib import _GeneratorContextManager
 from typing import Any, BinaryIO, Iterator
 
@@ -2429,7 +2430,7 @@ class GraphAPI:
         Return example::
 
             {
-              "id": "123456789012345"
+              "request_id": "123456789012345"
             }
         """
         data = {
@@ -2451,7 +2452,9 @@ class GraphAPI:
         group_id: str,
         subject: str | None = None,
         description: str | None = None,
-        profile_picture_file: bytes | str | BinaryIO | Iterator[bytes] | None = None,
+        profile_picture_file: (
+            bytes | str | pathlib.Path | BinaryIO | Iterator[bytes] | None
+        ) = None,
     ) -> dict:
         """
         Update group info.

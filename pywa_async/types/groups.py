@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, AsyncIterator
 
 from pywa.types.groups import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.groups import (
@@ -77,26 +77,37 @@ class GroupDetails(_GroupDetails):
             pagination=pagination,
         )
 
-    async def delete(self) -> None:
+    async def delete(self) -> GroupOperation:
         """
         Delete the group.
+
+        Returns:
+            An operation representing the delete group request. You can use the returned request ID to track the status of the delete operation.
         """
         return await self._client.delete_group(group_id=self.id)
 
-    async def remove_participants(self, participants: Iterable[str]) -> None:
+    async def remove_participants(self, participants: Iterable[str]) -> GroupOperation:
         """
         Remove participants from the group.
 
         Args:
             participants: The participants to remove.
+
+        Returns:
+            An operation representing the remove participants request. You can use the returned request ID to track the
         """
         return await self._client.remove_group_participants(
             group_id=self.id,
             participants=participants,
         )
 
-    async def remove_all_participants(self) -> None:
-        """Remove all participants from the group."""
+    async def remove_all_participants(self) -> GroupOperation:
+        """
+        Remove all participants from the group.
+
+        Returns:
+            An operation representing the remove all participants request. You can use the returned request ID to track
+        """
         return await self._client.remove_group_participants(
             group_id=self.id,
             participants=(p.preferred_id for p in self.participants),
@@ -105,10 +116,29 @@ class GroupDetails(_GroupDetails):
     async def update(
         self,
         *,
-        profile_picture: str | None = None,
         subject: str | None = None,
         description: str | None = None,
-    ) -> None: ...
+        profile_picture: bytes | str | pathlib.Path | BinaryIO | AsyncIterator[bytes],
+    ) -> GroupOperation:
+        """
+        Update group settings.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#update-group-settings>`_.
+
+        Args:
+            subject: Group subject, Maximum 128 characters.
+            description: Group description. Maximum 2048 characters.
+            profile_picture: The new group profile picture. Can be a bytes object, a file path, a file-like object, or an iterator that yields bytes.
+
+        Returns:
+            An operation representing the update group settings request. You can use the returned request ID to track the status of the update operation.
+        """
+        return await self._client.update_group_settings(
+            group_id=self.id,
+            subject=subject,
+            description=description,
+            profile_picture=profile_picture,
+        )
 
 
 class GroupParticipant(BaseUserAsync, _GroupParticipant):
@@ -124,7 +154,7 @@ class GroupParticipant(BaseUserAsync, _GroupParticipant):
 
     _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)
 
-    async def remove(self) -> None:
+    async def remove(self) -> GroupOperation:
         """
         Remove the participant from the group.
         """
@@ -163,14 +193,14 @@ class GroupJoinRequest(_GroupJoinRequest):
 
     _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)
 
-    async def approve(self) -> None:
+    async def approve(self) -> GroupOperation:
         """Approve the join request."""
         return await self._client.approve_group_join_requests(
             group_id=self._group_id,
             request_ids=(self.id,),
         )
 
-    async def reject(self) -> None:
+    async def reject(self) -> GroupOperation:
         """Reject the join request."""
         return await self._client.reject_group_join_requests(
             group_id=self._group_id,
@@ -196,7 +226,9 @@ class GroupJoinRequestsResult(Result[GroupJoinRequest]):
         )
         self._group_id = group_id
 
-    async def approve_all(self, *, fetch_all: bool = False, sleep: float = 0.0) -> None:
+    async def approve_all(
+        self, *, fetch_all: bool = False, sleep: float = 0.0
+    ) -> GroupOperation:
         """
         Approve all join requests.
 
@@ -210,7 +242,9 @@ class GroupJoinRequestsResult(Result[GroupJoinRequest]):
             request_ids=[request.id for request in requests],
         )
 
-    async def reject_all(self, *, fetch_all: bool = False, sleep: float = 0.0) -> None:
+    async def reject_all(
+        self, *, fetch_all: bool = False, sleep: float = 0.0
+    ) -> GroupOperation:
         """
         Reject all join requests.
 
@@ -225,11 +259,15 @@ class GroupJoinRequestsResult(Result[GroupJoinRequest]):
         )
 
 
-class GroupMessageStatuses(_GroupMessageStatuses):
+class GroupMessageStatuses(_GroupMessageStatuses, Sequence[MessageStatusAsync]):
+    """
+    Represents an update for message statuses in a WhatsApp group.
+
+    Attributes:
+        group_id: The unique identifier of the group.
+        statuses: A tuple of message statuses for messages sent to the group.
+    """
+
     _msg_status_cls: ClassVar[type[MessageStatusAsync]] = MessageStatusAsync
 
     statuses: tuple[MessageStatusAsync, ...]
-
-    def __iter__(self) -> Iterator[MessageStatusAsync]:
-        """Iterate over the message statuses."""
-        return super().__iter__()

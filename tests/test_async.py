@@ -93,6 +93,11 @@ from pywa.types import (
 from pywa.types import Video as VideoSync
 from pywa.types.base_update import BaseUpdate, BaseUserUpdate
 from pywa.types.flows import FlowDetails as FlowDetailsSync
+from pywa.types.groups import GroupDetails as GroupDetailsSync
+from pywa.types.groups import GroupInviteLink as GroupInviteLinkSync
+from pywa.types.groups import GroupJoinRequest as GroupJoinRequestSync
+from pywa.types.groups import GroupJoinRequestsResult as GroupJoinRequestsResultSync
+from pywa.types.groups import GroupMessageStatuses as GroupMessageStatusesSync
 from pywa.types.groups import GroupParticipant as GroupParticipantSync
 from pywa.types.media import ArrivedMedia
 from pywa.types.media import Media as MediaSync
@@ -204,6 +209,13 @@ from pywa_async.types import (
     UserMarketingPreferences as UserMarketingPreferencesAsync,
 )
 from pywa_async.types.flows import FlowDetails as FlowDetailsAsync
+from pywa_async.types.groups import GroupDetails as GroupDetailsAsync
+from pywa_async.types.groups import GroupInviteLink as GroupInviteLinkAsync
+from pywa_async.types.groups import GroupJoinRequest as GroupJoinRequestAsync
+from pywa_async.types.groups import (
+    GroupJoinRequestsResult as GroupJoinRequestsResultAsync,
+)
+from pywa_async.types.groups import GroupMessageStatuses as GroupMessageStatusesAsync
 from pywa_async.types.groups import GroupParticipant as GroupParticipantAsync
 from pywa_async.types.media import Audio as AudioAsync
 from pywa_async.types.media import Document as DocumentAsync
@@ -285,6 +297,11 @@ def overrides() -> list[tuple[type, type]]:
         (UpdatedTemplateSync, UpdatedTemplateAsync),
         (QRCodeSync, QRCodeAsync),
         (GroupParticipantSync, GroupParticipantAsync),
+        (GroupDetailsSync, GroupDetailsAsync),
+        (GroupInviteLinkSync, GroupInviteLinkAsync),
+        (GroupJoinRequestSync, GroupJoinRequestAsync),
+        (GroupJoinRequestsResultSync, GroupJoinRequestsResultAsync),
+        (GroupMessageStatusesSync, GroupMessageStatusesAsync),
     ]
 
 
@@ -370,6 +387,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
         "_usr_cls",
         "_msg_cls",
         "_group_participant_cls",
+        "_msg_status_cls",
         "_httpx_client",
         "_flow_req_cls",
         "_api_fields",
@@ -424,7 +442,9 @@ def test_same_signature(overrides):
             (MessageSync.reply_sticker, ("sticker",)),
             (WhatsAppSync.upload_media, ("media", "download_chunk_size", "dl_session")),
             (WhatsAppSync.update_business_profile, ("profile_picture",)),
+            (WhatsAppSync.update_group_settings, ("profile_picture",)),
             (GraphAPISync.upload_file, ("file",)),
+            (GroupDetailsSync.update, ("profile_picture",)),
         )
     }
     for sync_obj, async_obj in overrides:

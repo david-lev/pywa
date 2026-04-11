@@ -119,6 +119,7 @@ from .types.groups import (
     GroupInviteLink,
     GroupJoinApprovalMode,
     GroupJoinRequestsResult,
+    GroupOperation,
     GroupParticipant,
 )
 from .types.media import Media
@@ -4277,7 +4278,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             description: str | None = None,
             join_approval_mode: GroupJoinApprovalMode | None = None,
             phone_id: str | int | None = None,
-    ) -> None:
+    ) -> GroupOperation:
         """
         Create a new group.
 
@@ -4290,14 +4291,14 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             phone_id: The phone ID to create the group for (optional, if not provided, the client's phone ID will be used).
 
         Returns:
-            None
+            The response of the group creation request, containing the request ID to track the status of the group creation.
         """
-        self.api.create_group(
+        return GroupOperation(request_id=self.api.create_group(
             phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
             subject=subject,
             description=description,
             join_approval_mode=join_approval_mode.value if join_approval_mode else None,
-        )
+        )["request_id"])
 
     def get_group(
             self,
@@ -4357,7 +4358,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def delete_group(
             self,
             group_id: str,
-    ) -> None:
+    ) -> GroupOperation:
         """
         Delete a group.
 
@@ -4367,11 +4368,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             group_id: The ID of the group to delete.
 
         Returns:
-            None
+            The response of the group deletion request, containing the request ID to track the status of the group deletion.
         """
-        self.api.delete_group(
+        return GroupOperation(request_id=self.api.delete_group(
             group_id=group_id,
-        )
+        )["request_id"])
 
     def get_group_join_requests(
             self,
@@ -4404,7 +4405,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             self,
             group_id: str,
             request_ids: Iterable[str],
-    ) -> None:
+    ) -> GroupOperation:
         """
         Approve join requests for a group.
 
@@ -4415,18 +4416,18 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             request_ids: The IDs of the join requests to approve.
 
         Returns:
-            None
+            The response of the join request approval, containing the request ID to track the status of the approval.
         """
-        self.api.approve_group_join_requests(
+        return GroupOperation(request_id=self.api.approve_group_join_requests(
             group_id=group_id,
             request_ids=tuple(request_ids),
-        )
+        )["request_id"])
 
     def reject_group_join_requests(
             self,
             group_id: str,
             request_ids: Iterable[str],
-    ) -> None:
+    ) -> GroupOperation:
         """
         Reject join requests for a group.
 
@@ -4437,12 +4438,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             request_ids: The IDs of the join requests to reject.
 
         Returns:
-            None
+            The response of the join request rejection, containing the request ID to track the status of the rejection.
         """
-        self.api.reject_group_join_requests(
+        return GroupOperation(request_id=self.api.reject_group_join_requests(
             group_id=group_id,
             request_ids=tuple(request_ids),
-        )
+        )["request_id"])
 
     def get_group_invite_link(
             self,
@@ -4490,7 +4491,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             self,
             group_id: str,
             participants: Iterable[str],
-    ) -> None:
+    ) -> GroupOperation:
         """
         Remove participants from a group.
 
@@ -4501,12 +4502,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             participants: The WhatsApp IDs of the participants to remove.
 
         Returns:
-            None
+            The response of the remove participants request, containing the request ID to track the status of the removal.
         """
-        self.api.remove_group_participants(
+        return GroupOperation(request_id=self.api.remove_group_participants(
             group_id=group_id,
             participants=tuple(participants),
-        )
+        )["request_id"])
 
     def update_group_settings(
             self,
@@ -4514,16 +4515,28 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             *,
                 subject: str | None = None,
             description: str | None = None,
-            profile_picture: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
-
-    ) -> None:
+            profile_picture: bytes | str | pathlib.Path | BinaryIO | Iterator[bytes],
+    ) -> GroupOperation:
         """
         Update group settings.
 
         - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#update-group-settings>`_.
 
+        Args:
+            group_id: The ID of the group.
+            subject: Group subject, Maximum 128 characters.
+            description: Group description. Maximum 2048 characters.
+            profile_picture: The new group profile picture. Can be a bytes object, a file path, a file-like object, or an iterator that yields bytes.
 
+        Returns:
+            The response of the update group settings request, containing the request ID to track the status of the update.
         """
+        return GroupOperation(request_id=self.api.update_group_info(
+            group_id=group_id,
+            subject=subject,
+            description=description,
+            profile_picture_file=profile_picture,
+        )["request_id"])
 
     def pin_message(
             self,
