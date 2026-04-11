@@ -3,7 +3,20 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-#### 4.0.0b3 (2026-04-01) **Beta**
+ver#### 4.0.0b4 (2026-04-11) **Beta**
+
+- [client] update `webhook_fields` type to support `utils.WebhookFields` and enhance handling logic
+- [client] replace `business_account_id` with `waba_id` across the codebase
+- [client] add methods to retrieve shared and owned WABAs
+- [message] add `OutgoingMessage`, `OutgoingEditedMessage` and `OutgoingDeletedMessage` classes for message updates
+- [message] add `EditedMessage` and `DeletedMessage` classes for message updates
+- [contacts] add `ContactList` class for shared contacts handling
+- [media] store `caption` inside media objects
+- [groups] add `GroupOperation` class and update group-related methods to return operation responses
+- [callback] update `VoiceCallButton` to support `timedelta` for `ttl_minutes`
+- [errors] add `raw` error field and new group/template error classes
+
+#### 4.0.0b3 (2026-04-01)
 
 - [client] add `SUPPORTS_BSUID_API` flag and update user identifier resolution logic
 - [templates] fix summary fields in `TemplatesResult`
