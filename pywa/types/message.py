@@ -614,6 +614,16 @@ class EditedMessage(BaseUserUpdate):
             message=cls._msg_cls.from_update(client, update, is_edit=True),
         )
 
+    @property
+    def message_id_to_reply(self) -> str:
+        """
+        The ID of the message to reply to.
+
+        If you want to ``wa.send_x`` with ``reply_to_message_id`` in order to reply to a message, use this property
+        instead of ``id`` to prevent errors.
+        """
+        return self.original_message_id
+
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class DeletedMessage(BaseUserUpdate):
@@ -657,6 +667,16 @@ class DeletedMessage(BaseUserUpdate):
             ),
             metadata=Metadata.from_dict(value["metadata"]),
         )
+
+    @property
+    def message_id_to_reply(self) -> str:
+        """
+        The ID of the message to reply to.
+
+        If you want to ``wa.send_x`` with ``reply_to_message_id`` in order to reply to a message, use this property
+        instead of ``id`` to prevent errors.
+        """
+        return self.original_message_id
 
 
 class _Outgoing:
