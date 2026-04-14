@@ -829,14 +829,18 @@ class CreativeFeaturesSpec:
         Automatic Creative Optimizations are currently only available to businesses participating in early access. It will be made available to all businesses on a future date.
 
     Attributes:
-        image_brightness_and_contrast: Whether to apply brightness and contrast adjustments to images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-cropping>`_.
-        image_touchups: Whether to apply touch-ups to images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-filtering>`_.
-        add_text_overlay: Whether to add text overlays to images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#text-overlays>`_.
-        image_animation: Whether to apply animations to images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-animation>`_.
-        image_background_gen: Whether to generate backgrounds for images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-background-generation>`_.
-        text_extraction_for_headline: Whether to extract text from images for headlines. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#headline-extraction>`_.
-        text_extraction_for_tap_target: Whether to extract text from images for tap targets. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#tap-target-title-extraction>`_.
-        auto_promotion_tag: Whether to automatically extract the promotion tag, like “30% off”, “50% discount”, “Free shipping” from messages to create a promotion tag and put it into the image to highlight promotion information. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#auto-promotion-tag>`_.
+            image_brightness_and_contrast: Whether to apply brightness and contrast adjustments to images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-cropping>`_.
+            image_touchups: Whether to apply touch-ups to images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-filtering>`_.
+            add_text_overlay: Whether to automatically add a text overlay onto your image using your message content. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#text-overlays>`_.
+            image_animation: Whether to automatically transform your header image into an animated GIF. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-animation>`_.
+            image_background_gen: Whether to generate backgrounds for images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-background-generation>`_.
+            text_extraction_for_headline: Whether to extract keywords or phrases from your message to create a headline for your body text to highlight key information. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#headline-extraction>`_.
+            text_extraction_for_tap_target: Whether to extract keywords or phrases from your message to create a title for the tap-target area to highlight key information. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#tap-target-title-extraction>`_.
+            product_extensions: Whether to enhances single-image creatives by appending a set of additional catalog products users are likely to engage or convert with, creating more personalized and relevant experiences. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#product-extensions>`_.
+            text_formatting_optimization: Whether to update the formatting of text (e.g. remove unnecessary spaces, bold phrases) to increase performance. No text content is changed - format only. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#text-formatting>`_.
+            auto_promotion_tag: Whether to automatically extract the promotion tag, like “30% off”, “50% discount”, “Free shipping” from messages to create a promotion tag and put it into the image to highlight promotion information. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#auto-promotion-tag>`_.
+            hyperlink_formatting: Whether to automatically transform any URL links in the message body by either shortening the link or applying markdown formatting (hyperlinks) to adjacent key phrases to improve message digestibility. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#link-formatting-hyperlinks>`_.
+            image_banner: Whether to automatically apply colorful paddings to transform the image creative to the optimal aspect ratio to enhance visual appeal and improve media digestibility. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#image-banner>`_.
     """
 
     __slots__ = (
@@ -850,6 +854,9 @@ class CreativeFeaturesSpec:
         "product_extensions",
         "text_formatting_optimization",
         "auto_promotion_tag",
+        "hyperlink_formatting",
+        "image_banner",
+        "dynamic_cta_text",
     )
 
     def __init__(
@@ -865,6 +872,9 @@ class CreativeFeaturesSpec:
         product_extensions: bool | None = None,
         text_formatting_optimization: bool | None = None,
         auto_promotion_tag: bool | None = None,
+        hyperlink_formatting: bool | None = None,
+        image_banner: bool | None = None,
+        dynamic_cta_text: bool | None = None,
     ):
         """
         Initializes a CreativeFeaturesSpec instance.
@@ -877,9 +887,11 @@ class CreativeFeaturesSpec:
             image_background_gen: Whether to generate backgrounds for images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-background-generation>`_.
             text_extraction_for_headline: Whether to extract keywords or phrases from your message to create a headline for your body text to highlight key information. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#headline-extraction>`_.
             text_extraction_for_tap_target: Whether to extract keywords or phrases from your message to create a title for the tap-target area to highlight key information. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#tap-target-title-extraction>`_.
-            product_extensions: Whether to encourage users to explore more products by appending additional catalog products to single-image creatives. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#product-extensions>`_.
+            product_extensions: Whether to enhances single-image creatives by appending a set of additional catalog products users are likely to engage or convert with, creating more personalized and relevant experiences. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#product-extensions>`_.
             text_formatting_optimization: Whether to update the formatting of text (e.g. remove unnecessary spaces, bold phrases) to increase performance. No text content is changed - format only. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#text-formatting>`_.
             auto_promotion_tag: Whether to automatically extract the promotion tag, like “30% off”, “50% discount”, “Free shipping” from messages to create a promotion tag and put it into the image to highlight promotion information. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#auto-promotion-tag>`_.
+            hyperlink_formatting: Whether to automatically transform any URL links in the message body by either shortening the link or applying markdown formatting (hyperlinks) to adjacent key phrases to improve message digestibility. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#link-formatting-hyperlinks>`_.
+            image_banner: Whether to automatically apply colorful paddings to transform the image creative to the optimal aspect ratio to enhance visual appeal and improve media digestibility. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#image-banner>`_.
         """
         self.image_brightness_and_contrast = image_brightness_and_contrast
         self.image_touchups = image_touchups
@@ -891,6 +903,9 @@ class CreativeFeaturesSpec:
         self.product_extensions = product_extensions
         self.text_formatting_optimization = text_formatting_optimization
         self.auto_promotion_tag = auto_promotion_tag
+        self.hyperlink_formatting = hyperlink_formatting
+        self.image_banner = image_banner
+        self.dynamic_cta_text = dynamic_cta_text
 
     def to_dict(self) -> dict:
         return {
