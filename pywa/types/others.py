@@ -815,8 +815,8 @@ class MarketingMessagesOnboardingStatus(helpers.StrEnum):
 class BusinessInfo(helpers.APIObject, helpers.FromDict):
     id: str
     name: str
-    status: str
-    type: str
+    status: str | None = None
+    type: str | None = None
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -855,6 +855,8 @@ class WhatsAppBusinessAccount(helpers.APIObject):
     currency: str | None
     country: str | None
     subscribed_apps: tuple[FacebookApplication, ...] | None
+    owner_business_info: BusinessInfo | None
+    account_review_status: str | None
 
     @classmethod
     def from_dict(cls, data: dict) -> WhatsAppBusinessAccount:
@@ -895,6 +897,10 @@ class WhatsAppBusinessAccount(helpers.APIObject):
             )
             if "subscribed_apps" in data
             else None,
+            owner_business_info=BusinessInfo.from_dict(data["owner_business_info"])
+            if "owner_business_info" in data
+            else None,
+            account_review_status=data.get("account_review_status"),
         )
 
 
@@ -1032,6 +1038,11 @@ class ConversationalAutomation:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
+class CreatedBusinessPhoneNumber:
+    id: str
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
 class BusinessPhoneNumber(helpers.APIObject):
     """
     Represents a WhatsApp Business Phone Number.
@@ -1097,6 +1108,10 @@ class BusinessPhoneNumber(helpers.APIObject):
     certificate: str | None
     new_certificate: str | None
     last_onboarded_time: str | None
+    username: str | None
+    country_code: str | None
+    country_dial_code: str | None
+    unified_cert_status: str | None
 
     @classmethod
     def from_dict(cls, data: dict):
@@ -1134,6 +1149,10 @@ class BusinessPhoneNumber(helpers.APIObject):
             certificate=data.get("certificate"),
             new_certificate=data.get("new_certificate"),
             last_onboarded_time=data.get("last_onboarded_time"),
+            username=data.get("username"),
+            country_code=data.get("country_code"),
+            country_dial_code=data.get("country_dial_code"),
+            unified_cert_status=data.get("unified_cert_status"),
         )
 
 

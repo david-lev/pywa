@@ -294,11 +294,6 @@ Manage business account and profile:
      - Get phone number settings
    * - :meth:`~WhatsApp.update_business_phone_number_settings`
      - Update phone number settings
-   * - :meth:`~WhatsApp.register_phone_number`
-     - Register a new phone number
-   * - :meth:`~WhatsApp.deregister_phone_number`
-     - Deregister a phone number
-
 
 Managing Users
 --------------
@@ -428,6 +423,37 @@ Integrate with webhook events manually:
    * - :meth:`~WhatsApp.get_flow_request_handler`
      - Retrieve flow request handler
 
+Partner tools
+--------------
+
+.. list-table::
+   :widths: 40 60
+   :header-rows: 1
+
+   * - Method
+     - Description
+   * - :meth:`~WhatsApp.create_phone_number`
+     - Create a phone number on a WhatsApp Business Account.
+   * - :meth:`~WhatsApp.request_verification_code`
+     - Request a verification code for a phone number.
+   * - :meth:`~WhatsApp.verify_phone_number`
+     - Verify a phone number with a verification code.
+   * - :meth:`~WhatsApp.register_phone_number`
+     - Register a new phone number
+   * - :meth:`~WhatsApp.deregister_phone_number`
+     - Deregister a phone number
+   * - :meth:`~WhatsApp.get_shared_business_accounts`
+     - Get shared business accounts
+   * - :meth:`~WhatsApp.get_owned_business_account`
+     - Get owned business account
+   * - :meth:`~WhatsApp.override_waba_callback_url`
+     - Override WABA callback URL
+   * - :meth:`~WhatsApp.delete_waba_callback_url`
+     - Delete WABA callback URL
+   * - :meth:`~WhatsApp.override_phone_callback_url`
+     - Override phone callback URL
+   * - :meth:`~WhatsApp.delete_phone_callback_url`
+     - Delete phone callback URL
 
 Others
 ------
@@ -442,19 +468,6 @@ Others
      - Retrieve app access token
    * - :meth:`~WhatsApp.set_app_callback_url`
      - Set app callback URL
-   * - :meth:`~WhatsApp.override_waba_callback_url`
-     - Override WABA callback URL
-   * - :meth:`~WhatsApp.delete_waba_callback_url`
-     - Delete WABA callback URL
-   * - :meth:`~WhatsApp.override_phone_callback_url`
-     - Override phone callback URL
-   * - :meth:`~WhatsApp.delete_phone_callback_url`
-     - Delete phone callback URL
-   * - :meth:`~WhatsApp.get_shared_business_accounts`
-     - Get shared business accounts
-   * - :meth:`~WhatsApp.get_owned_business_account`
-     - Get owned business account
-
 
 .. toctree::
    client_reference

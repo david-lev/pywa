@@ -66,6 +66,9 @@ Client Reference
 .. automethod:: WhatsApp.get_blocked_users
 .. automethod:: WhatsApp.register_phone_number
 .. automethod:: WhatsApp.deregister_phone_number
+.. automethod:: WhatsApp.create_phone_number
+.. automethod:: WhatsApp.request_verification_code
+.. automethod:: WhatsApp.verify_phone_number
 .. automethod:: WhatsApp.create_qr_code
 .. automethod:: WhatsApp.get_qr_code
 .. automethod:: WhatsApp.get_qr_codes

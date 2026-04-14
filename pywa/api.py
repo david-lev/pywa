@@ -616,6 +616,82 @@ class GraphAPI:
             method="POST", endpoint=f"/{sender}/marketing_messages", json=body
         )
 
+    def create_phone_number(
+        self,
+        waba_id: str,
+        cc: str,
+        phone_number: str,
+        verified_name: str,
+    ) -> dict[str, str]:
+        """
+        Create a phone number on a WhatsApp Business Account.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/solution-providers/registering-phone-numbers#step-1-create-the-phone-number>`_.
+
+        Args:
+            waba_id: The ID of the WhatsApp Business Account to create the phone number on.
+            cc: The phone number’s country calling code (e.g. "1").
+            phone_number: The phone number, with or without the country calling code.
+            verified_name: The phone number’s `display name <https://www.facebook.com/business/help/338047025165344>`_.
+
+        Returns:
+            A dict with the ID of the created phone number.
+        """
+        return self._request(
+            method="POST",
+            endpoint=f"{waba_id}/phone_numbers",
+            json={
+                "country_code": cc,
+                "phone_number": phone_number,
+                "verified_name": verified_name,
+            },
+        )
+
+    def request_verification_code(
+        self, phone_id: str, code_method: str, language: str
+    ) -> dict[str, bool]:
+        """
+        Request a verification code for a phone number.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-phone-numbers/phone-numbers#verify-phone-numbers>`_.
+
+        Args:
+            phone_id: The ID of the phone number to request the verification code for.
+            code_method: Chosen method for verification. Supported options are "SMS"/"VOICE"
+            language: The language’s two-character `language code <https://developers.facebook.com/documentation/business-messaging/whatsapp/templates/supported-languages>`_. For example: "en".
+
+        Returns:
+            The success of the operation.
+        """
+        return self._request(
+            method="POST",
+            endpoint=f"/{phone_id}/request_code",
+            params={"code_method": code_method, "language": language},
+        )
+
+    def verify_phone_number(
+        self,
+        phone_id: str,
+        code: str,
+    ) -> dict[str, bool]:
+        """
+        Verify a phone number with the code received by the user.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-phone-numbers/phone-numbers#verify-phone-numbers>`_.
+
+        Args:
+            phone_id: The ID of the phone number to verify.
+            code: The verification code received by the user.
+
+        Returns:
+            The success of the operation.
+        """
+        return self._request(
+            method="POST",
+            endpoint=f"/{phone_id}/verify_code",
+            params={"code": code},
+        )
+
     def register_phone_number(
         self,
         phone_id: str,

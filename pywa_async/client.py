@@ -137,6 +137,7 @@ from .types.groups import (
 from .types.media import Media
 from .types.others import (
     BlockedUser,
+    CreatedBusinessPhoneNumber,
     InteractiveType,
     SuccessResult,
     UsersBlockedResult,
@@ -3543,6 +3544,83 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             The success of the deregistration.
         """
         return SuccessResult.from_dict(await self.api.deregister_phone_number(
+            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
+        ))
+
+    async def create_phone_number(
+        self,
+        *,
+        country_calling_code: str | int,
+        phone_number: str | int,
+        verified_name: str,
+        waba_id: str | int | None = None,
+    ) -> CreatedBusinessPhoneNumber:
+        """
+        Create a phone number on a WhatsApp Business Account.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/solution-providers/registering-phone-numbers#step-1-create-the-phone-number>`_.
+
+        Args:
+            country_calling_code: The phone number’s country calling code (e.g. "1").
+            phone_number: The phone number, with or without the country calling code.
+            verified_name: The phone number’s `display name <https://www.facebook.com/business/help/338047025165344>`_.
+            waba_id: The WhatsApp Business account ID to create the phone number on (optional, if not provided, the client's business account ID will be used).
+
+        Returns:
+            A dict with the ID of the created phone number.
+        """
+        return CreatedBusinessPhoneNumber(id=(await self.api.create_phone_number(
+            cc=str(country_calling_code),
+            phone_number=str(phone_number),
+            verified_name=verified_name,
+            waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"),
+        ))["id"])
+
+    async def request_verification_code(
+        self,
+        *,
+        code_method: Literal["SMS", "VOICE"],
+        language_code: str,
+        phone_id: str | int | None = None,
+    ) -> SuccessResult:
+        """
+        Request a verification code for a phone number.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-phone-numbers/phone-numbers#verify-phone-numbers>`_.
+
+        Args:
+            code_method: Chosen method for verification. Supported options are "SMS"/"VOICE"
+            language_code: The language’s two-character `language code <https://developers.facebook.com/documentation/business-messaging/whatsapp/templates/supported-languages>`_. For example: "en".
+            phone_id: The phone ID to create the verification code for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            The success of the request.
+        """
+        return SuccessResult.from_dict(await self.api.request_verification_code(
+            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
+            code_method=code_method,
+            language=language_code,
+        ))
+
+    async def verify_phone_number(
+        self,
+        code: str,
+        phone_id: str | int | None = None,
+    ) -> SuccessResult:
+        """
+        Verify a phone number with the code received by the user.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-phone-numbers/phone-numbers#verify-phone-numbers>`_.
+
+        Args:
+            code: The verification code received by the user.
+            phone_id: The phone ID to verify the code for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            The success of the request.
+        """
+        return SuccessResult.from_dict(await self.api.verify_phone_number(
+            code=code,
             phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
         ))
 

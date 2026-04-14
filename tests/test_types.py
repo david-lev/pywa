@@ -81,6 +81,8 @@ def test_flow_details():
             country=None,
             currency=None,
             subscribed_apps=None,
+            owner_business_info=None,
+            account_review_status=None,
         ),
         application=types.flows.FacebookApplication(
             link="https://www.facebook.com/games/?app_id=12345",
@@ -240,6 +242,10 @@ def test_business_phone_number():
         certificate=None,
         new_certificate=None,
         last_onboarded_time=None,
+        username=None,
+        country_code=None,
+        country_dial_code=None,
+        unified_cert_status=None,
     )
 
 
