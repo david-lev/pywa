@@ -16,8 +16,6 @@ Template Types
 
 .. autoclass:: TemplateCategory()
 
-.. autoclass:: TemplateSubCategory()
-
 .. autoclass:: TemplateLanguage()
 
 .. autoclass:: ParamFormat()

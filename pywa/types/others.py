@@ -1111,7 +1111,6 @@ class BusinessPhoneNumber(helpers.APIObject):
     username: str | None
     country_code: str | None
     country_dial_code: str | None
-    unified_cert_status: str | None
 
     @classmethod
     def from_dict(cls, data: dict):
@@ -1152,7 +1151,6 @@ class BusinessPhoneNumber(helpers.APIObject):
             username=data.get("username"),
             country_code=data.get("country_code"),
             country_dial_code=data.get("country_dial_code"),
-            unified_cert_status=data.get("unified_cert_status"),
         )
 
 

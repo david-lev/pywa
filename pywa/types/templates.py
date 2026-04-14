@@ -627,12 +627,6 @@ class TemplateCategory(helpers.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class TemplateSubCategory(helpers.StrEnum):
-    CALL_PERMISSIONS_REQUEST = "CALL_PERMISSIONS_REQUEST"
-
-    UNKNOWN = "UNKNOWN"
-
-
 class ComponentType(helpers.StrEnum):
     HEADER = "HEADER"
     BODY = "BODY"
@@ -4050,7 +4044,7 @@ class TemplateDetails(helpers.APIObject):
     library_template_name: str | None
     quality_score: QualityScore | None
     cta_url_link_tracking_opted_out: bool | None
-    sub_category: TemplateSubCategory | None
+    sub_category: str | None
     degrees_of_freedom_spec: DegreesOfFreedomSpec | None
 
     @classmethod
@@ -4083,9 +4077,7 @@ class TemplateDetails(helpers.APIObject):
             if "quality_score" in data
             else None,
             cta_url_link_tracking_opted_out=data.get("cta_url_link_tracking_opted_out"),
-            sub_category=TemplateSubCategory(data["sub_category"])
-            if "sub_category" in data
-            else None,
+            sub_category=data.get("sub_category"),
             degrees_of_freedom_spec=DegreesOfFreedomSpec(
                 creative_features_spec=CreativeFeaturesSpec.from_dict(
                     data["degrees_of_freedom_spec"]["creative_features_spec"]
