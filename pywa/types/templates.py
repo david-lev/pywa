@@ -1086,7 +1086,6 @@ class _BaseTextComponent:
         """
         Initializes a text component for a template.
 
-
         >>> positionals = HeaderText("Hi {{1}}!, How are you? Get {{2}}% OFF!", "David", 15)
         >>> named = BodyText("Hi {{name}}!, How are you? Get {{discount}}% OFF!", name="David", discount=15)
         >>> print(positionals.preview(), named.preview())
@@ -1097,16 +1096,56 @@ class _BaseTextComponent:
             **named_examples: Named examples for the text component. These will be used to fill in the template text.
         """
         if positionals_examples and named_examples:
-            raise ValueError("You can't use both positional and named args!")
+            raise ValueError("You can't use both positional and named examples!")
+
+        all_placeholders = set(re.findall(r"\{\{(\w+)}}", text))
+        positional_placeholders = {p for p in all_placeholders if p.isdigit()}
+        named_placeholders = all_placeholders - positional_placeholders
+
         if positionals_examples:
+            if named_placeholders:
+                raise ValueError(
+                    f"Found named placeholders {named_placeholders} in text, but positional examples were provided."
+                )
+
+            expected_indices = {str(i) for i in range(1, len(positionals_examples) + 1)}
+            if positional_placeholders != expected_indices:
+                raise ValueError(
+                    f"Mismatched positional placeholders. Expected {expected_indices} "
+                    f"based on {len(positionals_examples)} provided examples, but found {positional_placeholders} in text."
+                )
+
             self.param_format = ParamFormat.POSITIONAL
             self.text = text
             self.example = positionals_examples
+
         elif named_examples:
+            if positional_placeholders:
+                raise ValueError(
+                    f"Found positional placeholders {positional_placeholders} in text, but named examples were provided."
+                )
+
+            provided_keys = set(named_examples.keys())
+            if named_placeholders != provided_keys:
+                missing = named_placeholders - provided_keys
+                extra = provided_keys - named_placeholders
+                error_msgs = []
+                if missing:
+                    error_msgs.append(f"missing examples for {missing}")
+                if extra:
+                    error_msgs.append(f"extra examples provided for {extra}")
+                raise ValueError("Named parameters mismatch: " + "; ".join(error_msgs))
+
             self.param_format = ParamFormat.NAMED
             self.text = text
             self.example = named_examples
+
         else:
+            if all_placeholders:
+                raise ValueError(
+                    f"Text contains placeholders {all_placeholders} but no examples were provided."
+                )
+
             self.param_format = None
             self.example = None
             self.text = text

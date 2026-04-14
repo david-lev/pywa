@@ -50,12 +50,30 @@ def test_templates_to_json(caplog):
                 )
 
 
-def test_template_text_examples_params():
+def test_template_text_params_both_pos_and_named_examples():
     with pytest.raises(ValueError):
         HeaderText.params("pos", named="named")
 
 
 def test_template_text_examples_positionals():
+    with pytest.raises(
+        ValueError,
+        match="Text contains placeholders {'1'} but no examples were provided.",
+    ):
+        HeaderText("example {{1}}")
+
+    with pytest.raises(
+        ValueError,
+        match="Mismatched positional placeholders. Expected {'1|2', '1|2'} based on 2 provided examples, but found {'1'} in text.",
+    ):
+        HeaderText("example {{1}} {{2}}", "one")
+
+    with pytest.raises(
+        ValueError,
+        match="Found named placeholders {'named_param'} in text, but positional examples were provided.",
+    ):
+        HeaderText("example {{named_param}}", "example")
+
     h = HeaderText(
         "Hi {{1}}, this is a text template number {{2}}",
         "David",
@@ -100,6 +118,25 @@ def test_template_text_examples_positionals():
 
 
 def test_template_text_examples_named():
+    with pytest.raises(
+        ValueError,
+        match="Text contains placeholders {'name'} but no examples were provided.",
+    ):
+        BodyText("Hi {{name}}")
+
+    with pytest.raises(
+        ValueError, match="Named parameters mismatch: missing examples for {'number'}"
+    ):
+        BodyText("Hi {{name}}, this is a text template number {{number}}", name="David")
+
+    with pytest.raises(
+        ValueError,
+        match="Found positional placeholders {'1|2', '1|2'} in text, but named examples were provided.",
+    ):
+        BodyText(
+            "Hi {{1}}, this is a text template number {{2}}", name="David", number=1
+        )
+
     b = BodyText(
         "Hi {{name}}, this is a text template number {{number}}",
         name="David",
