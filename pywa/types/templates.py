@@ -1120,6 +1120,40 @@ class _BaseTextComponent:
             return f"{self.__class__.__name__}(text={self.text!r}, {', '.join(f'{k}={v!r}' for k, v in self.example.items())})"
         return f"{self.__class__.__name__}(text={self.text!r})"
 
+    @property
+    def param_names(self) -> tuple[str, ...]:
+        """
+        Returns the names of the parameters required by this component,
+        if the component uses **named parameters**.
+
+        This property is primarily intended for **introspection and automation**,
+        allowing to dynamically discover which parameters must be
+        provided when calling :meth:`params`.
+
+        Example:
+
+            >>> body = BodyText(
+            ...     text="Hi {{name}}, your flight {{flight_iata}} is delayed",
+            ...     name="John",
+            ...     flight_iata="AA123",
+            ... )
+            >>> body.param_names
+            ('name', 'flight_iata')
+
+            >>> wa.send_template(
+            ...     params=[body.params(**{name: my_get_value(name) for name in body.param_names})]
+            ... )
+
+        Returns:
+            A tuple of parameter names if the component uses named parameters, otherwise raises a ValueError.
+
+        Raises:
+            ValueError: If the component does not use named parameters.
+        """
+        if self.param_format == ParamFormat.NAMED:
+            return tuple(self.example.keys())
+        raise ValueError("This component does not use named parameters!")
+
     def preview(self, *override_positionals, **override_named) -> str:
         """
         Returns a preview of the template text with examples filled in.
