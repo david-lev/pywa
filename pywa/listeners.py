@@ -12,8 +12,6 @@ import dataclasses
 import threading
 from typing import TYPE_CHECKING
 
-from . import utils
-
 if TYPE_CHECKING:
     from .client import WhatsApp
     from .filters import Filter
@@ -223,11 +221,6 @@ class _Listeners:
             ListenerCanceled: If the listener was canceled by a filter
             ListenerStopped: If the listener was stopped manually
         """
-        if self._server is utils.MISSING:
-            raise ValueError(
-                "You must initialize the WhatsApp client with an web app"
-                " (Flask or FastAPI or custom server by setting `server` to None) in order to listen to incoming updates."
-            )
         self._check_for_async_filters(filters)
         self._check_for_async_filters(cancelers)
 

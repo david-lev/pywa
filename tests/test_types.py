@@ -245,7 +245,6 @@ def test_business_phone_number():
         username=None,
         country_code=None,
         country_dial_code=None,
-        unified_cert_status=None,
     )
 
 

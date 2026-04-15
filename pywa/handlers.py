@@ -2673,7 +2673,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         self._private_key = private_key or wa._private_key
         self._private_key_password = private_key_password or wa._private_key_password
 
-        if self._endpoint == wa._webhook_endpoint:
+        if self._endpoint == wa.webhook_endpoint:
             raise ValueError(
                 "The flow endpoint cannot be the same as the WhatsApp webhook endpoint."
             )

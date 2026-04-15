@@ -65,7 +65,7 @@ def test_wa_callback_scopes():
             callback_url_scope=utils.CallbackURLScope.APP,
             app_id=None,
             app_secret=None,
-        )
+        )._delayed_register_callback_url()
 
     with pytest.raises(ValueError):
         WhatsApp(
@@ -74,7 +74,7 @@ def test_wa_callback_scopes():
             waba_id=None,
             callback_url="https://exmaple.com",
             callback_url_scope=utils.CallbackURLScope.WABA,
-        )
+        )._delayed_register_callback_url()
 
     with pytest.raises(ValueError):
         WhatsApp(
@@ -83,7 +83,7 @@ def test_wa_callback_scopes():
             verify_token="xyzxyz",
             callback_url="https://exmaple.com",
             callback_url_scope=utils.CallbackURLScope.PHONE,
-        )
+        )._delayed_register_callback_url()
 
 
 def test_resolve_buttons_param():

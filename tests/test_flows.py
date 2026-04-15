@@ -7,7 +7,7 @@ from typing import Callable
 
 import pytest
 
-from pywa import WhatsApp, filters, handlers, utils
+from pywa import WhatsApp, filters
 from pywa.handlers import FlowCompletionHandler
 from pywa.types.flows import (
     ComponentRef,
@@ -707,26 +707,6 @@ def test_flow_callback_wrapper_on_completion():
     def on_completion(_, __): ...
 
     assert wrapper._wa._handlers[FlowCompletionHandler][0]._callback is on_completion
-
-
-def test_flows_server():
-    with pytest.raises(ValueError, match="^When using a custom server.*"):
-        wa = WhatsApp(token=..., server=None, verify_token=...)
-        wa.add_flow_request_handler(
-            handlers.FlowRequestHandler(
-                callback=...,
-                endpoint=...,
-            )
-        )
-
-    with pytest.raises(ValueError, match="^You must initialize the WhatsApp client.*"):
-        wa = WhatsApp(token=..., server=utils.MISSING)
-        wa.add_flow_request_handler(
-            handlers.FlowRequestHandler(
-                callback=...,
-                endpoint=...,
-            )
-        )
 
 
 def test_flow_preview_with_params():

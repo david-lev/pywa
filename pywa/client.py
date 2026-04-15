@@ -222,7 +222,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         token: str = None,
         *,
         session: httpx.Client | None = None,
-        server: Flask | FastAPI | None = utils.MISSING,
+        server: Flask | FastAPI | None = None,
         webhook_endpoint: str = "/",
         verify_token: str | None = None,
         filter_updates: bool = True,
@@ -370,23 +370,24 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 api_version=float(str(api_version)),
             )
 
-        super().__init__(
-            server=server,
-            webhook_endpoint=webhook_endpoint,
-            callback_url=callback_url,
-            callback_url_scope=callback_url_scope,
-            app_secret=app_secret,
-            verify_token=verify_token,
-            webhook_challenge_delay=webhook_challenge_delay
-            or _DEFAULT_VERIFY_DELAY_SEC,
-            business_private_key=business_private_key,
-            business_private_key_password=business_private_key_password,
-            flows_request_decryptor=flows_request_decryptor,
-            flows_response_encryptor=flows_response_encryptor,
-            continue_handling=continue_handling,
-            skip_duplicate_updates=skip_duplicate_updates,
-            validate_updates=validate_updates,
-        )
+        self.server = server
+        self._callback_url = callback_url
+        self._callback_url_scope = callback_url_scope
+        self._verify_token = verify_token
+        self.webhook_endpoint = webhook_endpoint
+        self._webhook_challenge_delay = webhook_challenge_delay
+        self._private_key = business_private_key
+        self._private_key_password = business_private_key_password
+        self._flows_request_decryptor = flows_request_decryptor
+        self._app_id = app_id
+        self._app_secret = app_secret
+        self._flows_response_encryptor = flows_response_encryptor
+        self._validate_updates = validate_updates
+        self._continue_handling = continue_handling
+        self._skip_duplicate_updates = skip_duplicate_updates
+
+        super().__init__()
+
         if handlers_modules:
             self.load_handlers_modules(*handlers_modules)
 
@@ -553,11 +554,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Args:
             handlers: The handlers to add.
         """
-        if self._server is utils.MISSING:
-            raise ValueError(
-                "You must initialize the WhatsApp client with an web app"
-                " (Flask or FastAPI or custom server by setting `server` to None) in order to handle incoming updates."
-            )
         for handler in handlers:
             self._check_for_async_callback(handler._callback)
             self._check_for_async_filters(handler._filters)

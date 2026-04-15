@@ -2,7 +2,7 @@
 
 import logging
 import threading
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 from . import _helpers as helpers
 from . import errors, handlers, utils
@@ -13,7 +13,6 @@ from .types.base_update import (
     StopHandling,
 )
 from .types.system import SystemType
-from .utils import FastAPI, Flask
 
 if TYPE_CHECKING:
     from .client import WhatsApp
@@ -55,82 +54,61 @@ class Server:
 
     def __init__(
         self: "WhatsApp",
-        server: Flask | FastAPI | None,
-        webhook_endpoint: str,
-        callback_url: str | None,
-        callback_url_scope: utils.CallbackURLScope,
-        app_secret: str | None,
-        verify_token: str | None,
-        webhook_challenge_delay: int | None,
-        business_private_key: str | None,
-        business_private_key_password: str | None,
-        flows_request_decryptor: utils.FlowRequestDecryptor | None,
-        flows_response_encryptor: utils.FlowResponseEncryptor | None,
-        continue_handling: bool,
-        skip_duplicate_updates: bool,
-        validate_updates: bool,
     ):
-        self._server = server
-        self._verify_token = verify_token
-        self._webhook_endpoint = webhook_endpoint
-        self._private_key = business_private_key
-        self._private_key_password = business_private_key_password
-        self._flows_request_decryptor = flows_request_decryptor
-        self._app_secret = app_secret
-        self._flows_response_encryptor = flows_response_encryptor
-        self._validate_updates = validate_updates
-        self._continue_handling = continue_handling
-        self._skip_duplicate_updates = skip_duplicate_updates
         self._updates_in_process = set[
             str | int
         ]()  # TODO use threading.Lock | asyncio.Lock
 
-        if server is utils.MISSING:
-            return
-        self._server_type = utils.ServerType.from_app(server)
+        self._server_type = utils.CustomServerType.from_app(self.server)
+        if self._server_type is not None:
+            self._register_routes()
 
-        if not verify_token:
+    def run(
+        self: "WhatsApp", *, host: str = "127.0.0.1", port: int = 8000, **options: Any
+    ) -> None:
+        """
+        Run the server to listen for incoming updates.
+
+        Args:
+            host: The host to listen on (default: ``127.0.0.1``)
+            port: The port to listen on (default: ``8000``)
+            **options: Additional options to pass to ``uvicorn.run`` (e.g. ``ssl_keyfile``, ``ssl_certfile``, etc.). See the `uvicorn documentation <https://uvicorn.dev/settings/>`_ for more details.
+        """
+        if self._server_type is not None:
             raise ValueError(
-                "When listening for incoming updates, a verify token must be provided.\n>> The verify token can "
-                "be any string. It is used to challenge the webhook endpoint to verify that the endpoint is valid."
+                "When providing a custom `server`, you must run it yourself."
             )
-        if validate_updates and not app_secret:
-            _logger.warning(
-                "No `app_secret` provided. Signature validation will be disabled "
-                "(not recommended. set `validate_updates=False` to suppress this warning)"
-            )
-            self._validate_updates = False
+        try:
+            from starlette.applications import Starlette as StarletteApp
+        except ImportError:
+            raise ImportError(
+                'Starlette is required to run the server. Please install it using `pip install "pywa[server"]`.'
+            ) from None
 
+        try:
+            import uvicorn
+        except ImportError:
+            raise ImportError(
+                'Uvicorn is required to run the server. Please install it using `pip install "pywa[server"]`.'
+            ) from None
+
+        self.server, self._server_type = (
+            StarletteApp(),
+            utils.CustomServerType.STARLETTE,
+        )
         self._register_routes()
 
-        if callback_url is not None:
-            if callback_url_scope == utils.CallbackURLScope.APP and (
-                self.app_id is None or app_secret is None
-            ):
-                raise ValueError(
-                    "When registering a callback URL in the app scope, the `app_id` and `app_secret` must be provided.\n>> See here how "
-                    "to get them: "
-                    "https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings/"
-                )
-            elif callback_url_scope == utils.CallbackURLScope.WABA and not self.waba_id:
-                raise ValueError(
-                    "When registering a callback URL in the WABA scope, the `waba_id` must be provided."
-                )
-            elif (
-                callback_url_scope == utils.CallbackURLScope.PHONE and not self.phone_id
-            ):
-                raise ValueError(
-                    "When registering a callback URL in the PHONE scope, the `phone_id` must be provided."
-                )
-
-            self._delayed_register_callback_url(
-                callback_url=f"{callback_url.rstrip('/')}/{self._webhook_endpoint.lstrip('/')}",
-                callback_url_scope=callback_url_scope,
-                app_id=self.app_id,
-                app_secret=app_secret,
-                verify_token=verify_token,
-                delay=webhook_challenge_delay,
-            )
+        uvicorn.run(
+            self.server,
+            host=host,
+            port=port,
+            headers=[
+                ("server", "pywa"),
+                ("X-Content-Type-Options", "nosniff"),
+            ],
+            **options,
+        )
+        exit()
 
     def webhook_challenge_handler(self, vt: str, ch: str) -> tuple[str, int]:
         """
@@ -236,102 +214,35 @@ class Server:
         return "ok", 200
 
     def _register_routes(self: "WhatsApp") -> None:
+        if not self._verify_token:
+            raise ValueError(
+                "When listening for incoming updates, a verify token must be provided.\n>> The verify token can "
+                "be any string. It is used to challenge the webhook endpoint to verify that the endpoint is valid."
+            )
+        if self._validate_updates and not self._app_secret:
+            _logger.warning(
+                "No `app_secret` provided. Signature validation will be disabled "
+                "(not recommended. set `validate_updates=False` to suppress this warning)"
+            )
+            self._validate_updates = False
+
         match self._server_type:
-            case utils.ServerType.FLASK:
-                _logger.info("Using Flask with WSGI")
-                import flask
-
-                @self._server.route(self._webhook_endpoint, methods=["GET"])
-                @helpers.rename_func(f"('{self._webhook_endpoint}')")
-                def pywa_challenge() -> flask.Response:
-                    """Automatically generated by pywa to handle the verification challenge."""
-                    ch, code = self.webhook_challenge_handler(
-                        vt=flask.request.args.get(utils.HUB_VT),
-                        ch=flask.request.args.get(utils.HUB_CH),
-                    )
-                    return flask.Response(
-                        response=ch,
-                        status=code,
-                        content_type="text/plain",
-                        headers={
-                            "X-Content-Type-Options": "nosniff",
-                        },
-                    )
-
-                @self._server.route(self._webhook_endpoint, methods=["POST"])
-                @helpers.rename_func(f"('{self._webhook_endpoint}')")
-                def pywa_webhook() -> flask.Response:
-                    """Automatically generated by pywa to handle incoming updates."""
-                    res, status = self.webhook_update_handler(
-                        update=flask.request.data,
-                        hmac_header=flask.request.headers.get(utils.HUB_SIG),
-                    )
-                    return flask.Response(
-                        response=res,
-                        status=status,
-                        content_type="text/plain",
-                        headers={
-                            "X-Content-Type-Options": "nosniff",
-                        },
-                    )
-
-            case utils.ServerType.FASTAPI:
+            case utils.CustomServerType.STARLETTE:
+                _logger.info("Using Starlette")
+                helpers.register_routes_starlette(wa=self)
+            case utils.CustomServerType.FLASK:
+                _logger.info("Using Flask")
+                helpers.register_routes_flask(wa=self)
+            case utils.CustomServerType.FASTAPI:
                 _logger.info("Using FastAPI")
-                import fastapi
-
-                @self._server.get(self._webhook_endpoint)
-                @helpers.rename_func(f"('{self._webhook_endpoint}')")
-                def pywa_challenge(
-                    vt: str = fastapi.Query(alias=utils.HUB_VT, examples=["xyzxyz"]),
-                    ch: str = fastapi.Query(
-                        alias=utils.HUB_CH, examples=["1858252904"]
-                    ),
-                ) -> fastapi.Response:
-                    """Automatically generated by pywa to handle the verification challenge."""
-                    content, status_code = self.webhook_challenge_handler(
-                        vt=vt,
-                        ch=ch,
-                    )
-                    return fastapi.Response(
-                        content=content,
-                        status_code=status_code,
-                        media_type="text/plain",
-                        headers={
-                            "X-Content-Type-Options": "nosniff",
-                        },
-                    )
-
-                async def _get_body(request: fastapi.Request):
-                    return await request.body()
-
-                @self._server.post(self._webhook_endpoint)
-                @helpers.rename_func(f"('{self._webhook_endpoint}')")
-                def pywa_webhook(
-                    update: bytes = fastapi.Depends(_get_body),
-                    hmac_header: str = fastapi.Header(
-                        alias=utils.HUB_SIG, examples=["sha256=..."]
-                    ),
-                ) -> fastapi.Response:
-                    """Automatically generated by pywa to handle incoming updates."""
-                    content, status_code = self.webhook_update_handler(
-                        update=update,
-                        hmac_header=hmac_header,
-                    )
-                    return fastapi.Response(
-                        content=content,
-                        status_code=status_code,
-                        media_type="text/plain",
-                        headers={
-                            "X-Content-Type-Options": "nosniff",
-                        },
-                    )
-            case None:
-                _logger.info("Using a custom server")
-
+                helpers.register_routes_fastapi(wa=self)
             case _:
                 raise ValueError(
-                    f"The `server` must be one of {utils.ServerType.protocols_names()} or None for a custom server"
+                    f"The `server` must be one of {utils.CustomServerType.protocols_names()} or None for a custom server"
                 )
+
+        if self._callback_url is not None:
+            self._delayed_register_callback_url()
 
     def _call_handlers(self: "WhatsApp", raw_update: RawUpdate) -> None:
         """Call the handlers for the given update."""
@@ -341,7 +252,7 @@ class Server:
             except (KeyError, ValueError, TypeError, IndexError):
                 (_logger.error if self._validate_updates else _logger.debug)(
                     "Webhook ('%s') received unexpected update%s: %s",
-                    self._webhook_endpoint,
+                    self.webhook_endpoint,
                     " (Enable `validate_updates` to ignore updates with invalid data)"
                     if not self._validate_updates
                     else "",
@@ -445,62 +356,60 @@ class Server:
 
     def _delayed_register_callback_url(
         self: "WhatsApp",
-        callback_url: str,
-        callback_url_scope: utils.CallbackURLScope,
-        app_id: int,
-        app_secret: str,
-        verify_token: str,
-        delay: int,
     ) -> None:
+        match self._callback_url_scope:
+            case utils.CallbackURLScope.APP:
+                if self._app_id is None or self._app_secret is None:
+                    raise ValueError(
+                        "When registering a callback URL in the app scope, the `app_id` and `app_secret` must be provided.\n>> See here how "
+                        "to get them: "
+                        "https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings/"
+                    )
+            case utils.CallbackURLScope.WABA:
+                if not self.waba_id:
+                    raise ValueError(
+                        "When registering a callback URL in the WABA scope, the `business_account_id` must be provided."
+                    )
+            case utils.CallbackURLScope.PHONE:
+                if not self.phone_id:
+                    raise ValueError(
+                        "When registering a callback URL in the PHONE scope, the `phone_id` must be provided."
+                    )
         threading.Timer(
-            interval=delay,
+            interval=self._webhook_challenge_delay,
             function=self._register_callback_url,
-            kwargs={
-                "callback_url": callback_url,
-                "callback_url_scope": callback_url_scope,
-                "app_id": app_id,
-                "app_secret": app_secret,
-                "verify_token": verify_token,
-                "fields": self._webhook_fields,
-            },
         ).start()
 
     def _register_callback_url(
         self: "WhatsApp",
-        callback_url: str,
-        callback_url_scope: utils.CallbackURLScope,
-        app_id: int,
-        app_secret: str,
-        verify_token: str,
-        fields: tuple[str, ...] | None,
     ) -> None:
         """
         This is a non-blocking function that registers the callback URL.
         It must be called after the server is running so that the challenge can be verified.
         """
         try:
-            match callback_url_scope:
+            match self._callback_url_scope:
                 case utils.CallbackURLScope.APP:
                     app_access_token = self.api.get_app_access_token(
-                        client_id=app_id, client_secret=app_secret
+                        client_id=self._app_id, client_secret=self._app_secret
                     )
                     res = self.api.set_app_callback_url(
-                        app_id=app_id,
+                        app_id=self._app_id,
                         access_token=app_access_token["access_token"],
-                        callback_url=callback_url,
-                        verify_token=verify_token,
-                        fields=fields,
+                        callback_url=self._callback_url,
+                        verify_token=self._verify_token,
+                        fields=tuple(self._webhook_fields),
                     )
                 case utils.CallbackURLScope.WABA:
                     res = self.api.set_waba_alternate_callback_url(
                         waba_id=self.waba_id,
-                        override_callback_uri=callback_url,
-                        verify_token=verify_token,
+                        override_callback_uri=self._callback_url,
+                        verify_token=self._verify_token,
                     )
                 case utils.CallbackURLScope.PHONE:
                     res = self.api.set_phone_alternate_callback_url(
-                        override_callback_uri=callback_url,
-                        verify_token=verify_token,
+                        override_callback_uri=self._callback_url,
+                        verify_token=self._verify_token,
                         phone_id=self.phone_id,
                     )
                 case _:
@@ -508,10 +417,12 @@ class Server:
 
             if not res["success"]:
                 raise RuntimeError("Failed to register callback URL.")
-            _logger.info("Callback URL '%s' registered successfully", callback_url)
+            _logger.info(
+                "Callback URL '%s' registered successfully", self._callback_url
+            )
         except errors.WhatsAppError as e:
             raise RuntimeError(
-                f"Failed to register callback URL '{callback_url}'. if you are using a slow/custom server, you can "
+                f"Failed to register callback URL '{self._callback_url}'. if you are using a slow/custom server, you can "
                 "increase the delay using the `webhook_challenge_delay` parameter when initializing the WhatsApp client."
             ) from e
 
@@ -566,16 +477,6 @@ class Server:
         response_encryptor: utils.FlowResponseEncryptor | None,
     ) -> handlers.FlowRequestCallbackWrapper:
         """Internal function to register a flow endpoint callback."""
-        if self._server is None:
-            raise ValueError(
-                "When using a custom server, you must use the `get_flow_request_handler` method to get the flow "
-                "request handler and call it manually."
-            )
-        elif self._server is utils.MISSING:
-            raise ValueError(
-                "You must initialize the WhatsApp client with an web server"
-                f" ({utils.ServerType.protocols_names()}) in order to handle incoming flow requests."
-            )
 
         return self._register_flow_callback_wrapper(
             self.get_flow_request_handler(
@@ -595,19 +496,19 @@ class Server:
     ) -> handlers.FlowRequestCallbackWrapper:
         """Register the flow callback wrapper to the server."""
         match self._server_type:
-            case utils.ServerType.FLASK:
+            case utils.CustomServerType.FLASK:
                 import flask
 
-                @self._server.route(callback_wrapper._endpoint, methods=["POST"])
+                @self.server.route(callback_wrapper._endpoint, methods=["POST"])
                 @helpers.rename_func(f"('{callback_wrapper._endpoint}')")
                 def pywa_flow() -> tuple[str, int]:
                     """Automatically generated by pywa to handle incoming flow requests."""
                     return callback_wrapper.handle(flask.request.json)
 
-            case utils.ServerType.FASTAPI:
+            case utils.CustomServerType.FASTAPI:
                 import fastapi
 
-                @self._server.post(callback_wrapper._endpoint)
+                @self.server.post(callback_wrapper._endpoint)
                 @helpers.rename_func(f"('{callback_wrapper._endpoint}')")
                 def pywa_flow(
                     flow_req: handlers.EncryptedFlowRequestType,
@@ -639,7 +540,7 @@ def _handle_messages_field(
                 return handler
             _logger.warning(
                 "Webhook ('%s'): Unknown interactive message type: %s. Falling back to MessageHandler.",
-                wa._webhook_endpoint,
+                wa.webhook_endpoint,
                 interactive_type,
             )
         elif msg_type == MessageType.SYSTEM:
@@ -649,7 +550,7 @@ def _handle_messages_field(
                 return handler
             _logger.warning(
                 "Webhook ('%s'): Unknown system message type: %s. Falling back to MessageHandler.",
-                wa._webhook_endpoint,
+                wa.webhook_endpoint,
                 system_type,
             )
         return _MESSAGE_TYPES.get(msg_type, handlers.MessageHandler)
@@ -661,7 +562,7 @@ def _handle_messages_field(
 
     _logger.warning(
         "Webhook ('%s'): Unknown message type: %s",
-        wa._webhook_endpoint,
+        wa.webhook_endpoint,
         value,
     )
     return None
@@ -674,7 +575,7 @@ def _handle_calls_field(wa: "WhatsApp", value: dict) -> type[handlers.Handler] |
             return handler
         _logger.warning(
             "Webhook ('%s'): Unknown call event: %s.",
-            wa._webhook_endpoint,
+            wa.webhook_endpoint,
             value["calls"][0]["event"],
         )
     elif "statuses" in value:
@@ -693,7 +594,7 @@ def _handle_user_preferences_field(
         return handlers.UserMarketingPreferencesHandler
     _logger.warning(
         "Webhook ('%s'): Unknown user preference category: %s.",
-        wa._webhook_endpoint,
+        wa.webhook_endpoint,
         value["user_preferences"][0]["category"],
     )
     return None

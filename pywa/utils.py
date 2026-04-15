@@ -37,6 +37,14 @@ MISSING: object | None = object()
 """A sentinel value to indicate a missing value to distinguish from ``None``."""
 
 
+class Starlette(Protocol):
+    """Protocol for the `Starlette <https://starlette.dev>`_ app."""
+
+    def add_route(
+        self, path: str, endpoint: Callable, methods: Iterable[str]
+    ) -> None: ...
+
+
 class FastAPI(Protocol):
     """Protocol for the `FastAPI <https://fastapi.tiangolo.com/>`_ app."""
 
@@ -51,10 +59,15 @@ class Flask(Protocol):
     def route(self, rule: str, **options: Any) -> Callable: ...
 
 
-class ServerType(enum.Enum):
+class CustomServerType(enum.Enum):
     """Enum for the supported server types."""
 
     FASTAPI = ("FASTAPI", FastAPI, lambda: importlib.import_module("fastapi").FastAPI)
+    STARLETTE = (
+        "STARLETTE",
+        Starlette,
+        lambda: importlib.import_module("starlette.applications").Starlette,
+    )
     FLASK = ("FLASK", Flask, lambda: importlib.import_module("flask").Flask)
 
     def __new__(cls, name: str, protocol: Protocol, server: Callable):
@@ -65,7 +78,7 @@ class ServerType(enum.Enum):
         return obj
 
     @classmethod
-    def from_app(cls, app) -> ServerType | None:
+    def from_app(cls, app) -> CustomServerType | None:
         """Get the server type from the app."""
         for server_type in cls:
             try:
