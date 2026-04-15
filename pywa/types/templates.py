@@ -83,7 +83,9 @@ from typing import (
     Iterator,
     Literal,
     NoReturn,
+    Sequence,
     cast,
+    overload,
 )
 
 from .. import _helpers as helpers
@@ -4559,7 +4561,7 @@ class UpdatedTemplate(_CreatedAndUpdatedTemplateActions):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class CreatedTemplates:
+class CreatedTemplates(Sequence[CreatedTemplate]):
     """
     Represents a collection of created WhatsApp Templates.
 
@@ -4587,11 +4589,16 @@ class CreatedTemplates:
             )
         )
 
-    def __iter__(self) -> Iterator[CreatedTemplate]:
-        """
-        Iterate over the created templates.
+    @overload
+    def __getitem__(self, index: int) -> CreatedTemplate: ...
 
-        Returns:
-            Iterator[CreatedTemplate]: An iterator over the CreatedTemplate instances.
-        """
-        return iter(self.templates)
+    @overload
+    def __getitem__(self, index: slice) -> list[CreatedTemplate]: ...
+
+    def __getitem__(
+        self, index: int | slice
+    ) -> CreatedTemplate | list[CreatedTemplate]:
+        return self._data[index]
+
+    def __len__(self) -> int:
+        return len(self._data)

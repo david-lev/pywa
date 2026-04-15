@@ -11,6 +11,7 @@ import logging
 import pathlib
 import re
 import warnings
+from collections.abc import Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -22,6 +23,7 @@ from typing import (
     Type,
     TypeAlias,
     TypeVar,
+    overload,
 )
 from urllib import parse as urllib_parse
 
@@ -1535,14 +1537,25 @@ class ScreenDataUpdate(Generic[_ScreenDataValTypeVar]):
         )
 
 
-class _ScreenDatasContainer:
+class _ScreenDatasContainer(Sequence[ScreenData | ScreenDataUpdate]):
     """A wrapper to prevent ``dataclasses.asdict()`` from converting ScreenData|Update objects."""
 
     def __init__(self, datas: list[ScreenData | ScreenDataUpdate]):  # not mixed
         self._datas = datas
 
-    def __iter__(self):
-        return iter(self._datas)
+    @overload
+    def __getitem__(self, index: int) -> ScreenData | ScreenDataUpdate: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> list[ScreenData | ScreenDataUpdate]: ...
+
+    def __getitem__(
+        self, index: int | slice
+    ) -> ScreenData | ScreenDataUpdate | list[ScreenData | ScreenDataUpdate]:
+        return self._datas[index]
+
+    def __len__(self) -> int:
+        return len(self._datas)
 
     def __repr__(self):
         return f"ScreenDatasContainer({self._datas})"

@@ -20,7 +20,6 @@ from typing import (
     ClassVar,
     Generic,
     Iterable,
-    Iterator,
     Literal,
     Protocol,
     TypeVar,
@@ -1598,12 +1597,6 @@ class Result(Generic[_T], Sequence[_T]):
 
         return before_data + self._data + after_data
 
-    def __iter__(self) -> Iterator[_T]:
-        return iter(self._data)
-
-    def __len__(self) -> int:
-        return len(self._data)
-
     @overload
     def __getitem__(self, index: int) -> _T: ...
 
@@ -1612,6 +1605,9 @@ class Result(Generic[_T], Sequence[_T]):
 
     def __getitem__(self, index: int | slice) -> _T | list[_T]:
         return self._data[index]
+
+    def __len__(self) -> int:
+        return len(self._data)
 
     def __bool__(self) -> bool:
         return bool(self._data)
