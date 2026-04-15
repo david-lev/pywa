@@ -126,12 +126,12 @@ class Server:
         if vt == self._verify_token:
             _logger.info(
                 "Webhook ('%s') passed the verification challenge",
-                self._webhook_endpoint,
+                self.webhook_endpoint,
             )
             return ch, 200
         _logger.error(
             "Webhook ('%s') failed the verification challenge. Expected verify_token: %s, received: %s",
-            self._webhook_endpoint,
+            self.webhook_endpoint,
             self._verify_token,
             vt,
         )
@@ -167,7 +167,7 @@ class Server:
             if not hmac_header:
                 _logger.debug(
                     "Webhook ('%s') received an update without a signature",
-                    self._webhook_endpoint,
+                    self.webhook_endpoint,
                 )
                 return "Error, missing signature", 401, None, None
             if not utils.webhook_updates_validator(
@@ -177,7 +177,7 @@ class Server:
             ):
                 _logger.debug(
                     "Webhook ('%s') received an update with unmatching signature: %s, update: %s",
-                    self._webhook_endpoint,
+                    self.webhook_endpoint,
                     hmac_header,
                     update,
                 )
@@ -187,7 +187,7 @@ class Server:
         except (TypeError, ValueError):
             _logger.debug(
                 "Webhook ('%s') received non-JSON data: %s",
-                self._webhook_endpoint,
+                self.webhook_endpoint,
                 update,
             )
             return "Error, invalid update", 400, None, None
@@ -195,7 +195,7 @@ class Server:
         update_hash = hmac_header or hash(update)
         _logger.debug(
             "Webhook ('%s') received an update: %s",
-            self._webhook_endpoint,
+            self.webhook_endpoint,
             raw_update,
         )
         if self._skip_duplicate_updates:
