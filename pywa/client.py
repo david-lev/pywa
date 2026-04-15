@@ -359,6 +359,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             type[Handler] | None,
             list[Handler],
         ] = collections.defaultdict(list)
+        self._flow_handlers_to_register = list[FlowRequestHandler]()
         self._listeners = dict[BaseListenerIdentifier, Listener]()
 
         if not token:
@@ -516,7 +517,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             A wrapper to help split the logic of the handler.
         """
-        wrapper = self._register_flow_endpoint_callback(
+        wrapper = FlowRequestCallbackWrapper(
+            wa=self,
             endpoint=handler._endpoint,
             callback=handler._main_handler,
             acknowledge_errors=handler._acknowledge_errors,
@@ -534,6 +536,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     filters=filters,
                 )
         self.add_handlers(*handler._completion_handlers)
+        if self.server is None:
+            self._flow_handlers_to_register.append(handler)
+        else:
+            self._register_flow_handler_wrapper(wrapper)
         return wrapper
 
     def add_handlers(self, *handlers: Handler) -> None:

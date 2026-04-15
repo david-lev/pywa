@@ -1312,7 +1312,7 @@ class _CallbackWrapperDecorators(abc.ABC):
 
 class FlowRequestHandler(_CallbackWrapperDecorators):
     """
-    A handler for Flow Data Exchange requests.
+    A handler for Flow requests.
 
     Args:
         callback: The function to call when a request is received (Takes a :class:`pywa.WhatsApp` instance and a
@@ -1358,7 +1358,9 @@ class FlowRequestHandler(_CallbackWrapperDecorators):
         screen: Screen | str | None = None,
         filters: Filter = None,
     ) -> _CallbackWrapperDecorators:
-        self._handlers[(action, screen)].append((filters, callback))
+        self._handlers[
+            (action, screen.id if isinstance(screen, Screen) else screen)
+        ].append((filters, callback))
         return self
 
     def add_completion_handler(
@@ -2556,16 +2558,17 @@ class _HandlerDecorators:
                 setattr(handler, _flow_request_handler_attr, None)
                 return handler
 
-            callback_wrapper = self._register_flow_endpoint_callback(
-                endpoint=endpoint,
-                callback=callback,
-                acknowledge_errors=acknowledge_errors,
-                private_key=private_key,
-                private_key_password=private_key_password,
-                request_decryptor=request_decryptor,
-                response_encryptor=response_encryptor,
+            return self.add_flow_request_handler(
+                FlowRequestHandler(
+                    callback=callback,
+                    endpoint=endpoint,
+                    acknowledge_errors=acknowledge_errors,
+                    private_key=private_key,
+                    private_key_password=private_key_password,
+                    request_decryptor=request_decryptor,
+                    response_encryptor=response_encryptor,
+                )
             )
-            return callback_wrapper
 
         return decorator
 

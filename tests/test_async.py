@@ -332,7 +332,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
             ServerSync._register_callback_url,
             ServerSync._get_handler_type,
             ServerSync._register_routes,
-            ServerSync._register_flow_endpoint_callback,
+            ServerSync._register_flow_handler_wrapper,
             _HandlerDecorators.on_message,
             _HandlerDecorators.on_callback_button,
             _HandlerDecorators.on_callback_selection,
