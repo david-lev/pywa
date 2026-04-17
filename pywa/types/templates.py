@@ -84,9 +84,12 @@ from typing import (
     Literal,
     NoReturn,
     Sequence,
+    TypeVar,
     cast,
     overload,
 )
+
+_T = TypeVar("_T")
 
 from .. import _helpers as helpers
 from .. import utils
@@ -1180,13 +1183,20 @@ class _BaseTextComponent:
         allowing to dynamically discover which parameters must be
         provided when calling :meth:`params`.
 
+        - See also :meth:`~pywa.types.templates.Template.get_component` and :meth:`~pywa.types.templates.Template.get_components`.
+
         Example:
 
-            >>> body = BodyText(
-            ...     text="Hi {{name}}, your flight {{flight_iata}} is delayed",
-            ...     name="John",
-            ...     flight_iata="AA123",
+            >>> temp = Template(
+            ...     components=[
+            ...         BodyText(
+            ...             text="Hi {{name}}, your flight {{flight_iata}} is delayed",
+            ...             name="John",
+            ...             flight_iata="AA123",
+            ...         )
+            ...     ]
             ... )
+            >>> body = temp.get_component(BodyText) # get the body component of the template
             >>> body.param_names
             ('name', 'flight_iata')
 
@@ -3618,11 +3628,103 @@ class AuthenticationFooter(BaseFooterComponent):
     code_expiration_minutes: int
 
 
+def _find_comp(
+    *, comp_type: type[_T], cmps: list[TemplateBaseComponent | dict], first_match: bool
+) -> _T | list[_T] | None:
+    matches = []
+    for comp in cmps:
+        if isinstance(comp, comp_type):
+            matches.append(comp)
+            if first_match:
+                break
+        elif isinstance(comp, Carousel):
+            for card in comp.cards:
+                inner_comp = _find_comp(
+                    comp_type=comp_type, cmps=card.components, first_match=first_match
+                )
+                if inner_comp is not None:
+                    if isinstance(inner_comp, list):
+                        matches.extend(inner_comp)
+                    else:
+                        matches.append(inner_comp)
+                    if first_match and matches:
+                        break
+        elif isinstance(comp, Buttons):
+            for button in comp.buttons:
+                if isinstance(button, comp_type):
+                    matches.append(button)
+                    if first_match:
+                        break
+
+    if not matches:
+        return None
+    if first_match:
+        return matches[0]
+    return matches
+
+
 # ========== TEMPLATE ==========
 
 
+class _BaseTemplateActions:
+    components: list[TemplateBaseComponent | dict]
+
+    def get_component(self, comp_type: type[_T]) -> _T | None:
+        """
+        Get a component of the specified type from the template.
+
+        - If the template has multiple components of the specified type (e.g. a button or a carousel), this property will return the first component found.
+        - Use :meth:`~pywa.types.templates.Template.get_components` to get all components of a specified type.
+
+        >>> t = Template(...)
+        >>> body = t.get_component(BodyText)
+        >>> if body: print(body.text, body.example)
+
+        Args:
+            comp_type: The type of component to retrieve.
+
+        Returns:
+            The component of the specified type if it exists, otherwise None.
+        """
+        return _find_comp(comp_type=comp_type, cmps=self.components, first_match=True)
+
+    def get_components(self, comp_type: type[_T]) -> list[_T]:
+        """
+        Get all components of the specified type from the template.
+
+        - This method will search for components of the specified type at all levels of the template, including within carousels and buttons.
+        - Use :meth:`~pywa.types.templates.Template.get_component` to get the first component of a specified type.
+
+        >>> t = Template(...)
+        >>> quick_replays = t.get_components(QuickReplyButton)
+        >>> for q in quick_replays: print(q.text)
+
+        Args:
+            comp_type: The type of components to retrieve.
+
+        Returns:
+            A list of components of the specified type if any exist, otherwise empty list.
+        """
+        return (
+            _find_comp(comp_type=comp_type, cmps=self.components, first_match=False)
+            or []
+        )
+
+    def validate_params(self, params: list[BaseParams] | None) -> NoReturn | None:
+        """
+        Validate the provided parameters against the template's components.
+
+        Args:
+            params: A list of BaseParams instances representing the parameters to validate.
+
+        Raises:
+            ValueError: If there are missing or extra parameters for the template's components.
+        """
+        _validate_params(self.components, params)
+
+
 @dataclasses.dataclass(kw_only=True, slots=True)
-class Template:
+class Template(_BaseTemplateActions):
     """
     Represents a New WhatsApp Template.
 
@@ -3699,18 +3801,6 @@ class Template:
         Convert the template to a JSON string representation.
         """
         return _template_to_json(self)
-
-    def validate_params(self, params: list[BaseParams] | None) -> NoReturn | None:
-        """
-        Validate the provided parameters against the template's components.
-
-        Args:
-            params: A list of BaseParams instances representing the parameters to validate.
-
-        Raises:
-            ValueError: If there are missing or extra parameters for the template's components.
-        """
-        _validate_params(self.components, params)
 
     @classmethod
     def from_dict(cls, data: dict) -> Template:
@@ -3927,7 +4017,7 @@ def _find_param_for_component(
 
 
 def _validate_params(
-    components: list[TemplateBaseComponent],
+    components: list[TemplateBaseComponent | dict],
     params: list[BaseParams] = None,
 ) -> None:
     real_params = [
@@ -4009,7 +4099,7 @@ def _validate_params(
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class TemplateDetails(helpers.APIObject):
+class TemplateDetails(helpers.APIObject, _BaseTemplateActions):
     """
     Represents the details of an existing WhatsApp Template.
 
@@ -4175,6 +4265,9 @@ class TemplateDetails(helpers.APIObject):
                 ),
                 message_send_ttl_seconds=overrides.get(
                     "message_send_ttl_seconds", self.message_send_ttl_seconds
+                ),
+                degrees_of_freedom_spec=overrides.get(
+                    "degrees_of_freedom_spec", self.degrees_of_freedom_spec
                 ),
             )
         )
