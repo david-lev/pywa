@@ -12,7 +12,7 @@ from pywa.types.templates import *  # noqa: F403
 
 
 def _resolve_example_handles(template: Template):
-    not_uploaded = helpers._filter_not_uploaded_comps(template.components)
+    not_uploaded = helpers.filter_not_uploaded_comps(template.components)
     for comp in not_uploaded:
         comp._handle = comp._example
     return template
