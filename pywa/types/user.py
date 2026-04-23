@@ -82,17 +82,18 @@ class User(BaseUser):
         parent_bsuid: The Parent business-scoped user ID. See `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#parent-business-scoped-user-ids>`_ for more information.
     """
 
-    name: str
+    name: str | None
     identity_key_hash: str | None
 
     @classmethod
     def from_contact(cls, data: dict, client: WhatsApp) -> User:
+        profile = data.get("profile", {})  # TODO `profile` should not be optional
         return cls(
             _client=client,
             bsuid=data["user_id"],
             wa_id=data.get("wa_id") or None,  # avoid empty string
-            name=data["profile"].get("name"),
-            username=data["profile"].get("username"),
+            name=profile.get("name"),
+            username=profile.get("username"),
             parent_bsuid=data.get("parent_user_id"),
             identity_key_hash=data.get("identity_key_hash"),
         )
