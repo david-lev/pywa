@@ -259,7 +259,12 @@ class TemplateDetails(_TemplateDetails):
                 self.parameter_format = new_parameter_format
         return res
 
-    async def duplicate(self, **overrides) -> CreatedTemplate:
+    async def duplicate(
+        self,
+        *,
+        target_waba_id: str | None = None,
+        **overrides,
+    ) -> CreatedTemplate:
         """
         Duplicate this template.
 
@@ -267,14 +272,15 @@ class TemplateDetails(_TemplateDetails):
 
         Example:
             >>> wa = WhatsApp(...)
-            >>> template = wa.get_template("my_template_id")
-            >>> new_template = template.duplicate(language=TemplateLanguage.ENGLISH)
+            >>> template = await wa.get_template("123456789")
+            >>> new_template = await template.duplicate(language=TemplateLanguage.FRENCH)
 
         Args:
-            overrides: Optional overrides for the template properties.
+            overrides: Optional overrides for the template properties (e.g. name, language, category, components, etc.) to be applied to the new template. If not provided, the new template will have the same properties as this one.
+            target_waba_id: The ID of the WhatsApp Business Account to create the new template in. If not provided, the client's ``waba_id`` will be used.
         """
         return await self._client.create_template(
-            Template(
+            template=Template(
                 name=overrides.get("name", self.name),
                 language=overrides.get("language", self.language),
                 category=overrides.get("category", self.category),
@@ -285,7 +291,8 @@ class TemplateDetails(_TemplateDetails):
                 message_send_ttl_seconds=overrides.get(
                     "message_send_ttl_seconds", self.message_send_ttl_seconds
                 ),
-            )
+            ),
+            waba_id=target_waba_id,
         )
 
     async def compare(
