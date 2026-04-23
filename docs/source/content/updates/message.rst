@@ -7,7 +7,7 @@ The :class:`Message` type is used to represent incoming messages from WhatsApp u
 
 
 .. autoclass:: Message()
-    :members: media, is_reply, has_media, download_media, copy
+    :members: media, is_reply, has_media, download_media, stream_media, get_media_bytes, copy
 
 ----------------
 

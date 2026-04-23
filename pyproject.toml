@@ -79,6 +79,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+server = [
+    "starlette>=0.32.0",
+    "uvicorn[standard]>=0.25.0"
+]
 dev = [
     "pytest~=9.0",
     "pytest-cov~=7.0",
@@ -145,5 +149,4 @@ omit = [
     "pywa/_helpers.py",
     "pywa/types/templates.py",
     "pywa/types/sent_update.py",
-
 ]

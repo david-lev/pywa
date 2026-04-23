@@ -2,6 +2,8 @@
 
 import logging
 import threading
+import warnings
+from collections import OrderedDict
 from typing import TYPE_CHECKING, Any, Callable
 
 from . import _helpers as helpers
@@ -47,6 +49,8 @@ _CALL_EVENTS: dict[str, type[handlers.Handler]] = {
 
 _logger = logging.getLogger(__name__)
 
+MAX_PROCESSED_UPDATES = 100_000
+
 
 class Server:
     """This class is used internally by the :class:`WhatsApp` client to set up a webhook for receiving incoming
@@ -55,11 +59,10 @@ class Server:
     def __init__(
         self: "WhatsApp",
     ):
-        self._updates_in_process = set[
-            str | int
-        ]()  # TODO use threading.Lock | asyncio.Lock
+        self._processed_updates: OrderedDict[str, None] = OrderedDict()
+        self._cache_lock = threading.Lock()
 
-        self._server_type = utils.CustomServerType.from_app(self.server)
+        self._server_type = utils.CustomServerType.from_app(self._server)
         if self._server_type is not None:
             self._register_routes()
 
@@ -78,39 +81,38 @@ class Server:
             raise ValueError(
                 "When providing a custom `server`, you must run it yourself."
             )
-        try:
-            from starlette.applications import Starlette as StarletteApp
-        except ImportError:
-            raise ImportError(
-                'Starlette is required to run the server. Please install it using `pip install "pywa[server"]`.'
-            ) from None
 
         try:
             import uvicorn
+            from starlette.applications import Starlette as StarletteApp
         except ImportError:
             raise ImportError(
-                'Uvicorn is required to run the server. Please install it using `pip install "pywa[server"]`.'
+                "Starlette and Uvicorn are required to run the built-in server. "
+                'Please install them using `pip install "pywa[server]"`.'
             ) from None
 
-        self.server, self._server_type = (
+        self._server, self._server_type = (
             StarletteApp(),
             utils.CustomServerType.STARLETTE,
         )
         self._register_routes()
+        options.setdefault("log_config", None)
+
+        _logger.info("Starting pywa server on http://%s:%d", host, port)
 
         uvicorn.run(
-            self.server,
+            self._server,
             host=host,
             port=port,
             headers=[
-                ("server", "pywa"),
                 ("X-Content-Type-Options", "nosniff"),
             ],
             **options,
         )
-        exit()
 
-    def webhook_challenge_handler(self, vt: str, ch: str) -> tuple[str, int]:
+    def webhook_challenge_handler(
+        self: "WhatsApp", vt: str, ch: str
+    ) -> tuple[str, int]:
         """
         Handle the verification challenge from the webhook manually.
 
@@ -126,91 +128,109 @@ class Server:
         if vt == self._verify_token:
             _logger.info(
                 "Webhook ('%s') passed the verification challenge",
-                self.webhook_endpoint,
+                self._webhook_endpoint,
             )
             return ch, 200
         _logger.error(
             "Webhook ('%s') failed the verification challenge. Expected verify_token: %s, received: %s",
-            self.webhook_endpoint,
+            self._webhook_endpoint,
             self._verify_token,
             vt,
         )
-        return "Error, invalid verification token", 403
+        return "Forbidden", 403
 
-    def webhook_update_handler(
-        self, update: bytes, hmac_header: str = None
-    ) -> tuple[str, int]:
+    def webhook_update_validator(
+        self: "WhatsApp", update: bytes, hmac_header: str | None
+    ) -> tuple[str, int] | None:
         """
-        Handle the incoming update from the webhook manually.
-
-        - Use this function only if you are using a custom server (e.g. Django etc.).
+        Validate the incoming webhook update signature.
 
         Args:
             update: The incoming raw update from the webhook (bytes)
             hmac_header: The ``X-Hub-Signature-256`` header (to validate the signature, use ``utils.HUB_SIG`` for the key).
 
         Returns:
+            A tuple of (error_message, status_code) if validation fails, otherwise None.
+        """
+        if not self._validate_updates:
+            return None
+
+        if not hmac_header:
+            _logger.debug(
+                "Webhook ('%s') received an update without a signature",
+                self._webhook_endpoint,
+            )
+            return "Unauthorized", 401
+
+        if not utils.webhook_updates_validator(
+            app_secret=self._app_secret,
+            request_body=update,
+            x_hub_signature=hmac_header,
+        ):
+            _logger.warning(
+                "Webhook ('%s') received an update with unmatching signature: %s",
+                self._webhook_endpoint,
+                hmac_header,
+            )
+            return "Forbidden", 403
+
+        return None
+
+    def webhook_update_handler(
+        self: "WhatsApp", update: bytes, hmac_header: None = None
+    ) -> tuple[str, int]:
+        """
+        Handle the incoming update manually.
+
+        - Use this function only if you are using a custom server (e.g. Django etc.).
+
+        Args:
+            update: The incoming raw update from the webhook (bytes)
+            hmac_header: Deprecated. Use ``client.webhook_update_validator`` to validate the request first.
+
+        Returns:
             A tuple containing the response and the status code.
         """
-        res, status, raw_update, update_hash = self._check_and_prepare_update(
-            update=update, hmac_header=hmac_header
-        )
-        if res:
-            return res, status
-        self._call_handlers(raw_update)
-        return self._after_handling_update(update_hash)
+        if hmac_header is not None:
+            warnings.warn(
+                "The `hmac_header` argument in `webhook_update_handler` is deprecated and will be removed "
+                "in a future version. Use `client.webhook_update_validator` to validate the request first.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            error_response = self.webhook_update_validator(update, hmac_header)
+            if error_response:
+                return error_response
 
-    def _check_and_prepare_update(
-        self, update: bytes, hmac_header: str = None
-    ) -> tuple[str | None, int | None, RawUpdate | None, str | None]:
-        if self._validate_updates:
-            if not hmac_header:
-                _logger.debug(
-                    "Webhook ('%s') received an update without a signature",
-                    self.webhook_endpoint,
-                )
-                return "Error, missing signature", 401, None, None
-            if not utils.webhook_updates_validator(
-                app_secret=self._app_secret,
-                request_body=update,
-                x_hub_signature=hmac_header,
-            ):
-                _logger.debug(
-                    "Webhook ('%s') received an update with unmatching signature: %s, update: %s",
-                    self.webhook_endpoint,
-                    hmac_header,
-                    update,
-                )
-                return "Unmatching signature", 200, None, None
         try:
             raw_update = RawUpdate(update, hmac_header=hmac_header)
         except (TypeError, ValueError):
             _logger.debug(
                 "Webhook ('%s') received non-JSON data: %s",
-                self.webhook_endpoint,
+                self._webhook_endpoint,
                 update,
             )
-            return "Error, invalid update", 400, None, None
+            return "Bad Request", 400
 
-        update_hash = hmac_header or hash(update)
-        _logger.debug(
-            "Webhook ('%s') received an update: %s",
-            self.webhook_endpoint,
-            raw_update,
-        )
+        update_hash = hmac_header or str(hash(update))
+
         if self._skip_duplicate_updates:
-            if update_hash in self._updates_in_process:
-                return "ok", 200, None, None
-            self._updates_in_process.add(update_hash)
+            with self._cache_lock:
+                if update_hash in self._processed_updates:
+                    _logger.debug(
+                        "Webhook ('%s') skipped duplicate update: %s",
+                        self._webhook_endpoint,
+                        update_hash,
+                    )
+                    return "ok", 200
 
-        return None, None, raw_update, update_hash
+                self._processed_updates[update_hash] = None
 
-    def _after_handling_update(self, update_hash: str) -> tuple[str, int]:
-        if self._skip_duplicate_updates:
-            try:
-                self._updates_in_process.remove(update_hash)
-            except KeyError:
-                pass
+                if len(self._processed_updates) > MAX_PROCESSED_UPDATES:
+                    self._processed_updates.popitem(last=False)
+
+        self._call_handlers(raw_update)
+
         return "ok", 200
 
     def _register_routes(self: "WhatsApp") -> None:
@@ -220,9 +240,11 @@ class Server:
                 "be any string. It is used to challenge the webhook endpoint to verify that the endpoint is valid."
             )
         if self._validate_updates and not self._app_secret:
-            _logger.warning(
-                "No `app_secret` provided. Signature validation will be disabled "
-                "(not recommended. set `validate_updates=False` to suppress this warning)"
+            warnings.warn(
+                message="No `app_secret` provided. Signature validation will be disabled "
+                "(not recommended. set `validate_updates=False` to suppress this warning)",
+                category=UserWarning,
+                stacklevel=2,
             )
             self._validate_updates = False
 
@@ -254,7 +276,7 @@ class Server:
             except (KeyError, ValueError, TypeError, IndexError):
                 (_logger.error if self._validate_updates else _logger.debug)(
                     "Webhook ('%s') received unexpected update%s: %s",
-                    self.webhook_endpoint,
+                    self._webhook_endpoint,
                     " (Enable `validate_updates` to ignore updates with invalid data)"
                     if not self._validate_updates
                     else "",
@@ -370,13 +392,19 @@ class Server:
             case utils.CallbackURLScope.WABA:
                 if not self.waba_id:
                     raise ValueError(
-                        "When registering a callback URL in the WABA scope, the `business_account_id` must be provided."
+                        "When registering a callback URL in the `WABA` scope, the `waba_id` must be provided."
                     )
             case utils.CallbackURLScope.PHONE:
                 if not self.phone_id:
                     raise ValueError(
-                        "When registering a callback URL in the PHONE scope, the `phone_id` must be provided."
+                        "When registering a callback URL in the `PHONE` scope, the `phone_id` must be provided."
                     )
+        _logger.info(
+            "Registering callback URL '%s' in scope '%s' after a delay of %s seconds to allow the server to start and be ready to receive the verification challenge.",
+            self._callback_url,
+            self._callback_url_scope.value,
+            self._webhook_challenge_delay,
+        )
         threading.Timer(
             interval=self._webhook_challenge_delay,
             function=self._register_callback_url,
@@ -507,7 +535,7 @@ def _handle_messages_field(
                 return handler
             _logger.warning(
                 "Webhook ('%s'): Unknown interactive message type: %s. Falling back to MessageHandler.",
-                wa.webhook_endpoint,
+                wa._webhook_endpoint,
                 interactive_type,
             )
         elif msg_type == MessageType.SYSTEM:
@@ -517,7 +545,7 @@ def _handle_messages_field(
                 return handler
             _logger.warning(
                 "Webhook ('%s'): Unknown system message type: %s. Falling back to MessageHandler.",
-                wa.webhook_endpoint,
+                wa._webhook_endpoint,
                 system_type,
             )
         return _MESSAGE_TYPES.get(msg_type, handlers.MessageHandler)
@@ -529,7 +557,7 @@ def _handle_messages_field(
 
     _logger.warning(
         "Webhook ('%s'): Unknown message type: %s",
-        wa.webhook_endpoint,
+        wa._webhook_endpoint,
         value,
     )
     return None
@@ -542,7 +570,7 @@ def _handle_calls_field(wa: "WhatsApp", value: dict) -> type[handlers.Handler] |
             return handler
         _logger.warning(
             "Webhook ('%s'): Unknown call event: %s.",
-            wa.webhook_endpoint,
+            wa._webhook_endpoint,
             value["calls"][0]["event"],
         )
     elif "statuses" in value:
@@ -561,7 +589,7 @@ def _handle_user_preferences_field(
         return handlers.UserMarketingPreferencesHandler
     _logger.warning(
         "Webhook ('%s'): Unknown user preference category: %s.",
-        wa.webhook_endpoint,
+        wa._webhook_endpoint,
         value["user_preferences"][0]["category"],
     )
     return None

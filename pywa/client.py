@@ -371,11 +371,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 api_version=float(str(api_version)),
             )
 
-        self.server = server
+        self._server = server
         self._callback_url = callback_url
         self._callback_url_scope = callback_url_scope
         self._verify_token = verify_token
-        self.webhook_endpoint = webhook_endpoint
+        self._webhook_endpoint = webhook_endpoint
         self._webhook_challenge_delay = webhook_challenge_delay
         self._private_key = business_private_key
         self._private_key_password = business_private_key_password
@@ -536,7 +536,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     filters=filters,
                 )
         self.add_handlers(*handler._completion_handlers)
-        if self.server is None:
+        if self._server is None:
             self._flow_handlers_to_register.append(handler)
         else:
             self._register_flow_handler_wrapper(wrapper)

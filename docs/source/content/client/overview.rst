@@ -416,10 +416,14 @@ Integrate with webhook events manually:
 
    * - Method
      - Description
-   * - :meth:`~WhatsApp.webhook_update_handler`
-     - Handle webhook updates manually
+   * - :meth:`~WhatsApp.run`
+     - Start a webhook server to receive updates
    * - :meth:`~WhatsApp.webhook_challenge_handler`
      - Handle webhook challenge manually
+   * - :meth:`~WhatsApp.webhook_update_validator`
+     - Validate incoming webhook updates
+   * - :meth:`~WhatsApp.webhook_update_handler`
+     - Handle webhook updates manually
    * - :meth:`~WhatsApp.get_flow_request_handler`
      - Retrieve flow request handler
 

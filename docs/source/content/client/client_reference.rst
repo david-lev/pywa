@@ -99,7 +99,9 @@ Client Reference
 .. automethod:: WhatsApp.get_shared_business_accounts
 .. automethod:: WhatsApp.get_owned_business_account
 .. automethod:: WhatsApp.delete_phone_callback_url
+.. automethod:: WhatsApp.run
 .. automethod:: WhatsApp.webhook_update_handler
+.. automethod:: WhatsApp.webhook_update_validator
 .. automethod:: WhatsApp.webhook_challenge_handler
 .. automethod:: WhatsApp.get_flow_request_handler
 .. automethod:: WhatsApp.load_handlers_modules
