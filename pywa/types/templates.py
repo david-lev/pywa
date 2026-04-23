@@ -2596,6 +2596,28 @@ class URLButton(BaseButtonComponent):
         example: str | None = None,
         app_deep_link: AppDeepLink | None = None,
     ):
+        variables = re.findall(r"\{\{.*?}}", url)
+        if len(variables) > 1:
+            raise ValueError(
+                f"URLButton url supports a maximum of 1 variable. "
+                f"Found {len(variables)}: {', '.join(variables)}"
+            )
+        if variables:
+            var = variables[0]
+            if not url.endswith(var):
+                raise ValueError(
+                    f"The URL variable {var} must be appended to the very end of the URL string. "
+                    f"Got: '{url}'"
+                )
+            if not example:
+                raise ValueError(
+                    "An 'example' must be provided because the URL contains a variable."
+                )
+        else:
+            if example:
+                raise ValueError(
+                    "An 'example' was provided, but the URL does not contain any variables."
+                )
         self.text = text
         self.url = url
         self.example = example

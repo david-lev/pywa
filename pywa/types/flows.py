@@ -925,7 +925,7 @@ class FlowDetails(helpers.APIObject):
         Example:
 
             >>> from pywa.types.flows import FlowCategory
-            >>> wa = WhatsApp(business_account_id='1234567890', ...)
+            >>> wa = WhatsApp(waba_id='1234567890', ...)
             >>> my_flows = wa.get_flows()
             >>> my_flows[0].update_metadata(
             ...     name='Feedback',

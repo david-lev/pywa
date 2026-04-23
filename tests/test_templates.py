@@ -1072,3 +1072,52 @@ def test_template_get_components_from_carousel():
     assert len(comps) == 2
     for component in comps:
         assert isinstance(component, HeaderText)
+
+
+def test_url_button_comp():
+    URLButton(
+        text="Visit Website",
+        url="https://example.com",
+    )
+    URLButton(
+        text="Visit Website",
+        url="https://example.com?ref={{1}}",
+        example="https://example.com?ref=wa",
+    )
+    with pytest.raises(
+        ValueError, match="^URLButton url supports a maximum of 1 variable.*"
+    ):
+        URLButton(
+            text="Visit Website",
+            url="https://example.com?ref={{1}}&utm={{2}}",
+            example="https://example.com?ref=wa",
+        )
+
+    with pytest.raises(
+        ValueError,
+        match=r"^The URL variable \{\{1\}\} must be appended to the very end of the URL string.*",
+    ):
+        URLButton(
+            text="Visit Website",
+            url="https://example.com/{{1}}/to",
+            example="https://example.com/path/to",
+        )
+
+    with pytest.raises(
+        ValueError,
+        match="^An 'example' must be provided because the URL contains a variable.$",
+    ):
+        URLButton(
+            text="Visit Website",
+            url="https://example.com?ref={{1}}",
+        )
+
+    with pytest.raises(
+        ValueError,
+        match="^An 'example' was provided, but the URL does not contain any variables.$",
+    ):
+        URLButton(
+            text="Visit Website",
+            url="https://example.com",
+            example="https://example.com?ref=wa&utm=123",
+        )
