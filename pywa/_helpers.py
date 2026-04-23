@@ -1110,6 +1110,9 @@ def register_routes_starlette(wa: WhatsApp):
         return StarletteResponse(
             content=content,
             status_code=status,
+            headers={
+                "X-Content-Type-Options": "nosniff",
+            },
         )
 
     async def _webhook_update_handler(req: StarletteRequest) -> StarletteResponse:
@@ -1123,7 +1126,14 @@ def register_routes_starlette(wa: WhatsApp):
             wa.webhook_update_handler,
             body,
         )
-        return StarletteResponse(content="OK", status_code=200, background=bg_task)
+        return StarletteResponse(
+            content="OK",
+            status_code=200,
+            headers={
+                "X-Content-Type-Options": "nosniff",
+            },
+            background=bg_task,
+        )
 
     server.add_route(
         path=wa._webhook_endpoint,

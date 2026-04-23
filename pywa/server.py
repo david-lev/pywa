@@ -104,9 +104,6 @@ class Server:
             self._server,
             host=host,
             port=port,
-            headers=[
-                ("X-Content-Type-Options", "nosniff"),
-            ],
             **options,
         )
 
@@ -236,13 +233,13 @@ class Server:
     def _register_routes(self: "WhatsApp") -> None:
         if not self._verify_token:
             raise ValueError(
-                "When listening for incoming updates, a verify token must be provided.\n>> The verify token can "
+                "When listening for incoming updates, a `verify_token` must be provided.\n>> The verify token can "
                 "be any string. It is used to challenge the webhook endpoint to verify that the endpoint is valid."
             )
         if self._validate_updates and not self._app_secret:
             warnings.warn(
                 message="No `app_secret` provided. Signature validation will be disabled "
-                "(not recommended. set `validate_updates=False` to suppress this warning)",
+                "(not recommended! set `validate_updates=False` to suppress this warning)",
                 category=UserWarning,
                 stacklevel=2,
             )
@@ -260,7 +257,7 @@ class Server:
                 helpers.register_routes_flask(wa=self)
             case _:
                 raise ValueError(
-                    f"The `server` must be one of {utils.CustomServerType.protocols_names()} or None for a custom server"
+                    f"The `server` must be one of {utils.CustomServerType.protocols_names()}, but got {type(self._server)}"
                 )
         for wrapper in self._flow_handlers_to_register:
             self._register_flow_handler_wrapper(wrapper)
