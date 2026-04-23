@@ -85,3 +85,5 @@ Others
 .. autoclass:: CallbackURLScope()
 
 .. autoclass:: WebhookFields()
+
+.. autofunction:: start_ngrok_tunnel

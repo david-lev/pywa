@@ -372,10 +372,14 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             )
 
         self._server = server
-        self._callback_url = callback_url
+        self._webhook_endpoint = webhook_endpoint
+        self._callback_url = (
+            f"{callback_url.rstrip('/')}/{webhook_endpoint.lstrip('/')}"
+            if callback_url
+            else None
+        )
         self._callback_url_scope = callback_url_scope
         self._verify_token = verify_token
-        self._webhook_endpoint = webhook_endpoint
         self._webhook_challenge_delay = webhook_challenge_delay
         self._private_key = business_private_key
         self._private_key_password = business_private_key_password

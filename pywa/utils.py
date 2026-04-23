@@ -419,3 +419,52 @@ class UserIdentifier(enum.Enum):
     @property
     def user_attr(self) -> str:
         return self.value
+
+
+def start_ngrok_tunnel(
+    port: int = 8000,
+    host: str = "127.0.0.1",
+    auth_token: str | None = None,
+    **forward_options,
+) -> str:
+    """
+    Starts an ngrok tunnel to the local server and returns the public URL.
+
+    - This function requires the `ngrok <https://pypi.org/project/ngrok/>`_ package to be installed. To install it, run `pip install ngrok`.
+    - This function is useful for testing webhooks locally without deploying to a server.
+
+    >>> from pywa.utils import start_ngrok_tunnel
+    >>> from pywa import WhatsApp
+
+    >>> callback_url = start_ngrok_tunnel(
+    ...     auth_token="your_ngrok_auth_token",
+    ...     domain="subdomain.ngrok-free.app",
+    ... )
+
+    >>> wa = WhatsApp(callback_url=callback_url, ...)
+    >>> wa.run(port=8000)
+
+    Args:
+        port: The local port to forward.
+        host: The local host (default is ``localhost``).
+        auth_token: The ngrok authtoken (found in your `ngrok dashboard <https://dashboard.ngrok.com/get-started/your-authtoken>`_).
+        **forward_options: Additional options passed to `ngrok.forward() <https://ngrok.github.io/ngrok-python/#full-configuration>`_.
+    """
+    try:
+        import ngrok
+    except ImportError:
+        raise ImportError(
+            "The 'ngrok' package is required for this utility. "
+            "Install it with: pip install ngrok"
+        ) from None
+
+    public_url = ngrok.forward(
+        addr=f"{host}:{port}",
+        authtoken=auth_token,
+        labels="edge:pywa",
+        **forward_options,
+    ).url()
+
+    _logger.info(f"Tunnel established: {public_url} -> {host}:{port}")
+
+    return public_url

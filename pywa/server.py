@@ -402,7 +402,7 @@ class Server:
         _logger.info(
             "Registering callback URL '%s' in scope '%s' after a delay of %s seconds to allow the server to start and be ready to receive the verification challenge.",
             self._callback_url,
-            self._callback_url_scope.value,
+            self._callback_url_scope.name,
             self._webhook_challenge_delay,
         )
         threading.Timer(
