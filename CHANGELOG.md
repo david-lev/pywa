@@ -3,7 +3,17 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-#### 4.0.0b4 (2026-04-11) **Beta**
+#### 4.0.0b5 (2026-04-17) **Latest Beta**
+
+- [client] add methods for creating and verifying phone numbers on WhatsApp Business Account
+- [templates] enhance `Template` and `TemplateDetails` with new methods for component retrieval and validation
+- [templates] add `param_names` property for introspection of named parameters
+- [templates] enhance error handling for positional and named examples in `HeaderText` and `BodyText`
+- [templates] enhance `CreativeFeaturesSpec` with new attributes for improved media handling and text optimization
+- [templates] remove `TemplateSubCategory` class and update `sub_category` type to string
+- [message] fix reply to message in `EditedMessage` and `DeletedMessage`
+
+#### 4.0.0b4 (2026-04-11)
 
 - [client] update `webhook_fields` type to support `utils.WebhookFields` and enhance handling logic
 - [client] replace `business_account_id` with `waba_id` across the codebase

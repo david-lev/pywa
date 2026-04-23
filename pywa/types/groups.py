@@ -4,7 +4,6 @@ import dataclasses
 import datetime
 import functools
 import pathlib
-from abc import abstractmethod
 from typing import (
     TYPE_CHECKING,
     BinaryIO,
@@ -388,23 +387,16 @@ class GroupMessageStatuses(BaseUpdate, Sequence[MessageStatus]):
         )
 
     @overload
-    @abstractmethod
     def __getitem__(self, index: int) -> MessageStatus: ...
 
     @overload
-    @abstractmethod
-    def __getitem__(self, index: slice[int | None]) -> Sequence[MessageStatus]: ...
+    def __getitem__(self, index: slice) -> list[MessageStatus]: ...
 
-    def __getitem__(self, index) -> MessageStatus | Sequence[MessageStatus]:
-        pass
+    def __getitem__(self, index: int | slice) -> MessageStatus | list[MessageStatus]:
+        return self.statuses[index]
 
     def __len__(self) -> int:
-        """Return the number of message statuses."""
         return len(self.statuses)
-
-    def __iter__(self) -> Iterator[MessageStatus]:
-        """Iterate over the message statuses."""
-        return iter(self.statuses)
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)

@@ -4,9 +4,10 @@ Template Types
 .. currentmodule:: pywa.types.templates
 
 .. autoclass:: Template()
+    :members: get_component, get_components, validate_params
 
 .. autoclass:: TemplateDetails()
-    :members: update, duplicate, delete, compare, send, unpause
+    :members: update, duplicate, delete, compare, send, unpause, get_component, get_components, validate_params
 
 .. autoclass:: TemplateStatus()
 

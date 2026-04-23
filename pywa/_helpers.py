@@ -1,23 +1,5 @@
 from __future__ import annotations
 
-__all__ = [
-    "resolve_recipient",
-    "resolve_callee",
-    "resolve_call_permission_request_user",
-    "resolve_blocking_users",
-    "clean_phone_number",
-    "resolve_buttons_param",
-    "resolve_media_param",
-    "resolve_tracker_param",
-    "resolve_arg",
-    "upload_template_media_components",
-    "resolve_flow_json_param",
-    "get_interactive_msg",
-    "get_media_msg",
-    "get_flow_metric_field",
-    "resolve_callback_data",
-]
-
 import base64
 import dataclasses
 import datetime
@@ -198,7 +180,7 @@ def resolve_buttons_param(
         return InteractiveType.BUTTON, {"buttons": tuple(b.to_dict() for b in buttons)}
 
 
-_header_format_to_media_type: dict[
+header_format_to_media_type: dict[
     HeaderFormatType, Literal["image", "video", "audio", "sticker", "document", "gif"]
 ] = {
     HeaderFormatType.IMAGE: "image",
@@ -206,7 +188,7 @@ _header_format_to_media_type: dict[
     HeaderFormatType.DOCUMENT: "document",
     HeaderFormatType.GIF: "gif",
 }
-_media_types_default_filenames = {
+media_types_default_filenames = {
     "image": "image.jpg",
     "video": "video.mp4",
     "audio": "audio.mp3",
@@ -214,7 +196,7 @@ _media_types_default_filenames = {
     "document": "document.pdf",
     "gif": "animation.gif",
 }
-_media_types_default_mime_types = {
+media_types_default_mime_types = {
     "image": "image/jpeg",
     "video": "video/mp4",
     "audio": "audio/mpeg",
@@ -222,13 +204,13 @@ _media_types_default_mime_types = {
     "document": "application/pdf",
     "gif": "image/gif",
 }
-_template_header_formats_filename = {
+template_header_formats_filename = {
     HeaderFormatType.IMAGE: "image.jpg",
     HeaderFormatType.VIDEO: "video.mp4",
     HeaderFormatType.DOCUMENT: "document.pdf",
     HeaderFormatType.GIF: "animation.gif",
 }
-_template_header_formats_default_mime_types = {
+template_header_formats_default_mime_types = {
     HeaderFormatType.IMAGE: "image/jpeg",
     HeaderFormatType.VIDEO: "video/mp4",
     HeaderFormatType.DOCUMENT: "application/pdf",
@@ -253,12 +235,12 @@ class MediaSource(enum.Enum):
     BASE64 = enum.auto()  # "iVBORw0KGgoAAAANSUhEUgAA..."
 
 
-_FILE_HANDLE_PATTERN = re.compile(r"^\d:.*")
-_BASE64_DATA_URI_PATTERN = re.compile(
+FILE_HANDLE_PATTERN = re.compile(r"^\d:.*")
+BASE64_DATA_URI_PATTERN = re.compile(
     r"^data:(?P<mime>[\w/-]+);base64,(?P<data>[A-Za-z0-9+/]+={0,2})$"
 )
-_BASE64_PATTERN = re.compile(r"^[A-Za-z0-9+/]+={0,2}$")
-_WA_MEDIA_PATTERN = re.compile(
+BASE64_PATTERN = re.compile(r"^[A-Za-z0-9+/]+={0,2}$")
+WA_MEDIA_PATTERN = re.compile(
     r"^https://lookaside\.fbsbx\.com/whatsapp_business/attachments/\?mid="
 )
 
@@ -270,7 +252,7 @@ def detect_media_source(
         media = str(media)
         if media.startswith(("https://", "http://")):
             if re.match(
-                _WA_MEDIA_PATTERN,
+                WA_MEDIA_PATTERN,
                 media,
             ):
                 _logger.debug("Detected media source as WhatsApp media URL")
@@ -283,13 +265,13 @@ def detect_media_source(
         elif pathlib.Path(media).is_file():
             _logger.debug("Detected media source as file path")
             return MediaSource.PATH
-        elif re.match(_FILE_HANDLE_PATTERN, media):
+        elif re.match(FILE_HANDLE_PATTERN, media):
             _logger.debug("Detected media source as file handle")
             return MediaSource.FILE_HANDLE
-        elif re.match(_BASE64_DATA_URI_PATTERN, media):
+        elif re.match(BASE64_DATA_URI_PATTERN, media):
             _logger.debug("Detected media source as base64 data URI")
             return MediaSource.BASE64_DATA_URI
-        elif len(media) % 4 == 0 and re.match(_BASE64_PATTERN, media):
+        elif len(media) % 4 == 0 and re.match(BASE64_PATTERN, media):
             _logger.debug("Detected media source as base64 string")
             return MediaSource.BASE64
         else:
@@ -437,11 +419,11 @@ def get_media_from_url(
 def get_media_from_base64(
     base64_str: str,
 ) -> MediaInfo:
-    match = re.match(_BASE64_DATA_URI_PATTERN, base64_str)
+    match = re.match(BASE64_DATA_URI_PATTERN, base64_str)
     if match:
         mime_type = match.group("mime")
         b64_data = match.group("data")
-    elif re.match(_BASE64_PATTERN, base64_str):
+    elif re.match(BASE64_PATTERN, base64_str):
         mime_type = None
         b64_data = base64_str
     else:
@@ -607,7 +589,7 @@ def internal_upload_media(
     final_filename = (
         filename
         or media_info.filename
-        or _media_types_default_filenames.get(media_type, "file.txt")
+        or media_types_default_filenames.get(media_type, "file.txt")
     )
     try:
         return Media(
@@ -617,7 +599,7 @@ def internal_upload_media(
                 media=media_info.content,
                 mime_type=mime_type
                 or media_info.mime_type
-                or _media_types_default_mime_types.get(media_type, "text/plain"),
+                or media_types_default_mime_types.get(media_type, "text/plain"),
                 filename=final_filename,
                 ttl_minutes=ttl_minutes,
             )["id"],
@@ -636,7 +618,7 @@ def internal_upload_media(
             pass
 
 
-def _filter_not_uploaded_comps(
+def filter_not_uploaded_comps(
     components: list[TemplateBaseComponent | dict],
 ) -> list[_BaseMediaHeaderComponent]:
     not_uploaded = []
@@ -660,7 +642,7 @@ def upload_template_media_components(
     """
     Internal method to upload media components examples in a template.
     """
-    not_uploaded = _filter_not_uploaded_comps(components)
+    not_uploaded = filter_not_uploaded_comps(components)
     if not not_uploaded:
         return
 
@@ -670,7 +652,7 @@ def upload_template_media_components(
     ) as executor:
         tasks = [
             executor.submit(
-                _upload_comps_example,
+                upload_comps_example,
                 wa=wa,
                 example=example,
                 comps=list(comps),
@@ -779,7 +761,7 @@ def internal_upload_file(
             pass
 
 
-def _upload_comps_example(
+def upload_comps_example(
     *,
     wa: WhatsApp,
     example: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
@@ -797,10 +779,10 @@ def _upload_comps_example(
             file=example,
             app_id=app_id,
             mime_type=first_comp._mime_type,
-            fallback_mime_type=_template_header_formats_default_mime_types.get(
+            fallback_mime_type=template_header_formats_default_mime_types.get(
                 first_comp.format, "application/octet-stream"
             ),
-            fallback_filename=_template_header_formats_filename.get(
+            fallback_filename=template_header_formats_filename.get(
                 first_comp.format, "pywa-template-header"
             ),
         )
@@ -827,7 +809,7 @@ def _upload_comps_example(
         ) from e
 
 
-def _filter_not_uploaded_params(
+def filter_not_uploaded_params(
     params: list[BaseParams | dict],
 ) -> list[_BaseMediaParams]:
     not_uploaded = []
@@ -851,7 +833,7 @@ def upload_template_media_params(
     """
     Internal method to upload media parameters when sending a template message.
     """
-    not_uploaded = _filter_not_uploaded_params(params)
+    not_uploaded = filter_not_uploaded_params(params)
 
     if not not_uploaded:
         return
@@ -860,7 +842,7 @@ def upload_template_media_params(
     ) as executor:
         tasks = [
             executor.submit(
-                _upload_params_media,
+                upload_params_media,
                 wa=wa,
                 sender=sender,
                 media=media,
@@ -872,7 +854,7 @@ def upload_template_media_params(
             task.result()
 
 
-def _upload_params_media(
+def upload_params_media(
     *,
     wa: WhatsApp,
     sender: str,
@@ -886,7 +868,7 @@ def _upload_params_media(
             media=media,
             mime_type=first_param._mime_type,
             filename=None,
-            media_type=_header_format_to_media_type[first_param.format],
+            media_type=header_format_to_media_type[first_param.format],
             phone_id=sender,
         )
         for p in params:
@@ -904,8 +886,8 @@ def resolve_tracker_param(tracker: str | CallbackData | None) -> str | None:
     return tracker.to_str() if isinstance(tracker, CallbackData) else tracker
 
 
-_BSUID_RE = re.compile(r"^[A-Z]{2}\.\d+$")
-_WA_ID_RE = re.compile(r"^\d+$")
+BSUID_RE = re.compile(r"^[A-Z]{2}\.\d+$")
+WA_ID_RE = re.compile(r"^\d+$")
 
 
 def resolve_recipient(to: str | int) -> tuple[dict[str, str], RecipientType]:

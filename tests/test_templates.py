@@ -12,7 +12,7 @@ from pywa.types.templates import *  # noqa: F403
 
 
 def _resolve_example_handles(template: Template):
-    not_uploaded = helpers._filter_not_uploaded_comps(template.components)
+    not_uploaded = helpers.filter_not_uploaded_comps(template.components)
     for comp in not_uploaded:
         comp._handle = comp._example
     return template
@@ -961,3 +961,114 @@ def test_validate_template_params():
                 QuickReplyButton.params(callback_data="extra", index=0),
             ]
         )
+
+
+def test_template_get_header():
+    t = Template(
+        name="test_template_get_header",
+        language=TemplateLanguage.ENGLISH_US,
+        category=TemplateCategory.MARKETING,
+        components=[
+            HeaderText(text="Welcome {{user}}", user="Customer"),
+        ],
+    )
+    assert isinstance(t.get_component(HeaderText), HeaderText)
+
+
+def test_template_get_body():
+    t = Template(
+        name="test_template_get_body",
+        language=TemplateLanguage.ENGLISH_US,
+        category=TemplateCategory.MARKETING,
+        components=[
+            BodyText(
+                text="Your order {{order_id}} is confirmed.",
+                order_id="12345",
+            ),
+        ],
+    )
+    assert isinstance(t.get_component(BodyText), BodyText)
+
+
+def test_template_get_component_from_buttons():
+    t = Template(
+        name="test_template_get_component",
+        language=TemplateLanguage.ENGLISH_US,
+        category=TemplateCategory.MARKETING,
+        components=[
+            Buttons(
+                buttons=[
+                    QuickReplyButton(text="Support"),
+                ]
+            ),
+        ],
+    )
+    assert isinstance(t.get_component(QuickReplyButton), QuickReplyButton)
+
+
+def test_template_get_component_from_carousel():
+    t = Template(
+        name="test_template_get_component",
+        language=TemplateLanguage.ENGLISH_US,
+        category=TemplateCategory.MARKETING,
+        components=[
+            Carousel(
+                cards=[
+                    CarouselCard(
+                        components=[
+                            HeaderText(text="Welcome {{user}}", user="Customer"),
+                        ]
+                    )
+                ]
+            )
+        ],
+    )
+    assert isinstance(t.get_component(HeaderText), HeaderText)
+
+
+def test_template_get_components():
+    t = Template(
+        name="test_template_get_component",
+        language=TemplateLanguage.ENGLISH_US,
+        category=TemplateCategory.MARKETING,
+        components=[
+            Buttons(
+                buttons=[
+                    QuickReplyButton(text="1"),
+                    QuickReplyButton(text="2"),
+                ]
+            ),
+        ],
+    )
+    comps = t.get_components(QuickReplyButton)
+    assert len(comps) == 2
+    for component in comps:
+        assert isinstance(component, QuickReplyButton)
+
+
+def test_template_get_components_from_carousel():
+    t = Template(
+        name="test_template_get_components",
+        language=TemplateLanguage.ENGLISH_US,
+        category=TemplateCategory.MARKETING,
+        components=[
+            Carousel(
+                cards=[
+                    CarouselCard(
+                        components=[
+                            HeaderText(text="1"),
+                        ]
+                    ),
+                    CarouselCard(
+                        components=[
+                            HeaderText(text="2"),
+                        ]
+                    ),
+                ]
+            )
+        ],
+    )
+    comps = t.get_components(HeaderText)
+    assert len(comps) == 2
+    for component in comps:
+        assert isinstance(component, HeaderText)

@@ -5,6 +5,7 @@ from __future__ import annotations
 import dataclasses
 import datetime
 import functools
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, cast
 
 from pywa.listeners import TemplateStatusUpdateListenerIdentifier
@@ -493,7 +494,7 @@ class UpdatedTemplate(_CreatedAndUpdatedTemplateActionsAsync, _UpdatedTemplate):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class CreatedTemplates(_CreatedTemplates):
+class CreatedTemplates(_CreatedTemplates, Sequence[CreatedTemplate]):
     """
     Represents a collection of created WhatsApp Templates.
 

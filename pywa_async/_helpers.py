@@ -10,24 +10,6 @@ from typing import TYPE_CHECKING, AsyncIterator, BinaryIO, Coroutine, Iterator, 
 import httpx
 
 from pywa._helpers import *  # noqa: F403
-from pywa._helpers import (
-    DOWNLOAD_CHUNK_SIZE,
-    GeneratorStreamer,
-    MediaInfo,
-    MediaSource,
-    _filter_not_uploaded_comps,
-    _filter_not_uploaded_params,
-    _header_format_to_media_type,
-    _media_types_default_filenames,
-    _media_types_default_mime_types,
-    _template_header_formats_default_mime_types,
-    _template_header_formats_filename,
-    detect_media_source,
-    get_filename_from_httpx_response_headers,
-    get_media_from_base64,
-    get_media_from_file_like_obj,
-    get_media_from_path,
-)
 from pywa.types.templates import (
     BaseParams,
     TemplateBaseComponent,
@@ -239,7 +221,7 @@ async def internal_upload_media(
     final_filename = (
         filename
         or media_info.filename
-        or _media_types_default_filenames.get(media_type, "file.txt")
+        or media_types_default_filenames.get(media_type, "file.txt")
     )
     try:
         return Media(
@@ -250,7 +232,7 @@ async def internal_upload_media(
                     media=media_info.content,
                     mime_type=mime_type
                     or media_info.mime_type
-                    or _media_types_default_mime_types.get(media_type, "text/plain"),
+                    or media_types_default_mime_types.get(media_type, "text/plain"),
                     filename=final_filename,
                     ttl_minutes=ttl_minutes,
                 )
@@ -278,7 +260,7 @@ async def upload_template_media_components(
     """
     Internal method to upload media components examples in a template.
     """
-    not_uploaded = _filter_not_uploaded_comps(components)
+    not_uploaded = filter_not_uploaded_comps(components)
     if not not_uploaded:
         return
 
@@ -450,10 +432,10 @@ async def _upload_comps_example(
             file=example,
             app_id=app_id,
             mime_type=first_comp._mime_type,
-            fallback_mime_type=_template_header_formats_default_mime_types.get(
+            fallback_mime_type=template_header_formats_default_mime_types.get(
                 first_comp.format, "application/octet-stream"
             ),
-            fallback_filename=_template_header_formats_filename.get(
+            fallback_filename=template_header_formats_filename.get(
                 first_comp.format, "pywa-template-header"
             ),
         )
@@ -488,7 +470,7 @@ async def upload_template_media_params(
     """
     Internal method to upload media parameters when sending a template message.
     """
-    not_uploaded = _filter_not_uploaded_params(params)
+    not_uploaded = filter_not_uploaded_params(params)
 
     if not not_uploaded:
         return
@@ -527,7 +509,7 @@ async def _upload_params_media(
             media=media,
             mime_type=first_param._mime_type,
             filename=None,
-            media_type=_header_format_to_media_type[first_param.format],
+            media_type=header_format_to_media_type[first_param.format],
             phone_id=sender,
         )
         for p in params:
