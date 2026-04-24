@@ -1117,10 +1117,13 @@ def register_routes_starlette(wa: WhatsApp):
 
     async def _webhook_update_handler(req: StarletteRequest) -> StarletteResponse:
         body = await req.body()
-        if error := wa.webhook_update_validator(
-            update=body,
-            hmac_header=req.headers.get(utils.HUB_SIG),
-        ):
+        if is_async_callable(validator := wa.webhook_update_validator):
+            error = await validator(
+                update=body, hmac_header=req.headers.get(utils.HUB_SIG)
+            )
+        else:
+            error = validator(update=body, hmac_header=req.headers.get(utils.HUB_SIG))
+        if error:
             return StarletteResponse(content=error[0], status_code=error[1])
         bg_task = StarletteBackgroundTask(
             wa.webhook_update_handler,
