@@ -3,7 +3,16 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-#### 4.0.0b5 (2026-04-17) **Latest Beta**
+#### 4.0.0b6 (2026-04-25) **Latest Beta**
+
+- [client] add `run` method to start the webhook server and listen for updates
+- [server] refactor webhook handling to include validation and improve endpoint management
+- [user] make `profile` temporary optional for testing
+- [utils] add `start_ngrok_tunnel` function to facilitate local webhook testing
+- [templates] enhance `duplicate` method to include `target_waba_id` parameter for template creation
+- [templates] add validation for URL variables in `URLButton` to enforce constraints on example and variable usage
+
+#### 4.0.0b5 (2026-04-17)
 
 - [client] add methods for creating and verifying phone numbers on WhatsApp Business Account
 - [templates] enhance `Template` and `TemplateDetails` with new methods for component retrieval and validation
