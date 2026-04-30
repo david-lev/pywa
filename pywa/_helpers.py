@@ -1151,11 +1151,13 @@ def register_routes_starlette(wa: "WhatsApp"):
         path=wa._webhook_endpoint,
         route=_webhook_challenge_handler,
         methods=["GET"],
+        include_in_schema=False,
     )
     server.add_route(
         path=wa._webhook_endpoint,
         route=_webhook_update_handler,
         methods=["POST"],
+        include_in_schema=False,
     )
 
 
@@ -1166,7 +1168,7 @@ def register_routes_fastapi(
 
     server: fastapi.FastAPI = wa._server  # type: ignore
 
-    @server.get(wa._webhook_endpoint)
+    @server.get(wa._webhook_endpoint, include_in_schema=False)
     async def pywa_challenge(
         vt: str = fastapi.Query(alias=utils.HUB_VT, examples=["xyzxyz"]),
         ch: str = fastapi.Query(alias=utils.HUB_CH, examples=["1858252904"]),
@@ -1191,7 +1193,7 @@ def register_routes_fastapi(
             },
         )
 
-    @server.post(wa._webhook_endpoint)
+    @server.post(wa._webhook_endpoint, include_in_schema=False)
     async def pywa_webhook(
         bg_tasks: fastapi.BackgroundTasks,
         req: fastapi.Request,
@@ -1388,6 +1390,7 @@ def register_flow_endpoint_starlette(
         path=callback_wrapper._endpoint,
         route=pywa_flow,
         methods=["POST"],
+        include_in_schema=False,
     )
 
 
@@ -1407,7 +1410,7 @@ def register_flow_endpoint_fastapi(
             else callback_wrapper.handle(req_dict)
         )
 
-    @server.post(callback_wrapper._endpoint)
+    @server.post(callback_wrapper._endpoint, include_in_schema=False)
     async def pywa_flow(
         res: tuple[str, int] = fastapi.Depends(_process_request),
     ) -> fastapi.Response:
