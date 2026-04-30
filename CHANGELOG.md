@@ -3,7 +3,13 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-#### 4.0.0b6 (2026-04-25) **Latest Beta**
+#### 4.0.0b7 (2026-04-30) **Latest Beta**
+
+- [helpers] fix incoming updates in `fastapi` and `starlette`
+- [helpers] hide webhook endpoints from OpenAPI schema
+- [ci] streamline publish workflow for PyPI
+
+#### 4.0.0b6 (2026-04-25)
 
 - [client] add `run` method to start the webhook server and listen for updates
 - [server] refactor webhook handling to include validation and improve endpoint management
