@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import base64
 import dataclasses
 import datetime
@@ -299,7 +297,7 @@ def detect_media_source(
 
 def resolve_media_param(
     *,
-    wa: WhatsApp,
+    wa: "WhatsApp",
     media: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
     mime_type: str | None,
     filename: str | None,
@@ -483,7 +481,7 @@ def get_filename_from_httpx_response_headers(
 
 
 def get_media_from_media_id_or_obj_or_url(
-    wa: WhatsApp,
+    wa: "WhatsApp",
     media: str | Media,
     media_source: MediaSource,
     download_chunk_size: int,
@@ -534,7 +532,7 @@ def internal_upload_media(
     filename: str | None,
     ttl_minutes: int | None = None,
     download_chunk_size: int | None,
-    wa: WhatsApp,
+    wa: "WhatsApp",
     phone_id: str,
     dl_session: httpx.Client | None = None,
 ) -> Media:
@@ -635,7 +633,7 @@ def filter_not_uploaded_comps(
 
 def upload_template_media_components(
     *,
-    wa: WhatsApp,
+    wa: "WhatsApp",
     app_id: int | str | None,
     components: list[TemplateBaseComponent | dict],
 ) -> None:
@@ -671,7 +669,7 @@ def upload_template_media_components(
 
 def internal_upload_file(
     *,
-    wa: WhatsApp,
+    wa: "WhatsApp",
     file: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
     app_id: int | str,
     mime_type: str | None,
@@ -763,7 +761,7 @@ def internal_upload_file(
 
 def upload_comps_example(
     *,
-    wa: WhatsApp,
+    wa: "WhatsApp",
     example: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
     comps: list[_BaseMediaHeaderComponent],
     app_id: int | str | None,
@@ -826,7 +824,7 @@ def filter_not_uploaded_params(
 
 def upload_template_media_params(
     *,
-    wa: WhatsApp,
+    wa: "WhatsApp",
     sender: str,
     params: list[BaseParams | dict],
 ) -> None:
@@ -856,7 +854,7 @@ def upload_template_media_params(
 
 def upload_params_media(
     *,
-    wa: WhatsApp,
+    wa: "WhatsApp",
     sender: str,
     media: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
     params: list[_BaseMediaParams],
@@ -952,7 +950,7 @@ def resolve_blocking_users(users: Iterable[str | int]) -> dict[str, list[str]]:
 
 def resolve_arg(
     *,
-    wa: WhatsApp,
+    wa: "WhatsApp",
     value: str | int | None,
     method_arg: str,
     client_arg: str,
@@ -1084,7 +1082,7 @@ def rename_func(extended_with: str) -> Callable:
     return inner
 
 
-def register_routes_starlette(wa: WhatsApp):
+def register_routes_starlette(wa: "WhatsApp"):
     from starlette.applications import Starlette as StarletteApp
     from starlette.background import BackgroundTask as StarletteBackgroundTask
     from starlette.requests import Request as StarletteRequest
@@ -1162,7 +1160,7 @@ def register_routes_starlette(wa: WhatsApp):
 
 
 def register_routes_fastapi(
-    wa: WhatsApp,
+    wa: "WhatsApp",
 ):
     import fastapi
 
@@ -1229,7 +1227,7 @@ def register_routes_fastapi(
 
 
 def register_routes_flask(
-    wa: WhatsApp,
+    wa: "WhatsApp",
 ):
     import flask
 
@@ -1341,7 +1339,7 @@ from .handlers import FlowRequestCallbackWrapper  # noqa: E402
 
 
 def register_flow_endpoint_starlette(
-    wa: WhatsApp,
+    wa: "WhatsApp",
     callback_wrapper: FlowRequestCallbackWrapper,
 ) -> None:
     import anyio.to_thread
@@ -1394,7 +1392,7 @@ def register_flow_endpoint_starlette(
 
 
 def register_flow_endpoint_fastapi(
-    wa: WhatsApp,
+    wa: "WhatsApp",
     callback_wrapper: FlowRequestCallbackWrapper,
 ) -> None:
     import fastapi
@@ -1422,7 +1420,7 @@ def register_flow_endpoint_fastapi(
 
 
 def register_flow_endpoint_flask(
-    wa: WhatsApp,
+    wa: "WhatsApp",
     callback_wrapper: FlowRequestCallbackWrapper,
 ) -> FlowRequestCallbackWrapper:
     import flask

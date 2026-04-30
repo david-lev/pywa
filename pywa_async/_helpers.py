@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import asyncio
 import itertools
 import mimetypes
@@ -25,7 +23,7 @@ if TYPE_CHECKING:
 
 async def resolve_media_param(
     *,
-    wa: WhatsApp,
+    wa: "WhatsApp",
     media: str
     | int
     | Media
@@ -96,7 +94,7 @@ async def get_media_from_url(
 
 
 async def get_media_from_media_id_or_obj_or_url(
-    wa: WhatsApp,
+    wa: "WhatsApp",
     media: str | Media,
     media_source: MediaSource,
     download_chunk_size: int | None,
@@ -158,7 +156,7 @@ async def internal_upload_media(
     mime_type: str | None,
     filename: str | None,
     ttl_minutes: int | None = None,
-    wa: WhatsApp,
+    wa: "WhatsApp",
     phone_id: str,
     dl_session: httpx.Client | None = None,
 ) -> Media:
@@ -253,7 +251,7 @@ async def internal_upload_media(
 
 async def upload_template_media_components(
     *,
-    wa: WhatsApp,
+    wa: "WhatsApp",
     app_id: int | str | None,
     components: list[TemplateBaseComponent | dict],
 ) -> None:
@@ -294,7 +292,7 @@ async def _run_all_and_cancel_on_exception(*coros: Coroutine):
 
 async def internal_upload_file(
     *,
-    wa: WhatsApp,
+    wa: "WhatsApp",
     file: str
     | int
     | Media
@@ -412,7 +410,7 @@ async def internal_upload_file(
 
 async def _upload_comps_example(
     *,
-    wa: WhatsApp,
+    wa: "WhatsApp",
     example: str
     | int
     | Media
@@ -463,7 +461,7 @@ async def _upload_comps_example(
 
 async def upload_template_media_params(
     *,
-    wa: WhatsApp,
+    wa: "WhatsApp",
     sender: str,
     params: list[BaseParams | dict],
 ) -> None:
@@ -490,7 +488,7 @@ async def upload_template_media_params(
 
 async def _upload_params_media(
     *,
-    wa: WhatsApp,
+    wa: "WhatsApp",
     sender: str,
     media: str
     | int
