@@ -3445,7 +3445,9 @@ class Carousel(TemplateBaseComponent):
             for card in self.cards:
                 card.clear_media_cache()
 
-    def params(self=None, *, cards: list[CarouselCard._Params]) -> Carousel._Params:
+    def params(
+        self: Carousel | None = None, *, cards: list[CarouselCard._Params]
+    ) -> Carousel._Params:
         """
         Fill the parameters for the carousel component.
 
