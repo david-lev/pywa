@@ -33,6 +33,7 @@ from .. import _helpers as helpers
 from .. import utils
 from .base_update import BaseUserUpdate, RawUpdate  # noqa
 from .media import ArrivedMedia
+from ..errors import PywaDeprecationWarning
 from .others import (
     FacebookApplication,
     MessageType,
@@ -635,7 +636,7 @@ class FlowJSONUpdateResult(SuccessResult):
     def __iter__(self):
         warnings.warn(
             "WhatsApp.update_flow_json() is no longer return (success, validation_errors) tuple, but FlowJSONUpdateResult object.",
-            DeprecationWarning,
+            PyWaDeprecationWarning,
             stacklevel=2,
         )
         return iter((self.success, self.validation_errors))
