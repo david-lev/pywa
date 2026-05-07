@@ -65,7 +65,7 @@ class SentMessage(_ClientShortcutsAsync, _SentMessage):
     Attributes:
         id: The ID of the message.
         from_phone_id: The WhatsApp Phone ID of the sender who sent the message.
-        recipient: The recipient of the message.
+        chat: The chat to which the message was sent.
         input: The input of the recipient.
     """
 
@@ -598,7 +598,7 @@ class SentMediaMessage(SentMessage, _SentMediaMessage):
     Attributes:
         id: The ID of the message.
         from_phone_id: The phone id of the sender (you).
-        recipient: The recipient of the message.
+        chat: The chat to which the message was sent.
         input: The input of the recipient.
         uploaded_media: The media that was uploaded and sent in the message (only available if the media was not Media ID or URL).
     """
@@ -613,7 +613,7 @@ class SentVoiceMessage(SentMediaMessage, _SentVoiceMessage):
     Attributes:
         id: The ID of the message.
         from_phone_id: The phone id of the sender (you).
-        recipient: The recipient of the message.
+        chat: The chat to which the message was sent.
         input: The input of the recipient.
         uploaded_media: The voice media that was uploaded and sent in the message (only available if the media was not Media ID or URL).
     """
@@ -673,7 +673,7 @@ class SentLocationRequest(SentMessage, _SentLocationRequest):
     Attributes:
         id: The ID of the message.
         from_phone_id: The phone id of the sender (you).
-        recipient: The recipient of the message.
+        chat: The chat to which the message was sent.
         input: The input of the recipient.
     """
 
@@ -727,7 +727,7 @@ class SentReaction(SentMessage, _SentReaction):
         id: The ID of the reaction.
         message_id: The ID of the message that was reacted/unreacted to.
         from_phone_id: The phone id of the sender (you).
-        recipient: The recipient of the message.
+        chat: The chat to which the reaction was sent.
         input: The input of the recipient.
     """
 
@@ -739,7 +739,7 @@ class SentTemplate(SentMessage, _SentTemplate):
     Attributes:
         id: The ID of the message.
         from_phone_id: The phone id of the sender (you).
-        recipient: The recipient of the message.
+        chat: The chat to which the template was sent.
         input: The input of the recipient.
         status: The status of the sent template.
     """
@@ -752,6 +752,6 @@ class InitiatedCall(_CallShortcutsAsync, _ClientShortcutsAsync, _InitiatedCall):
     Attributes:
         id: The call ID.
         from_phone_id: The phone id of the caller (you).
-        recipient: The recipient of the call.
+        chat: The chat to which the call was initiated.
         success: Whether the call was successfully initiated.
     """
