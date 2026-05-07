@@ -3912,7 +3912,18 @@ _otp_types_to_component: dict[OtpType, type[BaseOTPButton]] = {
 }
 
 
-def _parse_component(component: dict) -> TemplateBaseComponent | dict:
+def _unknown_comp_warning(comp: dict, unknown: str, template_id: str | None) -> None:
+    _logger.warning(
+        "%sUnknown %s: %s. Defaulting to raw dictionary representation. Please update pywa or report this issue.",
+        f"Template {template_id}: " if template_id else "",
+        unknown,
+        comp,
+    )
+
+
+def _parse_component(
+    component: dict, *, template_id: str | None = None
+) -> TemplateBaseComponent | dict:
     """
     Parse a component dictionary into a BaseComponent object.
 
@@ -3924,20 +3935,14 @@ def _parse_component(component: dict) -> TemplateBaseComponent | dict:
     """
     component_cls = _comp_types_to_component.get(ComponentType(component["type"]))
     if component_cls is None:
-        _logger.warning(
-            "Unknown component type: %s. Defaulting to dictionary representation.",
-            component["type"],
-        )
+        _unknown_comp_warning(component, "component type", template_id)
         return component
 
     if issubclass(component_cls, BaseHeaderComponent):
         header_format = HeaderFormatType(component["format"])
         header_cls = _header_formats_to_component.get(header_format)
         if header_cls is None:
-            _logger.warning(
-                "Unknown header format: %s. Defaulting to dictionary representation.",
-                component["format"],
-            )
+            _unknown_comp_warning(component, "header format", template_id)
             return component
         component_cls = header_cls
 
@@ -3947,10 +3952,7 @@ def _parse_component(component: dict) -> TemplateBaseComponent | dict:
         elif "text" in component:
             component_cls = BodyText
         else:
-            _logger.warning(
-                "Unknown body component: %s. Defaulting to dictionary representation.",
-                component,
-            )
+            _unknown_comp_warning(component, "body component", template_id)
             return component
 
     elif issubclass(component_cls, BaseFooterComponent):
@@ -3959,20 +3961,14 @@ def _parse_component(component: dict) -> TemplateBaseComponent | dict:
         elif "text" in component:
             component_cls = FooterText
         else:
-            _logger.warning(
-                "Unknown footer component: %s. Defaulting to dictionary representation.",
-                component,
-            )
+            _unknown_comp_warning(component, "footer component", template_id)
             return component
 
     elif issubclass(component_cls, BaseOTPButton):
         otp_type = OtpType(component["otp_type"])
         otp_cls = _otp_types_to_component.get(otp_type)
         if otp_cls is None:
-            _logger.warning(
-                "Unknown OTP type: %s. Defaulting to dictionary representation.",
-                component["otp_type"],
-            )
+            _unknown_comp_warning(component, "OTP type", template_id)
             return component
         component_cls = otp_cls
 
@@ -3980,7 +3976,8 @@ def _parse_component(component: dict) -> TemplateBaseComponent | dict:
         return component_cls.from_dict(component)
     except Exception:
         _logger.exception(
-            "Failed to parse component: %s. Defaulting to dictionary representation. please update pywa or report this issue.",
+            "%sFailed to parse component: %s. Defaulting to raw dictionary representation. Please update pywa or report this issue.",
+            f"Template {template_id}: " if template_id else "",
             component,
         )
         return component
@@ -4151,7 +4148,7 @@ class TemplateDetails(helpers.APIObject, _BaseTemplateActions):
     language: TemplateLanguage
     category: TemplateCategory
     status: TemplateStatus
-    components: list[TemplateBaseComponent]
+    components: list[TemplateBaseComponent | dict]
     parameter_format: ParamFormat | None
     message_send_ttl_seconds: int | None
     correct_category: TemplateCategory | None
@@ -4187,7 +4184,8 @@ class TemplateDetails(helpers.APIObject, _BaseTemplateActions):
             if "message_send_ttl_seconds" in data
             else None,
             components=[
-                _parse_component(component) for component in data["components"]
+                _parse_component(component, template_id=data["id"])
+                for component in data["components"]
             ],
             quality_score=QualityScore.from_dict(data=data["quality_score"])
             if "quality_score" in data
