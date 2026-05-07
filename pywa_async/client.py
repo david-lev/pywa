@@ -1675,7 +1675,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         media_type: Literal["image", "video", "audio", "document", "sticker"]
         | None = None,
         phone_id: str | int | None = None,
-    ) -> Awaitable[Media]:
+    ) -> PendingMedia:
         """
         Upload media to WhatsApp servers.
 
