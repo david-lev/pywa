@@ -5,6 +5,7 @@ import pytest
 
 from pywa import WhatsApp, types
 from pywa.types import Result
+from pywa.types.chat import Chat, ChatType
 from pywa.types.flows import FlowDetails
 from pywa.types.sent_update import (
     InitiatedCall,
@@ -263,14 +264,16 @@ def test_sent_message():
     )
     assert sm == SentMessage(
         _client=wa,
-        recipient="16505555555",
         _recipient_type=RecipientType.WA_ID,
         id="wamid.HBgLMTY1MDUwNzY1MjAVAgARGBI5QTNDQTVCM0Q0Q0Q2RTY3RTcA",
+        chat=Chat(id="16505555555", type=ChatType.PRIVATE),
         from_phone_id=wa.phone_id,
         input="16505555555",
     )
     assert sm.sender == wa.phone_id
+    assert sm.to == "16505555555"
     assert sm.recipient == "16505555555"
+    assert sm.chat.id == "16505555555"
 
     assert SentTemplate.from_sent_update(
         client=wa,
@@ -288,9 +291,9 @@ def test_sent_message():
         recipient_type=RecipientType.WA_ID,
     ) == SentTemplate(
         _client=wa,
-        recipient="16505555555",
         _recipient_type=RecipientType.WA_ID,
         id="wamid.HBgLMTY1MDUwNzY1MjAVAgARGBI5QTNDQTVCM0Q0Q0Q2RTY3RTcA",
+        chat=Chat(id="16505555555", type=ChatType.PRIVATE),
         from_phone_id=wa.phone_id,
         status=SentTemplateStatus.ACCEPTED,
         input="16505555555",
@@ -310,13 +313,14 @@ def test_initiated_call():
         callee="16506666666",
     )
     assert c.caller == wa.phone_id
-    assert c.recipient == "16506666666"
+    assert c.chat.id == "16506666666"
+    assert c.to == "16506666666"
     assert c.callee == "16506666666"
     assert c == InitiatedCall(
         _client=wa,
-        recipient="16506666666",
         _recipient_type=RecipientType.WA_ID,
         id="wacid.fiurefh8e=",
+        chat=Chat(id="16506666666", type=ChatType.PRIVATE),
         from_phone_id=wa.phone_id,
         success=True,
     )

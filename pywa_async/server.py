@@ -4,6 +4,7 @@ import logging
 import warnings
 from typing import TYPE_CHECKING
 
+from .errors import PywaDeprecationWarning
 from pywa.types.base_update import BaseUpdate
 
 from . import _helpers as helpers
@@ -80,7 +81,7 @@ class Server:
             warnings.warn(
                 "The `hmac_header` argument in `webhook_update_handler` is deprecated and will be removed "
                 "in a future version. Use `client.webhook_update_validator` to validate the request first.",
-                DeprecationWarning,
+                PywaDeprecationWarning,
                 stacklevel=2,
             )
             error_response = await self.webhook_update_validator(update, hmac_header)

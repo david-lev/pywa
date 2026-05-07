@@ -5,7 +5,7 @@ import time
 import warnings
 from collections.abc import Sequence
 
-from ..errors import WhatsAppError
+from ..errors import WhatsAppError, PywaDeprecationWarning
 from .user import BaseUser
 
 """Types for other objects."""
@@ -462,7 +462,7 @@ class ReplyToMessage:
     def message_id(self) -> str:
         warnings.warn(
             "ReplyToMessage.message_id is deprecated, use ReplyToMessage.id instead",
-            DeprecationWarning,
+            PywaDeprecationWarning,
             stacklevel=2,
         )
         return self.id

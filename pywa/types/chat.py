@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import dataclasses
-import enum
 
+from .. import _helpers as helpers
 from .user import User
 
 
@@ -28,9 +28,8 @@ class Chat:
         )
 
 
-class ChatType(enum.Enum):
-    PRIVATE = enum.auto()
-    GROUP = enum.auto()
+class ChatType(helpers.StrEnum):
+    PRIVATE = "PRIVATE"
+    GROUP = "GROUP"
 
-    def __repr__(self) -> str:
-        return f"ChatType.{self.name}"
+    UNKNOWN = "UNKNOWN"

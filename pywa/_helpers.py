@@ -889,6 +889,8 @@ WA_ID_RE = re.compile(r"^\d+$")
 
 
 def resolve_recipient(to: str | int) -> tuple[dict[str, str], RecipientType]:
+    if not to:
+        raise ValueError(f"Recipient cannot be empty. got: {to!r}")
     recipient_type = RecipientType.from_recipient(to)
     _logger.debug(f"Resolved recipient {to} to type {recipient_type}")
     match recipient_type:

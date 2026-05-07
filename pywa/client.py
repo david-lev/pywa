@@ -22,6 +22,7 @@ import httpx
 from . import _helpers as helpers
 from . import utils
 from .api import GraphAPI
+from .errors import PywaDeprecationWarning
 from .filters import Filter
 from .handlers import (
     CallbackButtonHandler,
@@ -333,12 +334,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         self.filter_updates = filter_updates
 
         if business_account_id is not None:
-            warnings.warn(
-                "The `business_account_id` parameter is deprecated to avoid confusion with the Business Portfolio ID, please use `waba_id` instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            waba_id = business_account_id
+            self.business_account_id = business_account_id
         self.waba_id = str(waba_id) if waba_id is not None else None
 
         if not all(i in user_identifier_priority for i in UserIdentifier):
@@ -492,10 +488,19 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def business_account_id(self) -> None:
         warnings.warn(
             "The `business_account_id` property is deprecated to avoid confusion with the Business Portfolio ID, please use `waba_id` instead.",
-            DeprecationWarning,
+            PywaDeprecationWarning,
             stacklevel=2,
         )
         return self.waba_id
+
+    @business_account_id.setter
+    def business_account_id(self, value: str) -> None:
+        warnings.warn(
+            "The `business_account_id` property is deprecated to avoid confusion with the Business Portfolio ID, please use `waba_id` instead.",
+            PywaDeprecationWarning,
+            stacklevel=2,
+        )
+        self.waba_id = value
 
     def add_flow_request_handler(
         self, handler: FlowRequestHandler

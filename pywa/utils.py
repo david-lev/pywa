@@ -13,6 +13,8 @@ from typing import Any, Callable, Iterable, Protocol, TypeAlias
 
 import httpx
 
+from .errors import PywaDeprecationWarning
+
 try:
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.asymmetric.padding import MGF1, OAEP, hashes
@@ -325,7 +327,7 @@ class FlowRequestDecryptedMedia:
         """Allow iteration over the attributes."""
         warnings.warn(
             "flow_request_media_decryptor() is no longer return (media_id, filename, data) tuple, but FlowRequestDecryptedMedia object.",
-            DeprecationWarning,
+            PywaDeprecationWarning,
             stacklevel=2,
         )
         return iter((self.media_id, self.filename, self.data))

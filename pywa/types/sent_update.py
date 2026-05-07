@@ -17,6 +17,7 @@ import enum
 import re
 from typing import TYPE_CHECKING, TypeVar, cast
 
+from .chat import Chat, ChatType
 from .. import _helpers as helpers
 from .. import filters as pywa_filters
 from ..listeners import UserUpdateListenerIdentifier
@@ -73,6 +74,11 @@ class RecipientType(enum.Enum):
 
         return cls.GROUP_ID
 
+    def to_chat_type(self) -> ChatType:
+        if self == RecipientType.GROUP_ID:
+            return ChatType.GROUP
+        return ChatType.PRIVATE
+
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class _SentUpdate(_ClientShortcuts, abc.ABC):
@@ -83,7 +89,7 @@ class _SentUpdate(_ClientShortcuts, abc.ABC):
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
     _recipient_type: RecipientType = dataclasses.field(repr=False)
     id: str
-    recipient: str
+    chat: Chat
     from_phone_id: str
 
     @property
@@ -91,9 +97,9 @@ class _SentUpdate(_ClientShortcuts, abc.ABC):
         """
         Return the recipient of the message.
 
-        - Same as :attr:`recipient`
+        - Same as ``chat.id``
         """
-        return self.recipient
+        return self.chat.id
 
     @staticmethod
     def _extract_recipient(contact: dict) -> str:
@@ -102,7 +108,7 @@ class _SentUpdate(_ClientShortcuts, abc.ABC):
     @property
     def _internal_sender(self) -> str:
         # noinspection PyProtectedMember
-        return self.recipient
+        return self.chat.id
 
     @property
     def _internal_recipient(self) -> str:
@@ -115,7 +121,7 @@ class _SentUpdate(_ClientShortcuts, abc.ABC):
     @property
     def listener_identifier(self) -> UserUpdateListenerIdentifier:
         return UserUpdateListenerIdentifier(
-            sender=self.recipient, recipient=self.from_phone_id
+            sender=self.chat.id, recipient=self.from_phone_id
         )
 
 
@@ -153,7 +159,7 @@ class SentMessage(_SentUpdate):
     Attributes:
         id: The ID of the message.
         from_phone_id: The WhatsApp Phone ID of the sender who sent the message.
-        recipient: The recipient of the message.
+        chat: The chat to which the message was sent.
         input: The input of the recipient.
     """
 
@@ -161,6 +167,11 @@ class SentMessage(_SentUpdate):
     _interactive_type: InteractiveType | None = dataclasses.field(
         default=None, repr=False, hash=False, compare=False
     )
+
+    @property
+    def recipient(self) -> str:
+        """The recipient of the message"""
+        return self._internal_sender
 
     @property
     def sender(self) -> str:
@@ -184,7 +195,10 @@ class SentMessage(_SentUpdate):
             _recipient_type=recipient_type,
             _interactive_type=interactive_type,
             id=update["messages"][0]["id"],
-            recipient=cls._extract_recipient(update["contacts"][0]),
+            chat=Chat(
+                id=cls._extract_recipient(update["contacts"][0]),
+                type=recipient_type.to_chat_type(),
+            ),
             from_phone_id=from_phone_id,
             input=update["contacts"][0]["input"],
             **kwargs,
@@ -196,7 +210,7 @@ class SentMessage(_SentUpdate):
             _recipient_type=self._recipient_type,
             _interactive_type=self._interactive_type,
             id=self.id,
-            recipient=self.recipient,
+            chat=self.chat,
             from_phone_id=self.from_phone_id,
             input=self.input,
         )
@@ -731,7 +745,7 @@ class SentMediaMessage(SentMessage):
     Attributes:
         id: The ID of the message.
         from_phone_id: The phone id of the sender (you).
-        recipient: The recipient of the message.
+        chat: The chat to which the message was sent.
         input: The input of the recipient.
         uploaded_media: The media that was uploaded and sent in the message (only available if the media was not Media ID or URL).
     """
@@ -746,7 +760,7 @@ class SentVoiceMessage(SentMediaMessage):
     Attributes:
         id: The ID of the message.
         from_phone_id: The phone id of the sender (you).
-        recipient: The recipient of the message.
+        chat: The chat to which the message was sent.
         input: The input of the recipient.
         uploaded_media: The voice media that was uploaded and sent in the message (only available if the media was not Media ID or URL).
     """
@@ -806,7 +820,7 @@ class SentLocationRequest(SentMessage):
     Attributes:
         id: The ID of the message.
         from_phone_id: The phone id of the sender (you).
-        recipient: The recipient of the message.
+        chat: The chat to which the message was sent.
         input: The input of the recipient.
     """
 
@@ -871,7 +885,7 @@ class SentReaction(SentMessage):
         id: The ID of the reaction.
         message_id: The ID of the message that was reacted/unreacted to.
         from_phone_id: The phone id of the sender (you).
-        recipient: The recipient of the message.
+        chat: The chat to which the message was sent.
         input: The input of the recipient.
     """
 
@@ -911,7 +925,7 @@ class SentTemplate(SentMessage):
     Attributes:
         id: The ID of the message.
         from_phone_id: The phone id of the sender (you).
-        recipient: The recipient of the message.
+        chat: The chat to which the template was sent.
         input: The input of the recipient.
         status: The status of the sent template.
     """
@@ -954,7 +968,7 @@ class InitiatedCall(_SentUpdate, _CallShortcuts):
     Attributes:
         id: The call ID.
         from_phone_id: The phone id of the caller (you).
-        recipient: The recipient of the call.
+        chat: The chat to which the call was initiated.
         success: Whether the call was successfully initiated.
     """
 
@@ -971,9 +985,9 @@ class InitiatedCall(_SentUpdate, _CallShortcuts):
     ) -> InitiatedCall:
         return cls(
             _client=client,
-            recipient=callee,
             _recipient_type=recipient_type,
             id=update["calls"][0]["id"],
+            chat=Chat(id=callee, type=recipient_type.to_chat_type()),
             from_phone_id=from_phone_id,
             success=update["success"],
         )

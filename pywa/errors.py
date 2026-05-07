@@ -10,6 +10,12 @@ from typing import ClassVar, Iterable, Type
 import httpx
 
 
+class PywaDeprecationWarning(UserWarning):
+    """Warning for deprecated features in pywa."""
+
+    pass
+
+
 @dataclasses.dataclass(slots=True, frozen=True)
 class WhatsAppError(Exception):
     """
