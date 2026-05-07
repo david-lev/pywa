@@ -16,7 +16,7 @@ __all__ = [
 import dataclasses
 import datetime
 import pathlib
-from typing import TYPE_CHECKING, AsyncGenerator
+from typing import TYPE_CHECKING, AsyncGenerator, Awaitable, Any, Generator, Coroutine
 
 from pywa.types.media import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.media import (
@@ -220,6 +220,37 @@ class Media(_MediaActionsAsync, _Media):
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         await self.delete()
+
+
+class PendingMedia(Awaitable[Media]):
+    """
+    A wrapper for media upload operations that supports both direct awaiting
+    and asynchronous context management.
+
+    This class defers the execution of the upload until the object is either
+    awaited or entered via an ``async with`` block. It caches the result
+    to ensure that the upload occurs only once.
+    """
+
+    def __init__(self, coro: Coroutine[Any, Any, Media]):
+        self._coro = coro
+        self._media: Media | None = None
+
+    async def _handle_caching(self) -> Media:
+        if self._media is None:
+            self._media = await self._coro
+        return self._media
+
+    def __await__(self) -> Generator[Any, None, Media]:
+        return self._handle_caching().__await__()
+
+    async def __aenter__(self) -> "Media":
+        media = await self
+        return await media.__aenter__()
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        if self._media:
+            await self._media.__aexit__(exc_type, exc_value, traceback)
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)

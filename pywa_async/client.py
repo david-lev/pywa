@@ -20,6 +20,7 @@ from typing import (
     Iterable,
     Iterator,
     Literal,
+    Awaitable,
 )
 
 import httpx
@@ -134,7 +135,7 @@ from .types.groups import (
     GroupOperation,
     GroupParticipant,
 )
-from .types.media import Media
+from .types.media import Media, PendingMedia
 from .types.others import (
     BlockedUser,
     CreatedBusinessPhoneNumber,
@@ -1656,7 +1657,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         )
 
     # noinspection PyMethodOverriding
-    async def upload_media(
+    def upload_media(
         self,
         media: str
         | int
@@ -1674,7 +1675,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         media_type: Literal["image", "video", "audio", "document", "sticker"]
         | None = None,
         phone_id: str | int | None = None,
-    ) -> Media:
+    ) -> Awaitable[Media]:
         """
         Upload media to WhatsApp servers.
 
@@ -1712,23 +1713,25 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             The uploaded media.
         """
-        return await helpers.internal_upload_media(
-            media=media,
-            media_source=helpers.detect_media_source(media),
-            media_type=media_type,
-            mime_type=mime_type,
-            filename=filename,
-            ttl_minutes=int(ttl.total_seconds() // 60)
-            if isinstance(ttl, datetime.timedelta)
-            else ttl,
-            wa=self,
-            phone_id=helpers.resolve_arg(
+        return PendingMedia(
+            helpers.internal_upload_media(
+                media=media,
+                media_source=helpers.detect_media_source(media),
+                media_type=media_type,
+                mime_type=mime_type,
+                filename=filename,
+                ttl_minutes=int(ttl.total_seconds() // 60)
+                if isinstance(ttl, datetime.timedelta)
+                else ttl,
                 wa=self,
-                value=phone_id,
-                method_arg="phone_id",
-                client_arg="phone_id",
-            ),
-            dl_session=dl_session,
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+                dl_session=dl_session,
+            )
         )
 
     async def get_media_url(self, media_id: str | int) -> MediaURL:
