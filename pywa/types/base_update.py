@@ -40,6 +40,7 @@ if TYPE_CHECKING:
         VoiceCallButton,
     )
     from .calls import SessionDescription
+    from .chat import Chat
     from .media import Media
     from .sent_update import (
         InitiatedCall,
@@ -1282,3 +1283,46 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
         instead of ``id`` to prevent errors.
         """
         return self.id
+
+
+class _PinUnpinActions:
+    _client: WhatsApp
+    id: str
+    recipient: str
+    chat: Chat
+
+    def pin(self, *, expiration_days: datetime.timedelta | int) -> SentMessage:
+        """
+        Pin the message in the chat.
+
+        - Note that currently only group chats support pinning messages.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/groups-messaging#pin-and-unpin-group-message>`_.
+
+        Args:
+            expiration_days: The number of days until the pinned message expires. Must be between 1 and 30 days.
+
+        Returns:
+            The pinned message.
+        """
+        return self._client.pin_message(
+            chat_id=self.chat.id,
+            message_id=self.id,
+            expiration_days=expiration_days,
+            sender=self.recipient,
+        )
+
+    def unpin(self) -> SentMessage:
+        """
+        Unpin the message from the chat.
+
+        - Note that currently only group chats support pinning messages.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/groups-messaging#pin-and-unpin-group-message>`_.
+
+        Returns:
+            The unpinned message.
+        """
+        return self._client.unpin_message(
+            chat_id=self.chat.id,
+            message_id=self.id,
+            sender=self.recipient,
+        )

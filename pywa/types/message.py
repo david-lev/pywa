@@ -18,7 +18,7 @@ import datetime
 from typing import TYPE_CHECKING, ClassVar, Generator, Iterable, Type
 
 from ..errors import WhatsAppError
-from .base_update import BaseUserUpdate, RawUpdate  # noqa
+from .base_update import BaseUserUpdate, RawUpdate, _PinUnpinActions  # noqa
 from .callback import Button, FlowButton, SectionList, URLButton, VoiceCallButton
 from .chat import Chat, ChatType
 from .media import Audio, Document, Image, Sticker, Video
@@ -42,7 +42,7 @@ if TYPE_CHECKING:
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Message(BaseUserUpdate):
+class Message(BaseUserUpdate, _PinUnpinActions):
     """
     A message received from a user.
 
@@ -528,42 +528,6 @@ class Message(BaseUserUpdate):
                 )
             case _:
                 raise ValueError(f"Message of type {self.type} cannot be copied.")
-
-    def pin(self, *, expiration_days: datetime.timedelta | int) -> SentMessage:
-        """
-        Pin the message in the chat.
-
-        - Note that currently only group chats support pinning messages.
-        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/groups-messaging#pin-and-unpin-group-message>`_.
-
-        Args:
-            expiration_days: The number of days until the pinned message expires. Must be between 1 and 30 days.
-
-        Returns:
-            The pinned message.
-        """
-        return self._client.pin_message(
-            chat_id=self.chat.id,
-            message_id=self.id,
-            expiration_days=expiration_days,
-            sender=self.recipient,
-        )
-
-    def unpin(self) -> SentMessage:
-        """
-        Unpin the message from the chat.
-
-        - Note that currently only group chats support pinning messages.
-        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/groups-messaging#pin-and-unpin-group-message>`_.
-
-        Returns:
-            The unpinned message.
-        """
-        return self._client.unpin_message(
-            chat_id=self.chat.id,
-            message_id=self.id,
-            sender=self.recipient,
-        )
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)

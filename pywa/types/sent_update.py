@@ -17,13 +17,13 @@ import enum
 import re
 from typing import TYPE_CHECKING, TypeVar, cast
 
-from .chat import Chat, ChatType
 from .. import _helpers as helpers
 from .. import filters as pywa_filters
 from ..listeners import UserUpdateListenerIdentifier
-from .base_update import BaseUserUpdate, _ClientShortcuts
+from .base_update import BaseUserUpdate, _ClientShortcuts, _PinUnpinActions
 from .callback import CallbackButton, CallbackSelection
 from .calls import CallConnect, CallPermissionUpdate, _CallShortcuts
+from .chat import Chat, ChatType
 from .flows import FlowCompletion
 from .media import Media
 from .message import Message
@@ -152,7 +152,7 @@ _SentMessageType = TypeVar("_SentMessageType", bound="SentMessage")
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class SentMessage(_SentUpdate):
+class SentMessage(_SentUpdate, _PinUnpinActions):
     """
     Represents a message that was sent to WhatsApp user/group.
 

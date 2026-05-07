@@ -888,15 +888,16 @@ BSUID_RE = re.compile(r"^[A-Z]{2}\.\d+$")
 WA_ID_RE = re.compile(r"^\d+$")
 
 
-def resolve_recipient(to: str | int) -> tuple[dict[str, str], RecipientType]:
+def resolve_recipient(to: str | int) -> tuple[dict[str, str | None], RecipientType]:
     if not to:
         raise ValueError(f"Recipient cannot be empty. got: {to!r}")
     recipient_type = RecipientType.from_recipient(to)
     _logger.debug(f"Resolved recipient {to} to type {recipient_type}")
+    to = str(to)
     match recipient_type:
         case RecipientType.WA_ID | RecipientType.PHONE_NUMBER:
             return {
-                "to": str(to),
+                "to": to,
                 "recipient": None,
                 "recipient_type": "individual",
             }, recipient_type

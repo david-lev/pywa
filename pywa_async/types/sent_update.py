@@ -55,10 +55,10 @@ __all__ = [
     "InitiatedCall",
 ]
 
-from pywa_async.types.base_update import _ClientShortcutsAsync
+from pywa_async.types.base_update import _ClientShortcutsAsync, _PinUnpinActionsAsync
 
 
-class SentMessage(_ClientShortcutsAsync, _SentMessage):
+class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
     """
     Represents a message that was sent to WhatsApp user/group.
 
