@@ -20,7 +20,6 @@ from typing import (
     Iterable,
     Iterator,
     Literal,
-    Awaitable,
 )
 
 import httpx
@@ -1659,14 +1658,16 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     # noinspection PyMethodOverriding
     def upload_media(
         self,
-        media: str
-        | int
-        | Media
-        | pathlib.Path
-        | bytes
-        | BinaryIO
-        | Iterator[bytes]
-        | AsyncIterator[bytes],
+        media: (
+            str
+            | int
+            | Media
+            | pathlib.Path
+            | bytes
+            | BinaryIO
+            | Iterator[bytes]
+            | AsyncIterator[bytes]
+        ),
         mime_type: str | None = None,
         filename: str | None = None,
         dl_session: httpx.AsyncClient | None = None,
