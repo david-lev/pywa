@@ -33,7 +33,6 @@ from .. import _helpers as helpers
 from .. import utils
 from .base_update import BaseUserUpdate, RawUpdate  # noqa
 from .media import ArrivedMedia
-from ..errors import PywaDeprecationWarning
 from .others import (
     FacebookApplication,
     MessageType,

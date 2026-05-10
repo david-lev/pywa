@@ -4,11 +4,11 @@ import logging
 import warnings
 from typing import TYPE_CHECKING
 
-from .errors import PywaDeprecationWarning
 from pywa.types.base_update import BaseUpdate
 
 from . import _helpers as helpers
 from . import errors, handlers, utils
+from .errors import PywaDeprecationWarning
 from .handlers import (
     EncryptedFlowRequestType,
     Handler,

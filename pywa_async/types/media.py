@@ -16,7 +16,7 @@ __all__ = [
 import dataclasses
 import datetime
 import pathlib
-from typing import TYPE_CHECKING, AsyncGenerator, Awaitable, Any, Generator, Coroutine
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Awaitable, Coroutine, Generator
 
 from pywa.types.media import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.media import (
