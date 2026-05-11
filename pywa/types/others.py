@@ -5,7 +5,7 @@ import time
 import warnings
 from collections.abc import Sequence
 
-from ..errors import WhatsAppError, PywaDeprecationWarning
+from ..errors import PywaDeprecationWarning, WhatsAppError
 from .user import BaseUser
 
 """Types for other objects."""

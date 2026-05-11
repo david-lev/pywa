@@ -12,7 +12,6 @@ __all__ = [
 ]
 
 import dataclasses
-import datetime
 import pathlib
 from typing import TYPE_CHECKING, AsyncGenerator, ClassVar, Iterable
 

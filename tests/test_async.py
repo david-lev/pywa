@@ -313,6 +313,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
     skip_methods = [
         m.__name__
         for m in {
+            WhatsAppSync.upload_media,
             WhatsAppSync.stream_media,
             WhatsAppSync.add_handlers,
             WhatsAppSync.remove_handlers,
@@ -480,6 +481,7 @@ def test_same_signature(overrides):
 
 def test_same_return_annotation(overrides):
     skip_methods = [
+        WhatsAppSync.upload_media.__name__,
         WhatsAppSync.stream_media.__name__,
         GraphAPISync.stream_media_bytes.__name__,
         MediaSync.stream.__name__,
