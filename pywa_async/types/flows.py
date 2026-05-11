@@ -104,7 +104,7 @@ class FlowCompletion(BaseUserUpdateAsync, _FlowCompletion):
     """
 
 
-@dataclasses.dataclass(slots=True, kw_only=True)
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
 class FlowDetails(_FlowDetails):
     """
     Represents the details of a flow.
@@ -150,9 +150,7 @@ class FlowDetails(_FlowDetails):
         Raises:
             FlowPublishingError: If this flow has validation errors or not all publishing checks have been resolved.
         """
-        if res := await self._client.publish_flow(self.id):
-            self.status = FlowStatus.PUBLISHED
-        return res
+        return await self._client.publish_flow(self.id)
 
     async def delete(self) -> SuccessResult:
         """
@@ -165,9 +163,7 @@ class FlowDetails(_FlowDetails):
         Raises:
             FlowDeletingError: If this flow is already published.
         """
-        if res := await self._client.delete_flow(self.id):
-            self.status = FlowStatus.DEPRECATED  # there is no `DELETED` status
-        return res
+        return await self._client.delete_flow(self.id)
 
     async def deprecate(self) -> SuccessResult:
         """
@@ -180,9 +176,7 @@ class FlowDetails(_FlowDetails):
         Raises:
             FlowDeprecatingError: If this flow is not published or already deprecated.
         """
-        if res := await self._client.deprecate_flow(self.id):
-            self.status = FlowStatus.DEPRECATED
-        return res
+        return await self._client.deprecate_flow(self.id)
 
     async def get_assets(self) -> Result[FlowAsset]:
         """
@@ -215,9 +209,9 @@ class FlowDetails(_FlowDetails):
 
         Example:
 
-            >>> from pywa.types.flows import FlowCategory
+            >>> from pywa_async.types.flows import FlowCategory
             >>> wa = WhatsApp(waba_id='1234567890', ...)
-            >>> my_flows = wa.get_flows()
+            >>> my_flows = await wa.get_flows()
             >>> my_flows[0].update_metadata(
             ...     name='Feedback',
             ...     categories=[FlowCategory.SURVEY, FlowCategory.OTHER],
@@ -230,21 +224,13 @@ class FlowDetails(_FlowDetails):
         Raises:
             ValueError: If neither ``name``, ``categories`` or ``endpoint_uri`` is provided.
         """
-        success = await self._client.update_flow_metadata(
+        return await self._client.update_flow_metadata(
             flow_id=self.id,
             name=name,
             categories=categories,
             endpoint_uri=endpoint_uri,
             application_id=application_id,
         )
-        if success:
-            if name:
-                self.name = name
-            if categories:
-                self.categories = tuple(FlowCategory(c) for c in categories)
-            if endpoint_uri:
-                self.endpoint_uri = endpoint_uri
-        return success
 
     async def update_json(
         self, flow_json: FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO
@@ -263,9 +249,7 @@ class FlowDetails(_FlowDetails):
         Raises:
             FlowUpdatingError: If the flow json is invalid or this flow is already published.
         """
-        res = await self._client.update_flow_json(
+        return await self._client.update_flow_json(
             flow_id=self.id,
             flow_json=flow_json,
         )
-        self.validation_errors = res.validation_errors or None
-        return res

@@ -752,7 +752,7 @@ class FlowPreview:
         return str(urllib_parse.urlunparse(url_parts))
 
 
-@dataclasses.dataclass(slots=True, kw_only=True)
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
 class FlowDetails(helpers.APIObject):
     """
     Represents the details of a flow.
@@ -860,9 +860,7 @@ class FlowDetails(helpers.APIObject):
         Raises:
             FlowPublishingError: If this flow has validation errors or not all publishing checks have been resolved.
         """
-        if res := self._client.publish_flow(self.id):
-            self.status = FlowStatus.PUBLISHED
-        return res
+        return self._client.publish_flow(self.id)
 
     def delete(self) -> SuccessResult:
         """
@@ -875,9 +873,7 @@ class FlowDetails(helpers.APIObject):
         Raises:
             FlowDeletingError: If this flow is already published.
         """
-        if res := self._client.delete_flow(self.id):
-            self.status = FlowStatus.DEPRECATED  # there is no `DELETED` status
-        return res
+        return self._client.delete_flow(self.id)
 
     def deprecate(self) -> SuccessResult:
         """
@@ -890,9 +886,7 @@ class FlowDetails(helpers.APIObject):
         Raises:
             FlowDeprecatingError: If this flow is not published or already deprecated.
         """
-        if res := self._client.deprecate_flow(self.id):
-            self.status = FlowStatus.DEPRECATED
-        return res
+        return self._client.deprecate_flow(self.id)
 
     def get_assets(self) -> Result[FlowAsset]:
         """
@@ -940,21 +934,13 @@ class FlowDetails(helpers.APIObject):
         Raises:
             ValueError: If neither ``name``, ``categories`` or ``endpoint_uri`` is provided.
         """
-        success = self._client.update_flow_metadata(
+        return self._client.update_flow_metadata(
             flow_id=self.id,
             name=name,
             categories=categories,
             endpoint_uri=endpoint_uri,
             application_id=application_id,
         )
-        if success:
-            if name:
-                self.name = name
-            if categories:
-                self.categories = tuple(FlowCategory(c) for c in categories)
-            if endpoint_uri:
-                self.endpoint_uri = endpoint_uri
-        return success
 
     def update_json(
         self, flow_json: FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO
@@ -973,12 +959,10 @@ class FlowDetails(helpers.APIObject):
         Raises:
             FlowUpdatingError: If the flow json is invalid or this flow is already published.
         """
-        res = self._client.update_flow_json(
+        return self._client.update_flow_json(
             flow_id=self.id,
             flow_json=flow_json,
         )
-        self.validation_errors = res.validation_errors or None
-        return res
 
 
 class FlowMetricName(helpers.StrEnum):
