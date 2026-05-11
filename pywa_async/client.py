@@ -82,6 +82,7 @@ from .types import (
     Command,
     CommerceSettings,
     Contact,
+    ContactInfoRequestButton,
     DeletedMessage,
     EditedMessage,
     FlowButton,
@@ -357,6 +358,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             | URLButton
             | VoiceCallButton
             | CallPermissionRequestButton
+            | ContactInfoRequestButton
             | SectionList
             | FlowButton
             | None

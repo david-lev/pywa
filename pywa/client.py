@@ -73,6 +73,7 @@ from .types import (
     Command,
     CommerceSettings,
     Contact,
+    ContactInfoRequestButton,
     DeletedMessage,
     EditedMessage,
     FlowButton,
@@ -638,6 +639,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             | URLButton
             | VoiceCallButton
             | CallPermissionRequestButton
+            | ContactInfoRequestButton
             | SectionList
             | FlowButton
             | None

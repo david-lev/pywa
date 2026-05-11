@@ -7,6 +7,7 @@ __all__ = [
     "URLButton",
     "VoiceCallButton",
     "CallPermissionRequestButton",
+    "ContactInfoRequestButton",
     "SectionRow",
     "Section",
     "SectionList",
@@ -14,6 +15,7 @@ __all__ = [
     "CallbackData",
 ]
 
+import abc
 import dataclasses
 import datetime
 import enum
@@ -22,6 +24,7 @@ import typing
 from typing import (
     TYPE_CHECKING,
     Any,
+    ClassVar,
     Generic,
     Iterable,
     Literal,
@@ -392,6 +395,15 @@ class CallbackSelection(BaseUserUpdate, Generic[_CallbackDataT]):
 
 
 @dataclasses.dataclass(slots=True)
+class BaseButton(abc.ABC):
+    _interactive_type: ClassVar[InteractiveType]
+    _action_name: ClassVar[str]
+
+    def to_dict(self) -> dict:
+        return {"name": self._action_name}
+
+
+@dataclasses.dataclass(slots=True)
 class Button:
     """
     Interactive reply buttons messages allow you to send up to three predefined replies for users to choose from.
@@ -417,7 +429,7 @@ class Button:
 
 
 @dataclasses.dataclass(slots=True)
-class URLButton:
+class URLButton(BaseButton):
     """
     Represents a button in the bottom of the message that opens a URL.
 
@@ -426,18 +438,21 @@ class URLButton:
         url: The URL to open when the user clicks on the button.
     """
 
+    _interactive_type = InteractiveType.CTA_URL
+    _action_name = InteractiveType.CTA_URL
+
     title: str
     url: str
 
     def to_dict(self) -> dict:
         return {
-            "name": InteractiveType.CTA_URL,
+            "name": self._action_name,
             "parameters": {"display_text": self.title, "url": self.url},
         }
 
 
 @dataclasses.dataclass(slots=True)
-class VoiceCallButton:
+class VoiceCallButton(BaseButton):
     """
     Represents a button that initiates a voice call on WhatsApp.
 
@@ -450,6 +465,9 @@ class VoiceCallButton:
         title: The text to display on the button (up to 20 characters) default is `Call Now`.
         ttl_minutes: The time-to-live for the call in minutes (up to ``43200`` minutes (30 days)), default is ``10080``  minutes (7 days).
     """
+
+    _interactive_type = InteractiveType.VOICE_CALL
+    _action_name = InteractiveType.VOICE_CALL
 
     title: str | None = None
     ttl_minutes: datetime.timedelta | int | None = None
@@ -466,20 +484,25 @@ class VoiceCallButton:
             )
 
         return {
-            "name": InteractiveType.VOICE_CALL,
+            "name": self._action_name,
             "parameters": params,
         }
 
 
 @dataclasses.dataclass(slots=True)
-class CallPermissionRequestButton:
+class CallPermissionRequestButton(BaseButton):
     """Represents a button that requests a call on WhatsApp."""
 
-    @staticmethod
-    def to_dict() -> dict:
-        return {
-            "name": InteractiveType.CALL_PERMISSION_REQUEST,
-        }
+    _interactive_type = InteractiveType.CALL_PERMISSION_REQUEST
+    _action_name = InteractiveType.CALL_PERMISSION_REQUEST
+
+
+@dataclasses.dataclass(slots=True)
+class ContactInfoRequestButton(BaseButton):
+    """Represents a button that requests the user's phone number on WhatsApp."""
+
+    _interactive_type = InteractiveType.CONTACT_REQUEST
+    _action_name = "request_contact_info"
 
 
 @dataclasses.dataclass(slots=True)
@@ -529,7 +552,7 @@ class Section:
 
 
 @dataclasses.dataclass(slots=True)
-class SectionList:
+class SectionList(BaseButton):
     """
     Interactive list messages allow you to present WhatsApp users with a list of options to choose from.
     When a user taps the button in the message, it displays a modal that lists the options available.
@@ -543,6 +566,8 @@ class SectionList:
         sections: The sections in the section list (at least 1, no more than 10).
     """
 
+    _interactive_type = InteractiveType.LIST
+
     button_title: str
     sections: Iterable[Section]
 
@@ -554,7 +579,7 @@ class SectionList:
 
 
 @dataclasses.dataclass(slots=True)
-class FlowButton:
+class FlowButton(BaseButton):
     """
     Represents a button that opens a flow.
 
@@ -569,6 +594,9 @@ class FlowButton:
         flow_action_payload: The data to provide to the navigation screen, if the screen requires it.
         mode: The mode of the flow. ``FlowStatus.PUBLISHED`` (default) or ``FlowStatus.DRAFT`` (for testing).
     """
+
+    _interactive_type = InteractiveType.FLOW
+    _action_name = InteractiveType.FLOW
 
     title: str
     flow_id: str | int | None = None
@@ -602,7 +630,7 @@ class FlowButton:
 
     def to_dict(self) -> dict:
         return {
-            "name": InteractiveType.FLOW,
+            "name": self._action_name,
             "parameters": {
                 "mode": self.mode.lower(),
                 "flow_message_version": str(self.flow_message_version),

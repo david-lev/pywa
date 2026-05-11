@@ -19,6 +19,8 @@ Keyboard
 
 .. autoclass:: CallPermissionRequestButton()
 
+.. autoclass:: ContactInfoRequestButton()
+
 .. autoclass:: CallbackData()
 
 ----------------

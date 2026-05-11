@@ -122,13 +122,9 @@ def is_async_callable(obj: Any) -> bool:
 
 from . import utils  # noqa: E402
 from .types.callback import (  # noqa: E402
+    BaseButton,
     Button,
     CallbackData,
-    CallPermissionRequestButton,
-    FlowButton,
-    SectionList,
-    URLButton,
-    VoiceCallButton,
 )
 from .types.flows import FlowJSON, FlowMetricGranularity, FlowMetricName  # noqa: E402
 from .types.media import Media  # noqa: E402
@@ -145,14 +141,7 @@ from .types.templates import (  # noqa: E402
 
 
 def resolve_buttons_param(
-    buttons: (
-        Iterable[Button]
-        | URLButton
-        | VoiceCallButton
-        | CallPermissionRequestButton
-        | FlowButton
-        | SectionList
-    ),
+    buttons: (Iterable[Button] | BaseButton),
 ) -> tuple[
     InteractiveType,
     dict,
@@ -160,21 +149,20 @@ def resolve_buttons_param(
     """
     Internal method to resolve ``buttons`` parameter. Returns a tuple of (``type``, ``buttons``, ``callback_options``).
     """
-    if isinstance(buttons, SectionList):
-        data = buttons.to_dict()
-        return (
-            InteractiveType.LIST,
-            data,
-        )
-    elif isinstance(buttons, URLButton):
-        return InteractiveType.CTA_URL, buttons.to_dict()
-    elif isinstance(buttons, VoiceCallButton):
-        return InteractiveType.VOICE_CALL, buttons.to_dict()
-    elif isinstance(buttons, CallPermissionRequestButton):
-        return InteractiveType.CALL_PERMISSION_REQUEST, buttons.to_dict()
-    elif isinstance(buttons, FlowButton):
-        return InteractiveType.FLOW, buttons.to_dict()
+    if isinstance(buttons, BaseButton):
+        return buttons._interactive_type, buttons.to_dict()
     else:  # assume its list of buttons
+        try:
+            buttons = list(buttons)
+        except TypeError:
+            raise ValueError(
+                f"`buttons` must be a BaseButton or an iterable of Button objects. got {type(buttons)}"
+            ) from None
+        for b in buttons:
+            if not isinstance(b, Button):
+                raise ValueError(
+                    f"All items in `buttons` iterable must be Button objects. got {type(b)}"
+                ) from None
         return InteractiveType.BUTTON, {"buttons": tuple(b.to_dict() for b in buttons)}
 
 
