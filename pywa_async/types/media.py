@@ -236,9 +236,14 @@ class PendingMedia(Awaitable[Media]):
         self._coro = coro
         self._media: Media | None = None
 
-    async def _handle_caching(self) -> Media:
+    async def _handle_caching(self) -> "Media":
         if self._media is None:
-            self._media = await self._coro
+            if self._coro is None:
+                raise RuntimeError("Media upload was already attempted or cleared.")
+            try:
+                self._media = await self._coro
+            finally:
+                self._coro = None
         return self._media
 
     def __await__(self) -> Generator[Any, None, Media]:
