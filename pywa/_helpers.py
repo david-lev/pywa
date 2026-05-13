@@ -925,7 +925,7 @@ def resolve_call_permission_request_user(user_id: int | str) -> dict[str, str]:
     raise ValueError(f"Invalid recipient type: {recipient_type}")
 
 
-def resolve_blocking_users(users: Iterable[str | int]) -> dict[str, list[str]]:
+def resolve_users(users: Iterable[str | int]) -> dict[str, list[str]]:
     resolved = {"users": [], "user_ids": []}
     for user_id in users:
         _, recipient_type = resolve_recipient(user_id)

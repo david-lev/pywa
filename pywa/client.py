@@ -4126,7 +4126,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             client=self,
             data=self.api.block_users(
                 phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-                **helpers.resolve_blocking_users(users),
+                **helpers.resolve_users(users),
             ),
         )
 
@@ -4154,7 +4154,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             client=self,
             data=self.api.unblock_users(
                 phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-                **helpers.resolve_blocking_users(users),
+                **helpers.resolve_users(users),
             ),
         )
 
@@ -4597,7 +4597,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         return GroupOperation(request_id=self.api.remove_group_participants(
             group_id=group_id,
-            participants=tuple(participants),
+            **helpers.resolve_users(participants),
         )["request_id"])
 
     def update_group_settings(

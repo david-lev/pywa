@@ -3944,7 +3944,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             client=self,
             data=await self.api.block_users(
                 phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-                **helpers.resolve_blocking_users(users),
+                **helpers.resolve_users(users),
             ),
         )
 
@@ -3972,7 +3972,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             client=self,
             data=await self.api.unblock_users(
                 phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-                **helpers.resolve_blocking_users(users),
+                **helpers.resolve_users(users),
             ),
         )
 
@@ -4412,9 +4412,10 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             The response of the remove participants request, containing the request ID to track the status of the removal.
         """
-        return GroupOperation(request_id=(await self.api.remove_group_participants(
+        return GroupOperation(
+            request_id=(await self.api.remove_group_participants(
             group_id=group_id,
-            participants=tuple(participants),
+            **helpers.resolve_users(participants)
         ))["request_id"])
 
     async def update_group_settings(

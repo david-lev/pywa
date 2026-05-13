@@ -2682,7 +2682,10 @@ class GraphAPI:
         )
 
     def remove_group_participants(
-        self, group_id: str, participants: tuple[str, ...]
+        self,
+        group_id: str,
+        users: tuple[str, ...],
+        user_ids: tuple[str, ...],
     ) -> dict:
         """
         Remove participants from a group.
@@ -2691,11 +2694,14 @@ class GraphAPI:
 
         Args:
             group_id: The ID of the group to remove participants from.
-            participants: A tuple of user IDs to remove from the group.
+            users: The list of phone numbers/wa_ids to remove from the group.
+            user_ids: The list of bsuids to remove from the group.
 
         Returns:
             A dictionary containing the result of the operation.
         """
+        participants = [{"user": user} for user in users]
+        participants.extend({"user_id": user_id} for user_id in user_ids)
         return self._request(
             method="DELETE",
             endpoint=f"/{group_id}/participants",
