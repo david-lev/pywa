@@ -44,7 +44,9 @@ wa = WhatsApp(
 )
 
 
-def _download_arrived(media: types.media.ArrivedMedia, fallback_ext: str) -> pathlib.Path:
+def _download_arrived(
+    media: types.media.ArrivedMedia, fallback_ext: str
+) -> pathlib.Path:
     """Download to ./downloads/<media_id><ext> and return the saved path."""
     ext = media.extension or f".{fallback_ext}"  # `extension` already includes the dot
     return media.download(path=DOWNLOADS, filename=f"{media.id}{ext}")
@@ -53,7 +55,9 @@ def _download_arrived(media: types.media.ArrivedMedia, fallback_ext: str) -> pat
 @wa.on_message(filters.image)
 def on_image(_: WhatsApp, msg: types.Message) -> None:
     path = _download_arrived(msg.image, "jpg")
-    msg.reply_text(f"Got your image — saved to {path.name} ({path.stat().st_size} bytes).")
+    msg.reply_text(
+        f"Got your image — saved to {path.name} ({path.stat().st_size} bytes)."
+    )
 
 
 @wa.on_message(filters.document)

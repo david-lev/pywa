@@ -58,7 +58,9 @@ def create() -> None:
         code="WA_IPHONE_15",
         per=15,
     )
-    url = URLButton(text="Buy Now", url="https://example.com/shop/{{1}}", example="iphone15")
+    url = URLButton(
+        text="Buy Now", url="https://example.com/shop/{{1}}", example="iphone15"
+    )
     qr_marketing = QuickReplyButton(text="Unsubscribe from marketing messages")
     qr_all = QuickReplyButton(text="Unsubscribe from all messages")
 
@@ -98,7 +100,9 @@ def send() -> None:
         code="WA_IPHONE_15",
         per=15,
     )
-    url = URLButton(text="Buy Now", url="https://example.com/shop/{{1}}", example="iphone15")
+    url = URLButton(
+        text="Buy Now", url="https://example.com/shop/{{1}}", example="iphone15"
+    )
     qr_marketing = QuickReplyButton(text="Unsubscribe from marketing messages")
     qr_all = QuickReplyButton(text="Unsubscribe from all messages")
 

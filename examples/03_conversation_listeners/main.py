@@ -46,14 +46,18 @@ TIMEOUT_SECS = 120.0
 def signup(_: WhatsApp, msg: types.Message) -> None:
     try:
         # Step 1: name (any text)
-        name = msg.reply(
-            text="Welcome! What's your name?",
-            buttons=[types.Button(title="Cancel", callback_data="cancel")],
-        ).wait_for_reply(
-            filters=filters.text,
-            cancelers=CANCEL,
-            timeout=TIMEOUT_SECS,
-        ).text
+        name = (
+            msg.reply(
+                text="Welcome! What's your name?",
+                buttons=[types.Button(title="Cancel", callback_data="cancel")],
+            )
+            .wait_for_reply(
+                filters=filters.text,
+                cancelers=CANCEL,
+                timeout=TIMEOUT_SECS,
+            )
+            .text
+        )
 
         # Step 2: age (text that's a positive integer)
         age_msg = msg.reply(

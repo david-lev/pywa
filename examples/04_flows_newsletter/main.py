@@ -72,8 +72,12 @@ wa = WhatsApp(
 
 def build_flow_json() -> FlowJSON:
     """Single screen: ask for name + email, submit closes the flow."""
-    name = TextInput(name="name", label="Name", input_type=InputType.TEXT, required=False)
-    email = TextInput(name="email", label="Email", input_type=InputType.EMAIL, required=True)
+    name = TextInput(
+        name="name", label="Name", input_type=InputType.TEXT, required=False
+    )
+    email = TextInput(
+        name="email", label="Email", input_type=InputType.EMAIL, required=True
+    )
     return FlowJSON(
         screens=[
             Screen(
@@ -110,7 +114,9 @@ def ensure_flow_exists() -> None:
         )
         logging.info("Created flow %r.", FLOW_NAME)
     else:
-        logging.info("Flow %r already exists (id=%s).", FLOW_NAME, existing[FLOW_NAME].id)
+        logging.info(
+            "Flow %r already exists (id=%s).", FLOW_NAME, existing[FLOW_NAME].id
+        )
 
 
 @wa.on_message(filters.matches("subscribe", "/subscribe", ignore_case=True))
