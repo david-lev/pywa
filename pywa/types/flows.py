@@ -183,10 +183,7 @@ class FlowCompletion(BaseUserUpdate):
             type=MessageType(msg["type"]),
             metadata=Metadata.from_dict(value["metadata"]),
             from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
-            timestamp=datetime.datetime.fromtimestamp(
-                int(msg["timestamp"]),
-                datetime.timezone.utc,
-            ),
+            timestamp=helpers.timestamp_to_datetime(msg["timestamp"]),
             reply_to_message=ReplyToMessage.from_dict(msg["context"])
             if msg.get("context", {}).get("id")
             else None,

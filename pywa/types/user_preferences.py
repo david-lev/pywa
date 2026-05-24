@@ -9,7 +9,6 @@ __all__ = [
 ]
 
 import dataclasses
-import datetime
 import logging
 from typing import TYPE_CHECKING
 
@@ -66,10 +65,7 @@ class UserMarketingPreferences(BaseUserUpdate):
             waba_id=entry["id"],
             id=entry["id"],
             metadata=Metadata.from_dict(value["metadata"]),
-            timestamp=datetime.datetime.fromtimestamp(
-                int(prefs["timestamp"]),
-                datetime.timezone.utc,
-            ),
+            timestamp=helpers.timestamp_to_datetime(prefs["timestamp"]),
             from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
             value=MarketingPreference(prefs["value"]),
             detail=prefs["detail"],

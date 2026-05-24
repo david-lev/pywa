@@ -195,10 +195,7 @@ class CallConnect(BaseUserUpdate, _CallShortcuts):
             id=call["id"],
             metadata=Metadata.from_dict(value["metadata"]),
             from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
-            timestamp=datetime.datetime.fromtimestamp(
-                int(call["timestamp"]),
-                datetime.timezone.utc,
-            ),
+            timestamp=helpers.timestamp_to_datetime(call["timestamp"]),
             event=CallEvent(call["event"]),
             direction=CallDirection(call["direction"]),
             session=SessionDescription.from_dict(call["session"])
@@ -265,18 +262,14 @@ class CallPermissionUpdate(BaseUserUpdate):
             type=MessageType(msg["type"]),
             metadata=Metadata.from_dict(value["metadata"]),
             from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
-            timestamp=datetime.datetime.fromtimestamp(
-                int(msg["timestamp"]),
-                datetime.timezone.utc,
-            ),
+            timestamp=helpers.timestamp_to_datetime(msg["timestamp"]),
             reply_to_message=ReplyToMessage.from_dict(msg["context"])
             if msg.get("context", {}).get("id")
             else None,
             response=CallPermissionResponse(perm["response"]),
             response_source=CallPermissionResponseSource(perm["response_source"]),
-            expiration_timestamp=datetime.datetime.fromtimestamp(
-                int(perm.get("expiration_timestamp", 0)),
-                datetime.timezone.utc,
+            expiration_timestamp=helpers.timestamp_to_datetime(
+                perm["expiration_timestamp"]
             )
             if "expiration_timestamp" in perm
             else None,
@@ -431,21 +424,14 @@ class CallTerminate(BaseUserUpdate, _CallShortcuts, Generic[_CallbackDataT]):
             id=call["id"],
             metadata=Metadata.from_dict(value["metadata"]),
             from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
-            timestamp=datetime.datetime.fromtimestamp(
-                int(call["timestamp"]),
-                datetime.timezone.utc,
-            ),
+            timestamp=helpers.timestamp_to_datetime(call["timestamp"]),
             event=CallEvent(call["event"]),
             direction=direction,
             status=CallTerminateStatus(call["status"]),
-            start_time=datetime.datetime.fromtimestamp(
-                int(call["start_time"]), datetime.timezone.utc
-            )
+            start_time=helpers.timestamp_to_datetime(call["start_time"])
             if "start_time" in call
             else None,
-            end_time=datetime.datetime.fromtimestamp(
-                int(call["end_time"]), datetime.timezone.utc
-            )
+            end_time=helpers.timestamp_to_datetime(call["end_time"])
             if "end_time" in call
             else None,
             duration=int(call["duration"]) if "duration" in call else None,
@@ -525,10 +511,7 @@ class CallStatus(BaseUserUpdate, _CallShortcuts, Generic[_CallbackDataT]):
             waba_id=entry["id"],
             id=status["id"],
             metadata=Metadata.from_dict(value["metadata"]),
-            timestamp=datetime.datetime.fromtimestamp(
-                int(status["timestamp"]),
-                datetime.timezone.utc,
-            ),
+            timestamp=helpers.timestamp_to_datetime(status["timestamp"]),
             from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
             type=status["type"],
             status=CallStatusType(status["status"]),
@@ -1053,8 +1036,8 @@ class CallPermissionActionLimit:
             time_period=data["time_period"],
             max_allowed=data["max_allowed"],
             current_usage=data["current_usage"],
-            limit_expiration_time=datetime.datetime.fromtimestamp(
-                data["limit_expiration_time"], datetime.timezone.utc
+            limit_expiration_time=helpers.timestamp_to_datetime(
+                data["limit_expiration_time"]
             )
             if "limit_expiration_time" in data
             else None,
@@ -1104,9 +1087,7 @@ class CallPermission:
     def from_dict(cls, data: dict) -> CallPermission:
         return cls(
             status=CallPermissionStatus(data["status"]),
-            expiration_time=datetime.datetime.fromtimestamp(
-                data["expiration_time"], datetime.timezone.utc
-            )
+            expiration_time=helpers.timestamp_to_datetime(data["expiration_time"])
             if "expiration_time" in data
             else None,
         )

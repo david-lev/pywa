@@ -1073,6 +1073,10 @@ def rename_func(extended_with: str) -> Callable:
     return inner
 
 
+def timestamp_to_datetime(ts: int) -> datetime.datetime:
+    return datetime.datetime.fromtimestamp(int(ts), tz=datetime.timezone.utc)
+
+
 def register_routes_starlette(wa: "WhatsApp"):
     from starlette.applications import Starlette as StarletteApp
     from starlette.background import BackgroundTask as StarletteBackgroundTask

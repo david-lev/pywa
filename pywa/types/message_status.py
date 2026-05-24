@@ -163,10 +163,7 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
             id=status["id"],
             metadata=Metadata.from_dict(value["metadata"]),
             status=MessageStatusType(status["status"]),
-            timestamp=datetime.datetime.fromtimestamp(
-                int(status["timestamp"]),
-                datetime.timezone.utc,
-            ),
+            timestamp=helpers.timestamp_to_datetime(status["timestamp"]),
             from_user=client._usr_cls.from_contact(
                 value["contacts"][contact_idx], client=client
             ),
@@ -204,10 +201,7 @@ class Conversation:
         return cls(
             id=data["id"],
             category=ConversationCategory(data["origin"]["type"]),
-            expiration=datetime.datetime.fromtimestamp(
-                int(data["expiration_timestamp"]),
-                datetime.timezone.utc,
-            )
+            expiration=helpers.timestamp_to_datetime(data["expiration_timestamp"])
             if "expiration_timestamp" in data
             else None,
         )
