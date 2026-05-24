@@ -169,14 +169,26 @@ class BanInfo:
     """
 
     state: WABABanState
-    date: datetime.date
+    date: str
 
     @classmethod
     def from_dict(cls, data: dict):
         return cls(
             state=WABABanState(data["waba_ban_state"]),
-            date=datetime.datetime.strptime(data["waba_ban_date"], "%B %d, %Y").date(),
+            date=data["waba_ban_date"],
         )
+
+    def as_date(self, *, fmt: str = "%B %d, %Y") -> datetime.date:
+        """
+        Get the ban date as a :class:`datetime.date` object.
+
+        Args:
+            fmt: Format string to use (default '%B %d, %Y', e.g., 'January 2, 2026').
+
+        Returns:
+            Ban date as a :class:`datetime.date` object.
+        """
+        return datetime.datetime.strptime(self.date, fmt).date()
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -198,7 +210,9 @@ class RestrictionInfo:
     def from_dict(cls, data: dict):
         return cls(
             type=RestrictionType(data["restriction_type"]),
-            expiration=datetime.datetime.fromtimestamp(data["expiration"]),
+            expiration=datetime.datetime.fromtimestamp(
+                data["expiration"], tz=datetime.timezone.utc
+            ),
             remediation=data.get("remediation"),
         )
 
@@ -242,7 +256,7 @@ class WABAInfo:
     owner_business_id: str
     partner_app_id: str | None
     solution_id: str | None
-    solution_partner_business_ids: list[str] | None
+    solution_partner_business_ids: tuple[str, ...]
     ad_account_linked: str | None
 
     @classmethod
@@ -252,7 +266,9 @@ class WABAInfo:
             owner_business_id=data["owner_business_id"],
             partner_app_id=data.get("partner_app_id"),
             solution_id=data.get("solution_id"),
-            solution_partner_business_ids=data.get("solution_partner_business_ids"),
+            solution_partner_business_ids=tuple(
+                data.get("solution_partner_business_ids", [])
+            ),
             ad_account_linked=data.get("ad_account_linked"),
         )
 
@@ -285,13 +301,14 @@ class AccountUpdate(BaseUpdate):
         ban_info: Ban information for WABA ban state. Only included for ``DISABLED_UPDATE`` event.
         restriction_info: Restriction info for WABA ban state. Only included for ``ACCOUNT_RESTRICTION`` event.
         disconnection_info: Disconnection info for WABA ban state. Only included for ``PARTNER_REMOVED`` events where the business was using both the WhatsApp Business app and Cloud API.
+        shared_data: Shared data between handlers.
     """
 
     event: AccountUpdateEvent
     waba_info: WABAInfo | None
     violation_info: ViolationInfo | None
     ban_info: BanInfo | None
-    restriction_info: list[RestrictionInfo] | None
+    restriction_info: tuple[RestrictionInfo, ...]
     disconnection_info: DisconnectionInfo | None
 
     _webhook_field = "account_update"
@@ -303,7 +320,9 @@ class AccountUpdate(BaseUpdate):
             _client=client,
             raw=update,
             id=data["id"],
-            timestamp=datetime.datetime.fromtimestamp(data["time"]),
+            timestamp=datetime.datetime.fromtimestamp(
+                data["time"], tz=datetime.timezone.utc
+            ),
             event=AccountUpdateEvent(value["event"]),
             waba_info=WABAInfo.from_dict(value["waba_info"])
             if "waba_info" in value
@@ -314,11 +333,9 @@ class AccountUpdate(BaseUpdate):
             ban_info=BanInfo.from_dict(value["ban_info"])
             if "ban_info" in value
             else None,
-            restriction_info=[
-                RestrictionInfo.from_dict(r) for r in value["restriction_info"]
-            ]
-            if "restriction_info" in value
-            else None,
+            restriction_info=tuple(
+                RestrictionInfo.from_dict(r) for r in value.get("restriction_info", [])
+            ),
             disconnection_info=DisconnectionInfo.from_dict(value["disconnection_info"])
             if "disconnection_info" in value
             else None,
