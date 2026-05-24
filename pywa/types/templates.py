@@ -591,7 +591,7 @@ class QualityScore:
     def from_dict(cls, data: dict):
         return cls(
             score=QualityScoreType(data["score"]),
-            date=datetime.datetime.fromisoformat(data["date"]),
+            date=helpers.timestamp_to_datetime(data["date"]),
         )
 
 

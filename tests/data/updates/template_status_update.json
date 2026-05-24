@@ -10,7 +10,7 @@
               "event": "APPROVED",
               "message_template_id": 1689556908129832,
               "message_template_name": "order_confirmation",
-              "message_template_language": "en-US",
+              "message_template_language": "en_US",
               "reason": "NONE",
               "message_template_category": "UTILITY"
             },
