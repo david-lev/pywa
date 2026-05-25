@@ -25,6 +25,7 @@ from .api import GraphAPI
 from .errors import PywaDeprecationWarning
 from .filters import Filter
 from .handlers import (
+    AccountUpdateHandler,
     CallbackButtonHandler,
     CallbackSelectionHandler,
     CallConnectHandler,
@@ -57,6 +58,7 @@ from .handlers import (
 from .listeners import BaseListenerIdentifier, Listener, _Listeners
 from .server import Server
 from .types import (
+    AccountUpdate,
     BusinessPhoneNumber,
     BusinessPhoneNumberSettings,
     BusinessProfile,
@@ -216,6 +218,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         OutgoingMessageHandler: OutgoingMessage,
         OutgoingEditedMessageHandler: OutgoingEditedMessage,
         OutgoingDeletedMessageHandler: OutgoingDeletedMessage,
+        AccountUpdateHandler: AccountUpdate,
     }
 
     def __init__(

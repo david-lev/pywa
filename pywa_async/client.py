@@ -39,6 +39,7 @@ from . import _helpers as helpers
 from . import utils
 from .api import GraphAPIAsync
 from .handlers import (
+    AccountUpdateHandler,
     CallbackButtonHandler,
     CallbackSelectionHandler,
     CallConnectHandler,
@@ -66,6 +67,7 @@ from .handlers import (
 from .listeners import _AsyncListeners
 from .server import Server
 from .types import (
+    AccountUpdate,
     BusinessPhoneNumber,
     BusinessPhoneNumberSettings,
     BusinessProfile,
@@ -213,6 +215,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         OutgoingMessageHandler: OutgoingMessage,
         OutgoingEditedMessageHandler: OutgoingEditedMessage,
         OutgoingDeletedMessageHandler: OutgoingDeletedMessage,
+        AccountUpdateHandler: AccountUpdate,
     }
     """A dictionary that maps handler types to their respective update constructors."""
 

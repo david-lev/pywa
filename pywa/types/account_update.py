@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import dataclasses
 import datetime
+from typing import TYPE_CHECKING
 
-from .. import WhatsApp
 from .. import _helpers as helpers
 from . import RawUpdate
 from .base_update import BaseUpdate
+from .others import WhatsAppBusinessAccount
+
+if TYPE_CHECKING:
+    from .. import WhatsApp
 
 
 class AccountUpdateEvent(helpers.StrEnum):
@@ -278,22 +282,6 @@ class AccountUpdate(BaseUpdate):
     """
     The account_update webhook notifies of changes to a WhatsApp Business Account’s partner-led business verification submission, its authentication-international rate eligibility, or primary business location, when it is shared with a Solution Partner, policy or terms violations, offboarding, reconnection, or when it is deleted.
 
-    Triggers::
-
-    - A WhatsApp Business Account’s partner-led business verification submission is approved, rejected, or discarded.
-    - A WhatsApp Business Account is deleted.
-    - A WhatsApp Business Account is shared (“installed”) or unshared (“uninstalled”) with a partner.
-    - A WhatsApp Business Account violates Meta policies or terms.
-    - A WhatsApp Business Account becomes eligible for authentication-international rates.
-    - A WhatsApp Business Account’s primary business location is set.
-    - A WhatsApp Business Account gives the partner access to its ad accounts.
-    - A WhatsApp Business Account is restricted due to policy violations or enforcement actions.
-    - A WhatsApp Business Account accepts the MM API for WhatsApp terms of service.
-    - A business customer grants or revokes app permissions for a WhatsApp Business Account.
-    - A WhatsApp Business Account’s volume-based pricing tier is updated.
-    - New: A WhatsApp Business Account is offboarded due to a device change or phone number reregistration.
-    - New: A WhatsApp Business Account is reconnected after a device change or phone number reregistration.
-
     Attributes:
         event: WhatsApp Business Account (“WABA”) event.
         waba_info: The WABA information for ``AD_ACCOUNT_LINKED``, ``PARTNER_*`` events, and ``MM_LITE_TERMS_SIGNED`` event.
@@ -312,6 +300,10 @@ class AccountUpdate(BaseUpdate):
     disconnection_info: DisconnectionInfo | None
 
     _webhook_field = "account_update"
+
+    def get_waba_account(self) -> WhatsAppBusinessAccount:
+        """Get the WhatsApp Business Account associated with this update."""
+        return self._client.get_business_account(waba_id=self.id)
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: RawUpdate) -> BaseUpdate:

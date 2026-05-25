@@ -25,6 +25,7 @@ Handler Decorators
 .. automethod:: WhatsApp.on_outgoing_message
 .. automethod:: WhatsApp.on_outgoing_edited_message
 .. automethod:: WhatsApp.on_outgoing_deleted_message
+.. automethod:: WhatsApp.on_account_update
 .. automethod:: WhatsApp.on_raw_update
 
 .. automethod:: WhatsApp.remove_callbacks

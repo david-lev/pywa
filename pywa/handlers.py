@@ -62,6 +62,7 @@ __all__ = [
     "OutgoingMessageHandler",
     "OutgoingEditedMessageHandler",
     "OutgoingDeletedMessageHandler",
+    "AccountUpdateHandler",
 ]
 
 import abc
@@ -86,6 +87,7 @@ from . import utils
 from .filters import Filter
 from .filters import new as new_filter
 from .types import (
+    AccountUpdate,
     CallbackButton,
     CallbackData,
     CallbackSelection,
@@ -196,6 +198,10 @@ _PhoneNumberChangeCallback: TypeAlias = Callable[
 ]
 _IdentityChangeCallback: TypeAlias = Callable[
     ["WhatsApp", "IdentityChange"],
+    Any | Awaitable[Any],
+]
+_AccountUpdateCallback: TypeAlias = Callable[
+    ["WhatsApp", "AccountUpdate"],
     Any | Awaitable[Any],
 ]
 
@@ -1021,6 +1027,36 @@ class OutgoingDeletedMessageHandler(Handler[OutgoingDeletedMessage]):
     def __init__(
         self,
         callback: _OutgoingDeletedMessageCallback,
+        filters: Filter = None,
+        priority: int = 0,
+    ):
+        super().__init__(callback=callback, filters=filters, priority=priority)
+
+
+class AccountUpdateHandler(Handler[AccountUpdate]):
+    """
+    Handler for :class:`~pywa.types.AccountUpdate` updates (When there is an update to the WhatsApp account, e.g. account info update, etc.)
+
+    - You can use the :func:`~pywa.client.WhatsApp.on_account_update` decorator to register a handler for this type.
+
+    Example:
+
+        >>> from pywa import WhatsApp
+        >>> wa = WhatsApp(...)
+        >>> print_account_update = lambda _, msg: print(msg)
+        >>> wa.add_handlers(AccountUpdateHandler(print_account_update))
+
+    Args:
+        callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.AccountUpdate` as positional arguments)
+        filters: The filters to apply to the handler
+        priority: The priority of the handler (default: ``0``)
+    """
+
+    _update = AccountUpdate
+
+    def __init__(
+        self,
+        callback: _AccountUpdateCallback,
         filters: Filter = None,
         priority: int = 0,
     ):
@@ -2492,6 +2528,52 @@ class _HandlerDecorators:
             return _registered_with_parentheses(
                 self=self,
                 handler_type=OutgoingDeletedMessageHandler,
+                callback=callback,
+                filters=filters,
+                priority=priority,
+            )
+
+        return deco
+
+    def on_account_update(
+        self: WhatsApp | Filter = None,
+        filters: Filter = None,
+        priority: int = 0,
+    ) -> (
+        Callable[[_AccountUpdateCallback], _AccountUpdateCallback]
+        | _AccountUpdateCallback
+    ):
+        """
+        Decorator to register a function as a callback for :class:`~pywa.types.AccountUpdate` updates (when the business account information is updated).
+
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.AccountUpdateHandler`.
+
+        Example:
+            >>> from pywa import WhatsApp, filters
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_account_update
+            ... def account_update_handler(client: WhatsApp, update: types.AccountUpdate):
+            ...     print(f"Your account information just got updated! Updated fields: {update.updated_fields}")
+
+        Args:
+            filters: Filters to apply to the incoming account updates.
+            priority: The priority of the handler (default: ``0``).
+        """
+
+        if (
+            clb := _registered_without_parentheses(
+                self=self,
+                handler_type=AccountUpdateHandler,
+                filters=filters,
+                priority=priority,
+            )
+        ) is not None:
+            return clb
+
+        def deco(callback: _AccountUpdateCallback) -> _AccountUpdateCallback:
+            return _registered_with_parentheses(
+                self=self,
+                handler_type=AccountUpdateHandler,
                 callback=callback,
                 filters=filters,
                 priority=priority,

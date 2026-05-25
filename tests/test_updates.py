@@ -163,6 +163,25 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
     "user_marketing_preferences": {
         "resume": [lambda u: u.value == MarketingPreference.RESUME],
     },
+    "account_update": {
+        "account_deleted": [],
+        "account_restriction": [],
+        "account_violation": [],
+        "ad_account_linked": [],
+        "authentication_international_eligibility": [],
+        "account_disabled": [],
+        "mm_api_for_wa_terms_of_service": [],
+        "partner_added": [],
+        "partner_app_installed": [],
+        "partner_app_uninstalled": [],
+        "partner_led_business_verification_status": [],
+        "partner_removed": [],
+        "partner_removed_wa_app_disconnection": [],
+        "primary_business_location_set": [],
+        "pricing_tiering_update": [],
+        "account_offboarded": [],
+        "account_reconnected": [],
+    },
 }
 
 

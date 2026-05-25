@@ -368,6 +368,9 @@ Available Handlers
    * - :meth:`~pywa.client.WhatsApp.on_outgoing_deleted_message`
      - :class:`OutgoingDeletedMessageHandler`
      - :class:`~pywa.types.message.OutgoingDeletedMessage`
+   * - :meth:`~pywa.client.WhatsApp.on_account_update`
+     - :class:`AccountUpdateHandler`
+     - :class:`~pywa.types.account_update.AccountUpdate`
    * - :meth:`~pywa.client.WhatsApp.on_raw_update`
      - :class:`RawUpdateHandler`
      - :class:`~pywa.types.base_update.RawUpdate`

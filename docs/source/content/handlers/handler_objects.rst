@@ -33,4 +33,5 @@ Handler Objects
 .. autoclass:: OutgoingMessageHandler
 .. autoclass:: OutgoingEditedMessageHandler
 .. autoclass:: OutgoingDeletedMessageHandler
+.. autoclass:: AccountUpdateHandler
 .. autoclass:: RawUpdateHandler

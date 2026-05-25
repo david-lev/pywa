@@ -86,6 +86,8 @@ The supported fields are automatically handled by PyWa and converted into Python
      - A message edited from the business app (only available in Coexistence)
    * - :py:class:`~pywa.types.message.OutgoingDeletedMessage`
      - A message deleted from the business app (only available in Coexistence)
+   * - :py:class:`~pywa.types.account_update.AccountUpdate`
+     - An account update (e.g. account banned, restricted, etc.)
 
 **Account-related updates:**
 
@@ -213,5 +215,6 @@ All updates share common methods and properties:
     outgoing_message
     outgoing_edited_message
     outgoing_deleted_message
+    account_update
     raw_update
     common_methods

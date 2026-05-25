@@ -355,6 +355,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
             _HandlerDecorators.on_outgoing_message,
             _HandlerDecorators.on_outgoing_edited_message,
             _HandlerDecorators.on_outgoing_deleted_message,
+            _HandlerDecorators.on_account_update,
             _HandlerDecorators.on_raw_update,
             ListenersSync._remove_listener,
             BaseUpdate.from_update,

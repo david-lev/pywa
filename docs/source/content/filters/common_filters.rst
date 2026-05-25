@@ -21,6 +21,7 @@ Common filters
 .. autoattribute:: pywa.filters.template_components
 .. autoattribute:: pywa.filters.phone_number_change
 .. autoattribute:: pywa.filters.identity_change
+.. autoattribute:: pywa.filters.account_update
 
 .. autoattribute:: pywa.filters.private
 .. autoattribute:: pywa.filters.group

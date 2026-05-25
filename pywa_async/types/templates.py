@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import dataclasses
 import datetime
 import functools
 from collections.abc import Sequence
@@ -49,11 +48,10 @@ if TYPE_CHECKING:
     from .sent_update import SentTemplate
 
 
-@dataclasses.dataclass(frozen=True, kw_only=True)
 class BaseTemplateUpdateAsync:
     """Base class for template updates."""
 
-    _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)
+    _client: WhatsAppAsync
     template_id: str
 
     async def get_template(self) -> TemplateDetails:
@@ -68,7 +66,6 @@ class BaseTemplateUpdateAsync:
         )
 
 
-@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
 class TemplateStatusUpdate(BaseTemplateUpdateAsync, _TemplateStatusUpdate):
     """
     Represents status change of a template.
@@ -109,7 +106,6 @@ class TemplateStatusUpdate(BaseTemplateUpdateAsync, _TemplateStatusUpdate):
         return await self._client.unpause_template(template_id=self.template_id)
 
 
-@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
 class TemplateCategoryUpdate(BaseTemplateUpdateAsync, _TemplateCategoryUpdate):
     """
     Represents a template category update.
@@ -133,7 +129,6 @@ class TemplateCategoryUpdate(BaseTemplateUpdateAsync, _TemplateCategoryUpdate):
     """
 
 
-@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
 class TemplateComponentsUpdate(BaseTemplateUpdateAsync, _TemplateComponentsUpdate):
     """
     Represents a template components update.
@@ -157,7 +152,6 @@ class TemplateComponentsUpdate(BaseTemplateUpdateAsync, _TemplateComponentsUpdat
     """
 
 
-@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
 class TemplateQualityUpdate(BaseTemplateUpdateAsync, _TemplateQualityUpdate):
     """
     Represents a template quality update.
@@ -179,7 +173,6 @@ class TemplateQualityUpdate(BaseTemplateUpdateAsync, _TemplateQualityUpdate):
     """
 
 
-@dataclasses.dataclass(kw_only=True, slots=True)
 class TemplateDetails(_TemplateDetails):
     """
     Represents the details of an existing WhatsApp Template.
@@ -202,7 +195,7 @@ class TemplateDetails(_TemplateDetails):
         sub_category: The sub-category of the template, if applicable.
     """
 
-    _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)
+    _client: WhatsAppAsync
 
     async def delete(self) -> SuccessResult:
         """
@@ -471,7 +464,6 @@ class _CreatedAndUpdatedTemplateActionsAsync:
         )
 
 
-@dataclasses.dataclass(frozen=True, slots=True)
 class CreatedTemplate(_CreatedAndUpdatedTemplateActionsAsync, _CreatedTemplate):
     """
     Represents a created WhatsApp Template.
@@ -482,10 +474,9 @@ class CreatedTemplate(_CreatedAndUpdatedTemplateActionsAsync, _CreatedTemplate):
         category: the template category.
     """
 
-    _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)
+    _client: WhatsAppAsync
 
 
-@dataclasses.dataclass(frozen=True, slots=True)
 class UpdatedTemplate(_CreatedAndUpdatedTemplateActionsAsync, _UpdatedTemplate):
     """
     Represents the result of a template update operation.
@@ -497,10 +488,9 @@ class UpdatedTemplate(_CreatedAndUpdatedTemplateActionsAsync, _UpdatedTemplate):
         success: Indicates whether the template update was successful.
     """
 
-    _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)
+    _client: WhatsAppAsync
 
 
-@dataclasses.dataclass(frozen=True, slots=True)
 class CreatedTemplates(_CreatedTemplates, Sequence[CreatedTemplate]):
     """
     Represents a collection of created WhatsApp Templates.

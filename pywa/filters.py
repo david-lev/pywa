@@ -94,6 +94,22 @@ __all__ = [
     "user_marketing_preferences",
     "user_marketing_preferences_stop",
     "user_marketing_preferences_resume",
+    "account_update",
+    "account_deleted",
+    "account_restriction",
+    "account_violation",
+    "ad_account_linked",
+    "auth_intl_price_eligibility_update",
+    "business_primary_location_country_update",
+    "account_disabled",
+    "partner_added",
+    "partner_app_installed",
+    "partner_app_uninstalled",
+    "partner_client_certification_status_update",
+    "partner_removed",
+    "volume_based_pricing_tier_update",
+    "account_offboarded",
+    "account_reconnected",
 ]
 
 import re
@@ -101,6 +117,8 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterable, TypeVar
 
 from . import _helpers as helpers
 from .errors import WhatsAppError
+from .types.account_update import AccountUpdate as _Au
+from .types.account_update import AccountUpdateEvent as _Aue
 from .types.base_update import (
     BaseUpdate as _BaseUpdate,
 )  # noqa
@@ -925,3 +943,57 @@ user_marketing_preferences_resume = new(
     name="user_marketing_preferences_resume",
 )
 """Filter for user marketing preferences updates that indicate the user has requested to resume receiving marketing messages."""
+
+account_update = new(lambda _, u: isinstance(u, _Au), name="account_update")
+"""Filter for account update updates."""
+
+account_deleted = new(
+    lambda _, u: u.event == _Aue.ACCOUNT_DELETED, name="account_deleted"
+)
+account_restriction = new(
+    lambda _, u: u.event == _Aue.ACCOUNT_RESTRICTION, name="account_restriction"
+)
+account_violation = new(
+    lambda _, u: u.event == _Aue.ACCOUNT_VIOLATION, name="account_violation"
+)
+ad_account_linked = new(
+    lambda _, u: u.event == _Aue.AD_ACCOUNT_LINKED, name="ad_account_linked"
+)
+auth_intl_price_eligibility_update = new(
+    lambda _, u: u.event == _Aue.AUTH_INTL_PRICE_ELIGIBILITY_UPDATE,
+    name="auth_intl_price_eligibility_update",
+)
+business_primary_location_country_update = new(
+    lambda _, u: u.event == _Aue.BUSINESS_PRIMARY_LOCATION_COUNTRY_UPDATE,
+    name="business_primary_location_country_update",
+)
+account_disabled = new(
+    lambda _, u: u.event == _Aue.DISABLED_UPDATE, name="account_disabled"
+)
+mm_lite_terms_signed = new(
+    lambda _, u: u.event == _Aue.MM_LITE_TERMS_SIGNED, name="mm_lite_terms_signed"
+)
+partner_added = new(lambda _, u: u.event == _Aue.PARTNER_ADDED, name="partner_added")
+partner_app_installed = new(
+    lambda _, u: u.event == _Aue.PARTNER_APP_INSTALLED, name="partner_app_installed"
+)
+partner_app_uninstalled = new(
+    lambda _, u: u.event == _Aue.PARTNER_APP_UNINSTALLED, name="partner_app_uninstalled"
+)
+partner_client_certification_status_update = new(
+    lambda _, u: u.event == _Aue.PARTNER_CLIENT_CERTIFICATION_STATUS_UPDATE,
+    name="partner_client_certification_status_update",
+)
+partner_removed = new(
+    lambda _, u: u.event == _Aue.PARTNER_REMOVED, name="partner_removed"
+)
+volume_based_pricing_tier_update = new(
+    lambda _, u: u.event == _Aue.VOLUME_BASED_PRICING_TIER_UPDATE,
+    name="volume_based_pricing_tier_update",
+)
+account_offboarded = new(
+    lambda _, u: u.event == _Aue.ACCOUNT_OFFBOARDED, name="account_offboarded"
+)
+account_reconnected = new(
+    lambda _, u: u.event == _Aue.ACCOUNT_RECONNECTED, name="account_reconnected"
+)
