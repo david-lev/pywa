@@ -67,6 +67,16 @@ class Server:
         if self._server_type is not None:
             self._register_routes()
 
+    def _setup_and_get_starlette_app(self):
+        from starlette.applications import Starlette as StarletteApp
+
+        self._server, self._server_type = (
+            StarletteApp(),
+            utils.CustomServerType.STARLETTE,
+        )
+        self._register_routes()
+        return self._server
+
     def run(
         self: "WhatsApp", *, host: str = "127.0.0.1", port: int = 8000, **options: Any
     ) -> None:
@@ -82,21 +92,14 @@ class Server:
             raise ValueError(
                 "When providing a custom `server`, you must run it yourself."
             )
-
         try:
             import uvicorn
-            from starlette.applications import Starlette as StarletteApp
         except ImportError:
             raise ImportError(
                 "Starlette and Uvicorn are required to run the built-in server. "
                 'Please install them using `pip install "pywa[server]"`.'
             ) from None
 
-        self._server, self._server_type = (
-            StarletteApp(),
-            utils.CustomServerType.STARLETTE,
-        )
-        self._register_routes()
         options.setdefault("log_config", None)
 
         _logger.info("Starting pywa server on http://%s:%d", host, port)

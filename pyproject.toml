@@ -107,6 +107,9 @@ flask = ["flask[async]"]
 fastapi = ["fastapi[standard]"]
 cryptography = ["cryptography"]
 
+[project.scripts]
+pywa = "pywa.cli:main"
+
 [project.urls]
 "Documentation" = "https://pywa.readthedocs.io/"
 "Issue Tracker" = "https://github.com/david-lev/pywa/issues"
