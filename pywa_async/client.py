@@ -2673,7 +2673,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 name='seasonal_promotion',
                 language=TemplateLanguage.ENGLISH_US,
                 params=[
-                    BodyText.params(text='Our {{season}} sale is on!', season='Summer'),
+                    BodyText.params(season='Summer'),
                     CopyCodeButton.params(coupon_code="25OFF", index=0)
                 ],
             )

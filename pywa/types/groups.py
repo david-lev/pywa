@@ -74,9 +74,8 @@ class GroupDetails(helpers.APIObject):
             _client=client,
             id=data["id"],
             subject=data["subject"],
-            creation_timestamp=datetime.datetime.fromtimestamp(
-                data["creation_timestamp"],
-                datetime.timezone.utc,
+            creation_timestamp=helpers.timestamp_to_datetime(
+                data["creation_timestamp"]
             ),
             suspended=data["suspended"],
             description=data.get("description"),
@@ -270,7 +269,7 @@ class GroupJoinRequest:
             user=client._group_participant_cls.from_dict(
                 group_id=group_id, client=client, data=data
             ),
-            creation_timestamp=datetime.datetime.fromtimestamp(
+            creation_timestamp=helpers.timestamp_to_datetime(
                 data["creation_timestamp"]
             ),
         )
@@ -370,10 +369,7 @@ class GroupMessageStatuses(BaseUpdate, Sequence[MessageStatus]):
             _client=client,
             raw=update,
             id=entry["id"],
-            timestamp=datetime.datetime.fromtimestamp(
-                int(status["timestamp"]),
-                datetime.timezone.utc,
-            ),
+            timestamp=helpers.timestamp_to_datetime(status["timestamp"]),
             group_id=status["recipient_id"],
             statuses=tuple(
                 cls._msg_status_cls.from_update(

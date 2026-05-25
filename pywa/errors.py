@@ -13,7 +13,9 @@ import httpx
 class PywaDeprecationWarning(UserWarning):
     """Warning for deprecated features in pywa."""
 
-    pass
+
+class PywaUnknownEnumMemberWarning(UserWarning):
+    """Warning for unknown enum members in pywa."""
 
 
 @dataclasses.dataclass(slots=True, frozen=True)

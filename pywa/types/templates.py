@@ -243,10 +243,7 @@ class TemplateStatusUpdate(BaseTemplateUpdate):
             _client=client,
             raw=update,
             id=data["id"],
-            timestamp=datetime.datetime.fromtimestamp(
-                data["time"],
-                datetime.timezone.utc,
-            ),
+            timestamp=helpers.timestamp_to_datetime(data["time"]),
             new_status=TemplateStatus(value["event"]),
             template_id=str(value["message_template_id"]),
             template_name=value["message_template_name"],
@@ -305,9 +302,7 @@ class DisableInfo:
     @classmethod
     def from_dict(cls, data: dict):
         return cls(
-            disable_date=datetime.datetime.fromtimestamp(
-                data["disable_date"], tz=datetime.timezone.utc
-            ),
+            disable_date=helpers.timestamp_to_datetime(data["disable_date"]),
         )
 
 
@@ -418,10 +413,7 @@ class TemplateCategoryUpdate(BaseTemplateUpdate):
             _client=client,
             raw=update,
             id=data["id"],
-            timestamp=datetime.datetime.fromtimestamp(
-                data["time"],
-                datetime.timezone.utc,
-            ),
+            timestamp=helpers.timestamp_to_datetime(data["time"]),
             template_id=str(value["message_template_id"]),
             template_name=value["message_template_name"],
             template_language=TemplateLanguage(value["message_template_language"]),
@@ -474,10 +466,7 @@ class TemplateComponentsUpdate(BaseTemplateUpdate):
             _client=client,
             raw=update,
             id=data["id"],
-            timestamp=datetime.datetime.fromtimestamp(
-                data["time"],
-                datetime.timezone.utc,
-            ),
+            timestamp=helpers.timestamp_to_datetime(data["time"]),
             template_id=str(value["message_template_id"]),
             template_name=value["message_template_name"],
             template_language=TemplateLanguage(value["message_template_language"]),
@@ -521,10 +510,7 @@ class TemplateQualityUpdate(BaseTemplateUpdate):
             _client=client,
             raw=update,
             id=data["id"],
-            timestamp=datetime.datetime.fromtimestamp(
-                data["time"],
-                datetime.timezone.utc,
-            ),
+            timestamp=helpers.timestamp_to_datetime(data["time"]),
             template_id=str(value["message_template_id"]),
             template_name=value["message_template_name"],
             template_language=TemplateLanguage(value["message_template_language"]),
@@ -605,9 +591,7 @@ class QualityScore:
     def from_dict(cls, data: dict):
         return cls(
             score=QualityScoreType(data["score"]),
-            date=datetime.datetime.fromtimestamp(
-                data["date"], tz=datetime.timezone.utc
-            ),
+            date=helpers.timestamp_to_datetime(data["date"]),
         )
 
 

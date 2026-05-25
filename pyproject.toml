@@ -31,48 +31,39 @@ maintainers = [
 ]
 keywords = [
     "whatsapp",
-    "whatsapp cloud api",
-    "meta whatsapp api",
-    "whatsapp webhook",
-    "whatsapp templates",
-    "whatsapp flows",
-    "whatsapp calling",
-    "whatsapp automation",
-    "python framework",
-    "python",
-    "python library",
+    "whatsapp-cloud-api",
+    "meta-whatsapp-api",
+    "whatsapp-webhook",
+    "whatsapp-templates",
+    "whatsapp-flows",
+    "whatsapp-calling",
+    "whatsapp-bot",
+    "pywa",
     "asyncio",
     "async",
-    "whatsapp bot",
-    "chatbot",
-    "chatbot framework",
-    "messaging bot",
+    "chatbot-framework",
+    "webhook-handler",
     "automation",
-    "webhook",
-    "webhook framework",
-    "webhook handler",
-    "pywa",
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
+    "Environment :: Web Environment",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14",
     "Framework :: AsyncIO",
-    "Environment :: Web Environment",
-    "Topic :: Communications",
+    "Framework :: Starlette",
     "Topic :: Communications :: Chat",
-    "Topic :: Internet",
-    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
-    "Topic :: Software Development :: Libraries",
     "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
     "httpx>=0.27,<1.0",
@@ -106,6 +97,9 @@ docs = [
 flask = ["flask[async]"]
 fastapi = ["fastapi[standard]"]
 cryptography = ["cryptography"]
+
+[project.scripts]
+pywa = "pywa.cli:main"
 
 [project.urls]
 "Documentation" = "https://pywa.readthedocs.io/"

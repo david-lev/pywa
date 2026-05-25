@@ -17,6 +17,7 @@ import dataclasses
 import datetime
 from typing import TYPE_CHECKING, ClassVar, Generator, Iterable, Type
 
+from .. import _helpers as helpers
 from ..errors import WhatsAppError
 from .base_update import BaseUserUpdate, RawUpdate, _PinUnpinActions  # noqa
 from .callback import Button, FlowButton, SectionList, URLButton, VoiceCallButton
@@ -208,10 +209,7 @@ class Message(BaseUserUpdate, _PinUnpinActions):
         msg_type = content["type"]
         context = content.get("context", {})
         metadata = Metadata.from_dict(value["metadata"])
-        timestamp = datetime.datetime.fromtimestamp(
-            int(msg["timestamp"]),
-            datetime.timezone.utc,
-        )
+        timestamp = helpers.timestamp_to_datetime(msg["timestamp"])
         msg_type = MessageType(msg_type)
         user = client._usr_cls.from_contact(value["contacts"][0], client=client)
         return cls(
@@ -570,10 +568,7 @@ class EditedMessage(BaseUserUpdate):
             type=MessageType(msg["edit"]["message"]["type"]),
             from_user=user,
             chat=Chat.from_message(msg=msg, user=user),
-            timestamp=datetime.datetime.fromtimestamp(
-                int(msg["timestamp"]),
-                datetime.timezone.utc,
-            ),
+            timestamp=helpers.timestamp_to_datetime(msg["timestamp"]),
             metadata=Metadata.from_dict(value["metadata"]),
             message=cls._msg_cls.from_update(client, update, is_edit=True),
         )
@@ -626,9 +621,7 @@ class DeletedMessage(BaseUserUpdate):
             type=MessageType.REVOKE,
             from_user=user,
             chat=Chat.from_message(msg=msg, user=user),
-            timestamp=datetime.datetime.fromtimestamp(
-                int(msg["timestamp"]), datetime.timezone.utc
-            ),
+            timestamp=helpers.timestamp_to_datetime(msg["timestamp"]),
             metadata=Metadata.from_dict(value["metadata"]),
         )
 

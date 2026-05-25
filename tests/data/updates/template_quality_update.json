@@ -11,7 +11,7 @@
               "new_quality_score": "YELLOW",
               "message_template_id": 806312974732579,
               "message_template_name": "welcome_template",
-              "message_template_language": "en-US"
+              "message_template_language": "en_US"
             },
             "field": "message_template_quality_update"
           }

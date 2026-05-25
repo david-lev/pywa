@@ -67,6 +67,25 @@ class Server:
         if self._server_type is not None:
             self._register_routes()
 
+    def _setup_and_get_starlette_app(self):
+        if self._server_type is not None:
+            raise ValueError(
+                "When providing a custom `server`, you must run it yourself."
+            )
+        try:
+            from starlette.applications import Starlette as StarletteApp
+        except ImportError:
+            raise ImportError(
+                'Starlette is required to run the built-in server. Please install it using `pip install "pywa[server]"`.'
+            ) from None
+
+        self._server, self._server_type = (
+            StarletteApp(),
+            utils.CustomServerType.STARLETTE,
+        )
+        self._register_routes()
+        return self._server
+
     def run(
         self: "WhatsApp", *, host: str = "127.0.0.1", port: int = 8000, **options: Any
     ) -> None:
@@ -78,31 +97,20 @@ class Server:
             port: The port to listen on (default: ``8000``)
             **options: Additional options to pass to ``uvicorn.run`` (e.g. ``ssl_keyfile``, ``ssl_certfile``, etc.). See the `uvicorn documentation <https://uvicorn.dev/settings/>`_ for more details.
         """
-        if self._server_type is not None:
-            raise ValueError(
-                "When providing a custom `server`, you must run it yourself."
-            )
-
         try:
             import uvicorn
-            from starlette.applications import Starlette as StarletteApp
         except ImportError:
             raise ImportError(
-                "Starlette and Uvicorn are required to run the built-in server. "
-                'Please install them using `pip install "pywa[server]"`.'
+                "Uvicorn are required to run the built-in server. "
+                'Please install it using `pip install "pywa[server]"`.'
             ) from None
 
-        self._server, self._server_type = (
-            StarletteApp(),
-            utils.CustomServerType.STARLETTE,
-        )
-        self._register_routes()
         options.setdefault("log_config", None)
 
         _logger.info("Starting pywa server on http://%s:%d", host, port)
 
         uvicorn.run(
-            self._server,
+            app=self._setup_and_get_starlette_app(),
             host=host,
             port=port,
             **options,

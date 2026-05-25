@@ -61,10 +61,7 @@ class PhoneNumberChange(BaseUserUpdate):
             raw=update,
             waba_id=entry["id"],
             id=msg["id"],
-            timestamp=datetime.datetime.fromtimestamp(
-                int(msg["timestamp"]),
-                datetime.timezone.utc,
-            ),
+            timestamp=helpers.timestamp_to_datetime(msg["timestamp"]),
             metadata=Metadata.from_dict(value["metadata"]),
             type=MessageType(msg["type"]),
             sys_type=SystemType(sys["type"]),
@@ -145,10 +142,7 @@ class IdentityChange(BaseUserUpdate):
             id=msg["id"],
             type=MessageType(msg["type"]),
             sys_type=SystemType(sys["type"]),
-            timestamp=datetime.datetime.fromtimestamp(
-                int(msg["timestamp"]),
-                datetime.timezone.utc,
-            ),
+            timestamp=helpers.timestamp_to_datetime(msg["timestamp"]),
             metadata=Metadata.from_dict(value["metadata"]),
             from_user=client._usr_cls.from_dict(value["contacts"][0], client=client),
             body=sys["body"],
@@ -175,8 +169,6 @@ class Identity:
     def from_dict(cls, data: dict) -> Identity:
         return cls(
             acknowledged=data["acknowledged"],
-            created_timestamp=datetime.datetime.fromtimestamp(
-                int(data["created_timestamp"]), datetime.timezone.utc
-            ),
+            created_timestamp=helpers.timestamp_to_datetime(data["created_timestamp"]),
             hash=data["hash"],
         )

@@ -14,6 +14,7 @@ import os
 import pathlib
 import re
 import threading
+import warnings
 from concurrent import futures
 from typing import (
     TYPE_CHECKING,
@@ -30,6 +31,8 @@ from typing import (
 )
 
 import httpx
+
+from .errors import PywaUnknownEnumMemberWarning
 
 if TYPE_CHECKING:
     from pywa import WhatsApp
@@ -71,11 +74,15 @@ class StrEnum(str, enum.Enum):
         if callable(cls._check_value) and not cls._check_value(value):
             return cls(cls._modify_value(value))
 
-        _logger.warning(
-            "Unknown value '%s' for enum '%s'. Defaulting to `%s.UNKNOWN`.",
-            value,
-            cls.__name__,
-            cls.__name__,
+        warnings.warn(
+            message=(
+                f"Unknown value '{value}' for enum '{cls.__name__}'. Defaulting to '{cls.__name__}.UNKNOWN'.\n"
+                "This usually means the WhatsApp API introduced a new value that your current version of pywa doesn't recognize.\n"
+                "Please upgrade to the latest version (`pip install -U pywa`).\n"
+                "If you are already on the latest version, please report this on https://github.com/david-lev/pywa/issues."
+            ),
+            category=PywaUnknownEnumMemberWarning,
+            stacklevel=4,
         )
         # noinspection PyUnresolvedReferences
         return cls.UNKNOWN
@@ -1071,6 +1078,10 @@ def rename_func(extended_with: str) -> Callable:
         return func
 
     return inner
+
+
+def timestamp_to_datetime(ts: int) -> datetime.datetime:
+    return datetime.datetime.fromtimestamp(int(ts), tz=datetime.timezone.utc)
 
 
 def register_routes_starlette(wa: "WhatsApp"):
