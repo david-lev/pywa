@@ -332,6 +332,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
             ServerSync._get_handler_type,
             ServerSync._register_routes,
             ServerSync._register_flow_handler_wrapper,
+            ServerSync._setup_and_get_starlette_app,
             _HandlerDecorators.on_message,
             _HandlerDecorators.on_callback_button,
             _HandlerDecorators.on_callback_selection,
