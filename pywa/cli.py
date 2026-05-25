@@ -68,7 +68,6 @@ def resolve_module_path(path: pathlib.Path) -> tuple[str, pathlib.Path]:
     module_parts = [module_path.stem]
     extra_sys_path = module_path.parent
 
-    # Climb up the tree as long as we find __init__.py files
     for parent in module_path.parents:
         if (parent / "__init__.py").is_file():
             module_parts.insert(0, parent.stem)
@@ -116,14 +115,12 @@ def discover_app_instance(module_str: str, explicit_app_name: str | None = None)
             )
         return explicit_app_name
 
-    # Heuristic discovery
     for preferred_name in ["wa", "bot", "client", "app", "main"]:
         if preferred_name in object_names_set:
             obj = getattr(mod, preferred_name)
             if isinstance(obj, WhatsApp):
                 return preferred_name
 
-    # Fallback to exhaustive search
     for name in object_names_set:
         obj = getattr(mod, name)
         if isinstance(obj, WhatsApp):
@@ -152,7 +149,7 @@ def serve_application(
     """
     if not uvicorn:
         print(
-            "❌ Error: Could not import Uvicorn. Please install it using 'pip install uvicorn'."
+            "❌ Error: Could not import Uvicorn. Please install it using 'pip install \"pywa[server]\"'."
         )
         sys.exit(1)
 
@@ -164,7 +161,6 @@ def serve_application(
 
     try:
         if entrypoint:
-            # Handle explicit entrypoint (e.g. 'main:app')
             module_str, _, app_name = entrypoint.partition(":")
             if not module_str or not app_name:
                 raise PywaCLIException("Entrypoint must be in the format 'module:app'")
@@ -173,7 +169,6 @@ def serve_application(
             sys.path.insert(0, str(sys_path))
 
         else:
-            # Handle auto-discovery or path-based execution
             target_path = path or get_default_path()
             if not target_path.exists():
                 raise PywaCLIException(f"Target path does not exist: {target_path}")
@@ -183,17 +178,14 @@ def serve_application(
             app_name = discover_app_instance(module_str, app)
 
     except PywaCLIException as e:
-        print(f"❌ Configuration Error: {e}")
+        print(f"❌ Error: {e}")
         sys.exit(1)
 
-    # Final import string resolution
     base_import_string = f"{module_str}:{app_name}"
-    # Target the Starlette factory method on the WhatsApp instance
     uvicorn_app_string = (
         f"{base_import_string}.{WhatsApp._setup_and_get_starlette_app.__name__}"
     )
 
-    # Print startup summary
     mode = "development" if command == "dev" else "production"
     print(f"\n🚀 Starting Pywa in {mode} mode")
     print("-" * 40)
@@ -212,20 +204,14 @@ def serve_application(
         reload=reload,
         reload_dirs=[str(d.resolve()) for d in reload_dirs] if reload_dirs else None,
         workers=workers,
-        log_config=None,  # Relying on imperative logging configuration as requested
+        log_config=None,
     )
 
 
 def main() -> None:
-    """
-    CLI entry point. Parses arguments and routes to the correct command server.
-    """
     parser = argparse.ArgumentParser(
         prog="pywa",
-        description=(
-            "Pywa CLI - The official command-line interface to serve and develop "
-            "WhatsApp applications effortlessly."
-        ),
+        description="Pywa CLI - A command-line toolkit to run, test, and manage Pywa WhatsApp applications.",
         formatter_class=argparse.RawTextHelpFormatter,
     )
 
@@ -238,7 +224,7 @@ def main() -> None:
         "path",
         nargs="?",
         type=str,
-        help="Path to the python file containing the Pywa app (e.g., 'src/main.py').",
+        help="Path to the python file containing the WhatsApp instance (e.g., 'src/main.py').",
     )
     parent_parser.add_argument(
         "--host",
@@ -255,11 +241,11 @@ def main() -> None:
     parent_parser.add_argument(
         "--entrypoint",
         type=str,
-        help="Explicit entrypoint string (e.g., 'main:app'). Overrides path and --app.",
+        help="Explicit entrypoint string (e.g., 'main:wa'). Overrides path and --app.",
     )
 
     run_parser = subparsers.add_parser(
-        "run", parents=[parent_parser], help="Run the application in production mode."
+        "run", parents=[parent_parser], help="Run the client in production mode."
     )
     run_parser.add_argument(
         "--workers",
@@ -271,7 +257,7 @@ def main() -> None:
     dev_parser = subparsers.add_parser(
         "dev",
         parents=[parent_parser],
-        help="Run the application in development mode with auto-reload enabled.",
+        help="Run the client in development mode with auto-reload enabled.",
     )
     dev_parser.add_argument(
         "--reload-dir",
