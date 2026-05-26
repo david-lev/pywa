@@ -145,6 +145,10 @@ class _AsyncListeners:
             ListenerCanceled: If the listener was canceled by a filter
             ListenerStopped: If the listener was stopped manually
         """
+        if self._workers > 1:
+            raise RuntimeError(
+                "Listening is not supported when running on multiple workers"
+            )
         listener = Listener(
             wa=self,
             identifier=to,

@@ -390,6 +390,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         self._validate_updates = validate_updates
         self._continue_handling = continue_handling
         self._skip_duplicate_updates = skip_duplicate_updates
+        self._workers = 0
 
         super().__init__()
 

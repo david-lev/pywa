@@ -79,7 +79,9 @@ def resolve_module_path(path: pathlib.Path) -> tuple[str, pathlib.Path]:
     return module_str, extra_sys_path.resolve()
 
 
-def discover_app_instance(module_str: str, explicit_app_name: str | None = None) -> str:
+def discover_app_instance(
+    module_str: str, explicit_app_name: str | None = None
+) -> tuple[str, WhatsApp]:
     """
     Discover the WhatsApp application instance name inside the loaded module.
 
@@ -113,18 +115,18 @@ def discover_app_instance(module_str: str, explicit_app_name: str | None = None)
             raise PywaCLIException(
                 f"The variable '{explicit_app_name}' in '{module_str}' is not a `pywa.WhatsApp` instance."
             )
-        return explicit_app_name
+        return explicit_app_name, app
 
     for preferred_name in ["wa", "bot", "client", "app", "main"]:
         if preferred_name in object_names_set:
             obj = getattr(mod, preferred_name)
             if isinstance(obj, WhatsApp):
-                return preferred_name
+                return preferred_name, obj
 
     for name in object_names_set:
         obj = getattr(mod, name)
         if isinstance(obj, WhatsApp):
-            return name
+            return name, obj
 
     raise PywaCLIException(
         f"Could not auto-discover a WhatsApp app instance in '{module_str}'. "
@@ -175,7 +177,8 @@ def serve_application(
 
             module_str, sys_path = resolve_module_path(target_path)
             sys.path.insert(0, str(sys_path))
-            app_name = discover_app_instance(module_str, app)
+            app_name, client = discover_app_instance(module_str, app)
+            client._workers = workers or 1
 
     except PywaCLIException as e:
         print(f"❌ Error: {e}")
@@ -187,11 +190,11 @@ def serve_application(
     )
 
     mode = "development" if command == "dev" else "production"
-    print(f"\n🚀 Starting Pywa in {mode} mode")
+    print(f"\n🚀  Starting Pywa in {mode} mode")
     print("-" * 40)
-    print(f"📦 Module Path:  {sys_path}")
-    print(f"🔍 App Instance: {base_import_string}")
-    print(f"🌐 Server URL:   http://{host}:{port}")
+    print(f"📦  Module Path:  {sys_path}")
+    print(f"🔍  App Instance: {base_import_string}")
+    print(f"🌐  Server URL:   http://{host}:{port}")
     if command == "dev":
         print("⚠️  Auto-reload:  Enabled (Use 'pywa run' for production)")
     print("-" * 40 + "\n")

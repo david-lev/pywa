@@ -1704,7 +1704,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             ...     filename='image.jpg',
             ... )
 
-            >>> async with await wa.upload_media("https://my-cdn.com/sensitive-image.png") as media: # will be deleted after use
+            >>> async with wa.upload_media("https://my-cdn.com/sensitive-image.png") as media: # will be deleted after use
             ...     await wa.send_image(to=..., image=media)
 
         Args:
