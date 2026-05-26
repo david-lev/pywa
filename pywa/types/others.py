@@ -101,7 +101,7 @@ class InteractiveType(helpers.StrEnum):
     LOCATION_REQUEST_MESSAGE = "location_request_message"
     VOICE_CALL = "voice_call"
     CALL_PERMISSION_REQUEST = "call_permission_request"
-    CONTACT_REQUEST = "contact_request"
+    REQUEST_CONTACT_INFO = "request_contact_info"
 
     UNKNOWN = "UNKNOWN"
 

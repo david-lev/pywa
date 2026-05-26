@@ -495,8 +495,8 @@ class CallPermissionRequestButton(BaseButton):
 class ContactInfoRequestButton(BaseButton):
     """Represents a button that requests the user's phone number on WhatsApp."""
 
-    _interactive_type = InteractiveType.CONTACT_REQUEST
-    _action_name = "request_contact_info"
+    _interactive_type = InteractiveType.REQUEST_CONTACT_INFO
+    _action_name = InteractiveType.REQUEST_CONTACT_INFO
 
 
 @dataclasses.dataclass(slots=True)

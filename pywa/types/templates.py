@@ -2939,6 +2939,7 @@ class ContactInfoRequestButton(BaseButtonComponent):
         init=False,
         repr=False,
     )
+    text: str = "Share Contact Info"  # only this text is allowed. (subcode error 2388153) see https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#using-templates
 
 
 class OtpType(helpers.StrEnum):
