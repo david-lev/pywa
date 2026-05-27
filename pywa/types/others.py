@@ -1639,3 +1639,36 @@ class SuccessResult(helpers.FromDict):
     def __bool__(self) -> bool:
         """Returns True if the operation was successful."""
         return self.success
+
+
+class UsernameStatusType(helpers.StrEnum):
+    """
+    Represents the status of a WhatsApp Business Account's username.
+
+    Attributes:
+        APPROVED: The requested username has been approved and will be visible to WhatsApp users once the usernames feature is made available.
+        RESERVED: The requested username has been reserved and approved but not yet visible to WhatsApp users. It will appear to WhatsApp users once the feature is available for everyone.
+        DELETED: Indicates the username has been deleted via the WhatsApp Business app.
+    """
+
+    _check_value = str.islower
+    _modify_value = str.lower
+
+    APPROVED = "approved"
+    RESERVED = "reserved"
+    DELETED = "deleted"
+
+    UNKNOWN = "UNKNOWN"
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class UsernameStatus:
+    username: str
+    status: UsernameStatusType
+
+    @classmethod
+    def from_dict(cls, data: dict) -> UsernameStatus:
+        return cls(
+            username=data["username"],
+            status=UsernameStatusType(data["status"]),
+        )

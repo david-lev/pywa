@@ -294,6 +294,14 @@ Manage business account and profile:
      - Get phone number settings
    * - :meth:`~WhatsApp.update_business_phone_number_settings`
      - Update phone number settings
+   * - :meth:`~WhatsApp.set_username`
+     - Set a username for the business account
+   * - :meth:`~WhatsApp.get_current_username`
+     - Get the current username of the business account
+   * - :meth:`~WhatsApp.get_reserved_usernames`
+     - Get a list of reserved usernames for the business account
+   * - :meth:`~WhatsApp.delete_username`
+     - Delete the current username of the business account
 
 Managing Users
 --------------

@@ -74,6 +74,11 @@ Client Reference
 .. automethod:: WhatsApp.get_qr_codes
 .. automethod:: WhatsApp.update_qr_code
 .. automethod:: WhatsApp.delete_qr_code
+.. automethod:: WhatsApp.set_username
+.. automethod:: WhatsApp.get_current_username
+.. automethod:: WhatsApp.get_reserved_usernames
+.. automethod:: WhatsApp.delete_username
+.. automethod:: WhatsApp.delete_qr_code
 .. automethod:: WhatsApp.get_call_permissions
 .. automethod:: WhatsApp.pre_accept_call
 .. automethod:: WhatsApp.accept_call

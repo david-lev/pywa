@@ -2768,3 +2768,76 @@ class GraphAPI:
                 if v is not None
             },
         )
+
+    def set_username(self, phone_id: str, username: str) -> dict:
+        """
+        Set a business username.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#adopt-or-change-a-business-username>`_.
+
+        Args:
+            phone_id: The ID of the phone number to set a business username for.
+            username: The new business username.
+
+        Returns:
+            A dictionary containing the status of the operation.
+        """
+        return self._request(
+            method="POST",
+            endpoint=f"/{phone_id}/username",
+            json={"username": username},
+        )
+
+    def get_current_username(self, phone_id: str) -> dict:
+        """
+        Get the status of the business username associated with the business phone number, or information about the username.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#get-current-username>`_.
+
+        Args:
+            phone_id: The ID of the phone number to get the business username for.
+
+        Returns:
+            A dictionary containing the current business username and status.
+        """
+        return self._request(
+            method="GET",
+            endpoint=f"/{phone_id}/username",
+        )
+
+    def get_reserved_usernames(self, phone_id: str) -> dict:
+        """
+        Get a list of usernames that have been reserved for your business portfolio.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#get-reserved-usernames>`_.
+
+        Args:
+            phone_id: The ID of the phone number to get reserved usernames for.
+
+        Returns:
+            A dictionary containing the reserved usernames.
+        """
+        return self._request(
+            method="GET",
+            endpoint=f"/{phone_id}/username_suggestions",
+        )
+
+    def delete_username(
+        self,
+        phone_id: str,
+    ) -> dict:
+        """
+        Delete the business username associated with the business phone number.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#delete-a-username>`_.
+
+        Args:
+            phone_id: The ID of the phone number to delete the business username from.
+
+        Returns:
+            A dictionary containing the success of the operation.
+        """
+        return self._request(
+            method="DELETE",
+            endpoint=f"/{phone_id}/username",
+        )

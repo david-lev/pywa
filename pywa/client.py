@@ -135,6 +135,8 @@ from .types.others import (
     StorageConfiguration,
     SuccessResult,
     UserIdentityChangeSettings,
+    UsernameStatus,
+    UsernameStatusType,
     UsersBlockedResult,
     UsersUnblockedResult,
     WhatsAppBusinessAccount,
@@ -3310,7 +3312,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             reason=res.get("reason"),
         )
 
-    # fmt: off
     def create_flow(
         self,
         name: str,
@@ -3318,7 +3319,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         *,
         clone_flow_id: str | None = None,
         endpoint_uri: str | None = None,
-        flow_json: FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO | None = None,
+        flow_json: (
+            FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO | None
+        ) = None,
         publish: bool | None = None,
         waba_id: str | int | None = None,
     ) -> CreatedFlow:
@@ -3363,7 +3366,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 categories=tuple(map(str, categories)),
                 clone_flow_id=clone_flow_id,
                 endpoint_uri=endpoint_uri,
-                waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"),
+                waba_id=helpers.resolve_arg(
+                    wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"
+                ),
                 flow_json=helpers.resolve_flow_json_param(flow_json)
                 if flow_json
                 else None,
@@ -3411,13 +3416,15 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         if not any((name, categories, endpoint_uri, application_id)):
             raise ValueError("At least one argument must be provided")
-        return SuccessResult.from_dict(self.api.update_flow_metadata(
-            flow_id=str(flow_id),
-            name=name,
-            categories=tuple(map(str, categories)) if categories else None,
-            endpoint_uri=endpoint_uri,
-            application_id=application_id,
-        ))
+        return SuccessResult.from_dict(
+            self.api.update_flow_metadata(
+                flow_id=str(flow_id),
+                name=name,
+                categories=tuple(map(str, categories)) if categories else None,
+                endpoint_uri=endpoint_uri,
+                application_id=application_id,
+            )
+        )
 
     def update_flow_json(
         self,
@@ -3464,11 +3471,16 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Raises:
             FlowUpdatingError: If the flow json is invalid or the flow is already published.
         """
-        return FlowJSONUpdateResult.from_dict(self.api.update_flow_json(flow_id=str(flow_id), flow_json=helpers.resolve_flow_json_param(flow_json)))
+        return FlowJSONUpdateResult.from_dict(
+            self.api.update_flow_json(
+                flow_id=str(flow_id),
+                flow_json=helpers.resolve_flow_json_param(flow_json),
+            )
+        )
 
     def publish_flow(
-            self,
-            flow_id: str | int,
+        self,
+        flow_id: str | int,
     ) -> SuccessResult:
         """
         This request updates the status of the Flow to "PUBLISHED".
@@ -3531,11 +3543,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return SuccessResult.from_dict(self.api.deprecate_flow(flow_id=str(flow_id)))
 
     def get_flow(
-            self,
-            flow_id: str | int,
-            *,
-            invalidate_preview: bool = True,
-            phone_number_id: str | int | None = None,
+        self,
+        flow_id: str | int,
+        *,
+        invalidate_preview: bool = True,
+        phone_number_id: str | int | None = None,
     ) -> FlowDetails:
         """
         Get the details of a flow.
@@ -3560,12 +3572,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )
 
     def get_flows(
-            self,
-            *,
-            invalidate_preview: bool = True,
-            phone_number_id: str | int | None = None,
-            pagination: Pagination | None = None,
-            waba_id: str | int | None = None,
+        self,
+        *,
+        invalidate_preview: bool = True,
+        phone_number_id: str | int | None = None,
+        pagination: Pagination | None = None,
+        waba_id: str | int | None = None,
     ) -> Result[FlowDetails]:
         """
         Get the flows associated with the WhatsApp Business account.
@@ -3595,7 +3607,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return Result(
             wa=self,
             response=self.api.get_flows(
-                waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"),
+                waba_id=helpers.resolve_arg(
+                    wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"
+                ),
                 fields=FlowDetails._api_fields(
                     invalidate_preview=invalidate_preview,
                     phone_number_id=phone_number_id,
@@ -3606,13 +3620,13 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )
 
     def get_flow_metrics(
-            self,
-            flow_id: str | int,
-            metric_name: FlowMetricName,
-            granularity: FlowMetricGranularity,
-            *,
-            since: datetime.date | str | None = None,
-            until: datetime.date | str | None = None,
+        self,
+        flow_id: str | int,
+        metric_name: FlowMetricName,
+        granularity: FlowMetricGranularity,
+        *,
+        since: datetime.date | str | None = None,
+        until: datetime.date | str | None = None,
     ) -> dict:
         """
         Get the metrics of a flow.
@@ -3642,10 +3656,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )["metric"]
 
     def get_flow_assets(
-            self,
-            flow_id: str | int,
-            *,
-            pagination: Pagination | None = None,
+        self,
+        flow_id: str | int,
+        *,
+        pagination: Pagination | None = None,
     ) -> Result[FlowAsset]:
         """
         Get assets attached to a specified Flow.
@@ -3667,11 +3681,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )
 
     def migrate_flows(
-            self,
-            source_waba_id: str | int,
-            source_flow_names: Iterable[str],
-            *,
-            destination_waba_id: str | int | None = None,
+        self,
+        source_waba_id: str | int,
+        source_flow_names: Iterable[str],
+        *,
+        destination_waba_id: str | int | None = None,
     ) -> MigrateFlowsResponse:
         """
         Migrate flows from one WhatsApp Business Account to another.
@@ -3698,11 +3712,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )
 
     def register_phone_number(
-            self,
-            pin: int | str,
-            *,
-            data_localization_region: str | None = None,
-            phone_id: str | int | None = None,
+        self,
+        pin: int | str,
+        *,
+        data_localization_region: str | None = None,
+        phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
         Register a Business Phone Number
@@ -3729,18 +3743,23 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The success of the registration.
         """
-        return SuccessResult.from_dict(self.api.register_phone_number(
-            phone_id=helpers.resolve_arg(
-                wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"
-            ),
-            pin=str(pin),
-            data_localization_region=data_localization_region,
-        ))
+        return SuccessResult.from_dict(
+            self.api.register_phone_number(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+                pin=str(pin),
+                data_localization_region=data_localization_region,
+            )
+        )
 
     def deregister_phone_number(
-            self,
-            *,
-            phone_id: str | int | None = None,
+        self,
+        *,
+        phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
         Deregister a Business Phone Number.
@@ -3753,9 +3772,16 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The success of the deregistration.
         """
-        return SuccessResult.from_dict(self.api.deregister_phone_number(
-            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-        ))
+        return SuccessResult.from_dict(
+            self.api.deregister_phone_number(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+            )
+        )
 
     def create_phone_number(
         self,
@@ -3779,12 +3805,16 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             A dict with the ID of the created phone number.
         """
-        return CreatedBusinessPhoneNumber(id=self.api.create_phone_number(
-            cc=str(country_calling_code),
-            phone_number=str(phone_number),
-            verified_name=verified_name,
-            waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"),
-        )["id"])
+        return CreatedBusinessPhoneNumber(
+            id=self.api.create_phone_number(
+                cc=str(country_calling_code),
+                phone_number=str(phone_number),
+                verified_name=verified_name,
+                waba_id=helpers.resolve_arg(
+                    wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"
+                ),
+            )["id"]
+        )
 
     def request_verification_code(
         self,
@@ -3806,11 +3836,18 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The success of the request.
         """
-        return SuccessResult.from_dict(self.api.request_verification_code(
-            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-            code_method=code_method,
-            language=language_code,
-        ))
+        return SuccessResult.from_dict(
+            self.api.request_verification_code(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+                code_method=code_method,
+                language=language_code,
+            )
+        )
 
     def verify_phone_number(
         self,
@@ -3829,17 +3866,24 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The success of the request.
         """
-        return SuccessResult.from_dict(self.api.verify_phone_number(
-            code=code,
-            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-        ))
+        return SuccessResult.from_dict(
+            self.api.verify_phone_number(
+                code=code,
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+            )
+        )
 
     def create_qr_code(
-            self,
-            prefilled_message: str,
-            image_type: QRCodeImageType | Literal["PNG", "SVG"] = QRCodeImageType.PNG,
-            *,
-            phone_id: str | int | None = None,
+        self,
+        prefilled_message: str,
+        image_type: QRCodeImageType | Literal["PNG", "SVG"] = QRCodeImageType.PNG,
+        *,
+        phone_id: str | int | None = None,
     ) -> QRCode:
         """
         Create a QR code for a prefilled message.
@@ -3854,7 +3898,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The QR code.
         """
-        phone_id = helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id")
+        phone_id = helpers.resolve_arg(
+            wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"
+        )
         return QRCode.from_dict(
             data=self.api.create_qr_code(
                 phone_id=phone_id,
@@ -3862,15 +3908,15 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 generate_qr_image=image_type,
             ),
             client=self,
-            phone_id=phone_id
+            phone_id=phone_id,
         )
 
     def get_qr_code(
-            self,
-            code: str,
-            *,
-            image_type: QRCodeImageType | Literal["PNG", "SVG"] | None = None,
-            phone_id: str | int | None = None,
+        self,
+        code: str,
+        *,
+        image_type: QRCodeImageType | Literal["PNG", "SVG"] | None = None,
+        phone_id: str | int | None = None,
     ) -> QRCode | None:
         """
         Get a QR code.
@@ -3883,24 +3929,28 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The QR code if found, otherwise None.
         """
-        phone_id = helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id")
+        phone_id = helpers.resolve_arg(
+            wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"
+        )
         qrs = self.api.get_qr_code(
-            phone_id=phone_id,
-            code=code,
-            fields=QRCode._api_fields(image_type)
+            phone_id=phone_id, code=code, fields=QRCode._api_fields(image_type)
         )["data"]
-        return QRCode.from_dict(
-            data=qrs[0],
-            client=self,
-            phone_id=phone_id,
-        ) if qrs else None
+        return (
+            QRCode.from_dict(
+                data=qrs[0],
+                client=self,
+                phone_id=phone_id,
+            )
+            if qrs
+            else None
+        )
 
     def get_qr_codes(
-            self,
-            *,
-            image_type: QRCodeImageType | Literal["PNG", "SVG"] | None = None,
-            phone_id: str | int | None = None,
-            pagination: Pagination | None = None,
+        self,
+        *,
+        image_type: QRCodeImageType | Literal["PNG", "SVG"] | None = None,
+        phone_id: str | int | None = None,
+        pagination: Pagination | None = None,
     ) -> Result[QRCode]:
         """
         Get QR codes associated with the WhatsApp Phone Number.
@@ -3913,7 +3963,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             Result object containing the QR codes.
         """
-        phone_id = helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id")
+        phone_id = helpers.resolve_arg(
+            wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"
+        )
         return Result(
             wa=self,
             response=self.api.get_qr_codes(
@@ -3929,11 +3981,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )
 
     def update_qr_code(
-            self,
-            code: str,
-            prefilled_message: str,
-            *,
-            phone_id: str | int | None = None,
+        self,
+        code: str,
+        prefilled_message: str,
+        *,
+        phone_id: str | int | None = None,
     ) -> QRCode:
         """
         Update a QR code.
@@ -3946,7 +3998,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The updated QR code.
         """
-        phone_id = helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id")
+        phone_id = helpers.resolve_arg(
+            wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"
+        )
         return QRCode.from_dict(
             data=self.api.update_qr_code(
                 phone_id=phone_id,
@@ -3954,14 +4008,14 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 prefilled_message=prefilled_message,
             ),
             client=self,
-            phone_id=phone_id
+            phone_id=phone_id,
         )
 
     def delete_qr_code(
-            self,
-            code: str,
-            *,
-            phone_id: str | int | None = None,
+        self,
+        code: str,
+        *,
+        phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
         Delete a QR code.
@@ -3973,10 +4027,17 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             Whether the QR code was deleted.
         """
-        return SuccessResult.from_dict(self.api.delete_qr_code(
-            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-            code=code,
-        ))
+        return SuccessResult.from_dict(
+            self.api.delete_qr_code(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+                code=code,
+            )
+        )
 
     def get_app_access_token(self, app_id: int, app_secret: str) -> str:
         """
@@ -3992,15 +4053,17 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The access token.
         """
-        return self.api.get_app_access_token(client_id=app_id, client_secret=app_secret)["access_token"]
+        return self.api.get_app_access_token(
+            client_id=app_id, client_secret=app_secret
+        )["access_token"]
 
     def set_app_callback_url(
-            self,
-            app_id: int,
-            app_access_token: str,
-            callback_url: str,
-            verify_token: str,
-            fields: Iterable[str],
+        self,
+        app_id: int,
+        app_access_token: str,
+        callback_url: str,
+        verify_token: str,
+        fields: Iterable[str],
     ) -> SuccessResult:
         """
         Set the callback URL for the webhook.
@@ -4019,11 +4082,17 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             Whether the callback URL was set.
         """
         return SuccessResult.from_dict(
-            self.api.set_app_callback_url(app_id=app_id, access_token=app_access_token, callback_url=callback_url,
-                                          verify_token=verify_token, fields=tuple(fields)))
+            self.api.set_app_callback_url(
+                app_id=app_id,
+                access_token=app_access_token,
+                callback_url=callback_url,
+                verify_token=verify_token,
+                fields=tuple(fields),
+            )
+        )
 
     def override_waba_callback_url(
-            self, callback_url: str, verify_token: str, *, waba_id: str | int | None = None
+        self, callback_url: str, verify_token: str, *, waba_id: str | int | None = None
     ) -> SuccessResult:
         """
         Override the callback URL for the WhatsApp Business account.
@@ -4038,11 +4107,19 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             Whether the callback URL was overridden.
         """
-        return SuccessResult.from_dict(self.api.set_waba_alternate_callback_url(
-            waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"),
-            override_callback_uri=callback_url, verify_token=verify_token))
+        return SuccessResult.from_dict(
+            self.api.set_waba_alternate_callback_url(
+                waba_id=helpers.resolve_arg(
+                    wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"
+                ),
+                override_callback_uri=callback_url,
+                verify_token=verify_token,
+            )
+        )
 
-    def delete_waba_callback_url(self, *,waba_id: str | int | None = None) -> SuccessResult:
+    def delete_waba_callback_url(
+        self, *, waba_id: str | int | None = None
+    ) -> SuccessResult:
         """
         Delete the callback URL for the WhatsApp Business account.
 
@@ -4054,12 +4131,16 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             Whether the callback URL was deleted.
         """
-        return SuccessResult.from_dict(self.api.delete_waba_alternate_callback_url(
-            waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"),
-        ))
+        return SuccessResult.from_dict(
+            self.api.delete_waba_alternate_callback_url(
+                waba_id=helpers.resolve_arg(
+                    wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"
+                ),
+            )
+        )
 
     def override_phone_callback_url(
-            self, callback_url: str, verify_token: str, *, phone_id: str | int | None = None
+        self, callback_url: str, verify_token: str, *, phone_id: str | int | None = None
     ) -> SuccessResult:
         """
         Override the callback URL for the phone.
@@ -4076,12 +4157,21 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             Whether the callback URL was overridden.
         """
         return SuccessResult.from_dict(
-            self.api.set_phone_alternate_callback_url(override_callback_uri=callback_url, verify_token=verify_token,
-                                                      phone_id=helpers.resolve_arg(wa=self, value=phone_id,
-                                                                                   method_arg="phone_id",
-                                                                                   client_arg="phone_id")))
+            self.api.set_phone_alternate_callback_url(
+                override_callback_uri=callback_url,
+                verify_token=verify_token,
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+            )
+        )
 
-    def delete_phone_callback_url(self, *,phone_id: str | int | None = None) -> SuccessResult:
+    def delete_phone_callback_url(
+        self, *, phone_id: str | int | None = None
+    ) -> SuccessResult:
         """
         Delete the callback URL for the phone.
 
@@ -4093,12 +4183,19 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             Whether the callback URL was deleted.
         """
-        return SuccessResult.from_dict(self.api.delete_phone_alternate_callback_url(
-            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-        ))
+        return SuccessResult.from_dict(
+            self.api.delete_phone_alternate_callback_url(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+            )
+        )
 
     def block_users(
-            self, users: Iterable[str | int], *, phone_id: str | int | None = None
+        self, users: Iterable[str | int], *, phone_id: str | int | None = None
     ) -> UsersBlockedResult:
         """
         Block users from sending messages to the WhatsApp Business account.
@@ -4129,13 +4226,18 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return UsersBlockedResult.from_dict(
             client=self,
             data=self.api.block_users(
-                phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
                 **helpers.resolve_users(users),
             ),
         )
 
     def unblock_users(
-            self, users: Iterable[str | int], *, phone_id: str | int | None = None
+        self, users: Iterable[str | int], *, phone_id: str | int | None = None
     ) -> UsersUnblockedResult:
         """
         Unblock users that were previously blocked from sending messages to the WhatsApp Business account.
@@ -4157,16 +4259,21 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return UsersUnblockedResult.from_dict(
             client=self,
             data=self.api.unblock_users(
-                phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
                 **helpers.resolve_users(users),
             ),
         )
 
     def get_blocked_users(
-            self,
-            *,
-            pagination: Pagination | None = None,
-            phone_id: str | int | None = None,
+        self,
+        *,
+        pagination: Pagination | None = None,
+        phone_id: str | int | None = None,
     ) -> Result[BlockedUser]:
         """
         Get blocked users.
@@ -4186,7 +4293,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return Result(
             wa=self,
             response=self.api.get_blocked_users(
-                phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
                 pagination=pagination.to_dict() if pagination else None,
             ),
             item_factory=functools.partial(
@@ -4196,10 +4308,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )
 
     def get_call_permissions(
-            self,
-            from_user: str | int,
-            *,
-            phone_id: str | int | None = None,
+        self,
+        from_user: str | int,
+        *,
+        phone_id: str | int | None = None,
     ) -> CallPermissions:
         """
         Get the call permissions for the WhatsApp Business account.
@@ -4216,17 +4328,22 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return CallPermissions.from_dict(
             self.api.get_call_permissions(
                 **helpers.resolve_call_permission_request_user(from_user),
-                phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
             ),
         )
 
     def initiate_call(
-            self,
-            to: str | int,
-            sdp: SessionDescription,
-            *,
-            tracker: str | CallbackData | None = None,
-            phone_id: str | int | None = None
+        self,
+        to: str | int,
+        sdp: SessionDescription,
+        *,
+        tracker: str | CallbackData | None = None,
+        phone_id: str | int | None = None,
     ) -> InitiatedCall:
         """
         Initiate a call to a WhatsApp user.
@@ -4243,19 +4360,32 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             An InitiatedCall object containing the details of the initiated call.
         """
         recipient, recipient_type = helpers.resolve_callee(to)
-        return InitiatedCall.from_sent_update(client=self, update=self.api.initiate_call(
-            phone_id=(from_phone_id := helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id")),
-            **recipient,
-            session=sdp.to_dict(),
-            biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-        ), from_phone_id=from_phone_id, callee=helpers.clean_phone_number(to), recipient_type=recipient_type)
+        return InitiatedCall.from_sent_update(
+            client=self,
+            update=self.api.initiate_call(
+                phone_id=(
+                    from_phone_id := helpers.resolve_arg(
+                        wa=self,
+                        value=phone_id,
+                        method_arg="phone_id",
+                        client_arg="phone_id",
+                    )
+                ),
+                **recipient,
+                session=sdp.to_dict(),
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+            ),
+            from_phone_id=from_phone_id,
+            callee=helpers.clean_phone_number(to),
+            recipient_type=recipient_type,
+        )
 
     def pre_accept_call(
-            self,
-            call_id: str,
-            sdp: SessionDescription,
-            *,
-            phone_id: str | int | None = None,
+        self,
+        call_id: str,
+        sdp: SessionDescription,
+        *,
+        phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
         Pre-accept a call.
@@ -4278,19 +4408,26 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             Whether the call was pre-accepted.
         """
-        return SuccessResult.from_dict(self.api.pre_accept_call(
-            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-            call_id=call_id,
-            session=sdp.to_dict() if sdp else None,
-        ))
+        return SuccessResult.from_dict(
+            self.api.pre_accept_call(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+                call_id=call_id,
+                session=sdp.to_dict() if sdp else None,
+            )
+        )
 
     def accept_call(
-            self,
-            call_id: str,
-            sdp: SessionDescription,
-            *,
-            tracker: str | CallbackData | None = None,
-            phone_id: str | int | None = None,
+        self,
+        call_id: str,
+        sdp: SessionDescription,
+        *,
+        tracker: str | CallbackData | None = None,
+        phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
         Connect to a call by providing a call agent's SDP.
@@ -4308,18 +4445,25 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             Whether the call was accepted.
         """
-        return SuccessResult.from_dict(self.api.accept_call(
-            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-            call_id=call_id,
-            session=sdp.to_dict() if sdp else None,
-            biz_opaque_callback_data=helpers.resolve_tracker_param(tracker)
-        ))
+        return SuccessResult.from_dict(
+            self.api.accept_call(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+                call_id=call_id,
+                session=sdp.to_dict() if sdp else None,
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+            )
+        )
 
     def reject_call(
-            self,
-            call_id: str,
-            *,
-            phone_id: str | int | None = None,
+        self,
+        call_id: str,
+        *,
+        phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
         Reject a call.
@@ -4335,16 +4479,23 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             Whether the call was rejected.
         """
-        return SuccessResult.from_dict(self.api.reject_call(
-            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-            call_id=call_id,
-        ))
+        return SuccessResult.from_dict(
+            self.api.reject_call(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+                call_id=call_id,
+            )
+        )
 
     def terminate_call(
-            self,
-            call_id: str,
-            *,
-            phone_id: str | int | None = None,
+        self,
+        call_id: str,
+        *,
+        phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
         Terminate an active call.
@@ -4361,18 +4512,25 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             Whether the call was terminated.
         """
-        return SuccessResult.from_dict(self.api.terminate_call(
-            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-            call_id=call_id,
-        ))
+        return SuccessResult.from_dict(
+            self.api.terminate_call(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+                call_id=call_id,
+            )
+        )
 
     def create_group(
-            self,
-            *,
-            subject: str,
-            description: str | None = None,
-            join_approval_mode: GroupJoinApprovalMode | None = None,
-            phone_id: str | int | None = None,
+        self,
+        *,
+        subject: str,
+        description: str | None = None,
+        join_approval_mode: GroupJoinApprovalMode | None = None,
+        phone_id: str | int | None = None,
     ) -> GroupOperation:
         """
         Create a new group.
@@ -4388,16 +4546,25 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The response of the group creation request, containing the request ID to track the status of the group creation.
         """
-        return GroupOperation(request_id=self.api.create_group(
-            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-            subject=subject,
-            description=description,
-            join_approval_mode=join_approval_mode.value if join_approval_mode else None,
-        )["request_id"])
+        return GroupOperation(
+            request_id=self.api.create_group(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+                subject=subject,
+                description=description,
+                join_approval_mode=join_approval_mode.value
+                if join_approval_mode
+                else None,
+            )["request_id"]
+        )
 
     def get_group(
-            self,
-            group_id: str,
+        self,
+        group_id: str,
     ) -> GroupDetails:
         """
         Get details about a group.
@@ -4419,10 +4586,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )
 
     def get_groups(
-            self,
-            *,
-            phone_id: str | int | None = None,
-            pagination: Pagination | None = None,
+        self,
+        *,
+        phone_id: str | int | None = None,
+        pagination: Pagination | None = None,
     ) -> Result[GroupDetails]:
         """
         Get groups associated with the WhatsApp Business account.
@@ -4444,15 +4611,20 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return Result(
             wa=self,
             response=self.api.get_active_groups(
-                phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
                 pagination=pagination.to_dict() if pagination else None,
             ),
             item_factory=functools.partial(GroupDetails.from_dict, client=self),
         )
 
     def delete_group(
-            self,
-            group_id: str,
+        self,
+        group_id: str,
     ) -> GroupOperation:
         """
         Delete a group.
@@ -4465,15 +4637,17 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The response of the group deletion request, containing the request ID to track the status of the group deletion.
         """
-        return GroupOperation(request_id=self.api.delete_group(
-            group_id=group_id,
-        )["request_id"])
+        return GroupOperation(
+            request_id=self.api.delete_group(
+                group_id=group_id,
+            )["request_id"]
+        )
 
     def get_group_join_requests(
-            self,
-            group_id: str,
-            *,
-            pagination: Pagination | None = None,
+        self,
+        group_id: str,
+        *,
+        pagination: Pagination | None = None,
     ) -> GroupJoinRequestsResult:
         """
         Get join requests for a group.
@@ -4493,13 +4667,13 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 group_id=group_id,
                 pagination=pagination.to_dict() if pagination else None,
             ),
-            group_id=group_id
+            group_id=group_id,
         )
 
     def approve_group_join_requests(
-            self,
-            group_id: str,
-            request_ids: Iterable[str],
+        self,
+        group_id: str,
+        request_ids: Iterable[str],
     ) -> GroupOperation:
         """
         Approve join requests for a group.
@@ -4513,15 +4687,17 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The response of the join request approval, containing the request ID to track the status of the approval.
         """
-        return GroupOperation(request_id=self.api.approve_group_join_requests(
-            group_id=group_id,
-            request_ids=tuple(request_ids),
-        )["request_id"])
+        return GroupOperation(
+            request_id=self.api.approve_group_join_requests(
+                group_id=group_id,
+                request_ids=tuple(request_ids),
+            )["request_id"]
+        )
 
     def reject_group_join_requests(
-            self,
-            group_id: str,
-            request_ids: Iterable[str],
+        self,
+        group_id: str,
+        request_ids: Iterable[str],
     ) -> GroupOperation:
         """
         Reject join requests for a group.
@@ -4535,14 +4711,16 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The response of the join request rejection, containing the request ID to track the status of the rejection.
         """
-        return GroupOperation(request_id=self.api.reject_group_join_requests(
-            group_id=group_id,
-            request_ids=tuple(request_ids),
-        )["request_id"])
+        return GroupOperation(
+            request_id=self.api.reject_group_join_requests(
+                group_id=group_id,
+                request_ids=tuple(request_ids),
+            )["request_id"]
+        )
 
     def get_group_invite_link(
-            self,
-            group_id: str,
+        self,
+        group_id: str,
     ) -> GroupInviteLink:
         """
         Get the invite link for a group.
@@ -4558,12 +4736,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return GroupInviteLink(
             _client=self,
             _group_id=group_id,
-            link=self.api.get_group_invite_link(group_id=group_id)["invite_link"]
+            link=self.api.get_group_invite_link(group_id=group_id)["invite_link"],
         )
 
     def reset_group_invite_link(
-            self,
-            group_id: str,
+        self,
+        group_id: str,
     ) -> GroupInviteLink:
         """
         Reset the invite link for a group.
@@ -4579,13 +4757,13 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return GroupInviteLink(
             _client=self,
             _group_id=group_id,
-            link=self.api.reset_group_invite_link(group_id=group_id)["invite_link"]
+            link=self.api.reset_group_invite_link(group_id=group_id)["invite_link"],
         )
 
     def remove_group_participants(
-            self,
-            group_id: str,
-            participants: Iterable[str],
+        self,
+        group_id: str,
+        participants: Iterable[str],
     ) -> GroupOperation:
         """
         Remove participants from a group.
@@ -4599,18 +4777,20 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The response of the remove participants request, containing the request ID to track the status of the removal.
         """
-        return GroupOperation(request_id=self.api.remove_group_participants(
-            group_id=group_id,
-            **helpers.resolve_users(participants),
-        )["request_id"])
+        return GroupOperation(
+            request_id=self.api.remove_group_participants(
+                group_id=group_id,
+                **helpers.resolve_users(participants),
+            )["request_id"]
+        )
 
     def update_group_settings(
-            self,
-            group_id: str,
-            *,
-                subject: str | None = None,
-            description: str | None = None,
-            profile_picture: bytes | str | pathlib.Path | BinaryIO | Iterator[bytes],
+        self,
+        group_id: str,
+        *,
+        subject: str | None = None,
+        description: str | None = None,
+        profile_picture: bytes | str | pathlib.Path | BinaryIO | Iterator[bytes],
     ) -> GroupOperation:
         """
         Update group settings.
@@ -4626,19 +4806,23 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The response of the update group settings request, containing the request ID to track the status of the update.
         """
-        return GroupOperation(request_id=self.api.update_group_info(
-            group_id=group_id,
-            subject=subject,
-            description=description,
-            profile_picture_file=profile_picture,
-        )["request_id"])
+        return GroupOperation(
+            request_id=self.api.update_group_info(
+                group_id=group_id,
+                subject=subject,
+                description=description,
+                profile_picture_file=profile_picture,
+            )["request_id"]
+        )
 
     def pin_message(
-            self,
-            chat_id: str | int,
-            message_id: str, *, expiration_days: datetime.timedelta | int,
-            sender: str | int | None = None
-        ) -> SentMessage:
+        self,
+        chat_id: str | int,
+        message_id: str,
+        *,
+        expiration_days: datetime.timedelta | int,
+        sender: str | int | None = None,
+    ) -> SentMessage:
         """
         Pin a message in a chat.
 
@@ -4667,19 +4851,17 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 msg={
                     "type": "pin",
                     "message_id": message_id,
-                    "expiration_days": expiration_days.days if isinstance(expiration_days, datetime.timedelta) else expiration_days,
-
-                  },
+                    "expiration_days": expiration_days.days
+                    if isinstance(expiration_days, datetime.timedelta)
+                    else expiration_days,
+                },
             ),
             from_phone_id=sender,
             recipient_type=recipient_type,
         )
 
     def unpin_message(
-            self,
-            chat_id: str | int,
-            message_id: str, *,
-            sender: str | int | None = None
+        self, chat_id: str | int, message_id: str, *, sender: str | int | None = None
     ) -> SentMessage:
         """
         Unpin a message in a chat.
@@ -4708,9 +4890,111 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 msg={
                     "type": "unpin",
                     "message_id": message_id,
-
                 },
             ),
             from_phone_id=sender,
             recipient_type=recipient_type,
+        )
+
+    def set_username(
+        self, username: str, *, phone_id: str | int | None = None
+    ) -> UsernameStatus:
+        """
+        Set a business username.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#adopt-or-change-a-business-username>`_.
+
+        Args:
+            username: The business username to set.
+            phone_id: The phone ID to set the username for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            A UsernameStatus object containing the new username and its status.
+        """
+        return UsernameStatus(
+            username=username,
+            status=UsernameStatusType(
+                self.api.set_username(
+                    phone_id=helpers.resolve_arg(
+                        wa=self,
+                        value=phone_id,
+                        method_arg="phone_id",
+                        client_arg="phone_id",
+                    ),
+                    username=username,
+                )["status"]
+            ),
+        )
+
+    def get_current_username(
+        self, *, phone_id: str | int | None = None
+    ) -> UsernameStatus:
+        """
+        Get the status of the business username associated with the business phone number, or information about the username.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#get-current-username>`_.
+
+        Args:
+            phone_id: The phone ID to get the username for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            A UsernameStatus object containing the current username and its status.
+        """
+        return UsernameStatus.from_dict(
+            data=self.api.get_current_username(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                )
+            )
+        )
+
+    def get_reserved_usernames(
+        self, *, phone_id: str | int | None = None
+    ) -> tuple[str]:
+        """
+        Get a list of usernames that have been reserved for your business portfolio.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#get-reserved-usernames>`_.
+
+        Args:
+            phone_id: The phone ID to get the reserved usernames for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            A tuple of reserved usernames. These usernames have a higher chance of approval.
+        """
+        return tuple(
+            self.api.get_reserved_usernames(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                )
+            )["data"][0]["username_suggestions"]
+        )
+
+    def delete_username(self, *, phone_id: str | int | None = None) -> SuccessResult:
+        """
+        Delete the business username associated with the business phone number.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#delete-a-username>`_.
+
+        Args:
+            phone_id: The phone ID to delete the username for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            Whether the username was deleted.
+        """
+        return SuccessResult.from_dict(
+            self.api.delete_username(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                )
+            )
         )
