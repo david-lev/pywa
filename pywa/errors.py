@@ -863,3 +863,40 @@ class TemplateLimitExceeded(TemplateCreationError):
     """You have exceeded the maximum number of message templates you can have for this WhatsApp business account."""
 
     __error_codes__ = (2388019,)
+
+
+# =====================================================================================================
+
+
+class UsernameError(WhatsAppError):
+    """
+    Base exception for all username errors.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#adopt-or-change-a-business-username>`_.
+    """
+
+    __error_codes__ = None
+
+
+class UsernameNotAvailable(UsernameError):
+    """The username has already been claimed, doesn’t pass our internal checks, or is not available for on the platform. Try requesting another username."""
+
+    __error_codes__ = (147001,)
+
+
+class AccountNotEligibleToRequestUsername(UsernameError):
+    """The business portfolio that owns the WhatsApp Business Account and business phone number must have a higher messaging limit."""
+
+    __error_codes__ = (147002,)
+
+
+class FBAccountNotLinked(UsernameError):
+    """You must `link <https://www.facebook.com/business/help/4631406400243963>`_ the phone number to the Facebook Page that already uses the requested username."""
+
+    __error_codes__ = (147003,)
+
+
+class IGAccountNotLinked(UsernameError):
+    """You must link the phone number to the Instagram account that already uses the requested username."""
+
+    __error_codes__ = (147004,)
