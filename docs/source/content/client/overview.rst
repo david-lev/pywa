@@ -456,7 +456,7 @@ Partner tools
      - Deregister a phone number
    * - :meth:`~WhatsApp.get_shared_business_accounts`
      - Get shared business accounts
-   * - :meth:`~WhatsApp.get_owned_business_account`
+   * - :meth:`~WhatsApp.get_owned_business_accounts`
      - Get owned business account
    * - :meth:`~WhatsApp.override_waba_callback_url`
      - Override WABA callback URL

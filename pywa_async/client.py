@@ -1965,7 +1965,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             item_factory=WhatsAppBusinessAccount.from_dict,
         )
 
-    async def get_owned_business_account(
+    async def get_owned_business_accounts(
         self,
         *,
         business_portfolio_id: str | int | None = None,

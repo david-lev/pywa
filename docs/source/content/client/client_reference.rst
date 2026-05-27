@@ -102,7 +102,7 @@ Client Reference
 .. automethod:: WhatsApp.delete_waba_callback_url
 .. automethod:: WhatsApp.override_phone_callback_url
 .. automethod:: WhatsApp.get_shared_business_accounts
-.. automethod:: WhatsApp.get_owned_business_account
+.. automethod:: WhatsApp.get_owned_business_accounts
 .. automethod:: WhatsApp.delete_phone_callback_url
 .. automethod:: WhatsApp.run
 .. automethod:: WhatsApp.webhook_update_handler

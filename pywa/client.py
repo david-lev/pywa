@@ -2183,7 +2183,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             item_factory=WhatsAppBusinessAccount.from_dict,
         )
 
-    def get_owned_business_account(
+    def get_owned_business_accounts(
         self,
         *,
         business_portfolio_id: str | int | None = None,
