@@ -13,7 +13,6 @@ __all__ = [
     "UploadedBy",
 ]
 
-import dataclasses
 import datetime
 import pathlib
 from typing import TYPE_CHECKING, Any, AsyncGenerator, Awaitable, Coroutine, Generator
@@ -258,7 +257,6 @@ class PendingMedia(Awaitable[Media]):
             await self._media.__aexit__(exc_type, exc_value, traceback)
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Image(Media, _Image):
     """
     Represents a received image.
@@ -275,7 +273,6 @@ class Image(Media, _Image):
     """
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Video(Media, _Video):
     """
     Represents a video.
@@ -292,7 +289,6 @@ class Video(Media, _Video):
     """
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Sticker(Media, _Sticker):
     """
     Represents a sticker.
@@ -309,7 +305,6 @@ class Sticker(Media, _Sticker):
     """
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Document(Media, _Document):
     """
     Represents a document.
@@ -327,7 +322,6 @@ class Document(Media, _Document):
     """
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Audio(Media, _Audio):
     """
     Represents an audio.
@@ -344,7 +338,6 @@ class Audio(Media, _Audio):
     """
 
 
-@dataclasses.dataclass(frozen=True, slots=True)
 class MediaURL(_MediaActionsAsync, _MediaURL):
     """
     Represents a media response.

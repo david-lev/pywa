@@ -30,7 +30,9 @@ from pywa.types.sent_update import (
     ignore_updates_canceler,
     new_update_canceler,
 )
-from pywa_async.types import (
+
+from .. import filters as pywa_filters
+from ..types import (
     CallbackButton,
     CallbackSelection,
     CallConnect,
@@ -39,8 +41,6 @@ from pywa_async.types import (
     Message,
     MessageStatus,
 )
-
-from .. import filters as pywa_filters
 from .calls import _CallShortcutsAsync
 from .media import Media
 
@@ -55,7 +55,7 @@ __all__ = [
     "InitiatedCall",
 ]
 
-from pywa_async.types.base_update import _ClientShortcutsAsync, _PinUnpinActionsAsync
+from .base_update import _ClientShortcutsAsync, _PinUnpinActionsAsync
 
 
 class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):

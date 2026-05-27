@@ -37,9 +37,9 @@ from pywa.types.templates import (
 from pywa.types.templates import (
     UpdatedTemplate as _UpdatedTemplate,
 )
-from pywa_async.types import CallbackData
 
 from .. import filters as pywa_filters
+from .callback import CallbackData
 from .others import Result, SuccessResult
 
 if TYPE_CHECKING:
@@ -414,6 +414,8 @@ class TemplatesResult(Result[TemplateDetails]):
 
 
 class _CreatedAndUpdatedTemplateActionsAsync:
+    _client: WhatsAppAsync
+
     async def get(self) -> TemplateDetails:
         """
         Retrieve the details of the created or updated template.
@@ -474,8 +476,6 @@ class CreatedTemplate(_CreatedAndUpdatedTemplateActionsAsync, _CreatedTemplate):
         category: the template category.
     """
 
-    _client: WhatsAppAsync
-
 
 class UpdatedTemplate(_CreatedAndUpdatedTemplateActionsAsync, _UpdatedTemplate):
     """
@@ -487,8 +487,6 @@ class UpdatedTemplate(_CreatedAndUpdatedTemplateActionsAsync, _UpdatedTemplate):
         category: The category of the updated template.
         success: Indicates whether the template update was successful.
     """
-
-    _client: WhatsAppAsync
 
 
 class CreatedTemplates(_CreatedTemplates, Sequence[CreatedTemplate]):

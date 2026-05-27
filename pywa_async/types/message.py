@@ -11,7 +11,6 @@ __all__ = [
     "OutgoingDeletedMessage",
 ]
 
-import dataclasses
 import pathlib
 from typing import TYPE_CHECKING, AsyncGenerator, ClassVar, Iterable
 
@@ -36,11 +35,10 @@ from .others import (
 from .user import User
 
 if TYPE_CHECKING:
-    from ..client import WhatsApp
+    from ..client import WhatsApp as WhatsApAsync
     from .sent_update import SentMessage
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Message(BaseUserUpdateAsync, _PinUnpinActionsAsync, _Message):
     """
     A message received from a user.
@@ -75,13 +73,13 @@ class Message(BaseUserUpdateAsync, _PinUnpinActionsAsync, _Message):
         shared_data: Shared data between handlers.
     """
 
-    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
+    _client: WhatsApAsync
 
-    image: Image | None = None
-    video: Video | None = None
-    sticker: Sticker | None = None
-    document: Document | None = None
-    audio: Audio | None = None
+    image: Image | None
+    video: Video | None
+    sticker: Sticker | None
+    document: Document | None
+    audio: Audio | None
 
     _media_objs = {
         "image": Image,
@@ -385,7 +383,6 @@ class Message(BaseUserUpdateAsync, _PinUnpinActionsAsync, _Message):
                 raise ValueError(f"Message of type {self.type} cannot be copied.")
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class EditedMessage(BaseUserUpdateAsync, _EditedMessage):
     """
     A message that has been edited.
@@ -405,7 +402,6 @@ class EditedMessage(BaseUserUpdateAsync, _EditedMessage):
     message: Message
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class DeletedMessage(BaseUserUpdateAsync, _DeletedMessage):
     """
     A message that has been deleted (revoked) by a user.

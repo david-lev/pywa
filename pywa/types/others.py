@@ -1189,7 +1189,7 @@ class QRCode(helpers.APIObject):
     deep_link_url: str
     qr_image_url: str | None
 
-    def fetch_image(self, image_type: QRCodeImageType) -> QRCode:
+    def fetch_image(self, image_type: QRCodeImageType) -> QRCode | None:
         """
         Returns the same QRCode object with the specified image type.
 

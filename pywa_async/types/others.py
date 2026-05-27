@@ -17,7 +17,6 @@ if TYPE_CHECKING:
     from ..client import WhatsApp as WhatsAppAsync
 
 
-@dataclasses.dataclass(frozen=True, slots=True)
 class QRCode(_QRCode):
     """
     Customers can scan a QR code from their phone to quickly begin a conversation with your business.
@@ -30,9 +29,9 @@ class QRCode(_QRCode):
         qr_image_url: The URL of the QR code image (return only when creating a QR code).
     """
 
-    _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)
+    _client: WhatsAppAsync
 
-    async def fetch_image(self, image_type: QRCodeImageType) -> QRCode:
+    async def fetch_image(self, image_type: QRCodeImageType) -> QRCode | None:
         """
         Returns the same QRCode object with the specified image type.
 

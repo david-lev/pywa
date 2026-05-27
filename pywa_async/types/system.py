@@ -1,10 +1,9 @@
-from __future__ import annotations
-
 """This module contains the types related to system messages."""
+
+from __future__ import annotations
 
 __all__ = ["PhoneNumberChange", "IdentityChange", "SystemType", "Identity"]
 
-import dataclasses
 
 from pywa.types.system import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.system import (
@@ -17,7 +16,6 @@ from pywa.types.system import (
 from .base_update import BaseUserUpdateAsync  # noqa
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class PhoneNumberChange(BaseUserUpdateAsync, _UserChangedNumber):
     """
     A update received when a user changes their phone number on WhatsApp.
@@ -36,7 +34,6 @@ class PhoneNumberChange(BaseUserUpdateAsync, _UserChangedNumber):
     """
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class IdentityChange(BaseUserUpdateAsync, _UserIdentityChanged):
     """
     A message received when a user changes their profile information on WhatsApp.

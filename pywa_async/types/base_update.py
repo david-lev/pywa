@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import dataclasses
 import datetime
 import pathlib
 from typing import TYPE_CHECKING, AsyncIterator, BinaryIO, Callable, Iterable, Iterator
@@ -15,7 +14,7 @@ from .user import User
 if TYPE_CHECKING:
     from pywa.types.sent_update import InitiatedCall
 
-    from ..client import WhatsApp
+    from ..client import WhatsApp as WhatsAppAsync
     from .callback import (
         Button,
         CallbackData,
@@ -51,7 +50,7 @@ class _ClientShortcutsAsync:
     """
     from_user: User
     """The user who sent the message."""
-    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
+    _client: WhatsAppAsync
     _internal_sender: str
     _internal_recipient: str
     _get_reply_to: Callable[[bool], str]
@@ -1041,7 +1040,6 @@ class _ClientShortcutsAsync:
         )
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class BaseUserUpdateAsync(_ClientShortcutsAsync):
     """Async Base class for all user-related update types (message, callback, etc.)."""
 
@@ -1061,7 +1059,7 @@ class BaseUserUpdateAsync(_ClientShortcutsAsync):
 
 
 class _PinUnpinActionsAsync:
-    _client: WhatsApp
+    _client: WhatsAppAsync
     id: str
     recipient: str
     chat: Chat

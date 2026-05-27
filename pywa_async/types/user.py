@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 from typing import TYPE_CHECKING
 
 from pywa.types.user import *  # noqa MUST BE IMPORTED FIRST
@@ -61,7 +60,6 @@ class BaseUserAsync:
         return await self._client.get_call_permissions(from_user=self.preferred_id)
 
 
-@dataclasses.dataclass(frozen=True, slots=True)
 class User(BaseUserAsync, _User):
     """
     Represents a WhatsApp user.
@@ -74,5 +72,3 @@ class User(BaseUserAsync, _User):
         identity_key_hash: The identity key hash of the user (Only if identity key check is enabled on the phone number settings).
         parent_bsuid: The Parent business-scoped user ID. See `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#parent-business-scoped-user-ids>`_ for more information.
     """
-
-    _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)

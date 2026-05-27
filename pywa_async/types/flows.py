@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import dataclasses
 import pathlib
 from typing import TYPE_CHECKING, BinaryIO, Iterable
 
@@ -25,10 +24,9 @@ from .base_update import BaseUserUpdateAsync
 from .others import Result
 
 if TYPE_CHECKING:
-    from ..client import WhatsApp
+    from ..client import WhatsApp as WhatsAppAsync
 
 
-@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
 class FlowRequest(_FlowRequest):
     """
     Represents a flow request. This request is sent to the flow endpoint when a user interacts with a flow.
@@ -83,7 +81,6 @@ class FlowRequest(_FlowRequest):
         )
 
 
-@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
 class FlowCompletion(BaseUserUpdateAsync, _FlowCompletion):
     """
     A flow completion message. This update arrives when a user completes a flow.
@@ -104,7 +101,6 @@ class FlowCompletion(BaseUserUpdateAsync, _FlowCompletion):
     """
 
 
-@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
 class FlowDetails(_FlowDetails):
     """
     Represents the details of a flow.
@@ -127,7 +123,7 @@ class FlowDetails(_FlowDetails):
         health_status: A summary of the Flows health status.
     """
 
-    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
+    _client: WhatsAppAsync
 
     async def publish(self) -> SuccessResult:
         """

@@ -40,7 +40,7 @@ class GroupDetails(_GroupDetails):
         join_approval_mode: Indicates if WhatsApp users who click the invitation link can join the group with or without being approved first.
     """
 
-    _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)
+    _client: WhatsAppAsync
 
     async def get_invite_link(self) -> GroupInviteLink:
         """
@@ -152,7 +152,7 @@ class GroupParticipant(BaseUserAsync, _GroupParticipant):
         parent_bsuid: The Parent business-scoped user ID. See `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#parent-business-scoped-user-ids>`_ for more information.
     """
 
-    _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)
+    _client: WhatsAppAsync
 
     async def remove(self) -> GroupOperation:
         """
@@ -191,7 +191,7 @@ class GroupJoinRequest(_GroupJoinRequest):
         creation_timestamp: The timestamp when the join request was created.
     """
 
-    _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)
+    _client: WhatsAppAsync
 
     async def approve(self) -> GroupOperation:
         """Approve the join request."""
