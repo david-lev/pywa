@@ -14,6 +14,7 @@ import itertools
 import pathlib
 import sys
 
+from . import __version__ as pywa_version
 from .client import WhatsApp
 
 try:
@@ -216,6 +217,12 @@ def main() -> None:
         prog="pywa",
         description="Pywa CLI - A command-line toolkit to run, test, and manage Pywa WhatsApp applications.",
         formatter_class=argparse.RawTextHelpFormatter,
+    )
+    parser.add_argument(
+        "--version",
+        "-v",
+        action="version",
+        version="%(prog)s " + pywa_version,
     )
 
     subparsers = parser.add_subparsers(
