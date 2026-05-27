@@ -10,6 +10,7 @@ __all__ = [
 
 import dataclasses
 import threading
+import warnings
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -224,6 +225,12 @@ class _Listeners:
         if self._workers > 1:
             raise RuntimeError(
                 "Listening is not supported when running on multiple workers"
+            )
+        if timeout is None:
+            warnings.warn(
+                "Listening without a `timeout` is highly discouraged as it can lead to memory leaks if the listener is never stopped.",
+                UserWarning,
+                stacklevel=3,
             )
         self._check_for_async_filters(filters)
         self._check_for_async_filters(cancelers)
