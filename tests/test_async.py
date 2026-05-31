@@ -7,6 +7,7 @@ from pywa.api import GraphAPI as GraphAPISync
 from pywa.handlers import _HandlerDecorators
 from pywa.listeners import _Listeners as ListenersSync
 from pywa.server import Server as ServerSync
+from pywa.types import AccountUpdate as AccountUpdateSync
 from pywa.types import Audio as AudioSync
 from pywa.types import (
     CallbackButton as CallbackButtonSync,
@@ -127,6 +128,7 @@ from pywa.types.templates import (
 )
 from pywa_async import WhatsApp as WhatsAppAsync
 from pywa_async.api import GraphAPIAsync
+from pywa_async.types import AccountUpdate as AccountUpdateAsync
 from pywa_async.types import (
     CallbackButton as CallbackButtonAsync,
 )
@@ -302,6 +304,7 @@ def overrides() -> list[tuple[type, type]]:
         (GroupJoinRequestSync, GroupJoinRequestAsync),
         (GroupJoinRequestsResultSync, GroupJoinRequestsResultAsync),
         (GroupMessageStatusesSync, GroupMessageStatusesAsync),
+        (AccountUpdateSync, AccountUpdateAsync),
     ]
 
 

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from .. import _helpers as helpers
 from . import RawUpdate
 from .base_update import BaseUpdate
+from .message_status import PricingCategory
 from .others import WhatsAppBusinessAccount
 
 if TYPE_CHECKING:
@@ -164,6 +165,7 @@ class ViolationInfo:
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class BanInfo:
+    _date_fmt = "%B %d, %Y"  # January 2, 2026
     """
     Ban information for WABA ban state.
 
@@ -173,26 +175,16 @@ class BanInfo:
     """
 
     state: WABABanState
-    date: str
+    date: datetime.date
 
     @classmethod
     def from_dict(cls, data: dict):
         return cls(
             state=WABABanState(data["waba_ban_state"]),
-            date=data["waba_ban_date"],
+            date=datetime.datetime.strptime(
+                data["waba_ban_date"], cls._date_fmt
+            ).date(),
         )
-
-    def as_date(self, *, fmt: str = "%B %d, %Y") -> datetime.date:
-        """
-        Get the ban date as a :class:`datetime.date` object.
-
-        Args:
-            fmt: Format string to use (default '%B %d, %Y', e.g., 'January 2, 2026').
-
-        Returns:
-            Ban date as a :class:`datetime.date` object.
-        """
-        return datetime.datetime.strptime(self.date, fmt).date()
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -277,18 +269,111 @@ class WABAInfo:
         )
 
 
+@dataclasses.dataclass(frozen=True, slots=True)
+class ExceptionCountry:
+    """
+    Represents a country where Authentication-International rates apply.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing/authentication-international-rates#exception-countries>`_.
+
+    Attributes:
+        country_code: The ISO 3166-1 alpha-2 country code (e.g., 'US' for the United States) representing the exception country.
+        start_time: A UTC timestamp indicating exactly when newly initiated authentication messages to this country become subject to Authentication-International rates.
+    """
+
+    country_code: str
+    start_time: datetime.datetime
+
+    @classmethod
+    def from_dict(cls, data: dict) -> ExceptionCountry:
+        return cls(
+            country_code=data["country_code"],
+            start_time=datetime.datetime.fromtimestamp(
+                data["start_time"], tz=datetime.timezone.utc
+            ),
+        )
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class AuthInternationalRateEligibility:
+    """
+    Represents a business's eligibility footprint for WhatsApp Authentication-International rates.
+
+    According to Meta's pricing model, businesses sending authentication messages (OTPs) that exceed a specific threshold (e.g., 750,000 messages in a moving 30-day window) trigger international rates across exception markets if their primary business location is outside of those countries.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing/authentication-international-rates>`_.
+
+    Attributes:
+        exception_countries: A tuple containing individual exception countries and their respective rate activation dates.
+        start_time: The general evaluation or notification timestamp determining when the overall eligibility was processed or communicated by Meta.
+    """
+
+    exception_countries: tuple[ExceptionCountry, ...]
+    start_time: datetime.datetime
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            exception_countries=tuple(
+                ExceptionCountry.from_dict(c)
+                for c in data.get("exception_countries", [])
+            ),
+            start_time=datetime.datetime.fromtimestamp(
+                data["start_time"], tz=datetime.timezone.utc
+            ),
+        )
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class VolumeTierInfo:
+    """
+    Represents the details of a volume-based pricing tier update for a WhatsApp Business Account (WABA).
+
+    Attributes:
+        tier_update_time: UTC timestamp indicating when the pricing tier was updated.
+        pricing_category: Pricing category for the volume-based pricing tier update.
+        tier: Volume range for the pricing tier. tuple of (min, max).
+        effective_month: Effective month for the volume-based pricing tier update.
+        region: Region for the volume-based pricing tier update.
+    """
+
+    tier_update_time: datetime.datetime
+    tier: tuple[int, int]
+    pricing_category: PricingCategory
+    effective_month: datetime.date
+    region: str
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            tier_update_time=datetime.datetime.fromtimestamp(
+                data["tier_update_time"], tz=datetime.timezone.utc
+            ),
+            tier=tuple(int(c) for c in data["tier"].split(":")),
+            pricing_category=PricingCategory(data["pricing_category"]),
+            effective_month=datetime.datetime.strptime(
+                data["effective_month"], "%Y-%m"
+            ).date(),
+            region=data["region"],
+        )
+
+
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class AccountUpdate(BaseUpdate):
     """
     The account_update webhook notifies of changes to a WhatsApp Business Account’s partner-led business verification submission, its authentication-international rate eligibility, or primary business location, when it is shared with a Solution Partner, policy or terms violations, offboarding, reconnection, or when it is deleted.
 
     Attributes:
+        id: Business Portfolio ID.
+        timestamp: Timestamp of the update (in UTC).
         event: WhatsApp Business Account (“WABA”) event.
         waba_info: The WABA information for ``AD_ACCOUNT_LINKED``, ``PARTNER_*`` events, and ``MM_LITE_TERMS_SIGNED`` event.
         violation_info: Violation information for WABA ban state. Only included for ``ACCOUNT_VIOLATION`` event.
         ban_info: Ban information for WABA ban state. Only included for ``DISABLED_UPDATE`` event.
         restriction_info: Restriction info for WABA ban state. Only included for ``ACCOUNT_RESTRICTION`` event.
         disconnection_info: Disconnection info for WABA ban state. Only included for ``PARTNER_REMOVED`` events where the business was using both the WhatsApp Business app and Cloud API.
+        auth_international_rate_eligibility: Authentication-international rate eligibility info. Only included for ``AUTH_INTL_PRICE_ELIGIBILITY_UPDATE`` event.
+        volume_tier_info: Volume tier info. Only included for ``VOLUME_BASED_PRICING_TIER_UPDATE`` event.
         shared_data: Shared data between handlers.
     """
 
@@ -298,6 +383,8 @@ class AccountUpdate(BaseUpdate):
     ban_info: BanInfo | None
     restriction_info: tuple[RestrictionInfo, ...]
     disconnection_info: DisconnectionInfo | None
+    auth_international_rate_eligibility: AuthInternationalRateEligibility | None
+    volume_tier_info: VolumeTierInfo | None
 
     _webhook_field = "account_update"
 
@@ -330,5 +417,13 @@ class AccountUpdate(BaseUpdate):
             ),
             disconnection_info=DisconnectionInfo.from_dict(value["disconnection_info"])
             if "disconnection_info" in value
+            else None,
+            auth_international_rate_eligibility=AuthInternationalRateEligibility.from_dict(
+                value["auth_international_rate_eligibility"]
+            )
+            if "auth_international_rate_eligibility" in value
+            else None,
+            volume_tier_info=VolumeTierInfo.from_dict(value["volume_tier_info"])
+            if "volume_tier_info" in value
             else None,
         )
