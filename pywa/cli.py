@@ -11,8 +11,10 @@ from __future__ import annotations
 import argparse
 import importlib
 import itertools
+import os
 import pathlib
 import sys
+import time
 
 from . import __version__ as pywa_version
 from .client import WhatsApp
@@ -212,6 +214,71 @@ def serve_application(
     )
 
 
+def send_messages(
+    send_type: str,
+    to: list[str],
+    delay: float,
+    reply_to_message_id: str | None,
+    token: str,
+    phone_id: str,
+    **kwargs,
+):
+    if not token or not phone_id:
+        raise PywaCLIException(
+            "WhatsApp API token and phone ID are required. Provide them via --token, --phone-id or set PYWA_TOKEN and PYWA_PHONE_ID environment variables."
+        )
+
+    wa = WhatsApp(phone_id=phone_id, token=token)
+    uploaded_media = None
+
+    for index, recipient in enumerate(to):
+        if index > 0 and delay > 0:
+            time.sleep(delay)
+
+        try:
+            if send_type == "text":
+                sent = wa.send_message(
+                    to=recipient,
+                    text=kwargs["text"],
+                    preview_url=kwargs.get("preview_url", False),
+                    reply_to_message_id=reply_to_message_id,
+                )
+            elif send_type == "location":
+                sent = wa.send_location(
+                    to=recipient,
+                    latitude=kwargs["latitude"],
+                    longitude=kwargs["longitude"],
+                    name=kwargs.get("name"),
+                    address=kwargs.get("address"),
+                    reply_to_message_id=reply_to_message_id,
+                )
+            else:
+                send_method = getattr(wa, f"send_{send_type}")
+
+                payload = {
+                    send_type: uploaded_media or kwargs.get("media"),
+                    "reply_to_message_id": reply_to_message_id,
+                }
+
+                for arg in ["caption", "mime_type", "filename", "is_voice"]:
+                    if arg in kwargs and kwargs[arg] is not None:
+                        payload[arg] = kwargs[arg]
+
+                sent = send_method(to=recipient, **payload)
+
+                if sent.uploaded_media:
+                    uploaded_media = sent.uploaded_media
+
+            print(
+                f"✅ [{index + 1}/{len(to)}] Sent {send_type} to {recipient} (Msg ID: {sent.id})"
+            )
+
+        except Exception as e:
+            print(
+                f"❌ [{index + 1}/{len(to)}] Failed to send {send_type} to {recipient}: {e}"
+            )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="pywa",
@@ -229,33 +296,34 @@ def main() -> None:
         dest="command", required=True, help="Available commands"
     )
 
-    parent_parser = argparse.ArgumentParser(add_help=False)
-    parent_parser.add_argument(
+    # --- SERVE PARSER ---
+    serve_parser = argparse.ArgumentParser(add_help=False)
+    serve_parser.add_argument(
         "path",
         nargs="?",
         type=str,
-        help="Path to the python file containing the WhatsApp instance (e.g., 'src/main.py').",
+        help="Path to the python file containing the WhatsApp instance.",
     )
-    parent_parser.add_argument(
+    serve_parser.add_argument(
         "--host",
         type=str,
         default="127.0.0.1",
         help="Bind socket to this host. Default: 127.0.0.1",
     )
-    parent_parser.add_argument(
+    serve_parser.add_argument(
         "--port", type=int, default=8000, help="Bind socket to this port. Default: 8000"
     )
-    parent_parser.add_argument(
+    serve_parser.add_argument(
         "--app", type=str, help="The explicit variable name of the WhatsApp instance."
     )
-    parent_parser.add_argument(
+    serve_parser.add_argument(
         "--entrypoint",
         type=str,
         help="Explicit entrypoint string (e.g., 'main:wa'). Overrides path and --app.",
     )
 
     run_parser = subparsers.add_parser(
-        "run", parents=[parent_parser], help="Run the client in production mode."
+        "run", parents=[serve_parser], help="Run the client in production mode."
     )
     run_parser.add_argument(
         "--workers",
@@ -266,7 +334,7 @@ def main() -> None:
 
     dev_parser = subparsers.add_parser(
         "dev",
-        parents=[parent_parser],
+        parents=[serve_parser],
         help="Run the client in development mode with auto-reload enabled.",
     )
     dev_parser.add_argument(
@@ -274,41 +342,129 @@ def main() -> None:
         action="append",
         dest="reload_dirs",
         type=str,
-        help="Directories to watch for changes (can be used multiple times).",
+        help="Directories to watch for changes.",
     )
 
+    # --- SEND PARSER ---
+    send_common_parser = argparse.ArgumentParser(add_help=False)
+    send_common_parser.add_argument(
+        "--to",
+        nargs="+",
+        required=True,
+        help="One or multiple recipient phone numbers/IDs (space separated)",
+    )
+    send_common_parser.add_argument(
+        "--delay",
+        type=float,
+        default=0.0,
+        help="Delay in seconds between sending messages (default: 0)",
+    )
+    send_common_parser.add_argument(
+        "--reply-to", dest="reply_to_message_id", help="Message ID to reply to"
+    )
+    send_common_parser.add_argument(
+        "--token", default=os.environ.get("PYWA_TOKEN"), help="WhatsApp Cloud API Token"
+    )
+    send_common_parser.add_argument(
+        "--phone-id", default=os.environ.get("PYWA_PHONE_ID"), help="WhatsApp Phone ID"
+    )
+
+    send_parser = subparsers.add_parser("send", help="Send messages to users")
+    send_subparsers = send_parser.add_subparsers(
+        dest="send_type", required=True, help="Type of message to send"
+    )
+
+    # Text
+    send_text = send_subparsers.add_parser(
+        "text", parents=[send_common_parser], help="Send a text message"
+    )
+    send_text.add_argument("text", help="The text message body")
+    send_text.add_argument(
+        "--preview-url",
+        action="store_true",
+        help="Enable URL preview if text contains links",
+    )
+
+    # Location
+    send_loc = send_subparsers.add_parser(
+        "location", parents=[send_common_parser], help="Send a location"
+    )
+    send_loc.add_argument("latitude", type=float, help="Latitude coordinate")
+    send_loc.add_argument("longitude", type=float, help="Longitude coordinate")
+    send_loc.add_argument("--name", help="Name of the location")
+    send_loc.add_argument("--address", help="Address of the location")
+
+    # Media Base Config
+    media_configs = {
+        "image": {"caption": True},
+        "video": {"caption": True},
+        "document": {
+            "caption": True,
+            "extra": [("--filename", {"help": "Optional filename to display"})],
+        },
+        "audio": {
+            "caption": False,
+            "extra": [
+                ("--is-voice", {"action": "store_true", "help": "Send as a voice note"})
+            ],
+        },
+        "voice": {"caption": False},
+        "sticker": {"caption": False},
+    }
+
+    media_common_parser = argparse.ArgumentParser(
+        add_help=False, parents=[send_common_parser]
+    )
+    media_common_parser.add_argument("media", help="Path/URL/ID of the media to send")
+    media_common_parser.add_argument("--mime-type", help="Optional MIME type")
+
+    for m_type, config in media_configs.items():
+        p = send_subparsers.add_parser(
+            m_type, parents=[media_common_parser], help=f"Send a {m_type}"
+        )
+
+        if config.get("caption"):
+            p.add_argument("--caption", help=f"{m_type.capitalize()} caption")
+
+        for arg_name, arg_kwargs in config.get("extra", []):
+            p.add_argument(arg_name, **arg_kwargs)
+
+    # --- EXECUTION ---
     args = parser.parse_args()
 
-    target_path = pathlib.Path(args.path) if args.path else None
-    reload_dirs = (
-        [pathlib.Path(d) for d in args.reload_dirs]
-        if getattr(args, "reload_dirs", None)
-        else None
-    )
+    if args.command in ["run", "dev"]:
+        target_path = pathlib.Path(args.path) if args.path else None
+        if args.command == "run":
+            serve_application(
+                command="run",
+                path=target_path,
+                host=args.host,
+                port=args.port,
+                reload=False,
+                workers=args.workers,
+                app=args.app,
+                entrypoint=args.entrypoint,
+            )
+        elif args.command == "dev":
+            reload_dirs = (
+                [pathlib.Path(d) for d in args.reload_dirs]
+                if getattr(args, "reload_dirs", None)
+                else None
+            )
+            serve_application(
+                command="dev",
+                path=target_path,
+                host=args.host,
+                port=args.port,
+                reload=True,
+                reload_dirs=reload_dirs,
+                workers=None,
+                app=args.app,
+                entrypoint=args.entrypoint,
+            )
 
-    if args.command == "run":
-        serve_application(
-            command="run",
-            path=target_path,
-            host=args.host,
-            port=args.port,
-            reload=False,
-            workers=args.workers,
-            app=args.app,
-            entrypoint=args.entrypoint,
-        )
-    elif args.command == "dev":
-        serve_application(
-            command="dev",
-            path=target_path,
-            host=args.host,
-            port=args.port,
-            reload=True,
-            reload_dirs=reload_dirs,
-            workers=None,  # Uvicorn doesn't support multiple workers with reload enabled
-            app=args.app,
-            entrypoint=args.entrypoint,
-        )
+    elif args.command == "send":
+        send_messages(**vars(args))
 
 
 if __name__ == "__main__":
