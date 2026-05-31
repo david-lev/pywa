@@ -385,16 +385,40 @@ Filter for updates that are sent to the client phone number.
 
 
 def from_users(
-    *numbers: str,
+    *ids: str,
 ) -> Filter:
     """
-    Filter for updates that are sent from the given numbers.
+    Filter for updates that are sent from the given IDs (BSUID, PARENT_BSUID, WA_ID, or PHONE_NUMBER).
 
-    >>> from_users("+1 555-555-5555", "972123456789")
+    >>> from_users("US.13491208655302741918", "+1 (631) 555-1234", "16315551234")
     """
+    from .types.sent_update import RecipientType
+
     only_nums_pattern = re.compile(r"\D")
-    numbers = tuple(re.sub(only_nums_pattern, "", n) for n in numbers)
-    return new(lambda _, m: m.from_user.wa_id in numbers, name="from_users")
+    processed_ids = set()
+
+    for identifier in ids:
+        id_type = RecipientType.from_recipient(identifier)
+        if id_type == RecipientType.GROUP_ID:
+            continue
+        if id_type == RecipientType.PHONE_NUMBER:
+            clean_id = re.sub(only_nums_pattern, "", identifier)
+            processed_ids.add(clean_id)
+        else:
+            processed_ids.add(identifier)
+
+    def filter_func(_, m) -> bool:
+        user = m.from_user
+        if not user:
+            return False
+
+        return (
+            user.bsuid in processed_ids
+            or user.wa_id in processed_ids
+            or user.parent_bsuid in processed_ids
+        )
+
+    return new(filter_func, name="from_users")
 
 
 def from_countries(
