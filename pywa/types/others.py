@@ -673,7 +673,7 @@ class Industry(helpers.StrEnum):
 @dataclasses.dataclass(frozen=True, slots=True)
 class BusinessProfile(helpers.APIObject):
     """
-    Represents a business profile.
+    Represents a business profile of a WhatsApp Phone Number.
 
     Attributes:
         about: This text appears in the business's profile, beneath its profile image, phone number, and contact buttons.

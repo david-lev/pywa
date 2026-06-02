@@ -158,6 +158,7 @@ from .types.templates import (
     Buttons,
     CreatedTemplate,
     CreatedTemplates,
+    DegreesOfFreedomSpec,
     LibraryTemplate,
     MigrateTemplatesResult,
     ParamFormat,
@@ -2246,8 +2247,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         self,
         *,
         disable_marketing_messages_on_cloud_api: bool | None = None,
+        degrees_of_freedom_spec: DegreesOfFreedomSpec | None = None,
         waba_id: str | int | None = None,
-    ) -> SuccessResult:
+    ) -> None:
         """
         Update the WhatsApp Business Account (WABA) settings.
 
@@ -2258,18 +2260,26 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Args:
             disable_marketing_messages_on_cloud_api: Whether to block Marketing category templates on the Cloud API ``/messages`` endpoint (in pywa it means that when you :meth:`~pywa.WhatsApp.send_template` a ``MARKETING`` template you must set ``use_mm_lite_api`` to ``True``).
+            degrees_of_freedom_spec: Configure automatic creative optimizations for message templates. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#configure-automatic-creative-optimizations-whatsapp-business-account-level>`_.
             waba_id: The WABA ID to update the settings for (optional, if not provided, the client's WABA ID will be used).
         """
-        return SuccessResult.from_dict(
-            self.api.update_waba_settings(
-                waba_id=helpers.resolve_arg(
-                    wa=self,
-                    value=waba_id,
-                    method_arg="waba_id",
-                    client_arg="waba_id",
-                ),
-                disable_marketing_messages_on_cloud_api=disable_marketing_messages_on_cloud_api,
-            )
+        self.api.update_waba_settings(
+            waba_id=helpers.resolve_arg(
+                wa=self,
+                value=waba_id,
+                method_arg="waba_id",
+                client_arg="waba_id",
+            ),
+            settings={
+                k: v
+                for k, v in {
+                    "disable_marketing_messages_on_cloud_api": disable_marketing_messages_on_cloud_api,
+                    "degrees_of_freedom_spec": degrees_of_freedom_spec.to_dict()
+                    if degrees_of_freedom_spec
+                    else None,
+                }.items()
+                if v is not None
+            },
         )
 
     def get_business_phone_number(
@@ -2278,7 +2288,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         phone_id: str | int | None = None,
     ) -> BusinessPhoneNumber:
         """
-        Get the phone number of the WhatsApp Business account.
+        Get the phone number details.
 
         Example:
 
@@ -2426,7 +2436,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
-        Update the conversational automation settings of the WhatsApp Business account.
+        Update the conversational automation settings of the WhatsApp Business phone number.
 
         - You can receive the current conversational automation settings using :py:func:`~pywa.client.WhatsApp.get_business_phone_number` and accessing the ``conversational_automation`` attribute.
         - Read more about `Conversational Automation <https://developers.facebook.com/docs/whatsapp/cloud-api/phone-numbers/conversational-components>`_.
@@ -2479,7 +2489,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
-        Update the display name of the WhatsApp Business account.
+        Update the display name of the WhatsApp Business phone number.
 
         - The display name is the name that appears in the WhatsApp app for your business.
         - The display name will undergo verification by WhatsApp, and you will receive a webhook notification when the verification is complete.
@@ -2513,7 +2523,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         phone_id: str | int | None = None,
     ) -> BusinessProfile:
         """
-        Get the business profile of the WhatsApp Business account.
+        Get the business profile of the phone number.
 
         Example:
 
@@ -2545,7 +2555,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
-        Set the business public key of the WhatsApp Business account (required for end-to-end encryption in flows)
+        Set the business public key of the phone number (required for end-to-end encryption in flows)
 
         Args:
             public_key: An public 2048-bit RSA Key in PEM format.
@@ -2590,7 +2600,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         app_id: str | int | None = None,
     ) -> SuccessResult:
         """
-        Update the business profile of the WhatsApp Business account.
+        Update the business profile of the phone number.
 
         Example:
 
@@ -2670,12 +2680,15 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         phone_id: str | int | None = None,
     ) -> CommerceSettings:
         """
-        Get the commerce settings of the WhatsApp Business account.
+        Get the commerce settings of the WhatsApp Business phone number.
 
         Example:
 
             >>> wa = WhatsApp()
             >>> wa.get_commerce_settings()
+
+        Args:
+            phone_id: The phone ID to get the commerce settings from (optional, if not provided, the client's phone ID will be used).
 
         Returns:
             The commerce settings.
@@ -2700,7 +2713,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
-        Update the commerce settings of the WhatsApp Business account.
+        Update the commerce settings of the WhatsApp Business phone number.
 
         Example:
 
@@ -3833,7 +3846,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             waba_id: The WhatsApp Business account ID to create the phone number on (optional, if not provided, the client's business account ID will be used).
 
         Returns:
-            A dict with the ID of the created phone number.
+            The created phone number.
         """
         return CreatedBusinessPhoneNumber(
             id=self.api.create_phone_number(

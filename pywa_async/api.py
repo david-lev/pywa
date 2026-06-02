@@ -881,7 +881,7 @@ class GraphAPIAsync(GraphAPI):
     async def update_waba_settings(
         self,
         waba_id: str,
-        disable_marketing_messages_on_cloud_api: bool | None = None,
+        settings: dict,
     ) -> dict:
         """
         Update the WhatsApp Business Account settings.
@@ -890,12 +890,12 @@ class GraphAPIAsync(GraphAPI):
         Return example::
 
             {
-                'success': True
+                'id': '1234567890',
             }
 
         Args:
             waba_id: The ID of the WhatsApp Business Account to update.
-            disable_marketing_messages_on_cloud_api: Whether to disable marketing messages on Cloud API.
+            settings: The settings to update.
 
         Returns:
             The success of the operation.
@@ -903,13 +903,7 @@ class GraphAPIAsync(GraphAPI):
         return await self._request(
             method="POST",
             endpoint=f"/{waba_id}",
-            json={
-                k: v
-                for k, v in {
-                    "disable_marketing_messages_on_cloud_api": disable_marketing_messages_on_cloud_api,
-                }.items()
-                if v is not None
-            },
+            json=settings,
         )
 
     async def get_business_phone_number(

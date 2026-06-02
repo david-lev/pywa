@@ -938,6 +938,11 @@ class DegreesOfFreedomSpec:
 
     creative_features_spec: CreativeFeaturesSpec
 
+    def to_dict(self) -> dict:
+        return {
+            "creative_features_spec": self.creative_features_spec.to_dict(),
+        }
+
 
 class TemplateBaseComponent(abc.ABC):
     """Base class for all template components"""
