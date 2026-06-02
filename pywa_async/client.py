@@ -2024,6 +2024,36 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             )
         )
 
+    async def update_business_account_settings(
+        self,
+        *,
+        disable_marketing_messages_on_cloud_api: bool | None = None,
+        waba_id: str | int | None = None,
+    ) -> SuccessResult:
+        """
+        Update the WhatsApp Business Account (WABA) settings.
+
+        Example:
+
+            >>> wa = WhatsApp()
+            >>> wa.update_business_account_settings(disable_marketing_messages_on_cloud_api=True)
+
+        Args:
+            disable_marketing_messages_on_cloud_api: Whether to block Marketing category templates on the Cloud API ``/messages`` endpoint (in pywa it means that when you :meth:`~pywa.WhatsApp.send_template` a ``MARKETING`` template you must set ``use_mm_lite_api`` to ``True``).
+            waba_id: The WABA ID to update the settings for (optional, if not provided, the client's WABA ID will be used).
+        """
+        return SuccessResult.from_dict(
+            await self.api.update_waba_settings(
+                waba_id=helpers.resolve_arg(
+                    wa=self,
+                    value=waba_id,
+                    method_arg="waba_id",
+                    client_arg="waba_id",
+                ),
+                disable_marketing_messages_on_cloud_api=disable_marketing_messages_on_cloud_api,
+            )
+        )
+
     async def get_business_phone_number(
         self,
         *,

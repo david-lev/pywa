@@ -837,6 +837,7 @@ class WhatsAppBusinessAccount(helpers.APIObject):
         ownership_type: Ownership type of the WhatsApp Business Account.
         currency: The currency in which the payment transactions for the WhatsApp Business Account will be processed
         country: country of the WhatsApp Business Account's owning Meta Business account
+        disable_marketing_messages_on_cloud_api: Whether the WhatsApp Business Account will not be able to send marketing messages using Cloud API, but can still send marketing messages using the MM Lite API. See `Marketing Messages Lite API <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/marketing-messages-lite-api>`_.
 
     """
 
@@ -857,6 +858,7 @@ class WhatsAppBusinessAccount(helpers.APIObject):
     subscribed_apps: tuple[FacebookApplication, ...] | None
     owner_business_info: BusinessInfo | None
     account_review_status: str | None
+    disable_marketing_messages_on_cloud_api: bool | None
 
     @classmethod
     def from_dict(cls, data: dict) -> WhatsAppBusinessAccount:
@@ -901,6 +903,9 @@ class WhatsAppBusinessAccount(helpers.APIObject):
             if "owner_business_info" in data
             else None,
             account_review_status=data.get("account_review_status"),
+            disable_marketing_messages_on_cloud_api=data.get(
+                "disable_marketing_messages_on_cloud_api"
+            ),
         )
 
 

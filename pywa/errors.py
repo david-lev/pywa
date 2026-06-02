@@ -437,6 +437,15 @@ class BSUIDRecipientNotSupported(SendMessageError):
     __error_codes__ = (131062,)
 
 
+class MarketingTemplatesDisabledForCloudAPI(SendMessageError):
+    """Marketing templates are disabled for Cloud API.
+
+    To send this template, use the Marketing Messages API for WhatsApp or enable marketing templates on Cloud API by turning off `disable_marketing_messages_on_cloud_api`.
+    """
+
+    __error_codes__ = (131063,)
+
+
 # ====================================================================================================
 
 

@@ -276,6 +276,8 @@ Manage business account and profile:
      - Description
    * - :meth:`~WhatsApp.get_business_account`
      - Get business account details
+   * - :meth:`~WhatsApp.update_business_account_settings`
+     - Update business account settings
    * - :meth:`~WhatsApp.get_business_profile`
      - Get business profile
    * - :meth:`~WhatsApp.get_business_phone_numbers`
