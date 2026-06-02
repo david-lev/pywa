@@ -8,7 +8,6 @@ from .. import _helpers as helpers
 from . import RawUpdate
 from .base_update import BaseUpdate
 from .message_status import PricingCategory
-from .others import WhatsAppBusinessAccount
 
 if TYPE_CHECKING:
     from .. import WhatsApp
@@ -387,10 +386,6 @@ class AccountUpdate(BaseUpdate):
     volume_tier_info: VolumeTierInfo | None
 
     _webhook_field = "account_update"
-
-    def get_waba_account(self) -> WhatsAppBusinessAccount:
-        """Get the WhatsApp Business Account associated with this update."""
-        return self._client.get_business_account(waba_id=self.id)
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: RawUpdate) -> BaseUpdate:

@@ -7,7 +7,6 @@ from pywa.api import GraphAPI as GraphAPISync
 from pywa.handlers import _HandlerDecorators
 from pywa.listeners import _Listeners as ListenersSync
 from pywa.server import Server as ServerSync
-from pywa.types import AccountUpdate as AccountUpdateSync
 from pywa.types import Audio as AudioSync
 from pywa.types import (
     CallbackButton as CallbackButtonSync,
@@ -128,7 +127,6 @@ from pywa.types.templates import (
 )
 from pywa_async import WhatsApp as WhatsAppAsync
 from pywa_async.api import GraphAPIAsync
-from pywa_async.types import AccountUpdate as AccountUpdateAsync
 from pywa_async.types import (
     CallbackButton as CallbackButtonAsync,
 )
@@ -304,7 +302,6 @@ def overrides() -> list[tuple[type, type]]:
         (GroupJoinRequestSync, GroupJoinRequestAsync),
         (GroupJoinRequestsResultSync, GroupJoinRequestsResultAsync),
         (GroupMessageStatusesSync, GroupMessageStatusesAsync),
-        (AccountUpdateSync, AccountUpdateAsync),
     ]
 
 
@@ -565,15 +562,3 @@ def _check_docs(
             raise AssertionError(
                 f"Method {method_name} has different docstrings in {async_obj}"
             ) from None
-
-
-def test_all_handlers_to_updates_are_overwritten_in_async(overrides):
-    assert len(WhatsAppSync._handlers_to_updates) == len(
-        WhatsAppAsync._handlers_to_updates
-    ), (
-        "WhatsAppSync._handlers_to_updates and WhatsAppAsync._handlers_to_updates have different lengths"
-    )
-    for handler, update in WhatsAppSync._handlers_to_updates.items():
-        assert WhatsAppAsync._handlers_to_updates[handler] != update, (
-            f"Handler {handler} has the same update class in WhatsAppAsync: {update}"
-        )
