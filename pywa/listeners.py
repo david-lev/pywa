@@ -13,6 +13,8 @@ import threading
 import warnings
 from typing import TYPE_CHECKING
 
+from . import utils
+
 if TYPE_CHECKING:
     from .client import WhatsApp
     from .filters import Filter
@@ -163,6 +165,40 @@ class Listener:
         return self.cancelers and self.cancelers.check_sync(wa, update)
 
 
+def _check_anyio_thread_limit(wa: WhatsApp) -> None:
+    if not hasattr(wa, "_anyio_thread_limit"):
+        wa._anyio_thread_limit = None
+
+        if wa._server_type in {
+            utils.CustomServerType.STARLETTE,
+            utils.CustomServerType.FASTAPI,
+        }:
+            try:
+                from anyio.to_thread import current_default_thread_limiter
+
+                wa._anyio_thread_limit = current_default_thread_limiter().total_tokens
+            except Exception:
+                pass
+
+    if wa._anyio_thread_limit is not None:
+        current_active = len(wa._listeners)
+        warning_threshold = max(1, int(wa._anyio_thread_limit * 0.85))
+
+        if current_active >= warning_threshold:
+            warnings.warn(
+                f"\n\n"
+                f"⚠️ ⚠️ CRITICAL SERVER THREAT ⚠️ ⚠️\n"
+                f"Active listeners ({current_active}) are approaching the AnyIO thread limit ({wa._anyio_thread_limit}).\n"
+                f"If this limit is reached, YOUR SERVER WILL COMPLETELY FREEZE and drop incoming webhooks.\n\n"
+                f"IMMEDIATE ACTION REQUIRED:\n"
+                f"  1. Migrate to `pywa_async` for fully async listeners that don't rely on AnyIO threads.\n"
+                f"  2. Enforce strict `timeout` values on all `.wait_for_...` calls.\n"
+                f"  3. Increase AnyIO thread limit. See https://anyio.readthedocs.io/en/stable/threads.html#adjusting-the-default-maximum-worker-thread-count.\n",
+                RuntimeWarning,
+                stacklevel=4,
+            )
+
+
 class _Listeners:
     def listen(
         self: WhatsApp,
@@ -222,7 +258,7 @@ class _Listeners:
             ListenerCanceled: If the listener was canceled by a filter
             ListenerStopped: If the listener was stopped manually
         """
-        if self._workers > 1:
+        if self._uvicorn_workers > 1:
             raise RuntimeError(
                 "Listening is not supported when running on multiple workers"
             )
@@ -232,6 +268,7 @@ class _Listeners:
                 UserWarning,
                 stacklevel=3,
             )
+        _check_anyio_thread_limit(self)
         self._check_for_async_filters(filters)
         self._check_for_async_filters(cancelers)
 

@@ -181,7 +181,7 @@ def serve_application(
             module_str, sys_path = resolve_module_path(target_path)
             sys.path.insert(0, str(sys_path))
             app_name, client = discover_app_instance(module_str, app)
-            client._workers = workers or 1
+            client._uvicorn_workers = workers or 1
 
     except PywaCLIException as e:
         print(f"❌ Error: {e}")
