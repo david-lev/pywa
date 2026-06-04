@@ -250,7 +250,7 @@ class Server:
                 message="No `app_secret` provided. Signature validation will be disabled "
                 "(not recommended! set `validate_updates=False` to suppress this warning)",
                 category=UserWarning,
-                stacklevel=2,
+                stacklevel=4,
             )
             self._validate_updates = False
 
