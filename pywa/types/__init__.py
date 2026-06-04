@@ -16,6 +16,8 @@ from .callback import (
     SectionRow,
     FlowButton,
     ContactInfoRequestButton,
+    VideoCarouselCard,
+    ImageCarouselCard,
 )
 from .media import MediaURL, Audio, Document, Image, Sticker, Video
 from .message import Message, EditedMessage, DeletedMessage, OutgoingMessage, OutgoingEditedMessage, OutgoingDeletedMessage

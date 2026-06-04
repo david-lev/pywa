@@ -86,6 +86,7 @@ from .types import (
     FlowRequest,
     GroupMessageStatuses,
     IdentityChange,
+    ImageCarouselCard,
     Industry,
     MediaURL,
     Message,
@@ -106,9 +107,11 @@ from .types import (
     URLButton,
     User,
     UserMarketingPreferences,
+    VideoCarouselCard,
     VoiceCallButton,
 )
 from .types.base_update import BaseUpdate
+from .types.callback import BaseCarouselCard
 from .types.calls import CallPermissions, SessionDescription
 from .types.flows import (
     CreatedFlow,
@@ -1809,6 +1812,63 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     },
                     body=body,
                     footer=footer,
+                ),
+                reply_to_message_id=reply_to_message_id,
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                recipient_identity_key_hash=identity_key_hash,
+            ),
+            from_phone_id=sender,
+            recipient_type=recipient_type,
+            interactive_type=InteractiveType.PRODUCT_LIST,
+        )
+
+    def send_carousel(
+        self,
+        to: str | int,
+        *,
+        body: str,
+        cards: list[ImageCarouselCard | VideoCarouselCard | BaseCarouselCard],
+        reply_to_message_id: str | None = None,
+        tracker: str | CallbackData | None = None,
+        identity_key_hash: str | None = None,
+        sender: str | int | None = None,
+    ) -> SentMessage:
+        """
+        Interactive media carousel messages display a set of horizontally scrollable media cards.
+
+        - See `Carousel messages <https://developers.facebook.com/documentation/business-messaging/whatsapp/messages/interactive-media-carousel-messages>`_.
+
+        Args:
+            to: The user phone number, WhatsApp ID, BSUID or group ID to send the message to.
+            body: Text to appear in the message body (up to 1024 characters).
+            cards: The carousel cards to send (up to 10).
+            reply_to_message_id: The message ID to quote (optional).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
+            sender: The phone ID to send the message from (optional, overrides the client's phone ID).
+
+        Returns:
+            The sent carousel message.
+        """
+        sender = helpers.resolve_arg(
+            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
+        )
+
+        recipient, recipient_type = helpers.resolve_recipient(to)
+        return SentMessage.from_sent_update(
+            client=self,
+            update=self.api.send_message(
+                sender=sender,
+                **recipient,
+                typ="interactive",
+                msg=helpers.get_interactive_msg(
+                    typ=InteractiveType.CAROUSEL,
+                    action={
+                        "cards": [
+                            card.to_dict(idx=idx) for idx, card in enumerate(cards)
+                        ]
+                    },
+                    body=body,
                 ),
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),

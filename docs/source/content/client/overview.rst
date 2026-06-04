@@ -86,6 +86,8 @@ The client allows you to send a wide variety of messages:
      - Send a single product
    * - :meth:`~WhatsApp.send_products`
      - Send multiple products
+   * - :meth:`~WhatsApp.send_carousel`
+     - Send a carousel message
    * - :meth:`~WhatsApp.send_reaction`
      - React to a message
    * - :meth:`~WhatsApp.remove_reaction`

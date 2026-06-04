@@ -17,6 +17,7 @@ Client Reference
 .. automethod:: WhatsApp.send_template
 .. automethod:: WhatsApp.send_product
 .. automethod:: WhatsApp.send_products
+.. automethod:: WhatsApp.send_carousel
 .. automethod:: WhatsApp.send_reaction
 .. automethod:: WhatsApp.remove_reaction
 .. automethod:: WhatsApp.mark_message_as_read

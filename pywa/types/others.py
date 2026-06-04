@@ -102,6 +102,7 @@ class InteractiveType(helpers.StrEnum):
     VOICE_CALL = "voice_call"
     CALL_PERMISSION_REQUEST = "call_permission_request"
     REQUEST_CONTACT_INFO = "request_contact_info"
+    CAROUSEL = "carousel"
 
     UNKNOWN = "UNKNOWN"
 

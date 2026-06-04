@@ -31,12 +31,15 @@ from .user import User
 if TYPE_CHECKING:
     from ..client import WhatsApp
     from .callback import (
+        BaseCarouselCard,
         Button,
         CallbackData,
         CallPermissionRequestButton,
         FlowButton,
+        ImageCarouselCard,
         SectionList,
         URLButton,
+        VideoCarouselCard,
         VoiceCallButton,
     )
     from .calls import SessionDescription
@@ -1128,6 +1131,44 @@ class _ClientShortcuts(abc.ABC):
             params=params,
             use_mm_lite_api=use_mm_lite_api,
             message_activity_sharing=message_activity_sharing,
+            reply_to_message_id=self.message_id_to_reply if quote else None,
+            identity_key_hash=identity_key_hash,
+            tracker=tracker,
+        )
+
+    def reply_carousel(
+        self,
+        *,
+        body: str,
+        cards: list[ImageCarouselCard | VideoCarouselCard | BaseCarouselCard],
+        quote: bool = False,
+        private: bool = False,
+        tracker: str | CallbackData | None = None,
+        identity_key_hash: str | None = None,
+        sender: str | int | None = None,
+    ) -> SentMessage:
+        """
+        Interactive media carousel messages display a set of horizontally scrollable media cards.
+
+        - See `Carousel messages <https://developers.facebook.com/documentation/business-messaging/whatsapp/messages/interactive-media-carousel-messages>`_.
+
+        Args:
+            body: Text to appear in the message body (up to 1024 characters).
+            cards: The list of carousel cards (up to 10 cards).
+            quote: Whether to quote the replied message (default: False).
+            private: Whether to send a private message instead of replying in the same chat (default: False, only applicable for group messages).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
+            sender: The sender of the message (optional, if not provided, ``recipient`` will be used).
+
+        Returns:
+            The sent carousel message.
+        """
+        return self._client.send_carousel(
+            sender=sender or self._internal_recipient,
+            to=self._get_reply_to(private),
+            body=body,
+            cards=cards,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             identity_key_hash=identity_key_hash,
             tracker=tracker,

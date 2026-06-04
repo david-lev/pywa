@@ -177,6 +177,8 @@ All updates share common methods and properties:
      - Reply with a product message
    * - :meth:`~BaseUserUpdate.reply_products`
      - Reply with a list of product messages
+   * - :meth:`~BaseUserUpdate.reply_carousel`
+     - Reply with a carousel message
    * - :meth:`~BaseUserUpdate.react`
      - React to the update with an emoji
    * - :meth:`~BaseUserUpdate.unreact`

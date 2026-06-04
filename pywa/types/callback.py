@@ -12,6 +12,8 @@ __all__ = [
     "Section",
     "SectionList",
     "FlowButton",
+    "ImageCarouselCard",
+    "VideoCarouselCard",
     "CallbackData",
 ]
 
@@ -653,3 +655,86 @@ class FlowButton(BaseButton):
                 ),
             },
         }
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class BaseCarouselCard:
+    body: str | None = None
+    buttons: Iterable[Button] | URLButton
+
+    def to_dict(self, idx: int) -> dict:
+        if isinstance(self.buttons, URLButton):
+            action = {
+                "name": "cta_url",
+                "parameters": {
+                    "display_text": self.buttons.title,
+                    "url": self.buttons.url,
+                },
+            }
+        else:
+            action = {
+                "buttons": [
+                    {
+                        "type": "quick_reply",
+                        "quick_reply": {
+                            "id": helpers.resolve_callback_data(b.callback_data),
+                            "title": b.title,
+                        },
+                    }
+                    for b in self.buttons
+                ]
+            }
+        payload = {
+            "card_index": idx,
+            "type": "cta_url",
+            "action": action,
+        }
+        if self.body is not None:
+            payload["body"] = {
+                "text": self.body,
+            }
+        return payload
+
+
+class _BaseMediaCarouselCard(BaseCarouselCard):
+    _header_type: ClassVar[str]
+
+    def to_dict(self, idx: int) -> dict:
+        common = super().to_dict(idx)
+        common["header"] = {
+            "type": self._header_type,
+            self._header_type: {"link": getattr(self, self._header_type)},
+        }
+        return common
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class ImageCarouselCard(_BaseMediaCarouselCard):
+    """
+    Represents a card in a carousel message with an image header.
+
+    Attributes:
+        body: The body text of the card (optional, Max 160 characters, and up to 2 line breaks).
+        image: Publicly available media asset URL.
+        buttons: The buttons of the card (either a list of up to 3 :class:`Button` or a single :class:`URLButton`).
+    """
+
+    _header_type = "image"
+
+    image: str
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class VideoCarouselCard(_BaseMediaCarouselCard):
+    """
+    Represents a card in a carousel message with an video header.
+
+    Attributes:
+        body: The body text of the card (optional, Max 160 characters, and up to 2 line breaks).
+        video: Publicly available media asset URL.
+        buttons: The buttons of the card (either a list of up to 3 :class:`Button` or a single :class:`URLButton`).
+    """
+
+    _header_type = "video"
+
+    video: str

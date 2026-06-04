@@ -16,6 +16,8 @@ from .callback import (
     SectionRow,
     FlowButton,
     ContactInfoRequestButton,
+    VideoCarouselCard,
+    ImageCarouselCard,
 )
 from .media import MediaURL, Audio, Document, Image, Sticker, Video
 from .message import Message, EditedMessage, DeletedMessage, OutgoingMessage, OutgoingEditedMessage, OutgoingDeletedMessage
@@ -88,5 +90,5 @@ from .calls import (
 )
 from .system import PhoneNumberChange, IdentityChange, Identity
 from .sent_update import SentMessage, SentTemplate, SentTemplateStatus, InitiatedCall
-from .groups import GroupInviteLink, GroupJoinApprovalMode
+from .groups import GroupInviteLink, GroupJoinApprovalMode, GroupMessageStatuses
 from .account_update import AccountUpdate
