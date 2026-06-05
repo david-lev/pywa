@@ -70,7 +70,7 @@ class Server:
     def _setup_and_get_starlette_app(self):
         if self._server_type is not None:
             raise ValueError(
-                "When providing a custom `server`, you must run it yourself."
+                "When providing a custom `server` instance to the WhatsApp client, pywa assumes you will handle the webhook routes and server setup yourself. "
             )
         try:
             from starlette.applications import Starlette as StarletteApp

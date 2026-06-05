@@ -143,6 +143,18 @@ Register event handlers to listen for updates:
      - Handle template quality changes
    * - :meth:`~WhatsApp.on_template_components_update`
      - Handle template components updates
+   * - :meth:`~WhatsApp.on_edited_message`
+     - Handle edited messages
+   * - :meth:`~WhatsApp.on_deleted_message`
+     - Handle deleted messages
+   * - :meth:`~WhatsApp.on_outgoing_message`
+     - Handle outgoing messages
+   * - :meth:`~WhatsApp.on_outgoing_edited_message`
+     - Handle outgoing edited messages
+   * - :meth:`~WhatsApp.on_outgoing_deleted_message`
+     - Handle outgoing deleted messages
+   * - :meth:`~WhatsApp.on_account_update`
+     - Handle business account updates
    * - :meth:`~WhatsApp.on_raw_update`
      - Handle raw updates from WhatsApp
    * - :meth:`~WhatsApp.add_handlers`

@@ -140,14 +140,9 @@ def discover_app_instance(
 def serve_application(
     command: str,
     path: pathlib.Path | None = None,
-    *,
-    host: str = "127.0.0.1",
-    port: int = 8000,
-    reload: bool = False,
-    reload_dirs: list[pathlib.Path] | None = None,
-    workers: int | None = None,
     app: str | None = None,
     entrypoint: str | None = None,
+    **uvicorn_kwargs,
 ) -> None:
     """
     Core function that resolves dependencies and starts the Uvicorn server.
@@ -163,6 +158,8 @@ def serve_application(
             "❌ Error: Cannot use --entrypoint together with a path or --app arguments."
         )
         sys.exit(1)
+
+    workers = uvicorn_kwargs.get("workers")
 
     try:
         if entrypoint:
@@ -192,6 +189,9 @@ def serve_application(
         f"{base_import_string}.{WhatsApp._setup_and_get_starlette_app.__name__}"
     )
 
+    host = uvicorn_kwargs.get("host", "127.0.0.1")
+    port = uvicorn_kwargs.get("port", 8000)
+
     mode = "development" if command == "dev" else "production"
     print(f"\n🚀  Starting Pywa in {mode} mode")
     print("-" * 40)
@@ -202,16 +202,13 @@ def serve_application(
         print("⚠️  Auto-reload:  Enabled (Use 'pywa run' for production)")
     print("-" * 40 + "\n")
 
-    uvicorn.run(
-        app=uvicorn_app_string,
-        factory=True,
-        host=host,
-        port=port,
-        reload=reload,
-        reload_dirs=[str(d.resolve()) for d in reload_dirs] if reload_dirs else None,
-        workers=workers,
-        log_config=None,
-    )
+    clean_kwargs = {k: v for k, v in uvicorn_kwargs.items() if v is not None}
+
+    clean_kwargs["app"] = uvicorn_app_string
+    clean_kwargs["factory"] = True
+    clean_kwargs["log_config"] = None
+
+    uvicorn.run(**clean_kwargs)
 
 
 def send_messages(
@@ -322,14 +319,41 @@ def main() -> None:
         help="Explicit entrypoint string (e.g., 'main:wa'). Overrides path and --app.",
     )
 
+    serve_parser.add_argument(
+        "--log-level",
+        type=str,
+        choices=["critical", "error", "warning", "info", "debug", "trace"],
+        help="Log level.",
+    )
+    serve_parser.add_argument("--ssl-keyfile", type=str, help="SSL key file.")
+    serve_parser.add_argument(
+        "--ssl-certfile",
+        type=str,
+        help="SSL certificate file.",
+    )
+
     run_parser = subparsers.add_parser(
         "run", parents=[serve_parser], help="Run the client in production mode."
     )
     run_parser.add_argument(
         "--workers",
         type=int,
-        default=None,
-        help="Number of worker processes. Defaults to 1.",
+        help="Number of worker processes.",
+    )
+    run_parser.add_argument(
+        "--proxy-headers",
+        action=argparse.BooleanOptionalAction,
+        help="Enable/Disable X-Forwarded-Proto, X-Forwarded-For to populate url scheme and remote address info.",
+    )
+    run_parser.add_argument(
+        "--forwarded-allow-ips",
+        type=str,
+        help="Comma separated list of IPs to trust with proxy headers. The literal '*' means trust everything.",
+    )
+    run_parser.add_argument(
+        "--timeout-keep-alive",
+        type=int,
+        help="Close Keep-Alive connections if no new data is received within this timeout (in seconds).",
     )
 
     dev_parser = subparsers.add_parser(
@@ -337,12 +361,24 @@ def main() -> None:
         parents=[serve_parser],
         help="Run the client in development mode with auto-reload enabled.",
     )
+
+    dev_parser.add_argument(
+        "--reload",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Enable auto-reload. Default: True",
+    )
     dev_parser.add_argument(
         "--reload-dir",
         action="append",
         dest="reload_dirs",
         type=str,
-        help="Directories to watch for changes.",
+        help="Set reload directories explicitly, instead of using the current working directory.",
+    )
+    dev_parser.add_argument(
+        "--reload-delay",
+        type=float,
+        help="Delay between previous and next check if application needs to be reloaded.",
     )
 
     # --- SEND PARSER ---
@@ -433,35 +469,23 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.command in ["run", "dev"]:
-        target_path = pathlib.Path(args.path) if args.path else None
-        if args.command == "run":
-            serve_application(
-                command="run",
-                path=target_path,
-                host=args.host,
-                port=args.port,
-                reload=False,
-                workers=args.workers,
-                app=args.app,
-                entrypoint=args.entrypoint,
-            )
-        elif args.command == "dev":
-            reload_dirs = (
-                [pathlib.Path(d) for d in args.reload_dirs]
-                if getattr(args, "reload_dirs", None)
-                else None
-            )
-            serve_application(
-                command="dev",
-                path=target_path,
-                host=args.host,
-                port=args.port,
-                reload=True,
-                reload_dirs=reload_dirs,
-                workers=None,
-                app=args.app,
-                entrypoint=args.entrypoint,
-            )
+        target_path = pathlib.Path(args.path) if getattr(args, "path", None) else None
+        app_args = {
+            "command": args.command,
+            "path": target_path,
+            "app": getattr(args, "app", None),
+            "entrypoint": getattr(args, "entrypoint", None),
+        }
+
+        exclude_keys = app_args.keys()
+        uvicorn_kwargs = {k: v for k, v in vars(args).items() if k not in exclude_keys}
+
+        if uvicorn_kwargs.get("reload_dirs"):
+            uvicorn_kwargs["reload_dirs"] = [
+                str(pathlib.Path(d).resolve()) for d in uvicorn_kwargs["reload_dirs"]
+            ]
+
+        serve_application(**app_args, **uvicorn_kwargs)
 
     elif args.command == "send":
         send_messages(**vars(args))
