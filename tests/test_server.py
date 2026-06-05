@@ -1,4 +1,5 @@
-from pywa import WhatsApp, utils as pywa_utils
+from pywa import WhatsApp
+from pywa import utils as pywa_utils
 
 
 def test_webhook_challenge_handler_valid():
