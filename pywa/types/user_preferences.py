@@ -9,11 +9,10 @@ __all__ = [
 ]
 
 import dataclasses
-import datetime
 import logging
 from typing import TYPE_CHECKING
 
-from .. import utils
+from .. import _helpers as helpers
 from .base_update import BaseUserUpdate, RawUpdate  # noqa
 from .others import Metadata
 
@@ -66,11 +65,8 @@ class UserMarketingPreferences(BaseUserUpdate):
             waba_id=entry["id"],
             id=entry["id"],
             metadata=Metadata.from_dict(value["metadata"]),
-            timestamp=datetime.datetime.fromtimestamp(
-                int(prefs["timestamp"]),
-                datetime.timezone.utc,
-            ),
-            from_user=client._usr_cls.from_dict(value["contacts"][0], client=client),
+            timestamp=helpers.timestamp_to_datetime(prefs["timestamp"]),
+            from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
             value=MarketingPreference(prefs["value"]),
             detail=prefs["detail"],
             category=UserPreferenceCategory(prefs["category"]),
@@ -81,7 +77,7 @@ class UserMarketingPreferences(BaseUserUpdate):
         return self.value != MarketingPreference.STOP
 
 
-class MarketingPreference(utils.StrEnum):
+class MarketingPreference(helpers.StrEnum):
     """
     The marketing preference chosen by the user.
 
@@ -99,7 +95,7 @@ class MarketingPreference(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class UserPreferenceCategory(utils.StrEnum):
+class UserPreferenceCategory(helpers.StrEnum):
     """
     The category of the user preference.
 

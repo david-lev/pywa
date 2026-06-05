@@ -3,17 +3,17 @@ from __future__ import annotations
 import base64
 import dataclasses
 import enum
-import functools
 import hashlib
 import hmac
 import importlib
-import inspect
 import json
 import logging
 import warnings
-from typing import Any, Callable, ClassVar, Protocol, TypeAlias
+from typing import Any, Callable, Iterable, Protocol, TypeAlias
 
 import httpx
+
+from .errors import PywaDeprecationWarning
 
 try:
     from cryptography.hazmat.backends import default_backend
@@ -39,6 +39,14 @@ MISSING: object | None = object()
 """A sentinel value to indicate a missing value to distinguish from ``None``."""
 
 
+class Starlette(Protocol):
+    """Protocol for the `Starlette <https://starlette.dev>`_ app."""
+
+    def add_route(
+        self, path: str, endpoint: Callable, methods: Iterable[str]
+    ) -> None: ...
+
+
 class FastAPI(Protocol):
     """Protocol for the `FastAPI <https://fastapi.tiangolo.com/>`_ app."""
 
@@ -53,10 +61,15 @@ class Flask(Protocol):
     def route(self, rule: str, **options: Any) -> Callable: ...
 
 
-class ServerType(enum.Enum):
+class CustomServerType(enum.Enum):
     """Enum for the supported server types."""
 
     FASTAPI = ("FASTAPI", FastAPI, lambda: importlib.import_module("fastapi").FastAPI)
+    STARLETTE = (
+        "STARLETTE",
+        Starlette,
+        lambda: importlib.import_module("starlette.applications").Starlette,
+    )
     FLASK = ("FLASK", Flask, lambda: importlib.import_module("flask").Flask)
 
     def __new__(cls, name: str, protocol: Protocol, server: Callable):
@@ -67,7 +80,7 @@ class ServerType(enum.Enum):
         return obj
 
     @classmethod
-    def from_app(cls, app) -> ServerType | None:
+    def from_app(cls, app) -> CustomServerType | None:
         """Get the server type from the app."""
         for server_type in cls:
             try:
@@ -80,15 +93,6 @@ class ServerType(enum.Enum):
     def protocols_names(cls) -> tuple[str, ...]:
         """Get the names of the protocols."""
         return tuple(server_type.protocol.__name__ for server_type in cls)
-
-
-def is_installed(lib: str) -> bool:
-    """Check if the library is installed."""
-    try:
-        importlib.import_module(lib)
-        return True
-    except ImportError:
-        return False
 
 
 class Version(enum.Enum):
@@ -108,7 +112,7 @@ class Version(enum.Enum):
     """
 
     # KEY = (MIN_VERSION: str, LATEST_VERSION: str)
-    GRAPH_API = ("17.0", "24.0")
+    GRAPH_API = ("17.0", "25.0")
     FLOW_JSON = ("2.1", "7.3")
     FLOW_DATA_API = ("3.0", "4.0")
     FLOW_MSG = ("3", "3")
@@ -146,77 +150,14 @@ class CallbackURLScope(enum.Enum):
     PHONE = enum.auto()
 
 
-class StrEnum(str, enum.Enum):
-    """A string-based enum that allows for custom handling of missing values."""
+@dataclasses.dataclass(slots=True, kw_only=True)
+class WebhookFields:
+    """
+    Represents the fields to add or remove from the webhook subscription.
+    """
 
-    _check_value: Callable[[str], bool] | None = str.isupper
-    """Check if the value needs to be modified or not."""
-    _modify_value: Callable[[str], str] | None = str.upper
-    """Modify the value if needed."""
-
-    def __str__(self):
-        """Return the string representation of the enum member."""
-        return self.value
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}.{self.name}"
-
-    def __init_subclass__(cls, *args, **kwargs):
-        """Ensure that the enum has an 'UNKNOWN' member to handle missing values."""
-        if list(cls) and not hasattr(
-            cls, "UNKNOWN"
-        ):  # in python3.10 __init_subclass__ does not have access to enum members
-            raise TypeError(
-                f"Enum {cls.__name__} must have an 'UNKNOWN' member to handle missing values."
-            )
-        return super().__init_subclass__(*args, **kwargs)
-
-    @classmethod
-    def _missing_(cls, value: str):
-        """Handle missing values in the enum."""
-        if callable(cls._check_value) and not cls._check_value(value):
-            return cls(cls._modify_value(value))
-
-        _logger.warning(
-            "Unknown value '%s' for enum '%s'. Defaulting to `%s.UNKNOWN`.",
-            value,
-            cls.__name__,
-            cls.__name__,
-        )
-        # noinspection PyUnresolvedReferences
-        return cls.UNKNOWN
-
-
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class FromDict:
-    """Allows to ignore extra fields when creating a dataclass from a dict."""
-
-    # noinspection PyArgumentList
-    @classmethod
-    def from_dict(cls, data: dict, **kwargs):
-        return cls(
-            **{
-                k: v
-                for k, v in (data | kwargs).items()
-                if k in (f.name for f in dataclasses.fields(cls))
-            }
-        )
-
-
-class APIObject:
-    """Base class for API objects that allows overriding field names."""
-
-    _override_api_fields: ClassVar[dict[str, str]] = {}
-    """Override API field names for this object."""
-
-    @classmethod
-    @functools.cache
-    def _api_fields(cls, *args, **kwargs) -> tuple[str, ...]:
-        return tuple(
-            cls._override_api_fields.get(f.name, f.name)
-            for f in dataclasses.fields(cls)
-            if not f.name.startswith("_")
-        )
+    add: Iterable[str] = dataclasses.field(default_factory=tuple)
+    remove: Iterable[str] = dataclasses.field(default_factory=tuple)
 
 
 FlowRequestDecryptor: TypeAlias = Callable[
@@ -386,7 +327,7 @@ class FlowRequestDecryptedMedia:
         """Allow iteration over the attributes."""
         warnings.warn(
             "flow_request_media_decryptor() is no longer return (media_id, filename, data) tuple, but FlowRequestDecryptedMedia object.",
-            DeprecationWarning,
+            PywaDeprecationWarning,
             stacklevel=2,
         )
         return iter((self.media_id, self.filename, self.data))
@@ -472,18 +413,61 @@ def _flow_request_media_decryptor(
     return decrypted_data
 
 
-def rename_func(extended_with: str) -> Callable:
-    """Rename function to avoid conflicts when registering the same function multiple times."""
+class UserIdentifier(enum.Enum):
+    WA_ID = "wa_id"
+    BSUID = "bsuid"
+    PARENT_BSUID = "parent_bsuid"
 
-    def inner(func: Callable):
-        func.__name__ = f"{func.__name__}{extended_with}"
-        return func
-
-    return inner
+    @property
+    def user_attr(self) -> str:
+        return self.value
 
 
-def is_async_callable(obj: Any) -> bool:
-    """Check if an object is an async callable."""
-    return inspect.iscoroutinefunction(obj) or (
-        callable(obj) and inspect.iscoroutinefunction(obj.__call__)
-    )
+def start_ngrok_tunnel(
+    *,
+    port: int = 8000,
+    host: str = "127.0.0.1",
+    auth_token: str | None = None,
+    **forward_options,
+) -> str:
+    """
+    Starts an ngrok tunnel to the local server and returns the public URL.
+
+    - This function requires the `ngrok <https://pypi.org/project/ngrok/>`_ package to be installed. To install it, run `pip install ngrok`.
+    - This function is useful for testing webhooks locally without deploying to a server.
+
+    >>> from pywa.utils import start_ngrok_tunnel
+    >>> from pywa import WhatsApp
+
+    >>> callback_url = start_ngrok_tunnel(
+    ...     auth_token="your_ngrok_auth_token",
+    ...     domain="subdomain.ngrok-free.app",
+    ... )
+
+    >>> wa = WhatsApp(callback_url=callback_url, ...)
+    >>> wa.run(port=8000)
+
+    Args:
+        port: The local port to forward.
+        host: The local host (default is ``localhost``).
+        auth_token: The ngrok authtoken (found in your `ngrok dashboard <https://dashboard.ngrok.com/get-started/your-authtoken>`_).
+        **forward_options: Additional options passed to `ngrok.forward() <https://ngrok.github.io/ngrok-python/#full-configuration>`_.
+    """
+    try:
+        import ngrok
+    except ImportError:
+        raise ImportError(
+            "The 'ngrok' package is required for this utility. "
+            "Install it with: pip install ngrok"
+        ) from None
+
+    public_url = ngrok.forward(
+        addr=f"{host}:{port}",
+        authtoken=auth_token,
+        labels="edge:pywa",
+        **forward_options,
+    ).url()
+
+    _logger.info(f"Tunnel established: {public_url} -> {host}:{port}")
+
+    return public_url

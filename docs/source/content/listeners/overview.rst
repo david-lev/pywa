@@ -112,56 +112,6 @@ _________________
 
 You can create custom listeners by using the raw :meth:`WhatsApp.listen` method. This method allows you to create a listener that waits for a specific update and returns the result when the update is received.
 
-For example, let's create a listener that waits for another user to enter the bot and become an admin. We will create a simple database to store the users and admins, and then we will create a listener that waits for a user to enter the bot and adds them as an admin if they are not already registered.
-
-.. code-block:: python
-    :linenos:
-    :emphasize-lines: 33-38
-
-    from pywa import WhatsApp, types, filters, listeners
-
-    wa = WhatsApp(...)
-
-    class Database:
-        def __init__(self):
-            self._users = []
-            self._admins = set()
-
-        def add_user(self, user: str):
-            if user not in self._users:
-                self._users.append(user)
-
-        def is_user_exists(self, user: str) -> bool:
-            return user in self._users
-
-        def add_admin(self, admin: str):
-            if admin not in self._admins:
-                self._admins.add(admin)
-                self.add_user(admin)
-
-        def is_admin(self, user: str) -> bool:
-            return user in self._admins
-
-    db = Database()
-    db.add_admin("my_phone_number")  # Add your phone number as an default admin
-
-    @wa.on_message(filters.command("add_admin") & filters.new(lambda _, msg: db.is_admin(msg.sender)))
-    def add_admin(client: WhatsApp, msg: types.Message):
-        _, new_admin_phone = msg.text.split(maxsplit=1)  # command is /add_admin <phone_number>
-        if not db.is_user_exists(new_admin_phone):
-            msg.reply("This user is not registered with the bot. Please ask them to enter the bot first.")
-            new_chat: types.ChatOpened = client.listen(
-                to=listeners.UserUpdateListenerIdentifier(
-                    sender=new_admin_phone, recipient=client.phone_id
-                ),
-                filters=filters.chat_opened,
-            )
-            new_chat.reply(f"Hi {new_chat.from_user.name}, you have been added as an admin.")
-            msg.reply(f"{new_chat.from_user.name} entered the bot, you are now an admin.")
-        else:
-            db.add_admin(new_admin_phone)
-            msg.reply(f"{new_admin_phone} is now an admin.")
-
 .. attention::
 
     If the listener did not **use** the update (the update not matched the filters or the cancelers), the update **will be passed to the handlers**.

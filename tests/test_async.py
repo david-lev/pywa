@@ -7,6 +7,7 @@ from pywa.api import GraphAPI as GraphAPISync
 from pywa.handlers import _HandlerDecorators
 from pywa.listeners import _Listeners as ListenersSync
 from pywa.server import Server as ServerSync
+from pywa.types import Audio as AudioSync
 from pywa.types import (
     CallbackButton as CallbackButtonSync,
 )
@@ -26,7 +27,11 @@ from pywa.types import (
     CallTerminate as CallTerminateSync,
 )
 from pywa.types import (
-    ChatOpened as ChatOpenedSync,
+    DeletedMessage as DeletedMessageSync,
+)
+from pywa.types import Document as DocumentSync
+from pywa.types import (
+    EditedMessage as EditedMessageSync,
 )
 from pywa.types import (
     FlowCompletion as FlowCompletionSync,
@@ -40,14 +45,22 @@ from pywa.types import (
 from pywa.types import (
     IdentityChange as IdentityChangeSync,
 )
-from pywa.types import (
-    MediaURL as MediaUrlResponseSync,
-)
+from pywa.types import Image as ImageSync
+from pywa.types import MediaURL as MediaUrlResponseSync
 from pywa.types import (
     Message as MessageSync,
 )
 from pywa.types import (
     MessageStatus as MessageStatusSync,
+)
+from pywa.types import (
+    OutgoingDeletedMessage as OutgoingDeletedMessageSync,
+)
+from pywa.types import (
+    OutgoingEditedMessage as OutgoingEditedMessageSync,
+)
+from pywa.types import (
+    OutgoingMessage as OutgoingMessageSync,
 )
 from pywa.types import (
     PhoneNumberChange as PhoneNumberChangeSync,
@@ -58,6 +71,7 @@ from pywa.types import (
 from pywa.types import (
     Result as ResultSync,
 )
+from pywa.types import Sticker as StickerSync
 from pywa.types import (
     TemplateCategoryUpdate as TemplateCategoryUpdateSync,
 )
@@ -76,8 +90,15 @@ from pywa.types import (
 from pywa.types import (
     UserMarketingPreferences as UserMarketingPreferencesSync,
 )
-from pywa.types.base_update import BaseUpdate
+from pywa.types import Video as VideoSync
+from pywa.types.base_update import BaseUpdate, BaseUserUpdate
 from pywa.types.flows import FlowDetails as FlowDetailsSync
+from pywa.types.groups import GroupDetails as GroupDetailsSync
+from pywa.types.groups import GroupInviteLink as GroupInviteLinkSync
+from pywa.types.groups import GroupJoinRequest as GroupJoinRequestSync
+from pywa.types.groups import GroupJoinRequestsResult as GroupJoinRequestsResultSync
+from pywa.types.groups import GroupMessageStatuses as GroupMessageStatusesSync
+from pywa.types.groups import GroupParticipant as GroupParticipantSync
 from pywa.types.media import ArrivedMedia
 from pywa.types.media import Media as MediaSync
 from pywa.types.sent_update import (
@@ -125,7 +146,10 @@ from pywa_async.types import (
     CallTerminate as CallTerminateAsync,
 )
 from pywa_async.types import (
-    ChatOpened as ChatOpenedAsync,
+    DeletedMessage as DeletedMessageAsync,
+)
+from pywa_async.types import (
+    EditedMessage as EditedMessageAsync,
 )
 from pywa_async.types import (
     FlowCompletion as FlowCompletionAsync,
@@ -147,6 +171,15 @@ from pywa_async.types import (
 )
 from pywa_async.types import (
     MessageStatus as MessageStatusAsync,
+)
+from pywa_async.types import (
+    OutgoingDeletedMessage as OutgoingDeletedMessageAsync,
+)
+from pywa_async.types import (
+    OutgoingEditedMessage as OutgoingEditedMessageAsync,
+)
+from pywa_async.types import (
+    OutgoingMessage as OutgoingMessageAsync,
 )
 from pywa_async.types import (
     PhoneNumberChange as PhoneNumberChangeAsync,
@@ -176,7 +209,20 @@ from pywa_async.types import (
     UserMarketingPreferences as UserMarketingPreferencesAsync,
 )
 from pywa_async.types.flows import FlowDetails as FlowDetailsAsync
+from pywa_async.types.groups import GroupDetails as GroupDetailsAsync
+from pywa_async.types.groups import GroupInviteLink as GroupInviteLinkAsync
+from pywa_async.types.groups import GroupJoinRequest as GroupJoinRequestAsync
+from pywa_async.types.groups import (
+    GroupJoinRequestsResult as GroupJoinRequestsResultAsync,
+)
+from pywa_async.types.groups import GroupMessageStatuses as GroupMessageStatusesAsync
+from pywa_async.types.groups import GroupParticipant as GroupParticipantAsync
+from pywa_async.types.media import Audio as AudioAsync
+from pywa_async.types.media import Document as DocumentAsync
+from pywa_async.types.media import Image as ImageAsync
 from pywa_async.types.media import Media as MediaAsync
+from pywa_async.types.media import Sticker as StickerAsync
+from pywa_async.types.media import Video as VideoAsync
 from pywa_async.types.sent_update import (
     InitiatedCall as InitiatedCallAsync,
 )
@@ -211,7 +257,6 @@ def overrides() -> list[tuple[type, type]]:
         (CallbackButtonSync, CallbackButtonAsync),
         (CallbackSelectionSync, CallbackSelectionAsync),
         (MessageStatusSync, MessageStatusAsync),
-        (ChatOpenedSync, ChatOpenedAsync),
         (PhoneNumberChangeSync, PhoneNumberChangeAsync),
         (IdentityChangeSync, IdentityChangeAsync),
         (FlowCompletionSync, FlowCompletionAsync),
@@ -220,6 +265,11 @@ def overrides() -> list[tuple[type, type]]:
         (TemplateQualityUpdateSync, TemplateQualityUpdateAsync),
         (TemplateComponentsUpdateSync, TemplateComponentsUpdateAsync),
         (UserMarketingPreferencesSync, UserMarketingPreferencesAsync),
+        (EditedMessageSync, EditedMessageAsync),
+        (DeletedMessageSync, DeletedMessageAsync),
+        (OutgoingMessageSync, OutgoingMessageAsync),
+        (OutgoingEditedMessageSync, OutgoingEditedMessageAsync),
+        (OutgoingDeletedMessageSync, OutgoingDeletedMessageAsync),
         (CallConnectSync, CallConnectAsync),
         (CallTerminateSync, CallTerminateAsync),
         (CallStatusSync, CallStatusAsync),
@@ -229,6 +279,11 @@ def overrides() -> list[tuple[type, type]]:
         (FlowDetailsSync, FlowDetailsAsync),
         (MediaUrlResponseSync, MediaUrlResponseAsync),
         (MediaSync, MediaAsync),
+        (ImageSync, ImageAsync),
+        (VideoSync, VideoAsync),
+        (DocumentSync, DocumentAsync),
+        (AudioSync, AudioAsync),
+        (StickerSync, StickerAsync),
         (SentMessageSync, SentMessageAsync),
         (SentTemplateSync, SentTemplateAsync),
         (InitiatedCallSync, InitiatedCallAsync),
@@ -241,6 +296,12 @@ def overrides() -> list[tuple[type, type]]:
         (CreatedTemplatesSync, CreatedTemplatesAsync),
         (UpdatedTemplateSync, UpdatedTemplateAsync),
         (QRCodeSync, QRCodeAsync),
+        (GroupParticipantSync, GroupParticipantAsync),
+        (GroupDetailsSync, GroupDetailsAsync),
+        (GroupInviteLinkSync, GroupInviteLinkAsync),
+        (GroupJoinRequestSync, GroupJoinRequestAsync),
+        (GroupJoinRequestsResultSync, GroupJoinRequestsResultAsync),
+        (GroupMessageStatusesSync, GroupMessageStatusesAsync),
     ]
 
 
@@ -252,6 +313,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
     skip_methods = [
         m.__name__
         for m in {
+            WhatsAppSync.upload_media,
             WhatsAppSync.stream_media,
             WhatsAppSync.add_handlers,
             WhatsAppSync.remove_handlers,
@@ -260,21 +322,22 @@ def test_all_methods_are_overwritten_in_async(overrides):
             WhatsAppSync.stop_listening,
             WhatsAppSync.get_flow_request_handler,
             WhatsAppSync.load_handlers_modules,
+            WhatsAppSync.run,
             WhatsAppSync._check_for_async_callback,
             WhatsAppSync._check_for_async_filters,
-            WhatsAppSync._flow_req_cls,
+            WhatsAppSync._resolve_user_identifier,
             GraphAPISync.stream_media_bytes,
-            ServerSync._check_and_prepare_update,
-            ServerSync._after_handling_update,
             ServerSync._delayed_register_callback_url,
             ServerSync._register_callback_url,
             ServerSync._get_handler_type,
-            ServerSync._register_flow_endpoint_callback,
+            ServerSync._register_routes,
+            ServerSync._register_flow_handler_wrapper,
+            ServerSync._setup_and_get_starlette_app,
             _HandlerDecorators.on_message,
             _HandlerDecorators.on_callback_button,
             _HandlerDecorators.on_callback_selection,
             _HandlerDecorators.on_message_status,
-            _HandlerDecorators.on_chat_opened,
+            _HandlerDecorators.on_group_message_statuses,
             _HandlerDecorators.on_phone_number_change,
             _HandlerDecorators.on_identity_change,
             _HandlerDecorators.on_flow_completion,
@@ -288,24 +351,38 @@ def test_all_methods_are_overwritten_in_async(overrides):
             _HandlerDecorators.on_call_status,
             _HandlerDecorators.on_call_permission_update,
             _HandlerDecorators.on_user_marketing_preferences,
+            _HandlerDecorators.on_edited_message,
+            _HandlerDecorators.on_deleted_message,
+            _HandlerDecorators.on_outgoing_message,
+            _HandlerDecorators.on_outgoing_edited_message,
+            _HandlerDecorators.on_outgoing_deleted_message,
+            _HandlerDecorators.on_account_update,
             _HandlerDecorators.on_raw_update,
             ListenersSync._remove_listener,
             BaseUpdate.from_update,
             BaseUpdate.stop_handling,
             BaseUpdate.continue_handling,
             BaseUpdate.handle_again,
+            BaseUserUpdate._get_reply_to,
             ArrivedMedia.from_flow_completion,
             SentMessageSync.from_sent_update,
             SentMessageSync._convert_to,
+            SentMessageSync._extract_recipient,
             FlowRequestSync.decrypt_media,
             FlowRequestSync.token_no_longer_valid,
             FlowRequestSync.respond,
             FlowRequestSync.from_dict,
             FlowResponseSync.to_dict,
             FlowCompletionSync.get_media,
+            UserSync.from_contact,
             UserSync.as_vcard,
             TemplateDetailsSync.to_json,
+            TemplateDetailsSync.validate_params,
+            TemplateDetailsSync.get_component,
+            TemplateDetailsSync.get_components,
             MessageSync._resolve_msg_content,
+            ResultSync.index,
+            ResultSync.count,
         }
     ]
     non_async = {
@@ -314,10 +391,14 @@ def test_all_methods_are_overwritten_in_async(overrides):
         "_register_flow_callback_wrapper",
         "_api_cls",
         "_usr_cls",
+        "_msg_cls",
+        "_group_participant_cls",
+        "_msg_status_cls",
         "_httpx_client",
         "_flow_req_cls",
         "_api_fields",
         "is_quick_reply",
+        "country_code",
     }
     for sync_obj, async_obj in overrides:
         for method_name in filter(
@@ -367,7 +448,9 @@ def test_same_signature(overrides):
             (MessageSync.reply_sticker, ("sticker",)),
             (WhatsAppSync.upload_media, ("media", "download_chunk_size", "dl_session")),
             (WhatsAppSync.update_business_profile, ("profile_picture",)),
+            (WhatsAppSync.update_group_settings, ("profile_picture",)),
             (GraphAPISync.upload_file, ("file",)),
+            (GroupDetailsSync.update, ("profile_picture",)),
         )
     }
     for sync_obj, async_obj in overrides:
@@ -400,6 +483,7 @@ def test_same_signature(overrides):
 
 def test_same_return_annotation(overrides):
     skip_methods = [
+        WhatsAppSync.upload_media.__name__,
         WhatsAppSync.stream_media.__name__,
         GraphAPISync.stream_media_bytes.__name__,
         MediaSync.stream.__name__,
@@ -478,15 +562,3 @@ def _check_docs(
             raise AssertionError(
                 f"Method {method_name} has different docstrings in {async_obj}"
             ) from None
-
-
-def test_all_handlers_to_updates_are_overwritten_in_async(overrides):
-    assert len(WhatsAppSync._handlers_to_updates) == len(
-        WhatsAppAsync._handlers_to_updates
-    ), (
-        "WhatsAppSync._handlers_to_updates and WhatsAppAsync._handlers_to_updates have different lengths"
-    )
-    for handler, update in WhatsAppSync._handlers_to_updates.items():
-        assert WhatsAppAsync._handlers_to_updates[handler] != update, (
-            f"Handler {handler} has the same update class in WhatsAppAsync: {update}"
-        )

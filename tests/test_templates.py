@@ -12,7 +12,7 @@ from pywa.types.templates import *  # noqa: F403
 
 
 def _resolve_example_handles(template: Template):
-    not_uploaded = helpers._filter_not_uploaded_comps(template.components)
+    not_uploaded = helpers.filter_not_uploaded_comps(template.components)
     for comp in not_uploaded:
         comp._handle = comp._example
     return template
@@ -50,12 +50,30 @@ def test_templates_to_json(caplog):
                 )
 
 
-def test_template_text_examples_params():
+def test_template_text_params_both_pos_and_named_examples():
     with pytest.raises(ValueError):
         HeaderText.params("pos", named="named")
 
 
 def test_template_text_examples_positionals():
+    with pytest.raises(
+        ValueError,
+        match="Text contains placeholders {'1'} but no examples were provided.",
+    ):
+        HeaderText("example {{1}}")
+
+    with pytest.raises(
+        ValueError,
+        match="Mismatched positional placeholders. Expected {'1|2', '1|2'} based on 2 provided examples, but found {'1'} in text.",
+    ):
+        HeaderText("example {{1}} {{2}}", "one")
+
+    with pytest.raises(
+        ValueError,
+        match="Found named placeholders {'named_param'} in text, but positional examples were provided.",
+    ):
+        HeaderText("example {{named_param}}", "example")
+
     h = HeaderText(
         "Hi {{1}}, this is a text template number {{2}}",
         "David",
@@ -100,6 +118,25 @@ def test_template_text_examples_positionals():
 
 
 def test_template_text_examples_named():
+    with pytest.raises(
+        ValueError,
+        match="Text contains placeholders {'name'} but no examples were provided.",
+    ):
+        BodyText("Hi {{name}}")
+
+    with pytest.raises(
+        ValueError, match="Named parameters mismatch: missing examples for {'number'}"
+    ):
+        BodyText("Hi {{name}}, this is a text template number {{number}}", name="David")
+
+    with pytest.raises(
+        ValueError,
+        match="Found positional placeholders {'1|2', '1|2'} in text, but named examples were provided.",
+    ):
+        BodyText(
+            "Hi {{1}}, this is a text template number {{2}}", name="David", number=1
+        )
+
     b = BodyText(
         "Hi {{name}}, this is a text template number {{number}}",
         name="David",
@@ -923,4 +960,164 @@ def test_validate_template_params():
                 BodyText.params("Extra Body"),
                 QuickReplyButton.params(callback_data="extra", index=0),
             ]
+        )
+
+
+def test_template_get_header():
+    t = Template(
+        name="test_template_get_header",
+        language=TemplateLanguage.ENGLISH_US,
+        category=TemplateCategory.MARKETING,
+        components=[
+            HeaderText(text="Welcome {{user}}", user="Customer"),
+        ],
+    )
+    assert isinstance(t.get_component(HeaderText), HeaderText)
+
+
+def test_template_get_body():
+    t = Template(
+        name="test_template_get_body",
+        language=TemplateLanguage.ENGLISH_US,
+        category=TemplateCategory.MARKETING,
+        components=[
+            BodyText(
+                text="Your order {{order_id}} is confirmed.",
+                order_id="12345",
+            ),
+        ],
+    )
+    assert isinstance(t.get_component(BodyText), BodyText)
+
+
+def test_template_get_component_from_buttons():
+    t = Template(
+        name="test_template_get_component",
+        language=TemplateLanguage.ENGLISH_US,
+        category=TemplateCategory.MARKETING,
+        components=[
+            Buttons(
+                buttons=[
+                    QuickReplyButton(text="Support"),
+                ]
+            ),
+        ],
+    )
+    assert isinstance(t.get_component(QuickReplyButton), QuickReplyButton)
+
+
+def test_template_get_component_from_carousel():
+    t = Template(
+        name="test_template_get_component",
+        language=TemplateLanguage.ENGLISH_US,
+        category=TemplateCategory.MARKETING,
+        components=[
+            Carousel(
+                cards=[
+                    CarouselCard(
+                        components=[
+                            HeaderText(text="Welcome {{user}}", user="Customer"),
+                        ]
+                    )
+                ]
+            )
+        ],
+    )
+    assert isinstance(t.get_component(HeaderText), HeaderText)
+
+
+def test_template_get_components():
+    t = Template(
+        name="test_template_get_component",
+        language=TemplateLanguage.ENGLISH_US,
+        category=TemplateCategory.MARKETING,
+        components=[
+            Buttons(
+                buttons=[
+                    QuickReplyButton(text="1"),
+                    QuickReplyButton(text="2"),
+                ]
+            ),
+        ],
+    )
+    comps = t.get_components(QuickReplyButton)
+    assert len(comps) == 2
+    for component in comps:
+        assert isinstance(component, QuickReplyButton)
+
+
+def test_template_get_components_from_carousel():
+    t = Template(
+        name="test_template_get_components",
+        language=TemplateLanguage.ENGLISH_US,
+        category=TemplateCategory.MARKETING,
+        components=[
+            Carousel(
+                cards=[
+                    CarouselCard(
+                        components=[
+                            HeaderText(text="1"),
+                        ]
+                    ),
+                    CarouselCard(
+                        components=[
+                            HeaderText(text="2"),
+                        ]
+                    ),
+                ]
+            )
+        ],
+    )
+    comps = t.get_components(HeaderText)
+    assert len(comps) == 2
+    for component in comps:
+        assert isinstance(component, HeaderText)
+
+
+def test_url_button_comp():
+    URLButton(
+        text="Visit Website",
+        url="https://example.com",
+    )
+    URLButton(
+        text="Visit Website",
+        url="https://example.com?ref={{1}}",
+        example="https://example.com?ref=wa",
+    )
+    with pytest.raises(
+        ValueError, match="^URLButton url supports a maximum of 1 variable.*"
+    ):
+        URLButton(
+            text="Visit Website",
+            url="https://example.com?ref={{1}}&utm={{2}}",
+            example="https://example.com?ref=wa",
+        )
+
+    with pytest.raises(
+        ValueError,
+        match=r"^The URL variable \{\{1\}\} must be appended to the very end of the URL string.*",
+    ):
+        URLButton(
+            text="Visit Website",
+            url="https://example.com/{{1}}/to",
+            example="https://example.com/path/to",
+        )
+
+    with pytest.raises(
+        ValueError,
+        match="^An 'example' must be provided because the URL contains a variable.$",
+    ):
+        URLButton(
+            text="Visit Website",
+            url="https://example.com?ref={{1}}",
+        )
+
+    with pytest.raises(
+        ValueError,
+        match="^An 'example' was provided, but the URL does not contain any variables.$",
+    ):
+        URLButton(
+            text="Visit Website",
+            url="https://example.com",
+            example="https://example.com?ref=wa&utm=123",
         )

@@ -86,6 +86,8 @@ The client allows you to send a wide variety of messages:
      - Send a single product
    * - :meth:`~WhatsApp.send_products`
      - Send multiple products
+   * - :meth:`~WhatsApp.send_carousel`
+     - Send a carousel message
    * - :meth:`~WhatsApp.send_reaction`
      - React to a message
    * - :meth:`~WhatsApp.remove_reaction`
@@ -115,8 +117,6 @@ Register event handlers to listen for updates:
      - Handle list or menu selections
    * - :meth:`~WhatsApp.on_message_status`
      - Track message delivery, read, and failure statuses
-   * - :meth:`~WhatsApp.on_chat_opened`
-     - Detect when a user opens a chat
    * - :meth:`~WhatsApp.on_flow_request`
      - Handle incoming flow requests
    * - :meth:`~WhatsApp.on_flow_completion`
@@ -143,6 +143,18 @@ Register event handlers to listen for updates:
      - Handle template quality changes
    * - :meth:`~WhatsApp.on_template_components_update`
      - Handle template components updates
+   * - :meth:`~WhatsApp.on_edited_message`
+     - Handle edited messages
+   * - :meth:`~WhatsApp.on_deleted_message`
+     - Handle deleted messages
+   * - :meth:`~WhatsApp.on_outgoing_message`
+     - Handle outgoing messages
+   * - :meth:`~WhatsApp.on_outgoing_edited_message`
+     - Handle outgoing edited messages
+   * - :meth:`~WhatsApp.on_outgoing_deleted_message`
+     - Handle outgoing deleted messages
+   * - :meth:`~WhatsApp.on_account_update`
+     - Handle business account updates
    * - :meth:`~WhatsApp.on_raw_update`
      - Handle raw updates from WhatsApp
    * - :meth:`~WhatsApp.add_handlers`
@@ -278,6 +290,8 @@ Manage business account and profile:
      - Description
    * - :meth:`~WhatsApp.get_business_account`
      - Get business account details
+   * - :meth:`~WhatsApp.update_business_account_settings`
+     - Update business account settings
    * - :meth:`~WhatsApp.get_business_profile`
      - Get business profile
    * - :meth:`~WhatsApp.get_business_phone_numbers`
@@ -296,11 +310,14 @@ Manage business account and profile:
      - Get phone number settings
    * - :meth:`~WhatsApp.update_business_phone_number_settings`
      - Update phone number settings
-   * - :meth:`~WhatsApp.register_phone_number`
-     - Register a new phone number
-   * - :meth:`~WhatsApp.deregister_phone_number`
-     - Deregister a phone number
-
+   * - :meth:`~WhatsApp.set_username`
+     - Set a username for the business account
+   * - :meth:`~WhatsApp.get_current_username`
+     - Get the current username of the business account
+   * - :meth:`~WhatsApp.get_reserved_usernames`
+     - Get a list of reserved usernames for the business account
+   * - :meth:`~WhatsApp.delete_username`
+     - Delete the current username of the business account
 
 Managing Users
 --------------
@@ -375,6 +392,42 @@ Calls
    * - :meth:`~WhatsApp.terminate_call`
      - Terminate a call
 
+Groups
+------
+
+.. list-table::
+   :widths: 40 60
+   :header-rows: 1
+
+   * - Method
+     - Description
+   * - :meth:`~WhatsApp.create_group`
+     - Create a group
+   * - :meth:`~WhatsApp.get_group`
+     - Get details of a group
+   * - :meth:`~WhatsApp.get_groups`
+     - List all groups
+   * - :meth:`~WhatsApp.delete_group`
+     - Delete a group
+   * - :meth:`~WhatsApp.get_group_join_requests`
+     - Get pending group join requests
+   * - :meth:`~WhatsApp.approve_group_join_request`
+     - Approve a group join request
+   * - :meth:`~WhatsApp.reject_group_join_requests`
+     - Reject a group join request
+   * - :meth:`~WhatsApp.update_group_settings`
+     - Update group details (name, description, picture, etc.)
+   * - :meth:`~WhatsApp.remove_group_participants`
+     - Remove participants from a group
+   * - :meth:`~WhatsApp.get_group_invite_link`
+     - Get group invite link
+   * - :meth:`~WhatsApp.reset_group_invite_link`
+     - Reset group invite link
+   * - :meth:`~WhatsApp.pin_message`
+     - Pin a message in a group
+   * - :meth:`~WhatsApp.unpin_message`
+     - Unpin a message in a group
+
 
 Server
 ------
@@ -387,13 +440,48 @@ Integrate with webhook events manually:
 
    * - Method
      - Description
-   * - :meth:`~WhatsApp.webhook_update_handler`
-     - Handle webhook updates manually
+   * - :meth:`~WhatsApp.run`
+     - Start a webhook server to receive updates
    * - :meth:`~WhatsApp.webhook_challenge_handler`
      - Handle webhook challenge manually
+   * - :meth:`~WhatsApp.webhook_update_validator`
+     - Validate incoming webhook updates
+   * - :meth:`~WhatsApp.webhook_update_handler`
+     - Handle webhook updates manually
    * - :meth:`~WhatsApp.get_flow_request_handler`
      - Retrieve flow request handler
 
+Partner tools
+--------------
+
+.. list-table::
+   :widths: 40 60
+   :header-rows: 1
+
+   * - Method
+     - Description
+   * - :meth:`~WhatsApp.create_phone_number`
+     - Create a phone number on a WhatsApp Business Account.
+   * - :meth:`~WhatsApp.request_verification_code`
+     - Request a verification code for a phone number.
+   * - :meth:`~WhatsApp.verify_phone_number`
+     - Verify a phone number with a verification code.
+   * - :meth:`~WhatsApp.register_phone_number`
+     - Register a new phone number
+   * - :meth:`~WhatsApp.deregister_phone_number`
+     - Deregister a phone number
+   * - :meth:`~WhatsApp.get_shared_business_accounts`
+     - Get shared business accounts
+   * - :meth:`~WhatsApp.get_owned_business_accounts`
+     - Get owned business account
+   * - :meth:`~WhatsApp.override_waba_callback_url`
+     - Override WABA callback URL
+   * - :meth:`~WhatsApp.delete_waba_callback_url`
+     - Delete WABA callback URL
+   * - :meth:`~WhatsApp.override_phone_callback_url`
+     - Override phone callback URL
+   * - :meth:`~WhatsApp.delete_phone_callback_url`
+     - Delete phone callback URL
 
 Others
 ------
@@ -408,15 +496,6 @@ Others
      - Retrieve app access token
    * - :meth:`~WhatsApp.set_app_callback_url`
      - Set app callback URL
-   * - :meth:`~WhatsApp.override_waba_callback_url`
-     - Override WABA callback URL
-   * - :meth:`~WhatsApp.delete_waba_callback_url`
-     - Delete WABA callback URL
-   * - :meth:`~WhatsApp.override_phone_callback_url`
-     - Override phone callback URL
-   * - :meth:`~WhatsApp.delete_phone_callback_url`
-     - Delete phone callback URL
-
 
 .. toctree::
    client_reference

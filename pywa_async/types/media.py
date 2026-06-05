@@ -13,10 +13,9 @@ __all__ = [
     "UploadedBy",
 ]
 
-import dataclasses
 import datetime
 import pathlib
-from typing import TYPE_CHECKING, AsyncGenerator
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Awaitable, Coroutine, Generator
 
 from pywa.types.media import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.media import (
@@ -69,7 +68,6 @@ class _MediaActionsAsync:
         *,
         path: str | pathlib.Path | None = None,
         filename: str | None = None,
-        in_memory: None = None,
         chunk_size: int | None = None,
         **httpx_kwargs,
     ) -> pathlib.Path:
@@ -77,6 +75,7 @@ class _MediaActionsAsync:
         Download a media file from WhatsApp servers.
 
         - Same as :func:`~pywa.client.WhatsApp.download_media` with ``media_url=media.get_media_url()``
+        - Use :func:`~pywa.types.media.Media.get_media_bytes` if you want to get the file as bytes instead of saving it to disk.
 
         >>> from pywa_async import WhatsApp, types, filters
         >>> wa = WhatsApp(...)
@@ -89,7 +88,6 @@ class _MediaActionsAsync:
             path: The path where to save the file (if not provided, the current working directory will be used).
             filename: The name of the file to save (if not provided, it will be extracted from the ``Content-Disposition`` header or a SHA256 hash of the URL will be used).
             chunk_size: The size (in bytes) of each chunk to read when downloading the media (default: ``64KB``).
-            in_memory: Deprecated: Use :py:func:`~pywa.client.WhatsApp.get_media_bytes` or :py:func:`~pywa.client.WhatsApp.stream_media` instead. If True, the file will be returned as bytes instead of being saved to disk.
             **httpx_kwargs: Additional arguments to pass to ``httpx.get(...)``.
 
         Returns:
@@ -99,7 +97,6 @@ class _MediaActionsAsync:
             url=await self.get_media_url(),
             path=path,
             filename=filename,
-            in_memory=in_memory,
             chunk_size=chunk_size,
             **httpx_kwargs,
         )
@@ -109,6 +106,7 @@ class _MediaActionsAsync:
         Get the media file as bytes.
 
         - Same as :func:`~pywa.client.WhatsApp.get_media_bytes` with ``media_url=media.get_media_url()``
+        - Use :func:`~pywa.types.media.Media.stream` if you want to stream the file as bytes instead of getting it all at once.
 
         >>> from pywa_async import WhatsApp, types, filters
         >>> wa = WhatsApp(...)
@@ -135,15 +133,17 @@ class _MediaActionsAsync:
         Stream the media file as bytes.
 
         - Same as :func:`~pywa.client.WhatsApp.stream_media` with ``media_url=media.get_media_url()``
+        - Use :func:`~pywa.types.media.Media.get_bytes` if you want to get the whole file as bytes.
 
         >>> from pywa_async import WhatsApp, types, filters
+        >>> import httpx
 
         >>> wa = WhatsApp(...)
 
         >>> @wa.on_message(filters.document)
         ... async def on_message(_: WhatsApp, msg: types.Message):
         ...     async with httpx.AsyncClient() as client:
-        ...        await client.post('http://example.com/upload', content=msg.document.stream())
+        ...        await client.post('https://example.com/upload', content=await msg.document.stream())
 
         Args:
             chunk_size: The size (in bytes) of each chunk to read (default: ``64KB``).
@@ -221,19 +221,58 @@ class Media(_MediaActionsAsync, _Media):
         await self.delete()
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class PendingMedia(Awaitable[Media]):
+    """
+    A wrapper for media upload operations that supports both direct awaiting
+    and asynchronous context management.
+
+    This class defers the execution of the upload until the object is either
+    awaited or entered via an ``async with`` block. It caches the result
+    to ensure that the upload occurs only once.
+    """
+
+    def __init__(self, coro: Coroutine[Any, Any, Media]):
+        self._coro = coro
+        self._media: Media | None = None
+
+    async def _handle_caching(self) -> "Media":
+        if self._media is None:
+            if self._coro is None:
+                raise RuntimeError("Media upload was already attempted or cleared.")
+            try:
+                self._media = await self._coro
+            finally:
+                self._coro = None
+        return self._media
+
+    def __await__(self) -> Generator[Any, None, Media]:
+        return self._handle_caching().__await__()
+
+    async def __aenter__(self) -> "Media":
+        media = await self
+        return await media.__aenter__()
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        if self._media:
+            await self._media.__aexit__(exc_type, exc_value, traceback)
+
+
 class Image(Media, _Image):
     """
-    Represents an received image.
+    Represents a received image.
 
     Attributes:
         id: The ID of the file (can be used to download or re-send the image).
         sha256: The SHA256 hash of the image.
         mime_type: The MIME type of the image.
+        url: The URL of the image (Use :meth:`~pywa.types.media.Media.get_bytes`/:meth:`~pywa.types.media.Media.stream`/:meth:`~pywa.types.media.Media.download` to access the image file).
+        caption: The caption of the image.
+        uploaded_by: Who uploaded the image.
+        uploaded_at: The timestamp when the image was uploaded (in UTC).
+        uploaded_to: The phone ID the image was uploaded to (optional).
     """
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Video(Media, _Video):
     """
     Represents a video.
@@ -242,10 +281,14 @@ class Video(Media, _Video):
         id: The ID of the file (can be used to download or re-send the video).
         sha256: The SHA256 hash of the video.
         mime_type: The MIME type of the video.
+        url: The URL of the video (Use :meth:`~pywa.types.media.Media.get_bytes`/:meth:`~pywa.types.media.Media.stream`/:meth:`~pywa.types.media.Media.download` to access the video file).
+        caption: The caption of the video.
+        uploaded_by: Who uploaded the video.
+        uploaded_at: The timestamp when the video was uploaded (in UTC).
+        uploaded_to: The phone ID the video was uploaded to (optional).
     """
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Sticker(Media, _Sticker):
     """
     Represents a sticker.
@@ -255,10 +298,13 @@ class Sticker(Media, _Sticker):
         sha256: The SHA256 hash of the sticker.
         mime_type: The MIME type of the sticker.
         animated: Whether the sticker is animated.
+        url: The URL of the sticker (Use :meth:`~pywa.types.media.Media.get_bytes`/:meth:`~pywa.types.media.Media.stream`/:meth:`~pywa.types.media.Media.download` to access the sticker file).
+        uploaded_by: Who uploaded the sticker.
+        uploaded_at: The timestamp when the sticker was uploaded (in UTC).
+        uploaded_to: The phone ID the sticker was uploaded to (optional).
     """
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Document(Media, _Document):
     """
     Represents a document.
@@ -268,10 +314,14 @@ class Document(Media, _Document):
         sha256: The SHA256 hash of the document.
         mime_type: The MIME type of the document.
         filename: The filename of the document (optional).
+        url: The URL of the document (Use :meth:`~pywa.types.media.Media.get_bytes`/:meth:`~pywa.types.media.Media.stream`/:meth:`~pywa.types.media.Media.download` to access the document file).
+        caption: The caption of the document.
+        uploaded_by: Who uploaded the document.
+        uploaded_at: The timestamp when the document was uploaded (in UTC).
+        uploaded_to: The phone ID the document was uploaded to (optional).
     """
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Audio(Media, _Audio):
     """
     Represents an audio.
@@ -281,10 +331,13 @@ class Audio(Media, _Audio):
         sha256: The SHA256 hash of the audio.
         mime_type: The MIME type of the audio.
         voice: Whether the audio is a voice message or just an audio file.
+        url: The URL of the audio (Use :meth:`~pywa.types.media.Media.get_bytes`/:meth:`~pywa.types.media.Media.stream`/:meth:`~pywa.types.media.Media.download` to access the audio file).
+        uploaded_by: Who uploaded the audio.
+        uploaded_at: The timestamp when the audio was uploaded (in UTC).
+        uploaded_to: The phone ID the audio was uploaded to (optional).
     """
 
 
-@dataclasses.dataclass(frozen=True, slots=True)
 class MediaURL(_MediaActionsAsync, _MediaURL):
     """
     Represents a media response.

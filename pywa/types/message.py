@@ -1,22 +1,30 @@
 from __future__ import annotations
 
 import pathlib
-import warnings
 
 """This module contains the types related to messages."""
 
-__all__ = ["Message"]
+__all__ = [
+    "Message",
+    "EditedMessage",
+    "DeletedMessage",
+    "OutgoingMessage",
+    "OutgoingEditedMessage",
+    "OutgoingDeletedMessage",
+]
 
 import dataclasses
 import datetime
-from typing import TYPE_CHECKING, ClassVar, Iterable
+from typing import TYPE_CHECKING, ClassVar, Generator, Iterable, Type
 
+from .. import _helpers as helpers
 from ..errors import WhatsAppError
-from .base_update import BaseUserUpdate, RawUpdate  # noqa
+from .base_update import BaseUserUpdate, RawUpdate, _PinUnpinActions  # noqa
 from .callback import Button, FlowButton, SectionList, URLButton, VoiceCallButton
+from .chat import Chat, ChatType
 from .media import Audio, Document, Image, Sticker, Video
 from .others import (
-    Contact,
+    ContactList,
     Location,
     MessageType,
     Metadata,
@@ -27,6 +35,7 @@ from .others import (
     ReplyToMessage,
     Unsupported,
 )
+from .user import User
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
@@ -34,7 +43,7 @@ if TYPE_CHECKING:
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Message(BaseUserUpdate):
+class Message(BaseUserUpdate, _PinUnpinActions):
     """
     A message received from a user.
 
@@ -45,6 +54,7 @@ class Message(BaseUserUpdate):
         metadata: The metadata of the message (to which phone number it was sent).
         type: The message type (See :class:`MessageType`).
         from_user: The user who sent the message.
+        chat: The chat where the message was sent (private or group).
         timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
         reply_to_message: The message to which this message is a reply (if any).
         forwarded: Whether the message was forwarded.
@@ -56,7 +66,7 @@ class Message(BaseUserUpdate):
         document: The document of the message.
         audio: The audio of the message.
         voice: The voice note of the message (shorthand for ``audio`` if it's a voice note).
-        caption: The caption of the message (Optional, only available for image video and document messages).
+        caption: The caption of the message media (Optional, only available for image video and document messages).
         reaction: The reaction of the message.
         location: The location of the message.
         contacts: The contacts of the message.
@@ -69,6 +79,7 @@ class Message(BaseUserUpdate):
 
     type: MessageType
     reply_to_message: ReplyToMessage | None
+    chat: Chat
     forwarded: bool
     forwarded_many_times: bool
     text: str | None = None
@@ -77,10 +88,9 @@ class Message(BaseUserUpdate):
     sticker: Sticker | None = None
     document: Document | None = None
     audio: Audio | None = None
-    caption: str | None = None
     reaction: Reaction | None = None
     location: Location | None = None
-    contacts: tuple[Contact, ...] | None = None
+    contacts: ContactList | None = None
     order: Order | None = None
     referral: Referral | None = None
     unsupported: Unsupported | None = None
@@ -95,17 +105,7 @@ class Message(BaseUserUpdate):
     }
     _txt_fields = ("text", "caption")
     _webhook_field = "messages"
-
-    @property
-    def system(self) -> None:
-        """Backwards compatibility for the ``system`` attr."""
-        warnings.warn(
-            "The `system` property is deprecated and will be removed in a future version. "
-            "Listen to `PhoneNumberChange` and `IdentityChange` updates instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return None
+    _messages_field: ClassVar[str] = "messages"
 
     @property
     def voice(self) -> Audio | None:
@@ -113,6 +113,14 @@ class Message(BaseUserUpdate):
         if self.audio and self.audio.voice:
             return self.audio
         return None
+
+    @property
+    def caption(self) -> str | None:
+        """The caption of the message media (if any). Only available for image, video and document messages."""
+        try:
+            return self.media.caption
+        except AttributeError:
+            return None
 
     @property
     def message_id_to_reply(self) -> str:
@@ -139,19 +147,24 @@ class Message(BaseUserUpdate):
         """
         return self.reply_to_message is not None or self.reaction is not None
 
+    def _get_reply_to(self, private: bool = False) -> str:
+        if private and self.chat.type == ChatType.GROUP:
+            return self.chat.id
+        return self._internal_sender
+
     @classmethod
     def _resolve_msg_content(
         cls,
         *,
         client: WhatsApp,
         msg_type: MessageType,
-        msg: dict,
+        content: dict,
         timestamp: datetime.datetime,
         recipient: str,
     ) -> dict:
         match msg_type:
             case MessageType.TEXT:
-                return {msg_type.value: msg[msg_type.value]["body"]}
+                return {msg_type.value: content[msg_type.value]["body"]}
             case (
                 MessageType.IMAGE
                 | MessageType.VIDEO
@@ -162,67 +175,58 @@ class Message(BaseUserUpdate):
                 return {
                     msg_type.value: cls._media_objs[msg_type.value].from_dict(
                         client=client,
-                        data=msg[msg_type.value],
+                        data=content[msg_type.value],
                         arrived_at=timestamp,
                         received_to=recipient,
                     )
                 }
             case MessageType.REACTION:
-                return {msg_type.value: Reaction.from_dict(msg[msg_type.value])}
+                return {msg_type.value: Reaction.from_dict(content[msg_type.value])}
             case MessageType.LOCATION:
-                return {msg_type.value: Location.from_dict(msg[msg_type.value])}
+                return {msg_type.value: Location.from_dict(content[msg_type.value])}
             case MessageType.CONTACTS:
-                return {
-                    msg_type.value: tuple(
-                        Contact.from_dict(c) for c in msg[msg_type.value]
-                    )
-                }
+                return {msg_type.value: ContactList(contacts=content)}
             case MessageType.ORDER:
-                return {msg_type.value: Order.from_dict(msg[msg_type.value])}
+                return {msg_type.value: Order.from_dict(content[msg_type.value])}
             case MessageType.UNSUPPORTED:
                 return (
-                    {msg_type.value: Unsupported(type=msg["unsupported"]["type"])}
-                    if "unsupported" in msg
+                    {msg_type.value: Unsupported(type=content["unsupported"]["type"])}
+                    if "unsupported" in content
                     else {}
                 )
             case _:
                 return {}
 
     @classmethod
-    def from_update(cls, client: WhatsApp, update: RawUpdate) -> Message:
+    def from_update(
+        cls, client: WhatsApp, update: RawUpdate, *, is_edit: bool = False
+    ) -> Message:
         msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
-            "messages"
+            cls._messages_field
         ][0]
+        content = msg["edit"]["message"] if is_edit else msg
         error = value.get("errors", msg.get("errors", (None,)))[0]
-        msg_type = msg["type"]
-        context = msg.get("context", {})
+        msg_type = content["type"]
+        context = content.get("context", {})
         metadata = Metadata.from_dict(value["metadata"])
-        timestamp = datetime.datetime.fromtimestamp(
-            int(msg["timestamp"]),
-            datetime.timezone.utc,
-        )
+        timestamp = helpers.timestamp_to_datetime(msg["timestamp"])
         msg_type = MessageType(msg_type)
-        msg_content = cls._resolve_msg_content(
-            client=client,
-            msg_type=msg_type,
-            msg=msg,
-            timestamp=timestamp,
-            recipient=metadata.phone_number_id,
-        )
-        try:
-            usr = client._usr_cls.from_dict(value["contacts"][0], client=client)
-        except KeyError:
-            usr = client._usr_cls(
-                wa_id=msg["from"], name=None, _client=client
-            )  # some messages don't have contacts
+        user = client._usr_cls.from_contact(value["contacts"][0], client=client)
         return cls(
             _client=client,
             raw=update,
             waba_id=entry["id"],
-            id=msg["id"],
+            id=msg["edit"]["original_message_id"] if is_edit else content["id"],
             type=msg_type,
-            **msg_content,
-            from_user=usr,
+            **cls._resolve_msg_content(
+                client=client,
+                msg_type=msg_type,
+                content=content,
+                timestamp=timestamp,
+                recipient=metadata.phone_number_id,
+            ),
+            from_user=user,
+            chat=Chat.from_message(msg=msg, user=user),
             timestamp=timestamp,
             metadata=metadata,
             forwarded=context.get("forwarded", False)
@@ -230,9 +234,6 @@ class Message(BaseUserUpdate):
             forwarded_many_times=context.get("frequently_forwarded", False),
             reply_to_message=ReplyToMessage.from_dict(context)
             if context.get("id")
-            else None,
-            caption=msg.get(msg_type, {}).get("caption")
-            if msg_type in cls._media_objs
             else None,
             referral=Referral.from_dict(msg["referral"]) if "referral" in msg else None,
             error=WhatsAppError.from_dict(error=error) if error is not None else None,
@@ -260,22 +261,27 @@ class Message(BaseUserUpdate):
         self,
         filepath: str | None = None,
         filename: str | None = None,
-        in_memory: None = False,
         *,
         chunk_size: int | None = None,
         **httpx_kwargs,
     ) -> pathlib.Path:
         """
-        Download a media file from WhatsApp servers (image, video, sticker, document or audio).
+        Download the media of the message to the specified path.
 
         - Shortcut for ``message.media.download(...)``, ``message.image.download(...)`` etc.
-        - Use :py:func:`~pywa.client.WhatsApp.get_media_bytes` or :py:func:`~pywa.client.WhatsApp.stream_media` instead of ``in_memory=True``.
+        - Use :py:meth:`~pywa.types.message.Message.get_media_bytes` if you want to get the file as bytes instead of saving it to disk.
+
+        >>> from pywa import WhatsApp, types, filters
+        >>> wa = WhatsApp(...)
+
+        >>> @wa.on_message(filters.image)
+        ... def on_message(_: WhatsApp, msg: types.Message):
+        ...     msg.download_media(path=pathlib.Path('/path/to/save'), filename='my_image.jpg')
 
         Args:
             filepath: The path where to save the file (if not provided, the current working directory will be used).
             filename: The name of the file to save (if not provided, it will be extracted from the ``Content-Disposition`` header or a SHA256 hash of the URL will be used).
             chunk_size: The size (in bytes) of each chunk to read when downloading the media (default: ``64KB``).
-            in_memory: Deprecated: Use :py:func:`~pywa.client.WhatsApp.get_media_bytes` or :py:func:`~pywa.client.WhatsApp.stream_media` instead. If True, the file will be returned as bytes instead of being saved to disk.
             **httpx_kwargs: Additional arguments to pass to ``httpx.get(...)``.
 
         Returns:
@@ -288,10 +294,74 @@ class Message(BaseUserUpdate):
             return self.media.download(
                 path=filepath,
                 filename=filename,
-                in_memory=in_memory,
                 chunk_size=chunk_size,
                 **httpx_kwargs,
             )
+        except AttributeError:
+            raise ValueError("Message does not contain any media.") from None
+
+    def stream_media(
+        self, chunk_size: int | None = None, **httpx_kwargs
+    ) -> Generator[bytes]:
+        """
+        Stream the media of the message as bytes.
+
+        - Shortcut for ``message.media.stream(...)``, ``message.image.stream(...)`` etc.
+        - Use :py:meth:`~pywa.types.message.Message.get_media_bytes` if you want to get the whole file as bytes.
+
+        >>> from pywa import WhatsApp, types, filters
+        >>> import httpx
+
+        >>> wa = WhatsApp(...)
+
+        >>> @wa.on_message(filters.document)
+        ... def on_message(_: WhatsApp, msg: types.Message):
+        ...     with httpx.Client() as client:
+        ...        client.post('https://example.com/upload', content=msg.stream_media())
+
+        Args:
+            chunk_size: The size (in bytes) of each chunk to read (default: ``64KB``).
+            **httpx_kwargs: Additional arguments to pass to ``httpx.get(...)``.
+
+        Returns:
+            An iterator that yields chunks of the media file as bytes.
+
+        Raises:
+            ValueError: If the message does not contain any media.
+        """
+        try:
+            return self.media.stream(
+                chunk_size=chunk_size,
+                **httpx_kwargs,
+            )
+        except AttributeError:
+            raise ValueError("Message does not contain any media.") from None
+
+    def get_media_bytes(self, **httpx_kwargs) -> bytes:
+        """
+        Get the media of the message as bytes.
+
+        - Shortcut for ``message.media.get_bytes(...)``, ``message.image.get_bytes(...)`` etc.
+        - Use :py:meth:`~pywa.types.message.Message.stream_media` if you want to stream the file as bytes instead of getting it all at once.
+
+        >>> from pywa import WhatsApp, types, filters
+        >>> wa = WhatsApp(...)
+
+        >>> @wa.on_message(filters.document)
+        ... def on_message(_: WhatsApp, msg: types.Message):
+        ...     doc_bytes = msg.get_media_bytes()
+
+        Args:
+            **httpx_kwargs: Additional arguments to pass to ``httpx.get(...)``.
+
+        Returns:
+            The media file as bytes.
+
+        Raises:
+            ValueError: If the message does not contain any media.
+        """
+        try:
+            return self.media.get_bytes(**httpx_kwargs)
         except AttributeError:
             raise ValueError("Message does not contain any media.") from None
 
@@ -456,3 +526,194 @@ class Message(BaseUserUpdate):
                 )
             case _:
                 raise ValueError(f"Message of type {self.type} cannot be copied.")
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class EditedMessage(BaseUserUpdate):
+    """
+    A message that has been edited.
+
+    Attributes:
+        id: The ID of the edit event (not the original message ID).
+        original_message_id: The original message ID before the edit.
+        type: The type of the edit (See :class:`MessageType`).
+        chat: The chat where the message was edited (private or group).
+        metadata: The metadata of the message (to which phone number it was sent).
+        from_user: The user who edit the message.
+        timestamp: The timestamp when the message was edited (in UTC).
+        message: The updated version of the message after the edit.
+    """
+
+    _msg_cls: ClassVar[Type[Message]] = Message
+    type: MessageType
+    chat: Chat
+    original_message_id: str
+    message: Message
+
+    _webhook_field = "messages"
+    _messages_field: ClassVar[str] = "messages"
+
+    @classmethod
+    def from_update(cls, client: WhatsApp, update: RawUpdate) -> EditedMessage:
+        msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
+            cls._messages_field
+        ][0]
+        user = client._usr_cls.from_contact(value["contacts"][0], client=client)
+        return cls(
+            _client=client,
+            raw=update,
+            waba_id=entry["id"],
+            id=msg["id"],
+            original_message_id=msg["edit"]["original_message_id"],
+            type=MessageType(msg["edit"]["message"]["type"]),
+            from_user=user,
+            chat=Chat.from_message(msg=msg, user=user),
+            timestamp=helpers.timestamp_to_datetime(msg["timestamp"]),
+            metadata=Metadata.from_dict(value["metadata"]),
+            message=cls._msg_cls.from_update(client, update, is_edit=True),
+        )
+
+    @property
+    def message_id_to_reply(self) -> str:
+        """
+        The ID of the message to reply to.
+
+        If you want to ``wa.send_x`` with ``reply_to_message_id`` in order to reply to a message, use this property
+        instead of ``id`` to prevent errors.
+        """
+        return self.original_message_id
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class DeletedMessage(BaseUserUpdate):
+    """
+    A message that has been deleted (revoked) by a user.
+
+    Attributes:
+        id: The ID of the revoke event (not the original message ID).
+        original_message_id: The ID of the message that was deleted.
+        type: The type of the update (always :class:`MessageType.REVOKE`).
+        chat: The chat where the message was deleted (private or group).
+        metadata: The metadata of the message (to which phone number it was sent).
+        from_user: The user who deleted the message.
+        timestamp: The timestamp when the message was deleted (in UTC).
+    """
+
+    type: MessageType
+    chat: Chat
+    original_message_id: str
+
+    _webhook_field = "messages"
+    _messages_field: ClassVar[str] = "messages"
+
+    @classmethod
+    def from_update(cls, client: WhatsApp, update: RawUpdate) -> DeletedMessage:
+        msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
+            cls._messages_field
+        ][0]
+        user = client._usr_cls.from_contact(value["contacts"][0], client=client)
+        return cls(
+            _client=client,
+            raw=update,
+            waba_id=entry["id"],
+            id=msg["id"],
+            original_message_id=msg["revoke"]["original_message_id"],
+            type=MessageType.REVOKE,
+            from_user=user,
+            chat=Chat.from_message(msg=msg, user=user),
+            timestamp=helpers.timestamp_to_datetime(msg["timestamp"]),
+            metadata=Metadata.from_dict(value["metadata"]),
+        )
+
+    @property
+    def message_id_to_reply(self) -> str:
+        """
+        The ID of the message to reply to.
+
+        If you want to ``wa.send_x`` with ``reply_to_message_id`` in order to reply to a message, use this property
+        instead of ``id`` to prevent errors.
+        """
+        return self.original_message_id
+
+
+class _Outgoing:
+    from_user: User
+
+    @property
+    def to_user(self) -> User:
+        """The recipient of the message."""
+        return self.from_user
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class OutgoingMessage(_Outgoing, Message):
+    """
+    A message that is sent by the business (Also known as `Echo message`).
+
+    Attributes:
+        id: The message ID (If you want to reply to the message, use ``message_id_to_reply`` instead).
+        metadata: The metadata of the message (which phone number was sent from).
+        type: The message type (See :class:`MessageType`).
+        to_user: The recipient of the message.
+        chat: The chat where the message was sent to (private or group).
+        timestamp: The timestamp when the message was sent (in UTC).
+        reply_to_message: The message to which this message is a reply (if any).
+        forwarded: Whether the message was forwarded.
+        forwarded_many_times: Whether the message was forwarded more than 5 times. (when ``True``, ``forwarded`` will be ``True`` as well)
+        text: The text of the message.
+        image: The image of the message.
+        video: The video of the message.
+        sticker: The sticker of the message.
+        document: The document of the message.
+        audio: The audio of the message.
+        voice: The voice note of the message (shorthand for ``audio`` if it's a voice note).
+        caption: The caption of the message media (Optional, only available for image video and document messages).
+        reaction: The reaction of the message.
+        location: The location of the message.
+        contacts: The contacts of the message.
+        order: The order of the message.
+        unsupported: The unsupported content of the message.
+        error: The error of the message.
+        shared_data: Shared data between handlers.
+    """
+
+    _webhook_field = "smb_message_echoes"
+    _messages_field = "message_echoes"
+
+
+class OutgoingEditedMessage(_Outgoing, EditedMessage):
+    """
+    An edited message that is sent by the business (Also known as `Echo message`).
+
+    Attributes:
+        id: The ID of the edit event (not the original message ID).
+        original_message_id: The original message ID before the edit.
+        type: The type of the edit (See :class:`MessageType`).
+        chat: The chat where the message was edited (private or group).
+        metadata: The metadata of the message (to which phone number it was sent).
+        to_user: The recipient of the message.
+        timestamp: The timestamp when the message was edited (in UTC).
+        message: The updated version of the message after the edit.
+    """
+
+    _msg_cls: ClassVar[Type[OutgoingMessage]] = OutgoingMessage
+    _webhook_field = "smb_message_echoes"
+    _messages_field = "message_echoes"
+
+
+class OutgoingDeletedMessage(_Outgoing, DeletedMessage):
+    """
+    A deleted message that is sent by the business (Also known as `Echo message`).
+
+    Attributes:
+        id: The ID of the revoke event (not the original message ID).
+        original_message_id: The ID of the message that was deleted.
+        type: The type of the update (always :class:`MessageType.REVOKE`).
+        chat: The chat where the message was deleted (private or group).
+        metadata: The metadata of the message (to which phone number it was sent).
+        to_user: The recipient of the message.
+        timestamp: The timestamp when the message was deleted (in UTC).
+    """
+
+    _webhook_field = "smb_message_echoes"
+    _messages_field = "message_echoes"

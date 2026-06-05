@@ -19,6 +19,12 @@ Keyboard
 
 .. autoclass:: CallPermissionRequestButton()
 
+.. autoclass:: ContactInfoRequestButton()
+
+.. autoclass:: ImageCarouselCard()
+
+.. autoclass:: VideoCarouselCard()
+
 .. autoclass:: CallbackData()
 
 ----------------

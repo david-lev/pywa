@@ -3,8 +3,10 @@ from __future__ import annotations
 import functools
 import time
 import warnings
+from collections.abc import Sequence
 
-from ..errors import WhatsAppError
+from ..errors import PywaDeprecationWarning, WhatsAppError
+from .user import BaseUser
 
 """Types for other objects."""
 
@@ -18,116 +20,21 @@ from typing import (
     ClassVar,
     Generic,
     Iterable,
-    Iterator,
     Literal,
     Protocol,
     TypeVar,
+    overload,
 )
 
-from .. import utils
+from .. import _helpers as helpers
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
-    from .calls import CallPermissions
 
 _logger = logging.getLogger(__name__)
 
 
-@dataclasses.dataclass(frozen=True, slots=True)
-class User:
-    """
-    Represents a WhatsApp user.
-
-    Attributes:
-        wa_id: The WhatsApp ID of the user (The phone number with the country code).
-        name: The name of the user (``None`` on :class:`MessageStatus`).
-        identity_key_hash: The identity key hash of the user (Only if identity key check is enabled on the phone number settings).
-    """
-
-    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
-    wa_id: str
-    name: str | None
-    identity_key_hash: str | None = None
-    _input: str | None = dataclasses.field(
-        default=None, repr=False, hash=False, compare=False
-    )
-
-    @classmethod
-    def from_dict(cls, data: dict, client: WhatsApp) -> User:
-        return cls(
-            _client=client,
-            _input=data.get("input"),
-            wa_id=data["wa_id"],
-            identity_key_hash=data.get("identity_key_hash"),
-            name=data.get("profile", {}).get("name"),
-        )
-
-    @property
-    def input(self) -> None:
-        """Deprecated, access the input from the sent message instead."""
-        warnings.warn(
-            "User.input is deprecated, access the input from the sent message instead. e.g. wa.send_message(...).input",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self._input
-
-    def block(self) -> bool:
-        """
-        Block the user.
-
-        - Shortcut for :meth:`~pywa.client.WhatsApp.block_users` with the user wa_id.
-
-        Returns:
-            bool: True if the user was blocked
-
-        Raises:
-            BlockUserError: If the user was not blocked
-        """
-        res = self._client.block_users((self.wa_id,))
-        added = self.wa_id in {u.wa_id for u in res.added_users}
-        if not added:
-            raise res.errors
-        return added
-
-    def unblock(self) -> bool:
-        """
-        Unblock the user.
-
-        - Shortcut for :meth:`~pywa.client.WhatsApp.unblock_users` with the user wa_id.
-
-        Returns:
-            bool: True if the user was unblocked, False otherwise.
-        """
-        return self.wa_id in {
-            u.wa_id for u in self._client.unblock_users((self.wa_id,)).removed_users
-        }
-
-    def get_call_permissions(self) -> CallPermissions:
-        """
-        Get the call permissions of the user.
-
-        - Shortcut for :meth:`~pywa.client.WhatsApp.get_call_permissions` with the user wa_id.
-
-        Returns:
-            CallPermissions: The call permissions of the user.
-        """
-        return self._client.get_call_permissions(wa_id=self.wa_id)
-
-    def as_vcard(self) -> str:
-        """Get the user as a vCard."""
-        return "\n".join(
-            (
-                "BEGIN:VCARD",
-                "VERSION:3.0",
-                f"FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:{self.name}",
-                f"TEL;type=CELL;type=VOICE:+{self.wa_id}",
-                "END:VCARD",
-            )
-        )
-
-
-class MessageType(utils.StrEnum):
+class MessageType(helpers.StrEnum):
     """
     Message types.
 
@@ -146,7 +53,6 @@ class MessageType(utils.StrEnum):
         UNSUPPORTED: An unsupported message (message type not supported by WhatsApp Cloud API).
         INTERACTIVE: Only used in :class:`CallbackButton`, :class:`CallbackSelection` and :class:`~pywa.types.calls.CallPermissionUpdate`.
         BUTTON: Only used in :class:`CallbackButton`.
-        REQUEST_WELCOME: Only used in :class:`ChatOpened`.
         SYSTEM: Only used in :class:`~pywa.types.system.PhoneNumberChange` and :class:`~pywa.types.system.IdentityChange`
     """
 
@@ -167,12 +73,14 @@ class MessageType(utils.StrEnum):
     BUTTON = "button"
     REQUEST_WELCOME = "request_welcome"
     SYSTEM = "system"
+    EDIT = "edit"
+    REVOKE = "revoke"
 
     _check_value = str.islower
     _modify_value = str.lower
 
 
-class InteractiveType(utils.StrEnum):
+class InteractiveType(helpers.StrEnum):
     """
     Interactive types.
 
@@ -193,6 +101,8 @@ class InteractiveType(utils.StrEnum):
     LOCATION_REQUEST_MESSAGE = "location_request_message"
     VOICE_CALL = "voice_call"
     CALL_PERMISSION_REQUEST = "call_permission_request"
+    REQUEST_CONTACT_INFO = "request_contact_info"
+    CAROUSEL = "carousel"
 
     UNKNOWN = "UNKNOWN"
 
@@ -223,7 +133,7 @@ class Reaction:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class Location(utils.FromDict):
+class Location(helpers.FromDict):
     """
     Represents a location.
 
@@ -363,7 +273,7 @@ class Contact:
         )
 
     @dataclasses.dataclass(frozen=True, slots=True)
-    class Name(utils.FromDict):
+    class Name(helpers.FromDict):
         """
         Represents a contact's name.
 
@@ -386,7 +296,7 @@ class Contact:
         prefix: str | None = None
 
     @dataclasses.dataclass(frozen=True, slots=True)
-    class Phone(utils.FromDict):
+    class Phone(helpers.FromDict):
         """
         Represents a contact's phone number.
 
@@ -401,7 +311,7 @@ class Contact:
         wa_id: str | None = None
 
     @dataclasses.dataclass(frozen=True, slots=True)
-    class Email(utils.FromDict):
+    class Email(helpers.FromDict):
         """
         Represents a contact's email address.
 
@@ -414,7 +324,7 @@ class Contact:
         type: str | None = None
 
     @dataclasses.dataclass(frozen=True, slots=True)
-    class Url(utils.FromDict):
+    class Url(helpers.FromDict):
         """
         Represents a contact's URL.
 
@@ -427,7 +337,7 @@ class Contact:
         type: str | None = None
 
     @dataclasses.dataclass(frozen=True, slots=True)
-    class Org(utils.FromDict):
+    class Org(helpers.FromDict):
         """
         Represents a contact's organization.
 
@@ -442,7 +352,7 @@ class Contact:
         title: str | None = None
 
     @dataclasses.dataclass(frozen=True, slots=True)
-    class Address(utils.FromDict):
+    class Address(helpers.FromDict):
         """
         Represents a contact's address.
 
@@ -463,6 +373,54 @@ class Contact:
         country: str | None = None
         country_code: str | None = None
         type: str | None = None
+
+
+class ContactsOrigin(helpers.StrEnum):
+    """
+    Represents an origin of a contact.
+
+    Attributes:
+        CONTACT_REQUEST: The contacts were shared as a contact request.
+        OTHER: The contacts were shared in another way.
+    """
+
+    CONTACT_REQUEST = "contact_request"
+    OTHER = "other"
+
+    UNKNOWN = "UNKNOWN"
+
+    _check_value = str.islower
+    _modify_value = str.lower
+
+
+class ContactList(tuple[Contact, ...]):
+    """
+    Represents an shared contacts in a message, which can be iterated over to get the individual contacts.
+
+    Attributes:
+        origin: The origin of the shared contacts (e.g. ``contact_request`` if the contacts were shared as a contact request, ``other`` otherwise).
+    """
+
+    origin: ContactsOrigin
+
+    def __new__(cls, contacts: dict):
+        inst = super().__new__(
+            cls, (Contact.from_dict(c) for c in contacts["contacts"])
+        )
+        inst.origin = (
+            ContactsOrigin(contacts["origin"])
+            if "origin" in contacts
+            else ContactsOrigin.OTHER
+        )
+        return inst
+
+    def __repr__(self) -> str:
+        return f"ContactList(origin={self.origin}, contacts={super().__repr__()})"
+
+    @property
+    def first(self) -> Contact:
+        """Get the first contact in the list."""
+        return self[0]
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -493,20 +451,29 @@ class ReplyToMessage:
     Represents a message that was replied to.
 
     Attributes:
-        message_id: The ID of the message that was replied to.
+        id: The ID of the message that was replied to.
         from_user_id: The ID of the user who sent the message that was replied to.
         referred_product: Referred product describing the product the user is requesting information about.
     """
 
-    message_id: str
-    from_user_id: str
+    id: str
+    from_user_id: str | None
     referred_product: ReferredProduct | None
+
+    @property
+    def message_id(self) -> str:
+        warnings.warn(
+            "ReplyToMessage.message_id is deprecated, use ReplyToMessage.id instead",
+            PywaDeprecationWarning,
+            stacklevel=2,
+        )
+        return self.id
 
     @classmethod
     def from_dict(cls, data: dict) -> ReplyToMessage:
         return cls(
-            message_id=data["id"],
-            from_user_id=data["from"],
+            id=data["id"],
+            from_user_id=data.get("from"),
             referred_product=ReferredProduct.from_dict(data["referred_product"])
             if "referred_product" in data
             else None,
@@ -514,7 +481,7 @@ class ReplyToMessage:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class Metadata(utils.FromDict):
+class Metadata(helpers.FromDict):
     """
     Represents the metadata of a message.
 
@@ -592,7 +559,7 @@ class Order:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class Referral(utils.FromDict):
+class Referral(helpers.FromDict):
     """
     Represents a referral object in a message.
 
@@ -655,7 +622,7 @@ class ProductsSection:
         }
 
 
-class Industry(utils.StrEnum):
+class Industry(helpers.StrEnum):
     """
     Represents the industry of a business.
 
@@ -705,9 +672,9 @@ class Industry(utils.StrEnum):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class BusinessProfile(utils.APIObject):
+class BusinessProfile(helpers.APIObject):
     """
-    Represents a business profile.
+    Represents a business profile of a WhatsApp Phone Number.
 
     Attributes:
         about: This text appears in the business's profile, beneath its profile image, phone number, and contact buttons.
@@ -744,7 +711,7 @@ class BusinessProfile(utils.APIObject):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class CommerceSettings(utils.APIObject):
+class CommerceSettings(helpers.APIObject):
     """
     Represents the WhatsApp commerce settings.
 
@@ -767,7 +734,7 @@ class CommerceSettings(utils.APIObject):
         )
 
 
-class BusinessVerificationStatus(utils.StrEnum):
+class BusinessVerificationStatus(helpers.StrEnum):
     """
     Represents the business verification status.
 
@@ -797,8 +764,11 @@ class BusinessVerificationStatus(utils.StrEnum):
 
     UNKNOWN = "UNKNOWN"
 
+    _check_value = str.islower
+    _modify_value = str.lower
 
-class MarketingMessagesLiteAPIStatus(utils.StrEnum):
+
+class MarketingMessagesLiteAPIStatus(helpers.StrEnum):
     """
     Represents the WhatsApp Business Account's status for onboarding onto Marketing Messages Lite.
 
@@ -815,7 +785,7 @@ class MarketingMessagesLiteAPIStatus(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class MarketingMessagesOnboardingStatus(utils.StrEnum):
+class MarketingMessagesOnboardingStatus(helpers.StrEnum):
     """
     Represents the WhatsApp Business Account's status for onboarding onto Marketing Messages Lite API.
 
@@ -843,15 +813,15 @@ class MarketingMessagesOnboardingStatus(utils.StrEnum):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class BusinessInfo(utils.APIObject, utils.FromDict):
+class BusinessInfo(helpers.APIObject, helpers.FromDict):
     id: str
     name: str
-    status: str
-    type: str
+    status: str | None = None
+    type: str | None = None
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class WhatsAppBusinessAccount(utils.APIObject):
+class WhatsAppBusinessAccount(helpers.APIObject):
     """
     Represents a WhatsApp Business Account.
 
@@ -868,6 +838,7 @@ class WhatsAppBusinessAccount(utils.APIObject):
         ownership_type: Ownership type of the WhatsApp Business Account.
         currency: The currency in which the payment transactions for the WhatsApp Business Account will be processed
         country: country of the WhatsApp Business Account's owning Meta Business account
+        disable_marketing_messages_on_cloud_api: Whether the WhatsApp Business Account will not be able to send marketing messages using Cloud API, but can still send marketing messages using the MM Lite API. See `Marketing Messages Lite API <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/marketing-messages-lite-api>`_.
 
     """
 
@@ -886,6 +857,9 @@ class WhatsAppBusinessAccount(utils.APIObject):
     currency: str | None
     country: str | None
     subscribed_apps: tuple[FacebookApplication, ...] | None
+    owner_business_info: BusinessInfo | None
+    account_review_status: str | None
+    disable_marketing_messages_on_cloud_api: bool | None
 
     @classmethod
     def from_dict(cls, data: dict) -> WhatsAppBusinessAccount:
@@ -926,11 +900,18 @@ class WhatsAppBusinessAccount(utils.APIObject):
             )
             if "subscribed_apps" in data
             else None,
+            owner_business_info=BusinessInfo.from_dict(data["owner_business_info"])
+            if "owner_business_info" in data
+            else None,
+            account_review_status=data.get("account_review_status"),
+            disable_marketing_messages_on_cloud_api=data.get(
+                "disable_marketing_messages_on_cloud_api"
+            ),
         )
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class FacebookApplication(utils.FromDict, utils.APIObject):
+class FacebookApplication(helpers.FromDict, helpers.APIObject):
     """
     Represents a Facebook Application.
 
@@ -945,7 +926,7 @@ class FacebookApplication(utils.FromDict, utils.APIObject):
     link: str
 
 
-class StorageStatus(utils.StrEnum):
+class StorageStatus(helpers.StrEnum):
     """
     Represents the storage status of a WhatsApp Business Phone Number.
 
@@ -1042,13 +1023,11 @@ class ConversationalAutomation:
 
     Attributes:
         id: The ID of the WhatsApp Business Phone Number.
-        chat_opened_enabled: Whether the welcome message is enabled (if so, you can listen to the :class:`~pywa.types.chat_opened.ChatOpened` event).
         ice_breakers: See `Ice Breakers <https://developers.facebook.com/docs/whatsapp/cloud-api/phone-numbers/conversational-components/#ice-breakers>`_.
         commands: The `commands <https://developers.facebook.com/docs/whatsapp/cloud-api/phone-numbers/conversational-components/#commands>`_.
     """
 
     id: str
-    chat_opened_enabled: bool
     ice_breakers: tuple[str] | None
     commands: tuple[Command, ...] | None
 
@@ -1056,7 +1035,6 @@ class ConversationalAutomation:
     def from_dict(cls, data: dict):
         return cls(
             id=data.get("id"),
-            chat_opened_enabled=data.get("enable_welcome_message", False),
             ice_breakers=tuple(data.get("prompts", ())) or None,
             commands=tuple(
                 Command.from_dict(command) for command in data.get("commands", ())
@@ -1066,7 +1044,12 @@ class ConversationalAutomation:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class BusinessPhoneNumber(utils.APIObject):
+class CreatedBusinessPhoneNumber:
+    id: str
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class BusinessPhoneNumber(helpers.APIObject):
     """
     Represents a WhatsApp Business Phone Number.
 
@@ -1131,6 +1114,9 @@ class BusinessPhoneNumber(utils.APIObject):
     certificate: str | None
     new_certificate: str | None
     last_onboarded_time: str | None
+    username: str | None
+    country_code: str | None
+    country_dial_code: str | None
 
     @classmethod
     def from_dict(cls, data: dict):
@@ -1168,10 +1154,13 @@ class BusinessPhoneNumber(utils.APIObject):
             certificate=data.get("certificate"),
             new_certificate=data.get("new_certificate"),
             last_onboarded_time=data.get("last_onboarded_time"),
+            username=data.get("username"),
+            country_code=data.get("country_code"),
+            country_dial_code=data.get("country_dial_code"),
         )
 
 
-class QRCodeImageType(utils.StrEnum):
+class QRCodeImageType(helpers.StrEnum):
     """
     Represents the image type of a QR code.
 
@@ -1187,7 +1176,7 @@ class QRCodeImageType(utils.StrEnum):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class QRCode(utils.APIObject):
+class QRCode(helpers.APIObject):
     """
     Customers can scan a QR code from their phone to quickly begin a conversation with your business.
     The WhatsApp Business Management API allows you to create and access these QR codes and associated short links.
@@ -1206,7 +1195,7 @@ class QRCode(utils.APIObject):
     deep_link_url: str
     qr_image_url: str | None
 
-    def fetch_image(self, image_type: QRCodeImageType) -> QRCode:
+    def fetch_image(self, image_type: QRCodeImageType) -> QRCode | None:
         """
         Returns the same QRCode object with the specified image type.
 
@@ -1294,6 +1283,50 @@ class BlockUserFailure:
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
+class _UnblockedOrBlockedUser(BaseUser):
+    _client: WhatsApp
+    input: str
+    bsuid: str | None
+
+    @classmethod
+    def from_dict(cls, client: WhatsApp, data: dict):
+        return cls(
+            _client=client,
+            input=data["input"],
+            wa_id=data.get("wa_id"),
+            bsuid=data.get("user_id"),
+            parent_bsuid=data.get("parent_user_id"),
+            username=None,
+        )
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class BlockedUser(_UnblockedOrBlockedUser):
+    """
+    Represents a blocked user.
+
+    Attributes:
+        input: The input that used when blocking the user (e.g., wa_id or bsuid).
+        wa_id: Will be set to the user’s phone number if you used their phone number to block the user.
+        bsuid: Will be set to the user’s BSUID or parent BSUID if you used the user’s BSUID or parent BSUID to block the user.
+        parent_bsuid: Will be set to the user’s parent BSUID if you have enabled parent BSUIDs. Otherwise, it will be omitted.
+    """
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class UnblockedUser(_UnblockedOrBlockedUser):
+    """
+    Represents a unblocked user.
+
+    Attributes:
+        input: The input that used when unblocking the user (e.g., wa_id or bsuid).
+        wa_id: Will be set to the user’s phone number if you used their phone number to unblock the user.
+        bsuid: Will be set to the user’s BSUID or parent BSUID if you used the user’s BSUID or parent BSUID to unblock the user.
+        parent_bsuid: Will be set to the user’s parent BSUID if you have enabled parent BSUIDs. Otherwise, it will be omitted.
+    """
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
 class UsersBlockedResult:
     """
     Represents the result of blocking users operation.
@@ -1304,15 +1337,15 @@ class UsersBlockedResult:
         errors: The errors that occurred during the operation (if any).
     """
 
-    added_users: tuple[User, ...]
+    added_users: tuple[BlockedUser, ...]
     failed_users: tuple[BlockUserFailure, ...]
     errors: WhatsAppError | None
 
     @classmethod
-    def from_dict(cls, data: dict, client: WhatsApp):
+    def from_dict(cls, client: WhatsApp, data: dict):
         return cls(
             added_users=tuple(
-                client._usr_cls.from_dict(user, client=client)
+                BlockedUser.from_dict(client=client, data=user)
                 for user in data.get("block_users", {}).get("added_users", [])
             ),
             failed_users=tuple(
@@ -1334,13 +1367,13 @@ class UsersUnblockedResult:
         removed_users: The users that were successfully unblocked.
     """
 
-    removed_users: tuple[User, ...]
+    removed_users: tuple[UnblockedUser, ...]
 
     @classmethod
-    def from_dict(cls, data: dict, client: WhatsApp):
+    def from_dict(cls, client: WhatsApp, data: dict):
         return cls(
             removed_users=tuple(
-                client._usr_cls.from_dict(user, client=client)
+                UnblockedUser.from_dict(client=client, data=user)
                 for user in data.get("block_users", {}).get("removed_users", [])
             )
         )
@@ -1439,7 +1472,7 @@ class _ItemFactory(Protocol):
     def __call__(self, data: dict) -> _T: ...
 
 
-class Result(Generic[_T]):
+class Result(Generic[_T], Sequence[_T]):
     """
     This class is used to handle paginated results from the WhatsApp API. You can iterate over the results, and also access the next and previous pages of results.
 
@@ -1468,7 +1501,7 @@ class Result(Generic[_T]):
     ) -> None:
         self._wa = wa
         self._item_factory = item_factory
-        self._data = [item_factory(item) for item in response.get("data", [])]
+        self._data: list[_T] = [item_factory(item) for item in response.get("data", [])]
         self._next_url, self._previous_url = (
             response.get("paging", {}).get("next"),
             response.get("paging", {}).get("previous"),
@@ -1515,7 +1548,7 @@ class Result(Generic[_T]):
         """
         if self.has_next:
             # noinspection PyProtectedMember
-            response = self._wa.api._make_request(method="GET", endpoint=self._next_url)
+            response = self._wa.api._request(method="GET", endpoint=self._next_url)
             return self.__class__(
                 wa=self._wa, response=response, item_factory=self._item_factory
             )
@@ -1529,9 +1562,7 @@ class Result(Generic[_T]):
         """
         if self.has_previous:
             # noinspection PyProtectedMember
-            response = self._wa.api._make_request(
-                method="GET", endpoint=self._previous_url
-            )
+            response = self._wa.api._request(method="GET", endpoint=self._previous_url)
             return self.__class__(
                 wa=self._wa, response=response, item_factory=self._item_factory
             )
@@ -1573,14 +1604,17 @@ class Result(Generic[_T]):
 
         return before_data + self._data + after_data
 
-    def __iter__(self) -> Iterator[_T]:
-        return iter(self._data)
+    @overload
+    def __getitem__(self, index: int) -> _T: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> list[_T]: ...
+
+    def __getitem__(self, index: int | slice) -> _T | list[_T]:
+        return self._data[index]
 
     def __len__(self) -> int:
         return len(self._data)
-
-    def __getitem__(self, index: int) -> _T:
-        return self._data[index]
 
     def __bool__(self) -> bool:
         return bool(self._data)
@@ -1590,7 +1624,7 @@ class Result(Generic[_T]):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class SuccessResult(utils.FromDict):
+class SuccessResult(helpers.FromDict):
     """
     Represents a simple success result.
 
@@ -1611,3 +1645,36 @@ class SuccessResult(utils.FromDict):
     def __bool__(self) -> bool:
         """Returns True if the operation was successful."""
         return self.success
+
+
+class UsernameStatusType(helpers.StrEnum):
+    """
+    Represents the status of a WhatsApp Business Account's username.
+
+    Attributes:
+        APPROVED: The requested username has been approved and will be visible to WhatsApp users once the usernames feature is made available.
+        RESERVED: The requested username has been reserved and approved but not yet visible to WhatsApp users. It will appear to WhatsApp users once the feature is available for everyone.
+        DELETED: Indicates the username has been deleted via the WhatsApp Business app.
+    """
+
+    _check_value = str.islower
+    _modify_value = str.lower
+
+    APPROVED = "approved"
+    RESERVED = "reserved"
+    DELETED = "deleted"
+
+    UNKNOWN = "UNKNOWN"
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class UsernameStatus:
+    username: str
+    status: UsernameStatusType
+
+    @classmethod
+    def from_dict(cls, data: dict) -> UsernameStatus:
+        return cls(
+            username=data["username"],
+            status=UsernameStatusType(data["status"]),
+        )

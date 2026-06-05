@@ -174,3 +174,6 @@ All exceptions fall into one of these categories:
     ./integrity_errors
     ./block_users_errors
     ./calling_errors
+    ./username_errors
+    ./template_creation_errors
+    ./group_errors

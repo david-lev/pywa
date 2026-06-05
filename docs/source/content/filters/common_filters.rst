@@ -10,7 +10,6 @@ Common filters
 .. autoattribute:: pywa.filters.callback_selection
 .. autoattribute:: pywa.filters.message_status
 .. autoattribute:: pywa.filters.flow_completion
-.. autoattribute:: pywa.filters.chat_opened
 .. autoattribute:: pywa.filters.call_connect
 .. autoattribute:: pywa.filters.call_terminate
 .. autoattribute:: pywa.filters.call_status
@@ -22,7 +21,10 @@ Common filters
 .. autoattribute:: pywa.filters.template_components
 .. autoattribute:: pywa.filters.phone_number_change
 .. autoattribute:: pywa.filters.identity_change
+.. autoattribute:: pywa.filters.account_update
 
+.. autoattribute:: pywa.filters.private
+.. autoattribute:: pywa.filters.group
 .. autofunction:: sent_to
 .. autoattribute:: pywa.filters.sent_to_me
 .. autofunction:: from_users

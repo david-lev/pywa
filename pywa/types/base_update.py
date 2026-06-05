@@ -18,26 +18,32 @@ from typing import (
     Awaitable,
     BinaryIO,
     ClassVar,
+    Generator,
     Iterable,
     Iterator,
     NoReturn,
 )
 
 from ..listeners import BaseListenerIdentifier, UserUpdateListenerIdentifier
-from .others import Contact, Metadata, ProductsSection, SuccessResult, User
+from .others import Contact, Metadata, ProductsSection, SuccessResult
+from .user import User
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
     from .callback import (
+        BaseCarouselCard,
         Button,
         CallbackData,
         CallPermissionRequestButton,
         FlowButton,
+        ImageCarouselCard,
         SectionList,
         URLButton,
+        VideoCarouselCard,
         VoiceCallButton,
     )
     from .calls import SessionDescription
+    from .chat import Chat
     from .media import Media
     from .sent_update import (
         InitiatedCall,
@@ -233,8 +239,8 @@ class BaseUpdate(abc.ABC, _HandlingFlow):
         return self.raw.shared_data
 
     @property
-    def listener_identifier(self) -> BaseListenerIdentifier | None:
-        """The identifier for the listener that this update is for."""
+    def listener_identifiers(self) -> Iterable[BaseListenerIdentifier] | None:
+        """The identifiers for the listener that this update is for."""
         return None
 
     @classmethod
@@ -263,6 +269,9 @@ class _ClientShortcuts(abc.ABC):
     _internal_sender: str
     _internal_recipient: str
 
+    def _get_reply_to(self, private: bool = False) -> str:
+        return self._internal_sender
+
     @property
     def message_id_to_reply(self) -> str:
         """
@@ -289,6 +298,7 @@ class _ClientShortcuts(abc.ABC):
         ) = None,
         *,
         quote: bool = False,
+        private: bool = False,
         preview_url: bool = False,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -315,6 +325,7 @@ class _ClientShortcuts(abc.ABC):
             footer: The footer of the message (if ``buttons`` are provided, optional, up to 60 characters, `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the message (optional).
             quote: Whether to quote the replied message (default: False).
+            private: Whether to send a private message instead of replying in the same chat (default: False, only applicable for group messages).
             preview_url: Whether to show a preview of the URL in the message (if any).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
@@ -324,7 +335,7 @@ class _ClientShortcuts(abc.ABC):
         """
         return self._client.send_message(
             sender=self._internal_recipient,
-            to=self._internal_sender,
+            to=self._get_reply_to(private),
             text=text,
             header=header,
             footer=footer,
@@ -345,6 +356,7 @@ class _ClientShortcuts(abc.ABC):
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
         *,
         quote: bool = False,
+        private: bool = False,
         mime_type: str | None = None,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -374,6 +386,7 @@ class _ClientShortcuts(abc.ABC):
             footer: The footer of the message (if buttons are provided, optional, `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the image (optional).
             quote: Whether to quote the replied message (default: False).
+            private: Whether to send a private message instead of replying in the same chat (default: False, only applicable for group messages).
             mime_type: The mime type of the image (optional, required when sending an image as bytes, or file path that does not have an extension).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
@@ -383,7 +396,7 @@ class _ClientShortcuts(abc.ABC):
         """
         return self._client.send_image(
             sender=self._internal_recipient,
-            to=self._internal_sender,
+            to=self._get_reply_to(private),
             image=image,
             caption=caption,
             footer=footer,
@@ -402,6 +415,7 @@ class _ClientShortcuts(abc.ABC):
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
         *,
         quote: bool = False,
+        private: bool = False,
         mime_type: str | None = None,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -431,6 +445,7 @@ class _ClientShortcuts(abc.ABC):
             footer: The footer of the message (if buttons are provided, optional, `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the video (optional).
             quote: Whether to quote the replied message (default: False).
+            private: Whether to send a private message instead of replying in the same chat (default: False, only applicable for group messages).
             mime_type: The mime type of the video (optional, required when sending a video as bytes or file path that does not have an extension).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
@@ -440,7 +455,7 @@ class _ClientShortcuts(abc.ABC):
         """
         return self._client.send_video(
             sender=self._internal_recipient,
-            to=self._internal_sender,
+            to=self._get_reply_to(private),
             video=video,
             caption=caption,
             reply_to_message_id=self.message_id_to_reply if quote else None,
@@ -460,6 +475,7 @@ class _ClientShortcuts(abc.ABC):
         buttons: Iterable[Button] | URLButton | FlowButton | None = None,
         *,
         quote: bool = False,
+        private: bool = False,
         mime_type: str | None = None,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -490,6 +506,7 @@ class _ClientShortcuts(abc.ABC):
             footer: The footer of the message (if buttons are provided, optional, `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
             buttons: The buttons to send with the document (optional).
             quote: Whether to quote the replied message (default: False).
+            private: Whether to send a private message instead of replying in the same chat (default: False, only applicable for group messages).
             mime_type: The mime type of the document (optional, required when sending a document as bytes or file path that does not have an extension).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
@@ -499,7 +516,7 @@ class _ClientShortcuts(abc.ABC):
         """
         return self._client.send_document(
             sender=self._internal_recipient,
-            to=self._internal_sender,
+            to=self._get_reply_to(private),
             document=document,
             filename=filename,
             caption=caption,
@@ -517,6 +534,7 @@ class _ClientShortcuts(abc.ABC):
         *,
         is_voice: bool | None = None,
         quote: bool = False,
+        private: bool = False,
         mime_type: str | None = None,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -541,6 +559,7 @@ class _ClientShortcuts(abc.ABC):
             is_voice: Set to True if sending a voice message (use :meth:`~pywa.types.base_update.BaseUserUpdate.reply_voice` instead for better type support).
             mime_type: The mime type of the audio file (optional, required when sending an audio as bytes or file path that does not have an extension).
             quote: Whether to quote the replied message (default: False).
+            private: Whether to send a private message instead of replying in the same chat (default: False, only applicable for group messages).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
@@ -549,7 +568,7 @@ class _ClientShortcuts(abc.ABC):
         """
         return self._client.send_audio(
             sender=self._internal_recipient,
-            to=self._internal_sender,
+            to=self._get_reply_to(private),
             audio=audio,
             is_voice=is_voice,
             reply_to_message_id=self.message_id_to_reply if quote else None,
@@ -563,6 +582,7 @@ class _ClientShortcuts(abc.ABC):
         voice: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
         *,
         quote: bool = False,
+        private: bool = False,
         mime_type: str | None = None,
         tracker: str | CallbackData | None = None,
     ) -> SentVoiceMessage:
@@ -588,6 +608,7 @@ class _ClientShortcuts(abc.ABC):
             voice: The voice file to reply with (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
             mime_type: The mime type of the voice file (optional, required when sending an audio as bytes or file path that does not have an extension).
             quote: Whether to quote the replied message (default: False).
+            private: Whether to send a private message instead of replying in the same chat (default: False, only applicable for group messages).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
         Returns:
@@ -595,7 +616,7 @@ class _ClientShortcuts(abc.ABC):
         """
         return self._client.send_voice(
             sender=self._internal_recipient,
-            to=self._internal_sender,
+            to=self._get_reply_to(private),
             voice=voice,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             mime_type=mime_type,
@@ -607,6 +628,7 @@ class _ClientShortcuts(abc.ABC):
         sticker: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
         *,
         quote: bool = False,
+        private: bool = False,
         mime_type: str | None = None,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
@@ -632,6 +654,7 @@ class _ClientShortcuts(abc.ABC):
             sticker: The sticker to reply with (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
             mime_type: The mime type of the sticker (optional, required when sending a sticker as bytes or file path that does not have an extension).
             quote: Whether to quote the replied message (default: False).
+            private: Whether to send a private message instead of replying in the same chat (default: False, only applicable for group messages).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
@@ -640,7 +663,7 @@ class _ClientShortcuts(abc.ABC):
         """
         return self._client.send_sticker(
             sender=self._internal_recipient,
-            to=self._internal_sender,
+            to=self._get_reply_to(private),
             sticker=sticker,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             mime_type=mime_type,
@@ -656,6 +679,7 @@ class _ClientShortcuts(abc.ABC):
         address: str | None = None,
         *,
         quote: bool = False,
+        private: bool = False,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
@@ -684,6 +708,7 @@ class _ClientShortcuts(abc.ABC):
             name: The name of the location (optional).
             address: The address of the location (optional).
             quote: Whether to quote the replied message (default: False).
+            private: Whether to send a private message instead of replying in the same chat (default: False, only applicable for group messages).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
@@ -692,7 +717,7 @@ class _ClientShortcuts(abc.ABC):
         """
         return self._client.send_location(
             sender=self._internal_recipient,
-            to=self._internal_sender,
+            to=self._get_reply_to(private),
             latitude=latitude,
             longitude=longitude,
             name=name,
@@ -707,6 +732,7 @@ class _ClientShortcuts(abc.ABC):
         text: str,
         *,
         quote: bool = False,
+        private: bool = False,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
     ) -> SentLocationRequest:
@@ -728,6 +754,7 @@ class _ClientShortcuts(abc.ABC):
         Args:
             text: The text to send with the request.
             quote: Whether to quote the replied message (default: False).
+            private: Whether to send a private message instead of replying in the same chat (default: False, only applicable for group messages).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
@@ -736,7 +763,7 @@ class _ClientShortcuts(abc.ABC):
         """
         return self._client.request_location(
             sender=self._internal_recipient,
-            to=self._internal_sender,
+            to=self._get_reply_to(private),
             text=text,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             identity_key_hash=identity_key_hash,
@@ -748,6 +775,7 @@ class _ClientShortcuts(abc.ABC):
         contact: Contact | Iterable[Contact],
         *,
         quote: bool = False,
+        private: bool = False,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
@@ -777,6 +805,7 @@ class _ClientShortcuts(abc.ABC):
         Args:
             contact: The contact/s to send.
             quote: Whether to quote the replied message (default: False).
+            private: Whether to send a private message instead of replying in the same chat (default: False, only applicable for group messages).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
@@ -785,7 +814,7 @@ class _ClientShortcuts(abc.ABC):
         """
         return self._client.send_contact(
             sender=self._internal_recipient,
-            to=self._internal_sender,
+            to=self._get_reply_to(private),
             contact=contact,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             identity_key_hash=identity_key_hash,
@@ -826,7 +855,7 @@ class _ClientShortcuts(abc.ABC):
         """
         return self._client.send_reaction(
             sender=self._internal_recipient,
-            to=self._internal_sender,
+            to=self._get_reply_to(),
             emoji=emoji,
             message_id=self.message_id_to_reply,
             identity_key_hash=identity_key_hash,
@@ -864,7 +893,7 @@ class _ClientShortcuts(abc.ABC):
         """
         return self._client.remove_reaction(
             sender=self._internal_recipient,
-            to=self._internal_sender,
+            to=self._get_reply_to(),
             message_id=self.message_id_to_reply,
             identity_key_hash=identity_key_hash,
             tracker=tracker,
@@ -877,6 +906,7 @@ class _ClientShortcuts(abc.ABC):
         *,
         thumbnail_product_sku: str | None = None,
         quote: bool = False,
+        private: bool = False,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
@@ -908,6 +938,7 @@ class _ClientShortcuts(abc.ABC):
             thumbnail_product_sku: The thumbnail of this item will be used as the message's header image (optional, if
                 not provided, the first item in the catalog will be used).
             quote: Whether to quote the replied message (default: False).
+            private: Whether to send a private message instead of replying in the same chat (default: False, only applicable for group messages).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
@@ -916,7 +947,7 @@ class _ClientShortcuts(abc.ABC):
         """
         return self._client.send_catalog(
             sender=self._internal_recipient,
-            to=self._internal_sender,
+            to=self._get_reply_to(private),
             body=body,
             footer=footer,
             thumbnail_product_sku=thumbnail_product_sku,
@@ -933,6 +964,7 @@ class _ClientShortcuts(abc.ABC):
         footer: str | None = None,
         *,
         quote: bool = False,
+        private: bool = False,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
@@ -963,6 +995,7 @@ class _ClientShortcuts(abc.ABC):
             body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
             quote: Whether to quote the replied message (default: False).
+            private: Whether to send a private message instead of replying in the same chat (default: False, only applicable for group messages).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
@@ -971,7 +1004,7 @@ class _ClientShortcuts(abc.ABC):
         """
         return self._client.send_product(
             sender=self._internal_recipient,
-            to=self._internal_sender,
+            to=self._get_reply_to(private),
             catalog_id=catalog_id,
             sku=sku,
             body=body,
@@ -990,6 +1023,7 @@ class _ClientShortcuts(abc.ABC):
         footer: str | None = None,
         *,
         quote: bool = False,
+        private: bool = False,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
     ) -> SentMessage:
@@ -1031,6 +1065,7 @@ class _ClientShortcuts(abc.ABC):
             body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
             quote: Whether to quote the replied message (default: False).
+            private: Whether to send a private message instead of replying in the same chat (default: False, only applicable for group messages).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
@@ -1039,7 +1074,7 @@ class _ClientShortcuts(abc.ABC):
         """
         return self._client.send_products(
             sender=self._internal_recipient,
-            to=self._internal_sender,
+            to=self._get_reply_to(private),
             catalog_id=catalog_id,
             product_sections=product_sections,
             title=title,
@@ -1060,6 +1095,7 @@ class _ClientShortcuts(abc.ABC):
         use_mm_lite_api: bool = False,
         message_activity_sharing: bool | None = None,
         quote: bool = False,
+        private: bool = False,
         identity_key_hash: str | None = None,
         tracker: str | CallbackData | None = None,
     ) -> SentTemplate:
@@ -1078,6 +1114,7 @@ class _ClientShortcuts(abc.ABC):
             use_mm_lite_api: Whether to use `Marketing Messages Lite API <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api>`_ (optional, default: False).
             message_activity_sharing: Whether to share message activities (e.g. message read) for that specific marketing message to Meta to help optimize marketing messages (optional, only if ``use_mm_lite_api`` is True).
             quote: Whether to quote the replied message (default: False).
+            private: Whether to send a private message instead of replying in the same chat (default: False, only applicable for group messages).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
 
@@ -1087,13 +1124,51 @@ class _ClientShortcuts(abc.ABC):
 
         return self._client.send_template(
             sender=self._internal_recipient,
-            to=self._internal_sender,
+            to=self._get_reply_to(private),
             name=name,
             language=language,
             template=template,
             params=params,
             use_mm_lite_api=use_mm_lite_api,
             message_activity_sharing=message_activity_sharing,
+            reply_to_message_id=self.message_id_to_reply if quote else None,
+            identity_key_hash=identity_key_hash,
+            tracker=tracker,
+        )
+
+    def reply_carousel(
+        self,
+        *,
+        body: str,
+        cards: list[ImageCarouselCard | VideoCarouselCard | BaseCarouselCard],
+        quote: bool = False,
+        private: bool = False,
+        tracker: str | CallbackData | None = None,
+        identity_key_hash: str | None = None,
+        sender: str | int | None = None,
+    ) -> SentMessage:
+        """
+        Interactive media carousel messages display a set of horizontally scrollable media cards.
+
+        - See `Carousel messages <https://developers.facebook.com/documentation/business-messaging/whatsapp/messages/interactive-media-carousel-messages>`_.
+
+        Args:
+            body: Text to appear in the message body (up to 1024 characters).
+            cards: The list of carousel cards (up to 10 cards).
+            quote: Whether to quote the replied message (default: False).
+            private: Whether to send a private message instead of replying in the same chat (default: False, only applicable for group messages).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
+            sender: The sender of the message (optional, if not provided, ``recipient`` will be used).
+
+        Returns:
+            The sent carousel message.
+        """
+        return self._client.send_carousel(
+            sender=sender or self._internal_recipient,
+            to=self._get_reply_to(private),
+            body=body,
+            cards=cards,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             identity_key_hash=identity_key_hash,
             tracker=tracker,
@@ -1168,7 +1243,7 @@ class _ClientShortcuts(abc.ABC):
             The initiated call.
         """
         return self._client.initiate_call(
-            to=self._internal_sender,
+            to=self._get_reply_to(),
             sdp=sdp,
             tracker=tracker,
             phone_id=self._internal_recipient,
@@ -1201,7 +1276,8 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
 
     @property
     def _internal_sender(self) -> str:
-        return self.from_user.wa_id
+        # noinspection PyProtectedMember
+        return next(self._client._resolve_user_identifier(self.from_user))
 
     @property
     def recipient(self) -> str:
@@ -1229,13 +1305,15 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
         return self.from_user.unblock()
 
     @property
-    def listener_identifier(self) -> UserUpdateListenerIdentifier:
+    def listener_identifiers(self) -> Generator[UserUpdateListenerIdentifier]:
         """
-        The listener identifier of the update.
+        The listener identifiers of the update.
         """
-        return UserUpdateListenerIdentifier(
-            sender=self.sender, recipient=self.recipient
-        )
+        # noinspection PyProtectedMember
+        for identifier in self._client._resolve_user_identifier(self.from_user):
+            yield UserUpdateListenerIdentifier(
+                sender=identifier, recipient=self.recipient
+            )
 
     @property
     def message_id_to_reply(self) -> str:
@@ -1246,3 +1324,46 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
         instead of ``id`` to prevent errors.
         """
         return self.id
+
+
+class _PinUnpinActions:
+    _client: WhatsApp
+    id: str
+    recipient: str
+    chat: Chat
+
+    def pin(self, *, expiration_days: datetime.timedelta | int) -> SentMessage:
+        """
+        Pin the message in the chat.
+
+        - Note that currently only group chats support pinning messages.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/groups-messaging#pin-and-unpin-group-message>`_.
+
+        Args:
+            expiration_days: The number of days until the pinned message expires. Must be between 1 and 30 days.
+
+        Returns:
+            The pinned message.
+        """
+        return self._client.pin_message(
+            chat_id=self.chat.id,
+            message_id=self.id,
+            expiration_days=expiration_days,
+            sender=self.recipient,
+        )
+
+    def unpin(self) -> SentMessage:
+        """
+        Unpin the message from the chat.
+
+        - Note that currently only group chats support pinning messages.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/groups-messaging#pin-and-unpin-group-message>`_.
+
+        Returns:
+            The unpinned message.
+        """
+        return self._client.unpin_message(
+            chat_id=self.chat.id,
+            message_id=self.id,
+            sender=self.recipient,
+        )

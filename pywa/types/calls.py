@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from . import MessageType
-
 """This module contains types related to WhatsApp calls, including call connection, termination, and status updates."""
 
 __all__ = [
@@ -46,11 +44,12 @@ import dataclasses
 import datetime
 from typing import TYPE_CHECKING, Generic
 
-from .. import utils
+from .. import _helpers as helpers
 from ..errors import WhatsAppError
 from .base_update import BaseUpdate, BaseUserUpdate, RawUpdate, _ClientShortcuts  # noqa
 from .callback import CallbackData, _CallbackDataT
 from .others import (
+    MessageType,
     Metadata,
     ReplyToMessage,
     StorageConfiguration,
@@ -195,13 +194,8 @@ class CallConnect(BaseUserUpdate, _CallShortcuts):
             waba_id=entry["id"],
             id=call["id"],
             metadata=Metadata.from_dict(value["metadata"]),
-            from_user=client._usr_cls.from_dict(value["contacts"][0], client=client)
-            if "contacts" in value  # Only available for USER_INITIATED calls
-            else client._usr_cls(_client=client, wa_id=call["to"], name=None),
-            timestamp=datetime.datetime.fromtimestamp(
-                int(call["timestamp"]),
-                datetime.timezone.utc,
-            ),
+            from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
+            timestamp=helpers.timestamp_to_datetime(call["timestamp"]),
             event=CallEvent(call["event"]),
             direction=CallDirection(call["direction"]),
             session=SessionDescription.from_dict(call["session"])
@@ -267,30 +261,22 @@ class CallPermissionUpdate(BaseUserUpdate):
             id=msg["id"],
             type=MessageType(msg["type"]),
             metadata=Metadata.from_dict(value["metadata"]),
-            from_user=client._usr_cls(
-                _client=client,
-                wa_id=msg["from"],
-                name=None,
-            ),
-            timestamp=datetime.datetime.fromtimestamp(
-                int(msg["timestamp"]),
-                datetime.timezone.utc,
-            ),
+            from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
+            timestamp=helpers.timestamp_to_datetime(msg["timestamp"]),
             reply_to_message=ReplyToMessage.from_dict(msg["context"])
             if msg.get("context", {}).get("id")
             else None,
             response=CallPermissionResponse(perm["response"]),
             response_source=CallPermissionResponseSource(perm["response_source"]),
-            expiration_timestamp=datetime.datetime.fromtimestamp(
-                int(perm.get("expiration_timestamp", 0)),
-                datetime.timezone.utc,
+            expiration_timestamp=helpers.timestamp_to_datetime(
+                perm["expiration_timestamp"]
             )
             if "expiration_timestamp" in perm
             else None,
         )
 
 
-class CallPermissionResponse(utils.StrEnum):
+class CallPermissionResponse(helpers.StrEnum):
     """
     Represents the response to a call permission request.
 
@@ -308,7 +294,7 @@ class CallPermissionResponse(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class CallPermissionResponseSource(utils.StrEnum):
+class CallPermissionResponseSource(helpers.StrEnum):
     """
     Represents the source of the call permission response.
 
@@ -327,7 +313,7 @@ class CallPermissionResponseSource(utils.StrEnum):
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
-class SessionDescription(utils.FromDict):
+class SessionDescription(helpers.FromDict):
     """
     Contains the Session Description Protocol (SDP) type and description language.
 
@@ -349,7 +335,7 @@ class SessionDescription(utils.FromDict):
         }
 
 
-class CallEvent(utils.StrEnum):
+class CallEvent(helpers.StrEnum):
     """
     Represents the type of call event.
 
@@ -367,7 +353,7 @@ class CallEvent(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class CallDirection(utils.StrEnum):
+class CallDirection(helpers.StrEnum):
     """
     Represents the direction of a call (who initiated the call).
 
@@ -437,28 +423,15 @@ class CallTerminate(BaseUserUpdate, _CallShortcuts, Generic[_CallbackDataT]):
             waba_id=entry["id"],
             id=call["id"],
             metadata=Metadata.from_dict(value["metadata"]),
-            from_user=client._usr_cls(
-                _client=client,
-                wa_id=call["from"]
-                if direction == CallDirection.BUSINESS_INITIATED
-                else call["to"],
-                name=None,
-            ),
-            timestamp=datetime.datetime.fromtimestamp(
-                int(call["timestamp"]),
-                datetime.timezone.utc,
-            ),
+            from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
+            timestamp=helpers.timestamp_to_datetime(call["timestamp"]),
             event=CallEvent(call["event"]),
             direction=direction,
             status=CallTerminateStatus(call["status"]),
-            start_time=datetime.datetime.fromtimestamp(
-                int(call["start_time"]), datetime.timezone.utc
-            )
+            start_time=helpers.timestamp_to_datetime(call["start_time"])
             if "start_time" in call
             else None,
-            end_time=datetime.datetime.fromtimestamp(
-                int(call["end_time"]), datetime.timezone.utc
-            )
+            end_time=helpers.timestamp_to_datetime(call["end_time"])
             if "end_time" in call
             else None,
             duration=int(call["duration"]) if "duration" in call else None,
@@ -489,7 +462,7 @@ class CallTerminate(BaseUserUpdate, _CallShortcuts, Generic[_CallbackDataT]):
         )
 
 
-class CallTerminateStatus(utils.StrEnum):
+class CallTerminateStatus(helpers.StrEnum):
     """
     Represents the status of a call termination event.
 
@@ -538,20 +511,15 @@ class CallStatus(BaseUserUpdate, _CallShortcuts, Generic[_CallbackDataT]):
             waba_id=entry["id"],
             id=status["id"],
             metadata=Metadata.from_dict(value["metadata"]),
-            timestamp=datetime.datetime.fromtimestamp(
-                int(status["timestamp"]),
-                datetime.timezone.utc,
-            ),
-            from_user=client._usr_cls(
-                wa_id=status["recipient_id"], name=None, _client=client
-            ),
+            timestamp=helpers.timestamp_to_datetime(status["timestamp"]),
+            from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
             type=status["type"],
             status=CallStatusType(status["status"]),
             tracker=status.get("biz_opaque_callback_data"),
         )
 
 
-class CallStatusType(utils.StrEnum):
+class CallStatusType(helpers.StrEnum):
     """
     Represents the type of call status.
 
@@ -568,7 +536,7 @@ class CallStatusType(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class CallingSettingsStatus(utils.StrEnum):
+class CallingSettingsStatus(helpers.StrEnum):
     """
     Represents the status of calling settings.
     """
@@ -579,7 +547,7 @@ class CallingSettingsStatus(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class CallIconVisibility(utils.StrEnum):
+class CallIconVisibility(helpers.StrEnum):
     """
     Represents the visibility of the call icon.
     """
@@ -590,7 +558,7 @@ class CallIconVisibility(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class CallbackPermissionStatus(utils.StrEnum):
+class CallbackPermissionStatus(helpers.StrEnum):
     """
     Represents the status of callback permission.
     """
@@ -601,7 +569,7 @@ class CallbackPermissionStatus(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class SIPStatus(utils.StrEnum):
+class SIPStatus(helpers.StrEnum):
     """
     Represents the status of SIP (Session Initiation Protocol).
     """
@@ -646,7 +614,7 @@ class SIPSettings:
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
-class SIPServer(utils.FromDict):
+class SIPServer(helpers.FromDict):
     """
     Represents a SIP server configuration.
 
@@ -872,7 +840,7 @@ class CallHours:
         )
 
 
-class STRPKeyExchangeProtocol(utils.StrEnum):
+class STRPKeyExchangeProtocol(helpers.StrEnum):
     """
     Represents the SRTP key exchange protocol.
 
@@ -978,7 +946,7 @@ class CallingSettings:
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
-class BusinessPhoneNumberSettings(utils.APIObject):
+class BusinessPhoneNumberSettings(helpers.APIObject):
     """
     Represents the settings of a WhatsApp Business Phone Number.
 
@@ -1027,7 +995,7 @@ class BusinessPhoneNumberSettings(utils.APIObject):
         }
 
 
-class CallPermissionStatus(utils.StrEnum):
+class CallPermissionStatus(helpers.StrEnum):
     """
     Represents the status of a call permission.
 
@@ -1068,8 +1036,8 @@ class CallPermissionActionLimit:
             time_period=data["time_period"],
             max_allowed=data["max_allowed"],
             current_usage=data["current_usage"],
-            limit_expiration_time=datetime.datetime.fromtimestamp(
-                data["limit_expiration_time"], datetime.timezone.utc
+            limit_expiration_time=helpers.timestamp_to_datetime(
+                data["limit_expiration_time"]
             )
             if "limit_expiration_time" in data
             else None,
@@ -1119,9 +1087,7 @@ class CallPermission:
     def from_dict(cls, data: dict) -> CallPermission:
         return cls(
             status=CallPermissionStatus(data["status"]),
-            expiration_time=datetime.datetime.fromtimestamp(
-                data["expiration_time"], datetime.timezone.utc
-            )
+            expiration_time=helpers.timestamp_to_datetime(data["expiration_time"])
             if "expiration_time" in data
             else None,
         )

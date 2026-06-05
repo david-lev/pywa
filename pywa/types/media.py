@@ -62,7 +62,6 @@ class _MediaActions:
         *,
         path: str | pathlib.Path | None = None,
         filename: str | None = None,
-        in_memory: None = None,
         chunk_size: int | None = None,
         **httpx_kwargs,
     ) -> pathlib.Path:
@@ -70,6 +69,7 @@ class _MediaActions:
         Download a media file from WhatsApp servers.
 
         - Same as :func:`~pywa.client.WhatsApp.download_media` with ``media_url=media.get_media_url()``
+        - Use :func:`~pywa.types.media.Media.get_media_bytes` if you want to get the file as bytes instead of saving it to disk.
 
         >>> from pywa import WhatsApp, types, filters
         >>> wa = WhatsApp(...)
@@ -82,7 +82,6 @@ class _MediaActions:
             path: The path where to save the file (if not provided, the current working directory will be used).
             filename: The name of the file to save (if not provided, it will be extracted from the ``Content-Disposition`` header or a SHA256 hash of the URL will be used).
             chunk_size: The size (in bytes) of each chunk to read when downloading the media (default: ``64KB``).
-            in_memory: Deprecated: Use :py:func:`~pywa.client.WhatsApp.get_media_bytes` or :py:func:`~pywa.client.WhatsApp.stream_media` instead. If True, the file will be returned as bytes instead of being saved to disk.
             **httpx_kwargs: Additional arguments to pass to ``httpx.get(...)``.
 
         Returns:
@@ -92,7 +91,6 @@ class _MediaActions:
             url=self.get_media_url(),
             path=path,
             filename=filename,
-            in_memory=in_memory,
             chunk_size=chunk_size,
             **httpx_kwargs,
         )
@@ -102,6 +100,7 @@ class _MediaActions:
         Get the media file as bytes.
 
         - Same as :func:`~pywa.client.WhatsApp.get_media_bytes` with ``media_url=media.get_media_url()``
+        - Use :func:`~pywa.types.media.Media.stream` if you want to stream the file as bytes instead of getting it all at once.
 
         >>> from pywa import WhatsApp, types, filters
         >>> wa = WhatsApp(...)
@@ -126,15 +125,17 @@ class _MediaActions:
         Stream the media file as bytes.
 
         - Same as :func:`~pywa.client.WhatsApp.stream_media` with ``media_url=media.get_media_url()``
+        - Use :func:`~pywa.types.media.Media.get_bytes` if you want to get the whole file as bytes.
 
         >>> from pywa import WhatsApp, types, filters
+        >>> import httpx
 
         >>> wa = WhatsApp(...)
 
         >>> @wa.on_message(filters.document)
         ... def on_message(_: WhatsApp, msg: types.Message):
         ...     with httpx.Client() as client:
-        ...        client.post('http://example.com/upload', content=msg.document.stream())
+        ...        client.post('https://example.com/upload', content=msg.document.stream())
 
         Args:
             chunk_size: The size (in bytes) of each chunk to read (default: ``64KB``).
@@ -358,7 +359,32 @@ class Image(ArrivedMedia):
         id: The ID of the file (can be used to download or re-send the image).
         sha256: The SHA256 hash of the image.
         mime_type: The MIME type of the image.
+        url: The URL of the image (Use :meth:`~pywa.types.media.Media.get_bytes`/:meth:`~pywa.types.media.Media.stream`/:meth:`~pywa.types.media.Media.download` to access the image file).
+        caption: The caption of the image.
+        uploaded_by: Who uploaded the image.
+        uploaded_at: The timestamp when the image was uploaded (in UTC).
+        uploaded_to: The phone ID the image was uploaded to (optional).
     """
+
+    caption: str | None
+
+    @classmethod
+    def from_dict(
+        cls,
+        client: WhatsApp,
+        data: dict,
+        arrived_at: datetime.datetime | None = None,
+        received_to: str | None = None,
+    ) -> Image:
+        return cls(
+            **_get_arrived_media_dict(
+                client=client,
+                data=data,
+                arrived_at=arrived_at,
+                received_to=received_to,
+                additional_field="caption",
+            )
+        )
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -370,7 +396,75 @@ class Video(ArrivedMedia):
         id: The ID of the file (can be used to download or re-send the video).
         sha256: The SHA256 hash of the video.
         mime_type: The MIME type of the video.
+        url: The URL of the video (Use :meth:`~pywa.types.media.Media.get_bytes`/:meth:`~pywa.types.media.Media.stream`/:meth:`~pywa.types.media.Media.download` to access the video file).
+        caption: The caption of the video.
+        uploaded_by: Who uploaded the video.
+        uploaded_at: The timestamp when the video was uploaded (in UTC).
+        uploaded_to: The phone ID the video was uploaded to (optional).
     """
+
+    caption: str | None
+
+    @classmethod
+    def from_dict(
+        cls,
+        client: WhatsApp,
+        data: dict,
+        arrived_at: datetime.datetime | None = None,
+        received_to: str | None = None,
+    ) -> Video:
+        return cls(
+            **_get_arrived_media_dict(
+                client=client,
+                data=data,
+                arrived_at=arrived_at,
+                received_to=received_to,
+                additional_field="caption",
+            )
+        )
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class Document(ArrivedMedia):
+    """
+    Represents a document.
+
+    Attributes:
+        id: The ID of the file (can be used to download or re-send the document).
+        sha256: The SHA256 hash of the document.
+        mime_type: The MIME type of the document.
+        filename: The filename of the document (optional).
+        url: The URL of the document (Use :meth:`~pywa.types.media.Media.get_bytes`/:meth:`~pywa.types.media.Media.stream`/:meth:`~pywa.types.media.Media.download` to access the document file).
+        caption: The caption of the document.
+        uploaded_by: Who uploaded the document.
+        uploaded_at: The timestamp when the document was uploaded (in UTC).
+        uploaded_to: The phone ID the document was uploaded to (optional).
+    """
+
+    caption: str | None
+
+    @classmethod
+    def from_dict(
+        cls,
+        client: WhatsApp,
+        data: dict,
+        arrived_at: datetime.datetime | None = None,
+        received_to: str | None = None,
+    ) -> Document:
+        return cls(
+            **_get_arrived_media_dict(
+                client=client,
+                data=data,
+                arrived_at=arrived_at,
+                received_to=received_to,
+                additional_field="caption",
+            )
+        )
+
+    @property
+    def extension(self) -> str | None:
+        """Gets the extension of the document (with dot.)"""
+        return pathlib.Path(self.filename or "").suffix or super().extension
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -383,6 +477,10 @@ class Sticker(ArrivedMedia):
         sha256: The SHA256 hash of the sticker.
         mime_type: The MIME type of the sticker.
         animated: Whether the sticker is animated.
+        url: The URL of the sticker (Use :meth:`~pywa.types.media.Media.get_bytes`/:meth:`~pywa.types.media.Media.stream`/:meth:`~pywa.types.media.Media.download` to access the sticker file).
+        uploaded_by: Who uploaded the sticker.
+        uploaded_at: The timestamp when the sticker was uploaded (in UTC).
+        uploaded_to: The phone ID the sticker was uploaded to (optional).
     """
 
     animated: bool
@@ -407,24 +505,6 @@ class Sticker(ArrivedMedia):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Document(ArrivedMedia):
-    """
-    Represents a document.
-
-    Attributes:
-        id: The ID of the file (can be used to download or re-send the document).
-        sha256: The SHA256 hash of the document.
-        mime_type: The MIME type of the document.
-        filename: The filename of the document (optional).
-    """
-
-    @property
-    def extension(self) -> str | None:
-        """Gets the extension of the document (with dot.)"""
-        return pathlib.Path(self.filename or "").suffix or super().extension
-
-
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Audio(ArrivedMedia):
     """
     Represents an audio.
@@ -434,6 +514,10 @@ class Audio(ArrivedMedia):
         sha256: The SHA256 hash of the audio.
         mime_type: The MIME type of the audio.
         voice: Whether the audio is a voice message or just an audio file.
+        url: The URL of the audio (Use :meth:`~pywa.types.media.Media.get_bytes`/:meth:`~pywa.types.media.Media.stream`/:meth:`~pywa.types.media.Media.download` to access the audio file).
+        uploaded_by: Who uploaded the audio.
+        uploaded_at: The timestamp when the audio was uploaded (in UTC).
+        uploaded_to: The phone ID the audio was uploaded to (optional).
     """
 
     voice: bool

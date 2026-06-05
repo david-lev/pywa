@@ -41,6 +41,7 @@ __all__ = [
     "MPMButton",
     "SPMButton",
     "CallPermissionRequestButton",
+    "ContactInfoRequestButton",
     "BaseOTPButton",
     "CopyCodeOTPButton",
     "OneTapOTPButton",
@@ -69,29 +70,35 @@ __all__ = [
 import abc
 import dataclasses
 import datetime
+import functools
 import json
 import logging
 import pathlib
 import re
-import warnings
 from typing import (
     TYPE_CHECKING,
     AsyncIterator,
     BinaryIO,
+    Generator,
     Iterator,
     Literal,
     NoReturn,
+    Sequence,
+    TypeVar,
     cast,
+    overload,
 )
+
+_T = TypeVar("_T")
 
 from .. import _helpers as helpers
 from .. import utils
 from ..listeners import TemplateStatusUpdateListenerIdentifier
-from . import CallbackData
 from .base_update import BaseUpdate, RawUpdate
+from .callback import CallbackData
 from .flows import FlowActionType, FlowJSON
 from .media import Media
-from .others import ProductsSection, Result, SuccessResult, _ItemFactory
+from .others import ProductsSection, Result, SuccessResult
 
 if TYPE_CHECKING:
     from .. import filters as pywa_filters
@@ -101,7 +108,7 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 
-class TemplateStatus(utils.StrEnum):
+class TemplateStatus(helpers.StrEnum):
     """
     The status of the template.
 
@@ -143,7 +150,7 @@ class TemplateStatus(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class TemplateRejectionReason(utils.StrEnum):
+class TemplateRejectionReason(helpers.StrEnum):
     """
     The reason the template was rejected.
 
@@ -236,10 +243,7 @@ class TemplateStatusUpdate(BaseTemplateUpdate):
             _client=client,
             raw=update,
             id=data["id"],
-            timestamp=datetime.datetime.fromtimestamp(
-                data["time"],
-                datetime.timezone.utc,
-            ),
+            timestamp=helpers.timestamp_to_datetime(data["time"]),
             new_status=TemplateStatus(value["event"]),
             template_id=str(value["message_template_id"]),
             template_name=value["message_template_name"],
@@ -262,8 +266,10 @@ class TemplateStatusUpdate(BaseTemplateUpdate):
         )
 
     @property
-    def listener_identifier(self) -> TemplateStatusUpdateListenerIdentifier:
-        return TemplateStatusUpdateListenerIdentifier(
+    def listener_identifiers(
+        self,
+    ) -> Generator[TemplateStatusUpdateListenerIdentifier, ...] | None:
+        yield TemplateStatusUpdateListenerIdentifier(
             template_id=self.template_id,
         )
 
@@ -278,36 +284,6 @@ class TemplateStatusUpdate(BaseTemplateUpdate):
             A TemplateUnpauseResult object containing the result of the unpause operation.
         """
         return self._client.unpause_template(template_id=self.template_id)
-
-    @property
-    def title(self) -> str | None:
-        """Deprecated. Use other_info.title instead."""
-        warnings.warn(
-            "The 'title' property is deprecated. Use 'other_info.title' instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.other_info.title if self.other_info else None
-
-    @property
-    def description(self) -> str | None:
-        """Deprecated. Use other_info.description instead."""
-        warnings.warn(
-            "The 'description' property is deprecated. Use 'other_info.description' instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.other_info.description if self.other_info else None
-
-    @property
-    def disable_date(self) -> datetime.datetime | None:
-        """Deprecated. Use disable_info.disable_date instead."""
-        warnings.warn(
-            "The 'disable_date' property is deprecated. Use 'disable_info.disable_date' instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.disable_info.disable_date if self.disable_info else None
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
@@ -326,9 +302,7 @@ class DisableInfo:
     @classmethod
     def from_dict(cls, data: dict):
         return cls(
-            disable_date=datetime.datetime.fromtimestamp(
-                data["disable_date"], tz=datetime.timezone.utc
-            ),
+            disable_date=helpers.timestamp_to_datetime(data["disable_date"]),
         )
 
 
@@ -439,10 +413,7 @@ class TemplateCategoryUpdate(BaseTemplateUpdate):
             _client=client,
             raw=update,
             id=data["id"],
-            timestamp=datetime.datetime.fromtimestamp(
-                data["time"],
-                datetime.timezone.utc,
-            ),
+            timestamp=helpers.timestamp_to_datetime(data["time"]),
             template_id=str(value["message_template_id"]),
             template_name=value["message_template_name"],
             template_language=TemplateLanguage(value["message_template_language"]),
@@ -495,10 +466,7 @@ class TemplateComponentsUpdate(BaseTemplateUpdate):
             _client=client,
             raw=update,
             id=data["id"],
-            timestamp=datetime.datetime.fromtimestamp(
-                data["time"],
-                datetime.timezone.utc,
-            ),
+            timestamp=helpers.timestamp_to_datetime(data["time"]),
             template_id=str(value["message_template_id"]),
             template_name=value["message_template_name"],
             template_language=TemplateLanguage(value["message_template_language"]),
@@ -542,10 +510,7 @@ class TemplateQualityUpdate(BaseTemplateUpdate):
             _client=client,
             raw=update,
             id=data["id"],
-            timestamp=datetime.datetime.fromtimestamp(
-                data["time"],
-                datetime.timezone.utc,
-            ),
+            timestamp=helpers.timestamp_to_datetime(data["time"]),
             template_id=str(value["message_template_id"]),
             template_name=value["message_template_name"],
             template_language=TemplateLanguage(value["message_template_language"]),
@@ -554,7 +519,7 @@ class TemplateQualityUpdate(BaseTemplateUpdate):
         )
 
 
-class QualityScoreType(utils.StrEnum):
+class QualityScoreType(helpers.StrEnum):
     """
     Every message template has a quality rating based on usage, customer feedback and engagement. A message template's rating will appear in the WhatsApp Manager whenever it has an Active status, and will be displayed after a hyphen in the message template's status:
 
@@ -626,13 +591,11 @@ class QualityScore:
     def from_dict(cls, data: dict):
         return cls(
             score=QualityScoreType(data["score"]),
-            date=datetime.datetime.fromtimestamp(
-                data["date"], tz=datetime.timezone.utc
-            ),
+            date=helpers.timestamp_to_datetime(data["date"]),
         )
 
 
-class TemplateCategory(utils.StrEnum):
+class TemplateCategory(helpers.StrEnum):
     """
     Template category.
 
@@ -653,13 +616,7 @@ class TemplateCategory(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class TemplateSubCategory(utils.StrEnum):
-    CALL_PERMISSIONS_REQUEST = "CALL_PERMISSIONS_REQUEST"
-
-    UNKNOWN = "UNKNOWN"
-
-
-class ComponentType(utils.StrEnum):
+class ComponentType(helpers.StrEnum):
     HEADER = "HEADER"
     BODY = "BODY"
     FOOTER = "FOOTER"
@@ -678,11 +635,12 @@ class ComponentType(utils.StrEnum):
     VOICE_CALL = "VOICE_CALL"
     APP = "APP"
     CALL_PERMISSION_REQUEST = "CALL_PERMISSION_REQUEST"
+    REQUEST_CONTACT_INFO = "REQUEST_CONTACT_INFO"
 
     UNKNOWN = "UNKNOWN"
 
 
-class HeaderFormatType(utils.StrEnum):
+class HeaderFormatType(helpers.StrEnum):
     TEXT = "TEXT"
     IMAGE = "IMAGE"
     VIDEO = "VIDEO"
@@ -694,7 +652,7 @@ class HeaderFormatType(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class ParamType(utils.StrEnum):
+class ParamType(helpers.StrEnum):
     """
     Parameter types for template parameters
 
@@ -724,7 +682,7 @@ class ParamType(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class TemplateLanguage(utils.StrEnum):
+class TemplateLanguage(helpers.StrEnum):
     """
     Template language and locale code.
 
@@ -826,7 +784,7 @@ class TemplateLanguage(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class ParamFormat(utils.StrEnum):
+class ParamFormat(helpers.StrEnum):
     """
     The type of parameter formatting the HEADER and BODY components of the template will use.
 
@@ -854,26 +812,19 @@ class CreativeFeaturesSpec:
         Automatic Creative Optimizations are currently only available to businesses participating in early access. It will be made available to all businesses on a future date.
 
     Attributes:
-        image_brightness_and_contrast: Whether to apply brightness and contrast adjustments to images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-cropping>`_.
-        image_touchups: Whether to apply touch-ups to images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-filtering>`_.
-        add_text_overlay: Whether to add text overlays to images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#text-overlays>`_.
-        image_animation: Whether to apply animations to images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-animation>`_.
-        image_background_gen: Whether to generate backgrounds for images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-background-generation>`_.
-        text_extraction_for_headline: Whether to extract text from images for headlines. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#headline-extraction>`_.
-        text_extraction_for_tap_target: Whether to extract text from images for tap targets. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#tap-target-title-extraction>`_.
-        auto_promotion_tag: Whether to automatically extract the promotion tag, like “30% off”, “50% discount”, “Free shipping” from messages to create a promotion tag and put it into the image to highlight promotion information. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#auto-promotion-tag>`_.
+            image_brightness_and_contrast: Whether to apply brightness and contrast adjustments to images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-cropping>`_.
+            image_touchups: Whether to apply touch-ups to images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-filtering>`_.
+            add_text_overlay: Whether to automatically add a text overlay onto your image using your message content. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#text-overlays>`_.
+            image_animation: Whether to automatically transform your header image into an animated GIF. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-animation>`_.
+            image_background_gen: Whether to generate backgrounds for images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-background-generation>`_.
+            text_extraction_for_headline: Whether to extract keywords or phrases from your message to create a headline for your body text to highlight key information. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#headline-extraction>`_.
+            text_extraction_for_tap_target: Whether to extract keywords or phrases from your message to create a title for the tap-target area to highlight key information. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#tap-target-title-extraction>`_.
+            product_extensions: Whether to enhances single-image creatives by appending a set of additional catalog products users are likely to engage or convert with, creating more personalized and relevant experiences. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#product-extensions>`_.
+            text_formatting_optimization: Whether to update the formatting of text (e.g. remove unnecessary spaces, bold phrases) to increase performance. No text content is changed - format only. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#text-formatting>`_.
+            auto_promotion_tag: Whether to automatically extract the promotion tag, like “30% off”, “50% discount”, “Free shipping” from messages to create a promotion tag and put it into the image to highlight promotion information. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#auto-promotion-tag>`_.
+            hyperlink_formatting: Whether to automatically transform any URL links in the message body by either shortening the link or applying markdown formatting (hyperlinks) to adjacent key phrases to improve message digestibility. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#link-formatting-hyperlinks>`_.
+            image_banner: Whether to automatically apply colorful paddings to transform the image creative to the optimal aspect ratio to enhance visual appeal and improve media digestibility. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#image-banner>`_.
     """
-
-    image_brightness_and_contrast: bool
-    image_touchups: bool
-    add_text_overlay: bool
-    image_animation: bool
-    image_background_gen: bool
-    text_extraction_for_headline: bool
-    text_extraction_for_tap_target: bool
-    product_extensions: bool
-    text_formatting_optimization: bool
-    auto_promotion_tag: bool
 
     __slots__ = (
         "image_brightness_and_contrast",
@@ -886,6 +837,9 @@ class CreativeFeaturesSpec:
         "product_extensions",
         "text_formatting_optimization",
         "auto_promotion_tag",
+        "hyperlink_formatting",
+        "image_banner",
+        "dynamic_cta_text",
     )
 
     def __init__(
@@ -901,6 +855,9 @@ class CreativeFeaturesSpec:
         product_extensions: bool | None = None,
         text_formatting_optimization: bool | None = None,
         auto_promotion_tag: bool | None = None,
+        hyperlink_formatting: bool | None = None,
+        image_banner: bool | None = None,
+        dynamic_cta_text: bool | None = None,
     ):
         """
         Initializes a CreativeFeaturesSpec instance.
@@ -913,21 +870,31 @@ class CreativeFeaturesSpec:
             image_background_gen: Whether to generate backgrounds for images. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#image-background-generation>`_.
             text_extraction_for_headline: Whether to extract keywords or phrases from your message to create a headline for your body text to highlight key information. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#headline-extraction>`_.
             text_extraction_for_tap_target: Whether to extract keywords or phrases from your message to create a title for the tap-target area to highlight key information. Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/marketing-messages-lite-api/sending-messages#tap-target-title-extraction>`_.
-            product_extensions: Whether to encourage users to explore more products by appending additional catalog products to single-image creatives. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#product-extensions>`_.
+            product_extensions: Whether to enhances single-image creatives by appending a set of additional catalog products users are likely to engage or convert with, creating more personalized and relevant experiences. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#product-extensions>`_.
             text_formatting_optimization: Whether to update the formatting of text (e.g. remove unnecessary spaces, bold phrases) to increase performance. No text content is changed - format only. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#text-formatting>`_.
             auto_promotion_tag: Whether to automatically extract the promotion tag, like “30% off”, “50% discount”, “Free shipping” from messages to create a promotion tag and put it into the image to highlight promotion information. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#auto-promotion-tag>`_.
+            hyperlink_formatting: Whether to automatically transform any URL links in the message body by either shortening the link or applying markdown formatting (hyperlinks) to adjacent key phrases to improve message digestibility. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#link-formatting-hyperlinks>`_.
+            image_banner: Whether to automatically apply colorful paddings to transform the image creative to the optimal aspect ratio to enhance visual appeal and improve media digestibility. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#image-banner>`_.
         """
-        locals_map = locals()
-        for field in self.__slots__:
-            setattr(self, field, locals_map[field])
+        self.image_brightness_and_contrast = image_brightness_and_contrast
+        self.image_touchups = image_touchups
+        self.add_text_overlay = add_text_overlay
+        self.image_animation = image_animation
+        self.image_background_gen = image_background_gen
+        self.text_extraction_for_headline = text_extraction_for_headline
+        self.text_extraction_for_tap_target = text_extraction_for_tap_target
+        self.product_extensions = product_extensions
+        self.text_formatting_optimization = text_formatting_optimization
+        self.auto_promotion_tag = auto_promotion_tag
+        self.hyperlink_formatting = hyperlink_formatting
+        self.image_banner = image_banner
+        self.dynamic_cta_text = dynamic_cta_text
 
     def to_dict(self) -> dict:
         return {
-            k: {"enroll_status": "OPT_IN" if v else "OPT_OUT"}
-            for k, v in {
-                field_name: getattr(self, field_name) for field_name in self.__slots__
-            }.items()
-            if v is not None
+            field: {"enroll_status": "OPT_IN" if value else "OPT_OUT"}
+            for field in self.__slots__
+            if (value := getattr(self, field)) is not None
         }
 
     @classmethod
@@ -942,12 +909,22 @@ class CreativeFeaturesSpec:
         )
 
     def __repr__(self) -> str:
-        field_reprs = ", ".join(
-            f"{field_name}={getattr(self, field_name)!r}"
-            for field_name in self.__slots__
-            if getattr(self, field_name) is not None
-        )
-        return f"{self.__class__.__name__}({field_reprs})"
+        parts = []
+        for field in self.__slots__:
+            value = getattr(self, field)
+            if value is not None:
+                parts.append(f"{field}={value!r}")
+        return f"{self.__class__.__name__}({', '.join(parts)})"
+
+    @classmethod
+    def all_enabled(cls) -> CreativeFeaturesSpec:
+        """Creates a CreativeFeaturesSpec instance with all features enabled."""
+        return cls(**dict.fromkeys(cls.__slots__, True))
+
+    @classmethod
+    def all_disabled(cls) -> CreativeFeaturesSpec:
+        """Creates a CreativeFeaturesSpec instance with all features disabled."""
+        return cls(**dict.fromkeys(cls.__slots__, False))
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -960,6 +937,11 @@ class DegreesOfFreedomSpec:
     """
 
     creative_features_spec: CreativeFeaturesSpec
+
+    def to_dict(self) -> dict:
+        return {
+            "creative_features_spec": self.creative_features_spec.to_dict(),
+        }
 
 
 class TemplateBaseComponent(abc.ABC):
@@ -1107,7 +1089,6 @@ class _BaseTextComponent:
         """
         Initializes a text component for a template.
 
-
         >>> positionals = HeaderText("Hi {{1}}!, How are you? Get {{2}}% OFF!", "David", 15)
         >>> named = BodyText("Hi {{name}}!, How are you? Get {{discount}}% OFF!", name="David", discount=15)
         >>> print(positionals.preview(), named.preview())
@@ -1118,16 +1099,56 @@ class _BaseTextComponent:
             **named_examples: Named examples for the text component. These will be used to fill in the template text.
         """
         if positionals_examples and named_examples:
-            raise ValueError("You can't use both positional and named args!")
+            raise ValueError("You can't use both positional and named examples!")
+
+        all_placeholders = set(re.findall(r"\{\{(\w+)}}", text))
+        positional_placeholders = {p for p in all_placeholders if p.isdigit()}
+        named_placeholders = all_placeholders - positional_placeholders
+
         if positionals_examples:
+            if named_placeholders:
+                raise ValueError(
+                    f"Found named placeholders {named_placeholders} in text, but positional examples were provided."
+                )
+
+            expected_indices = {str(i) for i in range(1, len(positionals_examples) + 1)}
+            if positional_placeholders != expected_indices:
+                raise ValueError(
+                    f"Mismatched positional placeholders. Expected {expected_indices} "
+                    f"based on {len(positionals_examples)} provided examples, but found {positional_placeholders} in text."
+                )
+
             self.param_format = ParamFormat.POSITIONAL
             self.text = text
             self.example = positionals_examples
+
         elif named_examples:
+            if positional_placeholders:
+                raise ValueError(
+                    f"Found positional placeholders {positional_placeholders} in text, but named examples were provided."
+                )
+
+            provided_keys = set(named_examples.keys())
+            if named_placeholders != provided_keys:
+                missing = named_placeholders - provided_keys
+                extra = provided_keys - named_placeholders
+                error_msgs = []
+                if missing:
+                    error_msgs.append(f"missing examples for {missing}")
+                if extra:
+                    error_msgs.append(f"extra examples provided for {extra}")
+                raise ValueError("Named parameters mismatch: " + "; ".join(error_msgs))
+
             self.param_format = ParamFormat.NAMED
             self.text = text
             self.example = named_examples
+
         else:
+            if all_placeholders:
+                raise ValueError(
+                    f"Text contains placeholders {all_placeholders} but no examples were provided."
+                )
+
             self.param_format = None
             self.example = None
             self.text = text
@@ -1140,6 +1161,47 @@ class _BaseTextComponent:
         elif self.param_format == ParamFormat.NAMED:
             return f"{self.__class__.__name__}(text={self.text!r}, {', '.join(f'{k}={v!r}' for k, v in self.example.items())})"
         return f"{self.__class__.__name__}(text={self.text!r})"
+
+    @property
+    def param_names(self) -> tuple[str, ...]:
+        """
+        Returns the names of the parameters required by this component,
+        if the component uses **named parameters**.
+
+        This property is primarily intended for **introspection and automation**,
+        allowing to dynamically discover which parameters must be
+        provided when calling :meth:`params`.
+
+        - See also :meth:`~pywa.types.templates.Template.get_component` and :meth:`~pywa.types.templates.Template.get_components`.
+
+        Example:
+
+            >>> temp = Template(
+            ...     components=[
+            ...         BodyText(
+            ...             text="Hi {{name}}, your flight {{flight_iata}} is delayed",
+            ...             name="John",
+            ...             flight_iata="AA123",
+            ...         )
+            ...     ]
+            ... )
+            >>> body = temp.get_component(BodyText) # get the body component of the template
+            >>> body.param_names
+            ('name', 'flight_iata')
+
+            >>> wa.send_template(
+            ...     params=[body.params(**{name: my_get_value(name) for name in body.param_names})]
+            ... )
+
+        Returns:
+            A tuple of parameter names if the component uses named parameters, otherwise raises a ValueError.
+
+        Raises:
+            ValueError: If the component does not use named parameters.
+        """
+        if self.param_format == ParamFormat.NAMED:
+            return tuple(self.example.keys())
+        raise ValueError("This component does not use named parameters!")
 
     def preview(self, *override_positionals, **override_named) -> str:
         """
@@ -2140,7 +2202,7 @@ class CopyCodeButton(BaseButtonComponent):
         return CopyCodeButton._Params(coupon_code=coupon_code, index=index)
 
 
-class FlowButtonIcon(utils.StrEnum):
+class FlowButtonIcon(helpers.StrEnum):
     """
     The icon for the Flow button.
 
@@ -2523,6 +2585,28 @@ class URLButton(BaseButtonComponent):
         example: str | None = None,
         app_deep_link: AppDeepLink | None = None,
     ):
+        variables = re.findall(r"\{\{.*?}}", url)
+        if len(variables) > 1:
+            raise ValueError(
+                f"URLButton url supports a maximum of 1 variable. "
+                f"Found {len(variables)}: {', '.join(variables)}"
+            )
+        if variables:
+            var = variables[0]
+            if not url.endswith(var):
+                raise ValueError(
+                    f"The URL variable {var} must be appended to the very end of the URL string. "
+                    f"Got: '{url}'"
+                )
+            if not example:
+                raise ValueError(
+                    "An 'example' must be provided because the URL contains a variable."
+                )
+        else:
+            if example:
+                raise ValueError(
+                    "An 'example' was provided, but the URL does not contain any variables."
+                )
         self.text = text
         self.url = url
         self.example = example
@@ -2853,7 +2937,17 @@ class CallPermissionRequestButton(BaseButtonComponent):
     )
 
 
-class OtpType(utils.StrEnum):
+@dataclasses.dataclass(kw_only=True, slots=True)
+class ContactInfoRequestButton(BaseButtonComponent):
+    type: ComponentType = dataclasses.field(
+        default=ComponentType.REQUEST_CONTACT_INFO,
+        init=False,
+        repr=False,
+    )
+    text: str = "Share Contact Info"  # only this text is allowed. (subcode error 2388153) see https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#using-templates
+
+
+class OtpType(helpers.StrEnum):
     """
     The type of the one-time password or code button.
 
@@ -3341,7 +3435,9 @@ class Carousel(TemplateBaseComponent):
             for card in self.cards:
                 card.clear_media_cache()
 
-    def params(self=None, *, cards: list[CarouselCard._Params]) -> Carousel._Params:
+    def params(
+        self: Carousel | None = None, *, cards: list[CarouselCard._Params]
+    ) -> Carousel._Params:
         """
         Fill the parameters for the carousel component.
 
@@ -3546,11 +3642,103 @@ class AuthenticationFooter(BaseFooterComponent):
     code_expiration_minutes: int
 
 
+def _find_comp(
+    *, comp_type: type[_T], cmps: list[TemplateBaseComponent | dict], first_match: bool
+) -> _T | list[_T] | None:
+    matches = []
+    for comp in cmps:
+        if isinstance(comp, comp_type):
+            matches.append(comp)
+            if first_match:
+                break
+        elif isinstance(comp, Carousel):
+            for card in comp.cards:
+                inner_comp = _find_comp(
+                    comp_type=comp_type, cmps=card.components, first_match=first_match
+                )
+                if inner_comp is not None:
+                    if isinstance(inner_comp, list):
+                        matches.extend(inner_comp)
+                    else:
+                        matches.append(inner_comp)
+                    if first_match and matches:
+                        break
+        elif isinstance(comp, Buttons):
+            for button in comp.buttons:
+                if isinstance(button, comp_type):
+                    matches.append(button)
+                    if first_match:
+                        break
+
+    if not matches:
+        return None
+    if first_match:
+        return matches[0]
+    return matches
+
+
 # ========== TEMPLATE ==========
 
 
+class _BaseTemplateActions:
+    components: list[TemplateBaseComponent | dict]
+
+    def get_component(self, comp_type: type[_T]) -> _T | None:
+        """
+        Get a component of the specified type from the template.
+
+        - If the template has multiple components of the specified type (e.g. a button or a carousel), this property will return the first component found.
+        - Use :meth:`~pywa.types.templates.Template.get_components` to get all components of a specified type.
+
+        >>> t = Template(...)
+        >>> body = t.get_component(BodyText)
+        >>> if body: print(body.text, body.example)
+
+        Args:
+            comp_type: The type of component to retrieve.
+
+        Returns:
+            The component of the specified type if it exists, otherwise None.
+        """
+        return _find_comp(comp_type=comp_type, cmps=self.components, first_match=True)
+
+    def get_components(self, comp_type: type[_T]) -> list[_T]:
+        """
+        Get all components of the specified type from the template.
+
+        - This method will search for components of the specified type at all levels of the template, including within carousels and buttons.
+        - Use :meth:`~pywa.types.templates.Template.get_component` to get the first component of a specified type.
+
+        >>> t = Template(...)
+        >>> quick_replays = t.get_components(QuickReplyButton)
+        >>> for q in quick_replays: print(q.text)
+
+        Args:
+            comp_type: The type of components to retrieve.
+
+        Returns:
+            A list of components of the specified type if any exist, otherwise empty list.
+        """
+        return (
+            _find_comp(comp_type=comp_type, cmps=self.components, first_match=False)
+            or []
+        )
+
+    def validate_params(self, params: list[BaseParams] | None) -> NoReturn | None:
+        """
+        Validate the provided parameters against the template's components.
+
+        Args:
+            params: A list of BaseParams instances representing the parameters to validate.
+
+        Raises:
+            ValueError: If there are missing or extra parameters for the template's components.
+        """
+        _validate_params(self.components, params)
+
+
 @dataclasses.dataclass(kw_only=True, slots=True)
-class Template:
+class Template(_BaseTemplateActions):
     """
     Represents a New WhatsApp Template.
 
@@ -3628,18 +3816,6 @@ class Template:
         """
         return _template_to_json(self)
 
-    def validate_params(self, params: list[BaseParams] | None) -> NoReturn | None:
-        """
-        Validate the provided parameters against the template's components.
-
-        Args:
-            params: A list of BaseParams instances representing the parameters to validate.
-
-        Raises:
-            ValueError: If there are missing or extra parameters for the template's components.
-        """
-        _validate_params(self.components, params)
-
     @classmethod
     def from_dict(cls, data: dict) -> Template:
         return cls(
@@ -3705,6 +3881,7 @@ _comp_types_to_component: dict[ComponentType, type[TemplateBaseComponent]] = {
     ComponentType.COPY_CODE: CopyCodeButton,
     ComponentType.FLOW: FlowButton,
     ComponentType.CALL_PERMISSION_REQUEST: CallPermissionRequestButton,
+    ComponentType.REQUEST_CONTACT_INFO: ContactInfoRequestButton,
     ComponentType.VOICE_CALL: VoiceCallButton,
 }
 
@@ -3725,7 +3902,18 @@ _otp_types_to_component: dict[OtpType, type[BaseOTPButton]] = {
 }
 
 
-def _parse_component(component: dict) -> TemplateBaseComponent | dict:
+def _unknown_comp_warning(comp: dict, unknown: str, template_id: str | None) -> None:
+    _logger.warning(
+        "%sUnknown %s: %s. Defaulting to raw dictionary representation. Please update pywa or report this issue.",
+        f"Template {template_id}: " if template_id else "",
+        unknown,
+        comp,
+    )
+
+
+def _parse_component(
+    component: dict, *, template_id: str | None = None
+) -> TemplateBaseComponent | dict:
     """
     Parse a component dictionary into a BaseComponent object.
 
@@ -3737,20 +3925,14 @@ def _parse_component(component: dict) -> TemplateBaseComponent | dict:
     """
     component_cls = _comp_types_to_component.get(ComponentType(component["type"]))
     if component_cls is None:
-        _logger.warning(
-            "Unknown component type: %s. Defaulting to dictionary representation.",
-            component["type"],
-        )
+        _unknown_comp_warning(component, "component type", template_id)
         return component
 
     if issubclass(component_cls, BaseHeaderComponent):
         header_format = HeaderFormatType(component["format"])
         header_cls = _header_formats_to_component.get(header_format)
         if header_cls is None:
-            _logger.warning(
-                "Unknown header format: %s. Defaulting to dictionary representation.",
-                component["format"],
-            )
+            _unknown_comp_warning(component, "header format", template_id)
             return component
         component_cls = header_cls
 
@@ -3760,10 +3942,7 @@ def _parse_component(component: dict) -> TemplateBaseComponent | dict:
         elif "text" in component:
             component_cls = BodyText
         else:
-            _logger.warning(
-                "Unknown body component: %s. Defaulting to dictionary representation.",
-                component,
-            )
+            _unknown_comp_warning(component, "body component", template_id)
             return component
 
     elif issubclass(component_cls, BaseFooterComponent):
@@ -3772,20 +3951,14 @@ def _parse_component(component: dict) -> TemplateBaseComponent | dict:
         elif "text" in component:
             component_cls = FooterText
         else:
-            _logger.warning(
-                "Unknown footer component: %s. Defaulting to dictionary representation.",
-                component,
-            )
+            _unknown_comp_warning(component, "footer component", template_id)
             return component
 
     elif issubclass(component_cls, BaseOTPButton):
         otp_type = OtpType(component["otp_type"])
         otp_cls = _otp_types_to_component.get(otp_type)
         if otp_cls is None:
-            _logger.warning(
-                "Unknown OTP type: %s. Defaulting to dictionary representation.",
-                component["otp_type"],
-            )
+            _unknown_comp_warning(component, "OTP type", template_id)
             return component
         component_cls = otp_cls
 
@@ -3793,7 +3966,8 @@ def _parse_component(component: dict) -> TemplateBaseComponent | dict:
         return component_cls.from_dict(component)
     except Exception:
         _logger.exception(
-            "Failed to parse component: %s. Defaulting to dictionary representation. please update pywa or report this issue.",
+            "%sFailed to parse component: %s. Defaulting to raw dictionary representation. Please update pywa or report this issue.",
+            f"Template {template_id}: " if template_id else "",
             component,
         )
         return component
@@ -3854,7 +4028,7 @@ def _find_param_for_component(
 
 
 def _validate_params(
-    components: list[TemplateBaseComponent],
+    components: list[TemplateBaseComponent | dict],
     params: list[BaseParams] = None,
 ) -> None:
     real_params = [
@@ -3936,7 +4110,7 @@ def _validate_params(
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
-class TemplateDetails(utils.APIObject):
+class TemplateDetails(helpers.APIObject, _BaseTemplateActions):
     """
     Represents the details of an existing WhatsApp Template.
 
@@ -3964,7 +4138,7 @@ class TemplateDetails(utils.APIObject):
     language: TemplateLanguage
     category: TemplateCategory
     status: TemplateStatus
-    components: list[TemplateBaseComponent]
+    components: list[TemplateBaseComponent | dict]
     parameter_format: ParamFormat | None
     message_send_ttl_seconds: int | None
     correct_category: TemplateCategory | None
@@ -3973,7 +4147,7 @@ class TemplateDetails(utils.APIObject):
     library_template_name: str | None
     quality_score: QualityScore | None
     cta_url_link_tracking_opted_out: bool | None
-    sub_category: TemplateSubCategory | None
+    sub_category: str | None
     degrees_of_freedom_spec: DegreesOfFreedomSpec | None
 
     @classmethod
@@ -4000,15 +4174,14 @@ class TemplateDetails(utils.APIObject):
             if "message_send_ttl_seconds" in data
             else None,
             components=[
-                _parse_component(component) for component in data["components"]
+                _parse_component(component, template_id=data["id"])
+                for component in data["components"]
             ],
             quality_score=QualityScore.from_dict(data=data["quality_score"])
             if "quality_score" in data
             else None,
             cta_url_link_tracking_opted_out=data.get("cta_url_link_tracking_opted_out"),
-            sub_category=TemplateSubCategory(data["sub_category"])
-            if "sub_category" in data
-            else None,
+            sub_category=data.get("sub_category"),
             degrees_of_freedom_spec=DegreesOfFreedomSpec(
                 creative_features_spec=CreativeFeaturesSpec.from_dict(
                     data["degrees_of_freedom_spec"]["creative_features_spec"]
@@ -4079,7 +4252,12 @@ class TemplateDetails(utils.APIObject):
                 self.parameter_format = new_parameter_format
         return res
 
-    def duplicate(self, **overrides) -> CreatedTemplate:
+    def duplicate(
+        self,
+        *,
+        target_waba_id: str | None = None,
+        **overrides,
+    ) -> CreatedTemplate:
         """
         Duplicate this template.
 
@@ -4087,14 +4265,15 @@ class TemplateDetails(utils.APIObject):
 
         Example:
             >>> wa = WhatsApp(...)
-            >>> template = wa.get_template("my_template_id")
-            >>> new_template = template.duplicate(language=TemplateLanguage.ENGLISH)
+            >>> template = wa.get_template("123456789")
+            >>> new_template = template.duplicate(language=TemplateLanguage.FRENCH)
 
         Args:
-            overrides: Optional overrides for the template properties.
+            overrides: Optional overrides for the template properties (e.g. name, language, category, components, etc.) to be applied to the new template. If not provided, the new template will have the same properties as this one.
+            target_waba_id: The ID of the WhatsApp Business Account to create the new template in. If not provided, the client's ``waba_id`` will be used.
         """
         return self._client.create_template(
-            Template(
+            template=Template(
                 name=overrides.get("name", self.name),
                 language=overrides.get("language", self.language),
                 category=overrides.get("category", self.category),
@@ -4105,7 +4284,11 @@ class TemplateDetails(utils.APIObject):
                 message_send_ttl_seconds=overrides.get(
                     "message_send_ttl_seconds", self.message_send_ttl_seconds
                 ),
-            )
+                degrees_of_freedom_spec=overrides.get(
+                    "degrees_of_freedom_spec", self.degrees_of_freedom_spec
+                ),
+            ),
+            waba_id=target_waba_id,
         )
 
     def compare(
@@ -4209,12 +4392,14 @@ class TemplatesResult(Result[TemplateDetails]):
         self,
         wa: WhatsApp,
         response: dict,
-        item_factory: _ItemFactory,
     ):
         super().__init__(
             wa=wa,
             response=response,
-            item_factory=item_factory,
+            item_factory=functools.partial(
+                TemplateDetails.from_dict,
+                client=wa,
+            ),
         )
         self.total_count = response["summary"]["total_count"]
         self.message_template_count = response["summary"]["message_template_count"]
@@ -4233,7 +4418,7 @@ class TemplatesResult(Result[TemplateDetails]):
         )
 
 
-class TopBlockReasonType(utils.StrEnum):
+class TopBlockReasonType(helpers.StrEnum):
     """
     The top reason that customers reported when they blocked your WhatsApp phone number after receiving one of your message templates. The reasons include: Spam, Didn’t sign up, No longer needed, Offensive messages. Note that Top block reason is only visible when a significant number of customers block your number.
 
@@ -4488,7 +4673,7 @@ class UpdatedTemplate(_CreatedAndUpdatedTemplateActions):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class CreatedTemplates:
+class CreatedTemplates(Sequence[CreatedTemplate]):
     """
     Represents a collection of created WhatsApp Templates.
 
@@ -4516,11 +4701,16 @@ class CreatedTemplates:
             )
         )
 
-    def __iter__(self) -> Iterator[CreatedTemplate]:
-        """
-        Iterate over the created templates.
+    @overload
+    def __getitem__(self, index: int) -> CreatedTemplate: ...
 
-        Returns:
-            Iterator[CreatedTemplate]: An iterator over the CreatedTemplate instances.
-        """
-        return iter(self.templates)
+    @overload
+    def __getitem__(self, index: slice) -> list[CreatedTemplate]: ...
+
+    def __getitem__(
+        self, index: int | slice
+    ) -> CreatedTemplate | list[CreatedTemplate]:
+        return self._data[index]
+
+    def __len__(self) -> int:
+        return len(self._data)

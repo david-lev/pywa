@@ -6,7 +6,6 @@ from .base_update import StopHandling, ContinueHandling, RawUpdate
 from .callback import (
     Button,
     URLButton,
-    ButtonUrl,  # Deprecated, use URLButton instead
     VoiceCallButton,
     CallPermissionRequestButton,
     CallbackButton,
@@ -16,9 +15,12 @@ from .callback import (
     SectionList,
     SectionRow,
     FlowButton,
+    ContactInfoRequestButton,
+    VideoCarouselCard,
+    ImageCarouselCard,
 )
 from .media import MediaURL, Audio, Document, Image, Sticker, Video
-from .message import Message
+from .message import Message, EditedMessage, DeletedMessage, OutgoingMessage, OutgoingEditedMessage, OutgoingDeletedMessage
 from .message_status import (
     Conversation,
     ConversationCategory,
@@ -41,7 +43,6 @@ from .others import (
     ReplyToMessage,
     ReferredProduct,
     Referral,
-    User,
     Command,
     ConversationalAutomation,
     QRCode,
@@ -52,6 +53,7 @@ from .others import (
     UserIdentityChangeSettings,
     Unsupported,
 )
+from .user import User
 from .templates import (
     Template,
     TemplateStatusUpdate,
@@ -72,7 +74,6 @@ from .flows import (
     FlowMetricName,
     FlowMetricGranularity,
 )
-from .chat_opened import ChatOpened
 from .user_preferences import (
     UserMarketingPreferences,
     UserPreferenceCategory,
@@ -89,3 +90,5 @@ from .calls import (
 )
 from .system import PhoneNumberChange, IdentityChange, Identity
 from .sent_update import SentMessage, SentTemplate, SentTemplateStatus, InitiatedCall
+from .groups import GroupInviteLink, GroupJoinApprovalMode, GroupMessageStatuses
+from .account_update import AccountUpdate

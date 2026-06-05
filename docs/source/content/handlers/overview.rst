@@ -332,9 +332,6 @@ Available Handlers
    * - :meth:`~pywa.client.WhatsApp.on_template_components_update`
      - :class:`TemplateComponentsUpdateHandler`
      - :class:`~pywa.types.templates.TemplateComponentsUpdate`
-   * - :meth:`~pywa.client.WhatsApp.on_chat_opened`
-     - :class:`ChatOpenedHandler`
-     - :class:`~pywa.types.chat_opened.ChatOpened`
    * - :meth:`~pywa.client.WhatsApp.on_phone_number_change`
      - :class:`PhoneNumberChangeHandler`
      - :class:`~pywa.types.system.PhoneNumberChange`
@@ -356,6 +353,24 @@ Available Handlers
    * - :meth:`~pywa.client.WhatsApp.on_user_marketing_preferences`
      - :class:`UserMarketingPreferencesHandler`
      - :class:`~pywa.types.user_preferences.UserMarketingPreferences`
+   * - :meth:`~pywa.client.WhatsApp.on_edited_message`
+     - :class:`EditedMessageHandler`
+     - :class:`~pywa.types.calls.EditedMessage`
+   * - :meth:`~pywa.client.WhatsApp.on_deleted_message`
+     - :class:`DeletedMessageHandler`
+     - :class:`~pywa.types.message.DeletedMessage`
+   * - :meth:`~pywa.client.WhatsApp.on_outgoing_message`
+     - :class:`OutgoingMessageHandler`
+     - :class:`~pywa.types.message.OutgoingMessage`
+   * - :meth:`~pywa.client.WhatsApp.on_outgoing_edited_message`
+     - :class:`OutgoingEditedMessageHandler`
+     - :class:`~pywa.types.message.OutgoingEditedMessage`
+   * - :meth:`~pywa.client.WhatsApp.on_outgoing_deleted_message`
+     - :class:`OutgoingDeletedMessageHandler`
+     - :class:`~pywa.types.message.OutgoingDeletedMessage`
+   * - :meth:`~pywa.client.WhatsApp.on_account_update`
+     - :class:`AccountUpdateHandler`
+     - :class:`~pywa.types.account_update.AccountUpdate`
    * - :meth:`~pywa.client.WhatsApp.on_raw_update`
      - :class:`RawUpdateHandler`
      - :class:`~pywa.types.base_update.RawUpdate`

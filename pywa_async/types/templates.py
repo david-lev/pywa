@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import dataclasses
 import datetime
+import functools
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, cast
 
 from pywa.listeners import TemplateStatusUpdateListenerIdentifier
-from pywa.types.others import _ItemFactory
 from pywa.types.templates import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.templates import (
     BaseParams,
@@ -37,9 +37,9 @@ from pywa.types.templates import (
 from pywa.types.templates import (
     UpdatedTemplate as _UpdatedTemplate,
 )
-from pywa_async.types import CallbackData
 
 from .. import filters as pywa_filters
+from .callback import CallbackData
 from .others import Result, SuccessResult
 
 if TYPE_CHECKING:
@@ -48,11 +48,10 @@ if TYPE_CHECKING:
     from .sent_update import SentTemplate
 
 
-@dataclasses.dataclass(frozen=True, kw_only=True)
 class BaseTemplateUpdateAsync:
     """Base class for template updates."""
 
-    _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)
+    _client: WhatsAppAsync
     template_id: str
 
     async def get_template(self) -> TemplateDetails:
@@ -67,7 +66,6 @@ class BaseTemplateUpdateAsync:
         )
 
 
-@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
 class TemplateStatusUpdate(BaseTemplateUpdateAsync, _TemplateStatusUpdate):
     """
     Represents status change of a template.
@@ -108,7 +106,6 @@ class TemplateStatusUpdate(BaseTemplateUpdateAsync, _TemplateStatusUpdate):
         return await self._client.unpause_template(template_id=self.template_id)
 
 
-@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
 class TemplateCategoryUpdate(BaseTemplateUpdateAsync, _TemplateCategoryUpdate):
     """
     Represents a template category update.
@@ -132,7 +129,6 @@ class TemplateCategoryUpdate(BaseTemplateUpdateAsync, _TemplateCategoryUpdate):
     """
 
 
-@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
 class TemplateComponentsUpdate(BaseTemplateUpdateAsync, _TemplateComponentsUpdate):
     """
     Represents a template components update.
@@ -156,7 +152,6 @@ class TemplateComponentsUpdate(BaseTemplateUpdateAsync, _TemplateComponentsUpdat
     """
 
 
-@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
 class TemplateQualityUpdate(BaseTemplateUpdateAsync, _TemplateQualityUpdate):
     """
     Represents a template quality update.
@@ -178,7 +173,6 @@ class TemplateQualityUpdate(BaseTemplateUpdateAsync, _TemplateQualityUpdate):
     """
 
 
-@dataclasses.dataclass(kw_only=True, slots=True)
 class TemplateDetails(_TemplateDetails):
     """
     Represents the details of an existing WhatsApp Template.
@@ -201,7 +195,7 @@ class TemplateDetails(_TemplateDetails):
         sub_category: The sub-category of the template, if applicable.
     """
 
-    _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)
+    _client: WhatsAppAsync
 
     async def delete(self) -> SuccessResult:
         """
@@ -258,7 +252,12 @@ class TemplateDetails(_TemplateDetails):
                 self.parameter_format = new_parameter_format
         return res
 
-    async def duplicate(self, **overrides) -> CreatedTemplate:
+    async def duplicate(
+        self,
+        *,
+        target_waba_id: str | None = None,
+        **overrides,
+    ) -> CreatedTemplate:
         """
         Duplicate this template.
 
@@ -266,14 +265,15 @@ class TemplateDetails(_TemplateDetails):
 
         Example:
             >>> wa = WhatsApp(...)
-            >>> template = wa.get_template("my_template_id")
-            >>> new_template = template.duplicate(language=TemplateLanguage.ENGLISH)
+            >>> template = await wa.get_template("123456789")
+            >>> new_template = await template.duplicate(language=TemplateLanguage.FRENCH)
 
         Args:
-            overrides: Optional overrides for the template properties.
+            overrides: Optional overrides for the template properties (e.g. name, language, category, components, etc.) to be applied to the new template. If not provided, the new template will have the same properties as this one.
+            target_waba_id: The ID of the WhatsApp Business Account to create the new template in. If not provided, the client's ``waba_id`` will be used.
         """
         return await self._client.create_template(
-            Template(
+            template=Template(
                 name=overrides.get("name", self.name),
                 language=overrides.get("language", self.language),
                 category=overrides.get("category", self.category),
@@ -284,7 +284,8 @@ class TemplateDetails(_TemplateDetails):
                 message_send_ttl_seconds=overrides.get(
                     "message_send_ttl_seconds", self.message_send_ttl_seconds
                 ),
-            )
+            ),
+            waba_id=target_waba_id,
         )
 
     async def compare(
@@ -386,12 +387,14 @@ class TemplatesResult(Result[TemplateDetails]):
         self,
         wa: WhatsApp,
         response: dict,
-        item_factory: _ItemFactory,
     ):
         super().__init__(
             wa=wa,
             response=response,
-            item_factory=item_factory,
+            item_factory=functools.partial(
+                TemplateDetails.from_dict,
+                client=wa,
+            ),
         )
         self.total_count = response["summary"]["total_count"]
         self.message_template_count = response["summary"]["message_template_count"]
@@ -411,6 +414,8 @@ class TemplatesResult(Result[TemplateDetails]):
 
 
 class _CreatedAndUpdatedTemplateActionsAsync:
+    _client: WhatsAppAsync
+
     async def get(self) -> TemplateDetails:
         """
         Retrieve the details of the created or updated template.
@@ -461,7 +466,6 @@ class _CreatedAndUpdatedTemplateActionsAsync:
         )
 
 
-@dataclasses.dataclass(frozen=True, slots=True)
 class CreatedTemplate(_CreatedAndUpdatedTemplateActionsAsync, _CreatedTemplate):
     """
     Represents a created WhatsApp Template.
@@ -472,10 +476,7 @@ class CreatedTemplate(_CreatedAndUpdatedTemplateActionsAsync, _CreatedTemplate):
         category: the template category.
     """
 
-    _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)
 
-
-@dataclasses.dataclass(frozen=True, slots=True)
 class UpdatedTemplate(_CreatedAndUpdatedTemplateActionsAsync, _UpdatedTemplate):
     """
     Represents the result of a template update operation.
@@ -487,11 +488,8 @@ class UpdatedTemplate(_CreatedAndUpdatedTemplateActionsAsync, _UpdatedTemplate):
         success: Indicates whether the template update was successful.
     """
 
-    _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)
 
-
-@dataclasses.dataclass(frozen=True, slots=True)
-class CreatedTemplates(_CreatedTemplates):
+class CreatedTemplates(_CreatedTemplates, Sequence[CreatedTemplate]):
     """
     Represents a collection of created WhatsApp Templates.
 

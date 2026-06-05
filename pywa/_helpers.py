@@ -1,21 +1,10 @@
-from __future__ import annotations
-
-__all__ = [
-    "resolve_buttons_param",
-    "resolve_media_param",
-    "resolve_tracker_param",
-    "resolve_arg",
-    "upload_template_media_components",
-    "resolve_flow_json_param",
-    "get_interactive_msg",
-    "get_media_msg",
-    "get_flow_metric_field",
-    "resolve_callback_data",
-]
-
 import base64
+import dataclasses
 import datetime
 import enum
+import functools
+import importlib
+import inspect
 import io
 import itertools
 import json
@@ -25,6 +14,7 @@ import os
 import pathlib
 import re
 import threading
+import warnings
 from concurrent import futures
 from typing import (
     TYPE_CHECKING,
@@ -32,6 +22,8 @@ from typing import (
     AsyncIterable,
     AsyncIterator,
     BinaryIO,
+    Callable,
+    ClassVar,
     Iterable,
     Iterator,
     Literal,
@@ -40,30 +32,7 @@ from typing import (
 
 import httpx
 
-from pywa.types.others import InteractiveType
-
-from .types import (
-    Button,
-    ButtonUrl,
-    CallbackData,
-    CallPermissionRequestButton,
-    FlowButton,
-    FlowJSON,
-    FlowMetricGranularity,
-    FlowMetricName,
-    SectionList,
-    URLButton,
-    VoiceCallButton,
-)
-from .types.media import Media
-from .types.templates import (
-    BaseParams,
-    Carousel,
-    HeaderFormatType,
-    TemplateBaseComponent,
-    _BaseMediaHeaderComponent,
-    _BaseMediaParams,
-)
+from .errors import PywaUnknownEnumMemberWarning
 
 if TYPE_CHECKING:
     from pywa import WhatsApp
@@ -74,15 +43,112 @@ _logger = logging.getLogger(__name__)
 DOWNLOAD_CHUNK_SIZE = 64 * 1024
 
 
+class StrEnum(str, enum.Enum):
+    """A string-based enum that allows for custom handling of missing values."""
+
+    _check_value: ClassVar[Callable[[str], bool] | None] = str.isupper
+    """Check if the value needs to be modified or not."""
+    _modify_value: ClassVar[Callable[[str], str] | None] = str.upper
+    """Modify the value if needed."""
+
+    def __str__(self):
+        """Return the string representation of the enum member."""
+        return self.value
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}.{self.name}"
+
+    def __init_subclass__(cls, *args, **kwargs):
+        """Ensure that the enum has an 'UNKNOWN' member to handle missing values."""
+        if list(cls) and not hasattr(
+            cls, "UNKNOWN"
+        ):  # in python3.10 __init_subclass__ does not have access to enum members
+            raise TypeError(
+                f"Enum {cls.__name__} must have an 'UNKNOWN' member to handle missing values."
+            )
+        return super().__init_subclass__(*args, **kwargs)
+
+    @classmethod
+    def _missing_(cls, value: str):
+        """Handle missing values in the enum."""
+        if callable(cls._check_value) and not cls._check_value(value):
+            return cls(cls._modify_value(value))
+
+        warnings.warn(
+            message=(
+                f"Unknown value '{value}' for enum '{cls.__name__}'. Defaulting to '{cls.__name__}.UNKNOWN'.\n"
+                "This usually means the WhatsApp API introduced a new value that your current version of pywa doesn't recognize.\n"
+                "Please upgrade to the latest version (`pip install -U pywa`).\n"
+                "If you are already on the latest version, please report this on https://github.com/david-lev/pywa/issues."
+            ),
+            category=PywaUnknownEnumMemberWarning,
+            stacklevel=4,
+        )
+        # noinspection PyUnresolvedReferences
+        return cls.UNKNOWN
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class FromDict:
+    """Allows to ignore extra fields when creating a dataclass from a dict."""
+
+    # noinspection PyArgumentList
+    @classmethod
+    def from_dict(cls, data: dict, **kwargs):
+        return cls(
+            **{
+                k: v
+                for k, v in (data | kwargs).items()
+                if k in (f.name for f in dataclasses.fields(cls))
+            }
+        )
+
+
+class APIObject:
+    """Base class for API objects that allows overriding field names."""
+
+    _override_api_fields: ClassVar[dict[str, str]] = {}
+    """Override API field names for this object."""
+
+    @classmethod
+    @functools.cache
+    def _api_fields(cls, *args, **kwargs) -> tuple[str, ...]:
+        return tuple(
+            cls._override_api_fields.get(f.name, f.name)
+            for f in dataclasses.fields(cls)
+            if not f.name.startswith("_")
+        )
+
+
+def is_async_callable(obj: Any) -> bool:
+    """Check if an object is an async callable."""
+    return inspect.iscoroutinefunction(obj) or (
+        callable(obj) and inspect.iscoroutinefunction(obj.__call__)
+    )
+
+
+from . import utils  # noqa: E402
+from .types.callback import (  # noqa: E402
+    BaseButton,
+    Button,
+    CallbackData,
+)
+from .types.flows import FlowJSON, FlowMetricGranularity, FlowMetricName  # noqa: E402
+from .types.media import Media  # noqa: E402
+from .types.others import InteractiveType  # noqa: E402
+from .types.sent_update import RecipientType  # noqa: E402
+from .types.templates import (  # noqa: E402
+    BaseParams,
+    Carousel,
+    HeaderFormatType,
+    TemplateBaseComponent,
+    _BaseMediaHeaderComponent,
+    _BaseMediaParams,
+)
+
+
 def resolve_buttons_param(
-    buttons: (
-        Iterable[Button]
-        | URLButton
-        | VoiceCallButton
-        | CallPermissionRequestButton
-        | FlowButton
-        | SectionList
-    ),
+    buttons: (Iterable[Button] | BaseButton),
 ) -> tuple[
     InteractiveType,
     dict,
@@ -90,25 +156,24 @@ def resolve_buttons_param(
     """
     Internal method to resolve ``buttons`` parameter. Returns a tuple of (``type``, ``buttons``, ``callback_options``).
     """
-    if isinstance(buttons, SectionList):
-        data = buttons.to_dict()
-        return (
-            InteractiveType.LIST,
-            data,
-        )
-    elif isinstance(buttons, (URLButton, ButtonUrl)):
-        return InteractiveType.CTA_URL, buttons.to_dict()
-    elif isinstance(buttons, VoiceCallButton):
-        return InteractiveType.VOICE_CALL, buttons.to_dict()
-    elif isinstance(buttons, CallPermissionRequestButton):
-        return InteractiveType.CALL_PERMISSION_REQUEST, buttons.to_dict()
-    elif isinstance(buttons, FlowButton):
-        return InteractiveType.FLOW, buttons.to_dict()
+    if isinstance(buttons, BaseButton):
+        return buttons._interactive_type, buttons.to_dict()
     else:  # assume its list of buttons
+        try:
+            buttons = list(buttons)
+        except TypeError:
+            raise ValueError(
+                f"`buttons` must be a BaseButton or an iterable of Button objects. got {type(buttons)}"
+            ) from None
+        for b in buttons:
+            if not isinstance(b, Button):
+                raise ValueError(
+                    f"All items in `buttons` iterable must be Button objects. got {type(b)}"
+                ) from None
         return InteractiveType.BUTTON, {"buttons": tuple(b.to_dict() for b in buttons)}
 
 
-_header_format_to_media_type: dict[
+header_format_to_media_type: dict[
     HeaderFormatType, Literal["image", "video", "audio", "sticker", "document", "gif"]
 ] = {
     HeaderFormatType.IMAGE: "image",
@@ -116,7 +181,7 @@ _header_format_to_media_type: dict[
     HeaderFormatType.DOCUMENT: "document",
     HeaderFormatType.GIF: "gif",
 }
-_media_types_default_filenames = {
+media_types_default_filenames = {
     "image": "image.jpg",
     "video": "video.mp4",
     "audio": "audio.mp3",
@@ -124,7 +189,7 @@ _media_types_default_filenames = {
     "document": "document.pdf",
     "gif": "animation.gif",
 }
-_media_types_default_mime_types = {
+media_types_default_mime_types = {
     "image": "image/jpeg",
     "video": "video/mp4",
     "audio": "audio/mpeg",
@@ -132,13 +197,13 @@ _media_types_default_mime_types = {
     "document": "application/pdf",
     "gif": "image/gif",
 }
-_template_header_formats_filename = {
+template_header_formats_filename = {
     HeaderFormatType.IMAGE: "image.jpg",
     HeaderFormatType.VIDEO: "video.mp4",
     HeaderFormatType.DOCUMENT: "document.pdf",
     HeaderFormatType.GIF: "animation.gif",
 }
-_template_header_formats_default_mime_types = {
+template_header_formats_default_mime_types = {
     HeaderFormatType.IMAGE: "image/jpeg",
     HeaderFormatType.VIDEO: "video/mp4",
     HeaderFormatType.DOCUMENT: "application/pdf",
@@ -163,12 +228,12 @@ class MediaSource(enum.Enum):
     BASE64 = enum.auto()  # "iVBORw0KGgoAAAANSUhEUgAA..."
 
 
-_FILE_HANDLE_PATTERN = re.compile(r"^\d:.*")
-_BASE64_DATA_URI_PATTERN = re.compile(
+FILE_HANDLE_PATTERN = re.compile(r"^\d:.*")
+BASE64_DATA_URI_PATTERN = re.compile(
     r"^data:(?P<mime>[\w/-]+);base64,(?P<data>[A-Za-z0-9+/]+={0,2})$"
 )
-_BASE64_PATTERN = re.compile(r"^[A-Za-z0-9+/]+={0,2}$")
-_WA_MEDIA_PATTERN = re.compile(
+BASE64_PATTERN = re.compile(r"^[A-Za-z0-9+/]+={0,2}$")
+WA_MEDIA_PATTERN = re.compile(
     r"^https://lookaside\.fbsbx\.com/whatsapp_business/attachments/\?mid="
 )
 
@@ -180,7 +245,7 @@ def detect_media_source(
         media = str(media)
         if media.startswith(("https://", "http://")):
             if re.match(
-                _WA_MEDIA_PATTERN,
+                WA_MEDIA_PATTERN,
                 media,
             ):
                 _logger.debug("Detected media source as WhatsApp media URL")
@@ -193,13 +258,13 @@ def detect_media_source(
         elif pathlib.Path(media).is_file():
             _logger.debug("Detected media source as file path")
             return MediaSource.PATH
-        elif re.match(_FILE_HANDLE_PATTERN, media):
+        elif re.match(FILE_HANDLE_PATTERN, media):
             _logger.debug("Detected media source as file handle")
             return MediaSource.FILE_HANDLE
-        elif re.match(_BASE64_DATA_URI_PATTERN, media):
+        elif re.match(BASE64_DATA_URI_PATTERN, media):
             _logger.debug("Detected media source as base64 data URI")
             return MediaSource.BASE64_DATA_URI
-        elif len(media) % 4 == 0 and re.match(_BASE64_PATTERN, media):
+        elif len(media) % 4 == 0 and re.match(BASE64_PATTERN, media):
             _logger.debug("Detected media source as base64 string")
             return MediaSource.BASE64
         else:
@@ -227,7 +292,7 @@ def detect_media_source(
 
 def resolve_media_param(
     *,
-    wa: WhatsApp,
+    wa: "WhatsApp",
     media: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
     mime_type: str | None,
     filename: str | None,
@@ -347,11 +412,11 @@ def get_media_from_url(
 def get_media_from_base64(
     base64_str: str,
 ) -> MediaInfo:
-    match = re.match(_BASE64_DATA_URI_PATTERN, base64_str)
+    match = re.match(BASE64_DATA_URI_PATTERN, base64_str)
     if match:
         mime_type = match.group("mime")
         b64_data = match.group("data")
-    elif re.match(_BASE64_PATTERN, base64_str):
+    elif re.match(BASE64_PATTERN, base64_str):
         mime_type = None
         b64_data = base64_str
     else:
@@ -411,7 +476,7 @@ def get_filename_from_httpx_response_headers(
 
 
 def get_media_from_media_id_or_obj_or_url(
-    wa: WhatsApp,
+    wa: "WhatsApp",
     media: str | Media,
     media_source: MediaSource,
     download_chunk_size: int,
@@ -462,7 +527,7 @@ def internal_upload_media(
     filename: str | None,
     ttl_minutes: int | None = None,
     download_chunk_size: int | None,
-    wa: WhatsApp,
+    wa: "WhatsApp",
     phone_id: str,
     dl_session: httpx.Client | None = None,
 ) -> Media:
@@ -517,7 +582,7 @@ def internal_upload_media(
     final_filename = (
         filename
         or media_info.filename
-        or _media_types_default_filenames.get(media_type, "file.txt")
+        or media_types_default_filenames.get(media_type, "file.txt")
     )
     try:
         return Media(
@@ -527,7 +592,7 @@ def internal_upload_media(
                 media=media_info.content,
                 mime_type=mime_type
                 or media_info.mime_type
-                or _media_types_default_mime_types.get(media_type, "text/plain"),
+                or media_types_default_mime_types.get(media_type, "text/plain"),
                 filename=final_filename,
                 ttl_minutes=ttl_minutes,
             )["id"],
@@ -546,7 +611,7 @@ def internal_upload_media(
             pass
 
 
-def _filter_not_uploaded_comps(
+def filter_not_uploaded_comps(
     components: list[TemplateBaseComponent | dict],
 ) -> list[_BaseMediaHeaderComponent]:
     not_uploaded = []
@@ -563,14 +628,14 @@ def _filter_not_uploaded_comps(
 
 def upload_template_media_components(
     *,
-    wa: WhatsApp,
+    wa: "WhatsApp",
     app_id: int | str | None,
     components: list[TemplateBaseComponent | dict],
 ) -> None:
     """
     Internal method to upload media components examples in a template.
     """
-    not_uploaded = _filter_not_uploaded_comps(components)
+    not_uploaded = filter_not_uploaded_comps(components)
     if not not_uploaded:
         return
 
@@ -580,7 +645,7 @@ def upload_template_media_components(
     ) as executor:
         tasks = [
             executor.submit(
-                _upload_comps_example,
+                upload_comps_example,
                 wa=wa,
                 example=example,
                 comps=list(comps),
@@ -599,7 +664,7 @@ def upload_template_media_components(
 
 def internal_upload_file(
     *,
-    wa: WhatsApp,
+    wa: "WhatsApp",
     file: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
     app_id: int | str,
     mime_type: str | None,
@@ -689,9 +754,9 @@ def internal_upload_file(
             pass
 
 
-def _upload_comps_example(
+def upload_comps_example(
     *,
-    wa: WhatsApp,
+    wa: "WhatsApp",
     example: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
     comps: list[_BaseMediaHeaderComponent],
     app_id: int | str | None,
@@ -707,10 +772,10 @@ def _upload_comps_example(
             file=example,
             app_id=app_id,
             mime_type=first_comp._mime_type,
-            fallback_mime_type=_template_header_formats_default_mime_types.get(
+            fallback_mime_type=template_header_formats_default_mime_types.get(
                 first_comp.format, "application/octet-stream"
             ),
-            fallback_filename=_template_header_formats_filename.get(
+            fallback_filename=template_header_formats_filename.get(
                 first_comp.format, "pywa-template-header"
             ),
         )
@@ -737,7 +802,7 @@ def _upload_comps_example(
         ) from e
 
 
-def _filter_not_uploaded_params(
+def filter_not_uploaded_params(
     params: list[BaseParams | dict],
 ) -> list[_BaseMediaParams]:
     not_uploaded = []
@@ -754,14 +819,14 @@ def _filter_not_uploaded_params(
 
 def upload_template_media_params(
     *,
-    wa: WhatsApp,
+    wa: "WhatsApp",
     sender: str,
     params: list[BaseParams | dict],
 ) -> None:
     """
     Internal method to upload media parameters when sending a template message.
     """
-    not_uploaded = _filter_not_uploaded_params(params)
+    not_uploaded = filter_not_uploaded_params(params)
 
     if not not_uploaded:
         return
@@ -770,7 +835,7 @@ def upload_template_media_params(
     ) as executor:
         tasks = [
             executor.submit(
-                _upload_params_media,
+                upload_params_media,
                 wa=wa,
                 sender=sender,
                 media=media,
@@ -782,9 +847,9 @@ def upload_template_media_params(
             task.result()
 
 
-def _upload_params_media(
+def upload_params_media(
     *,
-    wa: WhatsApp,
+    wa: "WhatsApp",
     sender: str,
     media: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
     params: list[_BaseMediaParams],
@@ -796,7 +861,7 @@ def _upload_params_media(
             media=media,
             mime_type=first_param._mime_type,
             filename=None,
-            media_type=_header_format_to_media_type[first_param.format],
+            media_type=header_format_to_media_type[first_param.format],
             phone_id=sender,
         )
         for p in params:
@@ -814,9 +879,76 @@ def resolve_tracker_param(tracker: str | CallbackData | None) -> str | None:
     return tracker.to_str() if isinstance(tracker, CallbackData) else tracker
 
 
+BSUID_RE = re.compile(r"^[A-Z]{2}\.\d+$")
+WA_ID_RE = re.compile(r"^\d+$")
+
+
+def resolve_recipient(to: str | int) -> tuple[dict[str, str | None], RecipientType]:
+    if not to:
+        raise ValueError(f"Recipient cannot be empty. got: {to!r}")
+    recipient_type = RecipientType.from_recipient(to)
+    _logger.debug(f"Resolved recipient {to} to type {recipient_type}")
+    to = str(to)
+    match recipient_type:
+        case RecipientType.WA_ID | RecipientType.PHONE_NUMBER:
+            return {
+                "to": to,
+                "recipient": None,
+                "recipient_type": "individual",
+            }, recipient_type
+        case RecipientType.BSUID | RecipientType.PARENT_BSUID:
+            return {
+                "to": None,
+                "recipient": to,
+                "recipient_type": "individual",
+            }, recipient_type
+        case RecipientType.GROUP_ID:
+            return {
+                "to": to,
+                "recipient": None,
+                "recipient_type": "group",
+            }, recipient_type
+        case _:
+            raise ValueError(f"Invalid recipient: {to}")
+
+
+def clean_phone_number(phone_number: str | int) -> str:
+    return re.sub(r"\D", "", str(phone_number))
+
+
+def resolve_callee(to: str | int) -> tuple[dict[str, str], RecipientType]:
+    recipient, recipient_type = resolve_recipient(to)
+    recipient.pop("recipient_type", None)
+    return recipient, recipient_type
+
+
+def resolve_call_permission_request_user(user_id: int | str) -> dict[str, str]:
+    _, recipient_type = resolve_recipient(user_id)
+    match recipient_type:
+        case RecipientType.WA_ID | RecipientType.PHONE_NUMBER:
+            return {"user_wa_id": clean_phone_number(user_id)}
+        case RecipientType.BSUID | RecipientType.PARENT_BSUID:
+            return {"recipient": str(user_id)}
+    raise ValueError(f"Invalid recipient type: {recipient_type}")
+
+
+def resolve_users(users: Iterable[str | int]) -> dict[str, list[str]]:
+    resolved = {"users": [], "user_ids": []}
+    for user_id in users:
+        _, recipient_type = resolve_recipient(user_id)
+        match recipient_type:
+            case RecipientType.WA_ID | RecipientType.PHONE_NUMBER:
+                resolved["users"].append(str(user_id))
+            case RecipientType.BSUID | RecipientType.PARENT_BSUID:
+                resolved["user_ids"].append(str(user_id))
+            case _:
+                raise ValueError(f"Invalid recipient type: {recipient_type}")
+    return resolved
+
+
 def resolve_arg(
     *,
-    wa: WhatsApp,
+    wa: "WhatsApp",
     value: str | int | None,
     method_arg: str,
     client_arg: str,
@@ -927,3 +1059,398 @@ def resolve_callback_data(data: str | CallbackData) -> str:
     elif isinstance(data, str):
         return data
     raise TypeError(f"Invalid callback data type {type(data)}")
+
+
+def is_installed(lib: str) -> bool:
+    """Check if the library is installed."""
+    try:
+        importlib.import_module(lib)
+        return True
+    except ImportError:
+        return False
+
+
+def rename_func(extended_with: str) -> Callable:
+    """Rename function to avoid conflicts when registering the same function multiple times."""
+
+    def inner(func: Callable):
+        func.__name__ = f"{func.__name__}{extended_with}"
+        return func
+
+    return inner
+
+
+def timestamp_to_datetime(ts: int) -> datetime.datetime:
+    return datetime.datetime.fromtimestamp(int(ts), tz=datetime.timezone.utc)
+
+
+def register_routes_starlette(wa: "WhatsApp"):
+    from starlette.applications import Starlette as StarletteApp
+    from starlette.background import BackgroundTask as StarletteBackgroundTask
+    from starlette.requests import Request as StarletteRequest
+    from starlette.responses import Response as StarletteResponse
+
+    server: StarletteApp = wa._server  # type: ignore
+
+    async def _webhook_challenge_handler(
+        req: StarletteRequest,
+    ) -> StarletteResponse:
+        params = req.query_params
+        vt, ch = params.get(utils.HUB_VT), params.get(utils.HUB_CH)
+        content, status = (
+            (
+                await wa.webhook_challenge_handler(
+                    vt=vt,
+                    ch=ch,
+                )
+            )
+            if wa._async_allowed
+            else wa.webhook_challenge_handler(vt=vt, ch=ch)
+        )
+        return StarletteResponse(
+            content=content,
+            status_code=status,
+            headers={
+                "X-Content-Type-Options": "nosniff",
+            },
+        )
+
+    async def _webhook_update_handler(req: StarletteRequest) -> StarletteResponse:
+        body = await req.body()
+        if error := (
+            (
+                await wa.webhook_update_validator(
+                    update=body, hmac_header=req.headers.get(utils.HUB_SIG)
+                )
+            )
+            if wa._async_allowed
+            else wa.webhook_update_validator(
+                update=body, hmac_header=req.headers.get(utils.HUB_SIG)
+            )
+        ):
+            return StarletteResponse(
+                content=error[0],
+                status_code=error[1],
+                headers={
+                    "X-Content-Type-Options": "nosniff",
+                },
+            )
+
+        bg_task = StarletteBackgroundTask(
+            wa.webhook_update_handler,
+            body,
+        )
+        return StarletteResponse(
+            content="OK",
+            status_code=200,
+            headers={
+                "X-Content-Type-Options": "nosniff",
+            },
+            background=bg_task,
+        )
+
+    server.add_route(
+        path=wa._webhook_endpoint,
+        route=_webhook_challenge_handler,
+        methods=["GET"],
+        include_in_schema=False,
+    )
+    server.add_route(
+        path=wa._webhook_endpoint,
+        route=_webhook_update_handler,
+        methods=["POST"],
+        include_in_schema=False,
+    )
+
+
+def register_routes_fastapi(
+    wa: "WhatsApp",
+):
+    import fastapi
+
+    server: fastapi.FastAPI = wa._server  # type: ignore
+
+    @server.get(wa._webhook_endpoint, include_in_schema=False)
+    async def pywa_challenge(
+        vt: str = fastapi.Query(alias=utils.HUB_VT, examples=["xyzxyz"]),
+        ch: str = fastapi.Query(alias=utils.HUB_CH, examples=["1858252904"]),
+    ) -> fastapi.Response:
+        """Automatically generated by pywa to handle the verification challenge."""
+        content, status = (
+            (
+                await wa.webhook_challenge_handler(
+                    vt=vt,
+                    ch=ch,
+                )
+            )
+            if wa._async_allowed
+            else wa.webhook_challenge_handler(vt=vt, ch=ch)
+        )
+        return fastapi.Response(
+            content=content,
+            status_code=status,
+            media_type="text/plain",
+            headers={
+                "X-Content-Type-Options": "nosniff",
+            },
+        )
+
+    @server.post(wa._webhook_endpoint, include_in_schema=False)
+    async def pywa_webhook(
+        bg_tasks: fastapi.BackgroundTasks,
+        req: fastapi.Request,
+        hmac_header: str = fastapi.Header(alias=utils.HUB_SIG, examples=["sha256=..."]),
+    ) -> fastapi.Response:
+        """Automatically generated by pywa to handle incoming updates."""
+        update: bytes = await req.body()
+        if error := (
+            (await wa.webhook_update_validator(update=update, hmac_header=hmac_header))
+            if wa._async_allowed
+            else wa.webhook_update_validator(update=update, hmac_header=hmac_header)
+        ):
+            return fastapi.Response(
+                content=error[0],
+                status_code=error[1],
+                media_type="text/plain",
+                headers={
+                    "X-Content-Type-Options": "nosniff",
+                },
+            )
+        bg_tasks.add_task(
+            wa.webhook_update_handler,
+            update=update,
+        )
+        return fastapi.Response(
+            content="OK",
+            status_code=200,
+            media_type="text/plain",
+            headers={
+                "X-Content-Type-Options": "nosniff",
+            },
+        )
+
+
+def register_routes_flask(
+    wa: "WhatsApp",
+):
+    import flask
+
+    server: flask.Flask = wa._server  # type: ignore
+
+    if wa._async_allowed:
+        if not is_installed("asgiref"):  # flask[async]
+            raise ValueError(
+                "Flask with ASGI is required to handle incoming updates asynchronously. Please install "
+                """the `asgiref` package (`pip install "flask[async]"` / `pip install "asgiref"`)"""
+            )
+
+        @server.route(wa._webhook_endpoint, methods=["GET"])
+        @rename_func(f"('{wa._webhook_endpoint}')")
+        async def pywa_challenge() -> flask.Response:
+            """Automatically generated by pywa to handle the verification challenge."""
+            ch, code = await wa.webhook_challenge_handler(
+                vt=flask.request.args.get(utils.HUB_VT),
+                ch=flask.request.args.get(utils.HUB_CH),
+            )
+            return flask.Response(
+                response=ch,
+                status=code,
+                content_type="text/plain",
+                headers={
+                    "X-Content-Type-Options": "nosniff",
+                },
+            )
+
+        @server.route(wa._webhook_endpoint, methods=["POST"])
+        @rename_func(f"('{wa._webhook_endpoint}')")
+        async def pywa_webhook() -> flask.Response:
+            """Automatically generated by pywa to handle incoming updates."""
+            update = flask.request.data
+            if error := await wa.webhook_update_validator(
+                update=update,
+                hmac_header=flask.request.headers.get(utils.HUB_SIG),
+            ):
+                return flask.Response(
+                    response=error[0],
+                    status=error[1],
+                    content_type="text/plain",
+                    headers={
+                        "X-Content-Type-Options": "nosniff",
+                    },
+                )
+            res, status = await wa.webhook_update_handler(
+                update=update,
+            )
+            return flask.Response(
+                response=res,
+                status=status,
+                content_type="text/plain",
+                headers={
+                    "X-Content-Type-Options": "nosniff",
+                },
+            )
+
+    else:
+
+        @server.route(wa._webhook_endpoint, methods=["GET"])
+        @rename_func(f"('{wa._webhook_endpoint}')")
+        def pywa_challenge() -> flask.Response:
+            """Automatically generated by pywa to handle the verification challenge."""
+            ch, code = wa.webhook_challenge_handler(
+                vt=flask.request.args.get(utils.HUB_VT),
+                ch=flask.request.args.get(utils.HUB_CH),
+            )
+            return flask.Response(
+                response=ch,
+                status=code,
+                content_type="text/plain",
+                headers={
+                    "X-Content-Type-Options": "nosniff",
+                },
+            )
+
+        @server.route(wa._webhook_endpoint, methods=["POST"])
+        @rename_func(f"('{wa._webhook_endpoint}')")
+        def pywa_webhook() -> flask.Response:
+            """Automatically generated by pywa to handle incoming updates."""
+            update = flask.request.data
+            if error := wa.webhook_update_validator(
+                update=update,
+                hmac_header=flask.request.headers.get(utils.HUB_SIG),
+            ):
+                return flask.Response(
+                    response=error[0],
+                    status=error[1],
+                    content_type="text/plain",
+                    headers={
+                        "X-Content-Type-Options": "nosniff",
+                    },
+                )
+            res, status = wa.webhook_update_handler(
+                update=update,
+            )
+            return flask.Response(
+                response=res,
+                status=status,
+                content_type="text/plain",
+                headers={
+                    "X-Content-Type-Options": "nosniff",
+                },
+            )
+
+
+from .handlers import FlowRequestCallbackWrapper  # noqa: E402
+
+
+def register_flow_endpoint_starlette(
+    wa: "WhatsApp",
+    callback_wrapper: FlowRequestCallbackWrapper,
+) -> None:
+    import anyio.to_thread
+    from starlette.applications import Starlette as StarletteApp
+    from starlette.requests import Request as StarletteRequest
+    from starlette.responses import Response as StarletteResponse
+
+    server: StarletteApp = wa._server  # type: ignore
+
+    if wa._async_allowed:
+
+        async def pywa_flow(
+            req: StarletteRequest,
+        ) -> StarletteResponse:
+            """Automatically generated by pywa to handle incoming flow requests."""
+            response, status_code = await callback_wrapper.handle_async(
+                await req.json()
+            )
+            return StarletteResponse(
+                content=response,
+                status_code=status_code,
+                media_type="application/json",
+                headers={
+                    "X-Content-Type-Options": "nosniff",
+                },
+            )
+    else:
+
+        def pywa_flow(
+            req: StarletteRequest,
+        ) -> StarletteResponse:
+            """Automatically generated by pywa to handle incoming flow requests."""
+            response, status_code = callback_wrapper.handle(
+                anyio.from_thread.run_sync(req.json)
+            )
+            return StarletteResponse(
+                content=response,
+                status_code=status_code,
+                media_type="application/json",
+                headers={
+                    "X-Content-Type-Options": "nosniff",
+                },
+            )
+
+    server.add_route(
+        path=callback_wrapper._endpoint,
+        route=pywa_flow,
+        methods=["POST"],
+        include_in_schema=False,
+    )
+
+
+def register_flow_endpoint_fastapi(
+    wa: "WhatsApp",
+    callback_wrapper: FlowRequestCallbackWrapper,
+) -> None:
+    import fastapi
+
+    server: fastapi.FastAPI = wa._server  # type: ignore
+
+    async def _process_request(request: fastapi.Request) -> tuple[str, int]:
+        req_dict = await request.json()
+        return (
+            (await callback_wrapper.handle_async(req_dict))
+            if wa._async_allowed
+            else callback_wrapper.handle(req_dict)
+        )
+
+    @server.post(callback_wrapper._endpoint, include_in_schema=False)
+    async def pywa_flow(
+        res: tuple[str, int] = fastapi.Depends(_process_request),
+    ) -> fastapi.Response:
+        """Automatically generated by pywa to handle incoming flow requests."""
+        response, status_code = res
+        return fastapi.Response(
+            content=response,
+            status_code=status_code,
+        )
+
+
+def register_flow_endpoint_flask(
+    wa: "WhatsApp",
+    callback_wrapper: FlowRequestCallbackWrapper,
+) -> FlowRequestCallbackWrapper:
+    import flask
+
+    server: flask.Flask = wa._server
+
+    if wa._async_allowed:
+        if not is_installed("asgiref"):  # flask[async]
+            raise ValueError(
+                "Flask with ASGI is required to handle incoming flow requests asynchronously. Please install "
+                """the `asgiref` package (`pip install "flask[async]"` / `pip install "asgiref"`)"""
+            )
+
+        @server.route(callback_wrapper._endpoint, methods=["POST"])
+        @rename_func(f"('{callback_wrapper._endpoint}')")
+        async def pywa_flow() -> tuple[str, int]:
+            """Automatically generated by pywa to handle incoming flow requests."""
+            return await callback_wrapper.handle_async(flask.request.json)
+
+    else:
+
+        @server.route(callback_wrapper._endpoint, methods=["POST"])
+        @rename_func(f"('{callback_wrapper._endpoint}')")
+        def pywa_flow() -> tuple[str, int]:
+            """Automatically generated by pywa to handle incoming flow requests."""
+            return callback_wrapper.handle(flask.request.json)
+
+    return callback_wrapper

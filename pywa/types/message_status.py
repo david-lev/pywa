@@ -20,7 +20,7 @@ import datetime
 import logging
 from typing import TYPE_CHECKING, Generic
 
-from .. import utils
+from .. import _helpers as helpers
 from ..errors import WhatsAppError
 from .base_update import BaseUserUpdate, RawUpdate  # noqa
 from .others import Metadata
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 
-class MessageStatusType(utils.StrEnum):
+class MessageStatusType(helpers.StrEnum):
     """
     Message status type.
 
@@ -55,7 +55,7 @@ class MessageStatusType(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class ConversationCategory(utils.StrEnum):
+class ConversationCategory(helpers.StrEnum):
     """
     Conversation category.
 
@@ -145,10 +145,16 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
     _is_user_action = False
 
     @classmethod
-    def from_update(cls, client: WhatsApp, update: RawUpdate) -> MessageStatus:
+    def from_update(
+        cls,
+        client: WhatsApp,
+        update: RawUpdate,
+        contact_idx: int = 0,
+        status_idx: int = 0,
+    ) -> MessageStatus:
         status = (value := (entry := update["entry"][0])["changes"][0]["value"])[
             "statuses"
-        ][0]
+        ][status_idx]
         error = value.get("errors", status.get("errors", (None,)))[0]
         return cls(
             _client=client,
@@ -157,15 +163,9 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
             id=status["id"],
             metadata=Metadata.from_dict(value["metadata"]),
             status=MessageStatusType(status["status"]),
-            timestamp=datetime.datetime.fromtimestamp(
-                int(status["timestamp"]),
-                datetime.timezone.utc,
-            ),
-            from_user=client._usr_cls(
-                wa_id=status["recipient_id"],
-                identity_key_hash=status.get("recipient_identity_key_hash"),
-                name=None,
-                _client=client,
+            timestamp=helpers.timestamp_to_datetime(status["timestamp"]),
+            from_user=client._usr_cls.from_contact(
+                value["contacts"][contact_idx], client=client
             ),
             tracker=status.get("biz_opaque_callback_data"),
             conversation=Conversation.from_dict(status["conversation"])
@@ -201,16 +201,13 @@ class Conversation:
         return cls(
             id=data["id"],
             category=ConversationCategory(data["origin"]["type"]),
-            expiration=datetime.datetime.fromtimestamp(
-                int(data["expiration_timestamp"]),
-                datetime.timezone.utc,
-            )
+            expiration=helpers.timestamp_to_datetime(data["expiration_timestamp"])
             if "expiration_timestamp" in data
             else None,
         )
 
 
-class PricingModel(utils.StrEnum):
+class PricingModel(helpers.StrEnum):
     """
     Pricing model.
 
@@ -225,7 +222,7 @@ class PricingModel(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class PricingType(utils.StrEnum):
+class PricingType(helpers.StrEnum):
     """
     Pricing type.
 
@@ -245,7 +242,7 @@ class PricingType(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class PricingCategory(utils.StrEnum):
+class PricingCategory(helpers.StrEnum):
     """
     Pricing category.
 
@@ -257,6 +254,7 @@ class PricingCategory(utils.StrEnum):
         UTILITY: Indicates utility rate applied.
         SERVICE: Indicates service rate applied.
         REFERRAL_CONVERSION: Indicates a `free entry point conversation <https://developers.facebook.com/docs/whatsapp/pricing#free-entry-point-conversations>`_.
+        GENERAL_PURPOSE_AI: Indicates a `general-purpose AI <https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing/ai-providers>`_ rate applied.
     """
 
     _check_value = str.islower
@@ -265,11 +263,14 @@ class PricingCategory(utils.StrEnum):
     AUTHENTICATION = "authentication"
     AUTHENTICATION_INTERNATIONAL = "authentication_international"
     MARKETING = "marketing"
+    GROUP_MARKETING = "group_marketing"
     MARKETING_LITE = "marketing_lite"
     UTILITY = "utility"
+    GROUP_UTILITY = "group_utility"
     SERVICE = "service"
+    GROUP_SERVICE = "group_service"
     REFERRAL_CONVERSION = "referral_conversion"
-
+    GENERAL_PURPOSE_AI = "general_purpose_ai"
     UNKNOWN = "UNKNOWN"
 
 
@@ -297,7 +298,7 @@ class Pricing:
     def from_dict(cls, data: dict):
         pricing_type = data.get("type") or data.get("pricing_type")
         return cls(
-            billable=data.get("billable", data.get("type") == PricingType.REGULAR),
+            billable=data.get("billable", pricing_type == PricingType.REGULAR),
             model=PricingModel(data["pricing_model"]),
             type=PricingType(pricing_type) if pricing_type else None,
             category=PricingCategory(data["category"]),

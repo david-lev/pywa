@@ -5,9 +5,11 @@ import pytest
 
 from pywa import WhatsApp, types
 from pywa.types import Result
+from pywa.types.chat import Chat, ChatType
 from pywa.types.flows import FlowDetails
 from pywa.types.sent_update import (
     InitiatedCall,
+    RecipientType,
     SentMessage,
     SentTemplate,
     SentTemplateStatus,
@@ -80,6 +82,9 @@ def test_flow_details():
             country=None,
             currency=None,
             subscribed_apps=None,
+            owner_business_info=None,
+            account_review_status=None,
+            disable_marketing_messages_on_cloud_api=None,
         ),
         application=types.flows.FacebookApplication(
             link="https://www.facebook.com/games/?app_id=12345",
@@ -123,7 +128,6 @@ def test_business_phone_number():
                     {"command_name": "start", "command_description": "Start"},
                     {"command_name": "help", "command_description": "Help"},
                 ],
-                "enable_welcome_message": False,
                 "id": "47328947638",
             },
             "status": "CONNECTED",
@@ -182,7 +186,6 @@ def test_business_phone_number():
         display_phone_number="+1 123-456-7890",
         conversational_automation=types.others.ConversationalAutomation(
             id="47328947638",
-            chat_opened_enabled=False,
             ice_breakers=("Hi man",),
             commands=(
                 types.others.Command(name="start", description="Start"),
@@ -241,6 +244,9 @@ def test_business_phone_number():
         certificate=None,
         new_certificate=None,
         last_onboarded_time=None,
+        username=None,
+        country_code=None,
+        country_dial_code=None,
     )
 
 
@@ -255,16 +261,20 @@ def test_sent_message():
             ],
         },
         from_phone_id=wa.phone_id,
+        recipient_type=RecipientType.WA_ID,
     )
     assert sm == SentMessage(
         _client=wa,
+        _recipient_type=RecipientType.WA_ID,
         id="wamid.HBgLMTY1MDUwNzY1MjAVAgARGBI5QTNDQTVCM0Q0Q0Q2RTY3RTcA",
-        to_user=types.User(wa_id="16505555555", name=None, _client=wa),
+        chat=Chat(id="16505555555", type=ChatType.PRIVATE),
         from_phone_id=wa.phone_id,
         input="16505555555",
     )
     assert sm.sender == wa.phone_id
-    assert sm.recipient == sm.to_user.wa_id
+    assert sm.to == "16505555555"
+    assert sm.recipient == "16505555555"
+    assert sm.chat.id == "16505555555"
 
     assert SentTemplate.from_sent_update(
         client=wa,
@@ -279,10 +289,12 @@ def test_sent_message():
             ],
         },
         from_phone_id=wa.phone_id,
+        recipient_type=RecipientType.WA_ID,
     ) == SentTemplate(
         _client=wa,
+        _recipient_type=RecipientType.WA_ID,
         id="wamid.HBgLMTY1MDUwNzY1MjAVAgARGBI5QTNDQTVCM0Q0Q0Q2RTY3RTcA",
-        to_user=types.User(wa_id="16505555555", name=None, _client=wa),
+        chat=Chat(id="16505555555", type=ChatType.PRIVATE),
         from_phone_id=wa.phone_id,
         status=SentTemplateStatus.ACCEPTED,
         input="16505555555",
@@ -298,14 +310,18 @@ def test_initiated_call():
             "success": True,
         },
         from_phone_id=wa.phone_id,
-        to_wa_id="16506666666",
+        recipient_type=RecipientType.WA_ID,
+        callee="16506666666",
     )
     assert c.caller == wa.phone_id
+    assert c.chat.id == "16506666666"
+    assert c.to == "16506666666"
     assert c.callee == "16506666666"
     assert c == InitiatedCall(
         _client=wa,
+        _recipient_type=RecipientType.WA_ID,
         id="wacid.fiurefh8e=",
-        to_user=types.User(wa_id="16506666666", name=None, _client=wa),
+        chat=Chat(id="16506666666", type=ChatType.PRIVATE),
         from_phone_id=wa.phone_id,
         success=True,
     )
@@ -319,7 +335,7 @@ def fake_item_factory():
 @pytest.fixture
 def wa_result():
     _wa = MagicMock()
-    _wa.api._make_request = MagicMock()
+    _wa.api._request = MagicMock()
     return _wa
 
 
@@ -380,16 +396,14 @@ def test_result_empty(wa_result, fake_item_factory, response_data):
 
 
 def test_result_next(wa_result, fake_item_factory, response_data):
-    wa_result.api._make_request.return_value = {
+    wa_result.api._request.return_value = {
         "data": [{"name": "Charlie"}],
         "paging": {},
     }
 
     result = Result(wa_result, response_data, fake_item_factory)
     next_result = result.next()
-    wa_result.api._make_request.assert_called_once_with(
-        method="GET", endpoint="/next-url"
-    )
+    wa_result.api._request.assert_called_once_with(method="GET", endpoint="/next-url")
     assert list(next_result) == [{"name": "Charlie"}]
 
 
@@ -402,16 +416,14 @@ def test_next_result_when_no_next(wa_result, fake_item_factory, response_data):
 
 
 def test_previous_result(wa_result, fake_item_factory, response_data):
-    wa_result.api._make_request.return_value = {
+    wa_result.api._request.return_value = {
         "data": [{"name": "Dave"}],
         "paging": {},
     }
 
     result = Result(wa_result, response_data, fake_item_factory)
     prev_result = result.previous()
-    wa_result.api._make_request.assert_called_once_with(
-        method="GET", endpoint="/prev-url"
-    )
+    wa_result.api._request.assert_called_once_with(method="GET", endpoint="/prev-url")
     assert list(prev_result) == [{"name": "Dave"}]
 
 
@@ -425,10 +437,10 @@ def test_previous_result_when_no_previous(wa_result, fake_item_factory, response
 
 def test_all_on_first_page(wa_result, fake_item_factory, pages):
     first_page, second_page, third_page = pages
-    wa_result.api._make_request.side_effect = [second_page, third_page]
+    wa_result.api._request.side_effect = [second_page, third_page]
     first_result = Result(wa_result, first_page, fake_item_factory)
     all_results = first_result.all()
-    wa_result.api._make_request.assert_has_calls(
+    wa_result.api._request.assert_has_calls(
         [call(method="GET", endpoint="/page2"), call(method="GET", endpoint="/page3")],
         any_order=False,
     )
@@ -437,10 +449,10 @@ def test_all_on_first_page(wa_result, fake_item_factory, pages):
 
 def test_all_on_middle_page(wa_result, fake_item_factory, pages):
     first_page, second_page, third_page = pages
-    wa_result.api._make_request.side_effect = [first_page, third_page]
+    wa_result.api._request.side_effect = [first_page, third_page]
     second_result = Result(wa_result, second_page, fake_item_factory)
     all_results = second_result.all()
-    wa_result.api._make_request.assert_has_calls(
+    wa_result.api._request.assert_has_calls(
         [
             call(method="GET", endpoint="/page1"),
             call(method="GET", endpoint="/page3"),
@@ -452,10 +464,10 @@ def test_all_on_middle_page(wa_result, fake_item_factory, pages):
 
 def test_all_on_last_page(wa_result, fake_item_factory, pages):
     first_page, second_page, third_page = pages
-    wa_result.api._make_request.side_effect = [second_page, first_page]
+    wa_result.api._request.side_effect = [second_page, first_page]
     third_result = Result(wa_result, third_page, fake_item_factory)
     all_results = third_result.all()
-    wa_result.api._make_request.assert_has_calls(
+    wa_result.api._request.assert_has_calls(
         [
             call(method="GET", endpoint="/page2"),
             call(method="GET", endpoint="/page1"),

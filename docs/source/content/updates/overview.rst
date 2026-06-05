@@ -62,8 +62,6 @@ The supported fields are automatically handled by PyWa and converted into Python
      - A flow completed by a user
    * - :py:class:`~pywa.types.message_status.MessageStatus`
      - A message status update (delivered, seen, etc.)
-   * - :py:class:`~pywa.types.chat_opened.ChatOpened`
-     - A chat opened by a user
    * - :py:class:`~pywa.types.system.PhoneNumberChange`
      - A user's phone number changed
    * - :py:class:`~pywa.types.system.IdentityChange`
@@ -78,6 +76,18 @@ The supported fields are automatically handled by PyWa and converted into Python
      - A call permission update (permission granted or denied)
    * - :py:class:`~pywa.types.user_preferences.UserMarketingPreferences`
      - A user marketing preferences update (e.g. opted in, opted out)
+   * - :py:class:`~pywa.types.message.EditedMessage`
+     - A user edited a message
+   * - :py:class:`~pywa.types.message.DeletedMessage`
+     - A user deleted (revoked) a message
+   * - :py:class:`~pywa.types.message.OutgoingMessage`
+     - A message sent from the business app (only available in Coexistence)
+   * - :py:class:`~pywa.types.message.OutgoingEditedMessage`
+     - A message edited from the business app (only available in Coexistence)
+   * - :py:class:`~pywa.types.message.OutgoingDeletedMessage`
+     - A message deleted from the business app (only available in Coexistence)
+   * - :py:class:`~pywa.types.account_update.AccountUpdate`
+     - An account update (e.g. account banned, restricted, etc.)
 
 **Account-related updates:**
 
@@ -167,6 +177,8 @@ All updates share common methods and properties:
      - Reply with a product message
    * - :meth:`~BaseUserUpdate.reply_products`
      - Reply with a list of product messages
+   * - :meth:`~BaseUserUpdate.reply_carousel`
+     - Reply with a carousel message
    * - :meth:`~BaseUserUpdate.react`
      - React to the update with an emoji
    * - :meth:`~BaseUserUpdate.unreact`
@@ -200,5 +212,11 @@ All updates share common methods and properties:
     template_category_update
     template_quality_update
     template_components_update
+    edited_message
+    deleted_message
+    outgoing_message
+    outgoing_edited_message
+    outgoing_deleted_message
+    account_update
     raw_update
     common_methods

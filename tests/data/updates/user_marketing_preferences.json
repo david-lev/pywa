@@ -14,7 +14,12 @@
               },
               "contacts": [
                 {
-                  "wa_id": "16505551234"
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321",
+                  "user_id": "US.13491208655302741918",
+                  "parent_user_id": "US.ENT.11815799212886844830"
                 }
               ],
               "user_preferences": [

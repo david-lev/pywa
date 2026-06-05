@@ -3,6 +3,66 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+#### 4.0.0b7 (2026-04-30) **Latest Beta**
+
+- [helpers] fix incoming updates in `fastapi` and `starlette`
+- [helpers] hide webhook endpoints from OpenAPI schema
+- [ci] streamline publish workflow for PyPI
+
+#### 4.0.0b6 (2026-04-25)
+
+- [client] add `run` method to start the webhook server and listen for updates
+- [server] refactor webhook handling to include validation and improve endpoint management
+- [user] make `profile` temporary optional for testing
+- [utils] add `start_ngrok_tunnel` function to facilitate local webhook testing
+- [templates] enhance `duplicate` method to include `target_waba_id` parameter for template creation
+- [templates] add validation for URL variables in `URLButton` to enforce constraints on example and variable usage
+
+#### 4.0.0b5 (2026-04-17)
+
+- [client] add methods for creating and verifying phone numbers on WhatsApp Business Account
+- [templates] enhance `Template` and `TemplateDetails` with new methods for component retrieval and validation
+- [templates] add `param_names` property for introspection of named parameters
+- [templates] enhance error handling for positional and named examples in `HeaderText` and `BodyText`
+- [templates] enhance `CreativeFeaturesSpec` with new attributes for improved media handling and text optimization
+- [templates] remove `TemplateSubCategory` class and update `sub_category` type to string
+- [message] fix reply to message in `EditedMessage` and `DeletedMessage`
+
+#### 4.0.0b4 (2026-04-11)
+
+- [client] update `webhook_fields` type to support `utils.WebhookFields` and enhance handling logic
+- [client] replace `business_account_id` with `waba_id` across the codebase
+- [client] add methods to retrieve shared and owned WABAs
+- [message] add `OutgoingMessage`, `OutgoingEditedMessage` and `OutgoingDeletedMessage` classes for message updates
+- [message] add `EditedMessage` and `DeletedMessage` classes for message updates
+- [contacts] add `ContactList` class for shared contacts handling
+- [media] store `caption` inside media objects
+- [groups] add `GroupOperation` class and update group-related methods to return operation responses
+- [callback] update `VoiceCallButton` to support `timedelta` for `ttl_minutes`
+- [errors] add `raw` error field and new group/template error classes
+
+#### 4.0.0b3 (2026-04-01)
+
+- [client] add `SUPPORTS_BSUID_API` flag and update user identifier resolution logic
+- [templates] fix summary fields in `TemplatesResult`
+- [ci] update checkout action to use workflow_run head_sha reference
+
+#### 4.0.0b1 (2026-03-30)
+
+- [user]
+  implement [BSUID](https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids)
+  changes
+- [user] added `country_code` field
+- [groups] add group management features
+- [handlers] implement `GroupMessageStatuses` class and handler for group message status updates
+- [message_status] add new `PricingCategory`: `general_purpose_ai`
+- [filters] update `from_countries` to support `country_code`
+- [filters] add filters for `private` and `group` chat messages
+- [templates] add `ContactInfoRequestButton` component
+- [templates] add to `CreativeFeaturesSpec` two classmethods: `all_enabled` and `all_disabled`
+- [others] add `BlockedUser` and `UnblockedUser` for user blocking functionality
+- [types] remove `ChatOpened` references and related code
+
 #### 3.9.0 (2026-03-11) **Latest**
 
 - [base_update] edit `reply_template` to accept `Template` obj

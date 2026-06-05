@@ -5,25 +5,28 @@ __all__ = [
     "CallbackSelection",
     "Button",
     "URLButton",
-    "ButtonUrl",  # Deprecated, use URLButton instead
     "VoiceCallButton",
     "CallPermissionRequestButton",
+    "ContactInfoRequestButton",
     "SectionRow",
     "Section",
     "SectionList",
     "FlowButton",
+    "ImageCarouselCard",
+    "VideoCarouselCard",
     "CallbackData",
 ]
 
+import abc
 import dataclasses
 import datetime
 import enum
 import types
 import typing
-import warnings
 from typing import (
     TYPE_CHECKING,
     Any,
+    ClassVar,
     Generic,
     Iterable,
     Literal,
@@ -290,11 +293,8 @@ class CallbackButton(BaseUserUpdate, Generic[_CallbackDataT]):
             id=msg["id"],
             metadata=Metadata.from_dict(value["metadata"]),
             type=MessageType(msg_type),
-            from_user=client._usr_cls.from_dict(value["contacts"][0], client=client),
-            timestamp=datetime.datetime.fromtimestamp(
-                int(msg["timestamp"]),
-                datetime.timezone.utc,
-            ),
+            from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
+            timestamp=helpers.timestamp_to_datetime(msg["timestamp"]),
             reply_to_message=ReplyToMessage.from_dict(msg["context"]),
             data=data,
             title=title,
@@ -381,16 +381,22 @@ class CallbackSelection(BaseUserUpdate, Generic[_CallbackDataT]):
             id=msg["id"],
             metadata=Metadata.from_dict(value["metadata"]),
             type=MessageType(msg["type"]),
-            from_user=client._usr_cls.from_dict(value["contacts"][0], client=client),
-            timestamp=datetime.datetime.fromtimestamp(
-                int(msg["timestamp"]),
-                datetime.timezone.utc,
-            ),
+            from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
+            timestamp=helpers.timestamp_to_datetime(msg["timestamp"]),
             reply_to_message=ReplyToMessage.from_dict(msg["context"]),
             data=msg["interactive"]["list_reply"]["id"],
             title=msg["interactive"]["list_reply"]["title"],
             description=msg["interactive"]["list_reply"].get("description"),
         )
+
+
+@dataclasses.dataclass(slots=True)
+class BaseButton(abc.ABC):
+    _interactive_type: ClassVar[InteractiveType]
+    _action_name: ClassVar[str]
+
+    def to_dict(self) -> dict:
+        return {"name": self._action_name}
 
 
 @dataclasses.dataclass(slots=True)
@@ -419,7 +425,7 @@ class Button:
 
 
 @dataclasses.dataclass(slots=True)
-class URLButton:
+class URLButton(BaseButton):
     """
     Represents a button in the bottom of the message that opens a URL.
 
@@ -428,72 +434,71 @@ class URLButton:
         url: The URL to open when the user clicks on the button.
     """
 
+    _interactive_type = InteractiveType.CTA_URL
+    _action_name = InteractiveType.CTA_URL
+
     title: str
     url: str
 
     def to_dict(self) -> dict:
         return {
-            "name": InteractiveType.CTA_URL,
+            "name": self._action_name,
             "parameters": {"display_text": self.title, "url": self.url},
         }
 
 
 @dataclasses.dataclass(slots=True)
-class ButtonUrl:
-    """Deprecated. Use :class:`URLButton` instead."""
-
-    title: str
-    url: str
-
-    def __post_init__(self):
-        warnings.warn(
-            "`ButtonUrl` is deprecated, use `URLButton` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-    def to_dict(self) -> dict:
-        return {
-            "name": InteractiveType.CTA_URL,
-            "parameters": {"display_text": self.title, "url": self.url},
-        }
-
-
-@dataclasses.dataclass(slots=True)
-class VoiceCallButton:
+class VoiceCallButton(BaseButton):
     """
     Represents a button that initiates a voice call on WhatsApp.
+
+    >>> VoiceCallButton(
+    ...     title='Call us',
+    ...     ttl_minutes=datetime.timedelta(days=3),
+    ... )
 
     Attributes:
         title: The text to display on the button (up to 20 characters) default is `Call Now`.
         ttl_minutes: The time-to-live for the call in minutes (up to ``43200`` minutes (30 days)), default is ``10080``  minutes (7 days).
     """
 
+    _interactive_type = InteractiveType.VOICE_CALL
+    _action_name = InteractiveType.VOICE_CALL
+
     title: str | None = None
-    ttl_minutes: int | None = None
+    ttl_minutes: datetime.timedelta | int | None = None
 
     def to_dict(self) -> dict:
         params = {}
         if self.title:
             params["display_text"] = self.title
         if self.ttl_minutes:
-            params["ttl_minutes"] = self.ttl_minutes
+            params["ttl_minutes"] = (
+                (self.ttl_minutes.total_seconds() // 60)
+                if isinstance(self.ttl_minutes, datetime.timedelta)
+                else self.ttl_minutes
+            )
 
         return {
-            "name": InteractiveType.VOICE_CALL,
+            "name": self._action_name,
             "parameters": params,
         }
 
 
 @dataclasses.dataclass(slots=True)
-class CallPermissionRequestButton:
+class CallPermissionRequestButton(BaseButton):
     """Represents a button that requests a call on WhatsApp."""
 
-    @staticmethod
-    def to_dict() -> dict:
-        return {
-            "name": InteractiveType.CALL_PERMISSION_REQUEST,
-        }
+    _interactive_type = InteractiveType.CALL_PERMISSION_REQUEST
+    _action_name = InteractiveType.CALL_PERMISSION_REQUEST
+
+
+@dataclasses.dataclass(slots=True)
+class ContactInfoRequestButton(BaseButton):
+    """Represents a button that requests the user's phone number on WhatsApp."""
+
+    _interactive_type = InteractiveType.REQUEST_CONTACT_INFO
+    _action_name = InteractiveType.REQUEST_CONTACT_INFO
 
 
 @dataclasses.dataclass(slots=True)
@@ -543,7 +548,7 @@ class Section:
 
 
 @dataclasses.dataclass(slots=True)
-class SectionList:
+class SectionList(BaseButton):
     """
     Interactive list messages allow you to present WhatsApp users with a list of options to choose from.
     When a user taps the button in the message, it displays a modal that lists the options available.
@@ -557,6 +562,8 @@ class SectionList:
         sections: The sections in the section list (at least 1, no more than 10).
     """
 
+    _interactive_type = InteractiveType.LIST
+
     button_title: str
     sections: Iterable[Section]
 
@@ -568,7 +575,7 @@ class SectionList:
 
 
 @dataclasses.dataclass(slots=True)
-class FlowButton:
+class FlowButton(BaseButton):
     """
     Represents a button that opens a flow.
 
@@ -583,6 +590,9 @@ class FlowButton:
         flow_action_payload: The data to provide to the navigation screen, if the screen requires it.
         mode: The mode of the flow. ``FlowStatus.PUBLISHED`` (default) or ``FlowStatus.DRAFT`` (for testing).
     """
+
+    _interactive_type = InteractiveType.FLOW
+    _action_name = InteractiveType.FLOW
 
     title: str
     flow_id: str | int | None = None
@@ -616,7 +626,7 @@ class FlowButton:
 
     def to_dict(self) -> dict:
         return {
-            "name": InteractiveType.FLOW,
+            "name": self._action_name,
             "parameters": {
                 "mode": self.mode.lower(),
                 "flow_message_version": str(self.flow_message_version),
@@ -645,3 +655,86 @@ class FlowButton:
                 ),
             },
         }
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class BaseCarouselCard:
+    body: str | None = None
+    buttons: Iterable[Button] | URLButton
+
+    def to_dict(self, idx: int) -> dict:
+        if isinstance(self.buttons, URLButton):
+            action = {
+                "name": "cta_url",
+                "parameters": {
+                    "display_text": self.buttons.title,
+                    "url": self.buttons.url,
+                },
+            }
+        else:
+            action = {
+                "buttons": [
+                    {
+                        "type": "quick_reply",
+                        "quick_reply": {
+                            "id": helpers.resolve_callback_data(b.callback_data),
+                            "title": b.title,
+                        },
+                    }
+                    for b in self.buttons
+                ]
+            }
+        payload = {
+            "card_index": idx,
+            "type": "cta_url",
+            "action": action,
+        }
+        if self.body is not None:
+            payload["body"] = {
+                "text": self.body,
+            }
+        return payload
+
+
+class _BaseMediaCarouselCard(BaseCarouselCard):
+    _header_type: ClassVar[str]
+
+    def to_dict(self, idx: int) -> dict:
+        common = super().to_dict(idx)
+        common["header"] = {
+            "type": self._header_type,
+            self._header_type: {"link": getattr(self, self._header_type)},
+        }
+        return common
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class ImageCarouselCard(_BaseMediaCarouselCard):
+    """
+    Represents a card in a carousel message with an image header.
+
+    Attributes:
+        body: The body text of the card (optional, Max 160 characters, and up to 2 line breaks).
+        image: Publicly available media asset URL.
+        buttons: The buttons of the card (either a list of up to 3 :class:`Button` or a single :class:`URLButton`).
+    """
+
+    _header_type = "image"
+
+    image: str
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class VideoCarouselCard(_BaseMediaCarouselCard):
+    """
+    Represents a card in a carousel message with an video header.
+
+    Attributes:
+        body: The body text of the card (optional, Max 160 characters, and up to 2 line breaks).
+        video: Publicly available media asset URL.
+        buttons: The buttons of the card (either a list of up to 3 :class:`Button` or a single :class:`URLButton`).
+    """
+
+    _header_type = "video"
+
+    video: str

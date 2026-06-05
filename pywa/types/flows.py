@@ -11,6 +11,7 @@ import logging
 import pathlib
 import re
 import warnings
+from collections.abc import Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -18,15 +19,19 @@ from typing import (
     Generic,
     Iterable,
     Literal,
+    NoReturn,
     Type,
     TypeAlias,
     TypeVar,
+    overload,
 )
 from urllib import parse as urllib_parse
 
 import httpx
 
+from .. import _helpers as helpers
 from .. import utils
+from ..errors import PywaDeprecationWarning
 from .base_update import BaseUserUpdate, RawUpdate  # noqa
 from .media import ArrivedMedia
 from .others import (
@@ -118,7 +123,6 @@ __all__ = [
     "CompleteAction",
     "UpdateDataAction",
     "OpenURLAction",
-    "OpenUrlAction",  # Deprecated, use OpenURLAction instead
     "FlowActionType",
     "FlowRequestActionType",
     "Next",
@@ -178,11 +182,8 @@ class FlowCompletion(BaseUserUpdate):
             id=msg["id"],
             type=MessageType(msg["type"]),
             metadata=Metadata.from_dict(value["metadata"]),
-            from_user=client._usr_cls.from_dict(value["contacts"][0], client=client),
-            timestamp=datetime.datetime.fromtimestamp(
-                int(msg["timestamp"]),
-                datetime.timezone.utc,
-            ),
+            from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
+            timestamp=helpers.timestamp_to_datetime(msg["timestamp"]),
             reply_to_message=ReplyToMessage.from_dict(msg["context"])
             if msg.get("context", {}).get("id")
             else None,
@@ -229,7 +230,7 @@ class FlowCompletion(BaseUserUpdate):
         )
 
 
-class FlowRequestActionType(utils.StrEnum):
+class FlowRequestActionType(helpers.StrEnum):
     """
     The type the action that triggered the :class:`FlowRequest`.
 
@@ -316,7 +317,7 @@ class FlowRequest:
             close_flow=close_flow,
         )
 
-    def token_no_longer_valid(self, error_message: str):
+    def token_no_longer_valid(self, error_message: str) -> NoReturn:
         """
         Raise a :class:`FlowTokenNoLongerValid` exception with the provided error message.
 
@@ -559,7 +560,7 @@ class FlowTokenNoLongerValid(FlowResponseError):
         self.body = {"error_msg": error_message}
 
 
-class FlowStatus(utils.StrEnum):
+class FlowStatus(helpers.StrEnum):
     """
     The status of the flow
 
@@ -590,7 +591,7 @@ class FlowStatus(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class FlowCategory(utils.StrEnum):
+class FlowCategory(helpers.StrEnum):
     """
     The category of the flow
 
@@ -632,7 +633,7 @@ class FlowJSONUpdateResult(SuccessResult):
     def __iter__(self):
         warnings.warn(
             "WhatsApp.update_flow_json() is no longer return (success, validation_errors) tuple, but FlowJSONUpdateResult object.",
-            DeprecationWarning,
+            PywaDeprecationWarning,
             stacklevel=2,
         )
         return iter((self.success, self.validation_errors))
@@ -649,7 +650,7 @@ class FlowJSONUpdateResult(SuccessResult):
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
-class FlowValidationError(Exception, utils.FromDict):
+class FlowValidationError(Exception, helpers.FromDict):
     """
     Represents a validation error of a :class:`FlowJSON`.
 
@@ -748,8 +749,8 @@ class FlowPreview:
         return str(urllib_parse.urlunparse(url_parts))
 
 
-@dataclasses.dataclass(slots=True, kw_only=True)
-class FlowDetails(utils.APIObject):
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+class FlowDetails(helpers.APIObject):
     """
     Represents the details of a flow.
 
@@ -856,9 +857,7 @@ class FlowDetails(utils.APIObject):
         Raises:
             FlowPublishingError: If this flow has validation errors or not all publishing checks have been resolved.
         """
-        if res := self._client.publish_flow(self.id):
-            self.status = FlowStatus.PUBLISHED
-        return res
+        return self._client.publish_flow(self.id)
 
     def delete(self) -> SuccessResult:
         """
@@ -871,9 +870,7 @@ class FlowDetails(utils.APIObject):
         Raises:
             FlowDeletingError: If this flow is already published.
         """
-        if res := self._client.delete_flow(self.id):
-            self.status = FlowStatus.DEPRECATED  # there is no `DELETED` status
-        return res
+        return self._client.delete_flow(self.id)
 
     def deprecate(self) -> SuccessResult:
         """
@@ -886,9 +883,7 @@ class FlowDetails(utils.APIObject):
         Raises:
             FlowDeprecatingError: If this flow is not published or already deprecated.
         """
-        if res := self._client.deprecate_flow(self.id):
-            self.status = FlowStatus.DEPRECATED
-        return res
+        return self._client.deprecate_flow(self.id)
 
     def get_assets(self) -> Result[FlowAsset]:
         """
@@ -922,7 +917,7 @@ class FlowDetails(utils.APIObject):
         Example:
 
             >>> from pywa.types.flows import FlowCategory
-            >>> wa = WhatsApp(business_account_id='1234567890', ...)
+            >>> wa = WhatsApp(waba_id='1234567890', ...)
             >>> my_flows = wa.get_flows()
             >>> my_flows[0].update_metadata(
             ...     name='Feedback',
@@ -936,21 +931,13 @@ class FlowDetails(utils.APIObject):
         Raises:
             ValueError: If neither ``name``, ``categories`` or ``endpoint_uri`` is provided.
         """
-        success = self._client.update_flow_metadata(
+        return self._client.update_flow_metadata(
             flow_id=self.id,
             name=name,
             categories=categories,
             endpoint_uri=endpoint_uri,
             application_id=application_id,
         )
-        if success:
-            if name:
-                self.name = name
-            if categories:
-                self.categories = tuple(FlowCategory(c) for c in categories)
-            if endpoint_uri:
-                self.endpoint_uri = endpoint_uri
-        return success
 
     def update_json(
         self, flow_json: FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO
@@ -969,15 +956,13 @@ class FlowDetails(utils.APIObject):
         Raises:
             FlowUpdatingError: If the flow json is invalid or this flow is already published.
         """
-        res = self._client.update_flow_json(
+        return self._client.update_flow_json(
             flow_id=self.id,
             flow_json=flow_json,
         )
-        self.validation_errors = res.validation_errors or None
-        return res
 
 
-class FlowMetricName(utils.StrEnum):
+class FlowMetricName(helpers.StrEnum):
     """
     The name of the metric
 
@@ -1000,7 +985,7 @@ class FlowMetricName(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class FlowMetricGranularity(utils.StrEnum):
+class FlowMetricGranularity(helpers.StrEnum):
     """
     The granularity of the metric
 
@@ -1072,7 +1057,7 @@ class CreatedFlow:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class MigratedFlow(utils.FromDict):
+class MigratedFlow(helpers.FromDict):
     """
     Successfully migrated flow.
 
@@ -1088,7 +1073,7 @@ class MigratedFlow(utils.FromDict):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class MigratedFlowError(Exception, utils.FromDict):
+class MigratedFlowError(Exception, helpers.FromDict):
     """
     Failed to migrate flow.
 
@@ -1534,14 +1519,25 @@ class ScreenDataUpdate(Generic[_ScreenDataValTypeVar]):
         )
 
 
-class _ScreenDatasContainer:
+class _ScreenDatasContainer(Sequence[ScreenData | ScreenDataUpdate]):
     """A wrapper to prevent ``dataclasses.asdict()`` from converting ScreenData|Update objects."""
 
     def __init__(self, datas: list[ScreenData | ScreenDataUpdate]):  # not mixed
         self._datas = datas
 
-    def __iter__(self):
-        return iter(self._datas)
+    @overload
+    def __getitem__(self, index: int) -> ScreenData | ScreenDataUpdate: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> list[ScreenData | ScreenDataUpdate]: ...
+
+    def __getitem__(
+        self, index: int | slice
+    ) -> ScreenData | ScreenDataUpdate | list[ScreenData | ScreenDataUpdate]:
+        return self._datas[index]
+
+    def __len__(self) -> int:
+        return len(self._datas)
 
     def __repr__(self):
         return f"ScreenDatasContainer({self._datas})"
@@ -1605,7 +1601,7 @@ class Screen:
         return ref.__class__(ref._field, screen=self.id)  # type: ignore
 
 
-class LayoutType(utils.StrEnum):
+class LayoutType(helpers.StrEnum):
     """
     The type of layout that is used to display the components.
         - Currently, only ``LayoutType.SINGLE_COLUMN`` is supported.
@@ -1651,7 +1647,7 @@ class Component(abc.ABC):
     def visible(self) -> bool | str | Condition | None: ...
 
 
-class FlowComponentType(utils.StrEnum):
+class FlowComponentType(helpers.StrEnum):
     """Internal component types"""
 
     _check_value = None
@@ -2250,7 +2246,7 @@ class TextComponent(Component, abc.ABC):
     def text(self) -> str | FlowStr | ScreenDataRef[str] | ComponentRef[str]: ...
 
 
-class FontWeight(utils.StrEnum):
+class FontWeight(helpers.StrEnum):
     """
     The text weight
 
@@ -2474,7 +2470,7 @@ class TextEntryComponent(FormComponent[str], abc.ABC):
     def error_message(self) -> str | ScreenDataRef[str] | ComponentRef[str] | None: ...
 
 
-class InputType(utils.StrEnum):
+class InputType(helpers.StrEnum):
     """
     The input type of the text entry component.
 
@@ -2502,7 +2498,7 @@ class InputType(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class LabelVariant(utils.StrEnum):
+class LabelVariant(helpers.StrEnum):
     """
     The label variant of the text entry component.
 
@@ -2622,7 +2618,7 @@ class TextArea(TextEntryComponent):
     error_message: str | ScreenDataRef[str] | ComponentRef[str] | None = None
 
 
-class MediaSize(utils.StrEnum):
+class MediaSize(helpers.StrEnum):
     """
     The media size of the image.
 
@@ -3178,7 +3174,7 @@ class DatePicker(FormComponent[str]):
     on_select_action: DataExchangeAction | None = None
 
 
-class CalendarPickerMode(utils.StrEnum):
+class CalendarPickerMode(helpers.StrEnum):
     """
     The mode of the calendar picker.
 
@@ -3196,7 +3192,7 @@ class CalendarPickerMode(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class CalendarDay(utils.StrEnum):
+class CalendarDay(helpers.StrEnum):
     """
     The days of the week.
 
@@ -3365,7 +3361,7 @@ class CalendarPicker(FormComponent[str]):
     ) = None
 
 
-class ScaleType(utils.StrEnum):
+class ScaleType(helpers.StrEnum):
     """
     The scale type of the image.
 
@@ -3489,7 +3485,7 @@ class ImageCarousel(Component):
     visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
 
 
-class PhotoSource(utils.StrEnum):
+class PhotoSource(helpers.StrEnum):
     """
     The source where the image can be selected from.
 
@@ -3704,7 +3700,7 @@ class Switch(Component):
     cases: dict[str, list[Component | dict[str, Any]]]
 
 
-class FlowActionType(utils.StrEnum):
+class FlowActionType(helpers.StrEnum):
     """
     Flow JSON provides a generic way to trigger asynchronous actions handled by a client through interactive UI elements.
 
@@ -3736,7 +3732,7 @@ class FlowActionType(utils.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class NextType(utils.StrEnum):
+class NextType(helpers.StrEnum):
     """
     The type of the next action
 
@@ -3869,24 +3865,6 @@ class OpenURLAction(BaseAction):
     )
     payload: None = dataclasses.field(default=None, init=False, repr=False)
     url: str
-
-
-@dataclasses.dataclass(slots=True, kw_only=True)
-class OpenUrlAction:
-    """Deprecated: Use :class:`OpenURLAction` instead."""
-
-    name: FlowActionType = dataclasses.field(
-        default=FlowActionType.OPEN_URL, init=False, repr=False
-    )
-    payload: None = dataclasses.field(default=None, init=False, repr=False)
-    url: str
-
-    def __post_init__(self):
-        warnings.warn(
-            "OpenUrlAction is deprecated. Use OpenURLAction instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)

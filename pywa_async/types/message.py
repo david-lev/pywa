@@ -2,30 +2,44 @@
 
 from __future__ import annotations
 
-__all__ = ["Message"]
+__all__ = [
+    "Message",
+    "EditedMessage",
+    "DeletedMessage",
+    "OutgoingMessage",
+    "OutgoingEditedMessage",
+    "OutgoingDeletedMessage",
+]
 
-import dataclasses
 import pathlib
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING, AsyncGenerator, ClassVar, Iterable
 
 from pywa.types.message import *  # noqa MUST BE IMPORTED FIRST
-from pywa.types.message import Message as _Message  # noqa MUST BE IMPORTED FIRST
+from pywa.types.message import (
+    DeletedMessage as _DeletedMessage,
+)  # noqa MUST BE IMPORTED FIRST
+from pywa.types.message import (
+    EditedMessage as _EditedMessage,
+)  # noqa MUST BE IMPORTED FIRST
+from pywa.types.message import (
+    Message as _Message,
+)  # noqa MUST BE IMPORTED FIRST
 
-from .base_update import BaseUserUpdateAsync  # noqa
+from .base_update import BaseUserUpdateAsync, _PinUnpinActionsAsync  # noqa
 from .callback import Button, FlowButton, SectionList, URLButton, VoiceCallButton
 from .media import Audio, Document, Image, Sticker, Video
 from .others import (
     MessageType,
     ProductsSection,
 )
+from .user import User
 
 if TYPE_CHECKING:
-    from ..client import WhatsApp
+    from ..client import WhatsApp as WhatsApAsync
     from .sent_update import SentMessage
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Message(BaseUserUpdateAsync, _Message):
+class Message(BaseUserUpdateAsync, _PinUnpinActionsAsync, _Message):
     """
     A message received from a user.
 
@@ -36,6 +50,7 @@ class Message(BaseUserUpdateAsync, _Message):
         metadata: The metadata of the message (to which phone number it was sent).
         type: The message type (See :class:`MessageType`).
         from_user: The user who sent the message.
+        chat: The chat where the message was sent (private or group).
         timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
         reply_to_message: The message to which this message is a reply (if any).
         forwarded: Whether the message was forwarded.
@@ -47,7 +62,7 @@ class Message(BaseUserUpdateAsync, _Message):
         document: The document of the message.
         audio: The audio of the message.
         voice: The voice note of the message (shorthand for ``audio`` if it's a voice note).
-        caption: The caption of the message (Optional, only available for image video and document messages).
+        caption: The caption of the message media (Optional, only available for image video and document messages).
         reaction: The reaction of the message.
         location: The location of the message.
         contacts: The contacts of the message.
@@ -58,13 +73,13 @@ class Message(BaseUserUpdateAsync, _Message):
         shared_data: Shared data between handlers.
     """
 
-    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
+    _client: WhatsApAsync
 
-    image: Image | None = None
-    video: Video | None = None
-    sticker: Sticker | None = None
-    document: Document | None = None
-    audio: Audio | None = None
+    image: Image | None
+    video: Video | None
+    sticker: Sticker | None
+    document: Document | None
+    audio: Audio | None
 
     _media_objs = {
         "image": Image,
@@ -101,22 +116,27 @@ class Message(BaseUserUpdateAsync, _Message):
         self,
         filepath: str | None = None,
         filename: str | None = None,
-        in_memory: None = False,
         *,
         chunk_size: int | None = None,
         **httpx_kwargs,
     ) -> pathlib.Path:
         """
-        Download a media file from WhatsApp servers (image, video, sticker, document or audio).
+        Download the media of the message to the specified path.
 
         - Shortcut for ``message.media.download(...)``, ``message.image.download(...)`` etc.
-        - Use :py:func:`~pywa.client.WhatsApp.get_media_bytes` or :py:func:`~pywa.client.WhatsApp.stream_media` instead of ``in_memory=True``.
+        - Use :py:meth:`~pywa.types.message.Message.get_media_bytes` if you want to get the file as bytes instead of saving it to disk.
+
+        >>> from pywa_async import WhatsApp, types, filters
+        >>> wa = WhatsApp(...)
+
+        >>> @wa.on_message(filters.image)
+        ... async def on_message(_: WhatsApp, msg: types.Message):
+        ...     await msg.download_media(path=pathlib.Path('/path/to/save'), filename='my_image.jpg')
 
         Args:
             filepath: The path where to save the file (if not provided, the current working directory will be used).
             filename: The name of the file to save (if not provided, it will be extracted from the ``Content-Disposition`` header or a SHA256 hash of the URL will be used).
             chunk_size: The size (in bytes) of each chunk to read when downloading the media (default: ``64KB``).
-            in_memory: Deprecated: Use :py:func:`~pywa.client.WhatsApp.get_media_bytes` or :py:func:`~pywa.client.WhatsApp.stream_media` instead. If True, the file will be returned as bytes instead of being saved to disk.
             **httpx_kwargs: Additional arguments to pass to ``httpx.get(...)``.
 
         Returns:
@@ -129,10 +149,74 @@ class Message(BaseUserUpdateAsync, _Message):
             return await self.media.download(
                 path=filepath,
                 filename=filename,
-                in_memory=in_memory,
                 chunk_size=chunk_size,
                 **httpx_kwargs,
             )
+        except AttributeError:
+            raise ValueError("Message does not contain any media.") from None
+
+    async def stream_media(
+        self, chunk_size: int | None = None, **httpx_kwargs
+    ) -> AsyncGenerator[bytes]:
+        """
+        Stream the media of the message as bytes.
+
+        - Shortcut for ``message.media.stream(...)``, ``message.image.stream(...)`` etc.
+        - Use :py:meth:`~pywa.types.message.Message.get_media_bytes` if you want to get the whole file as bytes.
+
+        >>> from pywa_async import WhatsApp, types, filters
+        >>> import httpx
+
+        >>> wa = WhatsApp(...)
+
+        >>> @wa.on_message(filters.document)
+        ... async def on_message(_: WhatsApp, msg: types.Message):
+        ...     async with httpx.AsyncClient() as client:
+        ...        await client.post('https://example.com/upload', content=await msg.stream_media())
+
+        Args:
+            chunk_size: The size (in bytes) of each chunk to read (default: ``64KB``).
+            **httpx_kwargs: Additional arguments to pass to ``httpx.get(...)``.
+
+        Returns:
+            An iterator that yields chunks of the media file as bytes.
+
+        Raises:
+            ValueError: If the message does not contain any media.
+        """
+        try:
+            return await self.media.stream(
+                chunk_size=chunk_size,
+                **httpx_kwargs,
+            )
+        except AttributeError:
+            raise ValueError("Message does not contain any media.") from None
+
+    async def get_media_bytes(self, **httpx_kwargs) -> bytes:
+        """
+        Get the media of the message as bytes.
+
+        - Shortcut for ``message.media.get_bytes(...)``, ``message.image.get_bytes(...)`` etc.
+        - Use :py:meth:`~pywa.types.message.Message.stream_media` if you want to stream the file as bytes instead of getting it all at once.
+
+        >>> from pywa_async import WhatsApp, types, filters
+        >>> wa = WhatsApp(...)
+
+        >>> @wa.on_message(filters.document)
+        ... async def on_message(_: WhatsApp, msg: types.Message):
+        ...     doc_bytes = await msg.get_media_bytes()
+
+        Args:
+            **httpx_kwargs: Additional arguments to pass to ``httpx.get(...)``.
+
+        Returns:
+            The media file as bytes.
+
+        Raises:
+            ValueError: If the message does not contain any media.
+        """
+        try:
+            return await self.media.get_bytes(**httpx_kwargs)
         except AttributeError:
             raise ValueError("Message does not contain any media.") from None
 
@@ -297,3 +381,119 @@ class Message(BaseUserUpdateAsync, _Message):
                 )
             case _:
                 raise ValueError(f"Message of type {self.type} cannot be copied.")
+
+
+class EditedMessage(BaseUserUpdateAsync, _EditedMessage):
+    """
+    A message that has been edited.
+
+    Attributes:
+        id: The ID of the edit event (not the original message ID).
+        original_message_id: The original message ID before the edit.
+        type: The type of the edit (See :class:`MessageType`).
+        chat: The chat where the message was edited (private or group).
+        metadata: The metadata of the message (to which phone number it was sent).
+        from_user: The user who edit the message.
+        timestamp: The timestamp when the message was edited (in UTC).
+        message: The updated version of the message after the edit.
+    """
+
+    _msg_cls: ClassVar[type[Message]] = Message
+    message: Message
+
+
+class DeletedMessage(BaseUserUpdateAsync, _DeletedMessage):
+    """
+    A message that has been deleted (revoked) by a user.
+
+    Attributes:
+        id: The ID of the revoke event (not the original message ID).
+        original_message_id: The ID of the message that was deleted.
+        type: The type of the update (always :class:`MessageType.REVOKE`).
+        chat: The chat where the message was deleted (private or group).
+        metadata: The metadata of the message (to which phone number it was sent).
+        from_user: The user who deleted the message.
+        timestamp: The timestamp when the message was deleted (in UTC).
+    """
+
+
+class _Outgoing:
+    from_user: User
+
+    @property
+    def to_user(self) -> User:
+        """The recipient of the message."""
+        return self.from_user
+
+
+class OutgoingMessage(_Outgoing, Message):
+    """
+    A message that is sent by the business (Also known as `Echo message`).
+
+    Attributes:
+        id: The message ID (If you want to reply to the message, use ``message_id_to_reply`` instead).
+        metadata: The metadata of the message (which phone number was sent from).
+        type: The message type (See :class:`MessageType`).
+        to_user: The recipient of the message.
+        chat: The chat where the message was sent to (private or group).
+        timestamp: The timestamp when the message was sent (in UTC).
+        reply_to_message: The message to which this message is a reply (if any).
+        forwarded: Whether the message was forwarded.
+        forwarded_many_times: Whether the message was forwarded more than 5 times. (when ``True``, ``forwarded`` will be ``True`` as well)
+        text: The text of the message.
+        image: The image of the message.
+        video: The video of the message.
+        sticker: The sticker of the message.
+        document: The document of the message.
+        audio: The audio of the message.
+        voice: The voice note of the message (shorthand for ``audio`` if it's a voice note).
+        caption: The caption of the message media (Optional, only available for image video and document messages).
+        reaction: The reaction of the message.
+        location: The location of the message.
+        contacts: The contacts of the message.
+        order: The order of the message.
+        unsupported: The unsupported content of the message.
+        error: The error of the message.
+        shared_data: Shared data between handlers.
+    """
+
+    _webhook_field = "smb_message_echoes"
+    _messages_field = "message_echoes"
+
+
+class OutgoingEditedMessage(_Outgoing, EditedMessage):
+    """
+    An edited message that is sent by the business (Also known as `Echo message`).
+
+    Attributes:
+        id: The ID of the edit event (not the original message ID).
+        original_message_id: The original message ID before the edit.
+        type: The type of the edit (See :class:`MessageType`).
+        chat: The chat where the message was edited (private or group).
+        metadata: The metadata of the message (to which phone number it was sent).
+        to_user: The recipient of the message.
+        timestamp: The timestamp when the message was edited (in UTC).
+        message: The updated version of the message after the edit.
+    """
+
+    _msg_cls: ClassVar[type[OutgoingMessage]] = OutgoingMessage
+    _webhook_field = "smb_message_echoes"
+    _messages_field = "message_echoes"
+
+
+class OutgoingDeletedMessage(_Outgoing, DeletedMessage):
+    """
+    A deleted message that is sent by the business (Also known as `Echo message`).
+
+    Attributes:
+        id: The ID of the revoke event (not the original message ID).
+        original_message_id: The ID of the message that was deleted.
+        type: The type of the update (always :class:`MessageType.REVOKE`).
+        chat: The chat where the message was deleted (private or group).
+        metadata: The metadata of the message (to which phone number it was sent).
+        to_user: The recipient of the message.
+        timestamp: The timestamp when the message was deleted (in UTC).
+    """
+
+    _webhook_field = "smb_message_echoes"
+    _messages_field = "message_echoes"

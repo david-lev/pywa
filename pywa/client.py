@@ -12,6 +12,7 @@ import hashlib
 import json
 import logging
 import mimetypes
+import os
 import pathlib
 import warnings
 from types import ModuleType
@@ -22,22 +23,29 @@ import httpx
 from . import _helpers as helpers
 from . import utils
 from .api import GraphAPI
+from .errors import PywaDeprecationWarning
 from .filters import Filter
 from .handlers import (
+    AccountUpdateHandler,
     CallbackButtonHandler,
     CallbackSelectionHandler,
     CallConnectHandler,
     CallPermissionUpdateHandler,
     CallStatusHandler,
     CallTerminateHandler,
-    ChatOpenedHandler,
+    DeletedMessageHandler,
+    EditedMessageHandler,
     FlowCompletionHandler,
     FlowRequestCallbackWrapper,
     FlowRequestHandler,
+    GroupMessageStatusesHandler,
     Handler,
     IdentityChangeHandler,
     MessageHandler,
     MessageStatusHandler,
+    OutgoingDeletedMessageHandler,
+    OutgoingEditedMessageHandler,
+    OutgoingMessageHandler,
     PhoneNumberChangeHandler,
     TemplateCategoryUpdateHandler,
     TemplateComponentsUpdateHandler,
@@ -51,6 +59,7 @@ from .handlers import (
 from .listeners import BaseListenerIdentifier, Listener, _Listeners
 from .server import Server
 from .types import (
+    AccountUpdate,
     BusinessPhoneNumber,
     BusinessPhoneNumberSettings,
     BusinessProfile,
@@ -64,20 +73,27 @@ from .types import (
     CallPermissionUpdate,
     CallStatus,
     CallTerminate,
-    ChatOpened,
     Command,
     CommerceSettings,
     Contact,
+    ContactInfoRequestButton,
+    DeletedMessage,
+    EditedMessage,
     FlowButton,
     FlowCategory,
     FlowMetricGranularity,
     FlowMetricName,
     FlowRequest,
+    GroupMessageStatuses,
     IdentityChange,
+    ImageCarouselCard,
     Industry,
     MediaURL,
     Message,
     MessageStatus,
+    OutgoingDeletedMessage,
+    OutgoingEditedMessage,
+    OutgoingMessage,
     Pagination,
     PhoneNumberChange,
     ProductsSection,
@@ -91,9 +107,11 @@ from .types import (
     URLButton,
     User,
     UserMarketingPreferences,
+    VideoCarouselCard,
     VoiceCallButton,
 )
 from .types.base_update import BaseUpdate
+from .types.callback import BaseCarouselCard
 from .types.calls import CallPermissions, SessionDescription
 from .types.flows import (
     CreatedFlow,
@@ -104,13 +122,25 @@ from .types.flows import (
     FlowJSONUpdateResult,
     MigrateFlowsResponse,
 )
+from .types.groups import (
+    GroupDetails,
+    GroupInviteLink,
+    GroupJoinApprovalMode,
+    GroupJoinRequestsResult,
+    GroupOperation,
+    GroupParticipant,
+)
 from .types.media import Media
 from .types.others import (
+    BlockedUser,
+    CreatedBusinessPhoneNumber,
     InteractiveType,
     QRCodeImageType,
     StorageConfiguration,
     SuccessResult,
     UserIdentityChangeSettings,
+    UsernameStatus,
+    UsernameStatusType,
     UsersBlockedResult,
     UsersUnblockedResult,
     WhatsAppBusinessAccount,
@@ -132,6 +162,7 @@ from .types.templates import (
     Buttons,
     CreatedTemplate,
     CreatedTemplates,
+    DegreesOfFreedomSpec,
     LibraryTemplate,
     MigrateTemplatesResult,
     ParamFormat,
@@ -149,16 +180,18 @@ from .types.templates import (
     _AuthenticationTemplates,
     _TemplateUpdate,
 )
-from .utils import FastAPI, Flask
+from .types.user import BaseUser
+from .utils import FastAPI, Flask, UserIdentifier
 
 _logger = logging.getLogger(__name__)
 
 _DEFAULT_VERIFY_DELAY_SEC = 3
+SUPPORTS_BSUID_API = False  # TODO should be set to True when the API supports BSUID-based endpoints (e.g. send message/block user by BSUID)
 
 
 class WhatsApp(Server, _HandlerDecorators, _Listeners):
     phone_id: str | int | None
-    business_account_id: str | int | None
+    waba_id: str | int | None
     app_id: str | int | None
     filter_updates: bool
     api: GraphAPI
@@ -166,14 +199,15 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     _api_cls = GraphAPI
     _flow_req_cls = FlowRequest
     _usr_cls = User
+    _group_participant_cls = GroupParticipant
     _httpx_client = httpx.Client
     _async_allowed = False
     _handlers_to_updates: dict[type[Handler], type[BaseUpdate]] = {
         MessageHandler: Message,
         MessageStatusHandler: MessageStatus,
+        GroupMessageStatusesHandler: GroupMessageStatuses,
         CallbackButtonHandler: CallbackButton,
         CallbackSelectionHandler: CallbackSelection,
-        ChatOpenedHandler: ChatOpened,
         PhoneNumberChangeHandler: PhoneNumberChange,
         IdentityChangeHandler: IdentityChange,
         FlowCompletionHandler: FlowCompletion,
@@ -186,6 +220,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         CallTerminateHandler: CallTerminate,
         CallStatusHandler: CallStatus,
         CallPermissionUpdateHandler: CallPermissionUpdate,
+        EditedMessageHandler: EditedMessage,
+        DeletedMessageHandler: DeletedMessage,
+        OutgoingMessageHandler: OutgoingMessage,
+        OutgoingEditedMessageHandler: OutgoingEditedMessage,
+        OutgoingDeletedMessageHandler: OutgoingDeletedMessage,
+        AccountUpdateHandler: AccountUpdate,
     }
 
     def __init__(
@@ -194,17 +234,18 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         token: str = None,
         *,
         session: httpx.Client | None = None,
-        server: Flask | FastAPI | None = utils.MISSING,
+        server: Flask | FastAPI | None = None,
         webhook_endpoint: str = "/",
         verify_token: str | None = None,
         filter_updates: bool = True,
         continue_handling: bool = False,
         skip_duplicate_updates: bool = True,
         validate_updates: bool = True,
-        business_account_id: str | int | None = None,
+        waba_id: str | int | None = None,
+        business_portfolio_id: str | int | None = None,
         callback_url: str | None = None,
         callback_url_scope: utils.CallbackURLScope = utils.CallbackURLScope.APP,
-        webhook_fields: Iterable[str] | None = None,
+        webhook_fields: utils.WebhookFields | Iterable[str] | None = None,
         app_id: int | str | None = None,
         app_secret: str | None = None,
         webhook_challenge_delay: int = _DEFAULT_VERIFY_DELAY_SEC,
@@ -218,6 +259,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             str | int | float | Literal[utils.Version.GRAPH_API]
         ) = utils.Version.GRAPH_API,
         handlers_modules: Iterable[ModuleType] | None = None,
+        user_identifier_priority: tuple[UserIdentifier, ...] = (
+            UserIdentifier.BSUID,
+            UserIdentifier.WA_ID,
+            UserIdentifier.PARENT_BSUID,
+        ),
+        business_account_id: None = None,
     ) -> None:
         """
         The WhatsApp client.
@@ -266,8 +313,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             app_id: The app ID from the `App Basic Settings <https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings>`_ (optional; required when registering a ``callback_url`` with ``APP`` scope).
             app_secret: The app secret from the `App Basic Settings <https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings>`_ (optional; recommended for validating updates and required when registering a ``callback_url`` with ``APP`` scope).
             webhook_endpoint: The endpoint path used to receive incoming webhook requests (default: ``/``); change this to avoid conflicts if the server is used for other purposes.
-            filter_updates: Whether to filter out updates that do not belong to this ``phone_id`` or ``business_account_id`` (default: ``True``; does not apply to raw updates).
-            business_account_id: The `WhatsApp Business Account <https://developers.facebook.com/documentation/business-messaging/whatsapp/whatsapp-business-accounts>`_ ID (WABA ID) that owns the phone number (optional; required for some API methods).
+            filter_updates: Whether to filter out updates that do not belong to this ``phone_id`` or ``waba_id`` (default: ``True``; does not apply to raw updates).
+            waba_id: The `WhatsApp Business Account <https://developers.facebook.com/documentation/business-messaging/whatsapp/whatsapp-business-accounts>`_ ID that owns the phone number (optional; required for some API methods).
+            business_portfolio_id: The `Business Portfolio ID <https://www.facebook.com/business/help/486932075688253>`_ that owns the assets. Also known as `Business ID or Busines Manager ID` (optional; required for some API methods).
             business_private_key: The global private key used by the ``flows_request_decryptor`` to decrypt incoming Flows requests.
             business_private_key_password: The password for the global private key, if required by the ``flows_request_decryptor``.
             flows_request_decryptor: The global Flows request decryptor implementation used to decrypt incoming Flows requests.
@@ -276,6 +324,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             skip_duplicate_updates: Whether to skip duplicate updates (default: ``True``).
             validate_updates: Whether to `validate <https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/create-webhook-endpoint#validation-1>`_ incoming update payloads (default: ``True``; requires ``app_secret``).
             handlers_modules: Python modules from which handlers should be automatically loaded.
+            user_identifier_priority: The priority order of user identifiers to use when replying to messages, blocking users, etc (default: ``bsuid`` > ``wa_id`` > ``parent_bsuid``)
+            business_account_id: Deprecated alias for ``waba_id`` (the WhatsApp Business Account ID that owns the phone number).
         """
         try:
             utils.Version.GRAPH_API.validate_min_version(str(api_version))
@@ -288,15 +338,39 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             )
 
         self.phone_id = str(phone_id) if phone_id is not None else None
-        self.business_account_id = (
-            str(business_account_id) if business_account_id is not None else None
+        self.business_portfolio_id = (
+            str(business_portfolio_id) if business_portfolio_id is not None else None
         )
         self.app_id = str(app_id) if app_id is not None else None
         self.filter_updates = filter_updates
+
+        if business_account_id is not None:
+            self.business_account_id = business_account_id
+        self.waba_id = str(waba_id) if waba_id is not None else None
+
+        if not all(i in user_identifier_priority for i in UserIdentifier):
+            raise ValueError(
+                f"user_identifier_priority must contain all UserIdentifier values. Got {user_identifier_priority}"
+            )
+        self._user_identifier_priority = user_identifier_priority
+
+        self._webhook_fields: set[str] = set(Handler._handled_fields().keys())
+        if isinstance(webhook_fields, utils.WebhookFields):
+            self._webhook_fields = (
+                self._webhook_fields | set(webhook_fields.add)
+            ) - set(webhook_fields.remove)
+        elif webhook_fields is not None:
+            self._webhook_fields = set(webhook_fields)
+
         self._handlers: dict[
             type[Handler] | None,
             list[Handler],
         ] = collections.defaultdict(list)
+        self._flow_handlers_to_register = list[FlowRequestHandler]()
+        try:
+            self._anyio_thread_limit = int(os.getenv("PYWA_ANYIO_THREAD_LIMIT", "40"))
+        except ValueError:
+            self._anyio_thread_limit = 40
         self._listeners = dict[BaseListenerIdentifier, Listener]()
 
         if not token:
@@ -308,25 +382,29 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 api_version=float(str(api_version)),
             )
 
-        super().__init__(
-            server=server,
-            webhook_endpoint=webhook_endpoint,
-            callback_url=callback_url,
-            callback_url_scope=callback_url_scope,
-            webhook_fields=tuple(webhook_fields) if webhook_fields else None,
-            app_id=app_id,
-            app_secret=app_secret,
-            verify_token=verify_token,
-            webhook_challenge_delay=webhook_challenge_delay
-            or _DEFAULT_VERIFY_DELAY_SEC,
-            business_private_key=business_private_key,
-            business_private_key_password=business_private_key_password,
-            flows_request_decryptor=flows_request_decryptor,
-            flows_response_encryptor=flows_response_encryptor,
-            continue_handling=continue_handling,
-            skip_duplicate_updates=skip_duplicate_updates,
-            validate_updates=validate_updates,
+        self._server = server
+        self._webhook_endpoint = webhook_endpoint
+        self._callback_url = (
+            f"{callback_url.rstrip('/')}/{webhook_endpoint.lstrip('/')}"
+            if callback_url
+            else None
         )
+        self._callback_url_scope = callback_url_scope
+        self._verify_token = verify_token
+        self._webhook_challenge_delay = webhook_challenge_delay
+        self._private_key = business_private_key
+        self._private_key_password = business_private_key_password
+        self._flows_request_decryptor = flows_request_decryptor
+        self._app_id = app_id
+        self._app_secret = app_secret
+        self._flows_response_encryptor = flows_response_encryptor
+        self._validate_updates = validate_updates
+        self._continue_handling = continue_handling
+        self._skip_duplicate_updates = skip_duplicate_updates
+        self._uvicorn_workers = 0
+
+        super().__init__()
+
         if handlers_modules:
             self.load_handlers_modules(*handlers_modules)
 
@@ -334,18 +412,31 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """Prevent async functions from being used in the sync version of pywa."""
         if self._async_allowed:
             return
-        if utils.is_async_callable(func):
+        if helpers.is_async_callable(func):
             raise ValueError(
                 f"Async callbacks ({func}) are not supported in the sync version of pywa. import `WhatsApp` from `pywa_async` instead"
             )
 
     def _check_for_async_filters(self, filters: Filter) -> None:
+        """Prevent async filters from being used in the sync version of pywa."""
         if not filters or self._async_allowed:
             return
         if filters.has_async():
             raise ValueError(
                 "Async filters are not supported in the sync version of pywa. import `WhatsApp` from `pywa_async` instead"
             )
+
+    def _resolve_user_identifier(self, user: BaseUser) -> Generator[str]:
+        """Resolve the user identifier based on the client's priority configuration."""
+        for ui in self._user_identifier_priority:
+            if (
+                ui in {UserIdentifier.BSUID, UserIdentifier.PARENT_BSUID}
+                and not SUPPORTS_BSUID_API
+            ):
+                continue
+            identifier = getattr(user, ui.user_attr)
+            if identifier:
+                yield identifier
 
     def load_handlers_modules(self, *modules: ModuleType) -> None:
         """
@@ -396,9 +487,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             )
         return self._api
 
-    def __str__(self) -> str:
-        return super().__repr__()
-
     def __repr__(self) -> str:
         return f"WhatsApp(phone_id={self.phone_id!r})"
 
@@ -412,6 +500,24 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """Update the token in API calls."""
         self.api._session.headers["Authorization"] = f"Bearer {value}"
 
+    @property
+    def business_account_id(self) -> None:
+        warnings.warn(
+            "The `business_account_id` property is deprecated to avoid confusion with the Business Portfolio ID, please use `waba_id` instead.",
+            PywaDeprecationWarning,
+            stacklevel=2,
+        )
+        return self.waba_id
+
+    @business_account_id.setter
+    def business_account_id(self, value: str) -> None:
+        warnings.warn(
+            "The `business_account_id` property is deprecated to avoid confusion with the Business Portfolio ID, please use `waba_id` instead.",
+            PywaDeprecationWarning,
+            stacklevel=2,
+        )
+        self.waba_id = value
+
     def add_flow_request_handler(
         self, handler: FlowRequestHandler
     ) -> FlowRequestCallbackWrapper:
@@ -422,7 +528,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
                 >>> from pywa.handlers import FlowRequestHandler
                 >>> from pywa import filters as fil
-                >>> wa = WhatsApp(...)
+                >>> wa = WhatsApp()
                 >>> wa.add_flow_request_handler(
                 ...     FlowRequestHandler(
                 ...         endpoint="/flow",
@@ -436,7 +542,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             A wrapper to help split the logic of the handler.
         """
-        wrapper = self._register_flow_endpoint_callback(
+        wrapper = FlowRequestCallbackWrapper(
+            wa=self,
             endpoint=handler._endpoint,
             callback=handler._main_handler,
             acknowledge_errors=handler._acknowledge_errors,
@@ -454,6 +561,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     filters=filters,
                 )
         self.add_handlers(*handler._completion_handlers)
+        if self._server is None:
+            self._flow_handlers_to_register.append(handler)
+        else:
+            self._register_flow_handler_wrapper(wrapper)
         return wrapper
 
     def add_handlers(self, *handlers: Handler) -> None:
@@ -465,7 +576,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             >>> from pywa.handlers import MessageHandler, CallbackButtonHandler
             >>> from pywa import filters as fil
             >>> print_message = lambda _, msg: print(msg)
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.add_handlers(
             ...     MessageHandler(print_message, fil.text),
             ...     CallbackButtonHandler(print_message),
@@ -474,11 +585,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Args:
             handlers: The handlers to add.
         """
-        if self._server is utils.MISSING:
-            raise ValueError(
-                "You must initialize the WhatsApp client with an web app"
-                " (Flask or FastAPI or custom server by setting `server` to None) in order to handle incoming updates."
-            )
         for handler in handlers:
             self._check_for_async_callback(handler._callback)
             self._check_for_async_filters(handler._filters)
@@ -497,7 +603,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             >>> from pywa.handlers import MessageHandler, CallbackButtonHandler
             >>> from pywa import filters as fil
             >>> print_message = lambda _, msg: print(msg)
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> message_handler = MessageHandler(print_message, fil.text)
             >>> wa.add_handlers(message_handler)
             >>> wa.remove_handlers(message_handler)
@@ -524,7 +630,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
             >>> from pywa.handlers import MessageHandler, CallbackButtonHandler
             >>> from pywa import filters as fil
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> @wa.on_message(fil.text)
             ... def message_handler(_: WhatsApp, msg: Message): print(msg)
             >>> wa.remove_callbacks(message_handler)
@@ -548,6 +654,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             | URLButton
             | VoiceCallButton
             | CallPermissionRequestButton
+            | ContactInfoRequestButton
             | SectionList
             | FlowButton
             | None
@@ -568,15 +675,15 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_message(
             ...     to="1234567890",
-            ...     text="Hello from PyWa! (https://github.com/david-lev/pywa)",
+            ...     text="*Hello from PyWa!* (https://github.com/david-lev/pywa)",
             ...     preview_url=True,
             ... )
 
         Args:
-            to: The phone ID of the WhatsApp user.
+            to: The user phone number, WhatsApp ID, BSUID or group ID to send the message to.
             text: The text to send (`markdown <https://faq.whatsapp.com/539178204879377>`_ allowed, max 4096 characters).
             header: The header of the message (if ``buttons`` are provided, optional, up to 60 characters, no `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
             footer: The footer of the message (if ``buttons`` are provided, optional, up to 60 characters, `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
@@ -593,12 +700,13 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
+        recipient, recipient_type = helpers.resolve_recipient(to)
         if not buttons:
             return SentMessage.from_sent_update(
                 client=self,
                 update=self.api.send_message(
                     sender=sender,
-                    to=str(to),
+                    **recipient,
                     typ="text",
                     msg={"body": text, "preview_url": preview_url},
                     reply_to_message_id=reply_to_message_id,
@@ -606,13 +714,14 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     recipient_identity_key_hash=identity_key_hash,
                 ),
                 from_phone_id=sender,
+                recipient_type=recipient_type,
             )
         typ, kb = helpers.resolve_buttons_param(buttons)
         return SentMessage.from_sent_update(
             client=self,
             update=self.api.send_message(
                 sender=sender,
-                to=str(to),
+                **recipient,
                 typ="interactive",
                 msg=helpers.get_interactive_msg(
                     typ=typ,
@@ -631,6 +740,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            recipient_type=recipient_type,
             interactive_type=typ,
         )
 
@@ -659,7 +769,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_image(
             ...     to="1234567890",
             ...     image="https://example.com/image.png",
@@ -667,7 +777,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             ... )
 
         Args:
-            to: The phone ID of the WhatsApp user.
+            to: The user phone number, WhatsApp ID, BSUID or group ID to send the message to.
             image: The image to send (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
             caption: The caption of the image (required when buttons are provided, `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
             footer: The footer of the message (if buttons are provided, optional, `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
@@ -684,6 +794,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
+        recipient, recipient_type = helpers.resolve_recipient(to)
         is_url, uploaded, media, _ = helpers.resolve_media_param(
             wa=self,
             media=image,
@@ -700,7 +811,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 client=self,
                 update=self.api.send_message(
                     sender=sender,
-                    to=str(to),
+                    **recipient,
                     typ="image",
                     msg=media_msg,
                     reply_to_message_id=reply_to_message_id,
@@ -708,6 +819,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     recipient_identity_key_hash=identity_key_hash,
                 ),
                 from_phone_id=sender,
+                recipient_type=recipient_type,
                 uploaded_media=media if uploaded else None,
             )
         if not caption:
@@ -719,7 +831,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             client=self,
             update=self.api.send_message(
                 sender=sender,
-                to=str(to),
+                **recipient,
                 typ="interactive",
                 msg=helpers.get_interactive_msg(
                     typ=typ,
@@ -736,6 +848,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            recipient_type=recipient_type,
             interactive_type=typ,
             uploaded_media=media if uploaded else None,
         )
@@ -763,7 +876,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_video(
             ...     to="1234567890",
             ...     video="https://example.com/video.mp4",
@@ -771,7 +884,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             ... )
 
         Args:
-            to: The phone ID of the WhatsApp user.
+            to: The user phone number, WhatsApp ID, BSUID or group ID to send the message to.
             video: The video to send (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
             caption: The caption of the video (required when sending a video with buttons, `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
             footer: The footer of the message (if buttons are provided, optional, `markdown <https://faq.whatsapp.com/539178204879377>`_ has no effect).
@@ -788,6 +901,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
+        recipient, recipient_type = helpers.resolve_recipient(to)
         is_url, uploaded, media, _ = helpers.resolve_media_param(
             wa=self,
             media=video,
@@ -804,7 +918,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 client=self,
                 update=self.api.send_message(
                     sender=sender,
-                    to=str(to),
+                    **recipient,
                     typ="video",
                     msg=media_msg,
                     reply_to_message_id=reply_to_message_id,
@@ -812,6 +926,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     recipient_identity_key_hash=identity_key_hash,
                 ),
                 from_phone_id=sender,
+                recipient_type=recipient_type,
                 uploaded_media=media if uploaded else None,
             )
         if not caption:
@@ -823,7 +938,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             client=self,
             update=self.api.send_message(
                 sender=sender,
-                to=str(to),
+                **recipient,
                 typ="interactive",
                 msg=helpers.get_interactive_msg(
                     typ=typ,
@@ -840,6 +955,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            recipient_type=recipient_type,
             interactive_type=typ,
             uploaded_media=media if uploaded else None,
         )
@@ -867,7 +983,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_document(
             ...     to="1234567890",
             ...     document="https://example.com/example_123.pdf",
@@ -876,7 +992,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             ... )
 
         Args:
-            to: The phone ID of the WhatsApp user.
+            to: The user phone number, WhatsApp ID, BSUID or group ID to send the message to.
             document: The document to send (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
             filename: Document filename, with extension. The WhatsApp client will use an appropriate file type icon based on the extension (Optional, if not provided, if possible, the filename will be extracted from the media. pass ``None`` to skip this behavior).
             caption: The caption of the document (required when sending a document with buttons, `markdown <https://faq.whatsapp.com/539178204879377>`_ allowed).
@@ -895,6 +1011,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
+        recipient, recipient_type = helpers.resolve_recipient(to)
         is_url, uploaded, media, fallback_filename = helpers.resolve_media_param(
             wa=self,
             media=document,
@@ -917,7 +1034,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 client=self,
                 update=self.api.send_message(
                     sender=sender,
-                    to=str(to),
+                    **recipient,
                     typ="document",
                     msg=media_msg,
                     reply_to_message_id=reply_to_message_id,
@@ -925,6 +1042,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     recipient_identity_key_hash=identity_key_hash,
                 ),
                 from_phone_id=sender,
+                recipient_type=recipient_type,
                 uploaded_media=media if uploaded else None,
             )
         if not caption:
@@ -936,7 +1054,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             client=self,
             update=self.api.send_message(
                 sender=sender,
-                to=str(to),
+                **recipient,
                 typ="interactive",
                 msg=helpers.get_interactive_msg(
                     typ=typ,
@@ -953,6 +1071,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            recipient_type=recipient_type,
             interactive_type=typ,
             uploaded_media=media if uploaded else None,
         )
@@ -977,14 +1096,14 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_audio(
             ...     to='1234567890',
             ...     audio='https://example.com/audio.mp3',
             ... )
 
         Args:
-            to: The phone ID of the WhatsApp user.
+            to: The user phone number, WhatsApp ID, BSUID or group ID to send the message to.
             audio: The audio file to send (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
             is_voice: Set to True if sending a voice message (use :meth:`~pywa.client.WhatsApp.send_voice` instead for better type support).
             mime_type: The mime type of the audio file (optional, required when sending an audio as bytes or file path that does not have an extension).
@@ -1000,6 +1119,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
+        recipient, recipient_type = helpers.resolve_recipient(to)
         is_url, uploaded, media, _ = helpers.resolve_media_param(
             wa=self,
             media=audio,
@@ -1012,7 +1132,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             client=self,
             update=self.api.send_message(
                 sender=sender,
-                to=str(to),
+                **recipient,
                 typ="audio",
                 msg=helpers.get_media_msg(
                     media=media, is_url=is_url, is_voice=is_voice
@@ -1022,6 +1142,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            recipient_type=recipient_type,
             uploaded_media=media if uploaded else None,
         )
 
@@ -1047,14 +1168,14 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_voice(
             ...     to='1234567890',
             ...     voice='https://example.com/voice.ogg',
             ... )
 
         Args:
-            to: The phone ID of the WhatsApp user.
+            to: The user phone number, WhatsApp ID, BSUID or group ID to send the message to.
             voice: The voice file to send (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
             mime_type: The mime type of the voice file (optional, required when sending an audio as bytes or file path that does not have an extension).
             reply_to_message_id: The message ID to quote (optional).
@@ -1098,14 +1219,14 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_sticker(
             ...     to='1234567890',
             ...     sticker='https://example.com/sticker.webp',
             ... )
 
         Args:
-            to: The phone ID of the WhatsApp user.
+            to: The user phone number, WhatsApp ID, BSUID or group ID to send the message to.
             sticker: The sticker to send (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
             mime_type: The mime type of the sticker (optional, required when sending a sticker as bytes or file path that does not have an extension).
             reply_to_message_id: The message ID to quote (optional).
@@ -1120,6 +1241,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
+        recipient, recipient_type = helpers.resolve_recipient(to)
         is_url, uploaded, media, _ = helpers.resolve_media_param(
             wa=self,
             media=sticker,
@@ -1132,7 +1254,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             client=self,
             update=self.api.send_message(
                 sender=sender,
-                to=str(to),
+                **recipient,
                 typ="sticker",
                 msg=helpers.get_media_msg(media=media, is_url=is_url),
                 reply_to_message_id=reply_to_message_id,
@@ -1140,6 +1262,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            recipient_type=recipient_type,
             uploaded_media=media if uploaded else None,
         )
 
@@ -1160,14 +1283,14 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         - You can react to incoming messages by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.react` method on every update.
         - See `Reaction messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/reaction-messages>`_.
 
-        >>> wa = WhatsApp(...)
+        >>> wa = WhatsApp()
         >>> @wa.on_message
         ... def message_handler(_: WhatsApp, msg: Message):
         ...     msg.react('👍')
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_reaction(
             ...     to='1234567890',
             ...     emoji='👍',
@@ -1175,7 +1298,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             ... )
 
         Args:
-            to: The phone ID of the WhatsApp user.
+            to: The user phone number, WhatsApp ID, BSUID or group ID to send the message to.
             emoji: The emoji to react with.
             message_id: The message ID to react to.
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
@@ -1189,17 +1312,19 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
+        recipient, recipient_type = helpers.resolve_recipient(to)
         return SentReaction.from_sent_update(
             client=self,
             update=self.api.send_message(
                 sender=sender,
-                to=str(to),
+                **recipient,
                 typ="reaction",
                 msg={"emoji": emoji, "message_id": message_id},
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            recipient_type=recipient_type,
             message_id=message_id,
         )
 
@@ -1218,7 +1343,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         - You can remove reactions from incoming messages by using the :py:func:`~pywa.types.base_update.BaseUserUpdate.unreact` method on every update.
         - See `Reaction messages <https://developers.facebook.com/docs/whatsapp/cloud-api/messages/reaction-messages>`_.
 
-        >>> wa = WhatsApp(...)
+        >>> wa = WhatsApp()
         >>> @wa.on_message
         ... def message_handler(_: WhatsApp, msg: Message):
         ...     msg.react('👍')
@@ -1226,14 +1351,14 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.remove_reaction(
             ...     to='1234567890',
             ...     message_id='wamid.XXX='
             ... )
 
         Args:
-            to: The phone ID of the WhatsApp user.
+            to: The user phone number, WhatsApp ID, BSUID or group ID to send the message to.
             message_id: The message ID to remove the reaction from.
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
             identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
@@ -1246,17 +1371,19 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
+        recipient, recipient_type = helpers.resolve_recipient(to)
         return SentReaction.from_sent_update(
             client=self,
             update=self.api.send_message(
                 sender=sender,
-                to=str(to),
+                **recipient,
                 typ="reaction",
                 msg={"emoji": "", "message_id": message_id},
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            recipient_type=recipient_type,
             message_id=message_id,
         )
 
@@ -1280,7 +1407,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_location(
             ...     to='1234567890',
             ...     latitude=37.4847483695049,
@@ -1290,7 +1417,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             ... )
 
         Args:
-            to: The phone ID of the WhatsApp user.
+            to: The user phone number, WhatsApp ID, BSUID or group ID to send the message to.
             latitude: The latitude of the location.
             longitude: The longitude of the location.
             name: The name of the location (optional).
@@ -1306,11 +1433,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
+        recipient, recipient_type = helpers.resolve_recipient(to)
         return SentMessage.from_sent_update(
             client=self,
             update=self.api.send_message(
                 sender=sender,
-                to=str(to),
+                **recipient,
                 typ="location",
                 msg={
                     "latitude": latitude,
@@ -1323,6 +1451,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            recipient_type=recipient_type,
         )
 
     def request_location(
@@ -1343,14 +1472,14 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.request_location(
             ...     to='1234567890',
             ...     text='Please share your location with us.',
             ... )
 
         Args:
-            to: The phone ID of the WhatsApp user.
+            to: The user phone number, WhatsApp ID, BSUID or group ID to send the message to.
             text: The text to send with the button.
             reply_to_message_id: The message ID to quote (optional).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
@@ -1363,12 +1492,13 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
+        recipient, recipient_type = helpers.resolve_recipient(to)
         # noinspection PyTypeChecker
         return SentLocationRequest.from_sent_update(
             client=self,
             update=self.api.send_message(
                 sender=sender,
-                to=str(to),
+                **recipient,
                 typ="interactive",
                 msg=helpers.get_interactive_msg(
                     typ=InteractiveType.LOCATION_REQUEST_MESSAGE,
@@ -1380,6 +1510,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            recipient_type=recipient_type,
             interactive_type=InteractiveType.LOCATION_REQUEST_MESSAGE,
         )
 
@@ -1403,7 +1534,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> from pywa.types import Contact
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_contact(
             ...     to='1234567890',
             ...     contact=Contact(
@@ -1415,7 +1546,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             ... )
 
         Args:
-            to: The phone ID of the WhatsApp user.
+            to: The user phone number, WhatsApp ID, BSUID or group ID to send the message to.
             contact: The contact/s to send.
             reply_to_message_id: The message ID to quote (optional).
             tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
@@ -1428,11 +1559,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
+        recipient, recipient_type = helpers.resolve_recipient(to)
         return SentMessage.from_sent_update(
             client=self,
             update=self.api.send_message(
                 sender=sender,
-                to=str(to),
+                **recipient,
                 typ="contacts",
                 msg=tuple(c.to_dict() for c in contact)
                 if isinstance(contact, Iterable)
@@ -1442,6 +1574,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            recipient_type=recipient_type,
         )
 
     def send_catalog(
@@ -1467,7 +1600,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_catalog(
             ...     to='1234567890',
             ...     body='Check out our catalog!',
@@ -1476,7 +1609,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             ... )
 
         Args:
-            to: The phone ID of the WhatsApp user.
+            to: The user phone number, WhatsApp ID, BSUID or group ID to send the message to.
             body: Text to appear in the message body (up to 1024 characters).
             footer: Text to appear in the footer of the message (optional, up to 60 characters).
             thumbnail_product_sku: Item SKU number. Labeled as Content ID in the Commerce Manager. The thumbnail of this item will be used as the message's header image. If omitted, the product image of the first item in your catalog will be used.
@@ -1491,11 +1624,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
+        recipient, recipient_type = helpers.resolve_recipient(to)
         return SentMessage.from_sent_update(
             client=self,
             update=self.api.send_message(
                 sender=sender,
-                to=str(to),
+                **recipient,
                 typ="interactive",
                 msg=helpers.get_interactive_msg(
                     typ=InteractiveType.CATALOG_MESSAGE,
@@ -1519,6 +1653,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            recipient_type=recipient_type,
             interactive_type=InteractiveType.CATALOG_MESSAGE,
         )
 
@@ -1543,7 +1678,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_product(
             ...     to='1234567890',
             ...     catalog_id='1234567890',
@@ -1553,7 +1688,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             ... )
 
         Args:
-            to: The phone ID of the WhatsApp user.
+            to: The user phone number, WhatsApp ID, BSUID or group ID to send the message to.
             catalog_id: The ID of the catalog to send the product from. (To get the catalog ID use
              :py:func:`~pywa.client.WhatsApp.get_commerce_settings` or in the `Commerce Manager
              <https://business.facebook.com/commerce/>`_).
@@ -1571,11 +1706,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
+        recipient, recipient_type = helpers.resolve_recipient(to)
         return SentMessage.from_sent_update(
             client=self,
             update=self.api.send_message(
                 sender=sender,
-                to=str(to),
+                **recipient,
                 typ="interactive",
                 msg=helpers.get_interactive_msg(
                     typ=InteractiveType.PRODUCT,
@@ -1591,6 +1727,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            recipient_type=recipient_type,
             interactive_type=InteractiveType.PRODUCT,
         )
 
@@ -1617,7 +1754,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> from pywa.types import ProductsSection
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.send_products(
             ...     to='1234567890',
             ...     catalog_id='1234567890',
@@ -1637,7 +1774,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             ... )
 
         Args:
-            to: The phone ID of the WhatsApp user.
+            to: The user phone number, WhatsApp ID, BSUID or group ID to send the message to.
             catalog_id: The ID of the catalog to send the product from (To get the catalog ID use
              :py:func:`~pywa.client.WhatsApp.get_commerce_settings` or in the `Commerce Manager
              <https://business.facebook.com/commerce/>`_).
@@ -1656,11 +1793,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
+        recipient, recipient_type = helpers.resolve_recipient(to)
         return SentMessage.from_sent_update(
             client=self,
             update=self.api.send_message(
                 sender=sender,
-                to=str(to),
+                **recipient,
                 typ="interactive",
                 msg=helpers.get_interactive_msg(
                     typ=InteractiveType.PRODUCT_LIST,
@@ -1680,6 +1818,64 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            recipient_type=recipient_type,
+            interactive_type=InteractiveType.PRODUCT_LIST,
+        )
+
+    def send_carousel(
+        self,
+        to: str | int,
+        *,
+        body: str,
+        cards: list[ImageCarouselCard | VideoCarouselCard | BaseCarouselCard],
+        reply_to_message_id: str | None = None,
+        tracker: str | CallbackData | None = None,
+        identity_key_hash: str | None = None,
+        sender: str | int | None = None,
+    ) -> SentMessage:
+        """
+        Interactive media carousel messages display a set of horizontally scrollable media cards.
+
+        - See `Carousel messages <https://developers.facebook.com/documentation/business-messaging/whatsapp/messages/interactive-media-carousel-messages>`_.
+
+        Args:
+            to: The user phone number, WhatsApp ID, BSUID or group ID to send the message to.
+            body: Text to appear in the message body (up to 1024 characters).
+            cards: The carousel cards to send (up to 10).
+            reply_to_message_id: The message ID to quote (optional).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
+            sender: The phone ID to send the message from (optional, overrides the client's phone ID).
+
+        Returns:
+            The sent carousel message.
+        """
+        sender = helpers.resolve_arg(
+            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
+        )
+
+        recipient, recipient_type = helpers.resolve_recipient(to)
+        return SentMessage.from_sent_update(
+            client=self,
+            update=self.api.send_message(
+                sender=sender,
+                **recipient,
+                typ="interactive",
+                msg=helpers.get_interactive_msg(
+                    typ=InteractiveType.CAROUSEL,
+                    action={
+                        "cards": [
+                            card.to_dict(idx=idx) for idx, card in enumerate(cards)
+                        ]
+                    },
+                    body=body,
+                ),
+                reply_to_message_id=reply_to_message_id,
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                recipient_identity_key_hash=identity_key_hash,
+            ),
+            from_phone_id=sender,
+            recipient_type=recipient_type,
             interactive_type=InteractiveType.PRODUCT_LIST,
         )
 
@@ -1698,7 +1894,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.mark_message_as_read(message_id='wamid.XXX=')
 
         Args:
@@ -1735,7 +1931,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.indicate_typing(message_id='wamid.XXX=')
 
         Args:
@@ -1781,7 +1977,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.upload_media(media='https://example.com/image.jpg')
 
             >>> wa.upload_media(media=pathlib.Path('image.jpg'))
@@ -1841,7 +2037,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.get_media_url(media_id='wamid.XXX=')
 
         Args:
@@ -1866,7 +2062,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         url: str,
         path: str | pathlib.Path | None = None,
         filename: str | None = None,
-        in_memory: None = None,
         chunk_size: int = helpers.DOWNLOAD_CHUNK_SIZE,
         **httpx_kwargs: Any,
     ) -> pathlib.Path:
@@ -1881,7 +2076,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.download_media(
             ...     url='https://mmg-fna.whatsapp.net/d/f/Amc.../v2/1234567890',
             ...     path=pathlib.Path('/path/to/save'),
@@ -1893,20 +2088,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             path: The path where to save the file (if not provided, the current working directory will be used).
             filename: The name of the file to save (if not provided, it will be extracted from the ``Content-Disposition`` header or a SHA256 hash of the URL will be used).
             chunk_size: The size (in bytes) of each chunk to read when downloading the media (default: ``64KB``).
-            in_memory: Deprecated: Use :py:func:`~pywa.client.WhatsApp.get_media_bytes` or :py:func:`~pywa.client.WhatsApp.stream_media` instead. If True, the file will be returned as bytes instead of being saved to disk.
             **httpx_kwargs: Additional arguments to pass to :py:func:`httpx.get`.
 
         Returns:
             The path of the saved file.
         """
-        if in_memory:
-            warnings.warn(
-                "`in_memory` parameter is deprecated and will be removed in future versions. "
-                "Use `get_media_bytes` or `stream_media` methods instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            return self.get_media_bytes(url=url, **httpx_kwargs)
         with self.api.stream_media_bytes(media_url=url, **httpx_kwargs) as res:
             res.raise_for_status()
             mimetype = res.headers.get("Content-Type")
@@ -1945,7 +2131,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> media_bytes = wa.get_media_bytes(
             ...     url='https://mmg-fna.whatsapp.net/d/f/Amc.../v2/1234567890',
             ... )
@@ -1979,7 +2165,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> with httpx.Client() as client:
             >>>    client.post("https://my-server.com/upload", content=wa.stream_media()) # streaming upload
 
@@ -2006,7 +2192,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.delete_media(media_id='wamid.XXX=')
 
         Args:
@@ -2030,6 +2216,72 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             )
         )
 
+    def get_shared_business_accounts(
+        self,
+        *,
+        business_portfolio_id: str | int | None = None,
+        pagination: Pagination | None = None,
+    ) -> Result[WhatsAppBusinessAccount]:
+        """
+        Get the WhatsApp Business Accounts (WABAs) in a business portfolio.
+
+        - See `Get List of Shared WABAs <https://developers.facebook.com/documentation/business-messaging/whatsapp/solution-providers/manage-accounts#get-list-of-shared-wabas>`_.
+
+        Args:
+            business_portfolio_id: The business portfolio ID to get the WABAs from (optional, if not provided, the client's business portfolio ID will be used).
+            pagination: Pagination object to paginate through the results (optional).
+
+        Returns:
+            A Result object containing WhatsAppBusinessAccount objects.
+        """
+        return Result(
+            wa=self,
+            response=self.api.get_shared_wabas(
+                business_portfolio_id=helpers.resolve_arg(
+                    wa=self,
+                    value=business_portfolio_id,
+                    method_arg="business_portfolio_id",
+                    client_arg="business_portfolio_id",
+                ),
+                pagination=pagination.to_dict() if pagination else None,
+                fields=WhatsAppBusinessAccount._api_fields(),
+            ),
+            item_factory=WhatsAppBusinessAccount.from_dict,
+        )
+
+    def get_owned_business_accounts(
+        self,
+        *,
+        business_portfolio_id: str | int | None = None,
+        pagination: Pagination | None = None,
+    ) -> Result[WhatsAppBusinessAccount]:
+        """
+        Get the WhatsApp Business Accounts (WABAs) owned by a business portfolio.
+
+        - See `Get List of Owned WhatsApp Business Accounts <https://developers.facebook.com/documentation/business-messaging/whatsapp/solution-providers/manage-accounts#get-list-of-owned-whatsapp-business-accounts>`_.
+
+        Args:
+            business_portfolio_id: The business portfolio ID to get the WABAs from (optional, if not provided, the client's business portfolio ID will be used).
+            pagination: Pagination object to paginate through the results (optional).
+
+        Returns:
+            A Result object containing WhatsAppBusinessAccount objects.
+        """
+        return Result(
+            wa=self,
+            response=self.api.get_owned_wabas(
+                business_portfolio_id=helpers.resolve_arg(
+                    wa=self,
+                    value=business_portfolio_id,
+                    method_arg="business_portfolio_id",
+                    client_arg="business_portfolio_id",
+                ),
+                pagination=pagination.to_dict() if pagination else None,
+                fields=WhatsAppBusinessAccount._api_fields(),
+            ),
+            item_factory=WhatsAppBusinessAccount.from_dict,
+        )
+
     def get_business_account(
         self,
         *,
@@ -2050,10 +2302,49 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     wa=self,
                     value=waba_id,
                     method_arg="waba_id",
-                    client_arg="business_account_id",
+                    client_arg="waba_id",
                 ),
                 fields=WhatsAppBusinessAccount._api_fields(),
             )
+        )
+
+    def update_business_account_settings(
+        self,
+        *,
+        disable_marketing_messages_on_cloud_api: bool | None = None,
+        degrees_of_freedom_spec: DegreesOfFreedomSpec | None = None,
+        waba_id: str | int | None = None,
+    ) -> None:
+        """
+        Update the WhatsApp Business Account (WABA) settings.
+
+        Example:
+
+            >>> wa = WhatsApp()
+            >>> wa.update_business_account_settings(disable_marketing_messages_on_cloud_api=True)
+
+        Args:
+            disable_marketing_messages_on_cloud_api: Whether to block Marketing category templates on the Cloud API ``/messages`` endpoint (in pywa it means that when you :meth:`~pywa.WhatsApp.send_template` a ``MARKETING`` template you must set ``use_mm_lite_api`` to ``True``).
+            degrees_of_freedom_spec: Configure automatic creative optimizations for message templates. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/marketing-messages/send-marketing-messages#configure-automatic-creative-optimizations-whatsapp-business-account-level>`_.
+            waba_id: The WABA ID to update the settings for (optional, if not provided, the client's WABA ID will be used).
+        """
+        self.api.update_waba_settings(
+            waba_id=helpers.resolve_arg(
+                wa=self,
+                value=waba_id,
+                method_arg="waba_id",
+                client_arg="waba_id",
+            ),
+            settings={
+                k: v
+                for k, v in {
+                    "disable_marketing_messages_on_cloud_api": disable_marketing_messages_on_cloud_api,
+                    "degrees_of_freedom_spec": degrees_of_freedom_spec.to_dict()
+                    if degrees_of_freedom_spec
+                    else None,
+                }.items()
+                if v is not None
+            },
         )
 
     def get_business_phone_number(
@@ -2062,11 +2353,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         phone_id: str | int | None = None,
     ) -> BusinessPhoneNumber:
         """
-        Get the phone number of the WhatsApp Business account.
+        Get the phone number details.
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.get_business_phone_number()
 
         Args:
@@ -2098,7 +2389,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> for phone_number in wa.get_business_phone_numbers():
             ...     print(phone_number)
 
@@ -2116,7 +2407,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     wa=self,
                     value=waba_id,
                     method_arg="waba_id",
-                    client_arg="business_account_id",
+                    client_arg="waba_id",
                 ),
                 pagination=pagination.to_dict() if pagination else None,
                 fields=BusinessPhoneNumber._api_fields(),
@@ -2135,7 +2426,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.get_business_phone_number_settings()
 
         Args:
@@ -2160,7 +2451,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
     def update_business_phone_number_settings(
         self,
-        settings: None = None,
         *,
         calling: CallingSettings | None = None,
         storage_configuration: StorageConfiguration | None = None,
@@ -2173,7 +2463,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> from pywa.types.calls import CallingSettingsStatus
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> s = wa.get_business_phone_number_settings()
             >>> s.calling.status = CallingSettingsStatus.ENABLED
             >>> wa.update_business_phone_number_settings(calling=s.calling)
@@ -2182,21 +2472,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             calling: The calling settings to update (optional).
             storage_configuration: The storage configuration to update (optional).
             user_identity_change: The user identity change settings to update (optional).
-            settings: Deprecated, use `calling`, `storage_configuration`, and `user_identity_change` instead.
             phone_id: The phone ID to update the settings for (optional, if not provided, the client's phone ID will be used).
 
         Returns:
             Whether the settings were updated successfully.
         """
-        if settings is not None:
-            warnings.warn(
-                "The `settings` parameter is deprecated, use `calling`, `storage_configuration`, and `user_identity_change` instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            calling = settings.calling
-            storage_configuration = settings.storage_configuration
-            user_identity_change = settings.user_identity_change
         return SuccessResult.from_dict(
             self.api.update_business_phone_number_settings(
                 phone_id=helpers.resolve_arg(
@@ -2215,22 +2495,20 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
     def update_conversational_automation(
         self,
-        enable_chat_opened: bool,
         ice_breakers: Iterable[str] | None = None,
         commands: Iterable[Command] | None = None,
         *,
         phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
-        Update the conversational automation settings of the WhatsApp Business account.
+        Update the conversational automation settings of the WhatsApp Business phone number.
 
         - You can receive the current conversational automation settings using :py:func:`~pywa.client.WhatsApp.get_business_phone_number` and accessing the ``conversational_automation`` attribute.
         - Read more about `Conversational Automation <https://developers.facebook.com/docs/whatsapp/cloud-api/phone-numbers/conversational-components>`_.
 
             >>> from pywa.types import Command
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.update_conversational_automation(
-            ...     enable_chat_opened=True,
             ...     ice_breakers=['Plan a trip', 'Create a workout plan'],
             ...     commands=[
             ...         Command(
@@ -2245,9 +2523,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             ... )
 
         Args:
-            enable_chat_opened: You can be notified whenever a WhatsApp user opens a chat with you for
-             the first time. This can be useful if you want to reply to these users with a special welcome message of
-             your own design (When enabled, you'll start receiving the :class:`ChatOpened` event).
             ice_breakers: Ice Breakers are customizable, tappable text strings that appear in a message thread the
              first time you chat with a user. For example, `Plan a trip` or `Create a workout plan`.
             commands: Commands are text strings that WhatsApp users can see by typing a forward slash in a message
@@ -2265,7 +2540,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     method_arg="phone_id",
                     client_arg="phone_id",
                 ),
-                enable_welcome_message=enable_chat_opened,
                 prompts=tuple(ice_breakers) if ice_breakers else None,
                 commands=json.dumps([c.to_dict() for c in commands])
                 if commands
@@ -2280,7 +2554,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
-        Update the display name of the WhatsApp Business account.
+        Update the display name of the WhatsApp Business phone number.
 
         - The display name is the name that appears in the WhatsApp app for your business.
         - The display name will undergo verification by WhatsApp, and you will receive a webhook notification when the verification is complete.
@@ -2288,7 +2562,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.update_display_name(new_display_name="Pizza Bot")
 
         Args:
@@ -2314,11 +2588,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         phone_id: str | int | None = None,
     ) -> BusinessProfile:
         """
-        Get the business profile of the WhatsApp Business account.
+        Get the business profile of the phone number.
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.get_business_profile()
 
         Args:
@@ -2346,7 +2620,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
-        Set the business public key of the WhatsApp Business account (required for end-to-end encryption in flows)
+        Set the business public key of the phone number (required for end-to-end encryption in flows)
 
         Args:
             public_key: An public 2048-bit RSA Key in PEM format.
@@ -2354,7 +2628,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.set_business_public_key(
             ...     public_key=\"\"\"-----BEGIN PUBLIC KEY-----...\"\"\"
             ... )
@@ -2371,7 +2645,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     method_arg="phone_id",
                     client_arg="phone_id",
                 ),
-                public_key=public_key,
+                business_public_key=public_key,
             )
         )
 
@@ -2389,15 +2663,14 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         websites: Iterable[str] | None = utils.MISSING,
         phone_id: str | int | None = None,
         app_id: str | int | None = None,
-        profile_picture_handle: None = utils.MISSING,
     ) -> SuccessResult:
         """
-        Update the business profile of the WhatsApp Business account.
+        Update the business profile of the phone number.
 
         Example:
 
             >>> from pywa.types import Industry
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.update_business_profile(
             ...     about='This is a test business',
             ...     address='Menlo Park, 1601 Willow Rd, United States',
@@ -2423,18 +2696,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
              There is a maximum of 2 websites with a maximum of 256 characters each.)
             phone_id: The phone ID to update the business profile for (optional, if not provided, the client's phone ID will be used).
             app_id: The App ID to upload the profile picture to (optional, if not provided, the client's app ID will be used).
-            profile_picture_handle: Deprecated, use ``profile_picture`` instead.
 
         Returns:
             Whether the business profile was updated.
         """
-        if profile_picture_handle is not utils.MISSING:
-            warnings.warn(
-                "`profile_picture_handle` parameter is deprecated, use `profile_picture` instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            profile_picture = profile_picture_handle
         data = {
             key: value or ""
             for key, value in {
@@ -2480,12 +2745,15 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         phone_id: str | int | None = None,
     ) -> CommerceSettings:
         """
-        Get the commerce settings of the WhatsApp Business account.
+        Get the commerce settings of the WhatsApp Business phone number.
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.get_commerce_settings()
+
+        Args:
+            phone_id: The phone ID to get the commerce settings from (optional, if not provided, the client's phone ID will be used).
 
         Returns:
             The commerce settings.
@@ -2510,11 +2778,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
-        Update the commerce settings of the WhatsApp Business account.
+        Update the commerce settings of the WhatsApp Business phone number.
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.update_commerce_settings(
             ...     is_catalog_visible=True,
             ...     is_cart_enabled=True,
@@ -2570,7 +2838,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
             from pywa.types import template as t
 
-            wa = WhatsApp(..., business_account_id='1234567890')
+            wa = WhatsApp(..., waba_id='1234567890')
 
             created = wa.create_template(
                 template=t.Template(
@@ -2615,7 +2883,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     wa=self,
                     value=waba_id,
                     method_arg="waba_id",
-                    client_arg="business_account_id",
+                    client_arg="waba_id",
                 ),
                 template=template.to_json(),
             ),
@@ -2644,7 +2912,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> from pywa.types.templates import *
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> templates = wa.upsert_authentication_template(
             ...     name='one_tap_authentication',
             ...     languages=[TemplateLanguage.ENGLISH_US, TemplateLanguage.FRENCH, TemplateLanguage.SPANISH],
@@ -2673,7 +2941,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     wa=self,
                     value=waba_id,
                     method_arg="waba_id",
-                    client_arg="business_account_id",
+                    client_arg="waba_id",
                 ),
                 template=_AuthenticationTemplates(
                     name=name,
@@ -2723,7 +2991,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 name='seasonal_promotion',
                 language=TemplateLanguage.ENGLISH_US,
                 params=[
-                    BodyText.params(text='Our {{season}} sale is on!', season='Summer'),
+                    BodyText.params(season='Summer'),
                     CopyCodeButton.params(coupon_code="25OFF", index=0)
                 ],
             )
@@ -2769,7 +3037,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             )
 
         Args:
-            to: The phone ID of the WhatsApp user.
+            to: The user phone number, WhatsApp ID, BSUID or group ID to send the message to.
             name: The name of the template to send (optional when ``template`` is provided).
             language: The language of the template to send (optional when ``template`` is provided).
             template: The template object to validate the parameters against (optional, if not provided, ``name`` and ``language`` must be provided).
@@ -2784,6 +3052,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         sender = helpers.resolve_arg(
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
+        recipient, recipient_type = helpers.resolve_recipient(to)
         name = name or (template.name if template else None)
         language = language or (template.language if template else None)
         if not name or not language:
@@ -2817,7 +3086,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             client=self,
             update=self.api.send_message(
                 sender=sender,
-                to=str(to),
+                **recipient,
                 typ="template",
                 msg=template,
                 reply_to_message_id=reply_to_message_id,
@@ -2827,7 +3096,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             if not use_mm_lite_api
             else self.api.send_marketing_message(
                 sender=sender,
-                to=str(to),
+                **recipient,
                 template=template,
                 message_activity_sharing=message_activity_sharing,
                 reply_to_message_id=reply_to_message_id,
@@ -2835,6 +3104,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 recipient_identity_key_hash=identity_key_hash,
             ),
             from_phone_id=sender,
+            recipient_type=recipient_type,
         )
 
     def get_templates(
@@ -2855,7 +3125,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> templates = wa.get_templates(
             ...     statuses=[TemplateStatus.APPROVED],
             ...     categories=[TemplateCategory.MARKETING],
@@ -2886,7 +3156,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     wa=self,
                     value=waba_id,
                     method_arg="waba_id",
-                    client_arg="business_account_id",
+                    client_arg="waba_id",
                 ),
                 fields=TemplateDetails._api_fields(),
                 filters={
@@ -2912,10 +3182,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 ),
                 pagination=pagination.to_dict() if pagination else None,
             ),
-            item_factory=functools.partial(
-                TemplateDetails.from_dict,
-                client=self,
-            ),
         )
 
     def get_template(self, template_id: int | str) -> TemplateDetails:
@@ -2924,7 +3190,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> template_details = wa.get_template(template_id='1234567890')
 
         Args:
@@ -2963,7 +3229,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> from pywa.types.templates import *
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> updated_template = wa.update_template(
             ...     template_id='1234567890',
             ...     new_category=TemplateCategory.MARKETING,
@@ -3019,7 +3285,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.delete_template(template_name='seasonal_promotion') # Deletes all templates with that name
             >>> wa.delete_template(template_name='seasonal_promotion', template_id='1234567890') # Deletes only the template with that ID
 
@@ -3037,7 +3303,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     wa=self,
                     value=waba_id,
                     method_arg="waba_id",
-                    client_arg="business_account_id",
+                    client_arg="waba_id",
                 ),
                 template_name=template_name,
                 template_id=template_id,
@@ -3062,7 +3328,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> now = datetime.datetime.now()
             >>> result = wa.compare_templates(
             ...     '1234567890', '0987654321',
@@ -3126,7 +3392,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     wa=self,
                     value=destination_waba_id,
                     method_arg="destination_waba_id",
-                    client_arg="business_account_id",
+                    client_arg="waba_id",
                 ),
                 page_number=page_number,
             )
@@ -3154,7 +3420,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             reason=res.get("reason"),
         )
 
-    # fmt: off
     def create_flow(
         self,
         name: str,
@@ -3162,7 +3427,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         *,
         clone_flow_id: str | None = None,
         endpoint_uri: str | None = None,
-        flow_json: FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO | None = None,
+        flow_json: (
+            FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO | None
+        ) = None,
         publish: bool | None = None,
         waba_id: str | int | None = None,
     ) -> CreatedFlow:
@@ -3187,7 +3454,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> from pywa.types.flows import *
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.create_flow(
             ...     name='Feedback',
             ...     categories=[FlowCategory.SURVEY, FlowCategory.OTHER],
@@ -3207,7 +3474,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 categories=tuple(map(str, categories)),
                 clone_flow_id=clone_flow_id,
                 endpoint_uri=endpoint_uri,
-                waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="business_account_id"),
+                waba_id=helpers.resolve_arg(
+                    wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"
+                ),
                 flow_json=helpers.resolve_flow_json_param(flow_json)
                 if flow_json
                 else None,
@@ -3238,7 +3507,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> from pywa.types.flows import FlowCategory
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.update_flow_metadata(
             ...     flow_id='1234567890',
             ...     name='Feedback',
@@ -3255,13 +3524,15 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         if not any((name, categories, endpoint_uri, application_id)):
             raise ValueError("At least one argument must be provided")
-        return SuccessResult.from_dict(self.api.update_flow_metadata(
-            flow_id=str(flow_id),
-            name=name,
-            categories=tuple(map(str, categories)) if categories else None,
-            endpoint_uri=endpoint_uri,
-            application_id=application_id,
-        ))
+        return SuccessResult.from_dict(
+            self.api.update_flow_metadata(
+                flow_id=str(flow_id),
+                name=name,
+                categories=tuple(map(str, categories)) if categories else None,
+                endpoint_uri=endpoint_uri,
+                application_id=application_id,
+            )
+        )
 
     def update_flow_json(
         self,
@@ -3277,7 +3548,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Examples:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
 
             - Using a Flow object:
 
@@ -3308,11 +3579,16 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Raises:
             FlowUpdatingError: If the flow json is invalid or the flow is already published.
         """
-        return FlowJSONUpdateResult.from_dict(self.api.update_flow_json(flow_id=str(flow_id), flow_json=helpers.resolve_flow_json_param(flow_json)))
+        return FlowJSONUpdateResult.from_dict(
+            self.api.update_flow_json(
+                flow_id=str(flow_id),
+                flow_json=helpers.resolve_flow_json_param(flow_json),
+            )
+        )
 
     def publish_flow(
-            self,
-            flow_id: str | int,
+        self,
+        flow_id: str | int,
     ) -> SuccessResult:
         """
         This request updates the status of the Flow to "PUBLISHED".
@@ -3375,11 +3651,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return SuccessResult.from_dict(self.api.deprecate_flow(flow_id=str(flow_id)))
 
     def get_flow(
-            self,
-            flow_id: str | int,
-            *,
-            invalidate_preview: bool = True,
-            phone_number_id: str | int | None = None,
+        self,
+        flow_id: str | int,
+        *,
+        invalidate_preview: bool = True,
+        phone_number_id: str | int | None = None,
     ) -> FlowDetails:
         """
         Get the details of a flow.
@@ -3404,12 +3680,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )
 
     def get_flows(
-            self,
-            *,
-            invalidate_preview: bool = True,
-            phone_number_id: str | int | None = None,
-            pagination: Pagination | None = None,
-            waba_id: str | int | None = None,
+        self,
+        *,
+        invalidate_preview: bool = True,
+        phone_number_id: str | int | None = None,
+        pagination: Pagination | None = None,
+        waba_id: str | int | None = None,
     ) -> Result[FlowDetails]:
         """
         Get the flows associated with the WhatsApp Business account.
@@ -3418,7 +3694,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> flows = wa.get_flows(
             ...     invalidate_preview=True,
             ...     phone_number_id='1234567890',
@@ -3439,7 +3715,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return Result(
             wa=self,
             response=self.api.get_flows(
-                waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="business_account_id"),
+                waba_id=helpers.resolve_arg(
+                    wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"
+                ),
                 fields=FlowDetails._api_fields(
                     invalidate_preview=invalidate_preview,
                     phone_number_id=phone_number_id,
@@ -3450,13 +3728,13 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )
 
     def get_flow_metrics(
-            self,
-            flow_id: str | int,
-            metric_name: FlowMetricName,
-            granularity: FlowMetricGranularity,
-            *,
-            since: datetime.date | str | None = None,
-            until: datetime.date | str | None = None,
+        self,
+        flow_id: str | int,
+        metric_name: FlowMetricName,
+        granularity: FlowMetricGranularity,
+        *,
+        since: datetime.date | str | None = None,
+        until: datetime.date | str | None = None,
     ) -> dict:
         """
         Get the metrics of a flow.
@@ -3486,10 +3764,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )["metric"]
 
     def get_flow_assets(
-            self,
-            flow_id: str | int,
-            *,
-            pagination: Pagination | None = None,
+        self,
+        flow_id: str | int,
+        *,
+        pagination: Pagination | None = None,
     ) -> Result[FlowAsset]:
         """
         Get assets attached to a specified Flow.
@@ -3511,11 +3789,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )
 
     def migrate_flows(
-            self,
-            source_waba_id: str | int,
-            source_flow_names: Iterable[str],
-            *,
-            destination_waba_id: str | int | None = None,
+        self,
+        source_waba_id: str | int,
+        source_flow_names: Iterable[str],
+        *,
+        destination_waba_id: str | int | None = None,
     ) -> MigrateFlowsResponse:
         """
         Migrate flows from one WhatsApp Business Account to another.
@@ -3534,7 +3812,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     wa=self,
                     value=destination_waba_id,
                     method_arg="destination_waba_id",
-                    client_arg="business_account_id",
+                    client_arg="waba_id",
                 ),
                 source_waba_id=str(source_waba_id),
                 source_flow_names=tuple(source_flow_names),
@@ -3542,11 +3820,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )
 
     def register_phone_number(
-            self,
-            pin: int | str,
-            *,
-            data_localization_region: str | None = None,
-            phone_id: str | int | None = None,
+        self,
+        pin: int | str,
+        *,
+        data_localization_region: str | None = None,
+        phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
         Register a Business Phone Number
@@ -3555,7 +3833,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> wa.register_phone_number(password='111111', data_localization_region='US')
 
         Args:
@@ -3573,18 +3851,23 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The success of the registration.
         """
-        return SuccessResult.from_dict(self.api.register_phone_number(
-            phone_id=helpers.resolve_arg(
-                wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"
-            ),
-            pin=str(pin),
-            data_localization_region=data_localization_region,
-        ))
+        return SuccessResult.from_dict(
+            self.api.register_phone_number(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+                pin=str(pin),
+                data_localization_region=data_localization_region,
+            )
+        )
 
     def deregister_phone_number(
-            self,
-            *,
-            phone_id: str | int | None = None,
+        self,
+        *,
+        phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
         Deregister a Business Phone Number.
@@ -3597,16 +3880,118 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The success of the deregistration.
         """
-        return SuccessResult.from_dict(self.api.deregister_phone_number(
-            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-        ))
+        return SuccessResult.from_dict(
+            self.api.deregister_phone_number(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+            )
+        )
+
+    def create_phone_number(
+        self,
+        *,
+        country_calling_code: str | int,
+        phone_number: str | int,
+        verified_name: str,
+        waba_id: str | int | None = None,
+    ) -> CreatedBusinessPhoneNumber:
+        """
+        Create a phone number on a WhatsApp Business Account.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/solution-providers/registering-phone-numbers#step-1-create-the-phone-number>`_.
+
+        Args:
+            country_calling_code: The phone number’s country calling code (e.g. "1").
+            phone_number: The phone number, with or without the country calling code.
+            verified_name: The phone number’s `display name <https://www.facebook.com/business/help/338047025165344>`_.
+            waba_id: The WhatsApp Business account ID to create the phone number on (optional, if not provided, the client's business account ID will be used).
+
+        Returns:
+            The created phone number.
+        """
+        return CreatedBusinessPhoneNumber(
+            id=self.api.create_phone_number(
+                cc=str(country_calling_code),
+                phone_number=str(phone_number),
+                verified_name=verified_name,
+                waba_id=helpers.resolve_arg(
+                    wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"
+                ),
+            )["id"]
+        )
+
+    def request_verification_code(
+        self,
+        *,
+        code_method: Literal["SMS", "VOICE"],
+        language_code: str,
+        phone_id: str | int | None = None,
+    ) -> SuccessResult:
+        """
+        Request a verification code for a phone number.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-phone-numbers/phone-numbers#verify-phone-numbers>`_.
+
+        Args:
+            code_method: Chosen method for verification. Supported options are "SMS"/"VOICE"
+            language_code: The language’s two-character `language code <https://developers.facebook.com/documentation/business-messaging/whatsapp/templates/supported-languages>`_. For example: "en".
+            phone_id: The phone ID to create the verification code for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            The success of the request.
+        """
+        return SuccessResult.from_dict(
+            self.api.request_verification_code(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+                code_method=code_method,
+                language=language_code,
+            )
+        )
+
+    def verify_phone_number(
+        self,
+        code: str,
+        phone_id: str | int | None = None,
+    ) -> SuccessResult:
+        """
+        Verify a phone number with the code received by the user.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-phone-numbers/phone-numbers#verify-phone-numbers>`_.
+
+        Args:
+            code: The verification code received by the user.
+            phone_id: The phone ID to verify the code for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            The success of the request.
+        """
+        return SuccessResult.from_dict(
+            self.api.verify_phone_number(
+                code=code,
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+            )
+        )
 
     def create_qr_code(
-            self,
-            prefilled_message: str,
-            image_type: QRCodeImageType | Literal["PNG", "SVG"] = QRCodeImageType.PNG,
-            *,
-            phone_id: str | int | None = None,
+        self,
+        prefilled_message: str,
+        image_type: QRCodeImageType | Literal["PNG", "SVG"] = QRCodeImageType.PNG,
+        *,
+        phone_id: str | int | None = None,
     ) -> QRCode:
         """
         Create a QR code for a prefilled message.
@@ -3621,7 +4006,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The QR code.
         """
-        phone_id = helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id")
+        phone_id = helpers.resolve_arg(
+            wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"
+        )
         return QRCode.from_dict(
             data=self.api.create_qr_code(
                 phone_id=phone_id,
@@ -3629,15 +4016,15 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 generate_qr_image=image_type,
             ),
             client=self,
-            phone_id=phone_id
+            phone_id=phone_id,
         )
 
     def get_qr_code(
-            self,
-            code: str,
-            *,
-            image_type: QRCodeImageType | Literal["PNG", "SVG"] | None = None,
-            phone_id: str | int | None = None,
+        self,
+        code: str,
+        *,
+        image_type: QRCodeImageType | Literal["PNG", "SVG"] | None = None,
+        phone_id: str | int | None = None,
     ) -> QRCode | None:
         """
         Get a QR code.
@@ -3650,24 +4037,28 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The QR code if found, otherwise None.
         """
-        phone_id = helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id")
+        phone_id = helpers.resolve_arg(
+            wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"
+        )
         qrs = self.api.get_qr_code(
-            phone_id=phone_id,
-            code=code,
-            fields=QRCode._api_fields(image_type)
+            phone_id=phone_id, code=code, fields=QRCode._api_fields(image_type)
         )["data"]
-        return QRCode.from_dict(
-            data=qrs[0],
-            client=self,
-            phone_id=phone_id,
-        ) if qrs else None
+        return (
+            QRCode.from_dict(
+                data=qrs[0],
+                client=self,
+                phone_id=phone_id,
+            )
+            if qrs
+            else None
+        )
 
     def get_qr_codes(
-            self,
-            *,
-            image_type: QRCodeImageType | Literal["PNG", "SVG"] | None = None,
-            phone_id: str | int | None = None,
-            pagination: Pagination | None = None,
+        self,
+        *,
+        image_type: QRCodeImageType | Literal["PNG", "SVG"] | None = None,
+        phone_id: str | int | None = None,
+        pagination: Pagination | None = None,
     ) -> Result[QRCode]:
         """
         Get QR codes associated with the WhatsApp Phone Number.
@@ -3680,7 +4071,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             Result object containing the QR codes.
         """
-        phone_id = helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id")
+        phone_id = helpers.resolve_arg(
+            wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"
+        )
         return Result(
             wa=self,
             response=self.api.get_qr_codes(
@@ -3696,11 +4089,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         )
 
     def update_qr_code(
-            self,
-            code: str,
-            prefilled_message: str,
-            *,
-            phone_id: str | int | None = None,
+        self,
+        code: str,
+        prefilled_message: str,
+        *,
+        phone_id: str | int | None = None,
     ) -> QRCode:
         """
         Update a QR code.
@@ -3713,7 +4106,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The updated QR code.
         """
-        phone_id = helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id")
+        phone_id = helpers.resolve_arg(
+            wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"
+        )
         return QRCode.from_dict(
             data=self.api.update_qr_code(
                 phone_id=phone_id,
@@ -3721,14 +4116,14 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 prefilled_message=prefilled_message,
             ),
             client=self,
-            phone_id=phone_id
+            phone_id=phone_id,
         )
 
     def delete_qr_code(
-            self,
-            code: str,
-            *,
-            phone_id: str | int | None = None,
+        self,
+        code: str,
+        *,
+        phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
         Delete a QR code.
@@ -3740,10 +4135,17 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             Whether the QR code was deleted.
         """
-        return SuccessResult.from_dict(self.api.delete_qr_code(
-            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-            code=code,
-        ))
+        return SuccessResult.from_dict(
+            self.api.delete_qr_code(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+                code=code,
+            )
+        )
 
     def get_app_access_token(self, app_id: int, app_secret: str) -> str:
         """
@@ -3760,17 +4162,16 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             The access token.
         """
         return self.api.get_app_access_token(
-            app_id=app_id,
-            app_secret=app_secret,
+            client_id=app_id, client_secret=app_secret
         )["access_token"]
 
     def set_app_callback_url(
-            self,
-            app_id: int,
-            app_access_token: str,
-            callback_url: str,
-            verify_token: str,
-            fields: Iterable[str],
+        self,
+        app_id: int,
+        app_access_token: str,
+        callback_url: str,
+        verify_token: str,
+        fields: Iterable[str],
     ) -> SuccessResult:
         """
         Set the callback URL for the webhook.
@@ -3788,16 +4189,18 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             Whether the callback URL was set.
         """
-        return SuccessResult.from_dict(self.api.set_app_callback_url(
-            app_id=app_id,
-            app_access_token=app_access_token,
-            callback_url=callback_url,
-            verify_token=verify_token,
-            fields=tuple(fields),
-        ))
+        return SuccessResult.from_dict(
+            self.api.set_app_callback_url(
+                app_id=app_id,
+                access_token=app_access_token,
+                callback_url=callback_url,
+                verify_token=verify_token,
+                fields=tuple(fields),
+            )
+        )
 
     def override_waba_callback_url(
-            self, callback_url: str, verify_token: str, *, waba_id: str | int | None = None
+        self, callback_url: str, verify_token: str, *, waba_id: str | int | None = None
     ) -> SuccessResult:
         """
         Override the callback URL for the WhatsApp Business account.
@@ -3812,13 +4215,19 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             Whether the callback URL was overridden.
         """
-        return SuccessResult.from_dict(self.api.set_waba_alternate_callback_url(
-            waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="business_account_id"),
-            callback_url=callback_url,
-            verify_token=verify_token,
-        ))
+        return SuccessResult.from_dict(
+            self.api.set_waba_alternate_callback_url(
+                waba_id=helpers.resolve_arg(
+                    wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"
+                ),
+                override_callback_uri=callback_url,
+                verify_token=verify_token,
+            )
+        )
 
-    def delete_waba_callback_url(self, *,waba_id: str | int | None = None) -> SuccessResult:
+    def delete_waba_callback_url(
+        self, *, waba_id: str | int | None = None
+    ) -> SuccessResult:
         """
         Delete the callback URL for the WhatsApp Business account.
 
@@ -3830,12 +4239,16 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             Whether the callback URL was deleted.
         """
-        return SuccessResult.from_dict(self.api.delete_waba_alternate_callback_url(
-            waba_id=helpers.resolve_arg(wa=self, value=waba_id, method_arg="waba_id", client_arg="business_account_id"),
-        ))
+        return SuccessResult.from_dict(
+            self.api.delete_waba_alternate_callback_url(
+                waba_id=helpers.resolve_arg(
+                    wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"
+                ),
+            )
+        )
 
     def override_phone_callback_url(
-            self, callback_url: str, verify_token: str, *, phone_id: str | int | None = None
+        self, callback_url: str, verify_token: str, *, phone_id: str | int | None = None
     ) -> SuccessResult:
         """
         Override the callback URL for the phone.
@@ -3851,13 +4264,22 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             Whether the callback URL was overridden.
         """
-        return SuccessResult.from_dict(self.api.set_phone_alternate_callback_url(
-            callback_url=callback_url,
-            verify_token=verify_token,
-            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-        ))
+        return SuccessResult.from_dict(
+            self.api.set_phone_alternate_callback_url(
+                override_callback_uri=callback_url,
+                verify_token=verify_token,
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+            )
+        )
 
-    def delete_phone_callback_url(self, *,phone_id: str | int | None = None) -> SuccessResult:
+    def delete_phone_callback_url(
+        self, *, phone_id: str | int | None = None
+    ) -> SuccessResult:
         """
         Delete the callback URL for the phone.
 
@@ -3869,12 +4291,19 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             Whether the callback URL was deleted.
         """
-        return SuccessResult.from_dict(self.api.delete_phone_alternate_callback_url(
-            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-        ))
+        return SuccessResult.from_dict(
+            self.api.delete_phone_alternate_callback_url(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+            )
+        )
 
     def block_users(
-            self, users: Iterable[str | int], *, phone_id: str | int | None = None
+        self, users: Iterable[str | int], *, phone_id: str | int | None = None
     ) -> UsersBlockedResult:
         """
         Block users from sending messages to the WhatsApp Business account.
@@ -3891,7 +4320,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> res = wa.block_users(users=['1234567890', '0987654321'])
             >>> if res.errors: print(res.failed_users)
 
@@ -3903,15 +4332,20 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             A UsersBlockedResult object with the status of the block operation.
         """
         return UsersBlockedResult.from_dict(
-            data=self.api.block_users(
-                phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-                users=tuple(str(phone_id) for phone_id in users),
-            ),
             client=self,
+            data=self.api.block_users(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+                **helpers.resolve_users(users),
+            ),
         )
 
     def unblock_users(
-            self, users: Iterable[str | int], *, phone_id: str | int | None = None
+        self, users: Iterable[str | int], *, phone_id: str | int | None = None
     ) -> UsersUnblockedResult:
         """
         Unblock users that were previously blocked from sending messages to the WhatsApp Business account.
@@ -3919,7 +4353,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/block-users#unblock-users>`_.
 
         Example:
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> res = wa.unblock_users(users=['1234567890', '0987654321'])
             >>> print(res.removed_users)
 
@@ -3931,25 +4365,30 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             A UsersUnblockedResult object with the status of the unblock operation.
         """
         return UsersUnblockedResult.from_dict(
-            data=self.api.unblock_users(
-                phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-                users=tuple(str(phone_id) for phone_id in users),
-            ),
             client=self,
+            data=self.api.unblock_users(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+                **helpers.resolve_users(users),
+            ),
         )
 
     def get_blocked_users(
-            self,
-            *,
-            pagination: Pagination | None = None,
-            phone_id: str | int | None = None,
-    ) -> Result[User]:
+        self,
+        *,
+        pagination: Pagination | None = None,
+        phone_id: str | int | None = None,
+    ) -> Result[BlockedUser]:
         """
         Get blocked users.
 
         Example:
 
-            >>> wa = WhatsApp(...)
+            >>> wa = WhatsApp()
             >>> for user in wa.get_blocked_users(): print(user)
 
         Args:
@@ -3962,17 +4401,25 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         return Result(
             wa=self,
             response=self.api.get_blocked_users(
-                phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
                 pagination=pagination.to_dict() if pagination else None,
             ),
-            item_factory=functools.partial(self._usr_cls.from_dict, client=self)
+            item_factory=functools.partial(
+                BlockedUser.from_dict,
+                client=self,
+            ),
         )
 
     def get_call_permissions(
-            self,
-            wa_id: str | int,
-            *,
-            phone_id: str | int | None = None,
+        self,
+        from_user: str | int,
+        *,
+        phone_id: str | int | None = None,
     ) -> CallPermissions:
         """
         Get the call permissions for the WhatsApp Business account.
@@ -3980,7 +4427,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/calling/user-call-permissions>`_.
 
         Args:
-            wa_id: The WhatsApp ID of the user to get the call permissions for.
+            from_user: The WhatsApp ID of the user to get the call permissions for.
             phone_id: The phone ID to get the call permissions from (optional, if not provided, the client's phone ID will be used).
 
         Returns:
@@ -3988,18 +4435,23 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         return CallPermissions.from_dict(
             self.api.get_call_permissions(
-                user_wa_id=str(wa_id),
-                phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
+                **helpers.resolve_call_permission_request_user(from_user),
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
             ),
         )
 
     def initiate_call(
-            self,
-            to: str | int,
-            sdp: SessionDescription,
-            *,
-            tracker: str | CallbackData | None = None,
-            phone_id: str | int | None = None
+        self,
+        to: str | int,
+        sdp: SessionDescription,
+        *,
+        tracker: str | CallbackData | None = None,
+        phone_id: str | int | None = None,
     ) -> InitiatedCall:
         """
         Initiate a call to a WhatsApp user.
@@ -4015,19 +4467,33 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             An InitiatedCall object containing the details of the initiated call.
         """
-        return InitiatedCall.from_sent_update(client=self, update=self.api.initiate_call(
-            phone_id=(from_phone_id := helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id")),
-            to=(to_wa_id := str(to)),
-            sdp=sdp.to_dict(),
-            biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-        ), from_phone_id=from_phone_id, to_wa_id=to_wa_id)
+        recipient, recipient_type = helpers.resolve_callee(to)
+        return InitiatedCall.from_sent_update(
+            client=self,
+            update=self.api.initiate_call(
+                phone_id=(
+                    from_phone_id := helpers.resolve_arg(
+                        wa=self,
+                        value=phone_id,
+                        method_arg="phone_id",
+                        client_arg="phone_id",
+                    )
+                ),
+                **recipient,
+                session=sdp.to_dict(),
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+            ),
+            from_phone_id=from_phone_id,
+            callee=helpers.clean_phone_number(to),
+            recipient_type=recipient_type,
+        )
 
     def pre_accept_call(
-            self,
-            call_id: str,
-            sdp: SessionDescription,
-            *,
-            phone_id: str | int | None = None,
+        self,
+        call_id: str,
+        sdp: SessionDescription,
+        *,
+        phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
         Pre-accept a call.
@@ -4050,19 +4516,26 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             Whether the call was pre-accepted.
         """
-        return SuccessResult.from_dict(self.api.pre_accept_call(
-            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-            call_id=call_id,
-            sdp=sdp.to_dict() if sdp else None,
-        ))
+        return SuccessResult.from_dict(
+            self.api.pre_accept_call(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+                call_id=call_id,
+                session=sdp.to_dict() if sdp else None,
+            )
+        )
 
     def accept_call(
-            self,
-            call_id: str,
-            sdp: SessionDescription,
-            *,
-            tracker: str | CallbackData | None = None,
-            phone_id: str | int | None = None,
+        self,
+        call_id: str,
+        sdp: SessionDescription,
+        *,
+        tracker: str | CallbackData | None = None,
+        phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
         Connect to a call by providing a call agent's SDP.
@@ -4080,18 +4553,25 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             Whether the call was accepted.
         """
-        return SuccessResult.from_dict(self.api.accept_call(
-            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-            call_id=call_id,
-            sdp=sdp.to_dict() if sdp else None,
-            biz_opaque_callback_data=helpers.resolve_tracker_param(tracker)
-        ))
+        return SuccessResult.from_dict(
+            self.api.accept_call(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+                call_id=call_id,
+                session=sdp.to_dict() if sdp else None,
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+            )
+        )
 
     def reject_call(
-            self,
-            call_id: str,
-            *,
-            phone_id: str | int | None = None,
+        self,
+        call_id: str,
+        *,
+        phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
         Reject a call.
@@ -4107,16 +4587,23 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             Whether the call was rejected.
         """
-        return SuccessResult.from_dict(self.api.reject_call(
-            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-            call_id=call_id,
-        ))
+        return SuccessResult.from_dict(
+            self.api.reject_call(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+                call_id=call_id,
+            )
+        )
 
     def terminate_call(
-            self,
-            call_id: str,
-            *,
-            phone_id: str | int | None = None,
+        self,
+        call_id: str,
+        *,
+        phone_id: str | int | None = None,
     ) -> SuccessResult:
         """
         Terminate an active call.
@@ -4133,7 +4620,489 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             Whether the call was terminated.
         """
-        return SuccessResult.from_dict(self.api.terminate_call(
-            phone_id=helpers.resolve_arg(wa=self, value=phone_id, method_arg="phone_id", client_arg="phone_id"),
-            call_id=call_id,
-        ))
+        return SuccessResult.from_dict(
+            self.api.terminate_call(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+                call_id=call_id,
+            )
+        )
+
+    def create_group(
+        self,
+        *,
+        subject: str,
+        description: str | None = None,
+        join_approval_mode: GroupJoinApprovalMode | None = None,
+        phone_id: str | int | None = None,
+    ) -> GroupOperation:
+        """
+        Create a new group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#create-group>`_.
+
+        Args:
+            subject: Group subject, Maximum 128 characters. Whitespace is trimmed.
+            description: Group description. Maximum 2048 characters.
+            join_approval_mode: Indicates if WhatsApp users who click the invitation link can join the group with or without being approved first. Default is ``AUTO_APPROVE``.
+            phone_id: The phone ID to create the group for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            The response of the group creation request, containing the request ID to track the status of the group creation.
+        """
+        return GroupOperation(
+            request_id=self.api.create_group(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+                subject=subject,
+                description=description,
+                join_approval_mode=join_approval_mode.value
+                if join_approval_mode
+                else None,
+            )["request_id"]
+        )
+
+    def get_group(
+        self,
+        group_id: str,
+    ) -> GroupDetails:
+        """
+        Get details about a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#get-group-info>`_.
+
+        Args:
+            group_id: The ID of the group.
+
+        Returns:
+            The group details.
+        """
+        return GroupDetails.from_dict(
+            data=self.api.get_group_info(
+                group_id=group_id,
+                fields=GroupDetails._api_fields(),
+            ),
+            client=self,
+        )
+
+    def get_groups(
+        self,
+        *,
+        phone_id: str | int | None = None,
+        pagination: Pagination | None = None,
+    ) -> Result[GroupDetails]:
+        """
+        Get groups associated with the WhatsApp Business account.
+
+        Example:
+
+            >>> wa = WhatsApp()
+            >>> groups = wa.get_groups(pagination=Pagination(limit=10))
+            ... for group in groups:
+            ...     print(f'Group {group.id}: {group}')
+
+        Args:
+            phone_id: The phone ID to get the groups for (optional, if not provided, the client's phone ID will be used).
+            pagination: The pagination parameters (optional).
+
+        Returns:
+            Result object containing the groups.
+        """
+        return Result(
+            wa=self,
+            response=self.api.get_active_groups(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                ),
+                pagination=pagination.to_dict() if pagination else None,
+            ),
+            item_factory=functools.partial(GroupDetails.from_dict, client=self),
+        )
+
+    def delete_group(
+        self,
+        group_id: str,
+    ) -> GroupOperation:
+        """
+        Delete a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#delete-group>`_.
+
+        Args:
+            group_id: The ID of the group to delete.
+
+        Returns:
+            The response of the group deletion request, containing the request ID to track the status of the group deletion.
+        """
+        return GroupOperation(
+            request_id=self.api.delete_group(
+                group_id=group_id,
+            )["request_id"]
+        )
+
+    def get_group_join_requests(
+        self,
+        group_id: str,
+        *,
+        pagination: Pagination | None = None,
+    ) -> GroupJoinRequestsResult:
+        """
+        Get join requests for a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#get-join-requests>`_.
+
+        Args:
+            group_id: The ID of the group.
+            pagination: The pagination parameters (optional).
+
+        Returns:
+            A GroupJoinRequestsResult object containing the join requests.
+        """
+        return GroupJoinRequestsResult(
+            wa=self,
+            response=self.api.get_group_join_requests(
+                group_id=group_id,
+                pagination=pagination.to_dict() if pagination else None,
+            ),
+            group_id=group_id,
+        )
+
+    def approve_group_join_requests(
+        self,
+        group_id: str,
+        request_ids: Iterable[str],
+    ) -> GroupOperation:
+        """
+        Approve join requests for a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#approve-join-requests>`_.
+
+        Args:
+            group_id: The ID of the group.
+            request_ids: The IDs of the join requests to approve.
+
+        Returns:
+            The response of the join request approval, containing the request ID to track the status of the approval.
+        """
+        return GroupOperation(
+            request_id=self.api.approve_group_join_requests(
+                group_id=group_id,
+                request_ids=tuple(request_ids),
+            )["request_id"]
+        )
+
+    def reject_group_join_requests(
+        self,
+        group_id: str,
+        request_ids: Iterable[str],
+    ) -> GroupOperation:
+        """
+        Reject join requests for a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#reject-join-requests>`_.
+
+        Args:
+            group_id: The ID of the group.
+            request_ids: The IDs of the join requests to reject.
+
+        Returns:
+            The response of the join request rejection, containing the request ID to track the status of the rejection.
+        """
+        return GroupOperation(
+            request_id=self.api.reject_group_join_requests(
+                group_id=group_id,
+                request_ids=tuple(request_ids),
+            )["request_id"]
+        )
+
+    def get_group_invite_link(
+        self,
+        group_id: str,
+    ) -> GroupInviteLink:
+        """
+        Get the invite link for a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#get-group-invite-link>`_.
+
+        Args:
+            group_id: The ID of the group.
+
+        Returns:
+            The group invite link.
+        """
+        return GroupInviteLink(
+            _client=self,
+            _group_id=group_id,
+            link=self.api.get_group_invite_link(group_id=group_id)["invite_link"],
+        )
+
+    def reset_group_invite_link(
+        self,
+        group_id: str,
+    ) -> GroupInviteLink:
+        """
+        Reset the invite link for a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#reset-group-invite-link>`_.
+
+        Args:
+            group_id: The ID of the group.
+
+        Returns:
+            The new group invite link.
+        """
+        return GroupInviteLink(
+            _client=self,
+            _group_id=group_id,
+            link=self.api.reset_group_invite_link(group_id=group_id)["invite_link"],
+        )
+
+    def remove_group_participants(
+        self,
+        group_id: str,
+        participants: Iterable[str],
+    ) -> GroupOperation:
+        """
+        Remove participants from a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#remove-participants>`_.
+
+        Args:
+            group_id: The ID of the group.
+            participants: The WhatsApp IDs of the participants to remove.
+
+        Returns:
+            The response of the remove participants request, containing the request ID to track the status of the removal.
+        """
+        return GroupOperation(
+            request_id=self.api.remove_group_participants(
+                group_id=group_id,
+                **helpers.resolve_users(participants),
+            )["request_id"]
+        )
+
+    def update_group_settings(
+        self,
+        group_id: str,
+        *,
+        subject: str | None = None,
+        description: str | None = None,
+        profile_picture: bytes | str | pathlib.Path | BinaryIO | Iterator[bytes],
+    ) -> GroupOperation:
+        """
+        Update group settings.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#update-group-settings>`_.
+
+        Args:
+            group_id: The ID of the group.
+            subject: Group subject, Maximum 128 characters.
+            description: Group description. Maximum 2048 characters.
+            profile_picture: The new group profile picture. Can be a bytes object, a file path, a file-like object, or an iterator that yields bytes.
+
+        Returns:
+            The response of the update group settings request, containing the request ID to track the status of the update.
+        """
+        return GroupOperation(
+            request_id=self.api.update_group_info(
+                group_id=group_id,
+                subject=subject,
+                description=description,
+                profile_picture_file=profile_picture,
+            )["request_id"]
+        )
+
+    def pin_message(
+        self,
+        chat_id: str | int,
+        message_id: str,
+        *,
+        expiration_days: datetime.timedelta | int,
+        sender: str | int | None = None,
+    ) -> SentMessage:
+        """
+        Pin a message in a chat.
+
+        - Note that currently only group chats support pinning messages.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/groups-messaging#pin-and-unpin-group-message>`_.
+
+        Args:
+            chat_id: The ID of the chat to pin the message in.
+            message_id: The ID of the message to pin.
+            expiration_days: The number of days until the pinned message expires. Must be between 1 and 30 days.
+            sender: The phone ID to pin the message from (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            The pinned message.
+        """
+        sender = helpers.resolve_arg(
+            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
+        )
+        recipient, recipient_type = helpers.resolve_recipient(chat_id)
+        return SentMessage.from_sent_update(
+            client=self,
+            update=self.api.send_message(
+                sender=sender,
+                **recipient,
+                typ="pin",
+                msg={
+                    "type": "pin",
+                    "message_id": message_id,
+                    "expiration_days": expiration_days.days
+                    if isinstance(expiration_days, datetime.timedelta)
+                    else expiration_days,
+                },
+            ),
+            from_phone_id=sender,
+            recipient_type=recipient_type,
+        )
+
+    def unpin_message(
+        self, chat_id: str | int, message_id: str, *, sender: str | int | None = None
+    ) -> SentMessage:
+        """
+        Unpin a message in a chat.
+
+        - Note that currently only group chats support pinning messages.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/groups-messaging#pin-and-unpin-group-message>`_.
+
+        Args:
+            chat_id: The ID of the chat to unpin the message in.
+            message_id: The ID of the message to unpin.
+            sender: The phone ID to unpin the message from (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            The unpinned message.
+        """
+        sender = helpers.resolve_arg(
+            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
+        )
+        recipient, recipient_type = helpers.resolve_recipient(chat_id)
+        return SentMessage.from_sent_update(
+            client=self,
+            update=self.api.send_message(
+                sender=sender,
+                **recipient,
+                typ="pin",
+                msg={
+                    "type": "unpin",
+                    "message_id": message_id,
+                },
+            ),
+            from_phone_id=sender,
+            recipient_type=recipient_type,
+        )
+
+    def set_username(
+        self, username: str, *, phone_id: str | int | None = None
+    ) -> UsernameStatus:
+        """
+        Set a business username.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#adopt-or-change-a-business-username>`_.
+
+        Args:
+            username: The business username to set.
+            phone_id: The phone ID to set the username for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            A UsernameStatus object containing the new username and its status.
+        """
+        return UsernameStatus(
+            username=username,
+            status=UsernameStatusType(
+                self.api.set_username(
+                    phone_id=helpers.resolve_arg(
+                        wa=self,
+                        value=phone_id,
+                        method_arg="phone_id",
+                        client_arg="phone_id",
+                    ),
+                    username=username,
+                )["status"]
+            ),
+        )
+
+    def get_current_username(
+        self, *, phone_id: str | int | None = None
+    ) -> UsernameStatus:
+        """
+        Get the status of the business username associated with the business phone number, or information about the username.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#get-current-username>`_.
+
+        Args:
+            phone_id: The phone ID to get the username for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            A UsernameStatus object containing the current username and its status.
+        """
+        return UsernameStatus.from_dict(
+            data=self.api.get_current_username(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                )
+            )
+        )
+
+    def get_reserved_usernames(
+        self, *, phone_id: str | int | None = None
+    ) -> tuple[str]:
+        """
+        Get a list of usernames that have been reserved for your business portfolio.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#get-reserved-usernames>`_.
+
+        Args:
+            phone_id: The phone ID to get the reserved usernames for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            A tuple of reserved usernames. These usernames have a higher chance of approval.
+        """
+        return tuple(
+            self.api.get_reserved_usernames(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                )
+            )["data"][0]["username_suggestions"]
+        )
+
+    def delete_username(self, *, phone_id: str | int | None = None) -> SuccessResult:
+        """
+        Delete the business username associated with the business phone number.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#delete-a-username>`_.
+
+        Args:
+            phone_id: The phone ID to delete the username for (optional, if not provided, the client's phone ID will be used).
+
+        Returns:
+            Whether the username was deleted.
+        """
+        return SuccessResult.from_dict(
+            self.api.delete_username(
+                phone_id=helpers.resolve_arg(
+                    wa=self,
+                    value=phone_id,
+                    method_arg="phone_id",
+                    client_arg="phone_id",
+                )
+            )
+        )

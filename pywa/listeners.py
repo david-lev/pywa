@@ -165,6 +165,31 @@ class Listener:
         return self.cancelers and self.cancelers.check_sync(wa, update)
 
 
+def _warn_anyio_thread_limit(wa: "WhatsApp") -> None:
+    if wa._server_type in {
+        utils.CustomServerType.STARLETTE,
+        utils.CustomServerType.FASTAPI,
+    }:
+        current_active = len(wa._listeners)
+        warning_threshold = max(1, int(wa._anyio_thread_limit * 0.90))
+
+        if current_active >= warning_threshold:
+            warnings.warn(
+                f"\n\n"
+                f"⚠️ ⚠️ CRITICAL SERVER THREAT ⚠️ ⚠️\n"
+                f"Active listeners ({current_active}) are approaching the assumed AnyIO thread limit ({wa._anyio_thread_limit}).\n"
+                f"If this limit is reached, YOUR SERVER WILL COMPLETELY FREEZE and drop incoming webhooks.\n\n"
+                f"IMMEDIATE ACTION REQUIRED (Choose one):\n"
+                f"  1. [RECOMMENDED] Migrate to `pywa_async` for fully non-blocking asynchronous listeners.\n"
+                f"  2. Enforce strict, shorter `timeout` values on all `.wait_for_...` calls to free up threads faster.\n"
+                f"  3. Increase the AnyIO thread limit in your app AND update the `PYWA_ANYIO_THREAD_LIMIT` \n"
+                f"     environment variable to match the new limit. \n"
+                f"     (See: https://anyio.readthedocs.io/en/stable/threads.html#adjusting-the-default-maximum-worker-thread-count)\n",
+                RuntimeWarning,
+                stacklevel=3,
+            )
+
+
 class _Listeners:
     def listen(
         self: WhatsApp,
@@ -224,24 +249,19 @@ class _Listeners:
             ListenerCanceled: If the listener was canceled by a filter
             ListenerStopped: If the listener was stopped manually
         """
-        if self._server is utils.MISSING:
-            raise ValueError(
-                "You must initialize the WhatsApp client with an web app"
-                " (Flask or FastAPI or custom server by setting `server` to None) in order to listen to incoming updates."
+        if self._uvicorn_workers > 1:
+            raise RuntimeError(
+                "Listening is not supported when running on multiple workers"
             )
+        if timeout is None:
+            warnings.warn(
+                "Listening without a `timeout` is highly discouraged as it can lead to memory leaks if the listener is never stopped.",
+                UserWarning,
+                stacklevel=3,
+            )
+        _warn_anyio_thread_limit(self)
         self._check_for_async_filters(filters)
         self._check_for_async_filters(cancelers)
-        if isinstance(to, str | int):
-            warnings.warn(
-                "Using WhatsApp.listen(to, ...) with a user wa_id/phone number is deprecated. "
-                "Please use `UserUpdateListenerIdentifier` instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            to = UserUpdateListenerIdentifier(
-                sender=to,
-                recipient=self.phone_id,
-            )
 
         listener = Listener(
             filters=filters,

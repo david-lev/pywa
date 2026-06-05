@@ -32,7 +32,7 @@ class GraphAPIAsync(GraphAPI):
     def __str__(self):
         return f"GraphAPIAsync(session={self._session!r})"
 
-    async def _make_request(
+    async def _request(
         self, method: str, endpoint: str, log_kwargs: bool = True, **kwargs
     ) -> dict:
         """
@@ -68,7 +68,7 @@ class GraphAPIAsync(GraphAPI):
         return res.json()
 
     async def get_app_access_token(
-        self, app_id: int, app_secret: str
+        self, client_id: int, client_secret: str
     ) -> dict[str, str]:
         """
         Get an access token for an app.
@@ -84,29 +84,26 @@ class GraphAPIAsync(GraphAPI):
 
 
         Args:
-            app_id: The ID of the app.
-            app_secret: The secret of the app.
+            client_id: The ID of the app.
+            client_secret: The secret of the app.
 
         Returns:
             The access token and its type.
 
         """
-        return await self._make_request(
+        return await self._request(
             method="GET",
             endpoint="/oauth/access_token",
             params={
                 "grant_type": "client_credentials",
-                "client_id": app_id,
-                "client_secret": app_secret,
+                "client_id": client_id,
+                "client_secret": client_secret,
             },
             log_kwargs=False,
         )
 
     async def get_business_access_token(
-        self,
-        app_id: int,
-        app_secret: str,
-        code: str,
+        self, client_id: int, client_secret: str, code: str
     ) -> dict[str, str]:
         """
         Exchange the Embedded Signup token code for a business token.
@@ -122,8 +119,8 @@ class GraphAPIAsync(GraphAPI):
 
 
         Args:
-            app_id: The ID of the app.
-            app_secret: The secret of the app.
+            client_id: The ID of the app.
+            client_secret: The secret of the app.
             code: The code `returned <https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/implementation#session-logging-message-event-listener>`_ by Embedded Signup when the customer successfully completed the flow.
 
         Returns:
@@ -131,12 +128,12 @@ class GraphAPIAsync(GraphAPI):
 
         """
 
-        return await self._make_request(
+        return await self._request(
             method="GET",
             endpoint="/oauth/access_token",
             params={
-                "client_id": app_id,
-                "client_secret": app_secret,
+                "client_id": client_id,
+                "client_secret": client_secret,
                 "code": code,
             },
             log_kwargs=False,
@@ -145,7 +142,7 @@ class GraphAPIAsync(GraphAPI):
     async def set_app_callback_url(
         self,
         app_id: int,
-        app_access_token: str,
+        access_token: str,
         callback_url: str,
         verify_token: str,
         fields: tuple[str, ...],
@@ -163,7 +160,7 @@ class GraphAPIAsync(GraphAPI):
 
         Args:
             app_id: The ID of the app.
-            app_access_token: The access token of the app (from ``get_app_access_token``).
+            access_token: The access token of the app (from ``get_app_access_token``).
             callback_url: The URL to set.
             verify_token: The verify token to challenge the webhook with.
             fields: The fields to subscribe to.
@@ -171,7 +168,7 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             The success of the operation.
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{app_id}/subscriptions",
             params={
@@ -179,15 +176,12 @@ class GraphAPIAsync(GraphAPI):
                 "callback_url": callback_url,
                 "verify_token": verify_token,
                 "fields": ",".join(fields),
-                "access_token": app_access_token,
+                "access_token": access_token,
             },
         )
 
     async def set_waba_alternate_callback_url(
-        self,
-        waba_id: str,
-        callback_url: str,
-        verify_token: str,
+        self, waba_id: str, override_callback_uri: str, verify_token: str
     ) -> dict[str, bool]:
         """
         Set an alternate callback URL on a WABA.
@@ -202,17 +196,17 @@ class GraphAPIAsync(GraphAPI):
 
         Args:
             waba_id: The ID of the WhatsApp Business Account.
-            callback_url: The URL to set.
+            override_callback_uri: The URL to set.
             verify_token: The verify token to challenge the webhook with.
 
         Returns:
             The success of the operation.
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{waba_id}/subscribed_apps",
             json={
-                "override_callback_uri": callback_url,
+                "override_callback_uri": override_callback_uri,
                 "verify_token": verify_token,
             },
         )
@@ -251,7 +245,7 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             The subscribed apps of the WABA.
         """
-        return await self._make_request(
+        return await self._request(
             method="GET",
             endpoint=f"/{waba_id}/subscribed_apps",
         )
@@ -272,16 +266,13 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             The success of the operation.
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{waba_id}/subscribed_apps",
         )
 
     async def set_phone_alternate_callback_url(
-        self,
-        callback_url: str,
-        verify_token: str,
-        phone_id: str,
+        self, override_callback_uri: str, verify_token: str, phone_id: str
     ) -> dict[str, bool]:
         """
         Set an alternate callback URL on the business phone number.
@@ -290,18 +281,18 @@ class GraphAPIAsync(GraphAPI):
 
         Args:
             phone_id: The ID of the phone number to set the callback URL on.
-            callback_url: The URL to set.
+            override_callback_uri: The URL to set.
             verify_token: The verify token to challenge the webhook with.
 
         Returns:
             The success of the operation.
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{phone_id}/",
             json={
                 "webhook_configuration": {
-                    "override_callback_uri": callback_url,
+                    "override_callback_uri": override_callback_uri,
                     "verify_token": verify_token,
                 }
             },
@@ -327,7 +318,7 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             The success of the operation.
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{phone_id}/",
             json={
@@ -340,7 +331,7 @@ class GraphAPIAsync(GraphAPI):
     async def set_business_public_key(
         self,
         phone_id: str,
-        public_key: str,
+        business_public_key: str,
     ) -> dict[str, bool]:
         """
         Set the public key of the business.
@@ -355,15 +346,15 @@ class GraphAPIAsync(GraphAPI):
 
         Args:
             phone_id: The ID of the phone number to set the public key on.
-            public_key: The public key to set.
+            business_public_key: The public key to set.
 
         Returns:
             The success of the operation.
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{phone_id}/whatsapp_business_encryption",
-            data={"business_public_key": public_key},
+            data={"business_public_key": business_public_key},
         )
 
     async def upload_media(
@@ -402,7 +393,7 @@ class GraphAPIAsync(GraphAPI):
         }
         if ttl_minutes is not None:
             files["ttl_minutes"] = (None, str(ttl_minutes))
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{phone_id}/media",
             files=files,
@@ -432,7 +423,7 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             A dict with the URL and other info about the media file.
         """
-        return await self._make_request(method="GET", endpoint=f"/{media_id}")
+        return await self._request(method="GET", endpoint=f"/{media_id}")
 
     def stream_media_bytes(
         self,
@@ -479,7 +470,7 @@ class GraphAPIAsync(GraphAPI):
             True if the media file was deleted successfully, False otherwise.
         """
         params = {"phone_number_id": phone_number_id} if phone_number_id else None
-        return await self._make_request(
+        return await self._request(
             method="DELETE", endpoint=f"/{media_id}", params=params
         )
 
@@ -515,7 +506,7 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             The response from the WhatsApp Cloud API.
         """
-        return await self._make_request(
+        return await self._request(
             method=method,
             endpoint=endpoint,
             log_kwargs=log_kwargs,
@@ -525,21 +516,25 @@ class GraphAPIAsync(GraphAPI):
     async def send_message(
         self,
         sender: str,
-        to: str,
+        to: str | None,
+        recipient: str | None,
+        recipient_type: str,
         typ: str,
-        msg: dict[str, str | list[str]] | tuple[dict],
+        msg: dict,
         reply_to_message_id: str | None = None,
         biz_opaque_callback_data: str | None = None,
         recipient_identity_key_hash: str | None = None,
-    ) -> dict[str, dict | list]:
+    ) -> dict:
         """
-        Send a message to a WhatsApp user.
+        Send a message to a WhatsApp user/group.
 
         - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages>`_.
 
         Args:
             sender: The phone id to send the message from.
-            to: The phone number to send the message to.
+            to: The WhatsApp ID to send the message to.
+            recipient: The recipient unique identifier (BSUID).
+            recipient_type: The type of the recipient (e.g. ``individual``, ``group``).
             typ: The type of the message (e.g. ``text``, ``image``, etc.).
             msg: The message object to send.
             reply_to_message_id: The ID of the message to reply to.
@@ -549,20 +544,25 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             The response from the WhatsApp Cloud API.
         """
+        if not to and not recipient:
+            raise ValueError("Either 'to' or 'recipient' must be provided")
         data = {
             "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": to,
+            "recipient_type": recipient_type,
             "type": typ,
             typ: msg,
         }
+        if to:
+            data["to"] = to
+        if recipient:
+            data["recipient"] = recipient
         if reply_to_message_id:
             data["context"] = {"message_id": reply_to_message_id}
         if biz_opaque_callback_data:
             data["biz_opaque_callback_data"] = biz_opaque_callback_data
         if recipient_identity_key_hash:
             data["recipient_identity_key_hash"] = recipient_identity_key_hash
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{sender}/messages",
             json=data,
@@ -572,12 +572,13 @@ class GraphAPIAsync(GraphAPI):
         self,
         sender: str,
         to: str,
-        template: dict[str, str | list[str]],
+        recipient: str,
+        template: dict,
         reply_to_message_id: str | None = None,
         message_activity_sharing: bool | None = None,
         biz_opaque_callback_data: str | None = None,
         recipient_identity_key_hash: str | None = None,
-    ) -> dict[str, dict | list]:
+    ) -> dict:
         """
         Send marketing template messages via MM Lite API.
 
@@ -586,7 +587,8 @@ class GraphAPIAsync(GraphAPI):
 
         Args:
             sender: The phone id to send the message from.
-            to: The phone number to send the message to.
+            to: The WhatsApp ID to send the message to.
+            recipient: The recipient unique identifier (BSUID).
             template: The template object to send.
             reply_to_message_id: The ID of the message to reply to.
             message_activity_sharing: Toggles on / off sharing message activities (e.g. message read) for that specific marketing message to Meta to help optimize marketing messages.
@@ -611,10 +613,84 @@ class GraphAPIAsync(GraphAPI):
             body["biz_opaque_callback_data"] = biz_opaque_callback_data
         if recipient_identity_key_hash:
             body["recipient_identity_key_hash"] = recipient_identity_key_hash
-        return await self._make_request(
+        return await self._request(
+            method="POST", endpoint=f"/{sender}/marketing_messages", json=body
+        )
+
+    async def create_phone_number(
+        self,
+        waba_id: str,
+        cc: str,
+        phone_number: str,
+        verified_name: str,
+    ) -> dict[str, str]:
+        """
+        Create a phone number on a WhatsApp Business Account.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/solution-providers/registering-phone-numbers#step-1-create-the-phone-number>`_.
+
+        Args:
+            waba_id: The ID of the WhatsApp Business Account to create the phone number on.
+            cc: The phone number’s country calling code (e.g. "1").
+            phone_number: The phone number, with or without the country calling code.
+            verified_name: The phone number’s `display name <https://www.facebook.com/business/help/338047025165344>`_.
+
+        Returns:
+            A dict with the ID of the created phone number.
+        """
+        return await self._request(
             method="POST",
-            endpoint=f"/{sender}/marketing_messages",
-            json=body,
+            endpoint=f"{waba_id}/phone_numbers",
+            json={
+                "country_code": cc,
+                "phone_number": phone_number,
+                "verified_name": verified_name,
+            },
+        )
+
+    async def request_verification_code(
+        self, phone_id: str, code_method: str, language: str
+    ) -> dict[str, bool]:
+        """
+        Request a verification code for a phone number.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-phone-numbers/phone-numbers#verify-phone-numbers>`_.
+
+        Args:
+            phone_id: The ID of the phone number to request the verification code for.
+            code_method: Chosen method for verification. Supported options are "SMS"/"VOICE"
+            language: The language’s two-character `language code <https://developers.facebook.com/documentation/business-messaging/whatsapp/templates/supported-languages>`_. For example: "en".
+
+        Returns:
+            The success of the operation.
+        """
+        return await self._request(
+            method="POST",
+            endpoint=f"/{phone_id}/request_code",
+            params={"code_method": code_method, "language": language},
+        )
+
+    async def verify_phone_number(
+        self,
+        phone_id: str,
+        code: str,
+    ) -> dict[str, bool]:
+        """
+        Verify a phone number with the code received by the user.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-phone-numbers/phone-numbers#verify-phone-numbers>`_.
+
+        Args:
+            phone_id: The ID of the phone number to verify.
+            code: The verification code received by the user.
+
+        Returns:
+            The success of the operation.
+        """
+        return await self._request(
+            method="POST",
+            endpoint=f"/{phone_id}/verify_code",
+            params={"code": code},
         )
 
     async def register_phone_number(
@@ -642,7 +718,7 @@ class GraphAPIAsync(GraphAPI):
             The success of the operation.
         """
 
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{phone_id}/register",
             json={
@@ -677,7 +753,7 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             The success of the operation.
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{phone_id}/deregister",
         )
@@ -705,7 +781,7 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             The success of the operation.
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{phone_id}/messages",
             json={
@@ -715,11 +791,75 @@ class GraphAPIAsync(GraphAPI):
             },
         )
 
+    async def get_shared_wabas(
+        self,
+        business_portfolio_id: str,
+        fields: tuple[str, ...] | None = None,
+        pagination: dict | None = None,
+    ) -> dict:
+        """
+        The client_whatsapp_business_accounts endpoint retrieves a list of all the WABAS assigned to/shared with your Business Manager account once the embedded signup flow is completed.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/solution-providers/manage-accounts#get-list-of-shared-wabas>`_.
+
+        Args:
+            business_portfolio_id: The ID of the business portfolio.
+            fields: The fields to get for each shared WABA.
+            pagination: The pagination of the API.
+
+        Returns:
+            A dict with the shared WABAs data.
+        """
+        params = {
+            k: v
+            for k, v in {
+                "fields": ",".join(fields) if fields else None,
+            }.items()
+            if v
+        } | (pagination or {})
+        return await self._request(
+            method="GET",
+            endpoint=f"/{business_portfolio_id}/client_whatsapp_business_accounts",
+            params=params,
+        )
+
+    async def get_owned_wabas(
+        self,
+        business_portfolio_id: str,
+        fields: tuple[str, ...] | None = None,
+        pagination: dict | None = None,
+    ) -> dict:
+        """
+        Use the owned_whatsapp_business_accounts endpoint to get a list of the WABAs that your business owns
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/solution-providers/manage-accounts#get-list-of-owned-whatsapp-business-accounts>`_.
+
+        Args:
+            business_portfolio_id: The ID of the business portfolio.
+            fields: The fields to get for each owned WABA.
+            pagination: The pagination of the API.
+
+        Returns:
+            A dict with the owned WABAs data.
+        """
+        params = {
+            k: v
+            for k, v in {
+                "fields": ",".join(fields) if fields else None,
+            }.items()
+            if v
+        } | (pagination or {})
+        return await self._request(
+            method="GET",
+            endpoint=f"/{business_portfolio_id}/owned_whatsapp_business_accounts",
+            params=params,
+        )
+
     async def get_waba_info(
         self,
         waba_id: str,
         fields: tuple[str, ...] | None = None,
-    ) -> dict[str, Any]:
+    ) -> dict:
         """
         Get the WhatsApp Business Account information.
 
@@ -732,17 +872,45 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             The WhatsApp Business Account information.
         """
-        return await self._make_request(
+        return await self._request(
             method="GET",
             endpoint=f"/{waba_id}",
             params={"fields": ",".join(fields)} if fields else None,
+        )
+
+    async def update_waba_settings(
+        self,
+        waba_id: str,
+        settings: dict,
+    ) -> dict:
+        """
+        Update the WhatsApp Business Account settings.
+
+
+        Return example::
+
+            {
+                'id': '1234567890',
+            }
+
+        Args:
+            waba_id: The ID of the WhatsApp Business Account to update.
+            settings: The settings to update.
+
+        Returns:
+            The success of the operation.
+        """
+        return await self._request(
+            method="POST",
+            endpoint=f"/{waba_id}",
+            json=settings,
         )
 
     async def get_business_phone_number(
         self,
         phone_id: str,
         fields: tuple[str, ...] | None = None,
-    ) -> dict[str, Any]:
+    ) -> dict:
         """
         Get the business phone number.
 
@@ -767,7 +935,7 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             The business phone number.
         """
-        return await self._make_request(
+        return await self._request(
             method="GET",
             endpoint=f"/{phone_id}",
             params={"fields": ",".join(fields)} if fields else None,
@@ -778,7 +946,7 @@ class GraphAPIAsync(GraphAPI):
         waba_id: str,
         fields: tuple[str, ...] | None = None,
         pagination: dict[str, str] | None = None,
-    ) -> dict[str, list[dict[str, Any]]]:
+    ) -> dict:
         """
         Get business phone numbers.
 
@@ -815,7 +983,7 @@ class GraphAPIAsync(GraphAPI):
             }.items()
             if v
         } | (pagination or {})
-        return await self._make_request(
+        return await self._request(
             method="GET",
             endpoint=endpoint,
             params=params,
@@ -826,7 +994,7 @@ class GraphAPIAsync(GraphAPI):
         phone_id: str,
         fields: tuple[str, ...] | None = None,
         include_sip_credentials: bool | None = None,
-    ) -> dict[str, Any]:
+    ) -> dict:
         """
         Get the business phone number settings.
 
@@ -843,7 +1011,7 @@ class GraphAPIAsync(GraphAPI):
         }
         if include_sip_credentials is not None:
             params["include_sip_credentials"] = include_sip_credentials
-        return await self._make_request(
+        return await self._request(
             method="GET",
             endpoint=f"/{phone_id}/settings",
             params=params,
@@ -852,7 +1020,7 @@ class GraphAPIAsync(GraphAPI):
     async def update_business_phone_number_settings(
         self,
         phone_id: str,
-        settings: dict[str, Any],
+        settings: dict,
     ) -> dict[str, bool]:
         """
         Update the business phone number settings.
@@ -864,7 +1032,7 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             The success of the operation.
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{phone_id}/settings",
             json=settings,
@@ -873,7 +1041,6 @@ class GraphAPIAsync(GraphAPI):
     async def update_conversational_automation(
         self,
         phone_id: str,
-        enable_welcome_message: bool | None = None,
         prompts: tuple[dict] | None = None,
         commands: str | None = None,
     ) -> dict[str, bool]:
@@ -890,20 +1057,18 @@ class GraphAPIAsync(GraphAPI):
 
         Args:
             phone_id: The ID of the phone number to update.
-            enable_welcome_message: Enable the welcome message.
             prompts: The prompts (ice breakers) to set.
             commands: The commands to set.
 
         Returns:
             The success of the operation.
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{phone_id}/conversational_automation",
             json={
                 k: v
                 for k, v in {
-                    "enable_welcome_message": enable_welcome_message,
                     "prompts": prompts,
                     "commands": commands,
                 }.items()
@@ -932,7 +1097,7 @@ class GraphAPIAsync(GraphAPI):
             new_display_name: The new display name to set.
         """
 
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{phone_id}",
             json={
@@ -945,7 +1110,7 @@ class GraphAPIAsync(GraphAPI):
         self,
         phone_id: str,
         fields: tuple[str, ...] | None = None,
-    ) -> dict[str, list[dict[str, str | list[str]]]]:
+    ) -> dict:
         """
         Get the business profile.
 
@@ -973,14 +1138,14 @@ class GraphAPIAsync(GraphAPI):
             phone_id: The ID of the phone number to get.
             fields: The fields to get.
         """
-        return await self._make_request(
+        return await self._request(
             method="GET",
             endpoint=f"/{phone_id}/whatsapp_business_profile",
             params={"fields": ",".join(fields)} if fields else None,
         )
 
     async def update_business_profile(
-        self, phone_id: str, data: dict[str, str | list[str]]
+        self, phone_id: str, data: dict
     ) -> dict[str, bool]:
         """
         Update the business profile.
@@ -998,7 +1163,7 @@ class GraphAPIAsync(GraphAPI):
             }
         """
         data.update(messaging_product="whatsapp")
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{phone_id}/whatsapp_business_profile",
             json=data,
@@ -1031,7 +1196,7 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             The commerce settings of the business catalog.
         """
-        return await self._make_request(
+        return await self._request(
             method="GET",
             endpoint=f"/{phone_id}/whatsapp_commerce_settings",
             params={"fields": ",".join(fields)} if fields else None,
@@ -1057,7 +1222,7 @@ class GraphAPIAsync(GraphAPI):
               "success": True
             }
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{phone_id}/whatsapp_commerce_settings",
             params=data,
@@ -1066,7 +1231,7 @@ class GraphAPIAsync(GraphAPI):
     async def create_template(
         self,
         waba_id: str,
-        template: str,
+        template: dict | str,
     ) -> dict:
         """
         Create a message template.
@@ -1085,7 +1250,7 @@ class GraphAPIAsync(GraphAPI):
                 "category": "MARKETING"
             }
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{waba_id}/message_templates",
             data=template,
@@ -1096,7 +1261,7 @@ class GraphAPIAsync(GraphAPI):
         self,
         template_id: str,
         fields: tuple[str, ...] | None = None,
-    ) -> dict[str, Any]:
+    ) -> dict:
         """
         Get a message template.
 
@@ -1115,7 +1280,7 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             The template data.
         """
-        return await self._make_request(
+        return await self._request(
             method="GET",
             endpoint=f"/{template_id}",
             params={"fields": ",".join(fields)} if fields else None,
@@ -1125,10 +1290,10 @@ class GraphAPIAsync(GraphAPI):
         self,
         waba_id: str,
         fields: tuple[str, ...] | None = None,
-        filters: dict[str, Any] | None = None,
+        filters: dict | None = None,
         summary_fields: tuple[str, ...] | None = None,
-        pagination: dict[str, str] | None = None,
-    ) -> dict[str, list[dict[str, Any]]]:
+        pagination: dict | None = None,
+    ) -> dict:
         """
         Get a list of message templates.
 
@@ -1150,7 +1315,7 @@ class GraphAPIAsync(GraphAPI):
             **(pagination if pagination else {}),
             **({"summary": ",".join(summary_fields)} if summary_fields else {}),
         }
-        return await self._make_request(
+        return await self._request(
             method="GET",
             endpoint=f"/{waba_id}/message_templates",
             params={k: v for k, v in params.items() if v is not None},
@@ -1173,7 +1338,7 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             A dict with the success status of the operation.
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{template_id}",
             data=template,
@@ -1199,7 +1364,7 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             A dict with the success status of the operation.
         """
-        return await self._make_request(
+        return await self._request(
             method="DELETE",
             endpoint=f"/{waba_id}/message_templates",
             params={
@@ -1229,7 +1394,7 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             A dict with the comparison results.
         """
-        return await self._make_request(
+        return await self._request(
             method="GET",
             endpoint=f"/{template_id}/compare",
             params={
@@ -1258,7 +1423,7 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             A dict with the migration results.
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{dest_waba_id}/migrate_message_templates",
             params={
@@ -1279,7 +1444,7 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             A dict with the success status of the operation.
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{template_id}/unpause",
         )
@@ -1312,7 +1477,7 @@ class GraphAPIAsync(GraphAPI):
             waba_id: The ID of the WhatsApp Business Account.
             template: A dict containing the template to create or update to all languages listed in the template.
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{waba_id}/upsert_message_templates",
             data=template,
@@ -1328,7 +1493,7 @@ class GraphAPIAsync(GraphAPI):
         endpoint_uri: str | None = None,
         flow_json: str = None,
         publish: bool = None,
-    ) -> dict[str, str]:
+    ) -> dict:
         """
         Create or clone a flow.
 
@@ -1384,7 +1549,7 @@ class GraphAPIAsync(GraphAPI):
                 if v is not None
             },
         }
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{waba_id}/flows",
             json=data,
@@ -1422,7 +1587,7 @@ class GraphAPIAsync(GraphAPI):
             **({"categories": categories} if categories else {}),
             **({"application_id": application_id} if application_id else {}),
         }
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{flow_id}",
             json=data,
@@ -1455,7 +1620,7 @@ class GraphAPIAsync(GraphAPI):
               ]
             }
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{flow_id}/assets",
             files={
@@ -1485,7 +1650,7 @@ class GraphAPIAsync(GraphAPI):
               "success": true
             }
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{flow_id}/publish",
         )
@@ -1509,7 +1674,7 @@ class GraphAPIAsync(GraphAPI):
             }
         """
 
-        return await self._make_request(
+        return await self._request(
             method="DELETE",
             endpoint=f"/{flow_id}",
         )
@@ -1533,7 +1698,7 @@ class GraphAPIAsync(GraphAPI):
             }
         """
 
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{flow_id}/deprecate",
         )
@@ -1542,7 +1707,7 @@ class GraphAPIAsync(GraphAPI):
         self,
         flow_id: str,
         fields: tuple[str, ...] | None = None,
-    ) -> dict[str, Any]:
+    ) -> dict:
         """
         Get a flow.
 
@@ -1578,7 +1743,7 @@ class GraphAPIAsync(GraphAPI):
         endpoint = f"/{flow_id}"
         if fields:
             endpoint += f"?fields={','.join(fields)}"
-        return await self._make_request(
+        return await self._request(
             method="GET",
             endpoint=endpoint,
         )
@@ -1588,7 +1753,7 @@ class GraphAPIAsync(GraphAPI):
         waba_id: str,
         fields: tuple[str, ...] | None = None,
         pagination: dict[str, str] | None = None,
-    ) -> dict[str, list[dict[str, Any]]]:
+    ) -> dict:
         """
         Get all flows.
 
@@ -1626,7 +1791,7 @@ class GraphAPIAsync(GraphAPI):
             }.items()
             if v
         } | (pagination or {})
-        return await self._make_request(
+        return await self._request(
             method="GET",
             endpoint=endpoint,
             params=params,
@@ -1636,7 +1801,7 @@ class GraphAPIAsync(GraphAPI):
         self,
         flow_id: str,
         pagination: dict[str, str] | None = None,
-    ) -> dict[str, list | dict]:
+    ) -> dict:
         """
         Get all assets of a flow.
 
@@ -1664,7 +1829,7 @@ class GraphAPIAsync(GraphAPI):
               }
             }
         """
-        return await self._make_request(
+        return await self._request(
             method="GET",
             endpoint=f"/{flow_id}/assets?fields=name,asset_type,download_url",
             params=pagination,
@@ -1675,7 +1840,7 @@ class GraphAPIAsync(GraphAPI):
         dest_waba_id: str,
         source_waba_id: str,
         source_flow_names: tuple[str, ...],
-    ) -> dict[str, list[dict[str, str]]]:
+    ) -> dict:
         """
         Migrate Flows from one WhatsApp Business Account (WABA) to another.
 
@@ -1717,7 +1882,7 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             Result of the migration request.
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{dest_waba_id}/migrate_flows?source_waba_id={source_waba_id}&source_flow_names={','.join(source_flow_names)}",
         )
@@ -1744,7 +1909,7 @@ class GraphAPIAsync(GraphAPI):
               "qr_image_url": "https://scontent-iad3-2.xx.fbcdn.net/..."
             }
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{phone_id}/message_qrdls",
             json={
@@ -1781,7 +1946,7 @@ class GraphAPIAsync(GraphAPI):
               ]
             }
         """
-        return await self._make_request(
+        return await self._request(
             method="GET",
             endpoint=f"/{phone_id}/message_qrdls/{code}",
             params={"fields": ",".join(fields)} if fields else None,
@@ -1822,7 +1987,7 @@ class GraphAPIAsync(GraphAPI):
             fields: The fields to get. If None, default fields will be returned.
             pagination: The pagination parameters.
         """
-        return await self._make_request(
+        return await self._request(
             method="GET",
             endpoint=f"/{phone_id}/message_qrdls",
             params={
@@ -1859,7 +2024,7 @@ class GraphAPIAsync(GraphAPI):
             code: The code of the QR code.
             prefilled_message: The prefilled message to set.
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{phone_id}/message_qrdls",
             json={"code": code, "prefilled_message": prefilled_message},
@@ -1881,7 +2046,7 @@ class GraphAPIAsync(GraphAPI):
             phone_id: The ID of the phone number to delete the QR code from.
             code: The code of the QR code.
         """
-        return await self._make_request(
+        return await self._request(
             method="DELETE",
             endpoint=f"/{phone_id}/message_qrdls/{code}",
         )
@@ -1908,7 +2073,7 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             The success of the operation.
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{phone_id}/messages",
             json={
@@ -1925,6 +2090,7 @@ class GraphAPIAsync(GraphAPI):
         self,
         phone_id: str,
         users: tuple[str, ...],
+        user_ids: tuple[str, ...],
     ) -> dict:
         """
         Block users from sending messages to the business.
@@ -1945,16 +2111,19 @@ class GraphAPIAsync(GraphAPI):
         Args:
             phone_id: The ID of the phone number to block users on.
             users: The list of phone numbers/wa_ids to block.
+            user_ids: The list of bsuids to block.
 
         Returns:
             The response from the WhatsApp Cloud API.
         """
-        return await self._make_request(
+        block_users = [{"user": user} for user in users]
+        block_users.extend({"user_id": user_id} for user_id in user_ids)
+        return await self._request(
             method="POST",
             endpoint=f"/{phone_id}/block_users",
             json={
                 "messaging_product": "whatsapp",
-                "block_users": [{"user": user} for user in users],
+                "block_users": block_users,
             },
         )
 
@@ -1962,6 +2131,7 @@ class GraphAPIAsync(GraphAPI):
         self,
         phone_id: str,
         users: tuple[str, ...],
+        user_ids: tuple[str, ...],
     ) -> dict:
         """
         Unblock users from sending messages to the business.
@@ -1981,16 +2151,19 @@ class GraphAPIAsync(GraphAPI):
         Args:
             phone_id: The ID of the phone number to unblock users on.
             users: The list of phone numbers/wa_ids to unblock.
+            user_ids: The list of bsuids to unblock.
 
         Returns:
             The response from the WhatsApp Cloud API.
         """
-        return await self._make_request(
+        unblock_users = [{"user": user} for user in users]
+        unblock_users.extend({"user_id": user_id} for user_id in user_ids)
+        return await self._request(
             method="DELETE",
             endpoint=f"/{phone_id}/block_users",
             json={
                 "messaging_product": "whatsapp",
-                "block_users": [{"user": user} for user in users],
+                "block_users": unblock_users,
             },
         )
 
@@ -2023,7 +2196,7 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             The response from the WhatsApp Cloud API.
         """
-        return await self._make_request(
+        return await self._request(
             method="GET",
             endpoint=f"/{phone_id}/block_users",
             params=pagination,
@@ -2035,7 +2208,7 @@ class GraphAPIAsync(GraphAPI):
         file_name: str,
         file_length: int,
         file_type: str,
-    ) -> dict[str, str]:
+    ) -> dict:
         """
         Create an upload session for a file.
 
@@ -2050,7 +2223,7 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             The ID of the upload session
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{app_id}/uploads?file_name={file_name}&file_length={file_length}&file_type={file_type}",
         )
@@ -2061,7 +2234,7 @@ class GraphAPIAsync(GraphAPI):
         file: bytes | AsyncIterator[bytes],
         file_offset: int = 0,
         content_length: int | None = None,
-    ) -> dict[str, str]:
+    ) -> dict:
         """
         Upload a file to an upload session.
 
@@ -2076,7 +2249,7 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             The file handle of the uploaded file.
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"/{upload_session_id}",
             headers={
@@ -2094,7 +2267,7 @@ class GraphAPIAsync(GraphAPI):
     async def get_upload_session(
         self,
         upload_session_id: str,
-    ) -> dict[str, str | int]:
+    ) -> dict:
         """
         Get the status of an upload session (resuming an interrupted upload).
 
@@ -2106,12 +2279,17 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             The status of the upload session (ID and current offset)
         """
-        return await self._make_request(
+        return await self._request(
             method="GET",
             endpoint=f"/{upload_session_id}",
         )
 
-    async def get_call_permissions(self, phone_id: str, user_wa_id: str) -> dict:
+    async def get_call_permissions(
+        self,
+        phone_id: str,
+        user_wa_id: str | None,
+        recipient: str | None,
+    ) -> dict:
         """
         Get call permissions for a user.
 
@@ -2159,24 +2337,33 @@ class GraphAPIAsync(GraphAPI):
 
         Args:
             phone_id: The ID of the phone number to get call permissions for.
-            user_wa_id: The WhatsApp ID of the user to check permissions for.
+            user_wa_id: The WhatsApp ID to get call permissions for. Required if recipient is not provided.
+            recipient: The recipient unique identifier (BSUID). Required if recipient is not provided.
 
         Returns:
             The response from the WhatsApp Cloud API.
         """
-        return await self._make_request(
+        if not user_wa_id and not recipient:
+            raise ValueError("Either 'user_wa_id' or 'recipient' must be provided")
+        data = {}
+        if user_wa_id:
+            data["user_wa_id"] = user_wa_id
+        if phone_id:
+            data["recipient"] = recipient
+        return await self._request(
             method="GET",
             endpoint=f"/{phone_id}/call_permissions",
-            params={"user_wa_id": user_wa_id},
+            params=data,
         )
 
     async def initiate_call(
         self,
         phone_id: str,
-        to: str,
-        sdp: dict[str, str],
+        to: str | None,
+        recipient: str | None,
+        session: dict[str, str],
         biz_opaque_callback_data: str | None = None,
-    ) -> dict[str, str | bool]:
+    ) -> dict:
         """
         Initiate a call.
 
@@ -2193,32 +2380,38 @@ class GraphAPIAsync(GraphAPI):
 
         Args:
             phone_id: The ID of the phone number to initiate the call on.
-            to: The number being called (callee).
-            sdp: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
+            to: The WhatsApp ID to initiate the call to. Required if recipient is not provided.
+            recipient: The recipient unique identifier (BSUID). Required if recipient is not provided.
+            session: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
             biz_opaque_callback_data: An arbitrary string you can pass in that is useful for tracking and logging purposes.
 
         Returns:
             The response from the WhatsApp Cloud API containing the call ID.
         """
-        return await self._make_request(
+        if not to and not recipient:
+            raise ValueError("Either 'to' or 'recipient' must be provided")
+        data = {
+            "messaging_product": "whatsapp",
+            "to": to,
+            "recipient": recipient,
+            "action": "connect",
+            "session": session,
+        }
+        if to:
+            data["to"] = to
+        if recipient:
+            data["recipient"] = recipient
+        if biz_opaque_callback_data:
+            data["biz_opaque_callback_data"] = biz_opaque_callback_data
+        return await self._request(
             method="POST",
             endpoint=f"{phone_id}/calls",
-            json={
-                "messaging_product": "whatsapp",
-                "to": to,
-                "action": "connect",
-                "session": sdp,
-                **(
-                    {"biz_opaque_callback_data": biz_opaque_callback_data}
-                    if biz_opaque_callback_data
-                    else {}
-                ),
-            },
+            json=data,
         )
 
     async def pre_accept_call(
-        self, phone_id: str, call_id: str, sdp: dict[str, str] | None = None
-    ) -> dict[str, str | bool]:
+        self, phone_id: str, call_id: str, session: dict[str, str] | None = None
+    ) -> dict:
         """
         Pre-accept a call.
 
@@ -2234,19 +2427,19 @@ class GraphAPIAsync(GraphAPI):
         Args:
             phone_id: The ID of the phone number to pre-accept the call on.
             call_id: The ID of the call to pre-accept.
-            sdp: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
+            session: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
 
         Returns:
             The response from the WhatsApp Cloud API.
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"{phone_id}/calls",
             json={
                 "messaging_product": "whatsapp",
                 "call_id": call_id,
                 "action": "pre_accept",
-                **({"session": sdp} if sdp else {}),
+                **({"session": session} if session else {}),
             },
         )
 
@@ -2254,9 +2447,9 @@ class GraphAPIAsync(GraphAPI):
         self,
         phone_id: str,
         call_id: str,
-        sdp: dict[str, str] | None = None,
+        session: dict[str, str] | None = None,
         biz_opaque_callback_data: str | None = None,
-    ) -> dict[str, str | bool]:
+    ) -> dict:
         """
         Accept a call.
 
@@ -2272,20 +2465,20 @@ class GraphAPIAsync(GraphAPI):
         Args:
             phone_id: The ID of the phone number to accept the call on.
             call_id: The ID of the call to accept.
-            sdp: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
+            session: The SDP info of the device on the other end of the call. The SDP must be compliant with RFC 8866.
             biz_opaque_callback_data: An arbitrary string you can pass in that is useful for tracking and logging purposes.
 
         Returns:
             The response from the WhatsApp Cloud API.
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"{phone_id}/calls",
             json={
                 "messaging_product": "whatsapp",
                 "call_id": call_id,
                 "action": "accept",
-                **({"session": sdp} if sdp else {}),
+                **({"session": session} if session else {}),
                 **(
                     {"biz_opaque_callback_data": biz_opaque_callback_data}
                     if biz_opaque_callback_data
@@ -2314,7 +2507,7 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             The response from the WhatsApp Cloud API.
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"{phone_id}/calls",
             json={
@@ -2344,7 +2537,7 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             The response from the WhatsApp Cloud API.
         """
-        return await self._make_request(
+        return await self._request(
             method="POST",
             endpoint=f"{phone_id}/calls",
             json={
@@ -2352,4 +2545,361 @@ class GraphAPIAsync(GraphAPI):
                 "call_id": call_id,
                 "action": "terminate",
             },
+        )
+
+    async def create_group(
+        self,
+        phone_id: str,
+        subject: str,
+        description: str | None = None,
+        join_approval_mode: str | None = None,
+    ) -> dict:
+        """
+        Create a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#create-group>`_.
+
+        Args:
+            phone_id: The ID of the phone number to create the group on.
+            subject: The subject of the group.
+            description: The description of the group.
+            join_approval_mode: The join approval mode of the group. Valid values are: ``auto_approve``, ``approval_required``.
+
+        Return example::
+
+            {
+              "request_id": "123456789012345"
+            }
+        """
+        data = {
+            "messaging_product": "whatsapp",
+            "subject": subject,
+            **({"description": description} if description else {}),
+            **(
+                {"join_approval_mode": join_approval_mode} if join_approval_mode else {}
+            ),
+        }
+        return await self._request(
+            method="POST",
+            endpoint=f"/{phone_id}/groups",
+            json=data,
+        )
+
+    async def update_group_info(
+        self,
+        group_id: str,
+        subject: str | None = None,
+        description: str | None = None,
+        profile_picture_file: (
+            bytes | str | pathlib.Path | BinaryIO | Iterator[bytes] | None
+        ) = None,
+    ) -> dict:
+        """
+        Update group info.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#update-group-info>`_.
+
+        Args:
+            group_id: The ID of the group to update.
+            subject: The new subject of the group.
+            description: The new description of the group.
+            profile_picture_file: The new profile picture file path of the group.
+
+        Returns:
+            A dictionary containing the result of the operation.
+        """
+        files: dict[str, tuple] = {
+            "messaging_product": (None, "whatsapp"),
+        }
+        if subject:
+            files["subject"] = (None, subject)
+        if description:
+            files["description"] = (None, description)
+        if profile_picture_file:
+            files["profile_picture_file"] = (
+                "profile.jpg",
+                profile_picture_file,
+                "image/jpeg",
+            )
+
+        return await self._request(
+            method="POST",
+            endpoint=f"/{group_id}",
+            files=files,
+        )
+
+    async def get_group_join_requests(
+        self, group_id: str, pagination: dict[str, str] | None = None
+    ) -> dict:
+        """
+        Get all join requests for a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#get-join-requests>`_.
+
+        Args:
+            group_id: The ID of the group to get join requests from.
+            pagination: The pagination parameters.
+
+        Returns:
+            A dictionary containing the join requests.
+        """
+        return await self._request(
+            method="GET",
+            endpoint=f"/{group_id}/join_requests",
+            params=pagination,
+        )
+
+    async def approve_group_join_requests(
+        self, group_id: str, request_ids: tuple[str, ...]
+    ) -> dict:
+        """
+        Approve join requests for a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#approve-join-requests>`_.
+
+        Args:
+            group_id: The ID of the group to approve join requests for.
+            request_ids: A tuple of join request IDs to approve.
+
+        Returns:
+            A dictionary containing the result of the operation.
+        """
+        return await self._request(
+            method="POST",
+            endpoint=f"/{group_id}/join_requests",
+            json={"messaging_product": "whatsapp", "join_requests": request_ids},
+        )
+
+    async def reject_group_join_requests(
+        self, group_id: str, request_ids: tuple[str, ...]
+    ) -> dict:
+        """
+        Reject join requests for a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#reject-join-requests>`_.
+
+        Args:
+            group_id: The ID of the group to reject join requests for.
+            request_ids: A tuple of join request IDs to reject.
+
+        Returns:
+            A dictionary containing the result of the operation.
+        """
+        return await self._request(
+            method="DELETE",
+            endpoint=f"/{group_id}/join_requests",
+            json={"messaging_product": "whatsapp", "join_requests": request_ids},
+        )
+
+    async def get_group_invite_link(self, group_id: str) -> dict:
+        """
+        Get the invite link for a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#get-group-invite-link>`_.
+
+        Args:
+            group_id: The ID of the group to get the invite link for.
+
+        Returns:
+            A dictionary containing the invite link.
+        """
+        return await self._request(
+            method="GET",
+            endpoint=f"/{group_id}/invite_link",
+        )
+
+    async def reset_group_invite_link(self, group_id: str) -> dict:
+        """
+        Reset the invite link for a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#reset-group-invite-link>`_.
+
+        Args:
+            group_id: The ID of the group to reset the invite link for.
+
+        Returns:
+            A dictionary containing the new invite link.
+        """
+        return await self._request(
+            method="POST",
+            endpoint=f"/{group_id}/invite_link",
+            json={"messaging_product": "whatsapp"},
+        )
+
+    async def delete_group(self, group_id: str) -> dict:
+        """
+        Delete a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#delete-group>`_.
+
+        Args:
+            group_id: The ID of the group to delete.
+
+        Returns:
+            A dictionary containing the result of the operation.
+        """
+        return await self._request(
+            method="DELETE",
+            endpoint=f"/{group_id}",
+        )
+
+    async def remove_group_participants(
+        self,
+        group_id: str,
+        users: tuple[str, ...],
+        user_ids: tuple[str, ...],
+    ) -> dict:
+        """
+        Remove participants from a group.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#remove-participants>`_.
+
+        Args:
+            group_id: The ID of the group to remove participants from.
+            users: The list of phone numbers/wa_ids to remove from the group.
+            user_ids: The list of bsuids to remove from the group.
+
+        Returns:
+            A dictionary containing the result of the operation.
+        """
+        participants = [{"user": user} for user in users]
+        participants.extend({"user_id": user_id} for user_id in user_ids)
+        return await self._request(
+            method="DELETE",
+            endpoint=f"/{group_id}/participants",
+            json={"messaging_product": "whatsapp", "participants": participants},
+        )
+
+    async def get_group_info(
+        self,
+        group_id: str,
+        fields: tuple[str, ...] | None = None,
+    ) -> dict:
+        """
+        Get group info.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#get-group-info>`_.
+
+        Args:
+            group_id: The ID of the group to get info for.
+            fields: The fields to get.
+
+        Returns:
+            A dictionary containing the group info.
+        """
+        return await self._request(
+            method="GET",
+            endpoint=f"/{group_id}",
+            params={
+                k: v
+                for k, v in {
+                    "fields": ",".join(fields) if fields else None,
+                }.items()
+                if v is not None
+            },
+        )
+
+    async def get_active_groups(
+        self,
+        phone_id: str,
+        fields: tuple[str, ...] | None = None,
+        pagination: dict[str, str] | None = None,
+    ) -> dict:
+        """
+        Get all active groups.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/reference#get-active-groups>`_.
+
+        Args:
+            phone_id: The ID of the phone number to get active groups for.
+            fields: The fields to get.
+            pagination: The pagination parameters.
+
+        Returns:
+            A dictionary containing the active groups.
+        """
+        return await self._request(
+            method="GET",
+            endpoint=f"/{phone_id}/groups",
+            params={
+                k: v
+                for k, v in {
+                    "fields": ",".join(fields) if fields else None,
+                    **(pagination or {}),
+                }.items()
+                if v is not None
+            },
+        )
+
+    async def set_username(self, phone_id: str, username: str) -> dict:
+        """
+        Set a business username.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#adopt-or-change-a-business-username>`_.
+
+        Args:
+            phone_id: The ID of the phone number to set a business username for.
+            username: The new business username.
+
+        Returns:
+            A dictionary containing the status of the operation.
+        """
+        return await self._request(
+            method="POST",
+            endpoint=f"/{phone_id}/username",
+            json={"username": username},
+        )
+
+    async def get_current_username(self, phone_id: str) -> dict:
+        """
+        Get the status of the business username associated with the business phone number, or information about the username.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#get-current-username>`_.
+
+        Args:
+            phone_id: The ID of the phone number to get the business username for.
+
+        Returns:
+            A dictionary containing the current business username and status.
+        """
+        return await self._request(
+            method="GET",
+            endpoint=f"/{phone_id}/username",
+        )
+
+    async def get_reserved_usernames(self, phone_id: str) -> dict:
+        """
+        Get a list of usernames that have been reserved for your business portfolio.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#get-reserved-usernames>`_.
+
+        Args:
+            phone_id: The ID of the phone number to get reserved usernames for.
+
+        Returns:
+            A dictionary containing the reserved usernames.
+        """
+        return await self._request(
+            method="GET",
+            endpoint=f"/{phone_id}/username_suggestions",
+        )
+
+    async def delete_username(
+        self,
+        phone_id: str,
+    ) -> dict:
+        """
+        Delete the business username associated with the business phone number.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#delete-a-username>`_.
+
+        Args:
+            phone_id: The ID of the phone number to delete the business username from.
+
+        Returns:
+            A dictionary containing the success of the operation.
+        """
+        return await self._request(
+            method="DELETE",
+            endpoint=f"/{phone_id}/username",
         )
