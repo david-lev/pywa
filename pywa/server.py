@@ -1,6 +1,7 @@
 """This module contains the Server class, which is used to set up a webhook for receiving incoming updates."""
 
 import logging
+import re
 import threading
 import warnings
 from collections import OrderedDict
@@ -131,6 +132,12 @@ class Server:
         Returns:
             A tuple containing the challenge and the status code.
         """
+        if not re.fullmatch(r"[A-Za-z0-9._~-]+", ch or ""):
+            _logger.error(
+                "Webhook ('%s') received an invalid challenge value",
+                self._webhook_endpoint,
+            )
+            return "Forbidden", 403
         if vt == self._verify_token:
             _logger.info(
                 "Webhook ('%s') passed the verification challenge",

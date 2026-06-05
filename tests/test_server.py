@@ -1,4 +1,38 @@
-from pywa import utils as pywa_utils
+from pywa import WhatsApp, utils as pywa_utils
+
+
+def test_webhook_challenge_handler_valid():
+    wa = WhatsApp(phone_id="1", token="t", verify_token="my_token")
+    body, status = wa.webhook_challenge_handler(vt="my_token", ch="abc123-._~")
+    assert status == 200
+    assert body == "abc123-._~"
+
+
+def test_webhook_challenge_handler_wrong_token():
+    wa = WhatsApp(phone_id="1", token="t", verify_token="my_token")
+    body, status = wa.webhook_challenge_handler(vt="wrong_token", ch="abc123")
+    assert status == 403
+
+
+def test_webhook_challenge_handler_xss_challenge():
+    wa = WhatsApp(phone_id="1", token="t", verify_token="my_token")
+    # A challenge containing HTML/JS should be rejected even with a valid token
+    body, status = wa.webhook_challenge_handler(
+        vt="my_token", ch="<script>alert(1)</script>"
+    )
+    assert status == 403
+
+
+def test_webhook_challenge_handler_empty_challenge():
+    wa = WhatsApp(phone_id="1", token="t", verify_token="my_token")
+    body, status = wa.webhook_challenge_handler(vt="my_token", ch="")
+    assert status == 403
+
+
+def test_webhook_challenge_handler_challenge_with_spaces():
+    wa = WhatsApp(phone_id="1", token="t", verify_token="my_token")
+    body, status = wa.webhook_challenge_handler(vt="my_token", ch="abc 123")
+    assert status == 403
 
 
 def test_webhook_updates_validator():
