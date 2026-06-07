@@ -32,7 +32,7 @@ MAX_PROCESSED_UPDATES = 100_000
 class Server:
     async def webhook_challenge_handler(
         self: "WhatsApp", vt: str, ch: str
-    ) -> tuple[str, int]:
+    ) -> tuple[str, int, dict[str, str]]:
         """
         Handle the verification challenge from the webhook manually.
 
@@ -43,7 +43,7 @@ class Server:
             ch: The challenge param (utils.HUB_CH).
 
         Returns:
-            A tuple containing the challenge and the status code.
+            A tuple containing the challenge, the status code, and security headers.
         """
         return super().webhook_challenge_handler(vt=vt, ch=ch)
 

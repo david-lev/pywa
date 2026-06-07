@@ -119,7 +119,7 @@ class Server:
 
     def webhook_challenge_handler(
         self: "WhatsApp", vt: str, ch: str
-    ) -> tuple[str, int]:
+    ) -> tuple[str, int, dict[str, str]]:
         """
         Handle the verification challenge from the webhook manually.
 
@@ -130,27 +130,31 @@ class Server:
             ch: The challenge param (utils.HUB_CH).
 
         Returns:
-            A tuple containing the challenge and the status code.
+            A tuple containing the challenge, the status code, and security headers.
         """
+        _security_headers = {
+            "Content-Type": "text/plain",
+            "X-Content-Type-Options": "nosniff",
+        }
         if not re.fullmatch(r"[A-Za-z0-9._~-]+", ch or ""):
             _logger.error(
                 "Webhook ('%s') received an invalid challenge value",
                 self._webhook_endpoint,
             )
-            return "Forbidden", 403
+            return "Forbidden", 403, _security_headers
         if vt == self._verify_token:
             _logger.info(
                 "Webhook ('%s') passed the verification challenge",
                 self._webhook_endpoint,
             )
-            return ch, 200
+            return ch, 200, _security_headers
         _logger.error(
             "Webhook ('%s') failed the verification challenge. Expected verify_token: %s, received: %s",
             self._webhook_endpoint,
             self._verify_token,
             vt,
         )
-        return "Forbidden", 403
+        return "Forbidden", 403, _security_headers
 
     def webhook_update_validator(
         self: "WhatsApp", update: bytes, hmac_header: str | None
