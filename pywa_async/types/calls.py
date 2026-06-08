@@ -1,19 +1,22 @@
+"""This module contains types related to WhatsApp calls, including call connection, termination, and status updates."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-"""This module contains types related to WhatsApp calls, including call connection, termination, and status updates."""
-
-
 from pywa.types.calls import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.calls import (
     CallConnect as _CallConnect,
-    CallTerminate as _CallTerminate,
-    CallStatus as _CallStatus,
+)
+from pywa.types.calls import (
     CallPermissionUpdate as _CallPermissionUpdate,
 )
-
-import dataclasses
+from pywa.types.calls import (
+    CallStatus as _CallStatus,
+)
+from pywa.types.calls import (
+    CallTerminate as _CallTerminate,
+)
 
 from .base_update import BaseUserUpdateAsync  # noqa
 from .callback import CallbackData
@@ -104,7 +107,6 @@ class _CallShortcutsAsync:
         return await self._client.terminate_call(call_id=self.id)
 
 
-@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
 class CallConnect(BaseUserUpdateAsync, _CallShortcutsAsync, _CallConnect):
     """
     Represents a call connection event.
@@ -123,7 +125,6 @@ class CallConnect(BaseUserUpdateAsync, _CallShortcutsAsync, _CallConnect):
     """
 
 
-@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
 class CallTerminate(BaseUserUpdateAsync, _CallShortcutsAsync, _CallTerminate):
     """
     Represents a call termination event.
@@ -168,7 +169,6 @@ class CallTerminate(BaseUserUpdateAsync, _CallShortcutsAsync, _CallTerminate):
         )
 
 
-@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
 class CallStatus(BaseUserUpdateAsync, _CallShortcutsAsync, _CallStatus):
     """
     Represents a call status update.
@@ -186,7 +186,6 @@ class CallStatus(BaseUserUpdateAsync, _CallShortcutsAsync, _CallStatus):
     """
 
 
-@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
 class CallPermissionUpdate(BaseUserUpdateAsync, _CallPermissionUpdate):
     """
     Represents a call permission update.

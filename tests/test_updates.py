@@ -80,6 +80,21 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
         "played": [lambda s: s.status == MessageStatusType.PLAYED],
         "failed": [lambda s: s.error is not None],
         "with_tracker": [lambda s: s.tracker is not None],
+        "group": [lambda s: s.group_id is not None],
+    },
+    "edited_message": {
+        "image": [
+            lambda m: m.message.image is not None,
+            lambda m: m.original_message_id == m.message.id,
+        ],
+    },
+    "deleted_message": {
+        "revoke": [lambda m: m.original_message_id is not None],
+    },
+    "outgoing_message": {
+        "text": [lambda m: m.to_user == m.from_user],
+        "edit": [lambda m: m.original_message_id == m.message.id],
+        "delete": [lambda m: m.original_message_id is not None],
     },
     "template_status_update": {
         "approved": [lambda s: s.new_status == TemplateStatus.APPROVED],
@@ -108,9 +123,6 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
         ],
         "without_flow_token": [lambda f: f.token is None],
     },
-    "chat_opened": {
-        "chat_opened": [lambda c: c.type == MessageType.REQUEST_WELCOME],
-    },
     "system": {
         "phone_number_change": [
             lambda s: s.sys_type == SystemType.USER_CHANGED_NUMBER,
@@ -134,18 +146,41 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
     },
     "call_permission_update": {
         "accept": [
-            lambda c: c.response == CallPermissionResponse.ACCEPT
-            and c.response_source == CallPermissionResponseSource.USER_ACTION
-            and c.expiration_timestamp is not None,
+            lambda c: (
+                c.response == CallPermissionResponse.ACCEPT
+                and c.response_source == CallPermissionResponseSource.USER_ACTION
+                and c.expiration_timestamp is not None
+            ),
         ],
         "reject": [
-            lambda c: c.response == CallPermissionResponse.REJECT
-            and c.response_source == CallPermissionResponseSource.USER_ACTION
-            and c.expiration_timestamp is None,
+            lambda c: (
+                c.response == CallPermissionResponse.REJECT
+                and c.response_source == CallPermissionResponseSource.USER_ACTION
+                and c.expiration_timestamp is None
+            ),
         ],
     },
     "user_marketing_preferences": {
         "resume": [lambda u: u.value == MarketingPreference.RESUME],
+    },
+    "account_update": {
+        "account_deleted": [],
+        "account_restriction": [],
+        "account_violation": [],
+        "ad_account_linked": [],
+        "authentication_international_eligibility": [],
+        "account_disabled": [],
+        "mm_api_for_wa_terms_of_service": [],
+        "partner_added": [],
+        "partner_app_installed": [],
+        "partner_app_uninstalled": [],
+        "partner_led_business_verification_status": [],
+        "partner_removed": [],
+        "partner_removed_wa_app_disconnection": [],
+        "primary_business_location_set": [],
+        "pricing_tiering_update": [],
+        "account_offboarded": [],
+        "account_reconnected": [],
     },
 }
 

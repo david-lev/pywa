@@ -9,10 +9,6 @@ from pywa.types.callback import (
 from .base_update import BaseUserUpdateAsync
 
 
-import dataclasses
-
-
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class CallbackButton(BaseUserUpdateAsync, _CallbackButton[_CallbackDataT]):
     """
     Represents a callback button (Incoming update when user clicks on :class:`~pywa.types.callback.Button` or on :class:`~pywa.types.templates.QuickReplyButton`'s template).
@@ -57,7 +53,6 @@ class CallbackButton(BaseUserUpdateAsync, _CallbackButton[_CallbackDataT]):
     """
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class CallbackSelection(BaseUserUpdateAsync, _CallbackSelection[_CallbackDataT]):
     """
     Represents a callback selection (Incoming update when user clicks on :class:`~pywa.types.callback.SectionRow` in :class:`~pywa.types.callback.SectionList`).

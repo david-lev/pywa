@@ -1,0 +1,377 @@
+{
+  "account_deleted": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "102290129340398",
+        "time": 1743451903,
+        "changes": [
+          {
+            "value": {
+              "event": "ACCOUNT_DELETED"
+            },
+            "field": "account_update"
+          }
+        ]
+      }
+    ]
+  },
+  "account_restriction": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "102290129340398",
+        "time": 1641330498,
+        "changes": [
+          {
+            "value": {
+              "event": "ACCOUNT_RESTRICTION",
+              "restriction_info": [
+                {
+                  "restriction_type": "RESTRICTED_BIZ_INITIATED_MESSAGING",
+                  "expiration": 1641330498
+                },
+                {
+                  "restriction_type": "RESTRICTED_ADD_PHONE_NUMBER_ACTION",
+                  "expiration": 1641330498
+                }
+              ]
+            },
+            "field": "account_update"
+          }
+        ]
+      }
+    ]
+  },
+  "account_violation": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "102290129340398",
+        "time": 1743451903,
+        "changes": [
+          {
+            "value": {
+              "event": "ACCOUNT_VIOLATION",
+              "violation_info": {
+                "violation_type": "ADULT"
+              }
+            },
+            "field": "account_update"
+          }
+        ]
+      }
+    ]
+  },
+  "ad_account_linked": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "2949482758682047",
+        "time": 1744823932,
+        "changes": [
+          {
+            "field": "account_update",
+            "value": {
+              "event": "AD_ACCOUNT_LINKED",
+              "waba_info": {
+                "owner_business_id": "2329417887457253",
+                "ad_account_linked": "980198427534243",
+                "waba_id": "980198427658004"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "authentication_international_eligibility": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "102290129340398",
+        "time": 1743451903,
+        "changes": [
+          {
+            "value": {
+              "auth_international_rate_eligibility": {
+                "exception_countries": [
+                  {
+                    "country_code": "ID",
+                    "start_time": 1751347424
+                  }
+                ],
+                "start_time": 1748780624
+              },
+              "event": "AUTH_INTL_PRICE_ELIGIBILITY_UPDATE"
+            },
+            "field": "account_update"
+          }
+        ]
+      }
+    ]
+  },
+  "account_disabled": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "102290129340398",
+        "time": 1743451903,
+        "changes": [
+          {
+            "value": {
+              "event": "DISABLED_UPDATE",
+              "ban_info": {
+                "waba_ban_state": "REINSTATE",
+                "waba_ban_date": "April 17, 2025"
+              }
+            },
+            "field": "account_update"
+          }
+        ]
+      }
+    ]
+  },
+  "mm_api_for_wa_terms_of_service": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "2949482758682047",
+        "time": 1744823932,
+        "changes": [
+          {
+            "field": "account_update",
+            "value": {
+              "event": "MM_LITE_TERMS_SIGNED",
+              "waba_info": {
+                "owner_business_id": "2329417887457253",
+                "waba_id": "980198427658004"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "partner_added": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "2949482758682047",
+        "time": 1744823932,
+        "changes": [
+          {
+            "value": {
+              "event": "PARTNER_ADDED",
+              "waba_info": {
+                "waba_id": "980198427658004",
+                "owner_business_id": "2329417887457253",
+                "solution_id": "1715120619246906",
+                "solution_partner_business_ids": [
+                  "2949482758682047",
+                  "520744086200222"
+                ]
+              }
+            },
+            "field": "account_update"
+          }
+        ]
+      }
+    ]
+  },
+  "partner_app_installed": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "2949482758682047",
+        "time": 1745337174,
+        "changes": [
+          {
+            "value": {
+              "event": "PARTNER_APP_INSTALLED",
+              "waba_info": {
+                "waba_id": "1191624265890717",
+                "owner_business_id": "2329417887457253",
+                "partner_app_id": "5731794616896507",
+                "solution_id": "1715120619246906",
+                "solution_partner_business_ids": [
+                  "2949482758682047",
+                  "520744086200222"
+                ]
+              }
+            },
+            "field": "account_update"
+          }
+        ]
+      }
+    ]
+  },
+  "partner_app_uninstalled": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "2949482758682047",
+        "time": 1748477359,
+        "changes": [
+          {
+            "value": {
+              "event": "PARTNER_APP_UNINSTALLED",
+              "waba_info": {
+                "waba_id": "184943124712545",
+                "owner_business_id": "1284923862322270",
+                "partner_app_id": "869361281603019"
+              }
+            },
+            "field": "account_update"
+          }
+        ]
+      }
+    ]
+  },
+  "partner_led_business_verification_status": {
+    "entry": [
+      {
+        "id": "102290129340398",
+        "time": 1743138982,
+        "changes": [
+          {
+            "value": {
+              "event": "PARTNER_CLIENT_CERTIFICATION_STATUS_UPDATE",
+              "partner_client_certification_info": {
+                "client_business_id": "2729063490586005",
+                "status": "APPROVED",
+                "rejection_reasons": [
+                  "NONE"
+                ]
+              }
+            },
+            "field": "account_update"
+          }
+        ]
+      }
+    ],
+    "object": "whatsapp_business_account"
+  },
+  "partner_removed": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "2949482758682047",
+        "time": 1748477359,
+        "changes": [
+          {
+            "value": {
+              "event": "PARTNER_REMOVED",
+              "waba_info": {
+                "waba_id": "980198427658004",
+                "owner_business_id": "2329417887457253"
+              }
+            },
+            "field": "account_update"
+          }
+        ]
+      }
+    ]
+  },
+  "partner_removed_wa_app_disconnection": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "2949482758682047",
+        "time": 1748477359,
+        "changes": [
+          {
+            "value": {
+              "event": "PARTNER_REMOVED",
+              "waba_info": {
+                "waba_id": "980198427658004",
+                "owner_business_id": "2329417887457253"
+              },
+              "disconnection_info": {
+                "reason": "PRIMARY_INACTIVITY",
+                "initiated_by": "SYSTEM"
+              }
+            },
+            "field": "account_update"
+          }
+        ]
+      }
+    ]
+  },
+  "primary_business_location_set": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "102290129340398",
+        "time": 1743138982,
+        "changes": [
+          {
+            "value": {
+              "country": "IN",
+              "event": "BUSINESS_PRIMARY_LOCATION_COUNTRY_UPDATE"
+            },
+            "field": "account_update"
+          }
+        ]
+      }
+    ]
+  },
+  "pricing_tiering_update": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "102290129340398",
+        "time": 1743451903,
+        "changes": [
+          {
+            "value": {
+              "volume_tier_info": {
+                "tier_update_time": 1743451903,
+                "pricing_category": "UTILITY",
+                "tier": "25000001:50000000",
+                "effective_month": "2025-11",
+                "region": "India"
+              },
+              "event": "VOLUME_BASED_PRICING_TIER_UPDATE"
+            },
+            "field": "account_update"
+          }
+        ]
+      }
+    ]
+  },
+  "account_offboarded": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "102290129340398",
+        "time": 1743451903,
+        "changes": [
+          {
+            "value": {
+              "event": "ACCOUNT_OFFBOARDED"
+            },
+            "field": "account_update"
+          }
+        ]
+      }
+    ]
+  },
+  "account_reconnected": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "102290129340398",
+        "time": 1743451903,
+        "changes": [
+          {
+            "value": {
+              "event": "ACCOUNT_RECONNECTED"
+            },
+            "field": "account_update"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -40,7 +40,7 @@ Let's start from the ``START`` screen. This screen welcomes the user and allows 
 
 .. code-block:: python
     :caption: start_screen.py
-    :linenos:
+:linenos:
     :emphasize-lines: 6, 9, 26
 
 
@@ -110,7 +110,7 @@ The ``SIGN_UP`` screen allows the user to sign up (create an account). Let's tak
 
 .. code-block:: python
     :caption: sign_up_screen.py
-    :linenos:
+:linenos:
     :emphasize-lines: 4, 5, 6, 7, 8, 9, 10, 25, 26, 33, 38, 40, 45, 47, 52, 54, 62, 64, 71, 77, 78, 79, 80, 81, 82, 83
 
     SIGN_UP = Screen(
@@ -263,7 +263,7 @@ Ok, now to the ``LOGIN`` screen. This screen allows the user to login to their e
 
 .. code-block:: python
     :caption: login_screen.py
-    :linenos:
+:linenos:
     :emphasize-lines: 5, 6, 7, 8, 22, 23, 24, 25, 26, 27, 28, 34, 39, 41, 46, 52, 53, 54, 55
 
     LOGIN = Screen(
@@ -348,7 +348,7 @@ Now, to the last screen, the ``LOGIN_SUCCESS`` screen. This screen is displayed 
 
 .. code-block:: python
     :caption: login_success_screen.py
-    :linenos:
+:linenos:
     :emphasize-lines: 16, 24, 25, 26
 
     LOGIN_SUCCESS = Screen(
@@ -1023,7 +1023,7 @@ Creating the flow is very simple using the :meth:`~pywa.client.WhatsApp.create_f
     wa = WhatsApp(
         phone_id="1234567890",
         token="abcdefg",
-        business_account_id="1234567890",  # the ID of the WhatsApp Business Account
+        waba_id="1234567890",  # the ID of the WhatsApp Business Account
     )
 
     flow_id = wa.create_flow(
@@ -1105,17 +1105,14 @@ To send the flow we need to initialize the :class:`~pywa.client.WhatsApp` client
 
 .. code-block:: python
     :caption: main.py
-    :linenos:
+:linenos:
 
-    import fastapi
     from pywa import WhatsApp
 
-    fastapi_app = fastapi.FastAPI()
 
     wa = WhatsApp(
         phone_id="1234567890",
         token="abcdefg",
-        server=fastapi_app,
         callback_url="https://my-server.com",
         webhook_endpoint="/webhook",
         verify_token="xyz123",
@@ -1130,7 +1127,6 @@ The :class:`~pywa.client.WhatsApp` class takes a few parameters:
 
 - ``phone_id``: The phone ID of the WhatsApp account that we are using to send and receive messages
 - ``token``: The token of the WhatsApp account that we are using to send and receive messages
-- ``server``: The FastAPI app that we created earlier, which will be used to register the routes
 - ``callback_url``: The URL that WhatsApp will use to send us updates
 - ``webhook_endpoint``: The endpoint that WhatsApp will use to send us updates
 - ``verify_token``: Used by WhatsApp to challenge the server when we register the webhook
@@ -1447,7 +1443,7 @@ The last thing that we need to do is run the server:
 
 .. code-block:: bash
 
-    fastapi dev wa.py
+    pywa dev
 
 What's Next?
 ------------

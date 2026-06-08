@@ -12,6 +12,7 @@ from pywa import _helpers as helpers
 from pywa._helpers import MediaSource
 from pywa.types import Contact
 from pywa.types.media import Media
+from pywa.types.sent_update import RecipientType
 
 PHONE_ID = "123456789"
 TOKEN = "xyz"
@@ -58,31 +59,31 @@ def test_warning_when_version_lower_than_min():
 def test_wa_callback_scopes():
     with pytest.raises(ValueError):
         WhatsApp(
+            server=None,
+            verify_token="xyzxyz",
+            callback_url="https://exmaple.com",
             callback_url_scope=utils.CallbackURLScope.APP,
             app_id=None,
             app_secret=None,
-            server=None,
-            callback_url="https://exmaple.com",
-            verify_token="xyzxyz",
-        )
+        )._delayed_register_callback_url()
 
     with pytest.raises(ValueError):
         WhatsApp(
+            server=None,
+            verify_token="xyzxyz",
+            waba_id=None,
+            callback_url="https://exmaple.com",
             callback_url_scope=utils.CallbackURLScope.WABA,
-            business_account_id=None,
-            server=None,
-            callback_url="https://exmaple.com",
-            verify_token="xyzxyz",
-        )
+        )._delayed_register_callback_url()
 
     with pytest.raises(ValueError):
         WhatsApp(
-            callback_url_scope=utils.CallbackURLScope.PHONE,
             phone_id=None,
             server=None,
-            callback_url="https://exmaple.com",
             verify_token="xyzxyz",
-        )
+            callback_url="https://exmaple.com",
+            callback_url_scope=utils.CallbackURLScope.PHONE,
+        )._delayed_register_callback_url()
 
 
 def test_resolve_buttons_param():
@@ -292,6 +293,83 @@ def test_resolve_callback_data():
     assert helpers.resolve_callback_data("user:123:John") == "user:123:John"
 
 
+def test_resolve_recipient():
+    assert helpers.resolve_recipient(1234567890) == (
+        {
+            "to": "1234567890",
+            "recipient": None,
+            "recipient_type": "individual",
+        },
+        RecipientType.WA_ID,
+    )
+    assert helpers.resolve_recipient("1234567890") == (
+        {
+            "to": "1234567890",
+            "recipient": None,
+            "recipient_type": "individual",
+        },
+        RecipientType.WA_ID,
+    )
+    assert helpers.resolve_recipient("US.13491208655302741918") == (
+        {
+            "to": None,
+            "recipient": "US.13491208655302741918",
+            "recipient_type": "individual",
+        },
+        RecipientType.BSUID,
+    )
+    assert helpers.resolve_recipient("US.ENT.11815799212886844830") == (
+        {
+            "to": None,
+            "recipient": "US.ENT.11815799212886844830",
+            "recipient_type": "individual",
+        },
+        RecipientType.PARENT_BSUID,
+    )
+    assert helpers.resolve_recipient("+16315551234") == (
+        {
+            "to": "+16315551234",
+            "recipient": None,
+            "recipient_type": "individual",
+        },
+        RecipientType.PHONE_NUMBER,
+    )
+    assert helpers.resolve_recipient("+1 (631) 555-1234") == (
+        {
+            "to": "+1 (631) 555-1234",
+            "recipient": None,
+            "recipient_type": "individual",
+        },
+        RecipientType.PHONE_NUMBER,
+    )
+    assert helpers.resolve_recipient("(631) 555-1234") == (
+        {
+            "to": "(631) 555-1234",
+            "recipient": None,
+            "recipient_type": "individual",
+        },
+        RecipientType.PHONE_NUMBER,
+    )
+    assert helpers.resolve_recipient("1 (631) 555-1234") == (
+        {
+            "to": "1 (631) 555-1234",
+            "recipient": None,
+            "recipient_type": "individual",
+        },
+        RecipientType.PHONE_NUMBER,
+    )
+    assert helpers.resolve_recipient(
+        "Y2FwaV9ncm91cDoxNzA1NTU1MDEzOToxMjAzNjM0MDQ2OTQyMzM4MjAZD"
+    ) == (
+        {
+            "to": "Y2FwaV9ncm91cDoxNzA1NTU1MDEzOToxMjAzNjM0MDQ2OTQyMzM4MjAZD",
+            "recipient": None,
+            "recipient_type": "group",
+        },
+        RecipientType.GROUP_ID,
+    )
+
+
 def test_resolve_tracker_param():
     @dataclasses.dataclass
     class User(types.CallbackData):
@@ -355,14 +433,14 @@ def test_resolve_flow_json_param():
 
 
 def test_resolve_waba_id_param():
-    client = WhatsApp(business_account_id=WABA_ID)
+    client = WhatsApp(waba_id=WABA_ID)
 
     assert (
         helpers.resolve_arg(
             wa=client,
             value=None,
             method_arg="waba_id",
-            client_arg="business_account_id",
+            client_arg="waba_id",
         )
         == WABA_ID
     )
@@ -371,7 +449,7 @@ def test_resolve_waba_id_param():
             wa=client,
             value=987654321,
             method_arg="waba_id",
-            client_arg="business_account_id",
+            client_arg="waba_id",
         )
         == "987654321"
     )
@@ -381,7 +459,7 @@ def test_resolve_waba_id_param():
             wa=WhatsApp(),
             value=None,
             method_arg="waba_id",
-            client_arg="business_account_id",
+            client_arg="waba_id",
         )
 
 
@@ -578,6 +656,8 @@ def test_send_message(api, client):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
+        recipient=None,
+        recipient_type="individual",
         typ=types.MessageType.TEXT.value,
         msg={"body": "Hello", "preview_url": False},
         reply_to_message_id=MSG_ID,
@@ -597,6 +677,8 @@ def test_send_image(api, client):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
+        recipient=None,
+        recipient_type="individual",
         typ=types.MessageType.IMAGE.value,
         msg={
             "link": "https://example.com/image.jpg",
@@ -618,6 +700,8 @@ def test_send_video(api, client):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
+        recipient=None,
+        recipient_type="individual",
         typ=types.MessageType.VIDEO.value,
         msg={
             "id": "1234567890",
@@ -638,6 +722,8 @@ def test_send_audio(api, client):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
+        recipient=None,
+        recipient_type="individual",
         typ=types.MessageType.AUDIO.value,
         msg={
             "id": "1234567890",
@@ -658,6 +744,8 @@ def test_send_document(api, client):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
+        recipient=None,
+        recipient_type="individual",
         typ=types.MessageType.DOCUMENT.value,
         msg={
             "id": "1234567890",
@@ -680,6 +768,8 @@ def test_send_location(api, client):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
+        recipient=None,
+        recipient_type="individual",
         typ=types.MessageType.LOCATION.value,
         msg={
             "latitude": 12.34,
@@ -714,6 +804,8 @@ def test_send_contact(api, client):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
+        recipient=None,
+        recipient_type="individual",
         typ=types.MessageType.CONTACTS.value,
         msg=(
             {
@@ -762,6 +854,8 @@ def test_send_sticker(api, client):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
+        recipient=None,
+        recipient_type="individual",
         typ=types.MessageType.STICKER.value,
         msg={
             "id": "1234567890",
@@ -782,6 +876,8 @@ def test_send_reaction(api, client):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
+        recipient=None,
+        recipient_type="individual",
         typ=types.MessageType.REACTION.value,
         msg={
             "emoji": "😍",
@@ -801,6 +897,8 @@ def test_remove_reaction(api, client):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
+        recipient=None,
+        recipient_type="individual",
         typ=types.MessageType.REACTION.value,
         msg={
             "emoji": "",
@@ -821,6 +919,8 @@ def test_request_location(api, client):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
+        recipient=None,
+        recipient_type="individual",
         typ=types.MessageType.INTERACTIVE.value,
         msg={
             "action": {
@@ -845,6 +945,8 @@ def test_send_catalog(api, client):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
+        recipient=None,
+        recipient_type="individual",
         typ=types.MessageType.INTERACTIVE.value,
         msg={
             "action": {
@@ -872,6 +974,8 @@ def test_send_product(api, client):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
+        recipient=None,
+        recipient_type="individual",
         typ=types.MessageType.INTERACTIVE.value,
         msg={
             "action": {
@@ -903,6 +1007,8 @@ def test_send_products(api, client):
     api.send_message.assert_called_once_with(
         sender=PHONE_ID,
         to=TO,
+        recipient=None,
+        recipient_type="individual",
         typ=types.MessageType.INTERACTIVE.value,
         msg={
             "action": {

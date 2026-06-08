@@ -15,6 +15,7 @@ from pywa.types import (
     ReplyToMessage,
 )
 from pywa.types.base_update import BaseUpdate
+from pywa.types.chat import ChatType
 from tests.common import CLIENTS
 
 _T = TypeVar("_T", bound=BaseUpdate)
@@ -80,7 +81,7 @@ FILTERS: dict[str, dict[str, list[tuple[Callable[[_T], _T], Filter]]]] = {
         ],
         "image": [
             (same, fil.image),
-            (lambda m: add_caption(m, "caption"), fil.has_caption),
+            (lambda m: add_caption_to_image(m, "caption"), fil.has_caption),
             (
                 lambda m: modify_img_mime_type(m, "image/jpeg"),
                 fil.mimetypes("image/jpeg"),
@@ -150,9 +151,23 @@ FILTERS: dict[str, dict[str, list[tuple[Callable[[_T], _T], Filter]]]] = {
         "sent_to_me": [
             (lambda m: modify_send_to(m, CLIENTS.keys()[0].phone_id), fil.sent_to_me)
         ],
-        "from_users": [(lambda m: modify_send_from(m, "123"), fil.from_users("123"))],
+        "from_users": [
+            (lambda m: modify_send_from_user(m, "123"), fil.from_users("123"))
+        ],
         "from_countries": [
-            (lambda m: modify_send_from(m, "97212345678"), fil.from_countries("972"))
+            (
+                lambda m: modify_send_from_user(m, "97212345678"),
+                fil.from_countries("972"),
+            )
+        ],
+        "from_groups": [
+            (lambda m: modify_send_from_group(m, "Y2F"), fil.from_groups("V9nc"))
+        ],
+        "private": [
+            (same, fil.private),
+        ],
+        "group": [
+            (same, fil.group),
         ],
         "has_referred_product": [
             (lambda m: modify_referred_product(m, "IPHONE"), fil.has_referred_product)
@@ -240,7 +255,22 @@ FILTERS: dict[str, dict[str, list[tuple[Callable[[_T], _T], Filter]]]] = {
             (same, fil.flow_completion),
         ]
     },
-    "chat_opened": {"chat_opened": [(same, fil.chat_opened)]},
+    "edited_message": {
+        "image": [
+            (same, fil.image),
+        ]
+    },
+    "deleted_message": {
+        "revoke": [
+            (same, fil.new(lambda _, m: m.id != m.original_message_id)),
+        ]
+    },
+    "outgoing_message": {
+        "text": [
+            (same, fil.text),
+            (same, fil.new(lambda _, m: m.to_user == m.from_user)),
+        ]
+    },
 }
 
 
@@ -301,8 +331,10 @@ def modify_text(msg: Message, to: str):
     return dataclasses.replace(msg, text=to)
 
 
-def add_caption(msg: Message, caption: str):
-    return dataclasses.replace(msg, caption=caption)
+def add_caption_to_image(msg: Message, caption: str):
+    return dataclasses.replace(
+        msg, image=dataclasses.replace(msg.image, caption=caption)
+    )
 
 
 def modify_img_mime_type(msg: Message, mime_type: str):
@@ -345,9 +377,15 @@ def modify_status_err(status: MessageStatus, err: WhatsAppError):
     return dataclasses.replace(status, error=err)
 
 
-def modify_send_from(msg: Message, wa_id: str):
+def modify_send_from_user(msg: Message, wa_id: str):
     return dataclasses.replace(
         msg, from_user=dataclasses.replace(msg.from_user, wa_id=wa_id)
+    )
+
+
+def modify_send_from_group(msg: Message, group_id: str):
+    return dataclasses.replace(
+        msg, chat=dataclasses.replace(msg.chat, id=group_id, type=ChatType.GROUP)
     )
 
 
@@ -360,15 +398,13 @@ def modify_send_to(msg: Message, wa_id: str):
 def modify_replies_to(msg: Message, message_id: str):
     return dataclasses.replace(
         msg,
-        reply_to_message=dataclasses.replace(
-            msg.reply_to_message, message_id=message_id
-        ),
+        reply_to_message=dataclasses.replace(msg.reply_to_message, id=message_id),
     )
 
 
 def modify_referred_product(msg: Message, product: str):
     reply_to_msg = ReplyToMessage(
-        message_id=msg.id,
+        id=msg.id,
         from_user_id=msg.from_user.wa_id,
         referred_product=ReferredProduct(catalog_id="123", sku=product),
     )

@@ -17,13 +17,10 @@ from pywa.types.message_status import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.message_status import MessageStatus as _MessageStatus  # noqa MUST BE IMPORTED FIRST
 
 
-import dataclasses
-
 from .base_update import BaseUserUpdateAsync  # noqa
 from .callback import _CallbackDataT
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class MessageStatus(BaseUserUpdateAsync, _MessageStatus[_CallbackDataT]):
     """
     Represents the status of a message.

@@ -13,12 +13,10 @@ from pywa.types.user_preferences import (
     UserMarketingPreferences as _UserMarketingPreferences,
 )  # noqa MUST BE IMPORTED FIRST
 
-import dataclasses
 
 from .base_update import BaseUserUpdateAsync  # noqa
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class UserMarketingPreferences(BaseUserUpdateAsync, _UserMarketingPreferences):
     """
     Represents user marketing preferences updates from WhatsApp.

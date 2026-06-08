@@ -12,6 +12,16 @@
                 "display_phone_number": "972123456789",
                 "phone_number_id": "1122334455667"
               },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321",
+                  "user_id": "US.13491208655302741918",
+                  "parent_user_id": "US.ENT.11815799212886844830"
+                }
+              ],
               "statuses": [
                 {
                   "id": "wamid.xyzxyz",
@@ -52,6 +62,16 @@
                 "display_phone_number": "972123456789",
                 "phone_number_id": "1122334455667"
               },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321",
+                  "user_id": "US.13491208655302741918",
+                  "parent_user_id": "US.ENT.11815799212886844830"
+                }
+              ],
               "statuses": [
                 {
                   "id": "wamid.xyzxyz",
@@ -91,6 +111,16 @@
                 "display_phone_number": "972123456789",
                 "phone_number_id": "1122334455667"
               },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321",
+                  "user_id": "US.13491208655302741918",
+                  "parent_user_id": "US.ENT.11815799212886844830"
+                }
+              ],
               "statuses": [
                 {
                   "id": "wamid.xyzxyz",
@@ -130,6 +160,16 @@
                 "display_phone_number": "972123456789",
                 "phone_number_id": "1122334455667"
               },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321",
+                  "user_id": "US.13491208655302741918",
+                  "parent_user_id": "US.ENT.11815799212886844830"
+                }
+              ],
               "statuses": [
                 {
                   "id": "wamid.xyzxyz",
@@ -169,6 +209,16 @@
                 "display_phone_number": "972123456789",
                 "phone_number_id": "1122334455667"
               },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321",
+                  "user_id": "US.13491208655302741918",
+                  "parent_user_id": "US.ENT.11815799212886844830"
+                }
+              ],
               "statuses": [
                 {
                   "id": "wamid.xyzxyz",
@@ -208,6 +258,16 @@
                 "display_phone_number": "972123456789",
                 "phone_number_id": "1122334455667"
               },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321",
+                  "user_id": "US.13491208655302741918",
+                  "parent_user_id": "US.ENT.11815799212886844830"
+                }
+              ],
               "statuses": [
                 {
                   "id": "wamid.xyzxyz",
@@ -227,6 +287,49 @@
                     "pricing_model": "CBP",
                     "category": "service"
                   }
+                }
+              ]
+            },
+            "field": "messages"
+          }
+        ]
+      }
+    ]
+  },
+  "group": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "<WHATSAPP_BUSINESS_ACCOUNT_ID>",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "<BUSINESS_DISPLAY_PHONE_NUMBER>",
+                "phone_number_id": "<BUSINESS_PHONE_NUMBER_ID>"
+              },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "<USER_DISPLAY_NAME>",
+                    "username": "<USERNAME>"
+                  },
+                  "wa_id": "<USER_PHONE_NUMBER>",
+                  "user_id": "US.123456",
+                  "parent_user_id": "<PARENT_BSUID>"
+                }
+              ],
+              "statuses": [
+                {
+                  "id": "<WHATSAPP_MESSAGE_ID>",
+                  "status": "read",
+                  "timestamp": "1698266945",
+                  "recipient_id": "fowefinoewcnw",
+                  "recipient_type": "group",
+                  "recipient_participant_id": "<GROUP_PARTICIPANT_USER_PHONE_NUMBER>",
+                  "recipient_participant_user_id": "US.123456",
+                  "recipient_participant_parent_user_id": "<PARENT_BSUID>"
                 }
               ]
             },

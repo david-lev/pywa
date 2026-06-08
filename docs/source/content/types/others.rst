@@ -83,3 +83,7 @@ Others
 .. currentmodule:: pywa.utils
 
 .. autoclass:: CallbackURLScope()
+
+.. autoclass:: WebhookFields()
+
+.. autofunction:: start_ngrok_tunnel

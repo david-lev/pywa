@@ -3,193 +3,64 @@
 
 .. currentmodule:: pywa.handlers
 
-To process updates from WhatsApp, your application needs to receive **incoming webhooks**.
-This is done by running a web server that listens for requests from WhatsApp and passes them to your handlers.
+Handlers are where your bot reacts to incoming WhatsApp updates.
 
-**Why pywa Doesn’t Start the Server?**
+In pywa, every incoming webhook update is converted into a typed update object, such as
+:class:`~pywa.types.Message`, :class:`~pywa.types.CallbackButton`, or
+:class:`~pywa.types.MessageStatus`. You register callback functions for the update types you
+care about, and pywa calls the right function when WhatsApp sends an update.
 
-``pywa`` is designed for **maximum flexibility** — it does not run the server for you.
-Instead, it only registers the route that will handle incoming updates.
+The usual workflow is:
 
-This means you can:
+1. Create a :class:`~pywa.client.WhatsApp` client.
+2. Register handlers with decorators or ``Handler`` objects.
+3. Give WhatsApp a public callback URL.
+4. Run the app with ``pywa dev`` while developing, or ``pywa run`` when deploying.
 
-- Use any web framework you like.
-- Configure your server however you want.
-- Serve other parts of your app alongside ``pywa`` without restrictions.
+This guide starts with the day-to-day part: writing handlers.
 
-.. note::
+Your First Handler
+------------------
 
-    Pywa has built-in support for FastAPI and Flask, but you can use any framework that supports handling HTTP requests.
-
-Setting Up a Callback URL
--------------------------
-For WhatsApp to send updates to your server, you must provide a **callback URL** — a public, secure (``HTTPS``) endpoint that points to your running server.
-
-If you’re developing locally, you can use tunneling services like:
-
-- `ngrok <https://ngrok.com/>`_
-- `Cloudflare Tunnel <https://developers.cloudflare.com/pages/how-to/preview-with-cloudflare-tunnel/>`_
-- `localtunnel <https://localtunnel.github.io/www/>`_
-
-These create a secure, public URL that forwards traffic to your local machine.
-
-Example using ngrok:
-
-.. code-block:: bash
-    :caption: Terminal
-
-    ngrok http 8080
-
-Once you have a public URL, you must **register it** with WhatsApp — either automatically (via pywa) or manually (via the WhatsApp App Dashboard).
-
-Option 1: Automatic Callback URL Registration
----------------------------------------------
-This is the simplest method — ``pywa`` will:
-
-- Register your callback URL with WhatsApp.
-- Handle the verification request for you.
-
-**Requirements:**
-
-- Your WhatsApp App **ID** and **Secret** (unless you’re setting callback_url_scope to ``PHONE`` or ``WABA``).
-  See `Facebook docs <https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings/>`_ for how to get them.
-
-Example using FastAPI:
+A handler callback receives the WhatsApp client and the update object.
 
 .. code-block:: python
     :caption: main.py
     :linenos:
-    :emphasize-lines: 4, 9, 10, 11, 12, 13
 
-    import fastapi
-    from pywa import WhatsApp
-
-    fastapi_app = fastapi.FastAPI()
+    from pywa import WhatsApp, filters, types
 
     wa = WhatsApp(
-        phone_id='1234567890',
-        token='xxxxxx',
-        server=fastapi_app,
-        callback_url='https://subdomain.ngrok.io',  # Your public URL
-        verify_token='XYZ123',
-        app_id=123456,
-        app_secret='xxxxxx'
+        phone_id="1234567890",
+        token="EAA...",
+        verify_token="my-verify-token",
     )
 
-    # Register your handlers here
+    @wa.on_message(filters.text)
+    def echo(client: WhatsApp, msg: types.Message):
+        msg.reply(f"You said: {msg.text}")
 
-Run the server:
+Then run the file with the pywa CLI:
 
 .. code-block:: bash
     :caption: Terminal
 
-    fastapi dev main.py --port 8080
+    pywa dev
 
-.. note::
+``pywa dev`` starts the webhook server and reloads it when your code changes.
 
-    The port must match the one you expose via your tunnel.
-    Example: ``ngrok http 8080`` means your server should run on port 8080.
+Registering Handlers
+--------------------
 
-Option 2: Manual Callback URL Registration
-------------------------------------------
-If you prefer to register the callback URL yourself:
+You can register handlers in two main ways:
 
-1. Start your server so ``pywa`` can handle WhatsApp’s verification request.
-2. Go to **App Dashboard > WhatsApp > Configuration**.
-
-.. image:: ../../../../_static/guides/register-callback-url.webp
-    :alt: Register Callback URL
-
-3. Enter:
-
-   - Your server’s public URL (e.g., ``https://subdomain.ngrok.io``).
-   - The ``verify_token`` you used in your ``WhatsApp`` client initialization.
-
-Example using FastAPI:
-
-.. code-block:: python
-    :caption: main.py
-    :linenos:
-    :emphasize-lines: 4, 9, 10
-
-    import fastapi
-    from pywa import WhatsApp
-
-    fastapi_app = fastapi.FastAPI()
-
-    wa = WhatsApp(
-        phone_id='1234567890',
-        token='xxxxxx',
-        server=fastapi_app,
-        verify_token='XYZ123',
-    )
-
-    # Register your handlers here
-
-Run the server:
-
-.. code-block:: bash
-    :caption: Terminal
-
-    fastapi dev main.py --port 8080
-
-Subscribing to Webhook Fields
------------------------------
-When registering manually, you must also subscribe to webhook fields in your app settings.
-
-Go to **App Dashboard > WhatsApp > Configuration** and scroll down to the **Webhook Fields** section.
-
-.. image:: ../../../../_static/guides/subscribe-webhook-fields.webp
-    :alt: Subscribe to Webhook Fields
-
-Supported by pywa:
-
-- ``messages`` – all user-related updates (messages, callbacks, message statuses)
-- ``calls`` – call connect, terminate, and status updates
-- ``message_template_status_update`` – template approval/rejection changes
-- ``message_template_quality_update`` – template quality score changes
-- ``message_template_components_update`` – template component changes (header, body, footer, buttons)
-- ``template_category_update`` – template category changes
-- ``user_preferences`` – user marketing preferences
-
-You can also subscribe to other fields, but they won’t be processed automatically — use :meth:`~pywa.client.WhatsApp.on_raw_update` to handle them.
-
-Once everything is set up correctly, WhatsApp will start sending updates to your webhook URL.
-
---------------------------
-
-Registering Callback Functions
-------------------------------
-
-To handle incoming updates, you must **register callback functions**.
-These functions are called whenever WhatsApp sends an update.
-
-A callback function must accept two arguments:
-
-- The WhatsApp client object (:class:`~pywa.client.WhatsApp`)
-- The update object (:class:`~pywa.types.Message`, :class:`~pywa.types.CallbackButton`, etc.)
-
-**Example:**
-
-.. code-block:: python
-    :emphasize-lines: 3, 6
-
-    from pywa import WhatsApp, types
-
-    def echo_ok(client: WhatsApp, msg: types.Message):
-        msg.reply("Ok")
-
-    def react_to_button(client: WhatsApp, clb: types.CallbackButton):
-        clb.react("❤️")
-
-Once defined, you can register callbacks in two main ways:
-
-
+- Decorators, which are the simplest option for most projects.
+- ``Handler`` objects, which are useful when handlers are assembled dynamically or imported from many modules.
 
 Using decorators
 ^^^^^^^^^^^^^^^^
 
-The simplest approach is with the ``on_...`` decorators such as :meth:`~pywa.client.WhatsApp.on_message`, :meth:`~pywa.client.WhatsApp.on_callback_button` etc.
+Use the ``on_...`` decorators on your :class:`~pywa.client.WhatsApp` client.
 
 .. code-block:: python
     :caption: main.py
@@ -197,10 +68,8 @@ The simplest approach is with the ``on_...`` decorators such as :meth:`~pywa.cli
     :emphasize-lines: 7, 11
 
     from pywa import WhatsApp, types
-    from fastapi import FastAPI
 
-    fastapi_app = FastAPI()
-    wa = WhatsApp(..., server=fastapi_app)
+    wa = WhatsApp(...)
 
     @wa.on_message
     def handle_message(client: WhatsApp, msg: types.Message):
@@ -208,92 +77,98 @@ The simplest approach is with the ``on_...`` decorators such as :meth:`~pywa.cli
 
     @wa.on_callback_button
     def handle_callback_button(client: WhatsApp, clb: types.CallbackButton):
-        print(clb.data)
+        clb.react("❤️")
 
-.. code-block:: bash
-    :caption: Terminal
-
-    fastapi dev main.py
-
-.. tip::
-
-    If you don’t have access to the client instance (e.g., in a module where you define handlers), you can register handlers **directly on the WhatsApp class**.
-
-    Example:
-
-    .. code-block:: python
-        :caption: my_handlers.py
-        :linenos:
-        :emphasize-lines: 4
-
-        from pywa import WhatsApp, types
-        from fastapi import FastAPI
-
-        @WhatsApp.on_message  # Register with the class itself
-        def handle_message(client: WhatsApp, msg: types.Message):
-            print(msg)
-
-    Then load the handlers in your main file:
-
-    .. code-block:: python
-        :caption: main.py
-        :linenos:
-        :emphasize-lines: 4, 8
-
-        from pywa import WhatsApp
-        import my_handlers  # Import the module with your handlers
-
-        wa = WhatsApp(..., handlers_modules=[my_handlers])
-
-        # Or dynamically:
-        wa = WhatsApp(...)
-        wa.load_handlers_modules(my_handlers)
-
-
-Using ``Handler`` objects
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-For larger projects, or when you need to register handlers dynamically, you can wrap callback functions in ``Handler`` objects and add them via :meth:`~pywa.client.WhatsApp.add_handlers`.
-
-**Example:**
+You can pass filters to many handlers:
 
 .. code-block:: python
-    :caption: my_handlers.py
+    :caption: main.py
+    :linenos:
+    :emphasize-lines: 5
+
+    from pywa import WhatsApp, filters, types
+
+    wa = WhatsApp(...)
+
+    @wa.on_message(filters.command("start"))
+    def start(client: WhatsApp, msg: types.Message):
+        msg.reply("Welcome!")
+
+See the `filters guide <../filters/overview.html>`_ for built-in filters and custom filters.
+
+Loading handlers from modules
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If your handlers live in another module and do not have direct access to the client instance,
+register them on the :class:`~pywa.client.WhatsApp` class.
+
+.. code-block:: python
+    :caption: handlers.py
+    :linenos:
+    :emphasize-lines: 4
+
+    from pywa import WhatsApp, filters, types
+
+    @WhatsApp.on_message(filters.text)
+    def handle_text(client: WhatsApp, msg: types.Message):
+        msg.reply(msg.text)
+
+Then load that module when creating the client:
+
+.. code-block:: python
+    :caption: main.py
+    :linenos:
+    :emphasize-lines: 2, 5
+
+    from pywa import WhatsApp
+    import handlers
+
+    wa = WhatsApp(
+        ...,
+        handlers_modules=[handlers],
+    )
+
+You can also load modules later:
+
+.. code-block:: python
+
+    wa.load_handlers_modules(handlers)
+
+Using ``Handler`` objects
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For larger projects, or when handlers are created dynamically, wrap callbacks in ``Handler``
+objects and register them with :meth:`~pywa.client.WhatsApp.add_handlers`.
+
+.. code-block:: python
+    :caption: handlers.py
     :linenos:
 
-    from pywa import WhatsApp, types
+    from pywa import types
 
-    def handle_message(client: WhatsApp, msg: types.Message):
+    def handle_message(client, msg: types.Message):
         print(msg.text)
 
-    def handle_callback_button(client: WhatsApp, clb: types.CallbackButton):
+    def handle_callback_button(client, clb: types.CallbackButton):
         print(clb.data)
 
 .. code-block:: python
     :caption: main.py
     :linenos:
-    :emphasize-lines: 3, 9-10
+    :emphasize-lines: 1, 6-9
 
-    from pywa import WhatsApp, handlers
-    from fastapi import FastAPI
-    import my_handlers  # Import the module with your handlers
+    from pywa import WhatsApp, filters, handlers
+    import handlers as my_handlers
 
-    fastapi_app = FastAPI()
-    wa = WhatsApp(..., server=fastapi_app)
+    wa = WhatsApp(...)
 
     wa.add_handlers(
-        handlers.MessageHandler(callback=my_handlers.handle_message),
-        handlers.CallbackButtonHandler(callback=my_handlers.handle_callback_button),
+        handlers.MessageHandler(my_handlers.handle_message, filters.text),
+        handlers.CallbackButtonHandler(my_handlers.handle_callback_button),
     )
 
-.. code-block:: bash
-    :caption: Terminal
-
-    fastapi dev main.py
-
-
 Available Handlers
--------------------
+------------------
 
 .. list-table::
    :widths: 20 20 60
@@ -332,9 +207,6 @@ Available Handlers
    * - :meth:`~pywa.client.WhatsApp.on_template_components_update`
      - :class:`TemplateComponentsUpdateHandler`
      - :class:`~pywa.types.templates.TemplateComponentsUpdate`
-   * - :meth:`~pywa.client.WhatsApp.on_chat_opened`
-     - :class:`ChatOpenedHandler`
-     - :class:`~pywa.types.chat_opened.ChatOpened`
    * - :meth:`~pywa.client.WhatsApp.on_phone_number_change`
      - :class:`PhoneNumberChangeHandler`
      - :class:`~pywa.types.system.PhoneNumberChange`
@@ -356,152 +228,440 @@ Available Handlers
    * - :meth:`~pywa.client.WhatsApp.on_user_marketing_preferences`
      - :class:`UserMarketingPreferencesHandler`
      - :class:`~pywa.types.user_preferences.UserMarketingPreferences`
+   * - :meth:`~pywa.client.WhatsApp.on_edited_message`
+     - :class:`EditedMessageHandler`
+     - :class:`~pywa.types.message.EditedMessage`
+   * - :meth:`~pywa.client.WhatsApp.on_deleted_message`
+     - :class:`DeletedMessageHandler`
+     - :class:`~pywa.types.message.DeletedMessage`
+   * - :meth:`~pywa.client.WhatsApp.on_outgoing_message`
+     - :class:`OutgoingMessageHandler`
+     - :class:`~pywa.types.message.OutgoingMessage`
+   * - :meth:`~pywa.client.WhatsApp.on_outgoing_edited_message`
+     - :class:`OutgoingEditedMessageHandler`
+     - :class:`~pywa.types.message.OutgoingEditedMessage`
+   * - :meth:`~pywa.client.WhatsApp.on_outgoing_deleted_message`
+     - :class:`OutgoingDeletedMessageHandler`
+     - :class:`~pywa.types.message.OutgoingDeletedMessage`
+   * - :meth:`~pywa.client.WhatsApp.on_account_update`
+     - :class:`AccountUpdateHandler`
+     - :class:`~pywa.types.account_update.AccountUpdate`
    * - :meth:`~pywa.client.WhatsApp.on_raw_update`
      - :class:`RawUpdateHandler`
      - :class:`~pywa.types.base_update.RawUpdate`
 
+Handlers or Listeners?
+----------------------
 
+Handlers are best for app entry points: commands, buttons, statuses, template events, and
+other updates that start a unit of work.
 
-Filtering updates
------------------
-
-You can filter incoming updates by passing filters to your handlers.
-This is useful when you only want to react to specific types of messages.
-
-.. code-block:: python
-    :caption: main.py
-    :linenos:
-    :emphasize-lines: 5
-
-    from pywa import WhatsApp, types, filters
-
-    wa = WhatsApp(...)
-
-    @wa.on_message(filters.text)  # Only handle text messages
-    def echo(client: WhatsApp, msg: types.Message):
-        msg.reply(text=msg.text)  # msg.text is guaranteed to exist here
-
-.. tip::
-
-    Explore the :mod:`~pywa.filters` module for built-in filters,
-    or create your own. See more in the `filters guide <../filters/overview.html>`_.
-
-
-Using listeners instead of handlers
-------------------------------------
-
-Handlers are best for **entry points** in your app (e.g., commands or button clicks).
-When you need to collect additional input from the user (like their age or address),
-you can use **listeners** instead of registering a new handler at runtime.
+When you need to continue a conversation and wait for the user's next message, use a listener.
 
 .. code-block:: python
     :caption: main.py
     :linenos:
     :emphasize-lines: 7
 
-    from pywa import WhatsApp, types, filters
+    from pywa import WhatsApp, filters, types
 
     wa = WhatsApp(...)
 
     @wa.on_message(filters.command("start"))
-    def start(_: WhatsApp, msg: types.Message):
+    def start(client: WhatsApp, msg: types.Message):
         age = msg.reply("Hello! What's your age?").wait_for_reply(filters.text).text
-        ...
+        msg.reply(f"Nice, you are {age}.")
 
-.. note::
+Read more in the `listeners guide <../listeners/overview.html>`_.
 
-    Read more about listeners in the `listeners guide <../listeners/overview.html>`_.
+Making WhatsApp Reach Your App
+------------------------------
 
+WhatsApp sends updates to a public HTTPS callback URL. During local development, that usually
+means opening a tunnel from the internet to your local server.
 
-Controlling handler flow
--------------------------
-
-By default, once a handler processes an update, no other handlers are called.
+Pywa provides :func:`~pywa.utils.start_ngrok_tunnel` for this:
 
 .. code-block:: python
     :caption: main.py
     :linenos:
-    :emphasize-lines: 8
+    :emphasize-lines: 1, 3-7, 14
+
+    from pywa import WhatsApp, filters, types, utils
+
+    callback_url = utils.start_ngrok_tunnel(
+        port=8000,
+        auth_token="your-ngrok-auth-token",
+        domain="subdomain.ngrok-free.app",
+    )
+
+    wa = WhatsApp(
+        phone_id="1234567890",
+        token="EAA...",
+        app_id="1234567890",
+        app_secret="xxxx",
+        callback_url=callback_url,
+        verify_token="my-verify-token",
+    )
+
+    @wa.on_message(filters.text)
+    def echo(client: WhatsApp, msg: types.Message):
+        msg.reply(msg.text)
+
+Run the app:
+
+.. code-block:: bash
+    :caption: Terminal
+
+    pywa dev
+
+Install the ``ngrok`` package before using the helper:
+
+.. code-block:: bash
+    :caption: Terminal
+
+    pip install ngrok
+
+.. tip::
+
+    Use a static ngrok domain while developing. It keeps the callback URL stable across
+    restarts. After the first successful registration, you can usually comment out
+    ``callback_url`` to avoid registering the same webhook every time you restart the app.
+
+You can also use any other HTTPS tunnel or deployed URL, such as:
+
+- `Cloudflare Tunnel <https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/>`_
+- `localtunnel <https://localtunnel.github.io/www/>`_
+- Your production server URL
+
+Registering the Callback URL
+----------------------------
+
+WhatsApp must know where to send webhook requests. You can register the callback URL
+automatically with pywa or manually in the Meta app dashboard.
+
+Automatic registration
+^^^^^^^^^^^^^^^^^^^^^^
+
+Automatic registration is the easiest option for development and for most apps.
+
+Pass ``callback_url`` and ``verify_token`` to :class:`~pywa.client.WhatsApp`. For the default
+app-level registration, also pass ``app_id`` and ``app_secret``.
+
+.. code-block:: python
+    :caption: main.py
+    :linenos:
+    :emphasize-lines: 7-10
+
+    from pywa import WhatsApp, utils
+
+    wa = WhatsApp(
+        phone_id="1234567890",
+        token="EAA...",
+        app_id="1234567890",
+        app_secret="xxxx",
+        callback_url=utils.start_ngrok_tunnel(domain="subdomain.ngrok-free.app"),
+        verify_token="my-verify-token",
+    )
+
+When the server starts, pywa registers the URL and handles WhatsApp's verification challenge
+for you.
+
+By default, pywa registers the URL in the app scope. You can use another scope with
+``callback_url_scope``:
+
+.. code-block:: python
+    :caption: main.py
+    :linenos:
+    :emphasize-lines: 1, 8
+
+    from pywa import WhatsApp, utils
+
+    wa = WhatsApp(
+        phone_id="1234567890",
+        token="EAA...",
+        callback_url="https://example.com",
+        verify_token="my-verify-token",
+        callback_url_scope=utils.CallbackURLScope.PHONE,
+    )
+
+The required IDs depend on the scope:
+
+.. list-table::
+   :widths: 25 40 35
+   :header-rows: 1
+
+   * - Scope
+     - Registers
+     - Required values
+   * - ``CallbackURLScope.APP``
+     - The app webhook subscription
+     - ``app_id`` and ``app_secret``
+   * - ``CallbackURLScope.WABA``
+     - A WABA alternate callback URL
+     - ``waba_id``
+   * - ``CallbackURLScope.PHONE``
+     - A phone-number alternate callback URL
+     - ``phone_id``
+
+Manual registration
+^^^^^^^^^^^^^^^^^^^
+
+If you prefer to register the URL yourself:
+
+1. Create the client with the same ``verify_token`` you will enter in Meta.
+2. Start the app so pywa can answer the verification challenge.
+3. Open **App Dashboard > WhatsApp > Configuration**.
+4. Enter your public callback URL and verify token.
+
+.. image:: ../../../static/guides/register-callback-url.webp
+    :alt: Register Callback URL
+
+.. code-block:: python
+    :caption: main.py
+    :linenos:
+    :emphasize-lines: 5
+
+    from pywa import WhatsApp
+
+    wa = WhatsApp(
+        token="EAA...",
+        verify_token="my-verify-token",
+    )
+
+Subscribing to Webhook Fields
+-----------------------------
+
+When registering manually, make sure your app is subscribed to the webhook fields you need.
+
+Go to **App Dashboard > WhatsApp > Configuration** and scroll to **Webhook Fields**.
+
+.. image:: ../../../static/guides/subscribe-webhook-fields.webp
+    :alt: Subscribe to Webhook Fields
+
+Pywa can process these fields:
+
+- ``messages`` - user messages, callbacks, and message statuses
+- ``calls`` - call connect, terminate, and status updates
+- ``message_template_status_update`` - template approval or rejection updates
+- ``message_template_quality_update`` - template quality score updates
+- ``message_template_components_update`` - template component updates
+- ``template_category_update`` - template category changes
+- ``user_preferences`` - user marketing preferences
+
+If you register the callback URL automatically, pywa subscribes to the webhook fields it
+supports. You can customize the fields with ``webhook_fields``.
+
+Use :meth:`~pywa.client.WhatsApp.on_raw_update` if you want to receive unsupported webhook
+events yourself.
+
+Running pywa
+------------
+
+After handlers and callback settings are in place, run the server.
+
+Using the CLI (recommended)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Install the server extras:
+
+.. code-block:: bash
+    :caption: Terminal
+
+    pip install "pywa[server]"
+
+Use ``pywa dev`` while developing:
+
+.. code-block:: bash
+    :caption: Terminal
+
+    pywa dev
+
+Use ``pywa run`` when you want to run without auto-reload:
+
+.. code-block:: bash
+    :caption: Terminal
+
+    pywa run main.py
+
+Both commands run pywa's built-in Starlette application with Uvicorn and register the webhook
+endpoint automatically.
+
+You can also point the CLI to a specific client object:
+
+.. code-block:: bash
+    :caption: Terminal
+
+    pywa dev main:wa2
+    pywa run --app wa2
+
+Common options include:
+
+.. code-block:: bash
+    :caption: Terminal
+
+    pywa dev --reload-dir src
+    pywa run --workers 4
+
+Using ``WhatsApp.run()``
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+For quick scripts and prototypes, you can start the built-in server directly from Python:
+
+.. code-block:: python
+    :caption: main.py
+    :linenos:
+    :emphasize-lines: 7
+
+    from pywa import WhatsApp
+
+    wa = WhatsApp(...)
+
+    # Register handlers here
+
+    wa.run()
+
+This uses the same Starlette-based webhook app, but it is blocking and does not include the
+development features of ``pywa dev``. Prefer ``pywa dev`` and ``pywa run`` for normal use.
+
+Using FastAPI or Flask
+^^^^^^^^^^^^^^^^^^^^^^
+
+If your project already has a FastAPI or Flask app, pass it to ``server``.
+Pywa registers the webhook routes on that app, and you run the app yourself.
+
+FastAPI:
+
+.. code-block:: python
+    :caption: main.py
+    :linenos:
+    :emphasize-lines: 6, 11
+
+    from fastapi import FastAPI
+    from pywa import WhatsApp, filters, types
+
+    app = FastAPI()
+
+    wa = WhatsApp(
+        ...,
+        server=app,
+        webhook_endpoint="/whatsapp",
+    )
+
+    @wa.on_message(filters.text)
+    def echo(client: WhatsApp, msg: types.Message):
+        msg.reply(msg.text)
+
+Run FastAPI normally:
+
+.. code-block:: bash
+    :caption: Terminal
+
+    fastapi dev main.py
+
+Flask works the same way:
+
+.. code-block:: python
+    :caption: app.py
+    :linenos:
+    :emphasize-lines: 6, 11, 17
+
+    from flask import Flask
+    from pywa import WhatsApp, filters, types
+
+    app = Flask(__name__)
+
+    wa = WhatsApp(
+        ...,
+        server=app,
+        webhook_endpoint="/whatsapp",
+    )
+
+    @wa.on_message(filters.text)
+    def echo(client: WhatsApp, msg: types.Message):
+        msg.reply(msg.text)
+
+    if __name__ == "__main__":
+        app.run(port=8000)
+
+If you pass a custom FastAPI or Flask server, pywa does not run it for you.
+
+Handler Order and Flow
+----------------------
+
+By default, pywa stops after the first handler that matches an update.
+
+.. code-block:: python
+    :caption: main.py
+    :linenos:
 
     from pywa import WhatsApp, types
 
     wa = WhatsApp(...)
 
     @wa.on_message
-    def handle_message(client: WhatsApp, msg: types.Message):
-        print(msg)
-        # No further handlers will run
+    def first(client: WhatsApp, msg: types.Message):
+        print("first")
+        # No later message handlers run for this update.
 
     @wa.on_message
-    def handle_message2(client: WhatsApp, msg: types.Message):
-        print(msg)
+    def second(client: WhatsApp, msg: types.Message):
+        print("second")
 
-.. tip::
-
-    Handlers run in the order they’re registered, unless you set a ``priority``.
-    A higher ``priority`` value means the handler runs earlier.
-
-    .. code-block:: python
-        :caption: main.py
-        :linenos:
-        :emphasize-lines: 5, 9
-
-        from pywa import WhatsApp, types
-
-        wa = WhatsApp(...)
-
-        @wa.on_message(priority=1)
-        def first(client: WhatsApp, msg: types.Message):
-            print("First:", msg)
-
-        @wa.on_message(priority=2)  # Will run before the previous handler
-        def second(client: WhatsApp, msg: types.Message):
-            print("Second:", msg)
-
-You can change the default behavior by enabling ``continue_handling`` when creating the client:
+Handlers run in registration order unless you set ``priority``. Higher priority runs earlier.
 
 .. code-block:: python
     :caption: main.py
     :linenos:
-    :emphasize-lines: 1
+    :emphasize-lines: 5, 9
+
+    from pywa import WhatsApp, types
+
+    wa = WhatsApp(...)
+
+    @wa.on_message(priority=1)
+    def first(client: WhatsApp, msg: types.Message):
+        print("First:", msg)
+
+    @wa.on_message(priority=2)
+    def second(client: WhatsApp, msg: types.Message):
+        print("Second:", msg)
+
+To keep checking later handlers by default, enable ``continue_handling``:
+
+.. code-block:: python
+    :caption: main.py
+    :linenos:
 
     wa = WhatsApp(..., continue_handling=True)
 
-    @wa.on_message
-    def handler(client: WhatsApp, msg: types.Message):
-        print(msg)
-        # The next handler WILL also run
-
-You can also decide per-message inside a handler by using
-:meth:`~pywa.types.base_update.BaseUpdate.stop_handling` or
-:meth:`~pywa.types.base_update.BaseUpdate.continue_handling`:
+You can also control the flow from inside a handler with
+:meth:`~pywa.types.base_update.BaseUpdate.stop_handling` and
+:meth:`~pywa.types.base_update.BaseUpdate.continue_handling`.
 
 .. code-block:: python
     :caption: main.py
     :linenos:
-    :emphasize-lines: 9, 11
+    :emphasize-lines: 8, 10
 
-    from pywa import WhatsApp, types, filters
+    from pywa import WhatsApp, filters, types
 
     wa = WhatsApp(...)
 
     @wa.on_message(filters.text)
     def handle_message(client: WhatsApp, msg: types.Message):
-        print(msg)
         if msg.text == "stop":
-            msg.stop_handling()       # Stop further handlers
+            msg.stop_handling()
         else:
-            msg.continue_handling()   # Allow further handlers
+            msg.continue_handling()
 
-
-Validating updates
+Validating Updates
 ------------------
 
 WhatsApp `recommends <https://developers.facebook.com/docs/graph-api/webhooks/getting-started#event-notifications>`_
-validating updates using the ``X-Hub-Signature-256`` header.
-This ensures the update was really sent by WhatsApp.
+validating incoming webhook requests with the ``X-Hub-Signature-256`` header.
 
-To enable validation, pass your ``app_secret`` when creating the client:
+Pywa validates updates by default when ``app_secret`` is provided:
 
 .. code-block:: python
     :caption: main.py
@@ -511,15 +671,74 @@ To enable validation, pass your ``app_secret`` when creating the client:
     from pywa import WhatsApp
 
     wa = WhatsApp(
-        validate_updates=True,  # Enabled by default
         app_secret="xxxx",
+        validate_updates=True,
         ...
     )
 
-If the signature is invalid, pywa automatically responds with
-``HTTP 401 Unauthorized``.
+If no ``app_secret`` is provided, pywa disables validation and emits a warning. If validation is
+enabled and the signature is missing or invalid, pywa rejects the request before calling your
+handlers. You can disable validation explicitly with ``validate_updates=False``.
 
-You can disable validation by setting ``validate_updates=False``.
+Using Other Web Frameworks
+--------------------------
+
+FastAPI and Flask are registered automatically. For any other web framework, create the HTTP
+routes yourself and call pywa's webhook helper methods.
+
+Your framework needs two routes on the same endpoint:
+
+- ``GET`` for the verification challenge.
+- ``POST`` for incoming webhook updates.
+
+Verification route:
+
+.. code-block:: python
+    :caption: main.py
+    :linenos:
+
+    challenge, status = wa.webhook_challenge_handler(
+        vt=request.GET[utils.HUB_VT],
+        ch=request.GET[utils.HUB_CH],
+    )
+
+    return challenge, status
+
+Update route:
+
+.. code-block:: python
+    :caption: main.py
+    :linenos:
+
+    body = request.body
+
+    validation_error = wa.webhook_update_validator(
+        update=body,
+        hmac_header=request.headers.get(utils.HUB_SIG),
+    )
+
+    if validation_error:
+        return validation_error
+
+    response, status = wa.webhook_update_handler(update=body)
+    return response, status
+
+With manual framework integration, you are responsible for returning the right response format
+for your framework and for running the server.
+
+What pywa runs
+--------------
+
+When you use ``pywa dev``, ``pywa run``, or :meth:`~pywa.client.WhatsApp.run`, pywa creates a
+small Starlette app and runs it with Uvicorn.
+
+That app registers:
+
+- A ``GET`` route on ``webhook_endpoint`` for WhatsApp's verification challenge.
+- A ``POST`` route on ``webhook_endpoint`` for incoming webhook updates.
+
+For supported custom servers, pywa registers equivalent routes on the FastAPI or Flask app you
+pass to ``server``. For other frameworks, use the manual helper methods above.
 
 .. toctree::
     handler_decorators

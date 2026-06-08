@@ -1,18 +1,22 @@
 """This module contains the Server class, which is used to set up a webhook for receiving incoming updates."""
 
+import contextlib
 import logging
 import threading
+import warnings
+from collections import OrderedDict
 from typing import TYPE_CHECKING, Callable
 
+from . import _helpers as helpers
 from . import errors, handlers, utils
-from .types import MessageType, RawUpdate, UserPreferenceCategory
+from .errors import PywaDeprecationWarning
+from .types import AccountUpdate, MessageType, RawUpdate, UserPreferenceCategory
 from .types.base_update import (
     BaseUpdate,
     ContinueHandling,
     StopHandling,
 )
 from .types.system import SystemType
-from .utils import FastAPI, Flask
 
 if TYPE_CHECKING:
     from .client import WhatsApp
@@ -20,10 +24,16 @@ if TYPE_CHECKING:
 
 _MESSAGE_TYPES: dict[MessageType, type[handlers.Handler]] = {
     MessageType.BUTTON: handlers.CallbackButtonHandler,
-    MessageType.REQUEST_WELCOME: handlers.ChatOpenedHandler,
+    MessageType.EDIT: handlers.EditedMessageHandler,
+    MessageType.REVOKE: handlers.DeletedMessageHandler,
+}
+_OUTGOING_MESSAGE_TYPES: dict[MessageType, type[handlers.Handler]] = {
+    MessageType.EDIT: handlers.OutgoingEditedMessageHandler,
+    MessageType.REVOKE: handlers.OutgoingDeletedMessageHandler,
 }
 _SYSTEM_TYPES: dict[SystemType | str, type[handlers.Handler]] = {
     SystemType.USER_CHANGED_NUMBER: handlers.PhoneNumberChangeHandler,
+    SystemType.USER_CHANGED_USER_ID: handlers.PhoneNumberChangeHandler,  # That's the new system message type for phone number changes, according to BSUID documentation
     "customer_changed_number": handlers.PhoneNumberChangeHandler,  # https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/components#messages-object
     SystemType.CUSTOMER_IDENTITY_CHANGED: handlers.IdentityChangeHandler,
 }
@@ -41,6 +51,9 @@ _CALL_EVENTS: dict[str, type[handlers.Handler]] = {
 
 _logger = logging.getLogger(__name__)
 
+MAX_PROCESSED_UPDATES = 100_000
+ANYIO_THREADS_LIMIT: int | None = None
+
 
 class Server:
     """This class is used internally by the :class:`WhatsApp` client to set up a webhook for receiving incoming
@@ -48,93 +61,91 @@ class Server:
 
     def __init__(
         self: "WhatsApp",
-        server: Flask | FastAPI | None,
-        webhook_endpoint: str,
-        callback_url: str | None,
-        callback_url_scope: utils.CallbackURLScope,
-        webhook_fields: tuple[str, ...] | None,
-        app_id: int | None,
-        app_secret: str | None,
-        verify_token: str | None,
-        webhook_challenge_delay: int | None,
-        business_private_key: str | None,
-        business_private_key_password: str | None,
-        flows_request_decryptor: utils.FlowRequestDecryptor | None,
-        flows_response_encryptor: utils.FlowResponseEncryptor | None,
-        continue_handling: bool,
-        skip_duplicate_updates: bool,
-        validate_updates: bool,
     ):
-        self._server = server
-        self._verify_token = verify_token
-        self._webhook_endpoint = webhook_endpoint
-        self._private_key = business_private_key
-        self._private_key_password = business_private_key_password
-        self._flows_request_decryptor = flows_request_decryptor
-        self._app_id = app_id
-        self._app_secret = app_secret
-        self._flows_response_encryptor = flows_response_encryptor
-        self._validate_updates = validate_updates
-        self._continue_handling = continue_handling
-        self._skip_duplicate_updates = skip_duplicate_updates
-        self._updates_in_process = set[
-            str | int
-        ]()  # TODO use threading.Lock | asyncio.Lock
+        self._processed_updates: OrderedDict[str, None] = OrderedDict()
+        self._cache_lock = threading.Lock()
 
-        if server is utils.MISSING:
-            return
-        self._server_type = utils.ServerType.from_app(server)
+        self._server_type = utils.CustomServerType.from_app(self._server)
+        if self._server_type is not None:
+            self._register_routes()
 
-        if not verify_token:
+    def _setup_and_get_starlette_app(self):
+        if self._server_type is not None:
             raise ValueError(
-                "When listening for incoming updates, a verify token must be provided.\n>> The verify token can "
-                "be any string. It is used to challenge the webhook endpoint to verify that the endpoint is valid."
+                "When providing a custom `server` instance to the WhatsApp client, pywa assumes you will handle the webhook routes and server setup yourself. "
             )
-        if validate_updates and not app_secret:
-            _logger.warning(
-                "No `app_secret` provided. Signature validation will be disabled "
-                "(not recommended. set `validate_updates=False` to suppress this warning)"
-            )
-            self._validate_updates = False
+        try:
+            from starlette.applications import Starlette as StarletteApp
+        except ImportError:
+            raise ImportError(
+                'Starlette is required to run the built-in server. Please install it using `pip install "pywa[server]"`.'
+            ) from None
 
+        if ANYIO_THREADS_LIMIT is not None:
+
+            @contextlib.asynccontextmanager
+            async def lifespan(_: StarletteApp):
+                from anyio.to_thread import current_default_thread_limiter
+
+                current_default_thread_limiter().total_tokens = 100
+                yield
+        else:
+            lifespan = None
+
+        self._server, self._server_type = (
+            StarletteApp(lifespan=lifespan),
+            utils.CustomServerType.STARLETTE,
+        )
         self._register_routes()
+        return self._server
 
-        if callback_url is not None:
-            if callback_url_scope == utils.CallbackURLScope.APP and (
-                app_id is None or app_secret is None
-            ):
-                raise ValueError(
-                    "When registering a callback URL in the app scope, the `app_id` and `app_secret` must be provided.\n>> See here how "
-                    "to get them: "
-                    "https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings/"
-                )
-            elif (
-                callback_url_scope == utils.CallbackURLScope.WABA
-                and not self.business_account_id
-            ):
-                raise ValueError(
-                    "When registering a callback URL in the WABA scope, the `business_account_id` must be provided."
-                )
-            elif (
-                callback_url_scope == utils.CallbackURLScope.PHONE and not self.phone_id
-            ):
-                raise ValueError(
-                    "When registering a callback URL in the PHONE scope, the `phone_id` must be provided."
-                )
+    def run(
+        self: "WhatsApp",
+        *,
+        host: str = "127.0.0.1",
+        port: int = 8000,
+    ) -> None:
+        """
+        Run the server to listen for incoming webhooks.
 
-            self._delayed_register_callback_url(
-                callback_url=f"{callback_url.rstrip('/')}/{self._webhook_endpoint.lstrip('/')}",
-                callback_url_scope=callback_url_scope,
-                app_id=app_id,
-                app_secret=app_secret,
-                verify_token=verify_token,
-                fields=tuple(
-                    webhook_fields or handlers.Handler._handled_fields().keys()
-                ),
-                delay=webhook_challenge_delay,
-            )
+        This method starts a basic, blocking server for quick prototyping and
+        testing. It does not support advanced development features such as
+        hot-reloading.
 
-    def webhook_challenge_handler(self, vt: str, ch: str) -> tuple[str, int]:
+        For a richer developer experience (like auto-reloading on code changes)
+        and to prepare for cloud deployments, it is highly recommended to use
+        the ``pywa`` CLI instead of this method.
+
+        Example CLI Usage:
+
+            .. code-block:: bash
+
+                $ pywa dev bot.py
+
+        Args:
+            host: The host address to bind the server to (default: ``127.0.0.1``).
+            port: The port number to listen on (default: ``8000``).
+        """
+        try:
+            import uvicorn
+        except ImportError:
+            raise ImportError(
+                "Uvicorn are required to run the built-in server. "
+                'Please install it using `pip install "pywa[server]"`.'
+            ) from None
+
+        _logger.info("Starting pywa server on http://%s:%d", host, port)
+
+        uvicorn.run(
+            app=self._setup_and_get_starlette_app(),
+            host=host,
+            port=port,
+            log_config=None,
+        )
+
+    def webhook_challenge_handler(
+        self: "WhatsApp", vt: str, ch: str
+    ) -> tuple[str, int]:
         """
         Handle the verification challenge from the webhook manually.
 
@@ -159,53 +170,71 @@ class Server:
             self._verify_token,
             vt,
         )
-        return "Error, invalid verification token", 403
+        return "Forbidden", 403
 
-    def webhook_update_handler(
-        self, update: bytes, hmac_header: str = None
-    ) -> tuple[str, int]:
+    def webhook_update_validator(
+        self: "WhatsApp", update: bytes, hmac_header: str | None
+    ) -> tuple[str, int] | None:
         """
-        Handle the incoming update from the webhook manually.
-
-        - Use this function only if you are using a custom server (e.g. Django etc.).
+        Validate the incoming webhook update signature.
 
         Args:
             update: The incoming raw update from the webhook (bytes)
             hmac_header: The ``X-Hub-Signature-256`` header (to validate the signature, use ``utils.HUB_SIG`` for the key).
 
         Returns:
+            A tuple of (error_message, status_code) if validation fails, otherwise None.
+        """
+        if not self._validate_updates:
+            return None
+
+        if not hmac_header:
+            _logger.debug(
+                "Webhook ('%s') received an update without a signature",
+                self._webhook_endpoint,
+            )
+            return "Unauthorized", 401
+
+        if not utils.webhook_updates_validator(
+            app_secret=self._app_secret,
+            request_body=update,
+            x_hub_signature=hmac_header,
+        ):
+            _logger.warning(
+                "Webhook ('%s') received an update with unmatching signature: %s",
+                self._webhook_endpoint,
+                hmac_header,
+            )
+            return "Forbidden", 403
+
+        return None
+
+    def webhook_update_handler(
+        self: "WhatsApp", update: bytes, hmac_header: None = None
+    ) -> tuple[str, int]:
+        """
+        Handle the incoming update manually.
+
+        - Use this function only if you are using a custom server (e.g. Django etc.).
+
+        Args:
+            update: The incoming raw update from the webhook (bytes)
+            hmac_header: Deprecated. Use ``client.webhook_update_validator`` to validate the request first.
+
+        Returns:
             A tuple containing the response and the status code.
         """
-        res, status, raw_update, update_hash = self._check_and_prepare_update(
-            update=update, hmac_header=hmac_header
-        )
-        if res:
-            return res, status
-        self._call_handlers(raw_update)
-        return self._after_handling_update(update_hash)
+        if hmac_header is not None:
+            warnings.warn(
+                "The `hmac_header` argument in `webhook_update_handler` is deprecated and will be removed "
+                "in a future version. Use `client.webhook_update_validator` to validate the request first.",
+                PywaDeprecationWarning,
+                stacklevel=2,
+            )
+            error_response = self.webhook_update_validator(update, hmac_header)
+            if error_response:
+                return error_response
 
-    def _check_and_prepare_update(
-        self, update: bytes, hmac_header: str = None
-    ) -> tuple[str | None, int | None, RawUpdate | None, str | None]:
-        if self._validate_updates:
-            if not hmac_header:
-                _logger.debug(
-                    "Webhook ('%s') received an update without a signature",
-                    self._webhook_endpoint,
-                )
-                return "Error, missing signature", 401, None, None
-            if not utils.webhook_updates_validator(
-                app_secret=self._app_secret,
-                request_body=update,
-                x_hub_signature=hmac_header,
-            ):
-                _logger.debug(
-                    "Webhook ('%s') received an update with unmatching signature: %s, update: %s",
-                    self._webhook_endpoint,
-                    hmac_header,
-                    update,
-                )
-                return "Unmatching signature", 200, None, None
         try:
             raw_update = RawUpdate(update, hmac_header=hmac_header)
         except (TypeError, ValueError):
@@ -214,126 +243,63 @@ class Server:
                 self._webhook_endpoint,
                 update,
             )
-            return "Error, invalid update", 400, None, None
+            return "Bad Request", 400
 
-        update_hash = hmac_header or hash(update)
-        _logger.debug(
-            "Webhook ('%s') received an update: %s",
-            self._webhook_endpoint,
-            raw_update,
-        )
+        update_hash = hmac_header or str(hash(update))
+
         if self._skip_duplicate_updates:
-            if update_hash in self._updates_in_process:
-                return "ok", 200, None, None
-            self._updates_in_process.add(update_hash)
+            with self._cache_lock:
+                if update_hash in self._processed_updates:
+                    _logger.debug(
+                        "Webhook ('%s') skipped duplicate update: %s",
+                        self._webhook_endpoint,
+                        update_hash,
+                    )
+                    return "ok", 200
 
-        return None, None, raw_update, update_hash
+                self._processed_updates[update_hash] = None
 
-    def _after_handling_update(self, update_hash: str) -> tuple[str, int]:
-        if self._skip_duplicate_updates:
-            try:
-                self._updates_in_process.remove(update_hash)
-            except KeyError:
-                pass
+                if len(self._processed_updates) > MAX_PROCESSED_UPDATES:
+                    self._processed_updates.popitem(last=False)
+
+        self._call_handlers(raw_update)
+
         return "ok", 200
 
     def _register_routes(self: "WhatsApp") -> None:
+        if not self._verify_token:
+            raise ValueError(
+                "When listening for incoming updates, a `verify_token` must be provided.\n>> The verify token can "
+                "be any string. It is used to challenge the webhook endpoint to verify that the endpoint is valid."
+            )
+        if self._validate_updates and not self._app_secret:
+            warnings.warn(
+                message="No `app_secret` provided. Signature validation will be disabled "
+                "(not recommended! set `validate_updates=False` to suppress this warning)",
+                category=UserWarning,
+                stacklevel=1,
+            )
+            self._validate_updates = False
+
         match self._server_type:
-            case utils.ServerType.FLASK:
-                _logger.info("Using Flask with WSGI")
-                import flask
-
-                @self._server.route(self._webhook_endpoint, methods=["GET"])
-                @utils.rename_func(f"('{self._webhook_endpoint}')")
-                def pywa_challenge() -> flask.Response:
-                    """Automatically generated by pywa to handle the verification challenge."""
-                    ch, code = self.webhook_challenge_handler(
-                        vt=flask.request.args.get(utils.HUB_VT),
-                        ch=flask.request.args.get(utils.HUB_CH),
-                    )
-                    return flask.Response(
-                        response=ch,
-                        status=code,
-                        content_type="text/plain",
-                        headers={
-                            "X-Content-Type-Options": "nosniff",
-                        },
-                    )
-
-                @self._server.route(self._webhook_endpoint, methods=["POST"])
-                @utils.rename_func(f"('{self._webhook_endpoint}')")
-                def pywa_webhook() -> flask.Response:
-                    """Automatically generated by pywa to handle incoming updates."""
-                    res, status = self.webhook_update_handler(
-                        update=flask.request.data,
-                        hmac_header=flask.request.headers.get(utils.HUB_SIG),
-                    )
-                    return flask.Response(
-                        response=res,
-                        status=status,
-                        content_type="text/plain",
-                        headers={
-                            "X-Content-Type-Options": "nosniff",
-                        },
-                    )
-
-            case utils.ServerType.FASTAPI:
+            case utils.CustomServerType.STARLETTE:
+                _logger.info("Using Starlette")
+                helpers.register_routes_starlette(wa=self)
+            case utils.CustomServerType.FASTAPI:
                 _logger.info("Using FastAPI")
-                import fastapi
-
-                @self._server.get(self._webhook_endpoint)
-                @utils.rename_func(f"('{self._webhook_endpoint}')")
-                def pywa_challenge(
-                    vt: str = fastapi.Query(alias=utils.HUB_VT, examples=["xyzxyz"]),
-                    ch: str = fastapi.Query(
-                        alias=utils.HUB_CH, examples=["1858252904"]
-                    ),
-                ) -> fastapi.Response:
-                    """Automatically generated by pywa to handle the verification challenge."""
-                    content, status_code = self.webhook_challenge_handler(
-                        vt=vt,
-                        ch=ch,
-                    )
-                    return fastapi.Response(
-                        content=content,
-                        status_code=status_code,
-                        media_type="text/plain",
-                        headers={
-                            "X-Content-Type-Options": "nosniff",
-                        },
-                    )
-
-                async def _get_body(request: fastapi.Request):
-                    return await request.body()
-
-                @self._server.post(self._webhook_endpoint)
-                @utils.rename_func(f"('{self._webhook_endpoint}')")
-                def pywa_webhook(
-                    update: bytes = fastapi.Depends(_get_body),
-                    hmac_header: str = fastapi.Header(
-                        alias=utils.HUB_SIG, examples=["sha256=..."]
-                    ),
-                ) -> fastapi.Response:
-                    """Automatically generated by pywa to handle incoming updates."""
-                    content, status_code = self.webhook_update_handler(
-                        update=update,
-                        hmac_header=hmac_header,
-                    )
-                    return fastapi.Response(
-                        content=content,
-                        status_code=status_code,
-                        media_type="text/plain",
-                        headers={
-                            "X-Content-Type-Options": "nosniff",
-                        },
-                    )
-            case None:
-                _logger.info("Using a custom server")
-
+                helpers.register_routes_fastapi(wa=self)
+            case utils.CustomServerType.FLASK:
+                _logger.info("Using Flask")
+                helpers.register_routes_flask(wa=self)
             case _:
                 raise ValueError(
-                    f"The `server` must be one of {utils.ServerType.protocols_names()} or None for a custom server"
+                    f"The `server` must be one of {utils.CustomServerType.protocols_names()}, but got {type(self._server)}"
                 )
+        for wrapper in self._flow_handlers_to_register:
+            self._register_flow_handler_wrapper(wrapper)
+        self._flow_handlers_to_register.clear()
+        if self._callback_url is not None:
+            self._delayed_register_callback_url()
 
     def _call_handlers(self: "WhatsApp", raw_update: RawUpdate) -> None:
         """Call the handlers for the given update."""
@@ -394,8 +360,13 @@ class Server:
 
     def _process_listener(self: "WhatsApp", update: BaseUpdate) -> bool:
         """Process and answer a listener if present."""
-        listener = self._listeners.get(update.listener_identifier)
-        if not listener:
+        if not (listener_identifiers := update.listener_identifiers):
+            return False
+        for identifier in listener_identifiers:
+            listener = self._listeners.get(identifier)
+            if listener is not None:
+                break
+        else:
             return False
 
         try:
@@ -420,12 +391,13 @@ class Server:
         self: "WhatsApp", update: RawUpdate
     ) -> type[handlers.Handler] | None:
         """Get the handler for the given update."""
-
-        if (
-            self.filter_updates
-            and self.business_account_id
-            and update.id != self.business_account_id
-        ):
+        update_field = update.field
+        account_id = (
+            self.waba_id
+            if update_field != AccountUpdate._webhook_field
+            else self.business_portfolio_id
+        )
+        if self.filter_updates and account_id and update.id != account_id:
             return None
 
         try:
@@ -438,71 +410,74 @@ class Server:
         except KeyError:  # no metadata in update
             pass
 
-        if update.field in _complex_fields_handlers:
-            return _complex_fields_handlers[update.field](self, update.value)
+        if update_field in _complex_fields_handlers:
+            return _complex_fields_handlers[update_field](self, update.value)
 
         # noinspection PyProtectedMember
-        return handlers.Handler._handled_fields().get(update.field)
+        return handlers.Handler._handled_fields().get(update_field)
 
     def _delayed_register_callback_url(
         self: "WhatsApp",
-        callback_url: str,
-        callback_url_scope: utils.CallbackURLScope,
-        app_id: int,
-        app_secret: str,
-        verify_token: str,
-        fields: tuple[str, ...] | None,
-        delay: int,
     ) -> None:
+        match self._callback_url_scope:
+            case utils.CallbackURLScope.APP:
+                if self._app_id is None or self._app_secret is None:
+                    raise ValueError(
+                        "When registering a callback URL in the app scope, the `app_id` and `app_secret` must be provided.\n>> See here how "
+                        "to get them: "
+                        "https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings/"
+                    )
+            case utils.CallbackURLScope.WABA:
+                if not self.waba_id:
+                    raise ValueError(
+                        "When registering a callback URL in the `WABA` scope, the `waba_id` must be provided."
+                    )
+            case utils.CallbackURLScope.PHONE:
+                if not self.phone_id:
+                    raise ValueError(
+                        "When registering a callback URL in the `PHONE` scope, the `phone_id` must be provided."
+                    )
+        _logger.info(
+            "Registering callback URL '%s' in scope '%s' after a delay of %s seconds to allow the server to start and be ready to receive the verification challenge.",
+            self._callback_url,
+            self._callback_url_scope.name,
+            self._webhook_challenge_delay,
+        )
         threading.Timer(
-            interval=delay,
+            interval=self._webhook_challenge_delay,
             function=self._register_callback_url,
-            kwargs={
-                "callback_url": callback_url,
-                "callback_url_scope": callback_url_scope,
-                "app_id": app_id,
-                "app_secret": app_secret,
-                "verify_token": verify_token,
-                "fields": fields,
-            },
         ).start()
 
     def _register_callback_url(
         self: "WhatsApp",
-        callback_url: str,
-        callback_url_scope: utils.CallbackURLScope,
-        app_id: int,
-        app_secret: str,
-        verify_token: str,
-        fields: tuple[str, ...] | None,
     ) -> None:
         """
         This is a non-blocking function that registers the callback URL.
         It must be called after the server is running so that the challenge can be verified.
         """
         try:
-            match callback_url_scope:
+            match self._callback_url_scope:
                 case utils.CallbackURLScope.APP:
                     app_access_token = self.api.get_app_access_token(
-                        app_id=app_id, app_secret=app_secret
+                        client_id=self._app_id, client_secret=self._app_secret
                     )
                     res = self.api.set_app_callback_url(
-                        app_id=app_id,
-                        app_access_token=app_access_token["access_token"],
-                        callback_url=callback_url,
-                        verify_token=verify_token,
-                        fields=fields,
+                        app_id=self._app_id,
+                        access_token=app_access_token["access_token"],
+                        callback_url=self._callback_url,
+                        verify_token=self._verify_token,
+                        fields=tuple(self._webhook_fields),
                     )
                 case utils.CallbackURLScope.WABA:
                     res = self.api.set_waba_alternate_callback_url(
-                        waba_id=self.business_account_id,
-                        callback_url=callback_url,
-                        verify_token=verify_token,
+                        waba_id=self.waba_id,
+                        override_callback_uri=self._callback_url,
+                        verify_token=self._verify_token,
                     )
                 case utils.CallbackURLScope.PHONE:
                     res = self.api.set_phone_alternate_callback_url(
-                        callback_url=callback_url,
-                        verify_token=verify_token,
+                        override_callback_uri=self._callback_url,
+                        verify_token=self._verify_token,
                         phone_id=self.phone_id,
                     )
                 case _:
@@ -510,10 +485,12 @@ class Server:
 
             if not res["success"]:
                 raise RuntimeError("Failed to register callback URL.")
-            _logger.info("Callback URL '%s' registered successfully", callback_url)
+            _logger.info(
+                "Callback URL '%s' registered successfully", self._callback_url
+            )
         except errors.WhatsAppError as e:
             raise RuntimeError(
-                f"Failed to register callback URL '{callback_url}'. if you are using a slow/custom server, you can "
+                f"Failed to register callback URL '{self._callback_url}'. if you are using a slow/custom server, you can "
                 "increase the delay using the `webhook_challenge_delay` parameter when initializing the WhatsApp client."
             ) from e
 
@@ -557,69 +534,24 @@ class Server:
             response_encryptor=response_encryptor,
         )
 
-    def _register_flow_endpoint_callback(
-        self: "WhatsApp",
-        endpoint: str,
-        callback: handlers._FlowRequestHandlerT,
-        acknowledge_errors: bool,
-        private_key: str | None,
-        private_key_password: str | None,
-        request_decryptor: utils.FlowRequestDecryptor | None,
-        response_encryptor: utils.FlowResponseEncryptor | None,
-    ) -> handlers.FlowRequestCallbackWrapper:
-        """Internal function to register a flow endpoint callback."""
-        if self._server is None:
-            raise ValueError(
-                "When using a custom server, you must use the `get_flow_request_handler` method to get the flow "
-                "request handler and call it manually."
-            )
-        elif self._server is utils.MISSING:
-            raise ValueError(
-                "You must initialize the WhatsApp client with an web server"
-                f" ({utils.ServerType.protocols_names()}) in order to handle incoming flow requests."
-            )
-
-        return self._register_flow_callback_wrapper(
-            self.get_flow_request_handler(
-                endpoint=endpoint,
-                callback=callback,
-                acknowledge_errors=acknowledge_errors,
-                private_key=private_key,
-                private_key_password=private_key_password,
-                request_decryptor=request_decryptor,
-                response_encryptor=response_encryptor,
-            ),
-        )
-
-    def _register_flow_callback_wrapper(
+    def _register_flow_handler_wrapper(
         self: "WhatsApp",
         callback_wrapper: handlers.FlowRequestCallbackWrapper,
     ) -> handlers.FlowRequestCallbackWrapper:
         """Register the flow callback wrapper to the server."""
         match self._server_type:
-            case utils.ServerType.FLASK:
-                import flask
-
-                @self._server.route(callback_wrapper._endpoint, methods=["POST"])
-                @utils.rename_func(f"('{callback_wrapper._endpoint}')")
-                def pywa_flow() -> tuple[str, int]:
-                    """Automatically generated by pywa to handle incoming flow requests."""
-                    return callback_wrapper.handle(flask.request.json)
-
-            case utils.ServerType.FASTAPI:
-                import fastapi
-
-                @self._server.post(callback_wrapper._endpoint)
-                @utils.rename_func(f"('{callback_wrapper._endpoint}')")
-                def pywa_flow(
-                    flow_req: handlers.EncryptedFlowRequestType,
-                ) -> fastapi.Response:
-                    """Automatically generated by pywa to handle incoming flow requests."""
-                    response, status_code = callback_wrapper.handle(flow_req)
-                    return fastapi.Response(
-                        content=response,
-                        status_code=status_code,
-                    )
+            case utils.CustomServerType.STARLETTE:
+                helpers.register_flow_endpoint_starlette(
+                    wa=self, callback_wrapper=callback_wrapper
+                )
+            case utils.CustomServerType.FASTAPI:
+                helpers.register_flow_endpoint_fastapi(
+                    wa=self, callback_wrapper=callback_wrapper
+                )
+            case utils.CustomServerType.FLASK:
+                helpers.register_flow_endpoint_flask(
+                    wa=self, callback_wrapper=callback_wrapper
+                )
 
         return callback_wrapper
 
@@ -657,6 +589,8 @@ def _handle_messages_field(
         return _MESSAGE_TYPES.get(msg_type, handlers.MessageHandler)
 
     elif "statuses" in value:  # status
+        if value["statuses"][0].get("recipient_type") == "group":
+            return handlers.GroupMessageStatusesHandler
         return handlers.MessageStatusHandler
 
     _logger.warning(
@@ -699,10 +633,20 @@ def _handle_user_preferences_field(
     return None
 
 
+def _handle_smb_message_echoes_field(
+    wa: "WhatsApp", value: dict
+) -> type[handlers.Handler] | None:
+    """Handle webhook updates with 'smb_message_echoes' field."""
+    return _OUTGOING_MESSAGE_TYPES.get(
+        value["message_echoes"][0]["type"], handlers.OutgoingMessageHandler
+    )
+
+
 _complex_fields_handlers: dict[
     str, Callable[["WhatsApp", dict], type[handlers.Handler] | None]
 ] = {
     "messages": _handle_messages_field,
     "calls": _handle_calls_field,
     "user_preferences": _handle_user_preferences_field,
+    "smb_message_echoes": _handle_smb_message_echoes_field,
 }

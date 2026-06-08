@@ -49,3 +49,9 @@ Sending Messages Errors
     :show-inheritance:
 .. autoclass:: RecipientIdentityKeyMismatch()
     :show-inheritance:
+.. autoclass:: UserStoppedMarketingMessages()
+    :show-inheritance:
+.. autoclass:: BSUIDRecipientNotSupported()
+    :show-inheritance:
+.. autoclass:: MarketingTemplatesDisabledForCloudAPI()
+    :show-inheritance:

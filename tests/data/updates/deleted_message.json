@@ -1,0 +1,43 @@
+{
+  "revoke": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "<WHATSAPP_BUSINESS_ACCOUNT_ID>",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "<BUSINESS_DISPLAY_PHONE_NUMBER>",
+                "phone_number_id": "<BUSINESS_PHONE_NUMBER_ID>"
+              },
+              "contacts": [
+                {
+                  "profile": {
+                    "name": "Test Name"
+                  },
+                  "wa_id": "972987654321",
+                  "user_id": "US.13491208655302741918",
+                  "parent_user_id": "US.ENT.11815799212886844830"
+                }
+              ],
+              "messages": [
+                {
+                  "from": "<WHATSAPP_USER_PHONE_NUMBER>",
+                  "id": "<WHATSAPP_MESSAGE_ID>",
+                  "timestamp": "1697043223",
+                  "type": "revoke",
+                  "revoke": {
+                    "original_message_id": "<ORIGINAL_WHATSAPP_MESSAGE_ID>"
+                  }
+                }
+              ]
+            },
+            "field": "messages"
+          }
+        ]
+      }
+    ]
+  }
+}

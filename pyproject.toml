@@ -31,54 +31,48 @@ maintainers = [
 ]
 keywords = [
     "whatsapp",
-    "whatsapp cloud api",
-    "meta whatsapp api",
-    "whatsapp webhook",
-    "whatsapp templates",
-    "whatsapp flows",
-    "whatsapp calling",
-    "whatsapp automation",
-    "python framework",
-    "python",
-    "python library",
+    "whatsapp-cloud-api",
+    "meta-whatsapp-api",
+    "whatsapp-webhook",
+    "whatsapp-templates",
+    "whatsapp-flows",
+    "whatsapp-calling",
+    "whatsapp-bot",
+    "pywa",
     "asyncio",
     "async",
-    "whatsapp bot",
-    "chatbot",
-    "chatbot framework",
-    "messaging bot",
+    "chatbot-framework",
+    "webhook-handler",
     "automation",
-    "webhook",
-    "webhook framework",
-    "webhook handler",
-    "pywa",
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
+    "Environment :: Web Environment",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14",
     "Framework :: AsyncIO",
-    "Environment :: Web Environment",
-    "Topic :: Communications",
+    "Framework :: Starlette",
     "Topic :: Communications :: Chat",
-    "Topic :: Internet",
-    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
-    "Topic :: Software Development :: Libraries",
     "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
     "httpx>=0.27,<1.0",
 ]
 
 [project.optional-dependencies]
+server = [
+    "starlette>=0.32.0",
+    "uvicorn[standard]>=0.25.0"
+]
 dev = [
     "pytest~=9.0",
     "pytest-cov~=7.0",
@@ -102,6 +96,9 @@ docs = [
 flask = ["flask[async]"]
 fastapi = ["fastapi[standard]"]
 cryptography = ["cryptography"]
+
+[project.scripts]
+pywa = "pywa.cli:main"
 
 [project.urls]
 "Documentation" = "https://pywa.readthedocs.io/"
@@ -145,5 +142,4 @@ omit = [
     "pywa/_helpers.py",
     "pywa/types/templates.py",
     "pywa/types/sent_update.py",
-
 ]

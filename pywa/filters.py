@@ -16,6 +16,8 @@ __all__ = [
     "new",
     "true",
     "false",
+    "private",
+    "group",
     "update_id",
     "forwarded",
     "forwarded_many_times",
@@ -76,7 +78,6 @@ __all__ = [
     "template_quality",
     "template_category",
     "template_components",
-    "chat_opened",
     "call_connect",
     "outgoing_call",
     "incoming_call",
@@ -93,37 +94,75 @@ __all__ = [
     "user_marketing_preferences",
     "user_marketing_preferences_stop",
     "user_marketing_preferences_resume",
+    "account_update",
+    "account_deleted",
+    "account_restriction",
+    "account_violation",
+    "ad_account_linked",
+    "auth_intl_price_eligibility_update",
+    "business_primary_location_country_update",
+    "account_disabled",
+    "partner_added",
+    "partner_app_installed",
+    "partner_app_uninstalled",
+    "partner_client_certification_status_update",
+    "partner_removed",
+    "volume_based_pricing_tier_update",
+    "account_offboarded",
+    "account_reconnected",
 ]
 
 import re
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterable, TypeVar
 
-from . import utils
+from . import _helpers as helpers
 from .errors import WhatsAppError
-from .types import CallbackButton as _Clb
-from .types import CallbackSelection as _Cls
-from .types import CallConnect as _Cc
-from .types import CallPermissionUpdate as _Cpu
-from .types import CallStatus as _Cst
-from .types import CallTerminate as _Ct
-from .types import ChatOpened as _Co
-from .types import FlowCompletion as _Fc
-from .types import IdentityChange as _Ic
-from .types import Message as _Msg
-from .types import MessageStatus as _Ms
-from .types import MessageStatusType as _Mst
-from .types import MessageType as _Mt
-from .types import PhoneNumberChange as _Pnc
-from .types import TemplateCategoryUpdate as _Tc
-from .types import TemplateComponentsUpdate as _Tcc
-from .types import TemplateQualityUpdate as _Tq
-from .types import TemplateStatusUpdate as _Ts
-from .types import UserMarketingPreferences as _Mup
+from .types.account_update import AccountUpdate as _Au
+from .types.account_update import AccountUpdateEvent as _Aue
 from .types.base_update import (
     BaseUpdate as _BaseUpdate,
 )  # noqa
-from .types.calls import CallDirection, CallPermissionResponse, CallStatusType
+from .types.callback import CallbackButton as _Clb
+from .types.callback import CallbackSelection as _Cls
+from .types.calls import (
+    CallConnect as _Cc,
+)
+from .types.calls import (
+    CallDirection,
+    CallPermissionResponse,
+    CallStatusType,
+)
+from .types.calls import (
+    CallPermissionUpdate as _Cpu,
+)
+from .types.calls import (
+    CallStatus as _Cst,
+)
+from .types.calls import (
+    CallTerminate as _Ct,
+)
+from .types.chat import ChatType
+from .types.flows import FlowCompletion as _Fc
+from .types.message import Message as _Msg
+from .types.message_status import MessageStatus as _Ms
+from .types.message_status import MessageStatusType as _Mst
+from .types.others import MessageType as _Mt
+from .types.system import IdentityChange as _Ic
+from .types.system import PhoneNumberChange as _Pnc
+from .types.templates import (
+    TemplateCategoryUpdate as _Tc,
+)
+from .types.templates import (
+    TemplateComponentsUpdate as _Tcc,
+)
+from .types.templates import (
+    TemplateQualityUpdate as _Tq,
+)
 from .types.templates import TemplateStatus
+from .types.templates import (
+    TemplateStatusUpdate as _Ts,
+)
+from .types.user_preferences import UserMarketingPreferences as _Mup
 
 if TYPE_CHECKING:
     from pywa import WhatsApp as _Wa
@@ -207,7 +246,7 @@ def new(
 ) -> Filter:
     """Factory function to create a filter from a function (sync or async)."""
 
-    is_async = utils.is_async_callable(func)
+    is_async = helpers.is_async_callable(func)
 
     def check_sync(self, wa: _Wa, update: _T) -> bool:
         return func(wa, update)
@@ -280,8 +319,9 @@ def replays_to(*msg_ids: str) -> Filter:
     >>> replays_to("wamid.HBKHUIyNTM4NjAfiefhwojfMTNFQ0Q2MERGRjVDMUHUIGGA=")
     """
     return new(
-        lambda _, m: m.reply_to_message is not None
-        and m.reply_to_message.message_id in msg_ids
+        lambda _, m: (
+            m.reply_to_message is not None and m.reply_to_message.message_id in msg_ids
+        )
     )
 
 
@@ -297,6 +337,14 @@ Filter for messages that user sends to ask about a product
 
 >>> filters.referred_product
 """
+
+
+private = new(lambda _, m: m.chat.type == ChatType.PRIVATE, name="private")
+"""Filter for messages that are sent in private chats."""
+
+
+group = new(lambda _, m: m.chat.type == ChatType.GROUP, name="group")
+"""Filter for messages that are sent in group chats."""
 
 
 def sent_to(*, display_phone_number: str = None, phone_number_id: str = None) -> Filter:
@@ -337,33 +385,72 @@ Filter for updates that are sent to the client phone number.
 
 
 def from_users(
-    *numbers: str,
+    *ids: str,
 ) -> Filter:
     """
-    Filter for updates that are sent from the given numbers.
+    Filter for updates that are sent from the given IDs (BSUID, PARENT_BSUID, WA_ID, or PHONE_NUMBER).
 
-    >>> from_users("+1 555-555-5555", "972123456789")
+    >>> from_users("US.13491208655302741918", "+1 (631) 555-1234", "16315551234")
     """
+    from .types.sent_update import RecipientType
+
     only_nums_pattern = re.compile(r"\D")
-    numbers = tuple(re.sub(only_nums_pattern, "", n) for n in numbers)
-    return new(lambda _, m: m.from_user.wa_id in numbers, name="from_users")
+    processed_ids = set()
+
+    for identifier in ids:
+        id_type = RecipientType.from_recipient(identifier)
+        if id_type == RecipientType.GROUP_ID:
+            continue
+        if id_type == RecipientType.PHONE_NUMBER:
+            clean_id = re.sub(only_nums_pattern, "", identifier)
+            processed_ids.add(clean_id)
+        else:
+            processed_ids.add(identifier)
+
+    def filter_func(_, m) -> bool:
+        user = m.from_user
+        if not user:
+            return False
+
+        return (
+            user.bsuid in processed_ids
+            or user.wa_id in processed_ids
+            or user.parent_bsuid in processed_ids
+        )
+
+    return new(filter_func, name="from_users")
 
 
 def from_countries(
-    *prefixes: str | int,
+    *prefixes_or_codes: str | int,
 ) -> Filter:
     """
     Filter for updates that are sent from the given country codes.
 
+    - You can pass either country codes (e.g. "US", "IL") or phone number prefixes (e.g. "+1", "972").
     - See https://countrycode.org/ for a list of country codes.
 
-    It is always recommended to restrict the countries that can use your bot. remember that you pay for
-    every conversation that you reply to.
-
-    >>> from_countries("972", "1") # Israel and USA
+    >>> from_countries("972", "1", "+972", "US", "IL") # Israel and USA
     """
-    codes = tuple(str(p) for p in prefixes)
-    return new(lambda _, m: m.from_user.wa_id.startswith(codes), name="from_countries")
+    codes = tuple(str(p) for p in prefixes_or_codes)
+    country_codes = {c.upper() for c in codes if c.isalpha()}
+    phone_prefixes = tuple((c.lstrip("+")) for c in codes if not c.isalpha())
+    return new(
+        lambda _, m: (
+            m.from_user.country_code in country_codes  # country_code always exists
+            or (m.from_user.wa_id and m.from_user.wa_id.startswith(phone_prefixes))
+        ),
+        name="from_countries",
+    )
+
+
+def from_groups(*group_ids: str) -> Filter:
+    """
+    Filter for updates that are sent from the given group ids.
+
+    >>> from_groups("Y2FwaV9ncm91cDoxNzA1NTU1MDEzOToxMjAzNjM0MDQ2OTQyMzM4MjAZD")
+    """
+    return new(lambda _, m: m.chat.id in group_ids, name="from_groups")
 
 
 def matches(*strings: str, ignore_case: bool = False) -> Filter:
@@ -385,13 +472,15 @@ def matches(*strings: str, ignore_case: bool = False) -> Filter:
     """
     strings = tuple(m.lower() for m in strings) if ignore_case else strings
     return new(
-        lambda _, m: any(
-            (txt.lower() if ignore_case else txt) in strings
-            for txt_field in m._txt_fields
-            if (txt := getattr(m, txt_field)) is not None
-        )
-        if getattr(m, "_txt_fields", None)
-        else False,
+        lambda _, m: (
+            any(
+                (txt.lower() if ignore_case else txt) in strings
+                for txt_field in m._txt_fields
+                if (txt := getattr(m, txt_field)) is not None
+            )
+            if getattr(m, "_txt_fields", None)
+            else False
+        ),
         name="matches",
     )
 
@@ -415,13 +504,15 @@ def startswith(*prefixes: str, ignore_case: bool = False) -> Filter:
     """
     prefixes = tuple(m.lower() for m in prefixes) if ignore_case else prefixes
     return new(
-        lambda _, u: any(
-            (txt.lower() if ignore_case else txt).startswith(prefixes)
-            for txt_field in u._txt_fields
-            if (txt := getattr(u, txt_field)) is not None
-        )
-        if getattr(u, "_txt_fields", None)
-        else False,
+        lambda _, u: (
+            any(
+                (txt.lower() if ignore_case else txt).startswith(prefixes)
+                for txt_field in u._txt_fields
+                if (txt := getattr(u, txt_field)) is not None
+            )
+            if getattr(u, "_txt_fields", None)
+            else False
+        ),
         name="startswith",
     )
 
@@ -445,13 +536,15 @@ def endswith(*suffixes: str, ignore_case: bool = False) -> Filter:
     """
     suffixes = tuple(m.lower() for m in suffixes) if ignore_case else suffixes
     return new(
-        lambda _, u: any(
-            (txt.lower() if ignore_case else txt).endswith(suffixes)
-            for txt_field in u._txt_fields
-            if (txt := getattr(u, txt_field)) is not None
-        )
-        if getattr(u, "_txt_fields", None)
-        else False,
+        lambda _, u: (
+            any(
+                (txt.lower() if ignore_case else txt).endswith(suffixes)
+                for txt_field in u._txt_fields
+                if (txt := getattr(u, txt_field)) is not None
+            )
+            if getattr(u, "_txt_fields", None)
+            else False
+        ),
         name="endswith",
     )
 
@@ -475,14 +568,16 @@ def contains(*words: str, ignore_case: bool = False) -> Filter:
     """
     words = tuple(m.lower() for m in words) if ignore_case else words
     return new(
-        lambda _, u: any(
-            word in (txt.lower() if ignore_case else txt)
-            for word in words
-            for txt_field in u._txt_fields
-            if (txt := getattr(u, txt_field)) is not None
-        )
-        if getattr(u, "_txt_fields", None)
-        else False,
+        lambda _, u: (
+            any(
+                word in (txt.lower() if ignore_case else txt)
+                for word in words
+                for txt_field in u._txt_fields
+                if (txt := getattr(u, txt_field)) is not None
+            )
+            if getattr(u, "_txt_fields", None)
+            else False
+        ),
         name="contains",
     )
 
@@ -508,14 +603,16 @@ def regex(*patterns: str | re.Pattern, flags: int = 0) -> Filter:
         p if isinstance(p, re.Pattern) else re.compile(p, flags) for p in patterns
     )
     return new(
-        lambda _, u: any(
-            re.match(p, txt)
-            for p in patterns
-            for txt_field in u._txt_fields
-            if (txt := getattr(u, txt_field)) is not None
-        )
-        if getattr(u, "_txt_fields", None)
-        else False,
+        lambda _, u: (
+            any(
+                re.match(p, txt)
+                for p in patterns
+                for txt_field in u._txt_fields
+                if (txt := getattr(u, txt_field)) is not None
+            )
+            if getattr(u, "_txt_fields", None)
+            else False
+        ),
         name="regex",
     )
 
@@ -582,10 +679,12 @@ def command(
     """
     cmds = tuple(c.lower() for c in cmds) if ignore_case else cmds
     return new(
-        lambda _, m: m.type == _Mt.TEXT
-        and (
-            m.text[0] in prefixes
-            and (m.text[1:].lower() if ignore_case else m.text[1:]).startswith(cmds)
+        lambda _, m: (
+            m.type == _Mt.TEXT
+            and (
+                m.text[0] in prefixes
+                and (m.text[1:].lower() if ignore_case else m.text[1:]).startswith(cmds)
+            )
         ),
         name="command",
     )
@@ -656,8 +755,10 @@ def location_in_radius(lat: float, lon: float, radius: float | int) -> Filter:
     """
 
     return new(
-        lambda _, m: m.type == _Mt.LOCATION
-        and m.location.in_radius(lat=lat, lon=lon, radius=radius),
+        lambda _, m: (
+            m.type == _Mt.LOCATION
+            and m.location.in_radius(lat=lat, lon=lon, radius=radius)
+        ),
         name="location_in_radius",
     )
 
@@ -697,12 +798,16 @@ contacts = new(lambda _, m: m.type == _Mt.CONTACTS, name="contacts")
 
 
 contacts_has_wa = new(
-    lambda _, m: m.type == _Mt.CONTACTS
-    and (
-        any(
-            (
-                p.wa_id
-                for p in (phone for contact in m.contacts for phone in contact.phones)
+    lambda _, m: (
+        m.type == _Mt.CONTACTS
+        and (
+            any(
+                (
+                    p.wa_id
+                    for p in (
+                        phone for contact in m.contacts for phone in contact.phones
+                    )
+                )
             )
         )
     ),
@@ -760,10 +865,12 @@ def failed_with(
         e for e in errors if e not in error_codes and issubclass(e, WhatsAppError)
     )
     return new(
-        lambda _, s: s.status == _Mst.FAILED
-        and (
-            any((isinstance(s.error, e) for e in exceptions))
-            or s.error.code in error_codes
+        lambda _, s: (
+            s.status == _Mst.FAILED
+            and (
+                any((isinstance(s.error, e) for e in exceptions))
+                or s.error.code in error_codes
+            )
         ),
         name="status_failed_with",
     )
@@ -796,9 +903,6 @@ template_components = new(lambda _, s: isinstance(s, _Tcc), name="template_compo
 
 flow_completion = new(lambda _, f: isinstance(f, _Fc), name="flow_completion")
 """Filter for flow completion updates."""
-
-chat_opened = new(lambda _, c: isinstance(c, _Co), name="chat_opened")
-"""Filter for chat opened updates."""
 
 call_connect = new(lambda _, c: isinstance(c, _Cc), name="call_connect")
 """Filter for call connect updates."""
@@ -863,3 +967,57 @@ user_marketing_preferences_resume = new(
     name="user_marketing_preferences_resume",
 )
 """Filter for user marketing preferences updates that indicate the user has requested to resume receiving marketing messages."""
+
+account_update = new(lambda _, u: isinstance(u, _Au), name="account_update")
+"""Filter for account update updates."""
+
+account_deleted = new(
+    lambda _, u: u.event == _Aue.ACCOUNT_DELETED, name="account_deleted"
+)
+account_restriction = new(
+    lambda _, u: u.event == _Aue.ACCOUNT_RESTRICTION, name="account_restriction"
+)
+account_violation = new(
+    lambda _, u: u.event == _Aue.ACCOUNT_VIOLATION, name="account_violation"
+)
+ad_account_linked = new(
+    lambda _, u: u.event == _Aue.AD_ACCOUNT_LINKED, name="ad_account_linked"
+)
+auth_intl_price_eligibility_update = new(
+    lambda _, u: u.event == _Aue.AUTH_INTL_PRICE_ELIGIBILITY_UPDATE,
+    name="auth_intl_price_eligibility_update",
+)
+business_primary_location_country_update = new(
+    lambda _, u: u.event == _Aue.BUSINESS_PRIMARY_LOCATION_COUNTRY_UPDATE,
+    name="business_primary_location_country_update",
+)
+account_disabled = new(
+    lambda _, u: u.event == _Aue.DISABLED_UPDATE, name="account_disabled"
+)
+mm_lite_terms_signed = new(
+    lambda _, u: u.event == _Aue.MM_LITE_TERMS_SIGNED, name="mm_lite_terms_signed"
+)
+partner_added = new(lambda _, u: u.event == _Aue.PARTNER_ADDED, name="partner_added")
+partner_app_installed = new(
+    lambda _, u: u.event == _Aue.PARTNER_APP_INSTALLED, name="partner_app_installed"
+)
+partner_app_uninstalled = new(
+    lambda _, u: u.event == _Aue.PARTNER_APP_UNINSTALLED, name="partner_app_uninstalled"
+)
+partner_client_certification_status_update = new(
+    lambda _, u: u.event == _Aue.PARTNER_CLIENT_CERTIFICATION_STATUS_UPDATE,
+    name="partner_client_certification_status_update",
+)
+partner_removed = new(
+    lambda _, u: u.event == _Aue.PARTNER_REMOVED, name="partner_removed"
+)
+volume_based_pricing_tier_update = new(
+    lambda _, u: u.event == _Aue.VOLUME_BASED_PRICING_TIER_UPDATE,
+    name="volume_based_pricing_tier_update",
+)
+account_offboarded = new(
+    lambda _, u: u.event == _Aue.ACCOUNT_OFFBOARDED, name="account_offboarded"
+)
+account_reconnected = new(
+    lambda _, u: u.event == _Aue.ACCOUNT_RECONNECTED, name="account_reconnected"
+)
