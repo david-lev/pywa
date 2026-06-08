@@ -3,7 +3,11 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-#### 4.0.0b7 (2026-04-30) **Latest Beta**
+#### 4.0.0 (2026-06-09) **Latest**
+
+WORK IN PROGRESS
+
+#### 4.0.0b7 (2026-04-30)
 
 - [helpers] fix incoming updates in `fastapi` and `starlette`
 - [helpers] hide webhook endpoints from OpenAPI schema

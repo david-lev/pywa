@@ -19,48 +19,147 @@
 
 ### New features
 
-- [user] Full support for
-  BSUIDs ([Business-Scoped User IDs](https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids)),
-  usernames, parent BSUIDs, and `country_code`.
-- [groups] Full support for group management: creating updating and fetching groups, invite links, join requests,
-  participant management, and
-  message pin/unpin.
-- [handlers] Added `GroupMessageStatusesHandler` and `on_group_message_statuses` for group delivery/read status updates.
-- [message] Incoming messages now expose `chat` metadata, so you can distinguish private and group chats directly (the
-  `Chat` object includes `id` and `type`).
-- [filters] Added `filters.private`, `filters.group`, and `filters.from_groups(...)`.
-- [filters] `filters.from_countries(...)` now supports both phone prefixes and ISO country codes.
-- [templates] Added `ContactInfoRequestButton` and `CreativeFeaturesSpec.all_enabled()` / `.all_disabled()`.
-- [system] Phone number change updates now include BSUID-related fields (`new_user_id`, `new_parent_id`) when available.
+Pywa 4.x is mostly about making the library ready for Meta's new identity model, improving webhook development, and
+adding the APIs needed for groups, usernames, richer templates, and business management.
+
+#### User identity and BSUID readiness
+
+- Full support for
+  [BSUIDs (Business-Scoped User IDs)](https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids),
+  parent BSUIDs, usernames, and `country_code`.
+- `types.User.wa_id` is now optional. Users who enable usernames may no longer expose a phone-number-based WhatsApp ID.
+- `types.User.preferred_id` can resolve IDs using `WhatsApp(user_identifier_priority=...)`, so you can decide whether
+  your app prefers `wa_id`, `bsuid`, or `parent_bsuid` when more than one identifier is available.
+- `filters.from_users(...)` now accepts BSUIDs, parent BSUIDs, WA IDs, and formatted phone numbers.
+- Phone number change updates now expose BSUID-related fields (`new_user_id`, `new_parent_id`) when Meta sends them.
+
+#### Groups and chat-aware updates
+
+- Full group management support: create, update, delete, fetch groups, manage invite links, handle join requests, and
+  add or remove participants.
+- Incoming messages now expose `msg.chat`, a `Chat` object with `id` and `type`, so handlers can distinguish private
+  chats from groups.
+- Added `filters.private`, `filters.group`, and `filters.from_groups(...)`.
+- Added `GroupMessageStatusesHandler` and `wa.on_group_message_statuses(...)` for group delivery/read status updates.
+- Sent messages now expose `sent.chat` instead of storing the recipient as a plain string field.
+- Sent messages can be pinned and unpinned when the target chat supports it.
+
+#### Webhooks, CLI, and local development
+
+- Added the built-in server workflow:
+    - `pywa dev` for development with auto-reload.
+    - `pywa run` for production-style serving.
+    - `WhatsApp.run()` for small scripts and quick prototypes.
+- Added `utils.start_ngrok_tunnel(...)` to make local webhook testing easier.
+- `webhook_fields` now accepts `utils.WebhookFields`, so you can add or remove fields from pywa's default subscription
+  set.
+- Webhook validation and endpoint registration were refactored to work consistently across the built-in Starlette app,
+  FastAPI, Flask, and manual integrations.
+- Listeners now warn when no timeout is provided and prevent usage with multiple Uvicorn workers.
+
+#### Messages, media, callbacks, and account updates
+
+- Added `EditedMessage`, `DeletedMessage`, `OutgoingEditedMessage`, and `OutgoingDeletedMessage` updates for
+  Coexistence support.
+- Added `AccountUpdate` and related enums for `account_update` webhooks.
+- Media objects now store their `caption`.
+- Media upload internals now support async pending uploads with `PendingMedia`.
+- Added `ContactInfoRequestButton` for requesting a user's contact information.
+- Added `send_carousel(...)` and `reply_carousel(...)` for interactive media carousel messages.
+- Added `ContactList` for shared contact handling.
+
+#### Business management and templates
+
+- Added methods to retrieve shared and owned WABAs.
+- Added methods to create and verify phone numbers on a WhatsApp Business Account.
+- Added username management methods: `set_username`, `get_current_username`, `get_reserved_usernames`, and
+  `delete_username`.
+- Added WABA settings updates, including `degrees_of_freedom_spec`.
+- Template components now have better validation, easier component lookup, `param_names`, stricter URL variable checks,
+  and improved errors for positional/named examples.
+- `Template.duplicate(...)` now supports `target_waba_id`.
+- Added `CreativeFeaturesSpec.all_enabled()` and `CreativeFeaturesSpec.all_disabled()`.
+- Pywa-specific deprecation warnings now use `PywaDeprecationWarning`.
 
 ### Breaking changes
 
-- [user] User identity is now BSUID-first.
-    - **`User.wa_id` is now optional and may be `None`. Switch to `User.bsuid`!!**
-    - `User` now includes `bsuid`, `username`, `parent_bsuid` and `country_code`.
-    - The default `WhatsApp(user_identifier_priority=...)` is `bsuid -> wa_id`. This will affect the value of
-      `User.preferred_id` that is used in various places (e.g., replying to messages, blocking users, etc.).
-- [chat_opened] `ChatOpened` support was removed.
-    - `types.ChatOpened`, `handlers.ChatOpenedHandler`, `wa.on_chat_opened(...)` and `filters.chat_opened` are no longer
-      available.
-    - The `chat_opened_enabled` parameter was removed from the `types.ConversationalAutomation` spec.
-- [listeners] `wa.listen(to="...")` no longer accepts a raw phone number / wa_id directly.
-    - Use `listeners.UserUpdateListenerIdentifier(...)` explicitly.
-- [message] `Message.system` was removed.
-    - If you still check `msg.system`, switch to `PhoneNumberChange` / `IdentityChange` handlers.
-- [deprecated] Deprecated aliases were removed.
-    - `types.ButtonUrl` -> `types.URLButton`
-    - `types.flows.OpenUrlAction` -> `types.flows.OpenURLAction`
-- [message] `Message.download_media(..., in_memory=True)` was removed.
-    - Use `msg.get_media_bytes()` or `msg.stream_media()` instead.
-- [sent_message] Sent updates no longer expose `to_user`.
-    - Use `sent.recipient` / `sent.to` instead.
+#### 1. Treat `User.wa_id` as optional
+
+`User.wa_id` may be `None` when a user enables WhatsApp usernames. Store `User.bsuid` now, and only use `wa_id` when
+you specifically need a phone-number-based identifier and have checked that it exists.
+
+`User` now includes:
+
+- `bsuid`
+- `wa_id`
+- `username`
+- `parent_bsuid`
+- `country_code`
+
+If you use `user.preferred_id`, review `WhatsApp(user_identifier_priority=...)` and choose the order that matches your
+app. The current default remains phone-number-compatible, but your code should be ready for BSUID-first behavior as
+Meta expands BSUID-based endpoints.
+
+#### 2. Remove `ChatOpened` usage
+
+`ChatOpened` support was removed:
+
+- `types.ChatOpened`
+- `handlers.ChatOpenedHandler`
+- `wa.on_chat_opened(...)`
+- `filters.chat_opened`
+- `chat_opened_enabled` in `types.ConversationalAutomation`
+
+Use message, callback, listener, or template entry points instead.
+
+#### 3. Update direct `wa.listen(...)` calls
+
+`wa.listen(to="...")` no longer accepts a raw phone number or WA ID. Use a listener identifier explicitly:
+
+- `listeners.UserUpdateListenerIdentifier(...)` for user updates.
+- `listeners.TemplateStatusUpdateListenerIdentifier(...)` for template status updates.
+
+The shortcut methods such as `msg.reply(...).wait_for_reply(...)`, `sent.wait_for_click(...)`, and
+`created_template.wait_until_approved(...)` remain the preferred API for most code.
+
+#### 4. Replace `Message.system`
+
+`Message.system` was removed. System events are separate updates now:
+
+- `wa.on_phone_number_change(...)`
+- `wa.on_identity_change(...)`
+
+#### 5. Replace removed aliases
+
+Deprecated aliases were removed:
+
+- `types.ButtonUrl` -> `types.URLButton`
+- `types.flows.OpenUrlAction` -> `types.flows.OpenURLAction`
+
+#### 6. Replace in-memory media downloads
+
+`Message.download_media(..., in_memory=True)` was removed:
+
+- Use `msg.get_media_bytes()` when you need all bytes in memory.
+- Use `msg.stream_media()` when you want to stream large files.
+- Use `msg.download_media(...)` when you want to save the file to disk.
+
+#### 7. Update sent-message recipient access
+
+Sent updates now expose the destination as `sent.chat`.
+
+- Use `sent.chat.id` for the destination ID.
+- Use `sent.chat.type` to distinguish private and group chats.
+- Use `sent.to` when you only need the destination ID compatibility shortcut.
+- Stop using `sent.to_user`.
 
 ---
 
 ### Migration steps
 
-1. Update user handling to work with BSUIDs and optional `wa_id`.
+#### Step 1: Update user identity storage
+
+Old code often used `wa_id` as the only stable user key. In 4.x, store `bsuid` and treat `wa_id` as optional.
 
 ```python
 ########################## OLD CODE ##########################
@@ -71,14 +170,16 @@ wa = WhatsApp(...)
 
 
 def save_user_to_db(user: types.User):
-    wa_id = user.wa_id
-    ...
+    db.save_user(
+        user_id=user.wa_id,
+        name=user.name,
+    )
 
 
 @wa.on_message
 def on_message(_: WhatsApp, msg: types.Message):
     save_user_to_db(msg.from_user)
-    msg.reply(f"Hello {msg.from_user.name}!")
+    msg.reply(f"Hello {msg.from_user.name or 'there'}!")
 
 
 ########################## NEW CODE ##########################
@@ -89,17 +190,87 @@ wa = WhatsApp(...)
 
 
 def save_user_to_db(user: types.User):
-    bsuid = user.bsuid
-    ...
+    db.save_user(
+        bsuid=user.bsuid,
+        wa_id=user.wa_id,
+        username=user.username,
+        parent_bsuid=user.parent_bsuid,
+        country_code=user.country_code,
+        name=user.name,
+    )
 
 
 @wa.on_message
 def on_message(_: WhatsApp, msg: types.Message):
     save_user_to_db(msg.from_user)
-    msg.reply(f"Hello {msg.from_user.name}!")
+    msg.reply(f"Hello {msg.from_user.name or 'there'}!")
 ```
 
-2. If you used `download_media(in_memory=True)` or `sent.to_user`, switch to the new APIs.
+If you need to choose which identifier pywa uses for user actions, configure `user_identifier_priority`:
+
+```python
+from pywa import WhatsApp, utils
+
+wa = WhatsApp(
+    ...,
+    user_identifier_priority=(
+        utils.UserIdentifier.BSUID,
+        utils.UserIdentifier.WA_ID,
+        utils.UserIdentifier.PARENT_BSUID,
+    ),
+)
+```
+
+#### Step 7: Run webhooks with the new built-in server
+
+If you previously created a FastAPI or Flask app only to host pywa webhooks, you can usually remove that framework and
+run pywa directly.
+
+```python
+from pywa import WhatsApp, filters, types, utils
+
+callback_url = utils.start_ngrok_tunnel(
+    auth_token="NGROK_AUTH_TOKEN",
+    domain="your-domain.ngrok-free.app",
+)
+
+wa = WhatsApp(
+    phone_id="1234567890",
+    token="EAA...",
+    app_id="1234567890",
+    app_secret="********",
+    callback_url=callback_url,
+    verify_token="my-verify-token",
+)
+
+
+@wa.on_message(filters.text)
+def echo(_: WhatsApp, msg: types.Message):
+    msg.reply(msg.text)
+```
+
+```bash
+pywa dev
+pywa run
+```
+
+#### Step 3: Update filters that identify users
+
+`filters.from_users(...)` now accepts several identifier formats. Prefer BSUIDs where you have them, but existing
+phone-number filters can often keep working.
+
+```python
+from pywa import WhatsApp, filters, types
+
+wa = WhatsApp(...)
+
+
+@wa.on_message(filters.from_users("US.13491208655302741918", "+1 (631) 555-1234"))
+def trusted_user(_: WhatsApp, msg: types.Message):
+    msg.reply("You are on the allowlist.")
+```
+
+#### Step 4: Replace in-memory media downloads
 
 ```python
 ########################## OLD CODE ##########################
@@ -112,7 +283,7 @@ wa = WhatsApp(...)
 @wa.on_message
 def on_message(_: WhatsApp, msg: types.Message):
     media_bytes = msg.download_media(in_memory=True)
-    ...
+    store(media_bytes)
 
 
 ########################## NEW CODE ##########################
@@ -124,11 +295,74 @@ wa = WhatsApp(...)
 
 @wa.on_message
 def on_message(_: WhatsApp, msg: types.Message):
-    media_bytes = msg.get_media_bytes()  # or even better, use msg.stream_media() for large files
-    ...
+    media_bytes = msg.get_media_bytes()
+    store(media_bytes)
+
+
+@wa.on_message
+def upload_large_file(_: WhatsApp, msg: types.Message):
+    upload_stream(msg.stream_media())
 ```
 
-3. If you want to distinguish private chats from groups, switch to `msg.chat` / the new filters.
+#### Step 5: Update sent-message recipient access
+
+```python
+########################## OLD CODE ##########################
+
+sent = wa.send_message(to="1234567890", text="Hello")
+
+audit_log.write(
+    message_id=sent.id,
+    to_user=sent.to_user,
+)
+
+########################## NEW CODE ##########################
+
+sent = wa.send_message(to="1234567890", text="Hello")
+
+audit_log.write(
+    message_id=sent.id,
+    chat_id=sent.chat.id,
+    chat_type=sent.chat.type,
+)
+
+# If you only need the destination ID:
+destination = sent.to
+```
+
+#### Step 6: Replace `ChatOpened` entry points
+
+```python
+########################## OLD CODE ##########################
+
+from pywa import WhatsApp, types
+
+wa = WhatsApp(...)
+
+
+@wa.on_chat_opened
+def opened_chat(_: WhatsApp, update: types.ChatOpened):
+    wa.send_message(to=update.from_user.wa_id, text="Welcome!")
+
+
+########################## NEW CODE ##########################
+
+from pywa import WhatsApp, filters, types
+
+wa = WhatsApp(...)
+
+
+@wa.on_message(filters.command("start"))
+def start(_: WhatsApp, msg: types.Message):
+    msg.reply("Welcome!")
+
+
+@wa.on_callback_button(filters.matches("start"))
+def start_clicked(_: WhatsApp, clb: types.CallbackButton):
+    clb.reply_text("Welcome!")
+```
+
+#### Step 7: Use chat-aware group/private handling
 
 ```python
 from pywa import WhatsApp, filters, types
@@ -138,13 +372,13 @@ wa = WhatsApp(...)
 
 @wa.on_message(filters.group)
 def on_group_message(_: WhatsApp, msg: types.Message):
-    msg.reply("Replying publicly to the group")
-    msg.reply("Replying privately to the sender", private=True)
+    msg.reply(f"Public reply in group {msg.chat.id}")
+    msg.reply("Private reply to the sender", private=True)
 
 
 @wa.on_message(filters.private)
 def on_private_message(_: WhatsApp, msg: types.Message):
-    msg.reply("Hello private user!")
+    msg.reply("Hello from a private chat!")
 ```
 
 ## Migration from 2.x to 3.x
