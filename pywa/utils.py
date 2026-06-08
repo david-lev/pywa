@@ -428,6 +428,7 @@ def start_ngrok_tunnel(
     port: int = 8000,
     host: str = "127.0.0.1",
     auth_token: str | None = None,
+    domain: str | None = None,
     **forward_options,
 ) -> str:
     """
@@ -435,22 +436,29 @@ def start_ngrok_tunnel(
 
     - This function requires the `ngrok <https://pypi.org/project/ngrok/>`_ package to be installed. To install it, run `pip install ngrok`.
     - This function is useful for testing webhooks locally without deploying to a server.
+    - Use a **static domain** to keep your public URL constant across restarts. After the first run, comment out the ``callback_url`` parameter in your client to avoid unnecessary webhook re-registration every time you restart the server.
 
     >>> from pywa.utils import start_ngrok_tunnel
     >>> from pywa import WhatsApp
 
     >>> callback_url = start_ngrok_tunnel(
-    ...     auth_token="your_ngrok_auth_token",
-    ...     domain="subdomain.ngrok-free.app",
+    ...     auth_token="your_ngrok_auth_token", # https://dashboard.ngrok.com/get-started/your-authtoken
+    ...     domain="subdomain.ngrok-free.app", # https://dashboard.ngrok.com/domains
     ... )
 
-    >>> wa = WhatsApp(callback_url=callback_url, ...)
-    >>> wa.run(port=8000)
+    >>> wa = WhatsApp(callback_url=callback_url, ...) # when using a static domain, you can comment out the callback_url parameter after the first run to avoid unnecessary webhook re-registration every time you restart the server.
+
+    - Run in the terminal to start the server:
+
+    .. code-block:: bash
+
+        pywa dev
 
     Args:
         port: The local port to forward.
         host: The local host (default is ``localhost``).
         auth_token: The ngrok authtoken (found in your `ngrok dashboard <https://dashboard.ngrok.com/get-started/your-authtoken>`_).
+        domain: The ngrok domain to use (found in your `ngrok dashboard <https://dashboard.ngrok.com/domains>`_). Optional. If not provided, ngrok will generate a random subdomain for you.
         **forward_options: Additional options passed to `ngrok.forward() <https://ngrok.github.io/ngrok-python/#full-configuration>`_.
     """
     try:
@@ -465,6 +473,7 @@ def start_ngrok_tunnel(
         addr=f"{host}:{port}",
         authtoken=auth_token,
         labels="edge:pywa",
+        domain=domain,
         **forward_options,
     ).url()
 
