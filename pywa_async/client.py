@@ -257,8 +257,8 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         ) = utils.Version.GRAPH_API,
         handlers_modules: Iterable[ModuleType] | None = None,
         user_identifier_priority: tuple[UserIdentifier, ...] = (
-            UserIdentifier.BSUID,
             UserIdentifier.WA_ID,
+            UserIdentifier.BSUID,
             UserIdentifier.PARENT_BSUID,
         ),
         business_account_id: None = None,
@@ -321,7 +321,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             skip_duplicate_updates: Whether to skip duplicate updates (default: ``True``).
             validate_updates: Whether to `validate <https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/create-webhook-endpoint#validation-1>`_ incoming update payloads (default: ``True``; requires ``app_secret``).
             handlers_modules: Python modules from which handlers should be automatically loaded.
-            user_identifier_priority: The priority order of user identifiers to use when replying to messages, blocking users, etc (default: ``bsuid`` > ``wa_id`` > ``parent_bsuid``)
+            user_identifier_priority: The priority order of user identifiers to use when replying to messages, blocking users, etc (default: ``wa_id`` > ``bsuid`` > ``parent_bsuid``)
             business_account_id: Deprecated alias for ``waba_id`` (the WhatsApp Business Account ID that owns the phone number).
         """
         super().__init__(

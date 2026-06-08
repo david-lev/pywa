@@ -260,8 +260,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         ) = utils.Version.GRAPH_API,
         handlers_modules: Iterable[ModuleType] | None = None,
         user_identifier_priority: tuple[UserIdentifier, ...] = (
-            UserIdentifier.BSUID,
             UserIdentifier.WA_ID,
+            UserIdentifier.BSUID,
             UserIdentifier.PARENT_BSUID,
         ),
         business_account_id: None = None,
@@ -324,7 +324,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             skip_duplicate_updates: Whether to skip duplicate updates (default: ``True``).
             validate_updates: Whether to `validate <https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/create-webhook-endpoint#validation-1>`_ incoming update payloads (default: ``True``; requires ``app_secret``).
             handlers_modules: Python modules from which handlers should be automatically loaded.
-            user_identifier_priority: The priority order of user identifiers to use when replying to messages, blocking users, etc (default: ``bsuid`` > ``wa_id`` > ``parent_bsuid``)
+            user_identifier_priority: The priority order of user identifiers to use when replying to messages, blocking users, etc (default: ``wa_id`` > ``bsuid`` > ``parent_bsuid``)
             business_account_id: Deprecated alias for ``waba_id`` (the WhatsApp Business Account ID that owns the phone number).
         """
         try:
@@ -429,11 +429,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def _resolve_user_identifier(self, user: BaseUser) -> Generator[str]:
         """Resolve the user identifier based on the client's priority configuration."""
         for ui in self._user_identifier_priority:
-            if (
-                ui in {UserIdentifier.BSUID, UserIdentifier.PARENT_BSUID}
-                and not SUPPORTS_BSUID_API
-            ):
-                continue
             identifier = getattr(user, ui.user_attr)
             if identifier:
                 yield identifier
