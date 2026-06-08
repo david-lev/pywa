@@ -17,12 +17,11 @@
     git clone https://github.com/david-lev/pywa.git
     cd pywa && pip3 install -U .
 
-- **For webhook features (FastAPI or Flask):**
+- **For webhook features:**
 
 .. code-block:: bash
 
-    pip3 install -U "pywa[fastapi]"
-    pip3 install -U "pywa[flask]"
+    pip3 install -U "pywa[server]"
 
 - **For Flow features with default encryption/decryption:**
 

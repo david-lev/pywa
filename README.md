@@ -33,26 +33,6 @@ design and send **template messages**, and enjoy **blazing-fast async support** 
 Flask**, and more.
 Fully **typed**, **documented**, and **production-ready** — build powerful bots in minutes.
 
----
-
-> [!IMPORTANT]
-> **Action Required: WhatsApp BSUID Migration**
->
-> WhatsApp is transitioning
-> to [Business-Scoped User IDs](https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids) (
-> BSUID). This is a breaking change in how user IDs are handled and will be rolled out by Meta in the near future.
->
-> pywa `4.0.0` (Beta) includes full support for BSUID and is required to ensure compatibility once the change takes
-> effect.
->
-> * **Install Beta:** `pip install -U pywa --pre`
-> * **Migration Guide:** https://pywa.readthedocs.io/en/dev/content/migration.html#migration-from-3-x-to-4-x
-> * **Issues:** Please report any BSUID-related bugs: https://github.com/david-lev/pywa/issues
->
-> We recommend upgrading and testing your integration ahead of the official rollout.
-
----
-
 
 📄 **Quick Documentation Index**
 --------------------------------
@@ -79,7 +59,7 @@ Fully **typed**, **documented**, and **production-ready** — build powerful bot
 - **📄 Templates** – Create and send powerful WhatsApp templates.
 - **♻️ Flows** – Build interactive WhatsApp flows effortlessly.
 - **📞 Calls Support** – Receive and handle call events.
-- **🔄 Webhook-Ready** – Native support for Flask, FastAPI, and more.
+- **🔄 Webhook-Ready** – Built-in server for development and production, or attach to your own FastAPI/Flask app.
 - **🔬 Filters** – Advanced filtering for incoming updates.
 - **✅ Production-Ready** – Typed, documented, and fully tested.
 
@@ -88,30 +68,71 @@ Fully **typed**, **documented**, and **production-ready** — build powerful bot
 👨‍💻 **How to Use**
 ------------------
 
-- **Send a message**
+### 1. Handle incoming messages
 
-> See [WhatsApp Client](https://pywa.readthedocs.io/en/latest/content/client/overview.html) for all the options.
+Start with a `WhatsApp` client and register handlers for the updates you want to receive.
+During development, run the webhook server with `pywa dev`. For production, use `pywa run`.
+
+```python
+# main.py
+from pywa import WhatsApp, filters, types, utils
+
+callback_url = utils.start_ngrok_tunnel(
+    auth_token="NGROK_AUTH_TOKEN",
+    domain="your-domain.ngrok-free.app",
+)
+
+wa = WhatsApp(
+    phone_id="1234567890",
+    token="EAA...",
+    app_id="1234567890",
+    app_secret="********",
+    callback_url=callback_url,
+    verify_token="my-verify-token",
+)
+
+
+@wa.on_message(filters.text)
+def echo(client: WhatsApp, msg: types.Message):
+    msg.reply(f"You said: {msg.text}")
+```
+
+Run it:
+
+```bash
+pywa dev
+```
+
+Use this when deploying:
+
+```bash
+pywa run
+```
+
+> See the [Handlers guide](https://pywa.readthedocs.io/en/latest/content/handlers/overview.html) for decorators,
+> filters, callback URL registration, custom servers, and handler flow.
+
+### 2. Send messages, media, templates, flows, and manage resources
+
+Use the same client to send messages, media, templates, flows, and to manage WhatsApp Business resources.
 
 ```python
 from pywa import WhatsApp, types
 
-# Create a WhatsApp client
 wa = WhatsApp(
-    phone_id="100458559237541",
-    token="EAAEZC6hUxkTIB"
+    phone_id="1234567890",
+    token="EAA...",
 )
 
-# Send a text message with buttons
 wa.send_message(
     to="9876543210",
     text="Hello from PyWa!",
     buttons=[
         types.Button(title="Menu", callback_data="menu"),
-        types.Button(title="Help", callback_data="help")
-    ]
+        types.Button(title="Help", callback_data="help"),
+    ],
 )
 
-# Send a image message from URL
 wa.send_image(
     to="9876543210",
     image="https://example.com/image.jpg",
@@ -119,84 +140,72 @@ wa.send_image(
 )
 ```
 
-- **Handle incoming updates** (with [FastAPI](https://fastapi.tiangolo.com/) in this example)
+> See the [Client guide](https://pywa.readthedocs.io/en/latest/content/client/overview.html) for the full API.
 
-> See [Handlers](https://pywa.readthedocs.io/en/latest/content/handlers/overview.html) for fully detailed guide.
+### 3. Listen for the next user response
+
+Handlers are great for entry points. When you need to continue a conversation, use listeners.
 
 ```python
-# wa.py
 from pywa import WhatsApp, filters, types
+
+wa = WhatsApp(...)
+
+
+@wa.on_message(filters.command("start"))
+def start(client: WhatsApp, msg: types.Message):
+    name = msg.reply("What's your name?").wait_for_reply(filters=filters.text).text
+    msg.reply(f"Nice to meet you, {name}!")
+```
+
+> See the [Listeners guide](https://pywa.readthedocs.io/en/latest/content/listeners/overview.html) for timeouts,
+> filters, callbacks, and waiting for clicks or replies.
+
+### 4. Use your own server when needed
+
+The CLI is the easiest way to run pywa, but you can also attach pywa to an existing
+[FastAPI](https://fastapi.tiangolo.com/) or [Flask](https://flask.palletsprojects.com/) app.
+
+```python
 from fastapi import FastAPI
+from pywa import WhatsApp, filters, types
 
-fastapi_app = FastAPI()  # FastAPI server
+app = FastAPI()
 
-# Create a WhatsApp client
 wa = WhatsApp(
-    phone_id=1234567890,
-    token="************",
-    server=fastapi_app,  # the server to listen to incoming updates
-    callback_url="https://yourdomain.com/",  # the public URL of your server
-    verify_token="xyz123",  # some random string to verify the webhook
-    app_id=123456,  # your app id
-    app_secret="*******"  # your app secret
+    ...,
+    server=app,
+    webhook_endpoint="/whatsapp",
 )
 
 
-# Register callback to handle incoming messages
-@wa.on_message(filters.matches("Hello", "Hi"))  # Filter to match text messages that contain "Hello" or "Hi"
-def hello(client: WhatsApp, msg: types.Message):
-    msg.react("👋")  # React to the message with a wave emoji
-    msg.reply_text(  # Short reply to the message
-        text=f"Hello {msg.from_user.name}!",  # Greet the user
-        buttons=[  # Add buttons to the reply
-            types.Button(
-                title="About me",
-                callback_data="about_me"  # Callback data to identify the click
-            )
-        ]
-    )
-    # Use the `wait_for_reply` listener to wait for a reply from the user
-    age = msg.reply(text="What's your age?").wait_for_reply(filters=filters.text).text
-    msg.reply_text(f"Your age is {age}.")
-
-
-# Register another callback to handle incoming button clicks
-@wa.on_callback_button(filters.matches("about_me"))  # Filter to match the button click
-def click_me(client: WhatsApp, clb: types.CallbackButton):
-    clb.reply_text(f"Hello {clb.from_user.name}, I am a WhatsApp bot built with PyWa!")  # Reply to the button click
+@wa.on_message(filters.text)
+def echo(client: WhatsApp, msg: types.Message):
+    msg.reply(msg.text)
 ```
 
-- To run the server, use [fastapi-cli](https://fastapi.tiangolo.com/#run-it) (`pip install "fastapi[standard]"`):
+Run your server normally
 
-```bash
-fastapi dev wa.py  # see uvicorn docs for more options (port, host, etc.)
-```
+### 5. Async usage
 
-- **Async Usage**
-
-- PyWa also supports async usage with the same API. This is useful if you want to use async/await in your code. To use
-  the async version, replace **all** the imports from `pywa` to `pywa_async`:
+PyWa also supports async usage with the same API. Replace imports from `pywa` with `pywa_async`
+and use `await`.
 
 ```python
-# wa.py
-import fastapi
-from pywa_async import WhatsApp, types  # Same API, just different imports
+from pywa_async import WhatsApp, filters, types, utils
 
-fastapi_app = fastapi.FastAPI()
-wa = WhatsApp(..., server=fastapi_app)
+callback_url = utils.start_ngrok_tunnel(auth_token="NGROK_AUTH_TOKEN")
 
-
-async def main():
-    await wa.send_message(...)  # async call
+wa = WhatsApp(..., callback_url=callback_url)
 
 
-@wa.on_message
-async def hello(_: WhatsApp, msg: types.Message):  # async callback
+@wa.on_message(filters.text)
+async def hello(client: WhatsApp, msg: types.Message):
     await msg.react("👋")
     await msg.reply("Hello from PyWa Async!")
 ```
 
-- **Create and send template messages**
+### 6. Create and send template messages
 
 > See [Templates](https://pywa.readthedocs.io/en/latest/content/templates/overview.html) for more details and examples.
 
@@ -245,7 +254,7 @@ wa.send_template(
 )
 ```
 
-- **Create and send flows**
+### 7. Create and send flows
 
 > See [Flows](https://pywa.readthedocs.io/en/latest/content/flows/overview.html) for much more details and examples.
 
@@ -330,21 +339,25 @@ def handle_flow_response(_: WhatsApp, flow: types.FlowCompletion):
 pip3 install -U pywa
 ```
 
+- **Install the built-in webhook server for `pywa dev` and `pywa run`:**
+
+```bash
+pip3 install -U "pywa[server]"
+```
+
+- **Install ngrok if you want to use `utils.start_ngrok_tunnel()` for local development:**
+
+```bash
+pip3 install -U ngrok
+```
+
 - **Install from source (the bleeding edge):**
 
 ```bash
 pip3 install -U git+https://github.com/david-lev/pywa.git
 ```
 
-- **If you going to use the webhook features, here is shortcut to install the required dependencies:**
-
-```bash
-pip3 install -U "pywa[fastapi]"
-pip3 install -U "pywa[flask]"
-```
-
-- **If you going to use the Flow features and want to use the default FlowRequestDecryptor and the default
-  FlowResponseEncryptor, here is shortcut to install the required dependencies:**
+- **If you use Flows and want pywa's default encryption helpers:**
 
 ```bash
 pip3 install -U "pywa[cryptography]"
