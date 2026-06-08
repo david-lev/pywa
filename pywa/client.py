@@ -12,7 +12,6 @@ import hashlib
 import json
 import logging
 import mimetypes
-import os
 import pathlib
 import warnings
 from types import ModuleType
@@ -367,10 +366,6 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             list[Handler],
         ] = collections.defaultdict(list)
         self._flow_handlers_to_register = list[FlowRequestHandler]()
-        try:
-            self._anyio_thread_limit = int(os.getenv("PYWA_ANYIO_THREAD_LIMIT", "40"))
-        except ValueError:
-            self._anyio_thread_limit = 40
         self._listeners = dict[BaseListenerIdentifier, Listener]()
 
         if not token:

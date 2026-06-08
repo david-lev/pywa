@@ -1,5 +1,6 @@
 """This module contains the Server class, which is used to set up a webhook for receiving incoming updates."""
 
+import contextlib
 import logging
 import threading
 import warnings
@@ -51,6 +52,7 @@ _CALL_EVENTS: dict[str, type[handlers.Handler]] = {
 _logger = logging.getLogger(__name__)
 
 MAX_PROCESSED_UPDATES = 100_000
+ANYIO_THREADS_LIMIT: int | None = None
 
 
 class Server:
@@ -79,8 +81,19 @@ class Server:
                 'Starlette is required to run the built-in server. Please install it using `pip install "pywa[server]"`.'
             ) from None
 
+        if ANYIO_THREADS_LIMIT is not None:
+
+            @contextlib.asynccontextmanager
+            async def lifespan(_: StarletteApp):
+                from anyio.to_thread import current_default_thread_limiter
+
+                current_default_thread_limiter().total_tokens = 100
+                yield
+        else:
+            lifespan = None
+
         self._server, self._server_type = (
-            StarletteApp(),
+            StarletteApp(lifespan=lifespan),
             utils.CustomServerType.STARLETTE,
         )
         self._register_routes()
@@ -250,7 +263,7 @@ class Server:
                 message="No `app_secret` provided. Signature validation will be disabled "
                 "(not recommended! set `validate_updates=False` to suppress this warning)",
                 category=UserWarning,
-                stacklevel=4,
+                stacklevel=1,
             )
             self._validate_updates = False
 
