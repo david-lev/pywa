@@ -176,6 +176,9 @@ def _warn_anyio_thread_limit(wa: "WhatsApp") -> None:
         warning_threshold = max(1, int((server.ANYIO_THREADS_LIMIT or 40) * 0.90))
 
         if current_active >= warning_threshold:
+            starlette_instructions = "Increase the AnyIO thread limit by setting the `pywa.server.ANYIO_THREADS_LIMIT` variable to a higher value (e.g., 100), but be cautious as this may impact server performance.\n\n"
+            fastapi_instructions = "Increase the AnyIO thread limit in your app (See: https://anyio.readthedocs.io/en/stable/threads.html#adjusting-the-default-maximum-worker-thread-count) and let pywa know by setting the `pywa.server.ANYIO_THREADS_LIMIT` variable to the same value, but be cautious as this may impact server performance.\n\n"
+
             warnings.warn(
                 f"\n\n"
                 f"⚠️ ⚠️ CRITICAL SERVER THREAT ⚠️ ⚠️\n"
@@ -184,7 +187,7 @@ def _warn_anyio_thread_limit(wa: "WhatsApp") -> None:
                 f"IMMEDIATE ACTION REQUIRED (Choose one):\n"
                 f"  1. [RECOMMENDED] Migrate to `pywa_async` for fully non-blocking asynchronous listeners.\n"
                 f"  2. Enforce strict, shorter `timeout` values on all `.wait_for_...` calls to free up threads faster.\n"
-                f"  3. Increase the AnyIO thread limit by setting the `pywa.server.ANYIO_THREADS_LIMIT` variable to a higher value (e.g., 100), but be cautious as this may impact server performance.\n\n",
+                f"  3. {starlette_instructions if wa._server_type == utils.CustomServerType.STARLETTE else fastapi_instructions}\n",
                 RuntimeWarning,
                 stacklevel=3,
             )
