@@ -5,12 +5,12 @@ import logging
 import threading
 import warnings
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Callable
 
 from . import _helpers as helpers
 from . import errors, handlers, utils
 from .errors import PywaDeprecationWarning
-from .types import MessageType, RawUpdate, UserPreferenceCategory
+from .types import AccountUpdate, MessageType, RawUpdate, UserPreferenceCategory
 from .types.base_update import (
     BaseUpdate,
     ContinueHandling,
@@ -100,15 +100,31 @@ class Server:
         return self._server
 
     def run(
-        self: "WhatsApp", *, host: str = "127.0.0.1", port: int = 8000, **options: Any
+        self: "WhatsApp",
+        *,
+        host: str = "127.0.0.1",
+        port: int = 8000,
     ) -> None:
         """
-        Run the server to listen for incoming updates.
+        Run the server to listen for incoming webhooks.
+
+        This method starts a basic, blocking server for quick prototyping and
+        testing. It does not support advanced development features such as
+        hot-reloading.
+
+        For a richer developer experience (like auto-reloading on code changes)
+        and to prepare for cloud deployments, it is highly recommended to use
+        the ``pywa`` CLI instead of this method.
+
+        Example CLI Usage:
+
+            .. code-block:: bash
+
+                $ pywa dev bot.py
 
         Args:
-            host: The host to listen on (default: ``127.0.0.1``)
-            port: The port to listen on (default: ``8000``)
-            **options: Additional options to pass to ``uvicorn.run`` (e.g. ``ssl_keyfile``, ``ssl_certfile``, etc.). See the `uvicorn documentation <https://uvicorn.dev/settings/>`_ for more details.
+            host: The host address to bind the server to (default: ``127.0.0.1``).
+            port: The port number to listen on (default: ``8000``).
         """
         try:
             import uvicorn
@@ -118,15 +134,13 @@ class Server:
                 'Please install it using `pip install "pywa[server]"`.'
             ) from None
 
-        options.setdefault("log_config", None)
-
         _logger.info("Starting pywa server on http://%s:%d", host, port)
 
         uvicorn.run(
             app=self._setup_and_get_starlette_app(),
             host=host,
             port=port,
-            **options,
+            log_config=None,
         )
 
     def webhook_challenge_handler(
@@ -377,8 +391,13 @@ class Server:
         self: "WhatsApp", update: RawUpdate
     ) -> type[handlers.Handler] | None:
         """Get the handler for the given update."""
-
-        if self.filter_updates and self.waba_id and update.id != self.waba_id:
+        update_field = update.field
+        account_id = (
+            self.waba_id
+            if update_field != AccountUpdate._webhook_field
+            else self.business_portfolio_id
+        )
+        if self.filter_updates and account_id and update.id != account_id:
             return None
 
         try:
@@ -391,11 +410,11 @@ class Server:
         except KeyError:  # no metadata in update
             pass
 
-        if update.field in _complex_fields_handlers:
-            return _complex_fields_handlers[update.field](self, update.value)
+        if update_field in _complex_fields_handlers:
+            return _complex_fields_handlers[update_field](self, update.value)
 
         # noinspection PyProtectedMember
-        return handlers.Handler._handled_fields().get(update.field)
+        return handlers.Handler._handled_fields().get(update_field)
 
     def _delayed_register_callback_url(
         self: "WhatsApp",

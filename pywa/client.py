@@ -270,61 +270,50 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         - Full documentation on `pywa.readthedocs.io <https://pywa.readthedocs.io>`_.
 
-        Example without webhook:
-
-            >>> from pywa import WhatsApp
-            >>> wa = WhatsApp(phone_id="1234567890",token="EAADKQl9oJxx")
-            >>> wa.send_message(to="1234567890", text="Hello from PyWa!")
-
-        Example with webhook (using `FastAPI <https://fastapi.tiangolo.com/>`_):
-
-            >>> from pywa import WhatsApp, types, filters
-            >>> from fastapi import FastAPI
-            >>> fastapi_app = FastAPI()
+            >>> from pywa import WhatsApp, filters, types, utils
 
             >>> wa = WhatsApp(
             ...     phone_id="1234567890",
-            ...     token="EAADKQl9oJxx",
-            ...     server=fastapi_app,
-            ...     callback_url='https://pywa.ngrok.io',
-            ...     verify_token="XYZ123",
+            ...     token="EAAJB...",
+            ...     callback_url=utils.start_ngrok_tunnel(...),
+            ...     verify_token="xyzxyz",
             ...     app_id=1234567890,
-            ...     app_secret="my_app_secret",
+            ...     app_secret="41678a4f...",
             ... )
 
             >>> @wa.on_message(filters.text)
             ... def new_message(_: WhatsApp, msg: types.Message):
             ...     msg.reply("Hello from PyWa!")
 
-            ``$ fastapi dev wa.py`` see `uvicorn docs <https://www.uvicorn.org/#command-line-options>`_ for more options (``port``, ``host``, etc.)
+            ``$ pywa dev``
 
         Args:
-            phone_id: The Phone Number ID to send messages from. If you manage multiple WhatsApp bots (e.g. `Solution Partners <https://developers.facebook.com/documentation/business-messaging/whatsapp/solution-providers/overview#solution-partners>`_ or `Tech Providers <https://developers.facebook.com/documentation/business-messaging/whatsapp/solution-providers/overview#tech-providers>`_), you may override the phone ID per request when sending messages or calling API methods.
-            token: The `system <https://developers.facebook.com/documentation/business-messaging/whatsapp/get-started#step-4-create-a-system-user-and-generate-a-permanent-access-token>`_ or `business <https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/onboarding-customers-as-a-tech-provider#step-1-exchange-the-token-code-for-a-business-token>`_ access token used for the WhatsApp Cloud API.
+            phone_id: The Phone Number ID to send messages from. If you manage multiple WhatsApp bots (e.g. `Solution Partners <https://developers.facebook.com/documentation/business-messaging/whatsapp/solution-providers/overview#solution-partners>`_ or `Tech Providers <https://developers.facebook.com/documentation/business-messaging/whatsapp/solution-providers/overview#tech-providers>`_), you should leave it as ``None`` and specify the phone ID in the method calls instead.
+            token: The `system <https://developers.facebook.com/documentation/business-messaging/whatsapp/get-started#step-4-create-a-system-user-and-generate-a-permanent-access-token>`_ or `business <https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/onboarding-customers-as-a-tech-provider#step-1-exchange-the-token-code-for-a-business-token>`_ access token used for the WhatsApp Cloud API. If not provided, the client can still be used to handle incoming updates.
             api_version: The `Graph API version <https://developers.facebook.com/docs/graph-api/guides/versioning>`_ to use (default: the latest version supported by pywa).
-            session: The session used for API requests (default: a new `httpx.Client() <https://www.python-httpx.org/api/#client>`_). Use a custom session to configure proxies, timeouts, etc. Do not share the same session across multiple WhatsApp clients.
-            server: A `Flask <https://flask.palletsprojects.com>`_ or `FastAPI <https://fastapi.tiangolo.com>`_ app instance used for the webhook. Required to automatically handle incoming updates; pass ``None`` to manually insert updates using :meth:`webhook_update_handler`.
-            callback_url: The public server URL to register as a webhook, without the endpoint (optional).
+            session: The httpx client used for API requests (default: a new `httpx.Client() <https://www.python-httpx.org/api/#client>`_). Use a custom client to configure proxies, timeouts, etc. Do not use the same session for another client or make other API calls while it is being used by the WhatsApp client, as this may cause unexpected behavior.
+            server: A `Flask <https://flask.palletsprojects.com>`_ or `FastAPI <https://fastapi.tiangolo.com>`_ app instance used for the webhook. Designed for cases where you want to use the same server for other routes or purposes; if you just want a simple webhook server, it's easier to leave this as ``None`` and let pywa create and manage the server for you.
+            callback_url: The public server URL to register, without the endpoint. If you using static domain (e.g. ``utils.start_ngrok_tunnel(domain=...)``), you can comment this out after the first successful registration to avoid unnecessary re-registrations on every restart.
             callback_url_scope: The scope used when registering the callback URL (default: ``APP``). See `Webhook overrides <https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/override>`_ for more information.
-            verify_token: A challenge string used to verify the webhook endpoint. Required when ``server`` is provided; can be any string and must match the value sent during verification.
+            verify_token: A challenge string used to verify the webhook endpoint; can be any string and must match the value sent during verification. Required when handling updates.
             webhook_challenge_delay: Delay in seconds to wait for the webhook verification challenge (default: ``3``); useful when the server or network is slow to start.
             webhook_fields: The webhook `fields <https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/overview#fields>`_ to register for the callback URL (optional). If not provided, all supported fields are registered; specify this to reduce unnecessary webhook traffic.
-            app_id: The app ID from the `App Basic Settings <https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings>`_ (optional; required when registering a ``callback_url`` with ``APP`` scope).
+            app_id: The app ID from the `App Basic Settings <https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings>`_ (optional; required when registering a ``callback_url`` with ``APP`` scope and when creating templates that contain media).
             app_secret: The app secret from the `App Basic Settings <https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings>`_ (optional; recommended for validating updates and required when registering a ``callback_url`` with ``APP`` scope).
-            webhook_endpoint: The endpoint path used to receive incoming webhook requests (default: ``/``); change this to avoid conflicts if the server is used for other purposes.
-            filter_updates: Whether to filter out updates that do not belong to this ``phone_id`` or ``waba_id`` (default: ``True``; does not apply to raw updates).
-            waba_id: The `WhatsApp Business Account <https://developers.facebook.com/documentation/business-messaging/whatsapp/whatsapp-business-accounts>`_ ID that owns the phone number (optional; required for some API methods).
-            business_portfolio_id: The `Business Portfolio ID <https://www.facebook.com/business/help/486932075688253>`_ that owns the assets. Also known as `Business ID or Busines Manager ID` (optional; required for some API methods).
-            business_private_key: The global private key used by the ``flows_request_decryptor`` to decrypt incoming Flows requests.
+            webhook_endpoint: The endpoint path used to receive incoming webhook requests (default: ``/``); change this to avoid conflicts if the ``server`` is used for other purposes.
+            filter_updates: Whether to filter out updates that do not belong to this ``phone_id``, ``waba_id`` or ``business_portfolio_id`` (default: ``True``; does not apply to raw updates).
+            waba_id: The `WhatsApp Business Account <https://developers.facebook.com/documentation/business-messaging/whatsapp/whatsapp-business-accounts>`_ ID that owns the ``phone_id`` (optional; required for some API methods).
+            business_portfolio_id: The `Business Portfolio ID <https://www.facebook.com/business/help/486932075688253>`_ that owns the ``waba_id``. Also known as `Business ID or Busines Manager ID` (optional; required for some API methods).
+            business_private_key: The global private key used by the ``flows_request_decryptor`` to decrypt incoming flow requests.
             business_private_key_password: The password for the global private key, if required by the ``flows_request_decryptor``.
-            flows_request_decryptor: The global Flows request decryptor implementation used to decrypt incoming Flows requests.
-            flows_response_encryptor: The global Flows response encryptor implementation used to encrypt outgoing Flows responses.
+            flows_request_decryptor: The global Flows request decryptor implementation used to decrypt incoming flow requests.
+            flows_response_encryptor: The global Flows response encryptor implementation used to encrypt outgoing flow responses.
             continue_handling: Whether to continue handling updates after a handler or listener has been matched (default: ``False``).
-            skip_duplicate_updates: Whether to skip duplicate updates (default: ``True``).
-            validate_updates: Whether to `validate <https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/create-webhook-endpoint#validation-1>`_ incoming update payloads (default: ``True``; requires ``app_secret``).
-            handlers_modules: Python modules from which handlers should be automatically loaded.
-            user_identifier_priority: The priority order of user identifiers to use when replying to messages, blocking users, etc (default: ``wa_id`` > ``bsuid`` > ``parent_bsuid``)
-            business_account_id: Deprecated alias for ``waba_id`` (the WhatsApp Business Account ID that owns the phone number).
+            skip_duplicate_updates: Whether to skip duplicate updates. Important when using custom server that block the incoming request until the response is sent, as WhatsApp may retry sending the same update if it does not receive a timely response (default: ``True``).
+            validate_updates: Whether to `validate <https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/create-webhook-endpoint#validation-1>`_ incoming webhhoks payloads (default: ``True``; requires ``app_secret``).
+            handlers_modules: Python modules from which handlers should be automatically loaded. A convenient way to organize handlers in separate files without having to import and register them manually (default: ``None``).
+            user_identifier_priority: The priority order of user identifiers to use when replying to messages, blocking users, etc (default: ``wa_id`` > ``bsuid`` > ``parent_bsuid``). Will be changed to ``bsuid`` > ``wa_id`` > ``parent_bsuid`` when the API supports BSUID-based endpoints.
+            business_account_id: Deprecated alias for ``waba_id`` (the WhatsApp Business Account ID that owns the ``phone_id``).
         """
         try:
             utils.Version.GRAPH_API.validate_min_version(str(api_version))

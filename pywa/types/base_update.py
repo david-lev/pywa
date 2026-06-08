@@ -196,17 +196,17 @@ class RawUpdate(dict, _HandlingFlow):
 
     @property
     def id(self) -> str:
-        """The WhatsApp Business Account ID for the business that is subscribed to the webhook."""
+        """The business ID this update is for: ``entry[0].id``."""
         return self["entry"][0]["id"]
 
     @property
     def field(self) -> str:
-        """The field name of the webhook update."""
+        """The field name of the webhook update: ``entry[0].changes[0].field``."""
         return self["entry"][0]["changes"][0]["field"]
 
     @property
     def value(self) -> dict:
-        """The value of the webhook update."""
+        """The value of the webhook update: ``entry[0].changes[0].value``."""
         return self["entry"][0]["changes"][0]["value"]
 
     def _immutable(self, *_, **__):
