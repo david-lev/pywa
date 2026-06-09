@@ -64,13 +64,13 @@ class Flask(Protocol):
 class CustomServerType(enum.Enum):
     """Enum for the supported server types."""
 
-    FASTAPI = ("FASTAPI", FastAPI, lambda: importlib.import_module("fastapi").FastAPI)
+    FASTAPI = ("FastAPI", FastAPI, lambda: importlib.import_module("fastapi").FastAPI)
     STARLETTE = (
-        "STARLETTE",
+        "Starlette",
         Starlette,
         lambda: importlib.import_module("starlette.applications").Starlette,
     )
-    FLASK = ("FLASK", Flask, lambda: importlib.import_module("flask").Flask)
+    FLASK = ("Flask", Flask, lambda: importlib.import_module("flask").Flask)
 
     def __new__(cls, name: str, protocol: Protocol, server: Callable):
         obj = object.__new__(cls)

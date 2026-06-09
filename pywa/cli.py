@@ -178,6 +178,10 @@ def serve_application(
             module_str, sys_path = resolve_module_path(target_path)
             sys.path.insert(0, str(sys_path))
             app_name, client = discover_app_instance(module_str, app)
+            if client._server is not None:
+                raise PywaCLIException(
+                    f"The WhatsApp instance assigned to '{app_name}' in '{module_str}.py' is already configured with a {client._server_type.value} server."
+                )
             client._uvicorn_workers = workers or 1
 
     except PywaCLIException as e:

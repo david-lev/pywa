@@ -64,10 +64,12 @@ class Server:
     ):
         self._processed_updates: OrderedDict[str, None] = OrderedDict()
         self._cache_lock = threading.Lock()
-
-        self._server_type = utils.CustomServerType.from_app(self._server)
-        if self._server_type is not None:
-            self._register_routes()
+        if self._server is not None:
+            self._server_type = utils.CustomServerType.from_app(self._server)
+            if self._server_type is not None:
+                self._register_routes()
+        else:
+            self._server_type = None
 
     def _setup_and_get_starlette_app(self):
         if self._server_type is not None:
