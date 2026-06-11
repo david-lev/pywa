@@ -174,14 +174,20 @@ app = FastAPI()
 
 wa = WhatsApp(
     ...,
-    server=app,
-    webhook_endpoint="/whatsapp",
+    server=app,  # Pass your FastAPI or Flask app here
+    webhook_endpoint="/whatsapp",  # Use different endpoint from "/" to avoid conflicts with your own routes
 )
 
 
 @wa.on_message(filters.text)
 def echo(client: WhatsApp, msg: types.Message):
     msg.reply(msg.text)
+
+
+# Serve your own routes alongside pywa's webhook
+@app.get("/")
+def read_root():
+    return {"Hello": "World"}
 ```
 
 Run your server normally

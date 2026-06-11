@@ -55,7 +55,7 @@ Registering Handlers
 You can register handlers in two main ways:
 
 - Decorators, which are the simplest option for most projects.
-- ``Handler`` objects, which are useful when handlers are assembled dynamically or imported from many modules.
+- ``*Handler`` objects, which are useful when handlers are assembled dynamically.
 
 Using decorators
 ^^^^^^^^^^^^^^^^
@@ -65,7 +65,7 @@ Use the ``on_...`` decorators on your :class:`~pywa.client.WhatsApp` client.
 .. code-block:: python
     :caption: main.py
     :linenos:
-    :emphasize-lines: 7, 11
+    :emphasize-lines: 5, 9
 
     from pywa import WhatsApp, types
 
@@ -100,16 +100,16 @@ Loading handlers from modules
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If your handlers live in another module and do not have direct access to the client instance,
-register them on the :class:`~pywa.client.WhatsApp` class.
+register them on the :class:`~pywa.client.WhatsApp` **class**:
 
 .. code-block:: python
-    :caption: handlers.py
+    :caption: my_handlers.py
     :linenos:
-    :emphasize-lines: 4
+    :emphasize-lines: 3
 
     from pywa import WhatsApp, filters, types
 
-    @WhatsApp.on_message(filters.text)
+    @WhatsApp.on_message(filters.text) # Register on the class, not an instance
     def handle_text(client: WhatsApp, msg: types.Message):
         msg.reply(msg.text)
 
@@ -121,18 +121,18 @@ Then load that module when creating the client:
     :emphasize-lines: 2, 5
 
     from pywa import WhatsApp
-    import handlers
+    from . import my_handlers # Import the module that holds the handlers
 
     wa = WhatsApp(
         ...,
-        handlers_modules=[handlers],
+        handlers_modules=[my_handlers,], # Pass the module to load handlers from it
     )
 
 You can also load modules later:
 
 .. code-block:: python
 
-    wa.load_handlers_modules(handlers)
+    wa.load_handlers_modules(my_handlers)
 
 Using ``Handler`` objects
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -155,7 +155,7 @@ objects and register them with :meth:`~pywa.client.WhatsApp.add_handlers`.
 .. code-block:: python
     :caption: main.py
     :linenos:
-    :emphasize-lines: 1, 6-9
+    :emphasize-lines: 2, 6-9
 
     from pywa import WhatsApp, filters, handlers
     import handlers as my_handlers
@@ -239,7 +239,7 @@ Available Handlers
      - :class:`~pywa.types.message.OutgoingMessage`
    * - :meth:`~pywa.client.WhatsApp.on_outgoing_edited_message`
      - :class:`OutgoingEditedMessageHandler`
-     - :class:`~pywa.types.message.OutgoingEditedMessage`
+     - :class:`~pywa.types.OutgoingEditedMessage`
    * - :meth:`~pywa.client.WhatsApp.on_outgoing_deleted_message`
      - :class:`OutgoingDeletedMessageHandler`
      - :class:`~pywa.types.message.OutgoingDeletedMessage`
@@ -351,7 +351,7 @@ app-level registration, also pass ``app_id`` and ``app_secret``.
 .. code-block:: python
     :caption: main.py
     :linenos:
-    :emphasize-lines: 7-10
+    :emphasize-lines: 7-9
 
     from pywa import WhatsApp, utils
 
@@ -373,15 +373,15 @@ By default, pywa registers the URL in the app scope. You can use another scope w
 .. code-block:: python
     :caption: main.py
     :linenos:
-    :emphasize-lines: 1, 8
+    :emphasize-lines: 7-8
 
     from pywa import WhatsApp, utils
 
     wa = WhatsApp(
         phone_id="1234567890",
         token="EAA...",
-        callback_url="https://example.com",
         verify_token="my-verify-token",
+        callback_url="https://example.com",
         callback_url_scope=utils.CallbackURLScope.PHONE,
     )
 
@@ -448,6 +448,7 @@ Pywa can process these fields:
 - ``message_template_components_update`` - template component updates
 - ``template_category_update`` - template category changes
 - ``user_preferences`` - user marketing preferences
+- ``account_update`` - account update events
 
 If you register the callback URL automatically, pywa subscribes to the webhook fields it
 supports. You can customize the fields with ``webhook_fields``.
@@ -535,7 +536,7 @@ FastAPI:
 .. code-block:: python
     :caption: main.py
     :linenos:
-    :emphasize-lines: 6, 11
+    :emphasize-lines: 4, 8-9, 18-21
 
     from fastapi import FastAPI
     from pywa import WhatsApp, filters, types
@@ -544,13 +545,20 @@ FastAPI:
 
     wa = WhatsApp(
         ...,
-        server=app,
-        webhook_endpoint="/whatsapp",
+        server=app,  # Pass your FastAPI or Flask app here
+        webhook_endpoint="/whatsapp",  # Use different endpoint from "/" to avoid conflicts with your own routes
     )
+
 
     @wa.on_message(filters.text)
     def echo(client: WhatsApp, msg: types.Message):
         msg.reply(msg.text)
+
+
+    # Serve your own routes alongside pywa's webhook
+    @app.get("/")
+    def read_root():
+        return {"Hello": "World"}
 
 Run FastAPI normally:
 
@@ -564,7 +572,7 @@ Flask works the same way:
 .. code-block:: python
     :caption: app.py
     :linenos:
-    :emphasize-lines: 6, 11, 17
+    :emphasize-lines: 4, 8-9, 17
 
     from flask import Flask
     from pywa import WhatsApp, filters, types
