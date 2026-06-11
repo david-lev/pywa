@@ -1316,16 +1316,19 @@ class _CallbackWrapperDecorators(abc.ABC):
         """
         Decorator to add a handler for flow completion requests.
 
-        **The :class:`FlowCompletion` update is not sent to the flow endpoint, but to the webhook endpoint.**
+        **IMPORTANT: If you have more than one flow running around, you should filter the flow completions by the ``token`` field in the :class:`FlowCompletion` object to make sure you are handling the right flow completion.**
 
         Example:
-
+            >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
+
+            >>> wa.send_message(to=..., buttons=types.FlowButton(flow_name="feedback", flow_token="feedback:123")
+
             >>> @wa.on_flow_request("/feedback_flow")
             ... def feedback_flow_handler(_: WhatsApp, req: FlowRequest):
             ...     ...
 
-            >>> @feedback_flow_handler.on_completion(filters=filters.new(lambda _, flow: flow.response["rating"] == "5"))
+            >>> @feedback_flow_handler.on_completion(filters.new(lambda _, c: c.token.startswith("feedback") and c.rating == 5))
             ... def on_flow_completion(_: WhatsApp, flow: FlowCompletion):
             ...     print("Flow completed with rating 5")
         """
