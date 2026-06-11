@@ -469,9 +469,10 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             True if the media file was deleted successfully, False otherwise.
         """
-        params = {"phone_number_id": phone_number_id} if phone_number_id else None
         return await self._request(
-            method="DELETE", endpoint=f"/{media_id}", params=params
+            method="DELETE",
+            endpoint=f"/{media_id}",
+            params=self._filter_none(phone_number_id=phone_number_id),
         )
 
     async def send_raw_request(
@@ -546,26 +547,21 @@ class GraphAPIAsync(GraphAPI):
         """
         if not to and not recipient:
             raise ValueError("Either 'to' or 'recipient' must be provided")
-        data = {
-            "messaging_product": "whatsapp",
-            "recipient_type": recipient_type,
-            "type": typ,
-            typ: msg,
-        }
-        if to:
-            data["to"] = to
-        if recipient:
-            data["recipient"] = recipient
-        if reply_to_message_id:
-            data["context"] = {"message_id": reply_to_message_id}
-        if biz_opaque_callback_data:
-            data["biz_opaque_callback_data"] = biz_opaque_callback_data
-        if recipient_identity_key_hash:
-            data["recipient_identity_key_hash"] = recipient_identity_key_hash
+        data = self._filter_none(
+            messaging_product="whatsapp",
+            recipient_type=recipient_type,
+            type=typ,
+            to=to,
+            recipient=recipient,
+            context={"message_id": reply_to_message_id}
+            if reply_to_message_id
+            else None,
+            biz_opaque_callback_data=biz_opaque_callback_data,
+            recipient_identity_key_hash=recipient_identity_key_hash,
+            **{typ: msg},
+        )
         return await self._request(
-            method="POST",
-            endpoint=f"/{sender}/messages",
-            json=data,
+            method="POST", endpoint=f"/{sender}/messages", json=data
         )
 
     async def send_marketing_message(
@@ -598,21 +594,19 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             The response from the WhatsApp Cloud API.
         """
-        body = {
-            "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": to,
-            "type": "template",
-            "template": template,
-        }
-        if reply_to_message_id:
-            body["context"] = {"message_id": reply_to_message_id}
-        if message_activity_sharing is not None:
-            body["message_activity_sharing"] = message_activity_sharing
-        if biz_opaque_callback_data:
-            body["biz_opaque_callback_data"] = biz_opaque_callback_data
-        if recipient_identity_key_hash:
-            body["recipient_identity_key_hash"] = recipient_identity_key_hash
+        body = self._filter_none(
+            messaging_product="whatsapp",
+            recipient_type="individual",
+            to=to,
+            type="template",
+            template=template,
+            context={"message_id": reply_to_message_id}
+            if reply_to_message_id
+            else None,
+            message_activity_sharing=message_activity_sharing,
+            biz_opaque_callback_data=biz_opaque_callback_data,
+            recipient_identity_key_hash=recipient_identity_key_hash,
+        )
         return await self._request(
             method="POST", endpoint=f"/{sender}/marketing_messages", json=body
         )
@@ -717,15 +711,11 @@ class GraphAPIAsync(GraphAPI):
         return await self._request(
             method="POST",
             endpoint=f"/{phone_id}/register",
-            json={
-                "messaging_product": "whatsapp",
-                "pin": pin,
-                **(
-                    {"data_localization_region": data_localization_region}
-                    if data_localization_region
-                    else {}
-                ),
-            },
+            json=self._filter_none(
+                messaging_product="whatsapp",
+                pin=pin,
+                data_localization_region=data_localization_region,
+            ),
         )
 
     async def deregister_phone_number(
@@ -806,17 +796,10 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             A dict with the shared WABAs data.
         """
-        params = {
-            k: v
-            for k, v in {
-                "fields": ",".join(fields) if fields else None,
-            }.items()
-            if v
-        } | (pagination or {})
         return await self._request(
             method="GET",
             endpoint=f"/{business_portfolio_id}/client_whatsapp_business_accounts",
-            params=params,
+            params=self._filter_none(pagination, fields=self._join_fields(fields)),
         )
 
     async def get_owned_wabas(
@@ -838,17 +821,10 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             A dict with the owned WABAs data.
         """
-        params = {
-            k: v
-            for k, v in {
-                "fields": ",".join(fields) if fields else None,
-            }.items()
-            if v
-        } | (pagination or {})
         return await self._request(
             method="GET",
             endpoint=f"/{business_portfolio_id}/owned_whatsapp_business_accounts",
-            params=params,
+            params=self._filter_none(pagination, fields=self._join_fields(fields)),
         )
 
     async def get_waba_info(
@@ -871,7 +847,7 @@ class GraphAPIAsync(GraphAPI):
         return await self._request(
             method="GET",
             endpoint=f"/{waba_id}",
-            params={"fields": ",".join(fields)} if fields else None,
+            params=self._filter_none(fields=self._join_fields(fields)),
         )
 
     async def update_waba_settings(
@@ -934,7 +910,7 @@ class GraphAPIAsync(GraphAPI):
         return await self._request(
             method="GET",
             endpoint=f"/{phone_id}",
-            params={"fields": ",".join(fields)} if fields else None,
+            params=self._filter_none(fields=self._join_fields(fields)),
         )
 
     async def get_business_phone_numbers(
@@ -971,18 +947,10 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             The business phone numbers.
         """
-        endpoint = f"/{waba_id}/phone_numbers"
-        params = {
-            k: v
-            for k, v in {
-                "fields": ",".join(fields) if fields else None,
-            }.items()
-            if v
-        } | (pagination or {})
         return await self._request(
             method="GET",
-            endpoint=endpoint,
-            params=params,
+            endpoint=f"/{waba_id}/phone_numbers",
+            params=self._filter_none(pagination, fields=self._join_fields(fields)),
         )
 
     async def get_business_phone_number_settings(
@@ -1002,15 +970,13 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             The business phone number settings.
         """
-        params = {
-            "fields": ",".join(fields) if fields else None,
-        }
-        if include_sip_credentials is not None:
-            params["include_sip_credentials"] = include_sip_credentials
         return await self._request(
             method="GET",
             endpoint=f"/{phone_id}/settings",
-            params=params,
+            params=self._filter_none(
+                fields=self._join_fields(fields),
+                include_sip_credentials=include_sip_credentials,
+            ),
         )
 
     async def update_business_phone_number_settings(
@@ -1062,14 +1028,7 @@ class GraphAPIAsync(GraphAPI):
         return await self._request(
             method="POST",
             endpoint=f"/{phone_id}/conversational_automation",
-            json={
-                k: v
-                for k, v in {
-                    "prompts": prompts,
-                    "commands": commands,
-                }.items()
-                if v is not None
-            },
+            json=self._filter_none(prompts=prompts, commands=commands),
         )
 
     async def update_display_name(
@@ -1137,7 +1096,7 @@ class GraphAPIAsync(GraphAPI):
         return await self._request(
             method="GET",
             endpoint=f"/{phone_id}/whatsapp_business_profile",
-            params={"fields": ",".join(fields)} if fields else None,
+            params=self._filter_none(fields=self._join_fields(fields)),
         )
 
     async def update_business_profile(
@@ -1195,7 +1154,7 @@ class GraphAPIAsync(GraphAPI):
         return await self._request(
             method="GET",
             endpoint=f"/{phone_id}/whatsapp_commerce_settings",
-            params={"fields": ",".join(fields)} if fields else None,
+            params=self._filter_none(fields=self._join_fields(fields)),
         )
 
     async def update_commerce_settings(
@@ -1279,7 +1238,7 @@ class GraphAPIAsync(GraphAPI):
         return await self._request(
             method="GET",
             endpoint=f"/{template_id}",
-            params={"fields": ",".join(fields)} if fields else None,
+            params=self._filter_none(fields=self._join_fields(fields)),
         )
 
     async def get_templates(
@@ -1305,16 +1264,15 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             A dict with the templates data.
         """
-        params = {
-            "fields": ",".join(fields) if fields else None,
-            **(filters if filters else {}),
-            **(pagination if pagination else {}),
-            **({"summary": ",".join(summary_fields)} if summary_fields else {}),
-        }
         return await self._request(
             method="GET",
             endpoint=f"/{waba_id}/message_templates",
-            params={k: v for k, v in params.items() if v is not None},
+            params=self._filter_none(
+                pagination,
+                fields=self._join_fields(fields),
+                summary=self._join_fields(summary_fields),
+                **(filters or {}),
+            ),
         )
 
     async def update_template(
@@ -1363,10 +1321,10 @@ class GraphAPIAsync(GraphAPI):
         return await self._request(
             method="DELETE",
             endpoint=f"/{waba_id}/message_templates",
-            params={
-                "name": template_name,
-                **({"hsm_id": template_id} if template_id else {}),
-            },
+            params=self._filter_none(
+                name=template_name,
+                hsm_id=template_id,
+            ),
         )
 
     async def archive_templates(
@@ -1464,10 +1422,10 @@ class GraphAPIAsync(GraphAPI):
         return await self._request(
             method="POST",
             endpoint=f"/{dest_waba_id}/migrate_message_templates",
-            params={
-                "source_waba_id": source_waba_id,
-                **({"page_number": page_number} if page_number is not None else {}),
-            },
+            params=self._filter_none(
+                source_waba_id=source_waba_id,
+                page_number=page_number,
+            ),
         )
 
     async def unpause_template(self, template_id: str) -> dict[str, bool | str]:
@@ -1573,20 +1531,14 @@ class GraphAPIAsync(GraphAPI):
               ]
             }
         """
-        data = {
-            "name": name,
-            "categories": categories,
-            **{
-                k: v
-                for k, v in {
-                    "clone_flow_id": clone_flow_id,
-                    "endpoint_uri": endpoint_uri,
-                    "flow_json": flow_json,
-                    "publish": publish,
-                }.items()
-                if v is not None
-            },
-        }
+        data = self._filter_none(
+            name=name,
+            categories=categories,
+            clone_flow_id=clone_flow_id,
+            endpoint_uri=endpoint_uri,
+            flow_json=flow_json,
+            publish=publish,
+        )
         return await self._request(
             method="POST",
             endpoint=f"/{waba_id}/flows",
@@ -1619,12 +1571,12 @@ class GraphAPIAsync(GraphAPI):
               "success": True
             }
         """
-        data = {
-            **({"name": name} if name else {}),
-            **({"endpoint_uri": endpoint_uri} if endpoint_uri else {}),
-            **({"categories": categories} if categories else {}),
-            **({"application_id": application_id} if application_id else {}),
-        }
+        data = self._filter_none(
+            name=name,
+            endpoint_uri=endpoint_uri,
+            categories=categories,
+            application_id=application_id,
+        )
         return await self._request(
             method="POST",
             endpoint=f"/{flow_id}",
@@ -1778,12 +1730,10 @@ class GraphAPIAsync(GraphAPI):
               }
             }
         """
-        endpoint = f"/{flow_id}"
-        if fields:
-            endpoint += f"?fields={','.join(fields)}"
         return await self._request(
             method="GET",
-            endpoint=endpoint,
+            endpoint=f"/{flow_id}",
+            params=self._filter_none(fields=self._join_fields(fields)),
         )
 
     async def get_flows(
@@ -1821,18 +1771,10 @@ class GraphAPIAsync(GraphAPI):
               ]
             }
         """
-        endpoint = f"/{waba_id}/flows"
-        params = {
-            k: v
-            for k, v in {
-                "fields": ",".join(fields) if fields else None,
-            }.items()
-            if v
-        } | (pagination or {})
         return await self._request(
             method="GET",
-            endpoint=endpoint,
-            params=params,
+            endpoint=f"/{waba_id}/flows",
+            params=self._filter_none(pagination, fields=self._join_fields(fields)),
         )
 
     async def get_flow_assets(
@@ -1870,7 +1812,7 @@ class GraphAPIAsync(GraphAPI):
         return await self._request(
             method="GET",
             endpoint=f"/{flow_id}/assets?fields=name,asset_type,download_url",
-            params=pagination,
+            params=self._filter_none(pagination),
         )
 
     async def migrate_flows(
@@ -1922,7 +1864,11 @@ class GraphAPIAsync(GraphAPI):
         """
         return await self._request(
             method="POST",
-            endpoint=f"/{dest_waba_id}/migrate_flows?source_waba_id={source_waba_id}&source_flow_names={','.join(source_flow_names)}",
+            endpoint=f"/{dest_waba_id}/migrate_flows",
+            params={
+                "source_waba_id": source_waba_id,
+                "source_flow_names": ",".join(source_flow_names),
+            },
         )
 
     async def create_qr_code(
@@ -1987,7 +1933,7 @@ class GraphAPIAsync(GraphAPI):
         return await self._request(
             method="GET",
             endpoint=f"/{phone_id}/message_qrdls/{code}",
-            params={"fields": ",".join(fields)} if fields else None,
+            params=self._filter_none(fields=self._join_fields(fields)),
         )
 
     async def get_qr_codes(
@@ -2028,14 +1974,7 @@ class GraphAPIAsync(GraphAPI):
         return await self._request(
             method="GET",
             endpoint=f"/{phone_id}/message_qrdls",
-            params={
-                k: v
-                for k, v in {
-                    "fields": ",".join(fields) if fields else None,
-                    **(pagination or {}),
-                }.items()
-                if v is not None
-            },
+            params=self._filter_none(pagination, fields=self._join_fields(fields)),
         )
 
     async def update_qr_code(
@@ -2237,7 +2176,7 @@ class GraphAPIAsync(GraphAPI):
         return await self._request(
             method="GET",
             endpoint=f"/{phone_id}/block_users",
-            params=pagination,
+            params=self._filter_none(pagination),
         )
 
     async def create_upload_session(
@@ -2383,15 +2322,10 @@ class GraphAPIAsync(GraphAPI):
         """
         if not user_wa_id and not recipient:
             raise ValueError("Either 'user_wa_id' or 'recipient' must be provided")
-        data = {}
-        if user_wa_id:
-            data["user_wa_id"] = user_wa_id
-        if phone_id:
-            data["recipient"] = recipient
         return await self._request(
             method="GET",
             endpoint=f"/{phone_id}/call_permissions",
-            params=data,
+            params=self._filter_none(user_wa_id=user_wa_id, recipient=recipient),
         )
 
     async def initiate_call(
@@ -2428,19 +2362,14 @@ class GraphAPIAsync(GraphAPI):
         """
         if not to and not recipient:
             raise ValueError("Either 'to' or 'recipient' must be provided")
-        data = {
-            "messaging_product": "whatsapp",
-            "to": to,
-            "recipient": recipient,
-            "action": "connect",
-            "session": session,
-        }
-        if to:
-            data["to"] = to
-        if recipient:
-            data["recipient"] = recipient
-        if biz_opaque_callback_data:
-            data["biz_opaque_callback_data"] = biz_opaque_callback_data
+        data = self._filter_none(
+            messaging_product="whatsapp",
+            to=to,
+            recipient=recipient,
+            action="connect",
+            session=session,
+            biz_opaque_callback_data=biz_opaque_callback_data,
+        )
         return await self._request(
             method="POST",
             endpoint=f"{phone_id}/calls",
@@ -2473,12 +2402,12 @@ class GraphAPIAsync(GraphAPI):
         return await self._request(
             method="POST",
             endpoint=f"{phone_id}/calls",
-            json={
-                "messaging_product": "whatsapp",
-                "call_id": call_id,
-                "action": "pre_accept",
-                **({"session": session} if session else {}),
-            },
+            json=self._filter_none(
+                messaging_product="whatsapp",
+                call_id=call_id,
+                action="pre_accept",
+                session=session,
+            ),
         )
 
     async def accept_call(
@@ -2512,17 +2441,13 @@ class GraphAPIAsync(GraphAPI):
         return await self._request(
             method="POST",
             endpoint=f"{phone_id}/calls",
-            json={
-                "messaging_product": "whatsapp",
-                "call_id": call_id,
-                "action": "accept",
-                **({"session": session} if session else {}),
-                **(
-                    {"biz_opaque_callback_data": biz_opaque_callback_data}
-                    if biz_opaque_callback_data
-                    else {}
-                ),
-            },
+            json=self._filter_none(
+                messaging_product="whatsapp",
+                call_id=call_id,
+                action="accept",
+                session=session,
+                biz_opaque_callback_data=biz_opaque_callback_data,
+            ),
         )
 
     async def reject_call(self, phone_id: str, call_id: str) -> dict[str, bool]:
@@ -2609,14 +2534,12 @@ class GraphAPIAsync(GraphAPI):
               "request_id": "123456789012345"
             }
         """
-        data = {
-            "messaging_product": "whatsapp",
-            "subject": subject,
-            **({"description": description} if description else {}),
-            **(
-                {"join_approval_mode": join_approval_mode} if join_approval_mode else {}
-            ),
-        }
+        data = self._filter_none(
+            messaging_product="whatsapp",
+            subject=subject,
+            description=description,
+            join_approval_mode=join_approval_mode,
+        )
         return await self._request(
             method="POST",
             endpoint=f"/{phone_id}/groups",
@@ -2646,19 +2569,18 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             A dictionary containing the result of the operation.
         """
-        files: dict[str, tuple] = {
-            "messaging_product": (None, "whatsapp"),
-        }
-        if subject:
-            files["subject"] = (None, subject)
-        if description:
-            files["description"] = (None, description)
-        if profile_picture_file:
-            files["profile_picture_file"] = (
+        files = self._filter_none(
+            messaging_product=(None, "whatsapp"),
+            subject=(None, subject) if subject else None,
+            description=(None, description) if description else None,
+            profile_picture_file=(
                 "profile.jpg",
                 profile_picture_file,
                 "image/jpeg",
             )
+            if profile_picture_file
+            else None,
+        )
 
         return await self._request(
             method="POST",
@@ -2684,7 +2606,7 @@ class GraphAPIAsync(GraphAPI):
         return await self._request(
             method="GET",
             endpoint=f"/{group_id}/join_requests",
-            params=pagination,
+            params=self._filter_none(pagination),
         )
 
     async def approve_group_join_requests(
@@ -2828,13 +2750,7 @@ class GraphAPIAsync(GraphAPI):
         return await self._request(
             method="GET",
             endpoint=f"/{group_id}",
-            params={
-                k: v
-                for k, v in {
-                    "fields": ",".join(fields) if fields else None,
-                }.items()
-                if v is not None
-            },
+            params=self._filter_none(fields=self._join_fields(fields)),
         )
 
     async def get_active_groups(
@@ -2859,14 +2775,7 @@ class GraphAPIAsync(GraphAPI):
         return await self._request(
             method="GET",
             endpoint=f"/{phone_id}/groups",
-            params={
-                k: v
-                for k, v in {
-                    "fields": ",".join(fields) if fields else None,
-                    **(pagination or {}),
-                }.items()
-                if v is not None
-            },
+            params=self._filter_none(pagination, fields=self._join_fields(fields)),
         )
 
     async def set_username(
@@ -2885,13 +2794,10 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             A dictionary containing the status of the operation.
         """
-        data = {"username": username}
-        if transfer_action:
-            data["transfer_action"] = transfer_action
         return await self._request(
             method="POST",
             endpoint=f"/{phone_id}/username",
-            json=data,
+            json=self._filter_none(username=username, transfer_action=transfer_action),
         )
 
     async def get_current_username(self, phone_id: str) -> dict:
