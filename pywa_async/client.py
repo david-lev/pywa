@@ -4809,7 +4809,11 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         )
 
     async def set_username(
-        self, username: str, *, phone_id: str | int | None = None
+        self,
+        username: str,
+        *,
+        force_transfer: bool = False,
+        phone_id: str | int | None = None,
     ) -> UsernameStatus:
         """
         Set a business username.
@@ -4819,6 +4823,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Args:
             username: The business username to set.
             phone_id: The phone ID to set the username for (optional, if not provided, the client's phone ID will be used).
+            force_transfer: Controls what happens when the requested username is currently in use on another business phone number within the same business portfolio (for example, when you want to move an existing username to a different one of your phone numbers)
 
         Returns:
             A UsernameStatus object containing the new username and its status.
@@ -4835,6 +4840,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                             client_arg="phone_id",
                         ),
                         username=username,
+                        transfer_action="force_transfer" if force_transfer else "none",
                     )
                 )["status"]
             ),

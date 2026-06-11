@@ -118,7 +118,7 @@ Then load that module when creating the client:
 .. code-block:: python
     :caption: main.py
     :linenos:
-    :emphasize-lines: 2, 5
+    :emphasize-lines: 2, 6
 
     from pywa import WhatsApp
     from . import my_handlers # Import the module that holds the handlers

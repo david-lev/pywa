@@ -2831,7 +2831,9 @@ class GraphAPIAsync(GraphAPI):
             },
         )
 
-    async def set_username(self, phone_id: str, username: str) -> dict:
+    async def set_username(
+        self, phone_id: str, username: str, transfer_action: str | None = None
+    ) -> dict:
         """
         Set a business username.
 
@@ -2840,14 +2842,18 @@ class GraphAPIAsync(GraphAPI):
         Args:
             phone_id: The ID of the phone number to set a business username for.
             username: The new business username.
+            transfer_action:"none" or "force_transfer".
 
         Returns:
             A dictionary containing the status of the operation.
         """
+        data = {"username": username}
+        if transfer_action:
+            data["transfer_action"] = transfer_action
         return await self._request(
             method="POST",
             endpoint=f"/{phone_id}/username",
-            json={"username": username},
+            json=data,
         )
 
     async def get_current_username(self, phone_id: str) -> dict:

@@ -909,3 +909,9 @@ class IGAccountNotLinked(UsernameError):
     """You must link the phone number to the Instagram account that already uses the requested username."""
 
     __error_codes__ = (147004,)
+
+
+class UsernameTransferRequired(UsernameError):
+    """The requested username is currently in use on another business phone number within your business portfolio. To transfer it to this phone number, resend the request with force_transfer=True."""
+
+    __error_codes__ = (147005,)

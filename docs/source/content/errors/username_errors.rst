@@ -13,3 +13,5 @@ Username Errors
     :show-inheritance:
 .. autoclass:: IGAccountNotLinked()
     :show-inheritance:
+.. autoclass:: UsernameTransferRequired()
+    :show-inheritance:
