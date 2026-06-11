@@ -74,6 +74,8 @@ The client allows you to send a wide variety of messages:
      - Share a location
    * - :meth:`~WhatsApp.request_location`
      - Request location from a user
+   * - :meth:`~WhatsApp.request_contact_info`
+     - Request contact information from a user
    * - :meth:`~WhatsApp.send_contact`
      - Send one or multiple contacts
    * - :meth:`~WhatsApp.send_sticker`

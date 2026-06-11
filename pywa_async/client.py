@@ -1272,6 +1272,66 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             interactive_type=InteractiveType.LOCATION_REQUEST_MESSAGE,
         )
 
+    async def request_contact_info(
+        self,
+        to: str | int,
+        text: str,
+        *,
+        reply_to_message_id: str | None = None,
+        tracker: str | CallbackData | None = None,
+        identity_key_hash: str | None = None,
+        sender: str | int | None = None,
+    ) -> SentMessage:
+        """
+        If a user taps this button, their WhatsApp phone number will be shared in the message thread, and a contacts webhook will be triggered containing the user’s phone number. Note that if a WhatsApp user shares a contact using the share contacts feature in the WhatsApp app instead, the webhook will also include the contact’s vCard.
+        If you are using the contact book feature, their phone number will also be added to your contact book automatically. For businesses that have enabled Local Storage, Meta extracts the user’s phone number from the shared contact card (vCard) and stores it in your contact book on Meta data centers. Only the phone number is extracted and stored; no other vCard data is retained beyond the standard data-in-use period.
+
+        - Great for scenarios where your application based on phone numbers. Register an handler with high priority and force them to share their contact info before they can interact with your bot.
+        - Read more about `Request contact info messages <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#requesting-phone-numbers-from-users>`_.
+
+        Example:
+
+            >>> wa = WhatsApp()
+            >>> await wa.request_contact_info(
+            ...     to='1234567890',
+            ...     text='In order to continue, please share your contact information with us.',
+            ... )
+
+        Args:
+            to: The user phone number, WhatsApp ID or BSUID to send the message to.
+            text: The text to send with the button.
+            reply_to_message_id: The message ID to quote (optional).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
+            sender: The phone ID to send the message from (optional, overrides the client's phone ID).
+
+        Returns:
+            The sent message.
+        """
+        sender = helpers.resolve_arg(
+            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
+        )
+        recipient, recipient_type = helpers.resolve_recipient(to)
+        return SentMessage.from_sent_update(
+            client=self,
+            update=await self.api.send_message(
+                sender=sender,
+                **recipient,
+                typ="interactive",
+                msg=helpers.get_interactive_msg(
+                    typ=InteractiveType.REQUEST_CONTACT_INFO,
+                    action={"name": "request_contact_info"},
+                    body=text,
+                ),
+                reply_to_message_id=reply_to_message_id,
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                recipient_identity_key_hash=identity_key_hash,
+            ),
+            from_phone_id=sender,
+            recipient_type=recipient_type,
+            interactive_type=InteractiveType.REQUEST_CONTACT_INFO,
+        )
+
     async def send_contact(
         self,
         to: str | int,

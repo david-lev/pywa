@@ -27,6 +27,7 @@ __all__ = [
     "sent_to",
     "sent_to_me",
     "from_users",
+    "no_wa_id",
     "from_countries",
     "matches",
     "contains",
@@ -300,6 +301,11 @@ reply = new(lambda _, m: m.reply_to_message is not None, name="reply")
 Filter for messages that reply to another message.
 
 >>> filters.reply
+"""
+
+no_wa_id = new(lambda _, u: u.from_user.wa_id is None, name="no_wa_id")
+"""
+Filter for updates that their sender doesn't have a ``wa_id`` (when the user enables username)
 """
 
 

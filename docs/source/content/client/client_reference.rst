@@ -11,6 +11,7 @@ Client Reference
 .. automethod:: WhatsApp.send_document
 .. automethod:: WhatsApp.send_location
 .. automethod:: WhatsApp.request_location
+.. automethod:: WhatsApp.request_contact_info
 .. automethod:: WhatsApp.send_contact
 .. automethod:: WhatsApp.send_sticker
 .. automethod:: WhatsApp.send_catalog
