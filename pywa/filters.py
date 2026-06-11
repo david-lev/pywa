@@ -415,13 +415,12 @@ def from_users(
 
     def filter_func(_, m) -> bool:
         user = m.from_user
-        if not user:
-            return False
 
         return (
             user.bsuid in processed_ids
             or user.wa_id in processed_ids
             or user.parent_bsuid in processed_ids
+            or user.username in processed_ids
         )
 
     return new(filter_func, name="from_users")

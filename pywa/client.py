@@ -154,6 +154,7 @@ from .types.sent_update import (
     SentVoiceMessage,
 )
 from .types.templates import (
+    ArchiveTemplatesResult,
     AuthenticationBody,
     AuthenticationFooter,
     BaseOTPButton,
@@ -175,6 +176,7 @@ from .types.templates import (
     TemplatesResult,
     TemplateStatus,
     TemplateUnpauseResult,
+    UnarchiveTemplatesResult,
     UpdatedTemplate,
     _AuthenticationTemplates,
     _TemplateUpdate,
@@ -3349,6 +3351,78 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             )
         )
 
+    def archive_templates(
+        self,
+        template_ids: Iterable[int | str],
+        *,
+        waba_id: str | int | None = None,
+    ) -> ArchiveTemplatesResult:
+        """
+        Archive templates.
+
+        - You can archive up to 100 templates at a time.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/templates/template-archival#archive-templates>`_.
+
+        Example:
+
+            >>> wa = WhatsApp()
+            >>> wa.archive_templates(,
+
+        Args:
+            template_ids: The IDs of the templates to archive.
+            waba_id: The WhatsApp Business account ID (Overrides the client's business account ID, optional).
+
+        Returns:
+            An ArchiveTemplatesResult object containing the results of the archival operation.
+        """
+        return ArchiveTemplatesResult.from_dict(
+            self.api.archive_templates(
+                waba_id=helpers.resolve_arg(
+                    wa=self,
+                    value=waba_id,
+                    method_arg="waba_id",
+                    client_arg="waba_id",
+                ),
+                template_ids=tuple(str(template_id) for template_id in template_ids),
+            )
+        )
+
+    def unarchive_templates(
+        self,
+        template_ids: Iterable[int | str],
+        *,
+        waba_id: str | int | None = None,
+    ) -> UnarchiveTemplatesResult:
+        """
+        Unarchive templates.
+
+        - You can unarchive up to 100 templates at a time.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/templates/template-archival#unarchive-templates>`_.
+
+        Example:
+
+            >>> wa = WhatsApp()
+            >>> await wa.unarchive_templates(,
+
+        Args:
+            template_ids: The IDs of the templates to unarchive.
+            waba_id: The WhatsApp Business account ID (Overrides the client's business account ID, optional).
+
+        Returns:
+            An UnarchiveTemplatesResult object containing the results of the unarchival operation.
+        """
+        return UnarchiveTemplatesResult.from_dict(
+            self.api.unarchive_templates(
+                waba_id=helpers.resolve_arg(
+                    wa=self,
+                    value=waba_id,
+                    method_arg="waba_id",
+                    client_arg="waba_id",
+                ),
+                template_ids=tuple(str(template_id) for template_id in template_ids),
+            )
+        )
+
     def compare_templates(
         self,
         template_id: int | str,
@@ -3954,7 +4028,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         return CreatedBusinessPhoneNumber(
             id=self.api.create_phone_number(
-                cc=str(country_calling_code),
+                country_code=str(country_calling_code),
                 phone_number=str(phone_number),
                 verified_name=verified_name,
                 waba_id=helpers.resolve_arg(

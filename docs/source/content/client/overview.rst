@@ -238,6 +238,10 @@ Create, update, and manage message templates:
      - Delete a template
    * - :meth:`~WhatsApp.unpause_template`
      - Unpause a previously paused template
+   * - :meth:`~WhatsApp.archive_templates`
+     - Archive one or multiple templates
+   * - :meth:`~WhatsApp.unarchive_templates`
+     - Unarchive one or multiple templates
    * - :meth:`~WhatsApp.compare_templates`
      - Compare two templates
    * - :meth:`~WhatsApp.migrate_templates`

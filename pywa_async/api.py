@@ -618,11 +618,7 @@ class GraphAPIAsync(GraphAPI):
         )
 
     async def create_phone_number(
-        self,
-        waba_id: str,
-        cc: str,
-        phone_number: str,
-        verified_name: str,
+        self, waba_id: str, country_code: str, phone_number: str, verified_name: str
     ) -> dict[str, str]:
         """
         Create a phone number on a WhatsApp Business Account.
@@ -631,7 +627,7 @@ class GraphAPIAsync(GraphAPI):
 
         Args:
             waba_id: The ID of the WhatsApp Business Account to create the phone number on.
-            cc: The phone number’s country calling code (e.g. "1").
+            country_code: The phone number’s country calling code (e.g. "1").
             phone_number: The phone number, with or without the country calling code.
             verified_name: The phone number’s `display name <https://www.facebook.com/business/help/338047025165344>`_.
 
@@ -642,7 +638,7 @@ class GraphAPIAsync(GraphAPI):
             method="POST",
             endpoint=f"{waba_id}/phone_numbers",
             json={
-                "country_code": cc,
+                "country_code": country_code,
                 "phone_number": phone_number,
                 "verified_name": verified_name,
             },
@@ -1371,6 +1367,48 @@ class GraphAPIAsync(GraphAPI):
                 "name": template_name,
                 **({"hsm_id": template_id} if template_id else {}),
             },
+        )
+
+    async def archive_templates(
+        self, waba_id: str, template_ids: tuple[str, ...]
+    ) -> dict:
+        """
+        Archive message templates.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/templates/template-archival#archive-templates>`_.
+
+        Args:
+            waba_id: The ID of the WhatsApp Business Account.
+            template_ids: The IDs of the templates to archive.
+
+        Returns:
+            A dict with archived_templates and failed_templates lists.
+        """
+        return await self._request(
+            method="POST",
+            endpoint=f"https://api.facebook.com/{waba_id}/message_templates/archive",
+            json={"hsm_ids": ",".join(template_ids)},
+        )
+
+    async def unarchive_templates(
+        self, waba_id: str, template_ids: tuple[str, ...]
+    ) -> dict:
+        """
+        Unarchive message templates.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/templates/template-archival#unarchive-templates>`_.
+
+        Args:
+            waba_id: The ID of the WhatsApp Business Account.
+            template_ids: The IDs of the templates to unarchive.
+
+        Returns:
+            A dict with unarchived_templates and failed_templates lists.
+        """
+        return await self._request(
+            method="POST",
+            endpoint=f"https://api.facebook.com/{waba_id}/message_templates/unarchive",
+            json={"hsm_ids": ",".join(template_ids)},
         )
 
     async def compare_templates(
