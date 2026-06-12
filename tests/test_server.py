@@ -1,4 +1,59 @@
+from pywa import WhatsApp
 from pywa import utils as pywa_utils
+
+
+def test_webhook_challenge_handler_valid():
+    wa = WhatsApp(phone_id="1", token="t", verify_token="my_token")
+    body, status, headers = wa.webhook_challenge_handler(vt="my_token", ch="abc123-._~")
+    assert status == 200
+    assert body == "abc123-._~"
+    assert headers == {
+        "Content-Type": "text/plain",
+        "X-Content-Type-Options": "nosniff",
+    }
+
+
+def test_webhook_challenge_handler_wrong_token():
+    wa = WhatsApp(phone_id="1", token="t", verify_token="my_token")
+    body, status, headers = wa.webhook_challenge_handler(vt="wrong_token", ch="abc123")
+    assert status == 403
+    assert headers == {
+        "Content-Type": "text/plain",
+        "X-Content-Type-Options": "nosniff",
+    }
+
+
+def test_webhook_challenge_handler_xss_challenge():
+    wa = WhatsApp(phone_id="1", token="t", verify_token="my_token")
+    # A challenge containing HTML/JS should be rejected even with a valid token
+    body, status, headers = wa.webhook_challenge_handler(
+        vt="my_token", ch="<script>alert(1)</script>"
+    )
+    assert status == 403
+    assert headers == {
+        "Content-Type": "text/plain",
+        "X-Content-Type-Options": "nosniff",
+    }
+
+
+def test_webhook_challenge_handler_empty_challenge():
+    wa = WhatsApp(phone_id="1", token="t", verify_token="my_token")
+    body, status, headers = wa.webhook_challenge_handler(vt="my_token", ch="")
+    assert status == 403
+    assert headers == {
+        "Content-Type": "text/plain",
+        "X-Content-Type-Options": "nosniff",
+    }
+
+
+def test_webhook_challenge_handler_challenge_with_spaces():
+    wa = WhatsApp(phone_id="1", token="t", verify_token="my_token")
+    body, status, headers = wa.webhook_challenge_handler(vt="my_token", ch="abc 123")
+    assert status == 403
+    assert headers == {
+        "Content-Type": "text/plain",
+        "X-Content-Type-Options": "nosniff",
+    }
 
 
 def test_webhook_updates_validator():
