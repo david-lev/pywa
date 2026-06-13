@@ -3366,7 +3366,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> wa = WhatsApp()
-            >>> wa.archive_templates(,
+            >>> wa.archive_templates(template_ids=['1234567890', '0987654321'])
 
         Args:
             template_ids: The IDs of the templates to archive.
@@ -3402,7 +3402,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> wa = WhatsApp()
-            >>> await wa.unarchive_templates(,
+            >>> wa.unarchive_templates(template_ids=['1234567890', '0987654321'])
 
         Args:
             template_ids: The IDs of the templates to unarchive.

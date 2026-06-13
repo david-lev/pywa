@@ -1,219 +1,194 @@
 [//]: # (Logo design by @nyatitilkesh https://github.com/nyatitilkesh | Telegram: @nyatitilkesh)
 <p align="center">
   <a href="https://github.com/david-lev/pywa">
-    <img src="https://pywa.readthedocs.io/en/latest/_static/pywa-logo.png" width="200" height="200" alt="PyWa Logo"/>
+    <img src="https://pywa.readthedocs.io/en/latest/_static/pywa-logo.png" width="180" height="180" alt="PyWa Logo"/>
   </a>
 </p>
 
+<h1 align="center">PyWa</h1>
+
 <p align="center">
-  <strong>🚀 Build WhatsApp Bots in Python • Fast. Effortless. Powerful.</strong>
+  <strong>The Python framework for building WhatsApp bots.</strong><br>
+  <sub>Fast. Typed. Production-ready. From prototype to production in minutes.</sub>
 </p>
 
 <p align="center">
-  <small><em>🤖 Hey there! I am using PyWa.</em></small>
-</p>
-
-
-<p align="center">
-  <a href="https://pypi.org/project/pywa/"><img src="https://img.shields.io/pypi/v/pywa.svg" /></a>
-  <a href="https://pypi.org/project/pywa/"><img src="https://static.pepy.tech/badge/pywa" /></a>
-  <a href="https://github.com/david-lev/pywa/actions/workflows/tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/david-lev/pywa/tests.yml?label=tests" /></a>
- <a href="https://pywa.readthedocs.io"><img src="https://readthedocs.org/projects/pywa/badge/?version=latest&" /></a>
-  <a href="https://github.com/david-lev/pywa/blob/master/LICENSE"><img src="https://img.shields.io/github/license/david-lev/pywa" /></a>
-  <a href="https://www.codefactor.io/repository/github/david-lev/pywa/overview/master"><img src="https://www.codefactor.io/repository/github/david-lev/pywa/badge/master" /></a>
-  <a href="https://t.me/py_wa"><img src="https://badges.aleen42.com/src/telegram.svg" /></a>
-</p>
+  <a href="https://pypi.org/project/pywa/"><img src="https://img.shields.io/pypi/v/pywa?color=%2334D058&label=pypi" alt="PyPI Version"/></a>
+  <a href="https://pepy.tech/project/pywa"><img src="https://static.pepy.tech/badge/pywa" alt="Downloads"/></a>
+  <a href="https://pypi.org/project/pywa/"><img src="https://img.shields.io/pypi/pyversions/pywa?color=%2334D058" alt="Python Versions"/></a>
+  <a href="https://github.com/david-lev/pywa/actions/workflows/tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/david-lev/pywa/tests.yml?label=tests" alt="Tests"/></a>
+  <a href="https://pywa.readthedocs.io"><img src="https://readthedocs.org/projects/pywa/badge/?version=latest&" alt="Docs"/></a>
+  <a href="https://github.com/david-lev/pywa/blob/master/LICENSE"><img src="https://img.shields.io/github/license/david-lev/pywa?color=%2334D058" alt="License"/></a>
+  <a href="https://www.codefactor.io/repository/github/david-lev/pywa/overview/master"><img src="https://www.codefactor.io/repository/github/david-lev/pywa/badge/master" alt="Code Quality"/></a>
+  <a href="https://t.me/py_wa"><img src="https://badges.aleen42.com/src/telegram.svg" /></a></p>
 
 ---
 
-**💫 PyWa is an all-in-one Python framework for the WhatsApp Cloud API.**
+**PyWa** is a comprehensive, fully-typed Python framework for
+the [WhatsApp Cloud API](https://developers.facebook.com/docs/whatsapp/cloud-api).
+It handles everything — sending messages, receiving webhooks, building interactive flows, managing templates,
+handling calls — so you can focus on building your bot, not wrestling with the API.
 
-Send **rich media messages**, use **interactive buttons**, listen to **real-time events**, build and send **flows**,
-design and send **template messages**, and enjoy **blazing-fast async support** with full integration for **FastAPI,
-Flask**, and more.
-Fully **typed**, **documented**, and **production-ready** — build powerful bots in minutes.
+```bash
+pip install -U "pywa[server]"
+```
 
+---
 
-📄 **Quick Documentation Index**
---------------------------------
+## ✨ Why PyWa?
 
-> [Get Started](https://pywa.readthedocs.io/en/latest/content/getting-started.html)
-> • [Client](https://pywa.readthedocs.io/en/latest/content/client/overview.html)
-> • [Handlers](https://pywa.readthedocs.io/en/latest/content/handlers/overview.html)
-> • [Listeners](https://pywa.readthedocs.io/en/latest/content/listeners/overview.html)
-> • [Updates](https://pywa.readthedocs.io/en/latest/content/updates/overview.html)
-> • [Filters](https://pywa.readthedocs.io/en/latest/content/filters/overview.html)
-> • [Templates](https://pywa.readthedocs.io/en/latest/content/templates/overview.html)
-> • [Flows](https://pywa.readthedocs.io/en/latest/content/flows/overview.html)
-> • [Calls](https://pywa.readthedocs.io/en/latest/content/calls/overview.html)
+<table>
+  <tr>
+    <td>💬 <strong>Rich Messaging</strong></td>
+    <td>Text, images, videos, documents, audio, stickers, locations, contacts, buttons, lists & more</td>
+  </tr>
+  <tr>
+    <td>📩 <strong>Real-Time Webhooks</strong></td>
+    <td>Messages, button clicks, delivery receipts, read receipts, reactions & account updates</td>
+  </tr>
+  <tr>
+    <td>🔔 <strong>Listeners</strong></td>
+    <td>Chain conversations naturally — wait for replies, clicks, or reactions inline</td>
+  </tr>
+  <tr>
+    <td>📄 <strong>Templates</strong></td>
+    <td>Create, send, and manage WhatsApp message templates with full parameter support</td>
+  </tr>
+  <tr>
+    <td>♻️ <strong>Flows</strong></td>
+    <td>Build rich, multi-screen interactive WhatsApp Flows in pure Python</td>
+  </tr>
+  <tr>
+    <td>📞 <strong>Calls</strong></td>
+    <td>Handle incoming and outgoing WhatsApp call events</td>
+  </tr>
+  <tr>
+    <td>⚡ <strong>Async Support</strong></td>
+    <td>Full async/await API via <code>pywa_async</code> — same interface, zero friction</td>
+  </tr>
+  <tr>
+    <td>🔌 <strong>Server Integrations</strong></td>
+    <td>Built-in webhook server, or plug into your existing FastAPI / Flask app</td>
+  </tr>
+  <tr>
+    <td>🛡️ <strong>Type Safety</strong></td>
+    <td>Fully typed - full autocomplete and static analysis everywhere</td>
+  </tr>
+  <tr>
+    <td>🔬 <strong>Smart Filters</strong></td>
+    <td>Composable filters with logical operators for precise update routing</td>
+  </tr>
+  <tr>
+    <td>🧰 <strong>CLI Tools</strong></td>
+    <td><code>pywa dev</code> for local development, <code>pywa run</code> for production</td>
+  </tr>
+</table>
 
-------------------------
+---
 
-⚡ **Why PyWa?**
----------------
+## 🚀 Quick Start
 
-- **🚀 Fast & Simple** – Focus on building, not boilerplate.
-- **💬 Rich Messaging** – Text, images, files, audio, locations, contacts, buttons & more.
-- **📩 Real-Time Updates** – Messages, callbacks, delivery/read receipts, account updates, and more.
-- **🔔 Listeners** – Wait for user replies, clicks, or reactions with ease.
-- **📄 Templates** – Create and send powerful WhatsApp templates.
-- **♻️ Flows** – Build interactive WhatsApp flows effortlessly.
-- **📞 Calls Support** – Receive and handle call events.
-- **🔄 Webhook-Ready** – Built-in server for development and production, or attach to your own FastAPI/Flask app.
-- **🔬 Filters** – Advanced filtering for incoming updates.
-- **✅ Production-Ready** – Typed, documented, and fully tested.
-
-------------------------
-
-👨‍💻 **How to Use**
-------------------
-
-### 1. Handle incoming messages
-
-Start with a `WhatsApp` client and register handlers for the updates you want to receive.
-During development, run the webhook server with `pywa dev`. For production, use `pywa run`.
+### 1. Echo Bot — 5 lines of code
 
 ```python
 # main.py
-from pywa import WhatsApp, filters, types, utils
-
-callback_url = utils.start_ngrok_tunnel(
-    auth_token="NGROK_AUTH_TOKEN",
-    domain="your-domain.ngrok-free.app",
-)
+from pywa import WhatsApp, filters, types
 
 wa = WhatsApp(
     phone_id="1234567890",
     token="EAA...",
-    app_id="1234567890",
+    app_id=1234567890,
     app_secret="********",
-    callback_url=callback_url,
+    callback_url="https://your-domain.ngrok-free.app",
     verify_token="my-verify-token",
 )
 
 
 @wa.on_message(filters.text)
-def echo(client: WhatsApp, msg: types.Message):
+def echo(_: WhatsApp, msg: types.Message):
     msg.reply(f"You said: {msg.text}")
 ```
 
-Run it:
+Start the webhook server:
 
 ```bash
-pywa dev
+pywa dev    # Local development
+pywa run    # Production
 ```
 
-Use this when deploying:
-
-```bash
-pywa run
-```
-
-> See the [Handlers guide](https://pywa.readthedocs.io/en/latest/content/handlers/overview.html) for decorators,
-> filters, callback URL registration, custom servers, and handler flow.
-
-### 2. Send messages, media, templates, flows, and manage resources
-
-Use the same client to send messages, media, templates, flows, and to manage WhatsApp Business resources.
+### 2. Rich Messages — Buttons, Media & More
 
 ```python
 from pywa import WhatsApp, types
 
-wa = WhatsApp(
-    phone_id="1234567890",
-    token="EAA...",
-)
+wa = WhatsApp(phone_id="1234567890", token="EAA...")
 
+# Text with interactive buttons
 wa.send_message(
     to="9876543210",
-    text="Hello from PyWa!",
+    text="How can I help you today?",
     buttons=[
-        types.Button(title="Menu", callback_data="menu"),
-        types.Button(title="Help", callback_data="help"),
+        types.Button(title="📋 Menu", callback_data="menu"),
+        types.Button(title="💬 Support", callback_data="help"),
     ],
 )
 
-wa.send_image(
-    to="9876543210",
-    image="https://example.com/image.jpg",
-    caption="Check out this image!",
-)
+# Images, documents, audio — one-liners
+wa.send_image(to="9876543210", image="https://example.com/photo.jpg", caption="Check this out!")
+wa.send_document(to="9876543210", document="report.pdf")
 ```
 
-> See the [Client guide](https://pywa.readthedocs.io/en/latest/content/client/overview.html) for the full API.
+### 3. Conversational Flows — Listeners
 
-### 3. Listen for the next user response
-
-Handlers are great for entry points. When you need to continue a conversation, use listeners.
+Handlers define entry points. Listeners let you continue the conversation naturally:
 
 ```python
-from pywa import WhatsApp, filters, types
-
-wa = WhatsApp(...)
-
-
 @wa.on_message(filters.command("start"))
-def start(client: WhatsApp, msg: types.Message):
+def start(_: WhatsApp, msg: types.Message):
     name = msg.reply("What's your name?").wait_for_reply(filters=filters.text).text
     msg.reply(f"Nice to meet you, {name}!")
 ```
 
-> See the [Listeners guide](https://pywa.readthedocs.io/en/latest/content/listeners/overview.html) for timeouts,
-> filters, callbacks, and waiting for clicks or replies.
-
-### 4. Use your own server when needed
-
-The CLI is the easiest way to run pywa, but you can also attach pywa to an existing
-[FastAPI](https://fastapi.tiangolo.com/) or [Flask](https://flask.palletsprojects.com/) app.
+### 4. Plug Into Your Own Server
 
 ```python
 from fastapi import FastAPI
 from pywa import WhatsApp, filters, types
 
 app = FastAPI()
-
-wa = WhatsApp(
-    ...,
-    server=app,  # Pass your FastAPI or Flask app here
-    webhook_endpoint="/whatsapp",  # Use different endpoint from "/" to avoid conflicts with your own routes
-)
+wa = WhatsApp(..., server=app, webhook_endpoint="/webhook")
 
 
 @wa.on_message(filters.text)
-def echo(client: WhatsApp, msg: types.Message):
+def echo(_: WhatsApp, msg: types.Message):
     msg.reply(msg.text)
 
 
-# Serve your own routes alongside pywa's webhook
 @app.get("/")
-def read_root():
-    return {"Hello": "World"}
+def health():
+    return {"status": "ok"}
 ```
 
-Run your server normally
+### 5. Full Async Support
 
-### 5. Async usage
-
-PyWa also supports async usage with the same API. Replace imports from `pywa` with `pywa_async`
-and use `await`.
+Same API. Just swap the import and add `await`:
 
 ```python
-from pywa_async import WhatsApp, filters, types, utils
+from pywa_async import WhatsApp, filters, types
 
-callback_url = utils.start_ngrok_tunnel(auth_token="NGROK_AUTH_TOKEN")
-
-wa = WhatsApp(..., callback_url=callback_url)
+wa = WhatsApp(...)
 
 
 @wa.on_message(filters.text)
-async def hello(client: WhatsApp, msg: types.Message):
+async def hello(_: WhatsApp, msg: types.Message):
     await msg.react("👋")
-    await msg.reply("Hello from PyWa Async!")
+    await msg.reply("Hello from async PyWa!")
 ```
 
-### 6. Create and send template messages
+### 6. Templates
 
-> See [Templates](https://pywa.readthedocs.io/en/latest/content/templates/overview.html) for more details and examples.
+Create and send [WhatsApp message templates](https://pywa.readthedocs.io/en/latest/content/templates/overview.html) with
+full parameter support:
 
 ```python
 from pywa import WhatsApp
@@ -221,179 +196,213 @@ from pywa.types.templates import *
 
 wa = WhatsApp(..., waba_id=123456)
 
-# Create a template
 wa.create_template(
     template=Template(
-        name="buy_new_iphone_x",
+        name="order_update",
         category=TemplateCategory.MARKETING,
         language=TemplateLanguage.ENGLISH_US,
         parameter_format=ParamFormat.NAMED,
         components=[
-            ht := HeaderText("The New iPhone {{iphone_num}} is here!", iphone_num=15),
-            bt := BodyText("Buy now and use the code {{code}} to get {{per}}% off!", code="WA_IPHONE_15", per=15),
+            ht := HeaderText("Your order #{{order_id}} has shipped!", order_id="12345"),
+            bt := BodyText("Track it with code {{code}}.", code="ABC123"),
             FooterText(text="Powered by PyWa"),
-            Buttons(
-                buttons=[
-                    url := URLButton(text="Buy Now", url="https://example.com/shop/{{1}}", example="iphone15"),
-                    PhoneNumberButton(text="Call Us", phone_number="1234567890"),
-                    qrb1 := QuickReplyButton(text="Unsubscribe from marketing messages"),
-                    qrb2 := QuickReplyButton(text="Unsubscribe from all messages"),
-                ]
-            ),
-
-        ]
+            Buttons(buttons=[
+                url := URLButton(text="Track Order", url="https://example.com/track/{{1}}", example="12345"),
+                QuickReplyButton(text="Unsubscribe"),
+            ]),
+        ],
     ),
 )
 
-# Send the template message
+# Send it
 wa.send_template(
     to="9876543210",
-    name="buy_new_iphone_x",
+    name="order_update",
     language=TemplateLanguage.ENGLISH_US,
     params=[
-        ht.params(iphone_num=30),
-        bt.params(code="WA_IPHONE_30", per=30),
-        url.params(url_variable="iphone30", index=0),
-        qrb1.params(callback_data="unsubscribe_from_marketing_messages", index=1),
-        qrb2.params(callback_data="unsubscribe_from_all_messages", index=2),
-    ]
+        ht.params(order_id="67890"),
+        bt.params(code="XYZ789"),
+        url.params(url_variable="67890", index=0),
+    ],
 )
 ```
 
-### 7. Create and send flows
+### 7. Interactive Flows
 
-> See [Flows](https://pywa.readthedocs.io/en/latest/content/flows/overview.html) for much more details and examples.
+Build [WhatsApp Flows](https://pywa.readthedocs.io/en/latest/content/flows/overview.html) — multi-screen interactive
+experiences — entirely in Python:
 
 ```python
 from pywa import WhatsApp, types
 from pywa.types.flows import *
 
-# Create a WhatsApp client
 wa = WhatsApp(..., waba_id=123456)
 
-# Build a flow
-my_flow_json = FlowJSON(
+my_flow = FlowJSON(
     screens=[
         Screen(
-            id="NEWSLETTER",
-            title="PyWa Newsletter",
-            layout=Layout(
-                children=[
-                    TextHeading(text="Subscribe to our newsletter"),
-                    name := TextInput(
-                        name="name",
-                        label="Name",
-                        input_type=InputType.TEXT,
-                        required=False,
+            id="SIGNUP",
+            title="Join Our Newsletter",
+            layout=Layout(children=[
+                TextHeading(text="Subscribe for updates"),
+                name := TextInput(name="name", label="Name", input_type=InputType.TEXT),
+                email := TextInput(name="email", label="Email", input_type=InputType.EMAIL, required=True),
+                Footer(
+                    label="Subscribe",
+                    on_click_action=CompleteAction(
+                        payload={"name": name.ref, "email": email.ref}
                     ),
-                    email := TextInput(
-                        name="email",
-                        label="Email",
-                        input_type=InputType.EMAIL,
-                        required=True,
-                    ),
-                    Footer(
-                        label="Subscribe",
-                        on_click_action=CompleteAction(
-                            payload={  # Payload to send to the server
-                                "name": name.ref,
-                                "email": email.ref,
-                            }
-                        )
-                    )
-                ]
-            )
+                ),
+            ]),
         )
     ]
 )
 
-# Create the flow
-wa.create_flow(
-    name="subscribe_to_newsletter",
-    categories=[FlowCategory.SIGN_UP, FlowCategory.OTHER],
-    flow_json=my_flow_json,
-    publish=True
-)
-
-# Send the flow to a user
-wa.send_text(
-    to="9876543210",
-    text="Hello from PyWa!",
-    buttons=types.FlowButton(
-        title="Subscribe to our newsletter!",
-        flow_name="subscribe_to_newsletter",
-    )
-)
+wa.create_flow(name="newsletter_signup", categories=[FlowCategory.SIGN_UP], flow_json=my_flow, publish=True)
 
 
-# Handle the flow response
 @wa.on_flow_completion
-def handle_flow_response(_: WhatsApp, flow: types.FlowCompletion):
-    flow.reply(
-        text=f"Thank you for subscribing to our newsletter, {flow.response['name']}! "
-             f"We will send you updates to {flow.response['email']}.",
-        buttons=[types.Button(title="Unsubscribe", callback_data="unsubscribe")]
-    )
+def on_signup(_: WhatsApp, flow: types.FlowCompletion):
+    flow.reply(text=f"Welcome, {flow.response['name']}! You're subscribed at {flow.response['email']}.")
 ```
 
-🎛 **Installation**
---------------------
+### 8. Account & Resource Management
 
-- **Install using pip3:**
+Beyond messaging, PyWa gives you full control over your WhatsApp Business resources:
+
+```python
+from pywa import WhatsApp
+
+wa = WhatsApp(phone_id="1234567890", token="EAA...", waba_id=123456)
+
+# Business profile
+profile = wa.get_business_profile()
+wa.update_business_profile(about="Powered by PyWa", description="We build bots!", profile_picture="profile.jpg")
+
+# Media management
+media = wa.upload_media(media="photo.jpg")
+media.stream(), media.download(), media.reupload(), media.delete()
+
+# QR codes
+qr = wa.create_qr_code(prefilled_message="Hi! I saw your QR code")
+qr.qr_image_url, qr.code, qr.update(prefilled_message="Hello"), qr.delete()
+
+# Usernames
+wa.get_reserved_usernames()
+wa.set_username(username="mybusiness")
+wa.get_current_username()
+
+# Groups
+wa.create_group(subject="VIP Customers")
+wa.get_groups()
+wa.get_group_join_requests()
+
+# Commerce
+wa.get_commerce_settings()
+wa.update_commerce_settings(is_catalog_visible=True, is_cart_enabled=
+True)
+# User management
+wa.block_users(users=["9876543210"])
+blocked = wa.get_blocked_users()
+```
+
+> See the [Client guide](https://pywa.readthedocs.io/en/latest/content/client/overview.html) for the full resource
+> management API — templates, flows, media, QR codes, commerce, groups, calls, and more.
+
+### 9. Partners & Tech Providers
+
+Building a platform on top of WhatsApp? PyWa supports multi-WABA management, phone number provisioning, and callback
+routing for [Solution Partners](https://developers.facebook.com/docs/whatsapp/solution-partners) and Tech Providers:
+
+```python
+from pywa import WhatsApp, types, filters
+
+wa = WhatsApp(phone_id="1234567890", token="EAA...", waba_id=123456)
+
+
+@wa.on_message(filters.sent_to(phone_number_id=...))
+def handle_message_for_specific_phone_number(wa: WhatsApp, msg: types.Message): ...
+
+
+@wa.on_account_update(filters.account_restriction)
+def handle_account_restriction(wa: WhatsApp, update: types.AccountUpdate): ...
+
+
+@wa.on_message(filters.account_deleted)
+def handle_account_deletion(wa: WhatsApp, update: types.AccountUpdate): ...
+
+
+# Get all WABAs you manage
+shared_wabas = wa.get_shared_business_accounts()
+owned_wabas = wa.get_owned_business_accounts()
+
+# Provision phone numbers on a WABA
+phone = wa.create_phone_number(country_calling_code="1", phone_number="5551234567", verified_name="John Doe")
+wa.request_verification_code(phone_id=phone.id, code_method="SMS")
+wa.verify_phone_number(code="123456", phone_id=phone.id)
+wa.register_phone_number(phone_id=phone.id)
+
+# Route webhooks per-WABA or per-phone
+wa.override_waba_callback_url(callback_url="https://your-platform.com/waba/123")
+wa.override_phone_callback_url(callback_url="https://your-platform.com/phone/456")
+
+# Migrate templates & flows between WABAs
+wa.migrate_templates(source_waba_id=111111, destination_waba_id=222222)
+wa.migrate_flows(source_waba_id=111111, destination_waba_id=222222, source_flow_names=["flow_1"])
+```
+
+---
+
+## 📦 Installation
 
 ```bash
-pip3 install -U pywa
+# Core (sending messages, no webhook server)
+pip install -U pywa
+
+# With built-in webhook server (recommended)
+pip install -U "pywa[server]"
+
+# For Flow encryption support
+pip install -U "pywa[cryptography]"
+
+# Everything
+pip install -U "pywa[server,cryptography]"
 ```
 
-- **Install the built-in webhook server for `pywa dev` and `pywa run`:**
+> **Requirements:** Python 3.10+
 
-```bash
-pip3 install -U "pywa[server]"
-```
+---
 
-- **Install ngrok if you want to use `utils.start_ngrok_tunnel()` for local development:**
+## 📚 Documentation
 
-```bash
-pip3 install -U ngrok
-```
+Full documentation is available at **[pywa.readthedocs.io](https://pywa.readthedocs.io)**.
 
-- **Install from source (the bleeding edge):**
+| Topic                                                                                 | Description                                     |
+|:--------------------------------------------------------------------------------------|:------------------------------------------------|
+| [Getting Started](https://pywa.readthedocs.io/en/latest/content/getting-started.html) | Setup, first bot, and key concepts              |
+| [Client](https://pywa.readthedocs.io/en/latest/content/client/overview.html)          | Sending messages, media, and managing resources |
+| [Handlers](https://pywa.readthedocs.io/en/latest/content/handlers/overview.html)      | Decorators, filters, and webhook routing        |
+| [Listeners](https://pywa.readthedocs.io/en/latest/content/listeners/overview.html)    | Conversational flows and inline waiting         |
+| [Updates](https://pywa.readthedocs.io/en/latest/content/updates/overview.html)        | Message, callback, status, and system updates   |
+| [Filters](https://pywa.readthedocs.io/en/latest/content/filters/overview.html)        | Composable, reusable update filtering           |
+| [Templates](https://pywa.readthedocs.io/en/latest/content/templates/overview.html)    | Create, send, and manage message templates      |
+| [Flows](https://pywa.readthedocs.io/en/latest/content/flows/overview.html)            | Build interactive multi-screen flows            |
+| [Calls](https://pywa.readthedocs.io/en/latest/content/calls/overview.html)            | Handle voice call events                        |
 
-```bash
-pip3 install -U git+https://github.com/david-lev/pywa.git
-```
+---
 
-- **If you use Flows and want pywa's default encryption helpers:**
+## 🤝 Contributing
 
-```bash
-pip3 install -U "pywa[cryptography]"
-```
+Contributions are welcome! Check out
+the [Contributing Guide](https://github.com/david-lev/pywa/blob/master/CONTRIBUTING.md) to get started.
 
-💾 **Requirements**
---------------------
+## 💬 Community
 
-- Python 3.10 or higher - https://www.python.org
+Questions? Ideas? Join the conversation:
 
-📖 **Setup and Usage**
------------------------
+- 💬 [Telegram Chat](https://t.me/pywachat) — Community discussions & support
+- 📢 [Telegram Channel](https://t.me/py_wa) — Announcements & updates
 
-See the [Documentation](https://pywa.readthedocs.io/) for detailed instructions
+## ⚖️ License
 
-
-⚖️ **License**
----------------
-
-This project is licensed under the MIT License - see the
-[LICENSE](https://github.com/david-lev/pywa/blob/master/LICENSE) file for details
-
-
-🔱 **Contributing**
---------------------
-
-Contributions are welcome! Please see
-the [Contributing Guide](https://github.com/david-lev/pywa/blob/master/CONTRIBUTING.md) for more information.
-
-🗣 **Community**
---------------------
-
-Join the [Telegram Group](https://t.me/pywachat) to discuss, ask questions, and share your projects built with PyWa!
+PyWa is open-source software licensed under the [MIT License](https://github.com/david-lev/pywa/blob/master/LICENSE).

@@ -543,7 +543,7 @@ class PhoneNumberChangeHandler(Handler[PhoneNumberChange]):
         super().__init__(callback=callback, filters=filters, priority=priority)
 
 
-class IdentityChangeHandler(Handler[PhoneNumberChange]):
+class IdentityChangeHandler(Handler[IdentityChange]):
     """
     Handler for :class:`~pywa.types.system.IdentityChange` updates (user changes their identity).
 
