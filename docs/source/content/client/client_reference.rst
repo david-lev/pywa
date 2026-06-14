@@ -11,6 +11,7 @@ Client Reference
 .. automethod:: WhatsApp.send_document
 .. automethod:: WhatsApp.send_location
 .. automethod:: WhatsApp.request_location
+.. automethod:: WhatsApp.request_contact_info
 .. automethod:: WhatsApp.send_contact
 .. automethod:: WhatsApp.send_sticker
 .. automethod:: WhatsApp.send_catalog
@@ -50,6 +51,8 @@ Client Reference
 .. automethod:: WhatsApp.get_templates
 .. automethod:: WhatsApp.delete_template
 .. automethod:: WhatsApp.unpause_template
+.. automethod:: WhatsApp.archive_templates
+.. automethod:: WhatsApp.unarchive_templates
 .. automethod:: WhatsApp.compare_templates
 .. automethod:: WhatsApp.migrate_templates
 .. automethod:: WhatsApp.create_flow

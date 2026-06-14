@@ -219,7 +219,6 @@ class TemplateDetails(_TemplateDetails):
         """
         Update this template.
 
-        - The template object will be updated in memory after a successful update.
         - Only templates with an ``APPROVED``, ``REJECTED``, or ``PAUSED`` status can be edited.
         - You cannot edit the category of an approved template.
         - Approved templates can be edited up to 10 times in a 30 day window, or 1 time in a 24 hour window. Rejected or paused templates can be edited an unlimited number of times.
@@ -235,22 +234,13 @@ class TemplateDetails(_TemplateDetails):
         Returns:
             Whether the template was updated successfully.
         """
-        if res := await self._client.update_template(
+        return await self._client.update_template(
             template_id=self.id,
             new_category=new_category,
             new_components=new_components,
             new_message_send_ttl_seconds=new_message_send_ttl_seconds,
             new_parameter_format=new_parameter_format,
-        ):
-            if new_category:
-                self.category = new_category
-            if new_components:
-                self.components = new_components
-            if new_message_send_ttl_seconds is not None:
-                self.message_send_ttl_seconds = new_message_send_ttl_seconds
-            if new_parameter_format is not None:
-                self.parameter_format = new_parameter_format
-        return res
+        )
 
     async def duplicate(
         self,
@@ -324,10 +314,13 @@ class TemplateDetails(_TemplateDetails):
         Returns:
             A TemplateUnpauseResult object containing the result of the unpause operation.
         """
-        res = await self._client.unpause_template(template_id=self.id)
-        if res:
-            self.status = TemplateStatus.APPROVED
-        return res
+        return await self._client.unpause_template(template_id=self.id)
+
+    async def archive(self) -> ArchiveTemplatesResult:
+        return await self._client.archive_templates(template_ids=(self.id,))
+
+    async def unarchive(self) -> UnarchiveTemplatesResult:
+        return await self._client.unarchive_templates(template_ids=(self.id,))
 
     async def send(
         self,

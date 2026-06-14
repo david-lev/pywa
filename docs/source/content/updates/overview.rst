@@ -165,6 +165,8 @@ All updates share common methods and properties:
      - Reply with a location message
    * - :meth:`~BaseUserUpdate.reply_location_request`
      - Request the user’s location
+   * :meth:`~BaseUserUpdate.reply_contact_info_request`
+     - Request the user’s contact info
    * - :meth:`~BaseUserUpdate.reply_contact`
      - Reply with a contact message
    * - :meth:`~BaseUserUpdate.reply_sticker`

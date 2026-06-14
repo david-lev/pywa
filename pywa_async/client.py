@@ -161,6 +161,7 @@ from .types.sent_update import (
     SentVoiceMessage,
 )
 from .types.templates import (
+    ArchiveTemplatesResult,
     AuthenticationBody,
     AuthenticationFooter,
     BaseOTPButton,
@@ -181,6 +182,7 @@ from .types.templates import (
     TemplatesResult,
     TemplateStatus,
     TemplateUnpauseResult,
+    UnarchiveTemplatesResult,
     UpdatedTemplate,
 )
 from .types.user import User
@@ -1270,6 +1272,66 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             from_phone_id=sender,
             recipient_type=recipient_type,
             interactive_type=InteractiveType.LOCATION_REQUEST_MESSAGE,
+        )
+
+    async def request_contact_info(
+        self,
+        to: str | int,
+        text: str,
+        *,
+        reply_to_message_id: str | None = None,
+        tracker: str | CallbackData | None = None,
+        identity_key_hash: str | None = None,
+        sender: str | int | None = None,
+    ) -> SentMessage:
+        """
+        If a user taps this button, their WhatsApp phone number will be shared in the message thread, and a contacts webhook will be triggered containing the user’s phone number. Note that if a WhatsApp user shares a contact using the share contacts feature in the WhatsApp app instead, the webhook will also include the contact’s vCard.
+        If you are using the contact book feature, their phone number will also be added to your contact book automatically. For businesses that have enabled Local Storage, Meta extracts the user’s phone number from the shared contact card (vCard) and stores it in your contact book on Meta data centers. Only the phone number is extracted and stored; no other vCard data is retained beyond the standard data-in-use period.
+
+        - Great for scenarios where your application based on phone numbers. Register an handler with high priority and force them to share their contact info before they can interact with your bot.
+        - Read more about `Request contact info messages <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#requesting-phone-numbers-from-users>`_.
+
+        Example:
+
+            >>> wa = WhatsApp()
+            >>> await wa.request_contact_info(
+            ...     to='1234567890',
+            ...     text='In order to continue, please share your contact information with us.',
+            ... )
+
+        Args:
+            to: The user phone number, WhatsApp ID or BSUID to send the message to.
+            text: The text to send with the button.
+            reply_to_message_id: The message ID to quote (optional).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
+            sender: The phone ID to send the message from (optional, overrides the client's phone ID).
+
+        Returns:
+            The sent message.
+        """
+        sender = helpers.resolve_arg(
+            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
+        )
+        recipient, recipient_type = helpers.resolve_recipient(to)
+        return SentMessage.from_sent_update(
+            client=self,
+            update=await self.api.send_message(
+                sender=sender,
+                **recipient,
+                typ="interactive",
+                msg=helpers.get_interactive_msg(
+                    typ=InteractiveType.REQUEST_CONTACT_INFO,
+                    action={"name": "request_contact_info"},
+                    body=text,
+                ),
+                reply_to_message_id=reply_to_message_id,
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                recipient_identity_key_hash=identity_key_hash,
+            ),
+            from_phone_id=sender,
+            recipient_type=recipient_type,
+            interactive_type=InteractiveType.REQUEST_CONTACT_INFO,
         )
 
     async def send_contact(
@@ -3086,6 +3148,78 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             )
         )
 
+    async def archive_templates(
+        self,
+        template_ids: Iterable[int | str],
+        *,
+        waba_id: str | int | None = None,
+    ) -> ArchiveTemplatesResult:
+        """
+        Archive templates.
+
+        - You can archive up to 100 templates at a time.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/templates/template-archival#archive-templates>`_.
+
+        Example:
+
+            >>> wa = WhatsApp()
+            >>> await wa.archive_templates(template_ids=['1234567890', '0987654321'])
+
+        Args:
+            template_ids: The IDs of the templates to archive.
+            waba_id: The WhatsApp Business account ID (Overrides the client's business account ID, optional).
+
+        Returns:
+            An ArchiveTemplatesResult object containing the results of the archival operation.
+        """
+        return ArchiveTemplatesResult.from_dict(
+            await self.api.archive_templates(
+                waba_id=helpers.resolve_arg(
+                    wa=self,
+                    value=waba_id,
+                    method_arg="waba_id",
+                    client_arg="waba_id",
+                ),
+                template_ids=tuple(str(template_id) for template_id in template_ids),
+            )
+        )
+
+    async def unarchive_templates(
+        self,
+        template_ids: Iterable[int | str],
+        *,
+        waba_id: str | int | None = None,
+    ) -> UnarchiveTemplatesResult:
+        """
+        Unarchive templates.
+
+        - You can unarchive up to 100 templates at a time.
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/templates/template-archival#unarchive-templates>`_.
+
+        Example:
+
+            >>> wa = WhatsApp()
+            >>> await wa.unarchive_templates(template_ids=['1234567890', '0987654321'])
+
+        Args:
+            template_ids: The IDs of the templates to unarchive.
+            waba_id: The WhatsApp Business account ID (Overrides the client's business account ID, optional).
+
+        Returns:
+            An UnarchiveTemplatesResult object containing the results of the unarchival operation.
+        """
+        return UnarchiveTemplatesResult.from_dict(
+            await self.api.unarchive_templates(
+                waba_id=helpers.resolve_arg(
+                    wa=self,
+                    value=waba_id,
+                    method_arg="waba_id",
+                    client_arg="waba_id",
+                ),
+                template_ids=tuple(str(template_id) for template_id in template_ids),
+            )
+        )
+
     async def compare_templates(
         self,
         template_id: int | str,
@@ -3700,7 +3834,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         return CreatedBusinessPhoneNumber(
             id=(
                 await self.api.create_phone_number(
-                    cc=str(country_calling_code),
+                    country_code=str(country_calling_code),
                     phone_number=str(phone_number),
                     verified_name=verified_name,
                     waba_id=helpers.resolve_arg(
@@ -4809,7 +4943,11 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         )
 
     async def set_username(
-        self, username: str, *, phone_id: str | int | None = None
+        self,
+        username: str,
+        *,
+        force_transfer: bool = False,
+        phone_id: str | int | None = None,
     ) -> UsernameStatus:
         """
         Set a business username.
@@ -4819,6 +4957,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Args:
             username: The business username to set.
             phone_id: The phone ID to set the username for (optional, if not provided, the client's phone ID will be used).
+            force_transfer: Controls what happens when the requested username is currently in use on another business phone number within the same business portfolio (for example, when you want to move an existing username to a different one of your phone numbers)
 
         Returns:
             A UsernameStatus object containing the new username and its status.
@@ -4835,6 +4974,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                             client_arg="phone_id",
                         ),
                         username=username,
+                        transfer_action="force_transfer" if force_transfer else "none",
                     )
                 )["status"]
             ),

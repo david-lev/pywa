@@ -58,6 +58,8 @@ __all__ = [
     "TemplatesResult",
     "TemplatesCompareResult",
     "TemplateUnpauseResult",
+    "ArchiveTemplatesResult",
+    "UnarchiveTemplatesResult",
     "MigrateTemplatesResult",
     "MigratedTemplate",
     "MigratedTemplateError",
@@ -75,6 +77,7 @@ import json
 import logging
 import pathlib
 import re
+import warnings
 from typing import (
     TYPE_CHECKING,
     AsyncIterator,
@@ -88,6 +91,8 @@ from typing import (
     cast,
     overload,
 )
+
+from ..errors import PywaDeprecationWarning
 
 _T = TypeVar("_T")
 
@@ -127,7 +132,8 @@ class TemplateStatus(helpers.StrEnum):
         PENDING_DELETION: Indicates template has been deleted via WhatsApp Manager.
         FLAGGED: Indicates the template has received negative feedback and is at risk of being disabled.
         PAUSED: Indicates the template has been `paused <https://developers.facebook.com/docs/whatsapp/message-templates/guidelines/#template-pausing>`_.
-        ARCHIVED: Indicates template has been archived to keep the list of templates in WhatsApp manager clean.
+        ARCHIVED: Indicates the template has been `archived <https://developers.facebook.com/documentation/business-messaging/whatsapp/templates/template-archival>`_ due to inactivity. Archived templates are scheduled for deletion after 28 days unless unarchived.
+        UNARCHIVED: Indicates the template has been `unarchived <https://developers.facebook.com/documentation/business-messaging/whatsapp/templates/template-archival>`_ and restored to its previous status.
         LIMIT_EXCEEDED: Indicates the WhatsApp Business Account template is at its template limit.
         LOCKED: Indicates the template has been locked and cannot be edited.
         UNKNOWN: The status of the template is unknown.
@@ -145,6 +151,7 @@ class TemplateStatus(helpers.StrEnum):
     PAUSED = "PAUSED"
     LIMIT_EXCEEDED = "LIMIT_EXCEEDED"
     ARCHIVED = "ARCHIVED"
+    UNARCHIVED = "UNARCHIVED"
     LOCKED = "LOCKED"
 
     UNKNOWN = "UNKNOWN"
@@ -4109,7 +4116,7 @@ def _validate_params(
         raise ValueError("; ".join(errors))
 
 
-@dataclasses.dataclass(kw_only=True, slots=True)
+@dataclasses.dataclass(kw_only=True, slots=True, frozen=True)
 class TemplateDetails(helpers.APIObject, _BaseTemplateActions):
     """
     Represents the details of an existing WhatsApp Template.
@@ -4219,7 +4226,6 @@ class TemplateDetails(helpers.APIObject, _BaseTemplateActions):
         """
         Update this template.
 
-        - The template object will be updated in memory after a successful update.
         - Only templates with an ``APPROVED``, ``REJECTED``, or ``PAUSED`` status can be edited.
         - You cannot edit the category of an approved template.
         - Approved templates can be edited up to 10 times in a 30 day window, or 1 time in a 24 hour window. Rejected or paused templates can be edited an unlimited number of times.
@@ -4235,22 +4241,13 @@ class TemplateDetails(helpers.APIObject, _BaseTemplateActions):
         Returns:
             Whether the template was updated successfully.
         """
-        if res := self._client.update_template(
+        return self._client.update_template(
             template_id=self.id,
             new_category=new_category,
             new_components=new_components,
             new_message_send_ttl_seconds=new_message_send_ttl_seconds,
             new_parameter_format=new_parameter_format,
-        ):
-            if new_category:
-                self.category = new_category
-            if new_components:
-                self.components = new_components
-            if new_message_send_ttl_seconds is not None:
-                self.message_send_ttl_seconds = new_message_send_ttl_seconds
-            if new_parameter_format is not None:
-                self.parameter_format = new_parameter_format
-        return res
+        )
 
     def duplicate(
         self,
@@ -4327,10 +4324,13 @@ class TemplateDetails(helpers.APIObject, _BaseTemplateActions):
         Returns:
             A TemplateUnpauseResult object containing the result of the unpause operation.
         """
-        res = self._client.unpause_template(template_id=self.id)
-        if res:
-            self.status = TemplateStatus.APPROVED
-        return res
+        return self._client.unpause_template(template_id=self.id)
+
+    def archive(self) -> ArchiveTemplatesResult:
+        return self._client.archive_templates(template_ids=(self.id,))
+
+    def unarchive(self) -> UnarchiveTemplatesResult:
+        return self._client.unarchive_templates(template_ids=(self.id,))
 
     def send(
         self,
@@ -4492,31 +4492,85 @@ class TemplatesCompareResult:
 
 
 @dataclasses.dataclass(kw_only=True, slots=True, frozen=True)
+class ArchiveTemplatesResult:
+    archived: tuple[str]
+    failed: dict[str, str]
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: dict,
+    ) -> ArchiveTemplatesResult:
+        return cls(
+            archived=tuple(data.get("archived_templates", [])),
+            failed=dict(data.get("failed_templates", {})),
+        )
+
+
+@dataclasses.dataclass(kw_only=True, slots=True, frozen=True)
+class UnarchiveTemplatesResult:
+    unarchived: tuple[str]
+    failed: dict[str, str]
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: dict,
+    ) -> UnarchiveTemplatesResult:
+        return cls(
+            unarchived=tuple(data.get("unarchived_templates", [])),
+            failed=dict(data.get("failed_templates", {})),
+        )
+
+
+@dataclasses.dataclass(kw_only=True, slots=True, frozen=True)
 class MigrateTemplatesResult:
     """
     Represents the response from migrating templates from one WhatsApp Business Account to another.
 
     Attributes:
-        migrated_templates:  templates that were successfully duplicated in the destination WhatsApp Business Account.
-        failed_templates: templates that failed to be duplicated in the destination WhatsApp Business Account, along with the reason for failure.
+        migrated:  templates that were successfully duplicated in the destination WhatsApp Business Account.
+        failed: templates that failed to be duplicated in the destination WhatsApp Business Account, along with the reason for failure.
     """
 
-    migrated_templates: tuple[MigratedTemplate, ...]
-    failed_templates: tuple[MigratedTemplateError, ...]
+    migrated: tuple[MigratedTemplate, ...]
+    failed: tuple[MigratedTemplateError, ...]
 
     @classmethod
     def from_dict(cls, data: dict) -> MigrateTemplatesResult:
-        migrated_templates = tuple(
-            MigratedTemplate(id=item) for item in data.get("migrated_templates", [])
-        )
-        failed_templates = tuple(
-            MigratedTemplateError(id=item["id"], reason=item["reason"])
-            for item in data.get("failed_templates", [])
-        )
         return cls(
-            migrated_templates=migrated_templates,
-            failed_templates=failed_templates,
+            migrated=tuple(
+                MigratedTemplate(id=item) for item in data.get("migrated_templates", [])
+            ),
+            failed=tuple(
+                MigratedTemplateError(id=item["id"], reason=item["reason"])
+                for item in data.get("failed_templates", [])
+            ),
         )
+
+    @property
+    def migrated_templates(self) -> None:
+        """
+        Deprecated alias for `migrated`.
+        """
+        warnings.warn(
+            "The 'migrated_templates' property is deprecated and will be removed in a future version. Please use the 'migrated' property instead.",
+            PywaDeprecationWarning,
+            stacklevel=2,
+        )
+        return self.migrated
+
+    @property
+    def failed_templates(self) -> None:
+        """
+        Deprecated alias for `failed`.
+        """
+        warnings.warn(
+            "The 'failed_templates' property is deprecated and will be removed in a future version. Please use the 'failed' property instead.",
+            PywaDeprecationWarning,
+            stacklevel=2,
+        )
+        return self.failed
 
 
 @dataclasses.dataclass(kw_only=True, slots=True, frozen=True)

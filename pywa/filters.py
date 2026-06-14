@@ -27,6 +27,7 @@ __all__ = [
     "sent_to",
     "sent_to_me",
     "from_users",
+    "no_wa_id",
     "from_countries",
     "matches",
     "contains",
@@ -302,6 +303,11 @@ Filter for messages that reply to another message.
 >>> filters.reply
 """
 
+no_wa_id = new(lambda _, u: u.from_user.wa_id is None, name="no_wa_id")
+"""
+Filter for updates that their sender doesn't have a ``wa_id`` (when the user enables username)
+"""
+
 
 def update_id(id_: str) -> Filter:
     """
@@ -409,13 +415,12 @@ def from_users(
 
     def filter_func(_, m) -> bool:
         user = m.from_user
-        if not user:
-            return False
 
         return (
             user.bsuid in processed_ids
             or user.wa_id in processed_ids
             or user.parent_bsuid in processed_ids
+            or user.username in processed_ids
         )
 
     return new(filter_func, name="from_users")
