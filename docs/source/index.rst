@@ -36,6 +36,7 @@ See the full changelog `here <content/changelog.html>`_.
     /content/groups/overview
     /content/calls/overview
     /content/examples/overview
+    /content/cli
     /content/changelog
     /content/contributing
     /content/migration

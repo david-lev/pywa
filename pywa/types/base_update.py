@@ -770,6 +770,50 @@ class _ClientShortcuts(abc.ABC):
             tracker=tracker,
         )
 
+    def reply_contact_info_request(
+        self,
+        text: str,
+        *,
+        quote: bool = False,
+        tracker: str | CallbackData | None = None,
+        identity_key_hash: str | None = None,
+    ) -> SentMessage:
+        """
+        If a user taps this button, their WhatsApp phone number will be shared in the message thread, and a contacts webhook will be triggered containing the user’s phone number. Note that if a WhatsApp user shares a contact using the share contacts feature in the WhatsApp app instead, the webhook will also include the contact’s vCard.
+        If you are using the contact book feature, their phone number will also be added to your contact book automatically. For businesses that have enabled Local Storage, Meta extracts the user’s phone number from the shared contact card (vCard) and stores it in your contact book on Meta data centers. Only the phone number is extracted and stored; no other vCard data is retained beyond the standard data-in-use period.
+
+        - Great for scenarios where your application based on phone numbers. Register an handler with high priority and force them to share their contact info before they can interact with your bot.
+        - Read more about `Request contact info messages <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#requesting-phone-numbers-from-users>`_.
+
+        Example:
+
+            >>> wa = WhatsApp(...)
+            >>> @wa.on_message(filters.no_wa_id, priority=100)
+            ... def callback(_: WhatsApp, msg: Message):
+            ...     # check in your db if the user has shared their contact info before, if not, request it:
+            ...     msg.reply_contact_info_request(
+            ...         text='Please share your contact info to continue using the bot',
+            ...         quote=True,
+            ...     )
+
+        Args:
+            text: The text to send with the request.
+            quote: Whether to quote the replied message (default: False).
+            tracker: The data to track the message with (optional, up to 512 characters, for complex data you can use :class:`~pywa.types.callback.CallbackData`).
+            identity_key_hash: The message would only be delivered if the hash value matches the customer's current hash (Optional, See `Identity Change Check <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers#identity-change-check>`_).
+
+        Returns:
+            The sent contact info request message.
+        """
+        return self._client.request_contact_info(
+            sender=self._internal_recipient,
+            to=self._get_reply_to(),
+            text=text,
+            reply_to_message_id=self.message_id_to_reply if quote else None,
+            tracker=tracker,
+            identity_key_hash=identity_key_hash,
+        )
+
     def reply_contact(
         self,
         contact: Contact | Iterable[Contact],

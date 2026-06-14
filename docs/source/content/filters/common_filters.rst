@@ -28,6 +28,7 @@ Common filters
 .. autofunction:: sent_to
 .. autoattribute:: pywa.filters.sent_to_me
 .. autofunction:: from_users
+.. autofunction:: no_wa_id
 .. autofunction:: from_countries
 .. autofunction:: matches
 .. autofunction:: contains

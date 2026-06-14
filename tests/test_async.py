@@ -327,6 +327,8 @@ def test_all_methods_are_overwritten_in_async(overrides):
             WhatsAppSync._check_for_async_filters,
             WhatsAppSync._resolve_user_identifier,
             GraphAPISync.stream_media_bytes,
+            GraphAPISync._join_fields,
+            GraphAPISync._filter_none,
             ServerSync._delayed_register_callback_url,
             ServerSync._register_callback_url,
             ServerSync._get_handler_type,
