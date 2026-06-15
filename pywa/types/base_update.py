@@ -788,7 +788,7 @@ class _ClientShortcuts(abc.ABC):
         Example:
 
             >>> wa = WhatsApp(...)
-            >>> @wa.on_message(filters.no_wa_id, priority=100)
+            >>> @wa.on_message(filters.without_wa_id, priority=100)
             ... def callback(_: WhatsApp, msg: Message):
             ...     # check in your db if the user has shared their contact info before, if not, request it:
             ...     msg.reply_contact_info_request(

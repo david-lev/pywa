@@ -6,7 +6,7 @@
 Updates are the **incoming events** from the WhatsApp Cloud API.
 They are sent to your webhook URL and converted by PyWa into type-safe objects that are easy to handle.
 
-In WhatsApp Cloud API, updates are called **fields**, and you need to subscribe to them in order to receive them at your webhook URL.
+In the WhatsApp Cloud API, incoming events are grouped into webhook **fields** (such as ``messages`` or ``calls``). To receive these updates, you must configure your webhook URL in the Meta Developer Portal and subscribe to the specific fields your bot needs.
 
 -----------------
 Supported Fields
@@ -165,7 +165,7 @@ All updates share common methods and properties:
      - Reply with a location message
    * - :meth:`~BaseUserUpdate.reply_location_request`
      - Request the user’s location
-   * :meth:`~BaseUserUpdate.reply_contact_info_request`
+   * - :meth:`~BaseUserUpdate.reply_contact_info_request`
      - Request the user’s contact info
    * - :meth:`~BaseUserUpdate.reply_contact`
      - Reply with a contact message

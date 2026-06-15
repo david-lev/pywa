@@ -1,8 +1,7 @@
 🤖 Demo Bots
 ============
 
-This page contains some examples of bots you can create using pywa.
-Every example is a complete working bot that you can run on your own server.
+This page contains complete, working examples of bots you can create using pywa.
 
 👋 Hello Bot
 --------------
@@ -12,15 +11,11 @@ This is a simple bot that welcomes the user when they send a message.
 .. code-block:: python
     :linenos:
 
-    import flask  # pip3 install flask
     from pywa import WhatsApp, types
-
-    flask_app = flask.Flask(__name__)
 
     wa = WhatsApp(
         phone_id='your_phone_number',
         token='your_token',
-        server=flask_app,
         verify_token='xyzxyz',
     )
 
@@ -29,8 +24,7 @@ This is a simple bot that welcomes the user when they send a message.
         msg.react('👋')
         msg.reply(f'Hello {msg.from_user.name}!')
 
-    # Run the server
-    flask_app.run()
+    # Run the server with `pywa dev`
 
 
 📝 Echo Bot
@@ -42,15 +36,11 @@ This is a simple bot that echoes back the user's message.
 .. code-block:: python
     :linenos:
 
-    import flask  # pip3 install flask
     from pywa import WhatsApp, types
-
-    flask_app = flask.Flask(__name__)
 
     wa = WhatsApp(
         phone_id='your_phone_number',
         token='your_token',
-        server=flask_app,
         verify_token='xyzxyz',
     )
 
@@ -59,11 +49,9 @@ This is a simple bot that echoes back the user's message.
         try:
             msg.copy(to=msg.sender, reply_to_message_id=msg.message_id_to_reply)
         except ValueError:
-            msg.reply_text("I can't echo this message")
+            msg.reply("I can't echo this message")
 
-    # Run the server
-    flask_app.run()
-
+    # Run the server with `pywa dev`
 
 
 ⬆️ Url Uploader Bot
@@ -74,16 +62,11 @@ This is a simple bot that uploads files from URLs.
 .. code-block:: python
     :linenos:
 
-    import flask  # pip3 install flask
     from pywa import WhatsApp, types, filters, errors
-    from pywa.types import Message, MessageStatus
-
-    flask_app = flask.Flask(__name__)
 
     wa = WhatsApp(
         phone_id='your_phone_number',
         token='your_token',
-        server=flask_app,
         verify_token='xyzxyz',
     )
 
@@ -94,10 +77,9 @@ This is a simple bot that uploads files from URLs.
     # When a file fails to download/upload, the bot will reply with an error message.
     @wa.on_message_status(filters.failed_with(errors.MediaDownloadError, errors.MediaUploadError))
     def on_media_download_error(_: WhatsApp, status: types.MessageStatus):
-        status.reply_text(f"I can't download/upload this file: {status.error.details}")
+        status.reply(f"I can't download/upload this file: {status.error.details}")
 
-    # Run the server
-    flask_app.run()
+    # Run the server with `pywa dev`
 
 
 🔢 Calculator WhatsApp Bot
@@ -115,15 +97,11 @@ Usage:
 .. code-block:: python
 
     import re
-    import flask  # pip3 install flask
     from pywa import WhatsApp, types, filters
-
-    flask_app = flask.Flask(__name__)
 
     wa = WhatsApp(
         phone_id='your_phone_number',
         token='your_token',
-        server=flask_app,
         verify_token='xyzxyz',
     )
 
@@ -153,9 +131,7 @@ Usage:
                 return
         msg.reply(f'{a} {op} {b} = *{result}*')
 
-    # Run the server
-    flask_app.run()
-
+    # Run the server with `pywa dev`
 
 🌐 Translator Bot
 -----------------
@@ -166,17 +142,14 @@ A simple WhatsApp bot that translates text messages to other languages.
     :linenos:
 
     import logging
-    import flask  # pip3 install flask
     import googletrans  # pip3 install googletrans==4.0.0-rc1
     from pywa import WhatsApp, types, filters
 
-    flask_app = flask.Flask(__name__)
     translator = googletrans.Translator()
 
     wa = WhatsApp(
         phone_id='your_phone_number',
         token='your_token',
-        server=flask_app,
         verify_token='xyzxyz',
     )
 
@@ -199,7 +172,7 @@ A simple WhatsApp bot that translates text messages to other languages.
 
     @wa.on_message(filters.text)
     def offer_translation(_: WhatsApp, msg: types.Message):
-        msg_id = msg.reply_text(
+        msg_id = msg.reply(
             text='Choose language to translate to:',
             buttons=types.SectionList(
                 button_title='🌐 Choose Language',
@@ -238,7 +211,7 @@ A simple WhatsApp bot that translates text messages to other languages.
             original_text = MESSAGE_ID_TO_TEXT[sel.reply_to_message.message_id]
         except KeyError:  # If the bot was restarted, the message ID is no longer valid.
             sel.react('❌')
-            sel.reply_text(
+            sel.reply(
                 text='Original message not found. Please send a new message.'
             )
             return
@@ -246,19 +219,18 @@ A simple WhatsApp bot that translates text messages to other languages.
             translated = translator.translate(original_text, dest=lang_code)
         except Exception as e:
             sel.react('❌')
-            sel.reply_text(
+            sel.reply(
                 text='An error occurred. Please try again.'
             )
             logging.exception(e)
             return
 
-        sel.reply_text(
+        sel.reply(
             text=f"Translated to {translated.dest}:\n{translated.text}"
         )
 
 
-    # Run the server
-    flask_app.run()
+    # Run the server with `pywa dev`
 
 
 🖼 Random image bot
@@ -270,16 +242,11 @@ This example shows how to create a simple bot that replies with a random image f
 .. code-block:: python
     :linenos:
 
-    import requests
-    import flask
     from pywa import WhatsApp, types
-
-    flask_app = flask.Flask(__name__)
 
     wa = WhatsApp(
         phone_id='your_phone_number',
         token='your_token',
-        server=flask_app,
         verify_token='xyzxyz',
     )
 
@@ -291,8 +258,7 @@ This example shows how to create a simple bot that replies with a random image f
             buttons=types.ButtonUrl(title='Unsplash', url='https://unsplash.com')
         )
 
-    # Run the server
-    flask_app.run()
+    # Run the server with `pywa dev`
 
 
 📸 Remove background from image
@@ -303,16 +269,13 @@ This example shows how to create a bot that removes the background from an image
 .. code-block:: python
     :linenos:
 
-    import requests
-    import flask
+    import logging
+    import httpx
     from pywa import WhatsApp, types
-
-    flask_app = flask.Flask(__name__)
 
     wa = WhatsApp(
         phone_id='your_phone_number',
         token='your_token',
-        server=flask_app,
         verify_token='xyzxyz',
     )
 
@@ -324,7 +287,7 @@ This example shows how to create a bot that removes the background from an image
         files = {'image_file': original_img}
         data = {'size': 'auto'}
         headers = {'X-Api-Key': REMOVEBG_API_KEY}
-        response = requests.post(url, files=files, data=data, headers=headers)
+        response = httpx.post(url, files=files, data=data, headers=headers)
         response.raise_for_status()
         return response.content
 
@@ -334,8 +297,8 @@ This example shows how to create a bot that removes the background from an image
         try:
             original_img = msg.image.download(in_memory=True)
             image = get_removed_bg_image(original_img)
-        except requests.HTTPError as e:
-            msg.reply_text(f"A error occurred")
+        except httpx.HTTPError as e:
+            msg.reply("An error occurred")
             logging.exception(e)
             return
         msg.reply_image(
@@ -344,5 +307,4 @@ This example shows how to create a bot that removes the background from an image
             mime_type='image/png',  # when sending bytes, you must specify the mime type
         )
 
-    # Run the server
-    flask_app.run()
+    # Run the server with `pywa dev`

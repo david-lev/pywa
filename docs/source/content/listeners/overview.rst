@@ -1,16 +1,31 @@
 📥 Listeners
-==================
+============
 
 .. currentmodule:: pywa.types.sent_update
 
-When handling updates, most of the time you ask the user for input (e.g. a reply, text, button press, etc.). This is where listeners come in.
-With listeners, you can create an `inline` handler that waits for a specific user input and returns the result.
+When your bot needs more than a single reply — for example, asking a follow-up question or
+collecting a sequence of inputs — listeners let you pause execution and wait for the user's
+next message, right inside the same handler function. No extra handler needed.
 
+.. warning::
+
+    **Limitations and Resource Safety Warnings:**
+
+    * **Multi-worker environments**: Listening is **not supported** when running the server with multiple workers (e.g., ``pywa run --workers > 1``), as workers do not share in-memory listener states.
+    * **Memory Leak Risk**: Listening without a ``timeout`` is highly discouraged. If the user never responds, the listener remains in memory indefinitely. Always specify a reasonable ``timeout``.
+    * **Thread Pool Exhaustion (Synchronous Clients)**: In synchronous pywa (not ``pywa_async``, each active listener blocks a worker thread. If you run pywa synchronously with ASGI frameworks like FastAPI or Starlette, active listeners can quickly exhaust the AnyIO thread pool (default is 40). **If the limit is reached, your server will freeze and drop incoming webhooks.**
+
+      *Actionable mitigations:*
+
+      1. **(Recommended)** Migrate to the asynchronous client (``pywa_async``) for fully non-blocking listeners.
+      2. Enforce strict, shorter ``timeout`` durations on all listeners to free up threads faster.
+      3. Increase the AnyIO thread limit by adjusting ``pywa.server.ANYIO_THREADS_LIMIT`` to a higher value.
 
 Listening
-_________
+---------
 
-In this example, we will create a listener that waits for the user to send their age. The listener will wait for a text-digit message from the user and then reply with a message based on the age provided.
+In this example, we wait for the user to send their age. The listener checks that the reply
+is a text message containing only digits, then branches based on the value.
 
 .. code-block:: python
     :linenos:
@@ -23,28 +38,29 @@ In this example, we will create a listener that waits for the user to send their
     @wa.on_message(filters.command("start"))
     def start(client: WhatsApp, msg: types.Message):
         sent = msg.reply("Hello! How old are you?")
-        age_reply: Message = sent.wait_for_reply(
+        age_reply: types.Message = sent.wait_for_reply(
             filters=filters.text & filters.new(lambda _, m: m.text.isdigit())
         )
         age = int(age_reply.text)
         if age < 18:
             age_reply.reply("You are too young to use this service.")
-            # Handle the case when the user is too young
         else:
             age_reply.reply("Welcome! You can now use the service.")
-            # Handle the case when the user is old enough
 
 .. role:: python(code)
    :language: python
 
-In the example above, we storing the sent message in the variable ``sent``. Then, we used the :meth:`~SentMessage.wait_for_reply` method to create a listener that waits for a reply from the user. The listener will wait for a message that matches the filter :python:`filters.text & filters.new(lambda _, m: m.text.isdigit())`, which means it will wait for a text message that contains only digits.
-When the user sends a message that matches the filter, the listener will return the message as a :class:`~pywa.types.Message` object, which we store in the variable ``age_reply``. We then convert the text of the message to an integer and check if the user is old enough to use the service.
-
+:meth:`~SentMessage.wait_for_reply` blocks execution until the user sends a message that
+matches the filter — :python:`filters.text & filters.new(lambda _, m: m.text.isdigit())` here.
+The matching update is returned as a :class:`~pywa.types.Message` object, so you can read
+``age_reply.text``, reply to it, or pass it along to other logic.
 
 Canceling
-_________
+---------
 
-Now, listeners are blocking. This means that the code execution will stop until the listener returns a result. However, you can cancel the listener if you want to stop waiting for a reply. For example, you can add a button to the message that the user can press to cancel the listener or you can set a timeout for the listener to stop waiting after a certain period of time.
+Listeners block until a matching message arrives. You can also give the user a way out by
+providing ``cancelers`` (e.g., a cancel button) or a ``timeout`` in seconds.
+If either triggers, a exception is raised — see *Handling cancel and timeout* below.
 
 .. code-block:: python
     :linenos:
@@ -64,13 +80,11 @@ Now, listeners are blocking. This means that the code execution will stop until 
         )
         ...
 
-In the example above, we added a button to the message that the user can press to cancel the listener. We also set a timeout of 60 seconds for the listener. If the user presses the cancel button or if the listener times out, the listener will stop waiting for a reply and raise an exception.
-
 Handling cancel and timeout
-____________________________
+---------------------------
 
-When a listener is canceled or times out, it raises an exception. Most of the time, you will want to handle these exceptions to provide a better user experience. PyWa provides two exceptions for this purpose: :class:`~pywa.listeners.ListenerCanceled` and :class:`~pywa.listeners.ListenerTimeout`.
-You can use these exceptions to handle the cancel and timeout cases in your code. Let's see an example:
+When a listener is canceled or times out, pywa raises :class:`~pywa.listeners.ListenerCanceled`
+or :class:`~pywa.listeners.ListenerTimeout` respectively. Catch them to send a helpful response.
 
 .. code-block:: python
     :linenos:
@@ -79,7 +93,6 @@ You can use these exceptions to handle the cancel and timeout cases in your code
     from pywa import WhatsApp, types, filters
 
     wa = WhatsApp(...)
-
 
     @wa.on_message(filters.command("start"))
     def start(_: WhatsApp, msg: types.Message):
@@ -100,31 +113,50 @@ You can use these exceptions to handle the cancel and timeout cases in your code
             return
         ...
 
-
-In the example above, we used a try-except block to handle the :class:`~pywa.listeners.ListenerCanceled` and :class:`~pywa.listeners.ListenerTimeout` exceptions. If the user cancels the listener by clicking the cancel button, we send a message to inform them that they canceled the operation. If the listener times out, we send a message to inform the user that they took too long to respond.
-If the listener returns a result, we can continue processing the user's input as usual.
-
-
 Custom listeners
-_________________
+----------------
 
 .. currentmodule:: pywa.client
 
-You can create custom listeners by using the raw :meth:`WhatsApp.listen` method. This method allows you to create a listener that waits for a specific update and returns the result when the update is received.
+For advanced use cases, you can use the lower-level :meth:`WhatsApp.listen` method directly.
+It lets you specify which sender and update type to wait for, and is what all the shortcuts
+(``wait_for_reply``, ``wait_for_click``, etc.) are built on top of.
 
 .. attention::
 
-    If the listener did not **use** the update (the update not matched the filters or the cancelers), the update **will be passed to the handlers**.
-    This means that the update can be processed by other handlers that are registered to handle the same update type.
-    This behavior changed since version ``3.0.0``, before that - when update was not used by the listener - it was ignored and not passed to the handlers.
+    If the listener did not **use** the update (the update did not match the filters or the
+    cancelers), the update **will be passed to the handlers**.
+    This means that the update can be processed by other handlers registered for the same update type.
 
-    If you must prevent the update from being passed to the handlers, call the :meth:`~pywa.types.base_update.BaseUpdate.stop_handling` method on the update inside the filters or the cancelers (it will not affect the listener behavior, just prevent the update from being passed to the handlers).
+    If you must prevent the update from being passed to the handlers, call
+    :meth:`~pywa.types.base_update.BaseUpdate.stop_handling` on the update inside the filters
+    or cancelers (this only affects handler dispatch, not the listener itself).
 
+.. code-block:: python
+    :linenos:
+    :emphasize-lines: 7-12
+
+    from pywa import WhatsApp, types, filters
+
+    wa = WhatsApp(...)
+
+    @wa.on_message(filters.command("confirm"))
+    def confirm_action(_: WhatsApp, msg: types.Message):
+        confirmation = wa.listen(
+            to=msg.sender,
+            filters=filters.callback_button & filters.matches("yes", "no"),
+            cancelers=filters.text & filters.matches("cancel"),
+            timeout=30,
+        )
+        if confirmation.data == "yes":
+            msg.reply("✅ Confirmed!")
+        else:
+            msg.reply("❌ Canceled.")
 
 Shortcuts
-_________
+---------
 
-PyWa provides a few shortcuts to create listeners when sending messages. Let's see an example:
+PyWa provides several shortcuts to create listeners directly from sent messages:
 
 .. code-block:: python
     :linenos:
@@ -136,10 +168,8 @@ PyWa provides a few shortcuts to create listeners when sending messages. Let's s
 
     @wa.on_message(filters.command("start"))
     def start(client: WhatsApp, msg: types.Message):
-        age: types.Message = m.reply("Hello! How old are you?").wait_for_reply(filters.text)
-        m.reply(f"You are {age.text} years old")
-
-In the example above, we used the :meth:`~pywa.types.sent_update.SentMessage.wait_for_reply` method to create a listener that waits for a text reply from the user.
+        age = msg.reply("Hello! How old are you?").wait_for_reply(filters.text)
+        msg.reply(f"You are {age.text} years old")
 
 .. code-block:: python
     :linenos:
@@ -154,9 +184,10 @@ In the example above, we used the :meth:`~pywa.types.sent_update.SentMessage.wai
         msg.reply(f"Hello {msg.from_user.name}!").wait_until_delivered()
         msg.reply("How can I help you?")
 
-In the example above, we used the :meth:`~pywa.types.sent_update.SentMessage.wait_until_delivered` method to create a listener that waits until the message is delivered to the user.
-
-Other shortcuts are available, such as :meth:`~pywa.types.sent_update.SentMessage.wait_for_click`, :meth:`~pywa.types.sent_update.SentMessage.wait_for_selection`, :meth:`~pywa.types.sent_update.SentMessage.wait_until_read`, :meth:`~pywa.types.sent_update.SentVoiceMessage.wait_until_played`, and more.
+Other shortcuts include :meth:`~pywa.types.sent_update.SentMessage.wait_for_click`,
+:meth:`~pywa.types.sent_update.SentMessage.wait_for_selection`,
+:meth:`~pywa.types.sent_update.SentMessage.wait_until_read`,
+:meth:`~pywa.types.sent_update.SentVoiceMessage.wait_until_played`, and more.
 
 .. toctree::
 

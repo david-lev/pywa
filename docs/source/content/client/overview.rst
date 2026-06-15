@@ -13,7 +13,7 @@ Its **three main responsibilities** are:
 3. **Managing resources** — templates, flows, profiles, and other business-related settings.
 
 .. tip::
-   :class: note
+   :class: tip
 
    Pywa provides **two types of clients**:
 
@@ -43,6 +43,9 @@ Its **three main responsibilities** are:
           await msg.reply("Hello!")
 
    For optimal type checking, ensure that **all** your imports come from the same package—either ``pywa`` or ``pywa_async``.
+
+To help you navigate the API, the client's methods are grouped below by functionality. Most of these methods return type-safe objects representing API responses, which you can then manipulate or reply to directly.
+
 .. autoclass:: WhatsApp()
    :members: __init__
 
@@ -227,7 +230,7 @@ Create, update, and manage message templates:
    * - :meth:`~WhatsApp.create_template`
      - Create a new template
    * - :meth:`~WhatsApp.upsert_authentication_template`
-     - Bulk create or update authentication templates
+     - Create or update multiple authentication templates in a single request
    * - :meth:`~WhatsApp.get_templates`
      - Retrieve all templates
    * - :meth:`~WhatsApp.get_template`

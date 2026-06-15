@@ -597,7 +597,7 @@ If you pass a custom FastAPI or Flask server, pywa does not run it for you.
 Handler Order and Flow
 ----------------------
 
-By default, pywa stops after the first handler that matches an update.
+By default, pywa stops after the first handler whose **filter** matches an update.
 
 .. code-block:: python
     :caption: main.py
@@ -609,14 +609,14 @@ By default, pywa stops after the first handler that matches an update.
 
     @wa.on_message
     def first(client: WhatsApp, msg: types.Message):
-        print("first")
-        # No later message handlers run for this update.
+        print("first")  # <-- runs, then stops. second() is never called.
 
     @wa.on_message
     def second(client: WhatsApp, msg: types.Message):
-        print("second")
+        print("second")  # <-- never reached, because first() matched first.
 
-Handlers run in registration order unless you set ``priority``. Higher priority runs earlier.
+Handlers run in registration order unless you set ``priority``.
+**Higher priority number runs first** — a handler with ``priority=2`` runs before one with ``priority=1``.
 
 .. code-block:: python
     :caption: main.py
@@ -734,19 +734,28 @@ Update route:
 With manual framework integration, you are responsible for returning the right response format
 for your framework and for running the server.
 
-What pywa runs
---------------
+.. note::
 
-When you use ``pywa dev``, ``pywa run``, or :meth:`~pywa.client.WhatsApp.run`, pywa creates a
-small Starlette app and runs it with Uvicorn.
+    Regardless of how you run pywa (``pywa dev``, ``pywa run``, or :meth:`~pywa.client.WhatsApp.run`),
+    it creates a small Starlette app backed by Uvicorn and registers two routes on ``webhook_endpoint``:
 
-That app registers:
+    - ``GET`` — answers WhatsApp's verification challenge.
+    - ``POST`` — receives and dispatches incoming webhook updates.
 
-- A ``GET`` route on ``webhook_endpoint`` for WhatsApp's verification challenge.
-- A ``POST`` route on ``webhook_endpoint`` for incoming webhook updates.
+    When you pass a FastAPI or Flask ``server``, pywa registers the same routes on that app instead.
+    For any other framework, use the :ref:`manual helper methods <Using Other Web Frameworks>` above.
 
-For supported custom servers, pywa registers equivalent routes on the FastAPI or Flask app you
-pass to ``server``. For other frameworks, use the manual helper methods above.
+.. tip::
+
+    **Common best practices:**
+
+    - Always add a filter (e.g., ``filters.text``) to message handlers that read ``msg.text``
+      so the handler is never called with ``None``.
+    - Avoid long blocking operations inside synchronous handlers — they block the entire event loop.
+      Use threads or switch to ``pywa_async`` for async handlers.
+    - Use ``priority`` sparingly. Explicit filters are usually cleaner than execution ordering.
+    - Use ``shared_data`` on the update object to pass context between chained handlers
+      instead of global state.
 
 .. toctree::
     handler_decorators
