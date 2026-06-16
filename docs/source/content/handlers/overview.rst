@@ -6,8 +6,8 @@
 Handlers are where your bot reacts to incoming WhatsApp updates.
 
 In pywa, every incoming webhook update is converted into a typed update object, such as
-:class:`~pywa.types.Message`, :class:`~pywa.types.CallbackButton`, or
-:class:`~pywa.types.MessageStatus`. You register callback functions for the update types you
+:class:`~pywa.types.message.Message`, :class:`~pywa.types.callback.CallbackButton`, or
+:class:`~pywa.types.message_status.MessageStatus`. You register callback functions for the update types you
 care about, and pywa calls the right function when WhatsApp sends an update.
 
 The usual workflow is:
@@ -15,7 +15,7 @@ The usual workflow is:
 1. Create a :class:`~pywa.client.WhatsApp` client.
 2. Register handlers with decorators or ``Handler`` objects.
 3. Give WhatsApp a public callback URL.
-4. Run the app with ``pywa dev`` while developing, or ``pywa run`` when deploying.
+4. Run the app with ``pywa dev`` while developing, or ``pywa run`` for production.
 
 This guide starts with the day-to-day part: writing handlers.
 
@@ -27,6 +27,7 @@ A handler callback receives the WhatsApp client and the update object.
 .. code-block:: python
     :caption: main.py
     :linenos:
+    :emphasize-lines: 9-11
 
     from pywa import WhatsApp, filters, types
 
@@ -79,20 +80,24 @@ Use the ``on_...`` decorators on your :class:`~pywa.client.WhatsApp` client.
     def handle_callback_button(client: WhatsApp, clb: types.CallbackButton):
         clb.react("❤️")
 
-You can pass filters to many handlers:
+You can pass filters to the handlers:
 
 .. code-block:: python
     :caption: main.py
     :linenos:
-    :emphasize-lines: 5
+    :emphasize-lines: 5, 9
 
     from pywa import WhatsApp, filters, types
 
     wa = WhatsApp(...)
 
-    @wa.on_message(filters.command("start"))
-    def start(client: WhatsApp, msg: types.Message):
-        msg.reply("Welcome!")
+    @wa.on_message(filters.text)
+    def handle_text_message(client: WhatsApp, msg: types.Message):
+        msg.reply(f"You said: {msg.text}")
+
+    @wa.on_message(filters.image | filters.video)
+    def handle_media_message(client: WhatsApp, msg: types.Message):
+        msg.reply(f"Thanks for sending a media message.")
 
 See the `filters guide <../filters/overview.html>`_ for built-in filters and custom filters.
 
@@ -134,38 +139,47 @@ You can also load modules later:
 
     wa.load_handlers_modules(my_handlers)
 
-Using ``Handler`` objects
-^^^^^^^^^^^^^^^^^^^^^^^^^
+Dynamic Handler Registration
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-For larger projects, or when handlers are created dynamically, wrap callbacks in ``Handler``
-objects and register them with :meth:`~pywa.client.WhatsApp.add_handlers`.
+You can register and remove handlers dynamically at runtime instead of declaring them all at startup. This is useful for state-dependent workflows (e.g., toggling a temporary maintenance mode) where handlers are added or removed on the fly.
 
-.. code-block:: python
-    :caption: handlers.py
-    :linenos:
+To register a handler dynamically, instantiate one of the `Available Handlers` and pass it to :meth:`~pywa.client.WhatsApp.add_handlers`. To stop listening, pass the same handler instance to :meth:`~pywa.client.WhatsApp.remove_handlers`.
 
-    from pywa import types
-
-    def handle_message(client, msg: types.Message):
-        print(msg.text)
-
-    def handle_callback_button(client, clb: types.CallbackButton):
-        print(clb.data)
+Here is an example demonstrating how to register a high-priority maintenance handler and dynamically remove it:
 
 .. code-block:: python
     :caption: main.py
     :linenos:
-    :emphasize-lines: 2, 6-9
+    :emphasize-lines: 13-16, 22, 25
 
-    from pywa import WhatsApp, filters, handlers
-    import handlers as my_handlers
+    from pywa import WhatsApp, filters, handlers, types
 
     wa = WhatsApp(...)
 
-    wa.add_handlers(
-        handlers.MessageHandler(my_handlers.handle_message, filters.text),
-        handlers.CallbackButtonHandler(my_handlers.handle_callback_button),
+    admin_filter = filters.from_users("1234567890", "9876543210")
+
+    # Define a high-priority handler callback that intercepts messages during maintenance
+    def maintenance_callback(client: WhatsApp, msg: types.Message):
+        msg.reply("🛠️ The bot is currently undergoing maintenance. Please try again later.")
+        msg.stop_handling()  # Prevent other, lower-priority handlers from running
+
+    # Create the handler instance with high priority
+    maintenance_handler = handlers.MessageHandler(
+        callback=maintenance_callback,
+        priority=100,
     )
+
+    # Handler to turn maintenance mode ON or OFF
+    @wa.on_message(filters.command("maintenance") & admin_filter)
+    def enable_maintenance(client: WhatsApp, msg: types.Message):
+        if msg.text.split("maintenance")[1].strip() == "on":
+            client.add_handlers(maintenance_handler)
+            msg.reply("Maintenance mode has been activated.")
+        else:
+            client.remove_handlers(maintenance_handler, silent=True)
+            msg.reply("Maintenance mode has been deactivated.")
+
 
 Available Handlers
 ------------------
