@@ -1428,11 +1428,9 @@ def _handle_on_update(
     priority: int,
     **kwargs,
 ) -> Any:
-    # Determine if 'self' is the WhatsApp client instance
     is_wa_instance = hasattr(self, "add_handlers")
 
     # Case 1: @wa.on_x (no parentheses)
-    # self=wa, filters=callback
     if is_wa_instance and callable(filters):
         self.add_handlers(
             handler_type(callback=filters, filters=None, priority=priority, **kwargs)
@@ -1440,13 +1438,7 @@ def _handle_on_update(
         return filters
 
     # Case 2: @WhatsApp.on_x (no parentheses)
-    # self=callback, filters=None
-    if (
-        not is_wa_instance
-        and callable(self)
-        and filters is None
-        and not isinstance(self, Filter)
-    ):
+    if not is_wa_instance and callable(self):
         _register_func_handler(
             handler_type=handler_type,
             callback=self,
@@ -1456,24 +1448,18 @@ def _handle_on_update(
         )
         return self
 
-    # Case 3: @wa.on_x(...) or @WhatsApp.on_x(...) (with parentheses)
     def deco(callback: Callable) -> Callable:
-        if is_wa_instance:
+        if is_wa_instance:  # Case 3: @wa.on_x(...) (with parentheses)
             self.add_handlers(
                 handler_type(
                     callback=callback, filters=filters, priority=priority, **kwargs
                 )
             )
-        else:
+        else:  # Case 4: @WhatsApp.on_x(...) (with parentheses)
             _register_func_handler(
                 handler_type=handler_type,
                 callback=callback,
-                filters=self
-                if (
-                    isinstance(self, Filter)
-                    or (callable(self) and self is not callback)
-                )
-                else filters,
+                filters=self if (isinstance(self, Filter)) else filters,
                 priority=priority,
                 **kwargs,
             )

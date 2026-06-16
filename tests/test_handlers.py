@@ -49,9 +49,9 @@ def test_instance_with_parentheses():
     @wa.on_message(filters=filters.text)  # @wa.on_x(filters=...)
     def instance_with_parentheses(_, __): ...
 
-    assert (
-        wa._handlers[handlers.MessageHandler][0]._callback == instance_with_parentheses
-    )
+    h = wa._handlers[handlers.MessageHandler][0]
+    assert h._callback == instance_with_parentheses
+    assert h._filters == filters.text
 
 
 def test_instance_without_parentheses():
@@ -60,10 +60,9 @@ def test_instance_without_parentheses():
     @wa.on_message  # @wa.on_x
     def instance_without_parentheses(_, __): ...
 
-    assert (
-        wa._handlers[handlers.MessageHandler][0]._callback
-        == instance_without_parentheses
-    )
+    h = wa._handlers[handlers.MessageHandler][0]
+    assert h._callback == instance_without_parentheses
+    assert h._filters is None
 
 
 def test_class_with_parentheses_kw():
@@ -74,9 +73,9 @@ def test_class_with_parentheses_kw():
 
     module.__dict__["on_message"] = class_with_parentheses_kw
     wa = WhatsApp(server=None, verify_token="1234567890", handlers_modules=[module])
-    assert (
-        wa._handlers[handlers.MessageHandler][0]._callback == class_with_parentheses_kw
-    )
+    h = wa._handlers[handlers.MessageHandler][0]
+    assert h._callback == class_with_parentheses_kw
+    assert h._filters == filters.text
 
 
 def test_class_with_parentheses_args():
@@ -87,10 +86,10 @@ def test_class_with_parentheses_args():
 
     module.__dict__["on_message"] = class_with_parentheses_args
     wa = WhatsApp(server=None, verify_token="1234567890", handlers_modules=[module])
-    assert (
-        wa._handlers[handlers.MessageHandler][0]._callback
-        == class_with_parentheses_args
-    )
+
+    h = wa._handlers[handlers.MessageHandler][0]
+    assert h._callback == class_with_parentheses_args
+    assert h._filters == filters.text
 
 
 def test_class_without_parentheses():
@@ -101,9 +100,10 @@ def test_class_without_parentheses():
 
     module.__dict__["on_message"] = class_without_parentheses
     wa = WhatsApp(server=None, verify_token="1234567890", handlers_modules=[module])
-    assert (
-        wa._handlers[handlers.MessageHandler][0]._callback == class_without_parentheses
-    )
+
+    h = wa._handlers[handlers.MessageHandler][0]
+    assert h._callback == class_without_parentheses
+    assert h._filters is None
 
 
 def test_all_combinations():

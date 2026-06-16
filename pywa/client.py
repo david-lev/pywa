@@ -548,7 +548,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             self._register_flow_handler_wrapper(wrapper)
         return wrapper
 
-    def add_handlers(self, *handlers: Handler) -> None:
+    def add_handlers(self, *handlers: Handler[Any]) -> None:
         """
         Add handlers programmatically instead of using decorators.
 
@@ -573,7 +573,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 self._handlers[handler.__class__], handler, key=lambda x: -x._priority
             )
 
-    def remove_handlers(self, *handlers: Handler, silent: bool = False) -> None:
+    def remove_handlers(self, *handlers: Handler[Any], silent: bool = False) -> None:
         """
         Remove handlers programmatically (not flow handlers).
 
