@@ -277,6 +277,17 @@ true = new(lambda _, __: True, name="true")
 false = new(lambda _, __: False, name="false")
 """Filter that always returns False."""
 
+
+def webhook_fields(*fields: str) -> Filter:
+    """
+    Filter for raw updates that contain any of the specified fields.
+
+    >>> filters.webhook_fields("messages")
+    """
+    fields = set(fields)
+    return new(lambda _, r: r.field in fields, name="webhook_fields")
+
+
 forwarded = new(
     lambda _, m: m.forwarded,
     name="forwarded",
