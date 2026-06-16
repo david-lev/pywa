@@ -3,9 +3,55 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-#### 4.0.0 (2026-06-09) **Latest**
+#### 4.1.0 (2026-06-16) **Latest**
 
-WORK IN PROGRESS
+- [client] add `archive_templates` and `unarchive_templates` methods for template archival management
+- [client] add `force_transfer` option to `set_username` method for username management
+- [client] add `request_contact_info` method to request customer contact information
+- [listners] add `wait_for_contact_info` method to wait for contact info requests
+- [filters] add `webhook_fields` filter for filtering raw updates by fields
+- [cli] improve error handling during CLI command execution
+- [handlers] improve handler typing and inline documentation examples
+- [api] add internal utility methods for filtering `None` values and joining fields
+
+#### 4.0.0 (2026-06-09)
+
+- **User Identity & BSUID Readiness**:
+    - Full support for BSUIDs (Business-Scoped User IDs), parent BSUIDs, usernames, and `country_code`.
+    - `types.User.wa_id` is now optional (users who enable usernames may no longer expose a phone-number-based WhatsApp
+      ID).
+    - `types.User.preferred_id` resolves IDs using the new `WhatsApp(user_identifier_priority=...)` priority
+      configuration.
+    - `filters.from_users(...)` now accepts BSUIDs, parent BSUIDs, WA IDs, and formatted phone numbers.
+    - Phone number change updates now expose BSUID-related fields (`new_user_id`, `new_parent_id`).
+- **Groups & Chat-Aware Updates**:
+    - Full group management support: create, update, delete, fetch groups, manage invite links, handle join requests,
+      and add/remove participants.
+    - Incoming messages now expose `msg.chat` (a `Chat` object with `id` and `type`) to distinguish private chats from
+      groups.
+    - Added `filters.private`, `filters.group`, and `filters.from_groups(...)`.
+    - Added `GroupMessageStatusesHandler` and `wa.on_group_message_statuses(...)` for group status updates.
+    - Sent messages now expose `sent.chat` and support pinning/unpinning.
+- **Webhooks, CLI, & Local Development**:
+    - Added the built-in server workflow: `pywa dev` (auto-reload), `pywa run` (production-style), and
+      `WhatsApp.run()` (quick scripts).
+    - Added `utils.start_ngrok_tunnel(...)` for easy local webhook testing.
+    - Support for custom webhook subscription fields with `utils.WebhookFields` via `webhook_fields`.
+    - Refactored webhook validation and endpoint registration to work consistently across built-in Starlette app,
+      FastAPI, Flask, and manual integrations.
+    - Listeners now warn when no timeout is provided and prevent usage with multiple Uvicorn workers.
+- **Messages, Media, Callbacks, & Account Updates**:
+    - Added `EditedMessage`, `DeletedMessage`, `OutgoingEditedMessage`, and `OutgoingDeletedMessage` updates for
+      coexistence support.
+    - Added `AccountUpdate` and related enums for account updates.
+    - Media objects now store their `caption`, and media upload internals support async pending uploads with
+      `PendingMedia`.
+    - Added `ContactInfoRequestButton`, `ContactList`, and carousel message support (`send_carousel`, `reply_carousel`).
+- **Business Management & Templates**:
+    - Retrieve shared/owned WABAs, create/verify phone numbers, and manage usernames (`set_username`, etc.).
+    - Added WABA settings updates, including `degrees_of_freedom_spec`.
+    - Enhanced template validation, lookup, parameter introspection (`param_names`), and error reporting.
+    - Support for `target_waba_id` in `Template.duplicate(...)` and helper states in `CreativeFeaturesSpec`.
 
 #### 4.0.0b7 (2026-04-30)
 
