@@ -105,11 +105,22 @@ from pywa.types.sent_update import (
     InitiatedCall as InitiatedCallSync,
 )
 from pywa.types.sent_update import (
+    SentContactInfoRequest as SentContactInfoRequestSync,
+)
+from pywa.types.sent_update import (
+    SentLocationRequest as SentLocationRequestSync,
+)
+from pywa.types.sent_update import (
+    SentMediaMessage as SentMediaMessageSync,
+)
+from pywa.types.sent_update import (
     SentMessage as SentMessageSync,
 )
+from pywa.types.sent_update import SentReaction as SentReactionSync
 from pywa.types.sent_update import (
     SentTemplate as SentTemplateSync,
 )
+from pywa.types.sent_update import SentVoiceMessage as SentVoiceMessageSync
 from pywa.types.templates import (
     CreatedTemplate as CreatedTemplateSync,
 )
@@ -227,10 +238,25 @@ from pywa_async.types.sent_update import (
     InitiatedCall as InitiatedCallAsync,
 )
 from pywa_async.types.sent_update import (
+    SentContactInfoRequest as SentContactInfoRequestAsync,
+)
+from pywa_async.types.sent_update import (
+    SentLocationRequest as SentLocationRequestAsync,
+)
+from pywa_async.types.sent_update import (
+    SentMediaMessage as SentMediaMessageAsync,
+)
+from pywa_async.types.sent_update import (
     SentMessage as SentMessageAsync,
 )
 from pywa_async.types.sent_update import (
+    SentReaction as SentReactionAsync,
+)
+from pywa_async.types.sent_update import (
     SentTemplate as SentTemplateAsync,
+)
+from pywa_async.types.sent_update import (
+    SentVoiceMessage as SentVoiceMessageAsync,
 )
 from pywa_async.types.templates import (
     CreatedTemplate as CreatedTemplateAsync,
@@ -285,6 +311,11 @@ def overrides() -> list[tuple[type, type]]:
         (AudioSync, AudioAsync),
         (StickerSync, StickerAsync),
         (SentMessageSync, SentMessageAsync),
+        (SentReactionSync, SentReactionAsync),
+        (SentLocationRequestSync, SentLocationRequestAsync),
+        (SentContactInfoRequestSync, SentContactInfoRequestAsync),
+        (SentMediaMessageSync, SentMediaMessageAsync),
+        (SentVoiceMessageSync, SentVoiceMessageAsync),
         (SentTemplateSync, SentTemplateAsync),
         (InitiatedCallSync, InitiatedCallAsync),
         (GraphAPISync, GraphAPIAsync),

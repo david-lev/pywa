@@ -1,6 +1,10 @@
 ⚙️ Get Started
 ===============
 
+This page walks you through installing pywa, creating a WhatsApp app on Meta,
+and sending your first message. If you already have your **Phone ID** and **Token**,
+jump straight to `Send a Message <#id2>`_.
+
 ⬇️ Installation
 ---------------
 
@@ -32,9 +36,9 @@
 ================================
 
 Create a WhatsApp Application
------------------------------
+------------------------------
 
-You already have an app? Skip to `Setup the App <#id1>`_.
+Already have a Facebook App? `Jump to Setup the App → <#id1>`_
 
 To use the WhatsApp Cloud API, you need a Facebook App.
 If you don't have a Facebook Developer account, `register here <https://developers.facebook.com/>`_.
@@ -51,7 +55,7 @@ If you don't have a Facebook Developer account, `register here <https://develope
        :alt: Select app type
        :align: center
 
-4. Fill in the app name and email, then click **Create App**.
+3. Fill in the app name and email, then click **Create App**.
 
 .. toggle::
 
@@ -60,7 +64,7 @@ If you don't have a Facebook Developer account, `register here <https://develope
        :alt: Fill app details
        :align: center
 
-5. In **Add products to your app**, search for **WhatsApp** and click **Set Up**.
+4. In **Add products to your app**, search for **WhatsApp** and click **Set Up**.
 
 .. toggle::
 
@@ -69,7 +73,7 @@ If you don't have a Facebook Developer account, `register here <https://develope
        :alt: Setup WhatsApp product
        :align: center
 
-6. Select a **Meta Business Account**, accept the terms, and click **Submit**.
+5. Select a **Meta Business Account**, accept the terms, and click **Submit**.
    If you don't have a Business Account, you will need to create one.
 
 .. toggle::
@@ -84,9 +88,9 @@ If you don't have a Facebook Developer account, `register here <https://develope
 Setup the App
 -------------
 
-You already have your **Phone ID** and **Token**? Skip to `Send a Message <#id2>`_.
+Already have your **Phone ID** and **Token**? `Jump to Send a Message → <#id2>`_
 
-7. In the left menu (under **Products**), expand **WhatsApp** and click **API Setup**.
+6. In the left menu (under **Products**), expand **WhatsApp** and click **API Setup**.
 
 .. toggle::
 
@@ -103,7 +107,7 @@ You already have your **Phone ID** and **Token**? Skip to `Send a Message <#id2>
 
 .. attention::
 
-    If you haven’t connected a real phone number, you can use a test number provided by Meta.
+    If you haven't connected a real phone number, you can use a test number provided by Meta.
     You can send messages to up to 5 allowed numbers. Add them in the **Manage phone number list**.
 
     .. toggle::
@@ -118,7 +122,7 @@ You already have your **Phone ID** and **Token**? Skip to `Send a Message <#id2>
 Send a Message
 --------------
 
-Now you have your ``phone_id`` and ``token``. You can send messages:
+Now that you have your ``phone_id`` and ``token``, you're ready to send messages:
 
 .. code-block:: python
 
@@ -129,13 +133,13 @@ Now you have your ``phone_id`` and ``token``. You can send messages:
         token='YOUR_TOKEN'         # from API Setup
     )
 
-.. code-block:: python
-
+    # Send a text message
     wa.send_message(
         to='PHONE_NUMBER_TO_SEND_TO',
         text='Hi! This message was sent from pywa!'
     )
 
+    # Send an image
     wa.send_image(
         to='PHONE_NUMBER_TO_SEND_TO',
         image='https://www.rd.com/wp-content/uploads/2021/04/GettyImages-1053735888-scaled.jpg'
@@ -143,8 +147,6 @@ Now you have your ``phone_id`` and ``token``. You can send messages:
 
 .. note::
 
-    - The ``to`` parameter must include country code, e.g., ``+972123456789`` or ``16315551234``.
-      Read more about `phone number formats here <https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-messages#phone-number-formats>`_.
     - For **Test Numbers**, add recipients to the allowed numbers list.
     - Free-form messages can only be received if the recipient messaged your number in the last 24h.
       See `WhatsApp policy <https://business.whatsapp.com/policy>`_.
@@ -154,13 +156,19 @@ Now you have your ``phone_id`` and ``token``. You can send messages:
 Quick Start
 -----------
 
-Here’s a quick overview of the ``pywa`` package:
+Here's a brief overview of the main pywa concepts — click any link to dive deeper:
 
-- `WhatsApp <client/overview.html>`_: Core client to send/receive messages, manage profile/business settings, and register callbacks.
-- `Handlers <handlers/overview.html>`_: Register callbacks to handle incoming updates (messages, callbacks, and more).
-- `Listeners <listeners/overview.html>`_: Listen for incoming user updates.
-- `Filters <filters/overview.html>`_: Filter and handle specific updates, e.g., text messages containing “Hello”.
-- `Updates <updates/overview.html>`_: Explore different update types, their attributes, and usage.
-- `Flows <flows/overview.html>`_: Create, update, and send flows.
-- `Errors <errors/overview.html>`_: Learn about package errors and how to handle them.
-- `Examples <examples/overview.html>`_: See practical usage examples.
+- `WhatsApp <client/overview.html>`_: The core client. Use it to send messages, manage your business
+  profile, and register handlers. Everything starts here.
+- `Handlers <handlers/overview.html>`_: Register callbacks that fire when a user sends a message,
+  presses a button, or triggers any other update. The backbone of every bot.
+- `Listeners <listeners/overview.html>`_: Wait for a user's *next* reply inline, without registering
+  a separate handler. Perfect for step-by-step conversations.
+- `Filters <filters/overview.html>`_: Composable conditions that decide which updates a handler
+  processes. Combine them with ``&``, ``|``, and ``~`` like Python expressions.
+- `Updates <updates/overview.html>`_: All the types of incoming events — messages, button clicks,
+  delivery statuses, flow completions, and more.
+- `Flows <flows/overview.html>`_: Build rich, multi-screen interactive WhatsApp experiences entirely
+  in Python.
+- `Errors <errors/overview.html>`_: How pywa surfaces API errors and how to handle them gracefully.
+- `Examples <examples/overview.html>`_: Complete, runnable bots and code snippets to get inspired.

@@ -1,9 +1,11 @@
 💡 Examples
-==============
+===========
 
-.. warning::
+Welcome to the examples gallery! Here you can find practical code recipes and complete bot implementations showcasing various features of PyWa.
 
-    The examples are outdated. please read the documentation for the latest features and usage.
+.. note::
+
+   Some of these examples use older patterns. For the latest recommended design patterns and best practices, please refer to the main guides (like `Get Started <../getting-started.html>`_ and `Handlers <../handlers/overview.html>`_).
 
 .. toctree::
     template

@@ -26,9 +26,11 @@ Common filters
 .. autoattribute:: pywa.filters.private
 .. autoattribute:: pywa.filters.group
 .. autofunction:: sent_to
+.. autofunction:: update_id
+.. autofunction:: waba_id
 .. autoattribute:: pywa.filters.sent_to_me
 .. autofunction:: from_users
-.. autofunction:: no_wa_id
+.. autofunction:: without_wa_id
 .. autofunction:: from_countries
 .. autofunction:: matches
 .. autofunction:: contains

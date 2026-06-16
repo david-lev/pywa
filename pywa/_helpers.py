@@ -1110,6 +1110,7 @@ def register_routes_starlette(wa: "WhatsApp"):
         return StarletteResponse(
             content=content,
             status_code=status,
+            media_type="text/plain",
             headers={
                 "X-Content-Type-Options": "nosniff",
             },
