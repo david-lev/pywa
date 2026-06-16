@@ -148,45 +148,38 @@ def serve_application(
     Core function that resolves dependencies and starts the Uvicorn server.
     """
     if not uvicorn:
-        print(
-            "❌ Error: Could not import Uvicorn. Please install it using 'pip install \"pywa[server]\"'."
+        raise PywaCLIException(
+            "Could not import Uvicorn. Please install it using 'pip install \"pywa[server]\"'."
         )
-        sys.exit(1)
 
     if entrypoint and (path or app):
-        print(
-            "❌ Error: Cannot use --entrypoint together with a path or --app arguments."
+        raise PywaCLIException(
+            "Cannot use --entrypoint together with a path or --app arguments."
         )
-        sys.exit(1)
 
     workers = uvicorn_kwargs.get("workers")
 
-    try:
-        if entrypoint:
-            module_str, _, app_name = entrypoint.partition(":")
-            if not module_str or not app_name:
-                raise PywaCLIException("Entrypoint must be in the format 'module:app'")
+    if entrypoint:
+        module_str, _, app_name = entrypoint.partition(":")
+        if not module_str or not app_name:
+            raise PywaCLIException("Entrypoint must be in the format 'module:app'")
 
-            sys_path = pathlib.Path.cwd().resolve()
-            sys.path.insert(0, str(sys_path))
+        sys_path = pathlib.Path.cwd().resolve()
+        sys.path.insert(0, str(sys_path))
 
-        else:
-            target_path = path or get_default_path()
-            if not target_path.exists():
-                raise PywaCLIException(f"Target path does not exist: {target_path}")
+    else:
+        target_path = path or get_default_path()
+        if not target_path.exists():
+            raise PywaCLIException(f"Target path does not exist: {target_path}")
 
-            module_str, sys_path = resolve_module_path(target_path)
-            sys.path.insert(0, str(sys_path))
-            app_name, client = discover_app_instance(module_str, app)
-            if client._server is not None:
-                raise PywaCLIException(
-                    f"The WhatsApp instance assigned to '{app_name}' in '{module_str}.py' is already configured with a {client._server_type.value} server."
-                )
-            client._uvicorn_workers = workers or 1
-
-    except PywaCLIException as e:
-        print(f"❌ Error: {e}")
-        sys.exit(1)
+        module_str, sys_path = resolve_module_path(target_path)
+        sys.path.insert(0, str(sys_path))
+        app_name, client = discover_app_instance(module_str, app)
+        if client._server is not None:
+            raise PywaCLIException(
+                f"The WhatsApp instance assigned to '{app_name}' in '{module_str}.py' is already configured with a {client._server_type.value} server."
+            )
+        client._uvicorn_workers = workers or 1
 
     base_import_string = f"{module_str}:{app_name}"
     uvicorn_app_string = (
@@ -607,30 +600,39 @@ def main() -> None:
     # --- EXECUTION ---
     args = parser.parse_args()
 
-    if args.command in ["run", "dev"]:
-        target_path = pathlib.Path(args.path) if getattr(args, "path", None) else None
-        app_args = {
-            "command": args.command,
-            "path": target_path,
-            "app": getattr(args, "app", None),
-            "entrypoint": getattr(args, "entrypoint", None),
-        }
+    try:
+        if args.command in ["run", "dev"]:
+            target_path = (
+                pathlib.Path(args.path) if getattr(args, "path", None) else None
+            )
+            app_args = {
+                "command": args.command,
+                "path": target_path,
+                "app": getattr(args, "app", None),
+                "entrypoint": getattr(args, "entrypoint", None),
+            }
 
-        exclude_keys = app_args.keys()
-        uvicorn_kwargs = {k: v for k, v in vars(args).items() if k not in exclude_keys}
+            exclude_keys = app_args.keys()
+            uvicorn_kwargs = {
+                k: v for k, v in vars(args).items() if k not in exclude_keys
+            }
 
-        if uvicorn_kwargs.get("reload_dirs"):
-            uvicorn_kwargs["reload_dirs"] = [
-                str(pathlib.Path(d).resolve()) for d in uvicorn_kwargs["reload_dirs"]
-            ]
+            if uvicorn_kwargs.get("reload_dirs"):
+                uvicorn_kwargs["reload_dirs"] = [
+                    str(pathlib.Path(d).resolve())
+                    for d in uvicorn_kwargs["reload_dirs"]
+                ]
 
-        serve_application(**app_args, **uvicorn_kwargs)
+            serve_application(**app_args, **uvicorn_kwargs)
 
-    elif args.command == "send":
-        send_messages(**vars(args))
+        elif args.command == "send":
+            send_messages(**vars(args))
 
-    elif args.command == "new":
-        generate_code(target=args.target, is_async=args.is_async, out_path=args.out)
+        elif args.command == "new":
+            generate_code(target=args.target, is_async=args.is_async, out_path=args.out)
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

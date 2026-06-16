@@ -151,7 +151,7 @@ Here is an example demonstrating how to register a high-priority maintenance han
 .. code-block:: python
     :caption: main.py
     :linenos:
-    :emphasize-lines: 13-16, 22, 25
+    :emphasize-lines: 13-16, 23, 26
 
     from pywa import WhatsApp, filters, handlers, types
 
@@ -167,6 +167,7 @@ Here is an example demonstrating how to register a high-priority maintenance han
     # Create the handler instance with high priority
     maintenance_handler = handlers.MessageHandler(
         callback=maintenance_callback,
+        filters=~admin_filter, # Only non-admins
         priority=100,
     )
 
