@@ -31,6 +31,7 @@ if TYPE_CHECKING:
     from .chat import Chat
     from .media import Media
     from .sent_update import (
+        SentContactInfoRequest,
         SentLocationRequest,
         SentMediaMessage,
         SentMessage,
@@ -605,7 +606,7 @@ class _ClientShortcutsAsync:
         quote: bool = False,
         tracker: str | CallbackData | None = None,
         identity_key_hash: str | None = None,
-    ) -> SentMessage:
+    ) -> SentContactInfoRequest:
         """
         If a user taps this button, their WhatsApp phone number will be shared in the message thread, and a contacts webhook will be triggered containing the user’s phone number. Note that if a WhatsApp user shares a contact using the share contacts feature in the WhatsApp app instead, the webhook will also include the contact’s vCard.
         If you are using the contact book feature, their phone number will also be added to your contact book automatically. For businesses that have enabled Local Storage, Meta extracts the user’s phone number from the shared contact card (vCard) and stores it in your contact book on Meta data centers. Only the phone number is extracted and stored; no other vCard data is retained beyond the standard data-in-use period.

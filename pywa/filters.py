@@ -19,6 +19,7 @@ __all__ = [
     "private",
     "group",
     "update_id",
+    "waba_id",
     "forwarded",
     "forwarded_many_times",
     "reply",
@@ -60,6 +61,7 @@ __all__ = [
     "current_location",
     "location_in_radius",
     "contacts",
+    "contact_info_shared",
     "contacts_has_wa",
     "order",
     "callback_button",
@@ -147,6 +149,7 @@ from .types.flows import FlowCompletion as _Fc
 from .types.message import Message as _Msg
 from .types.message_status import MessageStatus as _Ms
 from .types.message_status import MessageStatusType as _Mst
+from .types.others import ContactsOrigin as _Cor
 from .types.others import MessageType as _Mt
 from .types.system import IdentityChange as _Ic
 from .types.system import PhoneNumberChange as _Pnc
@@ -327,6 +330,15 @@ def update_id(id_: str) -> Filter:
     >>> update_id("wamid.HBKHUIyNTM4NjAfiefhwojfMTNFQ0Q2MERGRjVDMUHUIGGA=")
     """
     return new(lambda _, u: u.id == id_, name="update_id")
+
+
+def waba_id(id_: str) -> Filter:
+    """
+    Filter for updates that their WABA ID matches the given id.
+
+    >>> waba_id("105102735943269")
+    """
+    return new(lambda _, u: getattr(u, "waba_id", u.id) == id_, name="waba_id")
 
 
 def replays_to(*msg_ids: str) -> Filter:
@@ -812,6 +824,11 @@ def reaction_emojis(*emojis: str) -> Filter:
 contacts = new(lambda _, m: m.type == _Mt.CONTACTS, name="contacts")
 """Filter for contacts messages."""
 
+contact_info_shared = new(
+    lambda _, m: m.type == _Mt.CONTACTS and m.contacts.origin == _Cor.CONTACT_REQUEST,
+    name="contact_info_shared",
+)
+"""Filter for contact info shared messages."""
 
 contacts_has_wa = new(
     lambda _, m: (

@@ -88,7 +88,7 @@ or :class:`~pywa.listeners.ListenerTimeout` respectively. Catch them to send a h
 
 .. code-block:: python
     :linenos:
-    :emphasize-lines: 14-15, 17, 20
+    :emphasize-lines: 12-14, 16, 19
 
     from pywa import WhatsApp, types, filters
 
@@ -134,7 +134,7 @@ It lets you specify which sender and update type to wait for, and is what all th
 
 .. code-block:: python
     :linenos:
-    :emphasize-lines: 7-12
+    :emphasize-lines: 8-13
 
     from pywa import WhatsApp, types, filters
 
@@ -142,16 +142,23 @@ It lets you specify which sender and update type to wait for, and is what all th
 
     @wa.on_message(filters.command("confirm"))
     def confirm_action(_: WhatsApp, msg: types.Message):
-        confirmation = wa.listen(
-            to=msg.sender,
-            filters=filters.callback_button & filters.matches("yes", "no"),
-            cancelers=filters.text & filters.matches("cancel"),
-            timeout=30,
-        )
-        if confirmation.data == "yes":
-            msg.reply("✅ Confirmed!")
-        else:
-            msg.reply("❌ Canceled.")
+        try:
+            confirmation: types.Message = wa.listen(
+                to=msg.sender,
+                filters=filters.message & filters.matches("yes", "no"),
+                cancelers=filters.message & filters.matches("cancel"),
+                timeout=30,
+            )
+            if confirmation.text == "yes":
+                confirmation.reply("✅ Confirmed!")
+            else:
+                confirmation.reply("❌ Didn't confirm")
+        except types.ListenerCanceled:
+            msg.reply("You canceled the operation by clicking the cancel button.")
+            return
+        except types.ListenerTimeout:
+            msg.reply("You took too long to respond. Please try again later.")
+            return
 
 Shortcuts
 ---------
@@ -187,7 +194,9 @@ PyWa provides several shortcuts to create listeners directly from sent messages:
 Other shortcuts include :meth:`~pywa.types.sent_update.SentMessage.wait_for_click`,
 :meth:`~pywa.types.sent_update.SentMessage.wait_for_selection`,
 :meth:`~pywa.types.sent_update.SentMessage.wait_until_read`,
-:meth:`~pywa.types.sent_update.SentVoiceMessage.wait_until_played`, and more.
+:meth:`~pywa.types.sent_update.SentVoiceMessage.wait_until_played`,
+:meth:`~pywa.types.sent_update.SentLocationRequest.wait_for_location`,
+:meth:`~pywa.types.sent_update.SentContactInfoRequest.wait_for_contact_info` and more.
 
 .. toctree::
 

@@ -13,7 +13,7 @@ Basic Usage
 -----------
 
 .. code-block:: python
-    :emphasize-lines: 5, 10
+    :emphasize-lines: 5, 13
 
     from pywa import WhatsApp, types, filters
 
@@ -107,3 +107,5 @@ Built-in Filters
     ./common_filters
     ./message_filters
     ./message_status_filters
+    ./account_update_filters
+    ./calls_filters

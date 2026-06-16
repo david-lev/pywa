@@ -8,6 +8,9 @@ from pywa.types.sent_update import (
     InitiatedCall as _InitiatedCall,
 )
 from pywa.types.sent_update import (
+    SentContactInfoRequest as _SentContactInfoRequest,
+)
+from pywa.types.sent_update import (
     SentLocationRequest as _SentLocationRequest,
 )
 from pywa.types.sent_update import (
@@ -49,6 +52,7 @@ __all__ = [
     "SentMediaMessage",
     "SentVoiceMessage",
     "SentLocationRequest",
+    "SentContactInfoRequest",
     "SentReaction",
     "SentTemplate",
     "SentTemplateStatus",
@@ -668,7 +672,7 @@ class SentVoiceMessage(SentMediaMessage, _SentVoiceMessage):
 
 class SentLocationRequest(SentMessage, _SentLocationRequest):
     """
-    Represents a location request message that was sent to WhatsApp user/group.
+    Represents a location request message that was sent to WhatsApp user.
 
     Attributes:
         id: The ID of the message.
@@ -688,6 +692,16 @@ class SentLocationRequest(SentMessage, _SentLocationRequest):
     ) -> Message:
         """
         Wait for a location message in response to the location request.
+
+        Example:
+
+            .. code-block:: python
+
+                @wa.on_message(filters.command("start"))
+                async def start(w: WhatsApp, m: Message):
+                    r = await m.reply_location_request(text="Please share your location",)
+                    location_message = await r.wait_for_location()
+                    await r.reply(f"You shared your location: {location_message.location}", quote=True)
 
         Args:
             force_current_location: Whether to only accept current location messages.
@@ -713,6 +727,60 @@ class SentLocationRequest(SentMessage, _SentLocationRequest):
                 )
                 & (filters or pywa_filters.true)
             ),
+            cancelers=cancelers,
+            ignore_updates=ignore_updates,
+            timeout=timeout,
+        )
+
+
+class SentContactInfoRequest(SentMessage, _SentContactInfoRequest):
+    """
+    Represents a contact information request message that was sent to WhatsApp user.
+
+    Attributes:
+        id: The ID of the message.
+        from_phone_id: The phone id of the sender (you).
+        chat: The chat to which the message was sent.
+        input: The input of the recipient.
+    """
+
+    async def wait_for_contact_info(
+        self,
+        *,
+        filters: pywa_filters.Filter = None,
+        cancelers: pywa_filters.Filter = None,
+        ignore_updates: bool = True,
+        timeout: float | None = None,
+    ) -> Message:
+        """
+        Wait for a contact info shared message.
+
+        Example:
+
+            .. code-block:: python
+
+                @wa.on_message(filters.command("start"))
+                async def start(w: WhatsApp, m: Message):
+                    r = await m.reply_contact_info_request(text="Please share your contact",)
+                    contact_message = await r.wait_for_contact_info()
+                    await r.reply(f"You shared your contact: {contact_message.contacts.first.name}", quote=True)
+
+        Args:
+            filters: The filters to apply to the contact message.
+            cancelers: The filters to cancel the listening.
+            ignore_updates: Whether to ignore user updates that do not pass the filters.
+            timeout: The time to wait for the contact message.
+
+        Returns:
+            The contact message.
+
+        Raises:
+            ListenerTimeout: If the listener timed out.
+            ListenerCanceled: If the listener was canceled by a filter.
+            ListenerStopped: If the listener was stopped manually.
+        """
+        return await self.wait_for_reply(
+            filters=(filters or pywa_filters.true) & pywa_filters.contact_info_shared,
             cancelers=cancelers,
             ignore_updates=ignore_updates,
             timeout=timeout,

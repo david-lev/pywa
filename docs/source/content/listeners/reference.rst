@@ -20,6 +20,7 @@ Listeners reference
 .. automethod:: SentMessage.wait_for_incoming_voice_call
 .. automethod:: SentVoiceMessage.wait_until_played
 .. automethod:: SentLocationRequest.wait_for_location
+.. automethod:: SentContactInfoRequest.wait_for_contact_info
 
 .. currentmodule:: pywa.types.templates
 

@@ -17,6 +17,9 @@ Others
 .. autoclass:: SentLocationRequest()
     :show-inheritance:
 
+.. autoclass:: SentContactInfoRequest
+    :show-inheritance:
+
 .. autoclass:: SentReaction()
     :show-inheritance:
 
