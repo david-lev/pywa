@@ -201,10 +201,10 @@ class Contact:
 
     name: Name
     birthday: str | None = None
-    phones: Iterable[Phone] = dataclasses.field(default_factory=tuple)
-    emails: Iterable[Email] = dataclasses.field(default_factory=tuple)
-    urls: Iterable[Url] = dataclasses.field(default_factory=tuple)
-    addresses: Iterable[Address] = dataclasses.field(default_factory=tuple)
+    phones: Sequence[Phone] = dataclasses.field(default_factory=tuple)
+    emails: Sequence[Email] = dataclasses.field(default_factory=tuple)
+    urls: Sequence[Url] = dataclasses.field(default_factory=tuple)
+    addresses: Sequence[Address] = dataclasses.field(default_factory=tuple)
     org: Org | None = None
 
     @classmethod
