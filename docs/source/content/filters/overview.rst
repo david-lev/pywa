@@ -81,20 +81,22 @@ Write a function that accepts the client and the update, and returns a boolean.
    - Async functions can be used as filters **only** with the async client.
 
 .. code-block:: python
-    :emphasize-lines: 3-4, 8, 13
+    :emphasize-lines: 3-5, 9, 14
 
     from pywa import WhatsApp, types, filters
 
+    @filters.new
     def without_xyz_filter(_: WhatsApp, msg: types.Message) -> bool:
-        return msg.text and "xyz" not in msg.text
+        return "xyz" not in msg.text
 
     wa = WhatsApp(...)
 
-    @wa.on_message(filters.new(without_xyz_filter))
+    # Using the new filter:
+    @wa.on_message(filters.text & without_xyz_filter)
     def messages_without_xyz(wa: WhatsApp, msg: types.Message):
         msg.reply("You said something without xyz!")
 
-    # Or inline with a lambda — combine with built-in filters:
+    # Or passing the function directly:
     @wa.on_message(filters.text & filters.new(lambda _, msg: "xyz" not in msg.text))
     def messages_without_xyz(wa: WhatsApp, msg: types.Message):
         msg.reply("You said something without xyz!")

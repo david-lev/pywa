@@ -116,7 +116,7 @@ __all__ = [
 ]
 
 import re
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterable, TypeVar
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterable, TypeVar, overload
 
 from . import _helpers as helpers
 from .errors import WhatsAppError
@@ -245,10 +245,50 @@ class NotFilter(Filter):
         return self.filter.has_async()
 
 
+@overload
+def new() -> Callable[[Callable[[_Wa, _T], bool | Awaitable[bool]]], Filter]: ...
+
+
+@overload
+def new(
+    name: str,
+) -> Callable[[Callable[[_Wa, _T], bool | Awaitable[bool]]], Filter]: ...
+
+
+@overload
 def new(
     func: Callable[[_Wa, _T], bool | Awaitable[bool]], name: str | None = None
+) -> Filter: ...
+
+
+def new(
+    func: Callable[[_Wa, _T], bool | Awaitable[bool]] | str | None = None,
+    name: str | None = None,
 ) -> Filter:
-    """Factory function to create a filter from a function (sync or async)."""
+    """
+    A factory function to create custom filter from a function (sync or async).
+
+    >>> @filters.new
+    ... def is_registered(_: WhatsApp, msg: types.Message) -> bool:
+    ...     return my_db.is_user_registered(msg.from_user.bsuid)
+
+    Using it:
+
+    >>> @wa.on_message(is_registered)
+    ... def only_registered_users(wa: WhatsApp, msg: types.Message):
+    ...     msg.reply("Hello registered user!")
+
+    Or passing the function directly:
+
+    >>> @wa.on_message(filters.new(lambda _, msg: my_db.is_user_registered(msg.from_user.bsuid)))
+    ... def only_registered_users(wa: WhatsApp, msg: types.Message):
+    ...     msg.reply("Hello registered user!")"""
+    if func is None or not callable(func):
+
+        def decorator(f: Callable[[_Wa, _T], bool | Awaitable[bool]]) -> Filter:
+            return new(f, name=name or (func if isinstance(func, str) else None))
+
+        return decorator
 
     is_async = helpers.is_async_callable(func)
 
@@ -264,7 +304,9 @@ def new(
         return is_async
 
     return type(
-        name or func.__name__ or Filter,
+        name or getattr(func, "__name__", None) or Filter.__name__
+        if hasattr(Filter, "__name__")
+        else "Filter",
         (Filter,),
         {
             "check_sync": check_sync,

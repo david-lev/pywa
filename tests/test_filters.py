@@ -327,6 +327,52 @@ def test_filters():
                         ) from e
 
 
+def test_new():
+    @fil.new
+    def my_filter(_, __): ...
+
+    assert isinstance(my_filter, Filter)
+    assert my_filter.__class__.__name__ == "my_filter"
+
+    @fil.new
+    async def my_filter(_, __): ...
+
+    assert isinstance(my_filter, Filter)
+    assert my_filter.__class__.__name__ == "my_filter"
+
+    @fil.new()
+    def my_filter(_, __): ...
+
+    assert isinstance(my_filter, Filter)
+    assert my_filter.__class__.__name__ == "my_filter"
+
+    @fil.new()
+    async def my_filter(_, __): ...
+
+    assert isinstance(my_filter, Filter)
+    assert my_filter.__class__.__name__ == "my_filter"
+
+    @fil.new("custom_name")
+    def my_filter(_, __): ...
+
+    assert isinstance(my_filter, Filter)
+    assert my_filter.__class__.__name__ == "custom_name"
+
+    @fil.new("custom_name")
+    async def my_filter(_, __): ...
+
+    assert isinstance(my_filter, Filter)
+    assert my_filter.__class__.__name__ == "custom_name"
+
+    my_filter = fil.new(lambda _, __: True)
+    assert isinstance(my_filter, Filter)
+    assert my_filter.__class__.__name__ == "<lambda>"
+
+    my_filter = fil.new(func=lambda _, __: True, name="custom_name")
+    assert isinstance(my_filter, Filter)
+    assert my_filter.__class__.__name__ == "custom_name"
+
+
 def modify_text(msg: Message, to: str):
     return dataclasses.replace(msg, text=to)
 
