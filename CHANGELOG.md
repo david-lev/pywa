@@ -3,7 +3,13 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-#### 4.1.0 (2026-06-16) **Latest**
+#### 4.2.0 (2026-06-19) **Latest**
+
+- [filters] allowing `filters.new` to be used as decorator:
+- [contacts] adding `first_wa_id` property to `ContactList`
+- [api] fix `recipient_type` in `send_marketing_message`
+
+#### 4.1.0 (2026-06-16)
 
 - [client] add `archive_templates` and `unarchive_templates` methods for template archival management
 - [client] add `force_transfer` option to `set_username` method for username management
