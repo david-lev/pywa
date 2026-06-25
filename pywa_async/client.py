@@ -2724,7 +2724,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                     method_arg="waba_id",
                     client_arg="waba_id",
                 ),
-                template=template.to_json(),
+                template=json.loads(template.to_json()),
             ),
         )
 
@@ -3096,12 +3096,14 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         return UpdatedTemplate.from_dict(
             data=await self.api.update_template(
                 template_id=template_id,
-                template=_TemplateUpdate(
-                    category=new_category,
-                    components=new_components,
-                    message_send_ttl_seconds=new_message_send_ttl_seconds,
-                    parameter_format=new_parameter_format,
-                ).to_json(),
+                template=json.loads(
+                    _TemplateUpdate(
+                        category=new_category,
+                        components=new_components,
+                        message_send_ttl_seconds=new_message_send_ttl_seconds,
+                        parameter_format=new_parameter_format,
+                    ).to_json()
+                ),
             ),
             client=self,
         )
