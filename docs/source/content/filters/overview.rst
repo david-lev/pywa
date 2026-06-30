@@ -3,16 +3,17 @@
 
 .. currentmodule:: pywa.filters
 
-Filters are used by handlers to decide whether an update should be handled or ignored.
+Filters are conditions that decide whether an incoming update should be handled or ignored.
+Pass them to any handler and pywa will only call your callback when the filter matches.
 
-The library provides several built-in filters, available in the :mod:`pywa.filters` module.
+The library ships with a wide range of built-in filters in the :mod:`pywa.filters` module,
+and you can write your own in a single function.
 
------------------
 Basic Usage
------------------
+-----------
 
 .. code-block:: python
-    :emphasize-lines: 5, 10
+    :emphasize-lines: 5, 13
 
     from pywa import WhatsApp, types, filters
 
@@ -26,11 +27,10 @@ Basic Usage
             buttons=[types.Button("Click me!", "click")]
         )
 
-    @wa.on_callback(filters.matches("click"))
+    @wa.on_callback_button(filters.matches("click"))
     def handle_click(wa: WhatsApp, clb: types.CallbackButton):
         clb.reply("You clicked me!")
 
------------------
 Combining Filters
 -----------------
 
@@ -68,14 +68,11 @@ Filters can be combined with logical operators:
 
         filters.matches("hello", "hi")
 
------------------
 Custom Filters
------------------
+--------------
 
-You can define your own filters by writing a function that takes the client and the update, and returns a boolean.
-
-If the function returns ``True`` → the handler will process the update.
-If it returns ``False`` → the update will be ignored.
+Write a function that accepts the client and the update, and returns a boolean.
+``True`` means the handler runs; ``False`` means the update is skipped.
 
 .. note::
 
@@ -84,30 +81,33 @@ If it returns ``False`` → the update will be ignored.
    - Async functions can be used as filters **only** with the async client.
 
 .. code-block:: python
-    :emphasize-lines: 3-4, 8, 13
+    :emphasize-lines: 3-5, 9, 14
 
     from pywa import WhatsApp, types, filters
 
+    @filters.new
     def without_xyz_filter(_: WhatsApp, msg: types.Message) -> bool:
-        return msg.text and "xyz" not in msg.text
+        return "xyz" not in msg.text
 
     wa = WhatsApp(...)
 
-    @wa.on_message(filters.new(without_xyz_filter))
+    # Using the new filter:
+    @wa.on_message(filters.text & without_xyz_filter)
     def messages_without_xyz(wa: WhatsApp, msg: types.Message):
         msg.reply("You said something without xyz!")
 
-    # Or with lambda:
-    @wa.on_message(filters.new(lambda _, msg: msg.text and "xyz" not in msg.text))
+    # Or passing the function directly:
+    @wa.on_message(filters.text & filters.new(lambda _, msg: "xyz" not in msg.text))
     def messages_without_xyz(wa: WhatsApp, msg: types.Message):
         msg.reply("You said something without xyz!")
 
------------------
 Built-in Filters
------------------
+----------------
 
 .. toctree::
 
     ./common_filters
     ./message_filters
     ./message_status_filters
+    ./account_update_filters
+    ./calls_filters

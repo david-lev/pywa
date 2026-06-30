@@ -19,6 +19,7 @@ __all__ = [
     "private",
     "group",
     "update_id",
+    "waba_id",
     "forwarded",
     "forwarded_many_times",
     "reply",
@@ -27,7 +28,7 @@ __all__ = [
     "sent_to",
     "sent_to_me",
     "from_users",
-    "no_wa_id",
+    "without_wa_id",
     "from_countries",
     "matches",
     "contains",
@@ -60,6 +61,7 @@ __all__ = [
     "current_location",
     "location_in_radius",
     "contacts",
+    "contact_info_shared",
     "contacts_has_wa",
     "order",
     "callback_button",
@@ -114,7 +116,7 @@ __all__ = [
 ]
 
 import re
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterable, TypeVar
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterable, TypeVar, overload
 
 from . import _helpers as helpers
 from .errors import WhatsAppError
@@ -147,6 +149,7 @@ from .types.flows import FlowCompletion as _Fc
 from .types.message import Message as _Msg
 from .types.message_status import MessageStatus as _Ms
 from .types.message_status import MessageStatusType as _Mst
+from .types.others import ContactsOrigin as _Cor
 from .types.others import MessageType as _Mt
 from .types.system import IdentityChange as _Ic
 from .types.system import PhoneNumberChange as _Pnc
@@ -242,10 +245,50 @@ class NotFilter(Filter):
         return self.filter.has_async()
 
 
+@overload
+def new() -> Callable[[Callable[[_Wa, _T], bool | Awaitable[bool]]], Filter]: ...
+
+
+@overload
+def new(
+    name: str,
+) -> Callable[[Callable[[_Wa, _T], bool | Awaitable[bool]]], Filter]: ...
+
+
+@overload
 def new(
     func: Callable[[_Wa, _T], bool | Awaitable[bool]], name: str | None = None
+) -> Filter: ...
+
+
+def new(
+    func: Callable[[_Wa, _T], bool | Awaitable[bool]] | str | None = None,
+    name: str | None = None,
 ) -> Filter:
-    """Factory function to create a filter from a function (sync or async)."""
+    """
+    A factory function to create custom filter from a function (sync or async).
+
+    >>> @filters.new
+    ... def is_registered(_: WhatsApp, msg: types.Message) -> bool:
+    ...     return my_db.is_user_registered(msg.from_user.bsuid)
+
+    Using it:
+
+    >>> @wa.on_message(is_registered)
+    ... def only_registered_users(wa: WhatsApp, msg: types.Message):
+    ...     msg.reply("Hello registered user!")
+
+    Or passing the function directly:
+
+    >>> @wa.on_message(filters.new(lambda _, msg: my_db.is_user_registered(msg.from_user.bsuid)))
+    ... def only_registered_users(wa: WhatsApp, msg: types.Message):
+    ...     msg.reply("Hello registered user!")"""
+    if func is None or not callable(func):
+
+        def decorator(f: Callable[[_Wa, _T], bool | Awaitable[bool]]) -> Filter:
+            return new(f, name=name or (func if isinstance(func, str) else None))
+
+        return decorator
 
     is_async = helpers.is_async_callable(func)
 
@@ -261,7 +304,9 @@ def new(
         return is_async
 
     return type(
-        name or func.__name__ or Filter,
+        name or getattr(func, "__name__", None) or Filter.__name__
+        if hasattr(Filter, "__name__")
+        else "Filter",
         (Filter,),
         {
             "check_sync": check_sync,
@@ -276,6 +321,17 @@ true = new(lambda _, __: True, name="true")
 
 false = new(lambda _, __: False, name="false")
 """Filter that always returns False."""
+
+
+def webhook_fields(*fields: str) -> Filter:
+    """
+    Filter for raw updates that contain any of the specified fields.
+
+    >>> filters.webhook_fields("messages")
+    """
+    fields = set(fields)
+    return new(lambda _, r: r.field in fields, name="webhook_fields")
+
 
 forwarded = new(
     lambda _, m: m.forwarded,
@@ -303,7 +359,7 @@ Filter for messages that reply to another message.
 >>> filters.reply
 """
 
-no_wa_id = new(lambda _, u: u.from_user.wa_id is None, name="no_wa_id")
+without_wa_id = new(lambda _, u: u.from_user.wa_id is None, name="without_wa_id")
 """
 Filter for updates that their sender doesn't have a ``wa_id`` (when the user enables username)
 """
@@ -316,6 +372,15 @@ def update_id(id_: str) -> Filter:
     >>> update_id("wamid.HBKHUIyNTM4NjAfiefhwojfMTNFQ0Q2MERGRjVDMUHUIGGA=")
     """
     return new(lambda _, u: u.id == id_, name="update_id")
+
+
+def waba_id(id_: str) -> Filter:
+    """
+    Filter for updates that their WABA ID matches the given id.
+
+    >>> waba_id("105102735943269")
+    """
+    return new(lambda _, u: getattr(u, "waba_id", u.id) == id_, name="waba_id")
 
 
 def replays_to(*msg_ids: str) -> Filter:
@@ -801,6 +866,11 @@ def reaction_emojis(*emojis: str) -> Filter:
 contacts = new(lambda _, m: m.type == _Mt.CONTACTS, name="contacts")
 """Filter for contacts messages."""
 
+contact_info_shared = new(
+    lambda _, m: m.type == _Mt.CONTACTS and m.contacts.origin == _Cor.CONTACT_REQUEST,
+    name="contact_info_shared",
+)
+"""Filter for contact info shared messages."""
 
 contacts_has_wa = new(
     lambda _, m: (

@@ -33,5 +33,6 @@ Message Filters
 .. autoattribute:: pywa.filters.current_location
 .. autofunction:: pywa.filters.location_in_radius
 .. autoattribute:: pywa.filters.contacts
+.. autoattribute:: pywa.filters.contact_info_shared
 .. autoattribute:: pywa.filters.contacts_has_wa
 .. autoattribute:: pywa.filters.order

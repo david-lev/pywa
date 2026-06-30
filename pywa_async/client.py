@@ -153,6 +153,7 @@ from .types.others import (
 )
 from .types.sent_update import (
     InitiatedCall,
+    SentContactInfoRequest,
     SentLocationRequest,
     SentMediaMessage,
     SentMessage,
@@ -1283,7 +1284,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         tracker: str | CallbackData | None = None,
         identity_key_hash: str | None = None,
         sender: str | int | None = None,
-    ) -> SentMessage:
+    ) -> SentContactInfoRequest:
         """
         If a user taps this button, their WhatsApp phone number will be shared in the message thread, and a contacts webhook will be triggered containing the user’s phone number. Note that if a WhatsApp user shares a contact using the share contacts feature in the WhatsApp app instead, the webhook will also include the contact’s vCard.
         If you are using the contact book feature, their phone number will also be added to your contact book automatically. For businesses that have enabled Local Storage, Meta extracts the user’s phone number from the shared contact card (vCard) and stores it in your contact book on Meta data centers. Only the phone number is extracted and stored; no other vCard data is retained beyond the standard data-in-use period.
@@ -1314,7 +1315,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             wa=self, value=sender, method_arg="sender", client_arg="phone_id"
         )
         recipient, recipient_type = helpers.resolve_recipient(to)
-        return SentMessage.from_sent_update(
+        return SentContactInfoRequest.from_sent_update(
             client=self,
             update=await self.api.send_message(
                 sender=sender,
@@ -2723,7 +2724,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                     method_arg="waba_id",
                     client_arg="waba_id",
                 ),
-                template=template.to_json(),
+                template=json.loads(template.to_json()),
             ),
         )
 
@@ -3095,12 +3096,14 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         return UpdatedTemplate.from_dict(
             data=await self.api.update_template(
                 template_id=template_id,
-                template=_TemplateUpdate(
-                    category=new_category,
-                    components=new_components,
-                    message_send_ttl_seconds=new_message_send_ttl_seconds,
-                    parameter_format=new_parameter_format,
-                ).to_json(),
+                template=json.loads(
+                    _TemplateUpdate(
+                        category=new_category,
+                        components=new_components,
+                        message_send_ttl_seconds=new_message_send_ttl_seconds,
+                        parameter_format=new_parameter_format,
+                    ).to_json()
+                ),
             ),
             client=self,
         )

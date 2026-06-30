@@ -354,7 +354,7 @@ class GraphAPIAsync(GraphAPI):
         return await self._request(
             method="POST",
             endpoint=f"/{phone_id}/whatsapp_business_encryption",
-            data={"business_public_key": business_public_key},
+            json={"business_public_key": business_public_key},
         )
 
     async def upload_media(
@@ -569,6 +569,7 @@ class GraphAPIAsync(GraphAPI):
         sender: str,
         to: str,
         recipient: str,
+        recipient_type: str,
         template: dict,
         reply_to_message_id: str | None = None,
         message_activity_sharing: bool | None = None,
@@ -585,6 +586,7 @@ class GraphAPIAsync(GraphAPI):
             sender: The phone id to send the message from.
             to: The WhatsApp ID to send the message to.
             recipient: The recipient unique identifier (BSUID).
+            recipient_type: The type of the recipient (e.g. ``individual``, ``group``).
             template: The template object to send.
             reply_to_message_id: The ID of the message to reply to.
             message_activity_sharing: Toggles on / off sharing message activities (e.g. message read) for that specific marketing message to Meta to help optimize marketing messages.
@@ -596,7 +598,7 @@ class GraphAPIAsync(GraphAPI):
         """
         body = self._filter_none(
             messaging_product="whatsapp",
-            recipient_type="individual",
+            recipient_type=recipient_type,
             to=to,
             type="template",
             template=template,
@@ -1208,7 +1210,7 @@ class GraphAPIAsync(GraphAPI):
         return await self._request(
             method="POST",
             endpoint=f"/{waba_id}/message_templates",
-            data=template,
+            json=template,
             headers={"Content-Type": "application/json"},
         )
 
@@ -1295,7 +1297,7 @@ class GraphAPIAsync(GraphAPI):
         return await self._request(
             method="POST",
             endpoint=f"/{template_id}",
-            data=template,
+            json=template,
             headers={"Content-Type": "application/json"},
         )
 

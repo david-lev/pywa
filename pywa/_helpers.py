@@ -88,20 +88,14 @@ class StrEnum(str, enum.Enum):
         return cls.UNKNOWN
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class FromDict:
     """Allows to ignore extra fields when creating a dataclass from a dict."""
 
     # noinspection PyArgumentList
     @classmethod
-    def from_dict(cls, data: dict, **kwargs):
-        return cls(
-            **{
-                k: v
-                for k, v in (data | kwargs).items()
-                if k in (f.name for f in dataclasses.fields(cls))
-            }
-        )
+    def from_dict(cls, data: dict):
+        fields = {f.name for f in dataclasses.fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in fields})
 
 
 class APIObject:
@@ -1110,6 +1104,7 @@ def register_routes_starlette(wa: "WhatsApp"):
         return StarletteResponse(
             content=content,
             status_code=status,
+            media_type="text/plain",
             headers={
                 "X-Content-Type-Options": "nosniff",
             },

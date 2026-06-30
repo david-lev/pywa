@@ -201,10 +201,10 @@ class Contact:
 
     name: Name
     birthday: str | None = None
-    phones: Iterable[Phone] = dataclasses.field(default_factory=tuple)
-    emails: Iterable[Email] = dataclasses.field(default_factory=tuple)
-    urls: Iterable[Url] = dataclasses.field(default_factory=tuple)
-    addresses: Iterable[Address] = dataclasses.field(default_factory=tuple)
+    phones: Sequence[Phone] = dataclasses.field(default_factory=tuple)
+    emails: Sequence[Email] = dataclasses.field(default_factory=tuple)
+    urls: Sequence[Url] = dataclasses.field(default_factory=tuple)
+    addresses: Sequence[Address] = dataclasses.field(default_factory=tuple)
     org: Org | None = None
 
     @classmethod
@@ -398,7 +398,7 @@ class ContactList(tuple[Contact, ...]):
     Represents an shared contacts in a message, which can be iterated over to get the individual contacts.
 
     Attributes:
-        origin: The origin of the shared contacts (e.g. ``contact_request`` if the contacts were shared as a contact request, ``other`` otherwise).
+        origin: The origin of the shared contacts (e.g. ``contact_request`` if the contacts were shared as a contact info request, ``other`` otherwise).
     """
 
     origin: ContactsOrigin
@@ -421,6 +421,11 @@ class ContactList(tuple[Contact, ...]):
     def first(self) -> Contact:
         """Get the first contact in the list."""
         return self[0]
+
+    @property
+    def first_wa_id(self) -> str | None:
+        """Get the WhatsApp ID of the first contact in the list. Shortcut for ``msg.contacts[0].phones[0].wa_id``."""
+        return self.first.phones[0].wa_id
 
 
 @dataclasses.dataclass(frozen=True, slots=True)

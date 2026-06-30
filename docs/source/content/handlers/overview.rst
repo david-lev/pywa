@@ -6,8 +6,8 @@
 Handlers are where your bot reacts to incoming WhatsApp updates.
 
 In pywa, every incoming webhook update is converted into a typed update object, such as
-:class:`~pywa.types.Message`, :class:`~pywa.types.CallbackButton`, or
-:class:`~pywa.types.MessageStatus`. You register callback functions for the update types you
+:class:`~pywa.types.message.Message`, :class:`~pywa.types.callback.CallbackButton`, or
+:class:`~pywa.types.message_status.MessageStatus`. You register callback functions for the update types you
 care about, and pywa calls the right function when WhatsApp sends an update.
 
 The usual workflow is:
@@ -15,7 +15,7 @@ The usual workflow is:
 1. Create a :class:`~pywa.client.WhatsApp` client.
 2. Register handlers with decorators or ``Handler`` objects.
 3. Give WhatsApp a public callback URL.
-4. Run the app with ``pywa dev`` while developing, or ``pywa run`` when deploying.
+4. Run the app with ``pywa dev`` while developing, or ``pywa run`` for production.
 
 This guide starts with the day-to-day part: writing handlers.
 
@@ -27,6 +27,7 @@ A handler callback receives the WhatsApp client and the update object.
 .. code-block:: python
     :caption: main.py
     :linenos:
+    :emphasize-lines: 9-11
 
     from pywa import WhatsApp, filters, types
 
@@ -79,20 +80,24 @@ Use the ``on_...`` decorators on your :class:`~pywa.client.WhatsApp` client.
     def handle_callback_button(client: WhatsApp, clb: types.CallbackButton):
         clb.react("❤️")
 
-You can pass filters to many handlers:
+You can pass filters to the handlers:
 
 .. code-block:: python
     :caption: main.py
     :linenos:
-    :emphasize-lines: 5
+    :emphasize-lines: 5, 9
 
     from pywa import WhatsApp, filters, types
 
     wa = WhatsApp(...)
 
-    @wa.on_message(filters.command("start"))
-    def start(client: WhatsApp, msg: types.Message):
-        msg.reply("Welcome!")
+    @wa.on_message(filters.text)
+    def handle_text_message(client: WhatsApp, msg: types.Message):
+        msg.reply(f"You said: {msg.text}")
+
+    @wa.on_message(filters.image | filters.video)
+    def handle_media_message(client: WhatsApp, msg: types.Message):
+        msg.reply(f"Thanks for sending a media message.")
 
 See the `filters guide <../filters/overview.html>`_ for built-in filters and custom filters.
 
@@ -134,38 +139,48 @@ You can also load modules later:
 
     wa.load_handlers_modules(my_handlers)
 
-Using ``Handler`` objects
-^^^^^^^^^^^^^^^^^^^^^^^^^
+Dynamic Handler Registration
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-For larger projects, or when handlers are created dynamically, wrap callbacks in ``Handler``
-objects and register them with :meth:`~pywa.client.WhatsApp.add_handlers`.
+You can register and remove handlers dynamically at runtime instead of declaring them all at startup. This is useful for state-dependent workflows (e.g., toggling a temporary maintenance mode) where handlers are added or removed on the fly.
 
-.. code-block:: python
-    :caption: handlers.py
-    :linenos:
+To register a handler dynamically, instantiate one of the `Available Handlers` and pass it to :meth:`~pywa.client.WhatsApp.add_handlers`. To stop listening, pass the same handler instance to :meth:`~pywa.client.WhatsApp.remove_handlers`.
 
-    from pywa import types
-
-    def handle_message(client, msg: types.Message):
-        print(msg.text)
-
-    def handle_callback_button(client, clb: types.CallbackButton):
-        print(clb.data)
+Here is an example demonstrating how to register a high-priority maintenance handler and dynamically remove it:
 
 .. code-block:: python
     :caption: main.py
     :linenos:
-    :emphasize-lines: 2, 6-9
+    :emphasize-lines: 13-16, 23, 26
 
-    from pywa import WhatsApp, filters, handlers
-    import handlers as my_handlers
+    from pywa import WhatsApp, filters, handlers, types
 
     wa = WhatsApp(...)
 
-    wa.add_handlers(
-        handlers.MessageHandler(my_handlers.handle_message, filters.text),
-        handlers.CallbackButtonHandler(my_handlers.handle_callback_button),
+    admin_filter = filters.from_users("1234567890", "9876543210")
+
+    # Define a high-priority handler callback that intercepts messages during maintenance
+    def maintenance_callback(client: WhatsApp, msg: types.Message):
+        msg.reply("🛠️ The bot is currently undergoing maintenance. Please try again later.")
+        msg.stop_handling()  # Prevent other, lower-priority handlers from running
+
+    # Create the handler instance with high priority
+    maintenance_handler = handlers.MessageHandler(
+        callback=maintenance_callback,
+        filters=~admin_filter, # Only non-admins
+        priority=100,
     )
+
+    # Handler to turn maintenance mode ON or OFF
+    @wa.on_message(filters.command("maintenance") & admin_filter)
+    def enable_maintenance(client: WhatsApp, msg: types.Message):
+        if msg.text.split("maintenance")[1].strip() == "on":
+            client.add_handlers(maintenance_handler)
+            msg.reply("Maintenance mode has been activated.")
+        else:
+            client.remove_handlers(maintenance_handler, silent=True)
+            msg.reply("Maintenance mode has been deactivated.")
+
 
 Available Handlers
 ------------------
@@ -597,7 +612,7 @@ If you pass a custom FastAPI or Flask server, pywa does not run it for you.
 Handler Order and Flow
 ----------------------
 
-By default, pywa stops after the first handler that matches an update.
+By default, pywa stops after the first handler whose **filter** matches an update.
 
 .. code-block:: python
     :caption: main.py
@@ -609,14 +624,14 @@ By default, pywa stops after the first handler that matches an update.
 
     @wa.on_message
     def first(client: WhatsApp, msg: types.Message):
-        print("first")
-        # No later message handlers run for this update.
+        print("first")  # <-- runs, then stops. second() is never called.
 
     @wa.on_message
     def second(client: WhatsApp, msg: types.Message):
-        print("second")
+        print("second")  # <-- never reached, because first() matched first.
 
-Handlers run in registration order unless you set ``priority``. Higher priority runs earlier.
+Handlers run in registration order unless you set ``priority``.
+**Higher priority number runs first** — a handler with ``priority=2`` runs before one with ``priority=1``.
 
 .. code-block:: python
     :caption: main.py
@@ -734,19 +749,28 @@ Update route:
 With manual framework integration, you are responsible for returning the right response format
 for your framework and for running the server.
 
-What pywa runs
---------------
+.. note::
 
-When you use ``pywa dev``, ``pywa run``, or :meth:`~pywa.client.WhatsApp.run`, pywa creates a
-small Starlette app and runs it with Uvicorn.
+    Regardless of how you run pywa (``pywa dev``, ``pywa run``, or :meth:`~pywa.client.WhatsApp.run`),
+    it creates a small Starlette app backed by Uvicorn and registers two routes on ``webhook_endpoint``:
 
-That app registers:
+    - ``GET`` — answers WhatsApp's verification challenge.
+    - ``POST`` — receives and dispatches incoming webhook updates.
 
-- A ``GET`` route on ``webhook_endpoint`` for WhatsApp's verification challenge.
-- A ``POST`` route on ``webhook_endpoint`` for incoming webhook updates.
+    When you pass a FastAPI or Flask ``server``, pywa registers the same routes on that app instead.
+    For any other framework, use the :ref:`manual helper methods <Using Other Web Frameworks>` above.
 
-For supported custom servers, pywa registers equivalent routes on the FastAPI or Flask app you
-pass to ``server``. For other frameworks, use the manual helper methods above.
+.. tip::
+
+    **Common best practices:**
+
+    - Always add a filter (e.g., ``filters.text``) to message handlers that read ``msg.text``
+      so the handler is never called with ``None``.
+    - Avoid long blocking operations inside synchronous handlers — they block the entire event loop.
+      Use threads or switch to ``pywa_async`` for async handlers.
+    - Use ``priority`` sparingly. Explicit filters are usually cleaner than execution ordering.
+    - Use ``shared_data`` on the update object to pass context between chained handlers
+      instead of global state.
 
 .. toctree::
     handler_decorators

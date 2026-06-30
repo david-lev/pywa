@@ -3,24 +3,20 @@
 
 .. currentmodule:: pywa.types.flows
 
-PyWa has a built-in support for WhatsApp Flows, which allows you to create structured interactions with your users.
+PyWa has built-in support for WhatsApp Flows, allowing you to create rich, structured interactions with your users directly within WhatsApp.
 
-From `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows>`_:
+.. image:: ../../../../_static/guides/flows-new.webp
+    :alt: WhatsApp Flows
+    :width: 100%
 
-    .. image:: ../../../../_static/guides/flows-new.webp
-        :alt: WhatsApp Flows
-        :width: 100%
+Flows let your users perform complex tasks — such as booking appointments, browsing products, or completing sign-up forms — without leaving the chat interface.
 
-    WhatsApp Flows is a way to build structured interactions for business messaging. With Flows, businesses can define, configure, and customize messages with rich interactions that give customers more structure in the way they communicate.
+Working with WhatsApp Flows in PyWa involves four main steps:
 
-    You can use Flows to book appointments, browse products, collect customer feedback, get new sales leads, or anything else where structured communication is more natural or comfortable for your customers.
-
-The Flows are separated into 4 parts:
-
-- Creating Flow
-- Sending Flow
-- Handling Flow requests and responding to them (Only for dynamic flows)
-- Getting Flow Completion
+- Creating the Flow
+- Sending the Flow
+- Handling Flow requests and responding to them (for dynamic flows)
+- Receiving the Flow Completion update
 
 Creating Flow
 -------------
@@ -287,10 +283,10 @@ Or getting all the flows with :meth:`~pywa.client.WhatsApp.get_flows`:
         print(flow)
 
 
-To test your flow you need to sent it:
+To test your flow, you need to send it to a user.
 
-Sending Flow
-------------
+Sending Flows
+-------------
 
 .. currentmodule:: pywa.types.callback
 
@@ -361,64 +357,53 @@ The ``.response`` attribute is the payload you sent when you completed the flow.
             img.download()
 
 
-Handling Flow requests
+Handling Flow Requests
 ----------------------
 
-This is when things get interesting. WhatsApp Flows can be dynamic, which means that you can handle user actions and respond to them in real-time from your server.
+WhatsApp Flows can be dynamic, allowing your server to handle user actions and respond in real-time. For example, you can validate inputs, transition to new screens based on business logic, or complete the interaction dynamically.
 
+.. important::
 
-.. note::
+    Because dynamic flow requests and responses contain sensitive data, Meta requires them to be encrypted using `WhatsApp Business Encryption <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/whatsapp-business-encryption>`_.
 
-    Since the requests and responses can contain sensitive data, such as passwords and other personal information,
-    all the requests and responses are encrypted using the `WhatsApp Business Encryption <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/whatsapp-business-encryption>`_.
+    Before handling dynamic flows, you must generate and upload an RSA key pair:
 
-    Before you continue, you need to sign and upload the business public key.
-    First you need to generate a private key and a public key:
+    1. **Generate a private key** (you will be prompted to set a password):
 
-    Generate a public and private RSA key pair by typing in the following command:
+       .. code-block:: bash
 
-    >>> openssl genrsa -des3 -out private.pem 2048
+          openssl genrsa -des3 -out private.pem 2048
 
+    2. **Export the public key** from your private key:
 
-    This generates 2048-bit RSA key pair encrypted with a password you provided and is written to a file.
+       .. code-block:: bash
 
-    Next, you need to export the RSA Public Key to a file.
+          openssl rsa -in private.pem -outform PEM -pubout -out public.pem
 
-    >>> openssl rsa -in private.pem -outform PEM -pubout -out public.pem
+    3. **Upload the public key** to Meta using the :meth:`~pywa.client.WhatsApp.set_business_public_key` method:
 
+       .. code-block:: python
+           :linenos:
 
-    This exports the RSA Public Key to a file.
+           from pywa import WhatsApp
 
-    Once you have the public key, you can upload it using the :meth:`~pywa.client.WhatsApp.set_business_public_key` method.
+           wa = WhatsApp(...)
+           wa.set_business_public_key(open("public.pem").read())
 
-    .. code-block:: python
-        :linenos:
+    4. **Provide the private key** to your :class:`WhatsApp` client initialization:
 
-        from pywa import WhatsApp
+       .. code-block:: python
+           :linenos:
 
-        wa = WhatsApp(...)
+           from pywa import WhatsApp
 
-        wa.set_business_public_key(open("public.pem").read())
+           wa = WhatsApp(..., business_private_key=open("private.pem").read())
 
-    Every request need to be decrypted using the private key. so you need to provide it when you create the :class:`WhatsApp` object:
+    5. **Install the required dependencies** (pywa uses the `cryptography <https://cryptography.io/en/latest/>`_ library for decryption/encryption):
 
-    .. code-block:: python
-        :linenos:
+       .. code-block:: bash
 
-        from pywa import WhatsApp
-
-        wa = WhatsApp(..., business_private_key=open("private.pem").read())
-
-    Now you are ready to handle the requests.
-
-    Just one more thing, the default decryption & encryption implementation is using the `cryptography <https://cryptography.io/en/latest/>`_ library,
-    So you need to install it:
-
-    >>> pip3 install cryptography
-
-    Or when installing PyWa:
-
-    >>> pip3 install "pywa[cryptography]"
+          pip3 install "pywa[cryptography]"
 
 Let's see an example of a dynamic flow:
 

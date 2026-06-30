@@ -5,6 +5,7 @@ __all__ = [
     "SentMediaMessage",
     "SentVoiceMessage",
     "SentLocationRequest",
+    "SentContactInfoRequest",
     "SentReaction",
     "SentTemplate",
     "SentTemplateStatus",
@@ -815,7 +816,7 @@ class SentVoiceMessage(SentMediaMessage):
 
 class SentLocationRequest(SentMessage):
     """
-    Represents a location request message that was sent to WhatsApp user/group.
+    Represents a location request message that was sent to WhatsApp user.
 
     Attributes:
         id: The ID of the message.
@@ -877,6 +878,61 @@ class SentLocationRequest(SentMessage):
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class SentContactInfoRequest(SentMessage):
+    """
+    Represents a contact information request message that was sent to WhatsApp user.
+
+    Attributes:
+        id: The ID of the message.
+        from_phone_id: The phone id of the sender (you).
+        chat: The chat to which the message was sent.
+        input: The input of the recipient.
+    """
+
+    def wait_for_contact_info(
+        self,
+        *,
+        filters: pywa_filters.Filter = None,
+        cancelers: pywa_filters.Filter = None,
+        ignore_updates: bool = True,
+        timeout: float | None = None,
+    ) -> Message:
+        """
+        Wait for a contact info shared message.
+
+        Example:
+
+            .. code-block:: python
+
+                @wa.on_message(filters.command("start"))
+                def start(w: WhatsApp, m: Message):
+                    r = m.reply_contact_info_request(text="Please share your contact",)
+                    contact_message = r.wait_for_contact_info()
+                    r.reply(f"You shared your contact: {contact_message.contacts.first.name}", quote=True)
+
+        Args:
+            filters: The filters to apply to the contact message.
+            cancelers: The filters to cancel the listening.
+            ignore_updates: Whether to ignore user updates that do not pass the filters.
+            timeout: The time to wait for the contact message.
+
+        Returns:
+            The contact message.
+
+        Raises:
+            ListenerTimeout: If the listener timed out.
+            ListenerCanceled: If the listener was canceled by a filter.
+            ListenerStopped: If the listener was stopped manually.
+        """
+        return self.wait_for_reply(
+            filters=(filters or pywa_filters.true) & pywa_filters.contact_info_shared,
+            cancelers=cancelers,
+            ignore_updates=ignore_updates,
+            timeout=timeout,
+        )
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class SentReaction(SentMessage):
     """
     Represents a reaction message that was sent to WhatsApp user/group.
@@ -885,7 +941,7 @@ class SentReaction(SentMessage):
         id: The ID of the reaction.
         message_id: The ID of the message that was reacted/unreacted to.
         from_phone_id: The phone id of the sender (you).
-        chat: The chat to which the message was sent.
+        chat: The chat to which the reaction was sent.
         input: The input of the recipient.
     """
 
