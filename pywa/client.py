@@ -5196,14 +5196,16 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             A tuple of reserved usernames. These usernames have a higher chance of approval.
         """
         return tuple(
-            self.api.get_reserved_usernames(
-                phone_id=helpers.resolve_arg(
-                    wa=self,
-                    value=phone_id,
-                    method_arg="phone_id",
-                    client_arg="phone_id",
+            (
+                username := self.api.get_reserved_usernames(
+                    phone_id=helpers.resolve_arg(
+                        wa=self,
+                        value=phone_id,
+                        method_arg="phone_id",
+                        client_arg="phone_id",
+                    )
                 )
-            )["data"][0]["username_suggestions"]
+            ).get("data", [username])[0]["username_suggestions"]
         )
 
     def delete_username(self, *, phone_id: str | int | None = None) -> SuccessResult:

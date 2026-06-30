@@ -5024,7 +5024,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         """
         return tuple(
             (
-                await self.api.get_reserved_usernames(
+                username := await self.api.get_reserved_usernames(
                     phone_id=helpers.resolve_arg(
                         wa=self,
                         value=phone_id,
@@ -5032,7 +5032,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                         client_arg="phone_id",
                     )
                 )
-            )["data"][0]["username_suggestions"]
+            ).get("data", [username])[0]["username_suggestions"]
         )
 
     async def delete_username(
