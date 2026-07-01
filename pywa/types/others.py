@@ -199,7 +199,8 @@ class Contact:
         org: The organization of the contact (optional).
     """
 
-    name: Name
+    name: Name | None
+    birthday: str | None
     birthday: str | None = None
     phones: Sequence[Phone] = dataclasses.field(default_factory=tuple)
     emails: Sequence[Email] = dataclasses.field(default_factory=tuple)
@@ -210,7 +211,7 @@ class Contact:
     @classmethod
     def from_dict(cls, data: dict):
         return cls(
-            name=cls.Name.from_dict(data["name"]) if "name" in data else "",
+            name=cls.Name.from_dict(data["name"]) if "name" in data else None,
             birthday=data.get("birthday"),
             phones=tuple(
                 cls.Phone.from_dict(phone) for phone in data.get("phones", ())
