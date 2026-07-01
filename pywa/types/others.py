@@ -199,7 +199,8 @@ class Contact:
         org: The organization of the contact (optional).
     """
 
-    name: Name
+    name: Name | None
+    birthday: str | None
     birthday: str | None = None
     phones: Sequence[Phone] = dataclasses.field(default_factory=tuple)
     emails: Sequence[Email] = dataclasses.field(default_factory=tuple)
@@ -210,7 +211,7 @@ class Contact:
     @classmethod
     def from_dict(cls, data: dict):
         return cls(
-            name=cls.Name.from_dict(data["name"]),
+            name=cls.Name.from_dict(data["name"]) if "name" in data else None,
             birthday=data.get("birthday"),
             phones=tuple(
                 cls.Phone.from_dict(phone) for phone in data.get("phones", ())
@@ -407,10 +408,11 @@ class ContactList(tuple[Contact, ...]):
         inst = super().__new__(
             cls, (Contact.from_dict(c) for c in contacts["contacts"])
         )
-        inst.origin = (
-            ContactsOrigin(contacts["origin"])
-            if "origin" in contacts
-            else ContactsOrigin.OTHER
+        inst.origin = ContactsOrigin(
+            contacts.get(
+                "origin",
+                contacts.get("contacts", [{}])[0].get("origin", "other"),
+            )
         )
         return inst
 

@@ -376,7 +376,7 @@ class GraphAPI:
         return self._request(
             method="POST",
             endpoint=f"/{phone_id}/whatsapp_business_encryption",
-            data={"business_public_key": business_public_key},
+            json={"business_public_key": business_public_key},
         )
 
     def upload_media(
@@ -1224,7 +1224,7 @@ class GraphAPI:
         return self._request(
             method="POST",
             endpoint=f"/{waba_id}/message_templates",
-            data=template,
+            json=template,
             headers={"Content-Type": "application/json"},
         )
 
@@ -1311,7 +1311,7 @@ class GraphAPI:
         return self._request(
             method="POST",
             endpoint=f"/{template_id}",
-            data=template,
+            json=template,
             headers={"Content-Type": "application/json"},
         )
 
