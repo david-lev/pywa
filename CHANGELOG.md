@@ -3,7 +3,14 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-#### 4.2.0 (2026-06-19) **Latest**
+#### 4.2.1 (2026-07-01) **Latest**
+
+- [others] fix parsing contact with field `request contact`
+- [others] fix parsing contact without name
+- [client] fix parsing `get_reserved_usernames()`
+- [api] using `json` instead of `data` for encryption and template requests
+
+#### 4.2.0 (2026-06-19)
 
 - [filters] allowing `filters.new` to be used as decorator:
 - [contacts] adding `first_wa_id` property to `ContactList`
