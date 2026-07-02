@@ -1,0 +1,4 @@
+# Shared requirements for all PyWa examples.
+# Install with: pip install -r examples/requirements.txt
+pywa[fastapi,flask,cryptography]>=3.9
+python-dotenv>=1.0
