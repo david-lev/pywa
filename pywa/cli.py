@@ -19,11 +19,6 @@ import time
 from . import __version__ as pywa_version
 from .client import WhatsApp
 
-try:
-    import uvicorn
-except ImportError:
-    uvicorn = None
-
 
 class PywaCLIException(Exception):
     """Base exception for all Pywa CLI related errors."""
@@ -147,10 +142,12 @@ def serve_application(
     """
     Core function that resolves dependencies and starts the Uvicorn server.
     """
-    if not uvicorn:
+    try:
+        import uvicorn
+    except ImportError:
         raise PywaCLIException(
-            "Could not import Uvicorn. Please install it using 'pip install \"pywa[server]\"'."
-        )
+            "Could not import uvicorn. Please install it using 'pip install \"pywa[server]\"'."
+        ) from None
 
     if entrypoint and (path or app):
         raise PywaCLIException(
