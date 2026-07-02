@@ -29,6 +29,14 @@ class Chat:
 
 
 class ChatType(helpers.StrEnum):
+    """
+    Type of chat.
+
+    Attributes:
+        PRIVATE: Chat with a user.
+        GROUP: Chat with a group.
+    """
+
     PRIVATE = "PRIVATE"
     GROUP = "GROUP"
 

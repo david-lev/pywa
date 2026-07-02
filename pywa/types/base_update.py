@@ -13,6 +13,7 @@ import dataclasses
 import datetime
 import json
 import pathlib
+import warnings
 from typing import (
     TYPE_CHECKING,
     Awaitable,
@@ -24,6 +25,7 @@ from typing import (
     NoReturn,
 )
 
+from ..errors import PywaDeprecationWarning
 from ..listeners import BaseListenerIdentifier, UserUpdateListenerIdentifier
 from .others import Contact, Metadata, ProductsSection, SuccessResult
 from .user import User
@@ -1313,23 +1315,33 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
     """The WhatsApp Business Account ID that the update was sent to."""
 
     @property
-    def sender(self) -> str:
+    def sender(self) -> str | None:
         """
-        The Phone Number ID which the update was sent from.
+        Deprecated. Use :py:attr:`~pywa.types.others.User.wa_id` instead.
         """
-        return self._internal_sender
+        warnings.warn(
+            "Deprecated. Use `update.from_user.wa+id` instead.",
+            PywaDeprecationWarning,
+            stacklevel=2,
+        )
+        return self.from_user.wa_id
+
+    @property
+    def recipient(self) -> str:
+        """
+        Deprecated. Use :py:attr:`~pywa.types.others.Metadata.phone_number_id` instead.
+        """
+        warnings.warn(
+            "Deprecated. Use `update.metadata.phone_number_id` instead.",
+            PywaDeprecationWarning,
+            stacklevel=2,
+        )
+        return self._internal_recipient
 
     @property
     def _internal_sender(self) -> str:
         # noinspection PyProtectedMember
         return next(self._client._resolve_user_identifier(self.from_user))
-
-    @property
-    def recipient(self) -> str:
-        """
-        The Phone Number ID which the update was sent to.
-        """
-        return self._internal_recipient
 
     @property
     def _internal_recipient(self) -> str:

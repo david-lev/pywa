@@ -16,10 +16,12 @@ import abc
 import dataclasses
 import enum
 import re
+import warnings
 from typing import TYPE_CHECKING, TypeVar, cast
 
 from .. import _helpers as helpers
 from .. import filters as pywa_filters
+from ..errors import PywaDeprecationWarning
 from ..listeners import UserUpdateListenerIdentifier
 from .base_update import BaseUserUpdate, _ClientShortcuts, _PinUnpinActions
 from .callback import CallbackButton, CallbackSelection
@@ -171,12 +173,22 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
 
     @property
     def recipient(self) -> str:
-        """The recipient of the message"""
+        """Deprecated. Use :py:attr:`~pywa.types.SentMessage.chat.id` / :py:attr:`~pywa.types.SentMessage.to` instead."""
+        warnings.warn(
+            "Deprecated. Use `sent.chat.id` or `sent.to` instead.",
+            PywaDeprecationWarning,
+            stacklevel=2,
+        )
         return self._internal_sender
 
     @property
     def sender(self) -> str:
-        """The phone ID which sent the message"""
+        """Deprecated. Use :py:attr:`~pywa.types.SentMessage.from_phone_id` instead."""
+        warnings.warn(
+            "Deprecated. Use `sent.from_phone_id` instead.",
+            PywaDeprecationWarning,
+            stacklevel=2,
+        )
         return self._internal_recipient
 
     @classmethod
