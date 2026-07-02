@@ -232,7 +232,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def __init__(
         self,
         phone_id: str | int | None = None,
-        token: str = None,
+        token: str | None = None,
         *,
         session: httpx.Client | None = None,
         server: Flask | FastAPI | None = None,
@@ -403,7 +403,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 f"Async callbacks ({func}) are not supported in the sync version of pywa. import `WhatsApp` from `pywa_async` instead"
             )
 
-    def _check_for_async_filters(self, filters: Filter) -> None:
+    def _check_for_async_filters(self, filters: Filter | None) -> None:
         """Prevent async filters from being used in the sync version of pywa."""
         if not filters or self._async_allowed:
             return
@@ -2103,7 +2103,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         url: str,
         path: str | pathlib.Path | None = None,
         filename: str | None = None,
-        chunk_size: int = helpers.DOWNLOAD_CHUNK_SIZE,
+        chunk_size: int | None = helpers.DOWNLOAD_CHUNK_SIZE,
         **httpx_kwargs: Any,
     ) -> pathlib.Path:
         """

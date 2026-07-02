@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import dataclasses
 import datetime
-import functools
 import pathlib
 from typing import (
     TYPE_CHECKING,
@@ -301,8 +300,8 @@ class GroupJoinRequestsResult(Result[GroupJoinRequest]):
         super().__init__(
             wa=wa,
             response=response,
-            item_factory=functools.partial(
-                GroupJoinRequest.from_dict, client=wa, group_id=group_id
+            item_factory=lambda data: GroupJoinRequest.from_dict(
+                group_id=group_id, data=data, client=wa
             ),
         )
         self._group_id = group_id
@@ -386,9 +385,11 @@ class GroupMessageStatuses(BaseUpdate, Sequence[MessageStatus]):
     def __getitem__(self, index: int) -> MessageStatus: ...
 
     @overload
-    def __getitem__(self, index: slice) -> list[MessageStatus]: ...
+    def __getitem__(self, index: slice) -> tuple[MessageStatus, ...]: ...
 
-    def __getitem__(self, index: int | slice) -> MessageStatus | list[MessageStatus]:
+    def __getitem__(
+        self, index: int | slice
+    ) -> MessageStatus | tuple[MessageStatus, ...]:
         return self.statuses[index]
 
     def __len__(self) -> int:

@@ -707,7 +707,7 @@ class GraphAPI:
         self,
         phone_id: str,
         pin: str,
-        data_localization_region: str = None,
+        data_localization_region: str | None = None,
     ) -> dict[str, bool]:
         """
         Register a phone number.
@@ -1503,8 +1503,8 @@ class GraphAPI:
         categories: tuple[str, ...],
         clone_flow_id: str | None = None,
         endpoint_uri: str | None = None,
-        flow_json: str = None,
-        publish: bool = None,
+        flow_json: str | None = None,
+        publish: bool | None = None,
     ) -> dict:
         """
         Create or clone a flow.

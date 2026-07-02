@@ -28,14 +28,13 @@ except ImportError:
 
 _logger = logging.getLogger(__name__)
 
-
 HUB_VT = "hub.verify_token"
 """The key for the verify token in the query parameters of the webhook get request."""
 HUB_CH = "hub.challenge"
 """The key for the challenge in the query parameters of the webhook get request."""
 HUB_SIG = "X-Hub-Signature-256"
 """The header key for the signature in the webhook post request."""
-MISSING: object | None = object()
+MISSING: Any = object()
 """A sentinel value to indicate a missing value to distinguish from ``None``."""
 
 
@@ -72,7 +71,7 @@ class CustomServerType(enum.Enum):
     )
     FLASK = ("Flask", Flask, lambda: importlib.import_module("flask").Flask)
 
-    def __new__(cls, name: str, protocol: Protocol, server: Callable):
+    def __new__(cls, name: str, protocol: type, server: Callable):
         obj = object.__new__(cls)
         obj._value_ = name
         obj.protocol = protocol
@@ -189,7 +188,7 @@ def default_flow_request_decryptor(
     encrypted_aes_key_b64: str,
     initial_vector_b64: str,
     private_key: str,
-    password: str = None,
+    password: str | None = None,
 ) -> tuple[dict, bytes, bytes]:
     """
     The default global decryption function for decrypting data exchange requests from WhatsApp Flow.
@@ -219,26 +218,21 @@ def default_flow_request_decryptor(
 
     flow_data = base64.b64decode(encrypted_flow_data_b64)
     iv = base64.b64decode(initial_vector_b64)
-    encrypted_aes_key = base64.b64decode(encrypted_aes_key_b64)
-    private_key = load_pem_private_key(
+    aes_key = load_pem_private_key(
         data=private_key.encode("utf-8"),
         password=password.encode("utf-8") if password else None,
-    )
-    aes_key = private_key.decrypt(
-        encrypted_aes_key,
+    ).decrypt(
+        base64.b64decode(encrypted_aes_key_b64),
         OAEP(
             mgf=MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None
         ),
     )
-    encrypted_flow_data_body = flow_data[:-16]
-    encrypted_flow_data_tag = flow_data[-16:]
     decryptor = Cipher(
-        algorithms.AES(aes_key), modes.GCM(iv, encrypted_flow_data_tag)
+        algorithms.AES(aes_key), modes.GCM(iv, flow_data[-16:])
     ).decryptor()
-    decrypted_data_bytes = (
-        decryptor.update(encrypted_flow_data_body) + decryptor.finalize()
+    decrypted_data = json.loads(
+        (decryptor.update(flow_data[:-16]) + decryptor.finalize()).decode("utf-8")
     )
-    decrypted_data = json.loads(decrypted_data_bytes.decode("utf-8"))
     return decrypted_data, aes_key, iv
 
 
@@ -334,7 +328,7 @@ class FlowRequestDecryptedMedia:
 
 
 def flow_request_media_decryptor(
-    encrypted_media: dict[str, str | dict[str, str]],
+    encrypted_media: dict[str, Any],
     dl_session: httpx.Client | None = None,
 ) -> FlowRequestDecryptedMedia:
     """

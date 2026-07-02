@@ -232,8 +232,8 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
         self,
         *,
         force_quote: bool = False,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter | None = None,
+        cancelers: pywa_filters.Filter | None = None,
         ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> Message:
@@ -297,7 +297,7 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
         *,
         cancel_on_new_update: bool = False,
         cancel_if_failed: bool = True,
-        cancelers: pywa_filters.Filter = None,
+        cancelers: pywa_filters.Filter | None = None,
         timeout: float | None = None,
     ) -> MessageStatus:
         """
@@ -356,7 +356,7 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
         self,
         *,
         cancel_if_failed: bool = True,
-        cancelers: pywa_filters.Filter = None,
+        cancelers: pywa_filters.Filter | None = None,
         timeout: float | None = None,
     ) -> MessageStatus:
         """
@@ -402,8 +402,8 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
         self,
         *,
         cancel_if_delivered: bool = True,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter | None = None,
+        cancelers: pywa_filters.Filter | None = None,
         timeout: float | None = None,
     ) -> MessageStatus:
         """
@@ -464,8 +464,8 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
     def wait_for_click(
         self,
         *,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter | None = None,
+        cancelers: pywa_filters.Filter | None = None,
         ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> CallbackButton:
@@ -526,8 +526,8 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
     def wait_for_selection(
         self,
         *,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter | None = None,
+        cancelers: pywa_filters.Filter | None = None,
         ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> CallbackSelection:
@@ -572,8 +572,8 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
     def wait_for_completion(
         self,
         *,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter | None = None,
+        cancelers: pywa_filters.Filter | None = None,
         ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> FlowCompletion:
@@ -629,8 +629,8 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
     def wait_for_call_permission(
         self,
         *,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter | None = None,
+        cancelers: pywa_filters.Filter | None = None,
         ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> CallPermissionUpdate:
@@ -692,8 +692,8 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
     def wait_for_incoming_voice_call(
         self,
         *,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter | None = None,
+        cancelers: pywa_filters.Filter | None = None,
         ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> CallConnect:
@@ -781,8 +781,8 @@ class SentVoiceMessage(SentMediaMessage):
     def wait_until_played(
         self,
         *,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter | None = None,
+        cancelers: pywa_filters.Filter | None = None,
         timeout: float | None = None,
     ) -> MessageStatus:
         """
@@ -841,8 +841,8 @@ class SentLocationRequest(SentMessage):
         self,
         *,
         force_current_location: bool = True,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter | None = None,
+        cancelers: pywa_filters.Filter | None = None,
         ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> Message:
@@ -904,8 +904,8 @@ class SentContactInfoRequest(SentMessage):
     def wait_for_contact_info(
         self,
         *,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter | None = None,
+        cancelers: pywa_filters.Filter | None = None,
         ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> Message:

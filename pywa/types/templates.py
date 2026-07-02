@@ -4635,7 +4635,7 @@ class _CreatedAndUpdatedTemplateActions:
         self,
         *,
         cancel_on_rejection: bool = True,
-        cancelers: pywa_filters.Filter = None,
+        cancelers: pywa_filters.Filter | None = None,
         timeout: float | None = None,
     ) -> TemplateStatusUpdate:
         """

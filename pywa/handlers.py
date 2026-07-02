@@ -216,6 +216,7 @@ class EncryptedFlowRequestType(TypedDict):
 
 
 _logger = logging.getLogger(__name__)
+_pywa_logger = logging.getLogger("pywa")
 
 _FactorySupported: TypeAlias = (
     CallbackButton | CallbackSelection | MessageStatus | CallStatus
@@ -1098,6 +1099,14 @@ class RawUpdateHandler(Handler[RawUpdate]):
 _flow_req_has_error_filter = new_filter(
     lambda _, r: r.has_error, name="flow request has error"
 )
+
+
+def _log_flow_request(req: FlowRequest) -> None:
+    _pywa_logger.info(
+        "🔀 Flow '%s' received for screen '%s'.",
+        req.action.value,
+        req.screen,
+    )
 
 
 def _get_filters_with_error_filter(
@@ -3152,7 +3161,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         self,
         *,
         callback: _FlowRequestHandlerT,
-        action: FlowRequestActionType,
+        action: FlowRequestActionType | str,
         screen: Screen | str | None = None,
         filters: Filter | None = None,
     ) -> FlowRequestCallbackWrapper:
@@ -3259,12 +3268,12 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
             )
         except Exception:
             _logger.exception(
-                "Flow Endpoint ('%s'): Failed to construct FlowRequest from decrypted data: %s",
+                "Flow Endpoint ('%s'): Failed to construct FlowRequest from decrypted data",
                 self._endpoint,
-                decrypted_request,
             )
             return "pywa: Failed to construct FlowRequest object", 500
 
+        _log_flow_request(req)
         return self._execute_callback(req, aes_key, iv)
 
     async def handle_async(self, payload: EncryptedFlowRequestType) -> tuple[str, int]:
@@ -3297,12 +3306,12 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
             )
         except Exception:
             _logger.exception(
-                "Flow Endpoint ('%s'): Failed to construct FlowRequest from decrypted data: %s",
+                "Flow Endpoint ('%s'): Failed to construct FlowRequest from decrypted data",
                 self._endpoint,
-                decrypted_request,
             )
             return "pywa: Failed to construct FlowRequest object", 500
 
+        _log_flow_request(req)
         return await self._execute_callback_async(req, aes_key, iv)
 
     def _decrypt_request(
@@ -3316,9 +3325,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
             self._private_key_password,
         )
         _logger.debug(
-            "Flow Endpoint ('%s'): Received decrypted request: %s",
-            self._endpoint,
-            decrypted_request,
+            "Flow Endpoint ('%s'): Received decrypted request", self._endpoint
         )
         return decrypted_request, aes_key, iv
 

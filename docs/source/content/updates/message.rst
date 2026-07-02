@@ -16,7 +16,7 @@ The :class:`Message` type is used to represent incoming messages from WhatsApp u
 ----------------
 
 .. autoclass:: User()
-    :members: block, unblock
+    :members: block, unblock, country_code, as_vcard
 
 ----------------
 

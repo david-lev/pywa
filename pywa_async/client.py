@@ -231,7 +231,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     def __init__(
         self,
         phone_id: str | int | None = None,
-        token: str = None,
+        token: str | None = None,
         *,
         session: httpx.AsyncClient | None = None,
         server: Flask | FastAPI | None = None,
@@ -1891,7 +1891,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         url: str,
         path: str | pathlib.Path | None = None,
         filename: str | None = None,
-        chunk_size: int = helpers.DOWNLOAD_CHUNK_SIZE,
+        chunk_size: int | None = helpers.DOWNLOAD_CHUNK_SIZE,
         **httpx_kwargs: Any,
     ) -> pathlib.Path:
         """

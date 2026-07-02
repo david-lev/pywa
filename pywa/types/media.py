@@ -47,14 +47,18 @@ class UploadedBy(enum.Enum):
 class _MediaActions:
     _client: WhatsApp
     id: str
+    uploaded_at: datetime.datetime
+    uploaded_to: str
+    url: str | None
 
     def get_media_url(self) -> str:
         """Gets the URL of the media. (expires after 5 minutes)"""
-        if getattr(self, "url", None):
+        url: str | None = getattr(self, "url", None)
+        if url:
             if (
                 datetime.datetime.now(datetime.timezone.utc) - self.uploaded_at
             ) < datetime.timedelta(minutes=URL_EXPIRATION_MINUTES):
-                return self.url
+                return url
         return self._client.get_media_url(media_id=self.id).url
 
     def download(
@@ -174,14 +178,15 @@ class _MediaActions:
             to_phone_id: The phone ID to upload the media to (if not provided, the media owner's phone ID will be used).
             override_filename: The filename to use for the re-uploaded media (if not provided, the original filename will be used if available).
         """
+        url: str | None = getattr(self, "url", None)
         return self._client.upload_media(
             media=self.id
             if (
-                not getattr(self, "url", None)
+                not url
                 or (datetime.datetime.now(datetime.timezone.utc) - self.uploaded_at)
                 > datetime.timedelta(minutes=URL_EXPIRATION_MINUTES)
             )
-            else self.url,
+            else url,
             phone_id=to_phone_id or self.uploaded_to,
             filename=override_filename,
         )

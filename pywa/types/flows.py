@@ -47,7 +47,6 @@ from .others import (
 if TYPE_CHECKING:
     from ..client import WhatsApp
 
-
 _logger = logging.getLogger(__name__)
 
 __all__ = [

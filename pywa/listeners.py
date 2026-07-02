@@ -132,8 +132,8 @@ class Listener:
 
     def __init__(
         self,
-        filters: Filter,
-        cancelers: Filter,
+        filters: Filter | None,
+        cancelers: Filter | None,
     ):
         self.filters = filters
         self.cancelers = cancelers
@@ -162,7 +162,7 @@ class Listener:
         return not self.filters or self.filters.check_sync(wa, update)
 
     def apply_cancelers(self, wa: WhatsApp, update: BaseUpdate) -> bool:
-        return self.cancelers and self.cancelers.check_sync(wa, update)
+        return bool(self.cancelers) and self.cancelers.check_sync(wa, update)
 
 
 def _warn_anyio_thread_limit(wa: "WhatsApp") -> None:
@@ -198,8 +198,8 @@ class _Listeners:
         self: WhatsApp,
         to: BaseListenerIdentifier,
         *,
-        filters: Filter = None,
-        cancelers: Filter = None,
+        filters: Filter | None = None,
+        cancelers: Filter | None = None,
         timeout: float | None = None,
     ) -> BaseUpdate:
         """

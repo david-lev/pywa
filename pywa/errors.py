@@ -106,6 +106,7 @@ def _all_exceptions() -> dict[int, type[WhatsAppError]]:
         code: ssc
         for sc in WhatsAppError.__subclasses__()
         for ssc in sc.__subclasses__()
+        if ssc.__error_codes__ is not None
         for code in ssc.__error_codes__
     }
 

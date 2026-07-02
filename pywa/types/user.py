@@ -39,7 +39,9 @@ class BaseUser:
         res = self._client.block_users((self.preferred_id,))
         added = self.preferred_id in {u.preferred_id for u in res.added_users}
         if not added:
-            raise res.errors
+            if res.errors is not None:
+                raise res.errors
+            raise ValueError("Failed to block user")
         return added
 
     def unblock(self) -> bool:

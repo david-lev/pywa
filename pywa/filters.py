@@ -171,7 +171,6 @@ from .types.user_preferences import UserMarketingPreferences as _Mup
 if TYPE_CHECKING:
     from pywa import WhatsApp as _Wa
 
-
 _T = TypeVar("_T", bound=_BaseUpdate)
 
 
@@ -289,7 +288,8 @@ def new(
             return new(f, name=name or (func if isinstance(func, str) else None))
 
         return decorator
-
+    if not callable(func):
+        raise Exception
     is_async = helpers.is_async_callable(func)
 
     def check_sync(self, wa: _Wa, update: _T) -> bool:
@@ -409,10 +409,8 @@ Filter for messages that user sends to ask about a product
 >>> filters.referred_product
 """
 
-
 private = new(lambda _, m: m.chat.type == ChatType.PRIVATE, name="private")
 """Filter for messages that are sent in private chats."""
-
 
 group = new(lambda _, m: m.chat.type == ChatType.GROUP, name="group")
 """Filter for messages that are sent in group chats."""
@@ -836,13 +834,11 @@ def location_in_radius(lat: float, lon: float, radius: float | int) -> Filter:
 reaction = new(lambda _, m: m.type == _Mt.REACTION, name="reaction")
 """Filter for reaction messages (both added and removed)."""
 
-
 reaction_added = new(
     lambda _, m: m.type == _Mt.REACTION and m.reaction.emoji is not None,
     name="reaction_added",
 )
 """Filter for reaction messages that were added to a message."""
-
 
 reaction_removed = new(
     lambda _, m: m.type == _Mt.REACTION and m.reaction.emoji is None,
@@ -890,14 +886,11 @@ contacts_has_wa = new(
 )
 """Filter for contacts messages that have a WhatsApp account."""
 
-
 order = new(lambda _, m: m.type == _Mt.ORDER, name="order")
 """Filter for order messages."""
 
-
 unsupported = new(lambda _, m: m.type == _Mt.UNSUPPORTED, name="unsupported")
 """Filter for all unsupported messages."""
-
 
 callback_button = new(lambda _, c: isinstance(c, _Clb), name="callback_button")
 """Filter for callback buttons."""
