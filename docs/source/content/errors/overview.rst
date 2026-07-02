@@ -61,7 +61,7 @@ That’s why it’s **important to always register a handler** for failed messag
     @wa.on_message_status(filters.failed)
     def handle_failed_message(client: WhatsApp, status: types.MessageStatus):
         logging.error("Message failed to send to %s: %s",
-            status.sender, status.error
+            status.fron_user, status.error
         )
 
 ------------------------------

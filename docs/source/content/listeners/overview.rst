@@ -136,7 +136,7 @@ It lets you specify which sender and update type to wait for, and is what all th
     :linenos:
     :emphasize-lines: 8-13
 
-    from pywa import WhatsApp, types, filters
+    from pywa import WhatsApp, types, filters, listeners
 
     wa = WhatsApp(...)
 
@@ -144,7 +144,7 @@ It lets you specify which sender and update type to wait for, and is what all th
     def confirm_action(_: WhatsApp, msg: types.Message):
         try:
             confirmation: types.Message = wa.listen(
-                to=msg.sender,
+                to=listeners.UserUpdateListenerIdentifier(sender="97212345678", recipient=wa.phone_id),
                 filters=filters.message & filters.matches("yes", "no"),
                 cancelers=filters.message & filters.matches("cancel"),
                 timeout=30,

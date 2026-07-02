@@ -190,6 +190,22 @@ class TooManyMessages(ThrottlingError):
     __error_codes__ = (131056,)
 
 
+class RegistrationOrDeregistrationFailed(ThrottlingError):
+    """
+    Registration or Deregistration failed because there were too many attempts for this phone number in a short period of time
+    """
+
+    __error_codes__ = (133016,)
+
+
+class MessageFailedToReachMessagingLimit(ThrottlingError):
+    """
+    Message failed to send because this account has reached its messaging limit due to template classification violations. This applies to both template messages and direct send messages
+    """
+
+    __error_codes__ = (131064,)
+
+
 # ====================================================================================================
 
 
@@ -444,6 +460,22 @@ class MarketingTemplatesDisabledForCloudAPI(SendMessageError):
     """
 
     __error_codes__ = (131063,)
+
+
+class PhoneNumberDisplayNameNotApproved(SendMessageError):
+    """The `555 business phone number <https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/overview#555-business-phone-numbers>`_ used to send the request does not have an approved `display name <https://developers.facebook.com/documentation/business-messaging/whatsapp/display-names>`_."""
+
+    __error_codes__ = (131037,)
+
+
+class MessageUndeliverableDueToHealthyEcosystemEngagement(SendMessageError):
+    """This message was not delivered to maintain healthy ecosystem engagement.
+
+    If you do receive this error code and suspect it is due to the limit, wait at least 24 hours before resending the template message. Doing so will only result in another error response since the limit may be in effect for differing periods of time.
+    See `Per-User Marketing Template Message Limits <https://developers.facebook.com/docs/whatsapp/api/messages/template/limits#per-user-marketing-template-message-limits>`_ for additional information.
+    """
+
+    __error_codes__ = (131049,)
 
 
 # ====================================================================================================
@@ -847,7 +879,7 @@ class TemplateHeaderFormatIncorrect(TemplateCreationError):
 class TemplateBodyFormatIncorrect(TemplateCreationError):
     """Your message body contains invalid formatting."""
 
-    __error_codes__ = (2388048,)
+    __error_codes__ = (2388047,)
 
 
 class TemplateFooterFormatIncorrect(TemplateCreationError):
@@ -915,3 +947,56 @@ class UsernameTransferRequired(UsernameError):
     """The requested username is currently in use on another business phone number within your business portfolio. To transfer it to this phone number, resend the request with force_transfer=True."""
 
     __error_codes__ = (147005,)
+
+
+# =====================================================================================================
+
+
+class PhoneMigrationError(WhatsAppError):
+    """
+    Base exception for all phone migration errors.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/support/error-codes#phone-migration-errors>`_
+    """
+
+
+class PhoneNumberAlreadyExists(PhoneMigrationError):
+    """
+    This phone number already exists in your list of phone numbers.
+
+    Try again with a phone number that is not already present in your WhatsApp account.
+    """
+
+    __error_codes__ = (2388012,)
+
+
+class PhoneNumberNotEligibleForRegistrationCode(PhoneMigrationError):
+    """This phone number isn’t eligible to receive/verify a registration code since it is not being migrated.
+
+    Phone ownership verification APIs are not available for this use case.
+    Register and verify the number.
+    """
+
+    __error_codes__ = (
+        2388091,
+        2388093,
+    )
+
+
+class CannotMigratePhoneNumber(PhoneMigrationError):
+    """
+    Cannot migrate phone number.
+
+    """
+
+    __error_codes__ = (2388103,)
+
+
+class PhoneNumberAccountInMaintenanceMode(PhoneMigrationError):
+    """
+    The business phone number is in maintenance mode.
+
+    Try again in a few minutes.
+    """
+
+    __error_codes__ = (2494100,)

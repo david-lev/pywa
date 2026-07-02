@@ -20,6 +20,11 @@ The :class:`Message` type is used to represent incoming messages from WhatsApp u
 
 ----------------
 
+.. autoclass:: Chat()
+.. autoclass:: ChatType()
+
+----------------
+
 .. autoclass:: Image()
     :show-inheritance:
 
@@ -66,8 +71,6 @@ The :class:`Message` type is used to represent incoming messages from WhatsApp u
 
 .. autoclass:: Metadata()
 
-
 .. autoclass:: ReplyToMessage()
-
 
 .. autoclass:: ReferredProduct()

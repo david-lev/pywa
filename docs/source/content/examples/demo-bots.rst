@@ -47,7 +47,7 @@ This is a simple bot that echoes back the user's message.
     @wa.on_message
     def echo(_: WhatsApp, msg: types.Message):
         try:
-            msg.copy(to=msg.sender, reply_to_message_id=msg.message_id_to_reply)
+            msg.copy(to=msg.from_user.bsuid, reply_to_message_id=msg.message_id_to_reply)
         except ValueError:
             msg.reply("I can't echo this message")
 

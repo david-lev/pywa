@@ -143,12 +143,6 @@ All updates share common methods and properties:
 
    * - Method / Property
      - Description
-   * - :attr:`~BaseUserUpdate.sender`
-     - The phone ID of the sender
-   * - :attr:`~BaseUserUpdate.recipient`
-     - The phone ID of the recipient
-   * - :attr:`~BaseUserUpdate.message_id_to_reply`
-     - The message ID to reply to
    * - :meth:`~BaseUserUpdate.reply_text`
      - Reply with a text message
    * - :meth:`~BaseUserUpdate.reply_image`
@@ -195,6 +189,8 @@ All updates share common methods and properties:
      - Unblock the sender
    * - :meth:`~BaseUserUpdate.call`
      - Start a call with the sender
+   * - :attr:`~BaseUserUpdate.message_id_to_reply`
+     - The message ID to reply to
 
 .. toctree::
     message
