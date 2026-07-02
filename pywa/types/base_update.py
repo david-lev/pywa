@@ -1369,7 +1369,7 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
         # noinspection PyProtectedMember
         for identifier in self._client._resolve_user_identifier(self.from_user):
             yield UserUpdateListenerIdentifier(
-                sender=identifier, recipient=self.recipient
+                sender=identifier, recipient=self.metadata.phone_number_id
             )
 
     @property
