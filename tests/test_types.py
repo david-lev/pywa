@@ -271,9 +271,8 @@ def test_sent_message():
         from_phone_id=wa.phone_id,
         input="16505555555",
     )
-    assert sm.sender == wa.phone_id
+    assert sm.from_phone_id == wa.phone_id
     assert sm.to == "16505555555"
-    assert sm.recipient == "16505555555"
     assert sm.chat.id == "16505555555"
 
     assert SentTemplate.from_sent_update(

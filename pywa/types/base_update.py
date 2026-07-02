@@ -1320,7 +1320,7 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
         Deprecated. Use :py:attr:`~pywa.types.others.User.wa_id` instead.
         """
         warnings.warn(
-            "Deprecated. Use `update.from_user.wa+id` instead.",
+            "Deprecated. Use `update.from_user.wa_id` instead.",
             PywaDeprecationWarning,
             stacklevel=2,
         )

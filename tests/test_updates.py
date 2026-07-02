@@ -126,7 +126,7 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
     "system": {
         "phone_number_change": [
             lambda s: s.sys_type == SystemType.USER_CHANGED_NUMBER,
-            lambda s: s.sender == s.old_wa_id,
+            lambda s: s.from_user.wa_id == s.old_wa_id,
         ],
         "identity_change": [
             lambda s: s.sys_type == SystemType.CUSTOMER_IDENTITY_CHANGED,

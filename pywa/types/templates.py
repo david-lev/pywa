@@ -2946,12 +2946,25 @@ class CallPermissionRequestButton(BaseButtonComponent):
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class ContactInfoRequestButton(BaseButtonComponent):
+    """
+    Contact info request buttons are used to request contact information from the user. When tapped, they open a dialog that allows the user to share their contact information.
+
+    - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#using-templates>`_.
+
+    Example:
+
+        >>> contact_info_button = ContactInfoRequestButton(text="Share Contact Info")
+
+    Attributes:
+        text: The button label cannot be customized. If included, it must be passed exactly as “Share Contact Info”; the label shown to the recipient is automatically rendered in their app’s language.
+    """
+
     type: ComponentType = dataclasses.field(
         default=ComponentType.REQUEST_CONTACT_INFO,
         init=False,
         repr=False,
     )
-    text: str = "Share Contact Info"  # only this text is allowed. (subcode error 2388153) see https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#using-templates
+    text: Literal["Share Contact Info"] | None = "Share Contact Info"
 
 
 class OtpType(helpers.StrEnum):
