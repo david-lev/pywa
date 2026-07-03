@@ -77,8 +77,8 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
         self,
         *,
         force_quote: bool = False,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter | None = None,
+        cancelers: pywa_filters.Filter | None = None,
         ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> Message:
@@ -142,7 +142,7 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
         *,
         cancel_on_new_update: bool = False,
         cancel_if_failed: bool = True,
-        cancelers: pywa_filters.Filter = None,
+        cancelers: pywa_filters.Filter | None = None,
         timeout: float | None = None,
     ) -> MessageStatus:
         """
@@ -201,7 +201,7 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
         self,
         *,
         cancel_if_failed: bool = True,
-        cancelers: pywa_filters.Filter = None,
+        cancelers: pywa_filters.Filter | None = None,
         timeout: float | None = None,
     ) -> MessageStatus:
         """
@@ -247,8 +247,8 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
         self,
         *,
         cancel_if_delivered: bool = True,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter | None = None,
+        cancelers: pywa_filters.Filter | None = None,
         timeout: float | None = None,
     ) -> MessageStatus:
         """
@@ -309,8 +309,8 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
     async def wait_for_click(
         self,
         *,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter | None = None,
+        cancelers: pywa_filters.Filter | None = None,
         ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> CallbackButton:
@@ -371,8 +371,8 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
     async def wait_for_selection(
         self,
         *,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter | None = None,
+        cancelers: pywa_filters.Filter | None = None,
         ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> CallbackSelection:
@@ -417,8 +417,8 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
     async def wait_for_completion(
         self,
         *,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter | None = None,
+        cancelers: pywa_filters.Filter | None = None,
         ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> FlowCompletion:
@@ -474,8 +474,8 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
     async def wait_for_call_permission(
         self,
         *,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter | None = None,
+        cancelers: pywa_filters.Filter | None = None,
         ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> CallPermissionUpdate:
@@ -537,8 +537,8 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
     async def wait_for_incoming_voice_call(
         self,
         *,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter | None = None,
+        cancelers: pywa_filters.Filter | None = None,
         ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> CallConnect:
@@ -625,8 +625,8 @@ class SentVoiceMessage(SentMediaMessage, _SentVoiceMessage):
     async def wait_until_played(
         self,
         *,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter | None = None,
+        cancelers: pywa_filters.Filter | None = None,
         timeout: float | None = None,
     ) -> MessageStatus:
         """
@@ -685,8 +685,8 @@ class SentLocationRequest(SentMessage, _SentLocationRequest):
         self,
         *,
         force_current_location: bool = True,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter | None = None,
+        cancelers: pywa_filters.Filter | None = None,
         ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> Message:
@@ -747,8 +747,8 @@ class SentContactInfoRequest(SentMessage, _SentContactInfoRequest):
     async def wait_for_contact_info(
         self,
         *,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter | None = None,
+        cancelers: pywa_filters.Filter | None = None,
         ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> Message:

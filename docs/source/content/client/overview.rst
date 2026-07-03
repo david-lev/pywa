@@ -365,6 +365,23 @@ QR Codes
    * - :meth:`~WhatsApp.delete_qr_code`
      - Delete a QR code
 
+Signups
+--------
+.. list-table::
+   :widths: 40 60
+   :header-rows: 1
+
+   * - Method
+     - Description
+   * - :meth:`~WhatsApp.create_signup`
+     - Create a signup
+   * - :meth:`~WhatsApp.get_signup`
+     - Get details of a signup
+   * - :meth:`~WhatsApp.get_signups`
+     - List all signups
+   * - :meth:`~WhatsApp.update_signup`
+     - Update a signup
+
 
 Commerce
 --------

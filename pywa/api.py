@@ -2856,3 +2856,131 @@ class GraphAPI:
             method="DELETE",
             endpoint=f"/{phone_id}/username",
         )
+
+    def create_signup(
+        self,
+        waba_id: str,
+        signup_message: str,
+        confirmation_message: str,
+        privacy_policy_url: str,
+        website_url: str | None = None,
+        promo_code: str | None = None,
+        display_name: str | None = None,
+        policy: dict[str, str | bool] | None = None,
+    ) -> dict:
+        """
+        Create a signup deep link.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/in-app-signup#create-signup>`_.
+
+        Args:
+            waba_id: The ID of the WABA to create a signup for.
+            signup_message: The description shown on the pre-consent screen when a WhatsApp user opens the deep link. Supports WhatsApp formatting. Must be 1-300 characters.
+            confirmation_message: The message sent to the WhatsApp user immediately after a successful opt-in. Can contain the {{promo_code}} placeholder, which is replaced with the promo_code value in the delivered message. Must be 1-300 characters.
+            privacy_policy_url: A link to your privacy policy. Must start with http:// or https://. Immutable after creation.
+            website_url: Your business website URL. Must start with https://.
+            promo_code: A promotional code value. Must contain only alphanumeric characters (letters and numbers) and be 1-50 characters. Replaces {{promo_code}} in the confirmation message.
+            display_name: A business-facing nickname for the signup link. Not shown to WhatsApp users. Must be 1-256 characters.
+            policy: The policy object with "tos" and "accepted" fields.
+
+        Returns:
+            A dictionary containing the ID of the created signup.
+        """
+        return self._request(
+            method="POST",
+            endpoint=f"/{waba_id}/signups",
+            json=self._filter_none(
+                signup_message=signup_message,
+                confirmation_message=confirmation_message,
+                privacy_policy_url=privacy_policy_url,
+                website_url=website_url,
+                promo_code=promo_code,
+                display_name=display_name,
+                policy=policy,
+            ),
+        )
+
+    def get_signups(
+        self,
+        waba_id: str,
+        fields: tuple[str, ...] | None = None,
+        pagination: dict[str, str] | None = None,
+    ) -> dict:
+        """
+        List signup deep links for a WABA.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/in-app-signup#list-signups>`_.
+
+        Args:
+            waba_id: The ID of the WABA to list signups for.
+            fields: Fields to retrieve.
+            pagination: Pagination parameters.
+
+        Returns:
+            A dictionary containing the list of signup deep links.
+        """
+        return self._request(
+            method="GET",
+            endpoint=f"/{waba_id}/signups",
+            params=self._filter_none(pagination, fields=self._join_fields(fields)),
+        )
+
+    def get_signup(
+        self,
+        signup_id: str,
+    ) -> dict:
+        """
+        Get a signup deep link.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/in-app-signup#get-signup-details>`_.
+
+        Args:
+            signup_id: The ID of the signup deep link.
+
+        Returns:
+            A dictionary containing the signup deep link.
+        """
+        return self._request(
+            method="GET",
+            endpoint=f"/signups/{signup_id}",
+        )
+
+    def update_signup(
+        self,
+        signup_id: str,
+        status: str | None = None,
+        signup_message: str | None = None,
+        confirmation_message: str | None = None,
+        website_url: str | None = None,
+        promo_code: str | None = None,
+        display_name: str | None = None,
+    ) -> dict:
+        """
+        Update a signup deep link.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/in-app-signup#get-signup-details>`_.
+
+        Args:
+            signup_id: The ID of the signup deep link.
+            status: Updated status: ACTIVE or DISABLED.
+            signup_message: The description shown on the pre-consent screen when a WhatsApp user opens the deep link. Supports WhatsApp formatting. Must be 1-300 characters.
+            confirmation_message: The message sent to the WhatsApp user immediately after a successful opt-in. Can contain the {{promo_code}} placeholder, which is replaced with the promo_code value in the delivered message. Must be 1-300 characters.
+            website_url: Your business website URL. Must start with https://.
+            promo_code: A promotional code value. Must contain only alphanumeric characters (letters and numbers) and be 1-50 characters. Replaces {{promo_code}} in the confirmation message.
+            display_name: A business-facing nickname for the signup link. Not shown to WhatsApp users. Must be 1-256 characters.
+
+        Returns:
+            A dictionary containing the ID of the updated signup.
+        """
+        return self._request(
+            method="POST",
+            endpoint=f"/signups/{signup_id}",
+            json=self._filter_none(
+                status=status,
+                signup_message=signup_message,
+                confirmation_message=confirmation_message,
+                website_url=website_url,
+                promo_code=promo_code,
+                display_name=display_name,
+            ),
+        )

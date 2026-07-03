@@ -91,8 +91,8 @@ class _AsyncListeners:
         self: WhatsApp,
         to: BaseListenerIdentifier,
         *,
-        filters: Filter = None,
-        cancelers: Filter = None,
+        filters: Filter | None = None,
+        cancelers: Filter | None = None,
         timeout: float | None = None,
     ) -> BaseUpdate:
         """

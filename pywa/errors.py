@@ -1001,3 +1001,60 @@ class PhoneNumberAccountInMaintenanceMode(PhoneMigrationError):
     """
 
     __error_codes__ = (2494100,)
+
+
+# =====================================================================================================
+
+
+class SignupError(WhatsAppError):
+    """Base exception for signup errors."""
+
+    __error_codes__ = None
+
+
+class SignupNotFoundError(SignupError):
+    """The specified signup entity does not exist."""
+
+    __error_codes__ = (2494164,)
+
+
+class SignupAPIUnavailable(SignupError):
+    """The In-App Signup API is not enabled for this WABA."""
+
+    __error_codes__ = (2494165,)
+
+
+class SignupUnknownPlaceholderError(SignupError):
+    """The confirmation_message contains an unknown placeholder."""
+
+    __error_codes__ = (2494166,)
+
+
+class SignupMissingPlaceholderValueError(SignupError):
+    """The confirmation_message uses the {{promo_code}} placeholder but no promo_code value was provided."""
+
+    __error_codes__ = (2494167,)
+
+
+class SignupTOSNotAccepted(SignupError):
+    """The Terms of Service were not accepted."""
+
+    __error_codes__ = (2494168,)
+
+
+class SignupTOSURLNotAllowed(SignupError):
+    """The URL provided in policy.tos is not an approved Terms of Service URL. Use the URL shown in the Terms of Service section."""
+
+    __error_codes__ = (2494177,)
+
+
+class SignupTOSAlreadyAccepted(SignupError):
+    """The business has already accepted the Terms of Service, but the request still included the policy object. Omit the policy object on subsequent create requests."""
+
+    __error_codes__ = (2494176,)
+
+
+class SignupWebsiteURLSchemeNotAllowed(SignupError):
+    """The website_url does not use the https:// scheme."""
+
+    __error_codes__ = (2494179,)

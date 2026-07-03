@@ -83,7 +83,10 @@ Client Reference
 .. automethod:: WhatsApp.get_current_username
 .. automethod:: WhatsApp.get_reserved_usernames
 .. automethod:: WhatsApp.delete_username
-.. automethod:: WhatsApp.delete_qr_code
+.. automethod:: WhatsApp.create_signup
+.. automethod:: WhatsApp.get_signup
+.. automethod:: WhatsApp.get_signups
+.. automethod:: WhatsApp.update_signup
 .. automethod:: WhatsApp.get_call_permissions
 .. automethod:: WhatsApp.pre_accept_call
 .. automethod:: WhatsApp.accept_call
