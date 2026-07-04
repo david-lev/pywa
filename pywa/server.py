@@ -21,7 +21,6 @@ from .types.system import SystemType
 if TYPE_CHECKING:
     from .client import WhatsApp
 
-
 _MESSAGE_TYPES: dict[MessageType, type[handlers.Handler]] = {
     MessageType.BUTTON: handlers.CallbackButtonHandler,
     MessageType.EDIT: handlers.EditedMessageHandler,
@@ -33,21 +32,24 @@ _OUTGOING_MESSAGE_TYPES: dict[MessageType, type[handlers.Handler]] = {
 }
 _SYSTEM_TYPES: dict[SystemType | str, type[handlers.Handler]] = {
     SystemType.USER_CHANGED_NUMBER: handlers.PhoneNumberChangeHandler,
-    SystemType.USER_CHANGED_USER_ID: handlers.PhoneNumberChangeHandler,  # That's the new system message type for phone number changes, according to BSUID documentation
-    "customer_changed_number": handlers.PhoneNumberChangeHandler,  # https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/components#messages-object
+    SystemType.USER_CHANGED_USER_ID: handlers.PhoneNumberChangeHandler,
+    # That's the new system message type for phone number changes, according to BSUID documentation
+    "customer_changed_number": handlers.PhoneNumberChangeHandler,
+    # https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/components#messages-object
     SystemType.CUSTOMER_IDENTITY_CHANGED: handlers.IdentityChangeHandler,
 }
 _INTERACTIVE_TYPES: dict[str, type[handlers.Handler]] = {
     "button_reply": handlers.CallbackButtonHandler,
     "list_reply": handlers.CallbackSelectionHandler,
-    "nfm_reply": handlers.FlowCompletionHandler,
     "call_permission_reply": handlers.CallPermissionUpdateHandler,
+}
+_NFM_REPLY_TYPES: dict[str, type[handlers.Handler]] = {
+    "flow": handlers.FlowCompletionHandler,
 }
 _CALL_EVENTS: dict[str, type[handlers.Handler]] = {
     "connect": handlers.CallConnectHandler,
     "terminate": handlers.CallTerminateHandler,
 }
-
 
 _logger = logging.getLogger(__name__)
 
@@ -567,12 +569,14 @@ def _handle_messages_field(
         if msg_type == MessageType.INTERACTIVE:
             try:
                 interactive_type = value["messages"][0]["interactive"]["type"]
-            except (
-                KeyError
-            ):  # value with errors, when a user tries to send the interactive msg again
+            except KeyError:  # value has `errors`, when a user tries to send the interactive msg again
                 return handlers.MessageHandler
             if (handler := _INTERACTIVE_TYPES.get(interactive_type)) is not None:
                 return handler
+            if interactive_type == "nfm_reply":
+                return _NFM_REPLY_TYPES.get(
+                    value["messages"][0]["interactive"]["nfm_reply"]["name"]
+                )
             _logger.warning(
                 "Webhook ('%s'): Unknown interactive message type: %s. Falling back to MessageHandler.",
                 wa._webhook_endpoint,

@@ -37,11 +37,13 @@ class UserMarketingPreferences(BaseUserUpdate):
         value: The marketing preference chosen by the user, either ``stop`` or ``resume``.
         detail: A description of the marketing preference change (e.g. `User requested to stop marketing messages`).
         category: The category of the user preference, which is always ``marketing_messages``.
+        signup_id: The signup id the user click on.
     """
 
     value: MarketingPreference
     detail: str
     category: UserPreferenceCategory
+    signup_id: str | None
 
     _webhook_field = "user_preferences"
 
@@ -70,6 +72,7 @@ class UserMarketingPreferences(BaseUserUpdate):
             value=MarketingPreference(prefs["value"]),
             detail=prefs["detail"],
             category=UserPreferenceCategory(prefs["category"]),
+            signup_id=prefs.get("signup_id"),
         )
 
     def __bool__(self):
@@ -84,6 +87,7 @@ class MarketingPreference(helpers.StrEnum):
     Attributes:
         STOP: The user has requested to stop receiving marketing messages.
         RESUME: The user has requested to resume receiving marketing messages.
+        SIGNUP: The user signed up via signup link.
     """
 
     _check_value = str.islower
@@ -91,6 +95,7 @@ class MarketingPreference(helpers.StrEnum):
 
     STOP = "stop"
     RESUME = "resume"
+    SIGNUP = "signup"
 
     UNKNOWN = "UNKNOWN"
 

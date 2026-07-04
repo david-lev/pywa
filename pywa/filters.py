@@ -1026,12 +1026,12 @@ user_marketing_preferences = new(
 """Filter for user marketing preferences updates."""
 
 user_marketing_preferences_stop = new(
-    lambda _, m: bool(m),
+    lambda _, m: not bool(m),
     name="user_marketing_preferences_stop",
 )
 """Filter for user marketing preferences updates that indicate the user has requested to stop receiving marketing messages."""
 user_marketing_preferences_resume = new(
-    lambda _, m: not bool(m),
+    lambda _, m: bool(m),
     name="user_marketing_preferences_resume",
 )
 """Filter for user marketing preferences updates that indicate the user has requested to resume receiving marketing messages."""

@@ -13,7 +13,6 @@ from pywa.types.user_preferences import (
     UserMarketingPreferences as _UserMarketingPreferences,
 )  # noqa MUST BE IMPORTED FIRST
 
-
 from .base_update import BaseUserUpdateAsync  # noqa
 
 
@@ -31,4 +30,5 @@ class UserMarketingPreferences(BaseUserUpdateAsync, _UserMarketingPreferences):
         value: The marketing preference chosen by the user, either ``stop`` or ``resume``.
         detail: A description of the marketing preference change (e.g. `User requested to stop marketing messages`).
         category: The category of the user preference, which is always ``marketing_messages``.
+        signup_id: The signup id the user click on.
     """

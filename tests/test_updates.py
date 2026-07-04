@@ -162,6 +162,7 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
     },
     "user_marketing_preferences": {
         "resume": [lambda u: u.value == MarketingPreference.RESUME],
+        "signup": [lambda u: u.value == MarketingPreference.SIGNUP],
     },
     "account_update": {
         "account_deleted": [],
