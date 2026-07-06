@@ -1691,28 +1691,23 @@ class _CommonSignup:
     _client: WhatsApp
     id: str
 
-    def get_deeplink(self, *, phone_id: str | int | None = None) -> str:
+    def get_deeplink(self, phone_number: str | int) -> str:
         """
         Get the deeplink for the signup.
 
         Args:
-            phone_id: The ID of the phone number associated with the business account (If None, the phone ID of the client will be used).
+            phone_number: The phone number that this deep link will direct to.
 
         Returns:
             The deeplink for the signup.
 
         Example:
+
             >>> signup = wa.create_signup(...)
-            >>> signup.get_deeplink()  # or signup.get_deeplink(phone_id=1234567890)
-            "https://wa.me/1234567890/signup/signup_id"
+            >>> signup.get_deeplink()  # or signup.get_deeplink(phone_number=1234567890)
+            "https://wa.me/1234567890/signup/9876543210123456"
         """
-        resolved_phone_id = helpers.resolve_arg(
-            wa=self._client,
-            value=phone_id,
-            method_arg="phone_id",
-            client_arg="phone_id",
-        )
-        return f"https://wa.me/{resolved_phone_id}/signup/{self.id}"
+        return f"https://wa.me/{phone_number}/signup/{self.id}"
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -1724,9 +1719,10 @@ class CreatedSignup(_CommonSignup):
         id: The ID of the signup.
 
     Examples:
+
         >>> signup = wa.create_signup(...)
-        >>> signup.get_deeplink()  # or signup.get_deeplink(phone_id=1234567890)
-        "https://wa.me/1234567890/signup/3784328472342"
+        >>> signup.get_deeplink()  # or signup.get_deeplink(phone_number=1234567890)
+        "https://wa.me/1234567890/signup/9876543210123456"
     """
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
