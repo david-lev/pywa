@@ -1121,7 +1121,7 @@ class BusinessPhoneNumber(helpers.APIObject):
     certificate: str | None
     new_certificate: str | None
     last_onboarded_time: str | None
-    username: str | None
+    # username: str | None
     country_code: str | None
     country_dial_code: str | None
 
@@ -1161,10 +1161,23 @@ class BusinessPhoneNumber(helpers.APIObject):
             certificate=data.get("certificate"),
             new_certificate=data.get("new_certificate"),
             last_onboarded_time=data.get("last_onboarded_time"),
-            username=data.get("username"),
+            # username=data.get("username"),
             country_code=data.get("country_code"),
             country_dial_code=data.get("country_dial_code"),
         )
+
+    @property
+    def username(self) -> None:
+        """
+        This property is deprecated and will always return None.
+        """
+        # TODO revert when username feature is available? https://github.com/david-lev/pywa/issues/214
+        warnings.warn(
+            "BusinessPhoneNumber.username is empty for now. to get your username use `wa.get_current_username()` instead.",
+            PywaDeprecationWarning,
+            stacklevel=2,
+        )
+        return None
 
 
 class QRCodeImageType(helpers.StrEnum):
