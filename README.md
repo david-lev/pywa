@@ -20,7 +20,7 @@
   <a href="https://pywa.readthedocs.io"><img src="https://readthedocs.org/projects/pywa/badge/?version=latest&" alt="Docs"/></a>
   <a href="https://github.com/david-lev/pywa/blob/master/LICENSE"><img src="https://img.shields.io/github/license/david-lev/pywa?color=%2334D058" alt="License"/></a>
   <a href="https://www.codefactor.io/repository/github/david-lev/pywa/overview/master"><img src="https://www.codefactor.io/repository/github/david-lev/pywa/badge/master" alt="Code Quality"/></a>
-  <a href="https://t.me/py_wa"><img src="https://badges.aleen42.com/src/telegram.svg" /></a></p>
+  <a href="https://t.me/py_wa"><img src="https://badges.aleen42.com/src/telegram.svg"  alt="Updates"/></a></p>
 
 ---
 

@@ -3,7 +3,16 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-#### 4.2.1 (2026-07-01) **Latest**
+#### 4.3.0 (2026-08-07) **Latest**
+
+- [filters] make `Filter` class generic
+- [signups] adding support for creating listing and updating signups
+- [templates] add documentation and strict typing for `ContactInfoRequestButton`
+- [message] deprecate `sender` and `recipient` properties and update user identifier priority
+- [cli] move uvicorn import to runtime and improve error handling
+- [errors] add more error codes for throttling, sending, and migration, and fix template error code
+
+#### 4.2.1 (2026-07-01)
 
 - [others] fix parsing contact with field `request contact`
 - [others] fix parsing contact without name

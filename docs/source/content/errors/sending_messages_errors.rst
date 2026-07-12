@@ -55,3 +55,5 @@ Sending Messages Errors
     :show-inheritance:
 .. autoclass:: MarketingTemplatesDisabledForCloudAPI()
     :show-inheritance:
+.. autoclass:: PhoneNumberDisplayNameNotApproved()
+    :show-inheritance:

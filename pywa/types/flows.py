@@ -47,7 +47,6 @@ from .others import (
 if TYPE_CHECKING:
     from ..client import WhatsApp
 
-
 _logger = logging.getLogger(__name__)
 
 __all__ = [
@@ -226,7 +225,7 @@ class FlowCompletion(BaseUserUpdate):
             client=self._client,
             data=self.response[key][index],
             arrived_at=self.timestamp,
-            received_to=self.recipient,
+            received_to=self.metadata.phone_number_id,
         )
 
 

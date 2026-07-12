@@ -54,6 +54,7 @@ Template Types
     :members: library_input
 .. autoclass:: VoiceCallButton()
 .. autoclass:: CallPermissionRequestButton()
+.. autoclass:: ContactInfoRequestButton()
 .. autoclass:: QuickReplyButton()
     :members: params
 .. autoclass:: URLButton()

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from pywa.listeners import *  # noqa MUST BE IMPORTED FIRST
 from pywa.listeners import (
@@ -53,6 +53,9 @@ class ListenerCanceled(_ListenerCanceled):
         super().__init__(update)
 
 
+_UpdateT = TypeVar("_UpdateT", bound="BaseUpdate")
+
+
 class Listener(_Listener):
     _listener_canceled = ListenerCanceled
 
@@ -60,8 +63,8 @@ class Listener(_Listener):
         self,
         wa: WhatsApp,
         identifier: BaseListenerIdentifier,
-        filters: Filter,
-        cancelers: Filter,
+        filters: Filter[Any] | None,
+        cancelers: Filter[Any] | None,
     ):
         self.filters = filters
         self.cancelers = cancelers
@@ -91,10 +94,10 @@ class _AsyncListeners:
         self: WhatsApp,
         to: BaseListenerIdentifier,
         *,
-        filters: Filter = None,
-        cancelers: Filter = None,
+        filters: Filter[_UpdateT] | None = None,
+        cancelers: Filter[Any] | None = None,
         timeout: float | None = None,
-    ) -> BaseUpdate:
+    ) -> _UpdateT:
         """
         Listen to an update.
 

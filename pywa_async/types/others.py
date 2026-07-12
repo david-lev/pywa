@@ -12,6 +12,7 @@ from pywa.types.others import (
 from pywa.types.others import (
     Result as _Result,
 )
+from pywa.types.others import SignupDetails as _SignupDetails
 
 if TYPE_CHECKING:
     from ..client import WhatsApp as WhatsAppAsync
@@ -75,6 +76,100 @@ class QRCode(_QRCode):
         """
         return await self._client.delete_qr_code(
             code=self.code, phone_id=self._phone_id
+        )
+
+
+class SignupDetails(_SignupDetails):
+    """
+    Represents a signup for a WhatsApp Business Account.
+
+    Attributes:
+        id: The ID of the signup.
+        waba_id: The ID of the business account.
+        message: The message shown on the pre-consent screen.
+        confirmation_message: The message sent to the WhatsApp user after opt-in.
+        privacy_policy_url: The privacy policy URL.
+        promo_code: The promotional code value, if set.
+        status: The current status.
+        display_name: The business-facing nickname for the signup link, if set. Not shown to WhatsApp users.
+        website_url: The business website URL, if set.
+    """
+
+    _client: WhatsAppAsync
+
+    async def disable(self) -> SuccessResult:
+        """
+        Disable the signup.
+
+        Returns:
+            A SuccessResult indicating whether the operation was successful.
+
+        Example:
+
+            >>> signup = await wa.get_signup(...)
+            >>> if await signup.disable():
+            ...     print("Signup disabled successfully")
+        """
+        return await self._client.update_signup(
+            signup_id=self.id,
+            status=SignupStatus.DISABLED,
+        )
+
+    async def enable(self) -> SuccessResult:
+        """
+        Enable the signup.
+
+        Returns:
+            A SuccessResult indicating whether the operation was successful.
+
+        Example:
+            >>> signup = await wa.get_signup(...)
+            >>> await signup.enable()
+            SuccessResult(success=True)
+        """
+        return await self._client.update_signup(
+            signup_id=self.id,
+            status=SignupStatus.ACTIVE,
+        )
+
+    async def update(
+        self,
+        *,
+        status: SignupStatus | None = None,
+        message: str | None = None,
+        confirmation_message: str | None = None,
+        website_url: str | None = None,
+        promo_code: str | None = None,
+        display_name: str | None = None,
+    ) -> SuccessResult:
+        """
+        Update the signup.
+
+        Args:
+            status: Updated status: ``ACTIVE`` or ``DISABLED``.
+            message: The description shown on the pre-consent screen when a WhatsApp user opens the deep link. Supports WhatsApp formatting. Must be 1-300 characters.
+            confirmation_message: The description shown on the post-consent screen when a WhatsApp user successfully completes the flow. Supports WhatsApp formatting. Must be 1-300 characters.
+            website_url: The URL of the website.
+            promo_code: The promo code.
+            display_name: The display name.
+
+        Returns:
+            A SuccessResult indicating whether the operation was successful.
+
+        Example:
+
+            >>> signup = await wa.get_signup(...)
+            >>> if await signup.update(...):
+            ...     print("Signup updated successfully")
+        """
+        return await self._client.update_signup(
+            signup_id=self.id,
+            status=status,
+            message=message,
+            confirmation_message=confirmation_message,
+            website_url=website_url,
+            promo_code=promo_code,
+            display_name=display_name,
         )
 
 

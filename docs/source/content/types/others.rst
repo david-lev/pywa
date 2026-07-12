@@ -57,6 +57,14 @@ Others
 
 .. autoclass:: QRCodeImageType()
 
+.. autoclass:: CreatedSignup()
+    :members:
+
+.. autoclass:: SignupDetails()
+    :members:
+
+.. autoclass:: SignupStatus()
+
 .. autoclass:: Command()
 
 .. autoclass:: CommerceSettings()

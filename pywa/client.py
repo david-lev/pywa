@@ -7,7 +7,6 @@ __all__ = ["WhatsApp"]
 import bisect
 import collections
 import datetime
-import functools
 import hashlib
 import json
 import logging
@@ -133,8 +132,11 @@ from .types.media import Media
 from .types.others import (
     BlockedUser,
     CreatedBusinessPhoneNumber,
+    CreatedSignup,
     InteractiveType,
     QRCodeImageType,
+    SignupDetails,
+    SignupStatus,
     StorageConfiguration,
     SuccessResult,
     UserIdentityChangeSettings,
@@ -188,7 +190,6 @@ from .utils import FastAPI, Flask, UserIdentifier
 _logger = logging.getLogger(__name__)
 
 _DEFAULT_VERIFY_DELAY_SEC = 3
-SUPPORTS_BSUID_API = False  # TODO should be set to True when the API supports BSUID-based endpoints (e.g. send message/block user by BSUID)
 
 
 class WhatsApp(Server, _HandlerDecorators, _Listeners):
@@ -233,7 +234,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     def __init__(
         self,
         phone_id: str | int | None = None,
-        token: str = None,
+        token: str | None = None,
         *,
         session: httpx.Client | None = None,
         server: Flask | FastAPI | None = None,
@@ -262,8 +263,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         ) = utils.Version.GRAPH_API,
         handlers_modules: Iterable[ModuleType] | None = None,
         user_identifier_priority: tuple[UserIdentifier, ...] = (
-            UserIdentifier.WA_ID,
             UserIdentifier.BSUID,
+            UserIdentifier.WA_ID,
             UserIdentifier.PARENT_BSUID,
         ),
         business_account_id: None = None,
@@ -315,7 +316,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             skip_duplicate_updates: Whether to skip duplicate updates. Important when using custom server that block the incoming request until the response is sent, as WhatsApp may retry sending the same update if it does not receive a timely response (default: ``True``).
             validate_updates: Whether to `validate <https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/create-webhook-endpoint#validation-1>`_ incoming webhhoks payloads (default: ``True``; requires ``app_secret``).
             handlers_modules: Python modules from which handlers should be automatically loaded. A convenient way to organize handlers in separate files without having to import and register them manually (default: ``None``).
-            user_identifier_priority: The priority order of user identifiers to use when replying to messages, blocking users, etc (default: ``wa_id`` > ``bsuid`` > ``parent_bsuid``). Will be changed to ``bsuid`` > ``wa_id`` > ``parent_bsuid`` when the API supports BSUID-based endpoints.
+            user_identifier_priority: The priority order of user identifiers to use when replying to messages, blocking users, etc (default: ``bsuid`` > ``wa_id`` > ``parent_bsuid``).
             business_account_id: Deprecated alias for ``waba_id`` (the WhatsApp Business Account ID that owns the ``phone_id``).
         """
         try:
@@ -404,7 +405,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 f"Async callbacks ({func}) are not supported in the sync version of pywa. import `WhatsApp` from `pywa_async` instead"
             )
 
-    def _check_for_async_filters(self, filters: Filter) -> None:
+    def _check_for_async_filters(self, filters: Filter[Any] | None) -> None:
         """Prevent async filters from being used in the sync version of pywa."""
         if not filters or self._async_allowed:
             return
@@ -2104,7 +2105,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         url: str,
         path: str | pathlib.Path | None = None,
         filename: str | None = None,
-        chunk_size: int = helpers.DOWNLOAD_CHUNK_SIZE,
+        chunk_size: int | None = helpers.DOWNLOAD_CHUNK_SIZE,
         **httpx_kwargs: Any,
     ) -> pathlib.Path:
         """
@@ -2193,7 +2194,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         self,
         url: str,
         *,
-        chunk_size: int = helpers.DOWNLOAD_CHUNK_SIZE,
+        chunk_size: int | None = helpers.DOWNLOAD_CHUNK_SIZE,
         **httpx_kwargs: Any,
     ) -> Generator[bytes]:
         """
@@ -3840,7 +3841,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 ),
                 pagination=pagination.to_dict() if pagination else None,
             ),
-            item_factory=functools.partial(FlowDetails.from_dict, client=self),
+            item_factory=lambda data: FlowDetails.from_dict(data=data, client=self),
         )
 
     def get_flow_metrics(
@@ -4197,10 +4198,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 fields=QRCode._api_fields(image_type),
                 pagination=pagination.to_dict() if pagination else None,
             ),
-            item_factory=functools.partial(
-                QRCode.from_dict,
-                client=self,
-                phone_id=phone_id,
+            item_factory=lambda data: QRCode.from_dict(
+                data=data, client=self, phone_id=phone_id
             ),
         )
 
@@ -4525,10 +4524,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 ),
                 pagination=pagination.to_dict() if pagination else None,
             ),
-            item_factory=functools.partial(
-                BlockedUser.from_dict,
-                client=self,
-            ),
+            item_factory=lambda data: BlockedUser.from_dict(data=data, client=self),
         )
 
     def get_call_permissions(
@@ -4843,7 +4839,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 ),
                 pagination=pagination.to_dict() if pagination else None,
             ),
-            item_factory=functools.partial(GroupDetails.from_dict, client=self),
+            item_factory=lambda data: GroupDetails.from_dict(data=data, client=self),
         )
 
     def delete_group(
@@ -5228,5 +5224,149 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     method_arg="phone_id",
                     client_arg="phone_id",
                 )
+            )
+        )
+
+    def create_signup(
+        self,
+        message: str,
+        confirmation_message: str,
+        privacy_policy_url: str,
+        *,
+        website_url: str | None = None,
+        promo_code: str | None = None,
+        display_name: str | None = None,
+        accept_policy: bool = False,
+        waba_id: str | int | None = None,
+    ) -> CreatedSignup:
+        """
+        Create a signup deep link.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/in-app-signup#create-signup>`_.
+
+        Args:
+            message: The description shown on the pre-consent screen when a WhatsApp user opens the deep link. Supports WhatsApp formatting. Must be 1-300 characters.
+            confirmation_message: The message sent to the WhatsApp user immediately after a successful opt-in. Can contain the ``{{promo_code}}`` placeholder, which is replaced with the ``promo_code`` value in the delivered message. Must be 1-300 characters.
+            privacy_policy_url: A link to your privacy policy. Must start with ``http://`` or ``https://``. Immutable after creation.
+            website_url: Your business website URL. Must start with ``https://``.
+            promo_code: A promotional code value. Must contain only alphanumeric characters (letters and numbers) and be 1-50 characters. Replaces ``{{promo_code}}`` in ``confirmation_message``.
+            display_name: A business-facing nickname for the signup link. Not shown to WhatsApp users. Must be 1-256 characters.
+            accept_policy: Required on the first signup creation per business.
+            waba_id: The WhatsApp Business account ID (Overrides the client's business account ID).
+
+        Returns:
+            A Signup object containing the signup ID and deep link.
+        """
+        if "{{promo_code}}" in confirmation_message and promo_code is None:
+            raise ValueError(
+                "promo_code must be provided when using {{promo_code}} in confirmation_message"
+            )
+        return CreatedSignup(
+            _client=self,
+            id=self.api.create_signup(
+                waba_id=helpers.resolve_arg(
+                    wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"
+                ),
+                signup_message=message,
+                confirmation_message=confirmation_message,
+                privacy_policy_url=privacy_policy_url,
+                website_url=website_url,
+                promo_code=promo_code,
+                display_name=display_name,
+                policy={
+                    "tos": "https://www.facebook.com/legal/ads-manager-marketing-messages-terms",
+                    "accepted": True,
+                }
+                if accept_policy
+                else None,
+            )["id"],
+        )
+
+    def get_signups(
+        self,
+        *,
+        pagination: Pagination | None = None,
+        waba_id: str | int | None = None,
+    ) -> Result[SignupDetails]:
+        """
+        Get a list of signups for a business account.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/in-app-signup#list-signups>`_.
+
+        Args:
+            pagination: Pagination options.
+            waba_id: The WhatsApp Business account ID (Overrides the client's business account ID).
+
+        Returns:
+            A Result containing a list of SignupDetails objects.
+        """
+        return Result(
+            wa=self,
+            response=self.api.get_signups(
+                waba_id=helpers.resolve_arg(
+                    wa=self, value=waba_id, method_arg="waba_id", client_arg="waba_id"
+                ),
+                fields=SignupDetails._api_fields(),
+                pagination=pagination.to_dict() if pagination else None,
+            ),
+            item_factory=lambda data: SignupDetails.from_dict(data=data, client=self),
+        )
+
+    def get_signup(self, signup_id: str) -> SignupDetails:
+        """
+        Get details about a specific signup.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/in-app-signup#get-signup-details>`_.
+
+        Args:
+            signup_id: The ID of the signup.
+
+        Returns:
+            A SignupDetails object containing the signup details.
+        """
+        return SignupDetails.from_dict(
+            self.api.get_signup(
+                signup_id=signup_id,
+            ),
+            client=self,
+        )
+
+    def update_signup(
+        self,
+        signup_id: str,
+        *,
+        status: SignupStatus | None = None,
+        message: str | None = None,
+        confirmation_message: str | None = None,
+        website_url: str | None = None,
+        promo_code: str | None = None,
+        display_name: str | None = None,
+    ) -> SuccessResult:
+        """
+        Update a signup.
+
+        - Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/in-app-signup#update-signup>`_.
+
+        Args:
+            signup_id: The ID of the signup.
+            status: Updated status: ``ACTIVE`` or ``DISABLED``.
+            message: The description shown on the pre-consent screen when a WhatsApp user opens the deep link. Supports WhatsApp formatting. Must be 1-300 characters.
+            confirmation_message: The description shown on the post-consent screen when a WhatsApp user successfully completes the flow. Supports WhatsApp formatting. Must be 1-300 characters.
+            website_url: The URL of the website.
+            promo_code: The promo code.
+            display_name: The display name.
+
+        Returns:
+            A SuccessResult object indicating whether the signup was updated.
+        """
+        return SuccessResult.from_dict(
+            self.api.update_signup(
+                signup_id=signup_id,
+                status=status,
+                signup_message=message,
+                confirmation_message=confirmation_message,
+                website_url=website_url,
+                promo_code=promo_code,
+                display_name=display_name,
             )
         )

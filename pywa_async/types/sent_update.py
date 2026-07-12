@@ -59,6 +59,8 @@ __all__ = [
     "InitiatedCall",
 ]
 
+from pywa.types.base_update import BaseUserUpdate
+
 from .base_update import _ClientShortcutsAsync, _PinUnpinActionsAsync
 
 
@@ -77,8 +79,8 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
         self,
         *,
         force_quote: bool = False,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter[Message] | None = None,
+        cancelers: pywa_filters.Filter[BaseUserUpdate] | None = None,
         ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> Message:
@@ -127,14 +129,11 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
                 else ignore_updates_canceler
             )
 
-        return cast(
-            Message,
-            await self._client.listen(
-                to=self.listener_identifier,
-                filters=filters,
-                cancelers=cancelers,
-                timeout=timeout,
-            ),
+        return await self._client.listen(
+            to=self.listener_identifier,
+            filters=filters,
+            cancelers=cancelers,
+            timeout=timeout,
         )
 
     async def wait_until_read(
@@ -142,7 +141,7 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
         *,
         cancel_on_new_update: bool = False,
         cancel_if_failed: bool = True,
-        cancelers: pywa_filters.Filter = None,
+        cancelers: pywa_filters.Filter[BaseUserUpdate] | None = None,
         timeout: float | None = None,
     ) -> MessageStatus:
         """
@@ -201,7 +200,7 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
         self,
         *,
         cancel_if_failed: bool = True,
-        cancelers: pywa_filters.Filter = None,
+        cancelers: pywa_filters.Filter[BaseUserUpdate] | None = None,
         timeout: float | None = None,
     ) -> MessageStatus:
         """
@@ -247,8 +246,8 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
         self,
         *,
         cancel_if_delivered: bool = True,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter[MessageStatus] | None = None,
+        cancelers: pywa_filters.Filter[BaseUserUpdate] | None = None,
         timeout: float | None = None,
     ) -> MessageStatus:
         """
@@ -263,7 +262,7 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
                     text="This message will fail",
                 )
                 try:
-                    failed = m.wait_for_failed(
+                    failed = m.wait_until_failed(
                         filters=filters.failed_with(errors.ReEngagementMessage),  # message was send after 24 hours
                         cancel_if_delivered=True, # defaults to True, so the listener will be canceled if the message was delivered
                         timeout=5,
@@ -294,23 +293,20 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
                 if cancelers
                 else pywa_filters.delivered
             )
-        return cast(
-            MessageStatus,
-            await self._client.listen(
-                to=self.listener_identifier,
-                filters=pywa_filters.message_status
-                & pywa_filters.failed
-                & (filters or pywa_filters.true),
-                cancelers=cancelers,
-                timeout=timeout,
-            ),
+        return await self._client.listen(
+            to=self.listener_identifier,
+            filters=pywa_filters.message_status
+            & pywa_filters.failed
+            & (filters or pywa_filters.true),
+            cancelers=cancelers,
+            timeout=timeout,
         )
 
     async def wait_for_click(
         self,
         *,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter[CallbackButton] | None = None,
+        cancelers: pywa_filters.Filter[BaseUserUpdate] | None = None,
         ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> CallbackButton:
@@ -357,22 +353,19 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
                 if cancelers
                 else ignore_updates_canceler
             )
-        return cast(
-            CallbackButton,
-            await self._client.listen(
-                to=self.listener_identifier,
-                filters=pywa_filters.callback_button
-                & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
-                cancelers=cancelers,
-                timeout=timeout,
-            ),
+        return await self._client.listen(
+            to=self.listener_identifier,
+            filters=pywa_filters.callback_button
+            & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
+            cancelers=cancelers,
+            timeout=timeout,
         )
 
     async def wait_for_selection(
         self,
         *,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter[CallbackSelection] | None = None,
+        cancelers: pywa_filters.Filter[BaseUserUpdate] | None = None,
         ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> CallbackSelection:
@@ -403,22 +396,19 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
                 if cancelers
                 else ignore_updates_canceler
             )
-        return cast(
-            CallbackSelection,
-            await self._client.listen(
-                to=self.listener_identifier,
-                filters=pywa_filters.callback_selection
-                & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
-                cancelers=cancelers,
-                timeout=timeout,
-            ),
+        return await self._client.listen(
+            to=self.listener_identifier,
+            filters=pywa_filters.callback_selection
+            & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
+            cancelers=cancelers,
+            timeout=timeout,
         )
 
     async def wait_for_completion(
         self,
         *,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter[FlowCompletion] | None = None,
+        cancelers: pywa_filters.Filter[BaseUserUpdate] | None = None,
         ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> FlowCompletion:
@@ -460,22 +450,19 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
                 if cancelers
                 else ignore_updates_canceler
             )
-        return cast(
-            FlowCompletion,
-            await self._client.listen(
-                to=self.listener_identifier,
-                filters=pywa_filters.flow_completion
-                & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
-                cancelers=cancelers,
-                timeout=timeout,
-            ),
+        return await self._client.listen(
+            to=self.listener_identifier,
+            filters=pywa_filters.flow_completion
+            & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
+            cancelers=cancelers,
+            timeout=timeout,
         )
 
     async def wait_for_call_permission(
         self,
         *,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter[CallPermissionUpdate] | None = None,
+        cancelers: pywa_filters.Filter[BaseUserUpdate] | None = None,
         ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> CallPermissionUpdate:
@@ -523,22 +510,19 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
                 if cancelers
                 else ignore_updates_canceler
             )
-        return cast(
-            CallPermissionUpdate,
-            await self._client.listen(
-                to=self.listener_identifier,
-                filters=pywa_filters.call_permission_update
-                & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
-                cancelers=cancelers,
-                timeout=timeout,
-            ),
+        return await self._client.listen(
+            to=self.listener_identifier,
+            filters=pywa_filters.call_permission_update
+            & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
+            cancelers=cancelers,
+            timeout=timeout,
         )
 
     async def wait_for_incoming_voice_call(
         self,
         *,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter[CallConnect] | None = None,
+        cancelers: pywa_filters.Filter[BaseUserUpdate] | None = None,
         ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> CallConnect:
@@ -582,16 +566,13 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
                 if cancelers
                 else ignore_updates_canceler
             )
-        return cast(
-            CallConnect,
-            await self._client.listen(
-                to=self.listener_identifier,
-                filters=pywa_filters.call_connect
-                & pywa_filters.incoming_call
-                & (filters or pywa_filters.true),
-                cancelers=cancelers,
-                timeout=timeout,
-            ),
+        return await self._client.listen(
+            to=self.listener_identifier,
+            filters=pywa_filters.call_connect
+            & pywa_filters.incoming_call
+            & (filters or pywa_filters.true),
+            cancelers=cancelers,
+            timeout=timeout,
         )
 
 
@@ -625,8 +606,8 @@ class SentVoiceMessage(SentMediaMessage, _SentVoiceMessage):
     async def wait_until_played(
         self,
         *,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter[MessageStatus] | None = None,
+        cancelers: pywa_filters.Filter[BaseUserUpdate] | None = None,
         timeout: float | None = None,
     ) -> MessageStatus:
         """
@@ -685,8 +666,8 @@ class SentLocationRequest(SentMessage, _SentLocationRequest):
         self,
         *,
         force_current_location: bool = True,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter[Message] | None = None,
+        cancelers: pywa_filters.Filter[BaseUserUpdate] | None = None,
         ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> Message:
@@ -747,8 +728,8 @@ class SentContactInfoRequest(SentMessage, _SentContactInfoRequest):
     async def wait_for_contact_info(
         self,
         *,
-        filters: pywa_filters.Filter = None,
-        cancelers: pywa_filters.Filter = None,
+        filters: pywa_filters.Filter[Message] | None = None,
+        cancelers: pywa_filters.Filter[BaseUserUpdate] | None = None,
         ignore_updates: bool = True,
         timeout: float | None = None,
     ) -> Message:

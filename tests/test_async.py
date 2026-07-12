@@ -101,6 +101,9 @@ from pywa.types.groups import GroupMessageStatuses as GroupMessageStatusesSync
 from pywa.types.groups import GroupParticipant as GroupParticipantSync
 from pywa.types.media import ArrivedMedia
 from pywa.types.media import Media as MediaSync
+from pywa.types.others import (
+    SignupDetails as SignupDetailsSync,
+)
 from pywa.types.sent_update import (
     InitiatedCall as InitiatedCallSync,
 )
@@ -234,6 +237,9 @@ from pywa_async.types.media import Image as ImageAsync
 from pywa_async.types.media import Media as MediaAsync
 from pywa_async.types.media import Sticker as StickerAsync
 from pywa_async.types.media import Video as VideoAsync
+from pywa_async.types.others import (
+    SignupDetails as SignupDetailsAsync,
+)
 from pywa_async.types.sent_update import (
     InitiatedCall as InitiatedCallAsync,
 )
@@ -327,6 +333,7 @@ def overrides() -> list[tuple[type, type]]:
         (CreatedTemplatesSync, CreatedTemplatesAsync),
         (UpdatedTemplateSync, UpdatedTemplateAsync),
         (QRCodeSync, QRCodeAsync),
+        (SignupDetailsSync, SignupDetailsAsync),
         (GroupParticipantSync, GroupParticipantAsync),
         (GroupDetailsSync, GroupDetailsAsync),
         (GroupInviteLinkSync, GroupInviteLinkAsync),
@@ -416,6 +423,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
             MessageSync._resolve_msg_content,
             ResultSync.index,
             ResultSync.count,
+            SignupDetailsSync.get_deeplink,
         }
     ]
     non_async = {

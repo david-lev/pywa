@@ -1121,7 +1121,7 @@ class BusinessPhoneNumber(helpers.APIObject):
     certificate: str | None
     new_certificate: str | None
     last_onboarded_time: str | None
-    username: str | None
+    # username: str | None
     country_code: str | None
     country_dial_code: str | None
 
@@ -1161,10 +1161,23 @@ class BusinessPhoneNumber(helpers.APIObject):
             certificate=data.get("certificate"),
             new_certificate=data.get("new_certificate"),
             last_onboarded_time=data.get("last_onboarded_time"),
-            username=data.get("username"),
+            # username=data.get("username"),
             country_code=data.get("country_code"),
             country_dial_code=data.get("country_dial_code"),
         )
+
+    @property
+    def username(self) -> None:
+        """
+        This property is deprecated and will always return None.
+        """
+        # TODO revert when username feature is available? https://github.com/david-lev/pywa/issues/214
+        warnings.warn(
+            "BusinessPhoneNumber.username is empty for now. to get your username use `wa.get_current_username()` instead.",
+            PywaDeprecationWarning,
+            stacklevel=2,
+        )
+        return None
 
 
 class QRCodeImageType(helpers.StrEnum):
@@ -1684,4 +1697,181 @@ class UsernameStatus:
         return cls(
             username=data["username"],
             status=UsernameStatusType(data["status"]),
+        )
+
+
+class _CommonSignup:
+    _client: WhatsApp
+    id: str
+
+    def get_deeplink(self, phone_number: str | int) -> str:
+        """
+        Get the deeplink for the signup.
+
+        Args:
+            phone_number: The phone number that this deep link will direct to.
+
+        Returns:
+            The deeplink for the signup.
+
+        Example:
+
+            >>> signup = wa.create_signup(...)
+            >>> signup.get_deeplink()  # or signup.get_deeplink(phone_number=1234567890)
+            "https://wa.me/1234567890/signup/9876543210123456"
+        """
+        return f"https://wa.me/{phone_number}/signup/{self.id}"
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class CreatedSignup(_CommonSignup):
+    """
+    Represents a created signup for a WhatsApp Business Account.
+
+    Attributes:
+        id: The ID of the signup.
+
+    Examples:
+
+        >>> signup = wa.create_signup(...)
+        >>> signup.get_deeplink()  # or signup.get_deeplink(phone_number=1234567890)
+        "https://wa.me/1234567890/signup/9876543210123456"
+    """
+
+    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
+    id: str
+
+
+class SignupStatus(helpers.StrEnum):
+    """
+    Represents the status of a Signup.
+
+    Attributes:
+        ACTIVE: The signup is active.
+        DISABLED: The signup is disabled.
+    """
+
+    ACTIVE = "ACTIVE"
+    DISABLED = "DISABLED"
+
+    UNKNOWN = "UNKNOWN"
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class SignupDetails(helpers.APIObject, _CommonSignup):
+    """
+    Represents a signup for a WhatsApp Business Account.
+
+    Attributes:
+        id: The ID of the signup.
+        waba_id: The ID of the business account.
+        message: The message shown on the pre-consent screen.
+        confirmation_message: The message sent to the WhatsApp user after opt-in.
+        privacy_policy_url: The privacy policy URL.
+        promo_code: The promotional code value, if set.
+        status: The current status.
+        display_name: The business-facing nickname for the signup link, if set. Not shown to WhatsApp users.
+        website_url: The business website URL, if set.
+    """
+
+    _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
+
+    id: str
+    waba_id: str
+    status: SignupStatus
+    message: str
+    confirmation_message: str
+    privacy_policy_url: str
+    promo_code: str | None
+    display_name: str | None
+    website_url: str | None
+
+    @classmethod
+    def from_dict(cls, data: dict, client: WhatsApp) -> SignupDetails:
+        return cls(
+            _client=client,
+            id=data["id"],
+            waba_id=data["waba_id"],
+            status=SignupStatus(data["status"]),
+            message=data["signup_message"],
+            confirmation_message=data["confirmation_message"],
+            privacy_policy_url=data["privacy_policy_url"],
+            promo_code=data.get("promo_code"),
+            display_name=data.get("display_name"),
+            website_url=data.get("website_url"),
+        )
+
+    def disable(self) -> SuccessResult:
+        """
+        Disable the signup.
+
+        Returns:
+            A SuccessResult indicating whether the operation was successful.
+
+        Example:
+
+            >>> signup = wa.get_signup(...)
+            >>> if signup.disable():
+            ...     print("Signup disabled successfully")
+        """
+        return self._client.update_signup(
+            signup_id=self.id,
+            status=SignupStatus.DISABLED,
+        )
+
+    def enable(self) -> SuccessResult:
+        """
+        Enable the signup.
+
+        Returns:
+            A SuccessResult indicating whether the operation was successful.
+
+        Example:
+            >>> signup = wa.get_signup(...)
+            >>> signup.enable()
+            SuccessResult(success=True)
+        """
+        return self._client.update_signup(
+            signup_id=self.id,
+            status=SignupStatus.ACTIVE,
+        )
+
+    def update(
+        self,
+        *,
+        status: SignupStatus | None = None,
+        message: str | None = None,
+        confirmation_message: str | None = None,
+        website_url: str | None = None,
+        promo_code: str | None = None,
+        display_name: str | None = None,
+    ) -> SuccessResult:
+        """
+        Update the signup.
+
+        Args:
+            status: Updated status: ``ACTIVE`` or ``DISABLED``.
+            message: The description shown on the pre-consent screen when a WhatsApp user opens the deep link. Supports WhatsApp formatting. Must be 1-300 characters.
+            confirmation_message: The description shown on the post-consent screen when a WhatsApp user successfully completes the flow. Supports WhatsApp formatting. Must be 1-300 characters.
+            website_url: The URL of the website.
+            promo_code: The promo code.
+            display_name: The display name.
+
+        Returns:
+            A SuccessResult indicating whether the operation was successful.
+
+        Example:
+
+            >>> signup = wa.get_signup(...)
+            >>> if signup.update(...):
+            ...     print("Signup updated successfully")
+        """
+        return self._client.update_signup(
+            signup_id=self.id,
+            status=status,
+            message=message,
+            confirmation_message=confirmation_message,
+            website_url=website_url,
+            promo_code=promo_code,
+            display_name=display_name,
         )

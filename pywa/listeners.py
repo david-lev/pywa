@@ -11,7 +11,7 @@ __all__ = [
 import dataclasses
 import threading
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from . import utils
 
@@ -127,13 +127,16 @@ class ListenerStopped(Exception):
         )
 
 
+_UpdateT = TypeVar("_UpdateT", bound="BaseUpdate")
+
+
 class Listener:
     _listener_canceled = ListenerCanceled
 
     def __init__(
         self,
-        filters: Filter,
-        cancelers: Filter,
+        filters: Filter[Any] | None,
+        cancelers: Filter[Any] | None,
     ):
         self.filters = filters
         self.cancelers = cancelers
@@ -162,7 +165,7 @@ class Listener:
         return not self.filters or self.filters.check_sync(wa, update)
 
     def apply_cancelers(self, wa: WhatsApp, update: BaseUpdate) -> bool:
-        return self.cancelers and self.cancelers.check_sync(wa, update)
+        return bool(self.cancelers) and self.cancelers.check_sync(wa, update)
 
 
 def _warn_anyio_thread_limit(wa: "WhatsApp") -> None:
@@ -198,10 +201,10 @@ class _Listeners:
         self: WhatsApp,
         to: BaseListenerIdentifier,
         *,
-        filters: Filter = None,
-        cancelers: Filter = None,
+        filters: Filter[_UpdateT] | None = None,
+        cancelers: Filter[Any] | None = None,
         timeout: float | None = None,
-    ) -> BaseUpdate:
+    ) -> _UpdateT:
         """
         Listen to an update.
 

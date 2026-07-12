@@ -11,18 +11,27 @@ from __future__ import annotations
 import argparse
 import importlib
 import itertools
+import logging
 import os
 import pathlib
 import sys
 import time
+from typing import TypedDict
 
 from . import __version__ as pywa_version
 from .client import WhatsApp
 
-try:
-    import uvicorn
-except ImportError:
-    uvicorn = None
+
+def _configure_pywa_logger() -> None:
+    logger = logging.getLogger("pywa")
+    logger.setLevel(logging.INFO)
+    if not any(
+        getattr(handler, "_pywa_cli_handler", False) for handler in logger.handlers
+    ):
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(levelname)s:%(name)s: %(message)s"))
+        handler._pywa_cli_handler = True
+        logger.addHandler(handler)
 
 
 class PywaCLIException(Exception):
@@ -147,10 +156,12 @@ def serve_application(
     """
     Core function that resolves dependencies and starts the Uvicorn server.
     """
-    if not uvicorn:
+    try:
+        import uvicorn
+    except ImportError:
         raise PywaCLIException(
-            "Could not import Uvicorn. Please install it using 'pip install \"pywa[server]\"'."
-        )
+            "Could not import uvicorn. Please install it using 'pip install \"pywa[server]\"'."
+        ) from None
 
     if entrypoint and (path or app):
         raise PywaCLIException(
@@ -177,7 +188,7 @@ def serve_application(
         app_name, client = discover_app_instance(module_str, app)
         if client._server is not None:
             raise PywaCLIException(
-                f"The WhatsApp instance assigned to '{app_name}' in '{module_str}.py' is already configured with a {client._server_type.value} server."
+                f"The WhatsApp instance assigned to '{app_name}' in '{module_str}.py' is already configured with a {client._server_type.name} server."  # ty:ignore[unresolved-attribute]
             )
         client._uvicorn_workers = workers or 1
 
@@ -204,6 +215,9 @@ def serve_application(
     clean_kwargs["app"] = uvicorn_app_string
     clean_kwargs["factory"] = True
     clean_kwargs["log_config"] = None
+    clean_kwargs["access_log"] = False
+
+    _configure_pywa_logger()
 
     uvicorn.run(**clean_kwargs)
 
@@ -518,7 +532,12 @@ def main() -> None:
     send_loc.add_argument("--name", help="Name of the location")
     send_loc.add_argument("--address", help="Address of the location")
 
-    media_configs = {
+    class MediaConfig(TypedDict, total=False):
+        caption: bool
+        aliases: list[str]
+        extra: list[tuple[str, dict[str, str]]]
+
+    media_configs: dict[str, MediaConfig] = {
         "image": {"caption": True, "aliases": ["img", "pic"]},
         "video": {"caption": True, "aliases": ["vid"]},
         "document": {
@@ -551,14 +570,14 @@ def main() -> None:
             m_type,
             parents=[media_common_parser],
             help=f"Send a {m_type}",
-            aliases=config.get("aliases", list[str]),
+            aliases=config.get("aliases", []),
         )
 
         if config.get("caption"):
             p.add_argument("--caption", help=f"{m_type.capitalize()} caption")
 
         for arg_name, arg_kwargs in config.get("extra", []):
-            p.add_argument(arg_name, **arg_kwargs)
+            p.add_argument(arg_name, **arg_kwargs)  # ty:ignore[invalid-argument-type]
 
     # ==========================================
     # NEW PARSER
