@@ -218,9 +218,6 @@ class EncryptedFlowRequestType(TypedDict):
 _logger = logging.getLogger(__name__)
 _pywa_logger = logging.getLogger("pywa")
 
-_FactorySupported: TypeAlias = (
-    CallbackButton | CallbackSelection | MessageStatus | CallStatus
-)
 
 _UpdateType = TypeVar("_UpdateType")
 _CallbackT = TypeVar("_CallbackT", bound=Callable)
@@ -235,8 +232,8 @@ class Handler(Generic[_UpdateType]):
     def __init__(
         self,
         callback: Callable[[WhatsApp, _UpdateType], Any | Awaitable[Any]],
-        filters: Filter | None,
-        priority: int,
+        filters: Filter[_UpdateType] | None = None,
+        priority: int = 0,
     ):
         """
         Initialize a new callback.
@@ -291,9 +288,6 @@ class Handler(Generic[_UpdateType]):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(callback={self._callback}, filters={self._filters}, priority={self._priority})"
 
-    def __str__(self) -> str:
-        return self.__repr__()
-
 
 class MessageHandler(Handler[Message]):
     """
@@ -316,14 +310,6 @@ class MessageHandler(Handler[Message]):
 
     _update = Message
 
-    def __init__(
-        self,
-        callback: _MessageCallback,
-        filters: Filter | None = None,
-        priority: int = 0,
-    ):
-        super().__init__(callback=callback, filters=filters, priority=priority)
-
 
 class _FactoryHandler(Generic[_UpdateType], Handler[_UpdateType]):
     """Base class for handlers that use a factory to construct the callback data."""
@@ -333,15 +319,15 @@ class _FactoryHandler(Generic[_UpdateType], Handler[_UpdateType]):
 
     def __init__(
         self,
-        callback: Callable[[WhatsApp, _FactorySupported], Any | Awaitable[Any]],
-        filters: Filter | None,
-        factory: type[CallbackData] | None,
-        priority: int,
+        callback: Callable[[WhatsApp, _UpdateType], Any | Awaitable[Any]],
+        filters: Filter[_UpdateType] | None = None,
+        factory: type[CallbackData] | None = None,
+        priority: int = 0,
     ):
         self._factory = factory
         super().__init__(callback=callback, filters=filters, priority=priority)
 
-    def _process_update(self, update: _FactorySupported) -> _FactorySupported | None:
+    def _process_update(self, update: _UpdateType) -> _UpdateType | None:
         if self._factory:
             raw_data = getattr(update, self._data_field)
             if raw_data is None or not raw_data.startswith(
@@ -355,13 +341,13 @@ class _FactoryHandler(Generic[_UpdateType], Handler[_UpdateType]):
             )
         return update
 
-    def handle(self, wa: WhatsApp, update: _FactorySupported) -> bool:
+    def handle(self, wa: WhatsApp, update: _UpdateType) -> bool:
         update = self._process_update(update)
         if update is None:
             return False
         return super().handle(wa, update)
 
-    async def ahandle(self, wa: WhatsApp, update: _FactorySupported) -> bool:
+    async def ahandle(self, wa: WhatsApp, update: _UpdateType) -> bool:
         update = self._process_update(update)
         if update is None:
             return False
@@ -394,20 +380,6 @@ class CallbackButtonHandler(_FactoryHandler[CallbackButton]):
     _update = CallbackButton
     _data_field = "data"
 
-    def __init__(
-        self,
-        callback: _CallbackButtonCallback,
-        filters: Filter | None = None,
-        factory: type[CallbackData] | None = None,
-        priority: int = 0,
-    ):
-        super().__init__(
-            callback=callback,
-            filters=filters,
-            factory=factory,
-            priority=priority,
-        )
-
 
 class CallbackSelectionHandler(_FactoryHandler[CallbackSelection]):
     """
@@ -431,20 +403,6 @@ class CallbackSelectionHandler(_FactoryHandler[CallbackSelection]):
 
     _update = CallbackSelection
     _data_field = "data"
-
-    def __init__(
-        self,
-        callback: _CallbackSelectionCallback,
-        filters: Filter | None = None,
-        factory: type[CallbackData] | None = None,
-        priority: int = 0,
-    ):
-        super().__init__(
-            callback=callback,
-            filters=filters,
-            factory=factory,
-            priority=priority,
-        )
 
 
 class MessageStatusHandler(_FactoryHandler[MessageStatus]):
@@ -472,20 +430,6 @@ class MessageStatusHandler(_FactoryHandler[MessageStatus]):
     _update = MessageStatus
     _data_field = "tracker"
 
-    def __init__(
-        self,
-        callback: _MessageStatusCallback,
-        filters: Filter | None = None,
-        factory: type[CallbackData] | None = None,
-        priority: int = 0,
-    ):
-        super().__init__(
-            callback=callback,
-            filters=filters,
-            factory=factory,
-            priority=priority,
-        )
-
 
 class GroupMessageStatusesHandler(Handler[GroupMessageStatuses]):
     """
@@ -497,7 +441,7 @@ class GroupMessageStatusesHandler(Handler[GroupMessageStatuses]):
 
         >>> from pywa import WhatsApp, filters
         >>> wa = WhatsApp(...)
-        >>> wa.add_handlers(GroupMessageStatusHandler(lambda _, status: print(status)))
+        >>> wa.add_handlers(GroupMessageStatusesHandler(lambda _, status: print(status)))
 
     Args:
         callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.groups.GroupMessageStatuses` as positional arguments).
@@ -506,14 +450,6 @@ class GroupMessageStatusesHandler(Handler[GroupMessageStatuses]):
     """
 
     _update = GroupMessageStatuses
-
-    def __init__(
-        self,
-        callback: _GroupMessageStatusesCallback,
-        filters: Filter | None = None,
-        priority: int = 0,
-    ):
-        super().__init__(callback=callback, filters=filters, priority=priority)
 
 
 class PhoneNumberChangeHandler(Handler[PhoneNumberChange]):
@@ -537,14 +473,6 @@ class PhoneNumberChangeHandler(Handler[PhoneNumberChange]):
 
     _update = PhoneNumberChange
 
-    def __init__(
-        self,
-        callback: _PhoneNumberChangeCallback,
-        filters: Filter | None = None,
-        priority: int = 0,
-    ):
-        super().__init__(callback=callback, filters=filters, priority=priority)
-
 
 class IdentityChangeHandler(Handler[IdentityChange]):
     """
@@ -566,14 +494,6 @@ class IdentityChangeHandler(Handler[IdentityChange]):
     """
 
     _update = IdentityChange
-
-    def __init__(
-        self,
-        callback: _IdentityChangeCallback,
-        filters: Filter | None = None,
-        priority: int = 0,
-    ):
-        super().__init__(callback=callback, filters=filters, priority=priority)
 
 
 class TemplateStatusUpdateHandler(Handler[TemplateStatusUpdate]):
@@ -598,14 +518,6 @@ class TemplateStatusUpdateHandler(Handler[TemplateStatusUpdate]):
 
     _update = TemplateStatusUpdate
 
-    def __init__(
-        self,
-        callback: _TemplateStatusUpdateCallback,
-        filters: Filter | None = None,
-        priority: int = 0,
-    ):
-        super().__init__(callback=callback, filters=filters, priority=priority)
-
 
 class TemplateCategoryUpdateHandler(Handler[TemplateCategoryUpdate]):
     """
@@ -629,14 +541,6 @@ class TemplateCategoryUpdateHandler(Handler[TemplateCategoryUpdate]):
 
     _update = TemplateCategoryUpdate
 
-    def __init__(
-        self,
-        callback: _TemplateCategoryUpdateCallback,
-        filters: Filter | None = None,
-        priority: int = 0,
-    ):
-        super().__init__(callback=callback, filters=filters, priority=priority)
-
 
 class TemplateQualityUpdateHandler(Handler[TemplateQualityUpdate]):
     """
@@ -658,14 +562,6 @@ class TemplateQualityUpdateHandler(Handler[TemplateQualityUpdate]):
     """
 
     _update = TemplateQualityUpdate
-
-    def __init__(
-        self,
-        callback: _TemplateQualityUpdateCallback,
-        filters: Filter | None = None,
-        priority: int = 0,
-    ):
-        super().__init__(callback=callback, filters=filters, priority=priority)
 
 
 class TemplateComponentsUpdateHandler(Handler[TemplateComponentsUpdate]):
@@ -689,14 +585,6 @@ class TemplateComponentsUpdateHandler(Handler[TemplateComponentsUpdate]):
 
     _update = TemplateComponentsUpdate
 
-    def __init__(
-        self,
-        callback: _TemplateComponentsUpdateCallback,
-        filters: Filter | None = None,
-        priority: int = 0,
-    ):
-        super().__init__(callback=callback, filters=filters, priority=priority)
-
 
 class UserMarketingPreferencesHandler(Handler[UserMarketingPreferences]):
     """
@@ -718,14 +606,6 @@ class UserMarketingPreferencesHandler(Handler[UserMarketingPreferences]):
     """
 
     _update = UserMarketingPreferences
-
-    def __init__(
-        self,
-        callback: _UserMarketingPreferencesCallback,
-        filters: Filter | None = None,
-        priority: int = 0,
-    ):
-        super().__init__(callback=callback, filters=filters, priority=priority)
 
 
 class FlowCompletionHandler(Handler[FlowCompletion]):
@@ -749,14 +629,6 @@ class FlowCompletionHandler(Handler[FlowCompletion]):
 
     _update = FlowCompletion
 
-    def __init__(
-        self,
-        callback: _FlowCompletionCallback,
-        filters: Filter | None = None,
-        priority: int = 0,
-    ):
-        super().__init__(callback=callback, filters=filters, priority=priority)
-
 
 class CallConnectHandler(Handler[CallConnect]):
     """
@@ -779,14 +651,6 @@ class CallConnectHandler(Handler[CallConnect]):
 
     _update = CallConnect
 
-    def __init__(
-        self,
-        callback: _CallConnectCallback,
-        filters: Filter | None = None,
-        priority: int = 0,
-    ):
-        super().__init__(callback=callback, filters=filters, priority=priority)
-
 
 class CallTerminateHandler(Handler[CallTerminate]):
     """
@@ -808,14 +672,6 @@ class CallTerminateHandler(Handler[CallTerminate]):
     """
 
     _update = CallTerminate
-
-    def __init__(
-        self,
-        callback: _CallTerminateCallback,
-        filters: Filter | None = None,
-        priority: int = 0,
-    ):
-        super().__init__(callback=callback, filters=filters, priority=priority)
 
 
 class CallStatusHandler(_FactoryHandler[CallStatus]):
@@ -841,20 +697,6 @@ class CallStatusHandler(_FactoryHandler[CallStatus]):
     _update = CallStatus
     _data_field = "tracker"
 
-    def __init__(
-        self,
-        callback: _CallStatusCallback,
-        filters: Filter | None = None,
-        factory: type[CallbackData] | None = None,
-        priority: int = 0,
-    ):
-        super().__init__(
-            callback=callback,
-            filters=filters,
-            factory=factory,
-            priority=priority,
-        )
-
 
 class CallPermissionUpdateHandler(Handler[CallPermissionUpdate]):
     """
@@ -876,14 +718,6 @@ class CallPermissionUpdateHandler(Handler[CallPermissionUpdate]):
     """
 
     _update = CallPermissionUpdate
-
-    def __init__(
-        self,
-        callback: _CallPermissionUpdateCallback,
-        filters: Filter | None = None,
-        priority: int = 0,
-    ):
-        super().__init__(callback=callback, filters=filters, priority=priority)
 
 
 class EditedMessageHandler(Handler[EditedMessage]):
@@ -907,14 +741,6 @@ class EditedMessageHandler(Handler[EditedMessage]):
 
     _update = EditedMessage
 
-    def __init__(
-        self,
-        callback: _EditedMessageCallback,
-        filters: Filter | None = None,
-        priority: int = 0,
-    ):
-        super().__init__(callback=callback, filters=filters, priority=priority)
-
 
 class DeletedMessageHandler(Handler[DeletedMessage]):
     """
@@ -936,14 +762,6 @@ class DeletedMessageHandler(Handler[DeletedMessage]):
     """
 
     _update = DeletedMessage
-
-    def __init__(
-        self,
-        callback: _DeletedMessageCallback,
-        filters: Filter | None = None,
-        priority: int = 0,
-    ):
-        super().__init__(callback=callback, filters=filters, priority=priority)
 
 
 class OutgoingMessageHandler(Handler[OutgoingMessage]):
@@ -967,14 +785,6 @@ class OutgoingMessageHandler(Handler[OutgoingMessage]):
 
     _update = OutgoingMessage
 
-    def __init__(
-        self,
-        callback: _OutgoingMessageCallback,
-        filters: Filter | None = None,
-        priority: int = 0,
-    ):
-        super().__init__(callback=callback, filters=filters, priority=priority)
-
 
 class OutgoingEditedMessageHandler(Handler[OutgoingEditedMessage]):
     """
@@ -996,14 +806,6 @@ class OutgoingEditedMessageHandler(Handler[OutgoingEditedMessage]):
     """
 
     _update = OutgoingEditedMessage
-
-    def __init__(
-        self,
-        callback: _OutgoingEditedMessageCallback,
-        filters: Filter | None = None,
-        priority: int = 0,
-    ):
-        super().__init__(callback=callback, filters=filters, priority=priority)
 
 
 class OutgoingDeletedMessageHandler(Handler[OutgoingDeletedMessage]):
@@ -1027,14 +829,6 @@ class OutgoingDeletedMessageHandler(Handler[OutgoingDeletedMessage]):
 
     _update = OutgoingDeletedMessage
 
-    def __init__(
-        self,
-        callback: _OutgoingDeletedMessageCallback,
-        filters: Filter | None = None,
-        priority: int = 0,
-    ):
-        super().__init__(callback=callback, filters=filters, priority=priority)
-
 
 class AccountUpdateHandler(Handler[AccountUpdate]):
     """
@@ -1056,14 +850,6 @@ class AccountUpdateHandler(Handler[AccountUpdate]):
     """
 
     _update = AccountUpdate
-
-    def __init__(
-        self,
-        callback: _AccountUpdateCallback,
-        filters: Filter | None = None,
-        priority: int = 0,
-    ):
-        super().__init__(callback=callback, filters=filters, priority=priority)
 
 
 class RawUpdateHandler(Handler[RawUpdate]):
@@ -1087,14 +873,6 @@ class RawUpdateHandler(Handler[RawUpdate]):
 
     _update = None
 
-    def __init__(
-        self,
-        callback: _RawUpdateCallback,
-        filters: Filter | None = None,
-        priority: int = 0,
-    ):
-        super().__init__(callback=callback, filters=filters, priority=priority)
-
 
 _flow_req_has_error_filter = new_filter(
     lambda _, r: r.has_error, name="flow request has error"
@@ -1110,8 +888,8 @@ def _log_flow_request(req: FlowRequest) -> None:
 
 
 def _get_filters_with_error_filter(
-    filters: Filter | None, handle_errors: bool
-) -> Filter | None:
+    filters: Filter[Any] | None, handle_errors: bool
+) -> Filter[Any] | None:
     error_filter = (
         _flow_req_has_error_filter if handle_errors else ~_flow_req_has_error_filter
     )
@@ -1126,7 +904,7 @@ class _CallbackWrapperDecorators(abc.ABC):
         callback: _FlowRequestHandlerT,
         action: FlowRequestActionType,
         screen: Screen | str | None = None,
-        filters: Filter | None = None,
+        filters: Filter[FlowRequest] | None = None,
     ) -> _CallbackWrapperDecorators: ...
 
     @abc.abstractmethod
@@ -1140,7 +918,7 @@ class _CallbackWrapperDecorators(abc.ABC):
         *,
         action: FlowRequestActionType,
         screen: Screen | str | None = None,
-        filters: Filter | None = None,
+        filters: Filter[FlowRequest] | None = None,
     ) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT] | _FlowRequestHandlerT:
         """
         Decorator to help you add more handlers to the same endpoint and split the logic into multiple functions.
@@ -1165,7 +943,10 @@ class _CallbackWrapperDecorators(abc.ABC):
         return decorator
 
     def on_init(
-        self=None, filters: Filter | None = None, *, call_on_error: bool = False
+        self=None,
+        filters: Filter[FlowRequest] | None = None,
+        *,
+        call_on_error: bool = False,
     ) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT]:
         """
         Decorator to add a handler for the :class:`FlowRequestActionType.INIT` action.
@@ -1217,7 +998,7 @@ class _CallbackWrapperDecorators(abc.ABC):
     def on_data_exchange(
         self=None,
         screen: Screen | str | None = None,
-        filters: Filter | None = None,
+        filters: Filter[FlowRequest] | None = None,
         *,
         call_on_error: bool = False,
     ) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT]:
@@ -1271,7 +1052,7 @@ class _CallbackWrapperDecorators(abc.ABC):
         self=None,
         *,
         screen: Screen | str | None = None,
-        filters: Filter | None = None,
+        filters: Filter[FlowRequest] | None = None,
     ) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT]:
         """
         Decorator to add a handler for the :class:`FlowRequestActionType.BACK` action.
@@ -1320,7 +1101,7 @@ class _CallbackWrapperDecorators(abc.ABC):
 
     def on_completion(
         self=None,
-        filters: Filter | None = None,
+        filters: Filter[FlowCompletion] | None = None,
         *,
         priority: int = 0,
     ) -> Callable[[_FlowCompletionCallback], _FlowCompletionCallback]:
@@ -1390,7 +1171,7 @@ class FlowRequestHandler(_CallbackWrapperDecorators):
         self._main_handler = callback
         self._handlers: dict[
             tuple[FlowRequestActionType | str, str | None],
-            list[tuple[Filter | None, _FlowRequestHandlerT]],
+            list[tuple[Filter[FlowRequest] | None, _FlowRequestHandlerT]],
         ] = collections.defaultdict(list)  # {(action, screen?): [(filters?, callback)]}
         self._completion_handlers: list[FlowCompletionHandler] = []
         self._endpoint = endpoint
@@ -1406,7 +1187,7 @@ class FlowRequestHandler(_CallbackWrapperDecorators):
         callback: _FlowRequestHandlerT,
         action: FlowRequestActionType,
         screen: Screen | str | None = None,
-        filters: Filter | None = None,
+        filters: Filter[FlowRequest] | None = None,
     ) -> _CallbackWrapperDecorators:
         self._handlers[
             (action, screen.id if isinstance(screen, Screen) else screen)
@@ -1431,9 +1212,9 @@ _flow_request_handler_attr = "__pywa_flow_request_handler"
 
 
 def _handle_on_update(
-    self: WhatsApp | Filter | Callable | None,
+    self: WhatsApp | Filter[Any] | Callable | None,
     handler_type: type[Handler],
-    filters: Filter | Callable | None,
+    filters: Filter[Any] | Callable | None,
     priority: int,
     **kwargs,
 ) -> Any:
@@ -1486,34 +1267,34 @@ class _HandlerDecorators:
     @overload
     def on_raw_update(
         self: WhatsApp,
-        filters: Filter | None = None,
+        filters: Filter[RawUpdate] | None = None,
         priority: int = 0,
     ) -> Callable[[_RawUpdateCallback], _RawUpdateCallback]: ...
 
     @overload
     def on_raw_update(
         self: _RawUpdateCallback,
-        filters: Filter | None = None,
+        filters: Filter[RawUpdate] | None = None,
         priority: int = 0,
     ) -> _RawUpdateCallback: ...
 
     @overload
     def on_raw_update(
-        self: Filter,
-        filters: Filter | None = None,
+        self: Filter[RawUpdate],
+        filters: Filter[RawUpdate] | None = None,
         priority: int = 0,
     ) -> Callable[[_RawUpdateCallback], _RawUpdateCallback]: ...
 
     @overload
     def on_raw_update(
         self: None = None,
-        filters: Filter | None = None,
+        filters: Filter[RawUpdate] | None = None,
         priority: int = 0,
     ) -> Callable[[_RawUpdateCallback], _RawUpdateCallback]: ...
 
     def on_raw_update(
-        self: WhatsApp | Filter | _RawUpdateCallback | None = None,
-        filters: Filter | None = None,
+        self: WhatsApp | Filter[RawUpdate] | _RawUpdateCallback | None = None,
+        filters: Filter[RawUpdate] | None = None,
         priority: int = 0,
     ) -> Callable[[_RawUpdateCallback], _RawUpdateCallback] | _RawUpdateCallback:
         """
@@ -1544,34 +1325,34 @@ class _HandlerDecorators:
     @overload
     def on_message(
         self: WhatsApp,
-        filters: Filter | None = None,
+        filters: Filter[Message] | None = None,
         priority: int = 0,
     ) -> Callable[[_MessageCallback], _MessageCallback]: ...
 
     @overload
     def on_message(
         self: _MessageCallback,
-        filters: Filter | None = None,
+        filters: Filter[Message] | None = None,
         priority: int = 0,
     ) -> _MessageCallback: ...
 
     @overload
     def on_message(
-        self: Filter,
-        filters: Filter | None = None,
+        self: Filter[Message],
+        filters: Filter[Message] | None = None,
         priority: int = 0,
     ) -> Callable[[_MessageCallback], _MessageCallback]: ...
 
     @overload
     def on_message(
         self: None = None,
-        filters: Filter | None = None,
+        filters: Filter[Message] | None = None,
         priority: int = 0,
     ) -> Callable[[_MessageCallback], _MessageCallback]: ...
 
     def on_message(
-        self: WhatsApp | Filter | _MessageCallback | None = None,
-        filters: Filter | None = None,
+        self: WhatsApp | Filter[Message] | _MessageCallback | None = None,
+        filters: Filter[Message] | None = None,
         priority: int = 0,
     ) -> Callable[[_MessageCallback], _MessageCallback] | _MessageCallback:
         """
@@ -1602,7 +1383,7 @@ class _HandlerDecorators:
     @overload
     def on_callback_button(
         self: WhatsApp,
-        filters: Filter | None = None,
+        filters: Filter[CallbackButton] | None = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ) -> Callable[[_CallbackButtonCallback], _CallbackButtonCallback]: ...
@@ -1610,15 +1391,15 @@ class _HandlerDecorators:
     @overload
     def on_callback_button(
         self: _CallbackButtonCallback,
-        filters: Filter | None = None,
+        filters: Filter[CallbackButton] | None = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ) -> _CallbackButtonCallback: ...
 
     @overload
     def on_callback_button(
-        self: Filter,
-        filters: Filter | None = None,
+        self: Filter[CallbackButton],
+        filters: Filter[CallbackButton] | None = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ) -> Callable[[_CallbackButtonCallback], _CallbackButtonCallback]: ...
@@ -1626,14 +1407,14 @@ class _HandlerDecorators:
     @overload
     def on_callback_button(
         self: None = None,
-        filters: Filter | None = None,
+        filters: Filter[CallbackButton] | None = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ) -> Callable[[_CallbackButtonCallback], _CallbackButtonCallback]: ...
 
     def on_callback_button(
-        self: WhatsApp | Filter | _CallbackButtonCallback | None = None,
-        filters: Filter | None = None,
+        self: WhatsApp | Filter[CallbackButton] | _CallbackButtonCallback | None = None,
+        filters: Filter[CallbackButton] | None = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ) -> (
@@ -1672,7 +1453,7 @@ class _HandlerDecorators:
     @overload
     def on_callback_selection(
         self: WhatsApp,
-        filters: Filter | None = None,
+        filters: Filter[CallbackSelection] | None = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ) -> Callable[[_CallbackSelectionCallback], _CallbackSelectionCallback]: ...
@@ -1680,15 +1461,15 @@ class _HandlerDecorators:
     @overload
     def on_callback_selection(
         self: _CallbackSelectionCallback,
-        filters: Filter | None = None,
+        filters: Filter[CallbackSelection] | None = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ) -> _CallbackSelectionCallback: ...
 
     @overload
     def on_callback_selection(
-        self: Filter,
-        filters: Filter | None = None,
+        self: Filter[CallbackSelection],
+        filters: Filter[CallbackSelection] | None = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ) -> Callable[[_CallbackSelectionCallback], _CallbackSelectionCallback]: ...
@@ -1696,14 +1477,17 @@ class _HandlerDecorators:
     @overload
     def on_callback_selection(
         self: None = None,
-        filters: Filter | None = None,
+        filters: Filter[CallbackSelection] | None = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ) -> Callable[[_CallbackSelectionCallback], _CallbackSelectionCallback]: ...
 
     def on_callback_selection(
-        self: WhatsApp | Filter | _CallbackSelectionCallback | None = None,
-        filters: Filter | None = None,
+        self: WhatsApp
+        | Filter[CallbackSelection]
+        | _CallbackSelectionCallback
+        | None = None,
+        filters: Filter[CallbackSelection] | None = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ) -> (
@@ -1742,7 +1526,7 @@ class _HandlerDecorators:
     @overload
     def on_message_status(
         self: WhatsApp,
-        filters: Filter | None = None,
+        filters: Filter[MessageStatus] | None = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ) -> Callable[[_MessageStatusCallback], _MessageStatusCallback]: ...
@@ -1750,15 +1534,15 @@ class _HandlerDecorators:
     @overload
     def on_message_status(
         self: _MessageStatusCallback,
-        filters: Filter | None = None,
+        filters: Filter[MessageStatus] | None = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ) -> _MessageStatusCallback: ...
 
     @overload
     def on_message_status(
-        self: Filter,
-        filters: Filter | None = None,
+        self: Filter[MessageStatus],
+        filters: Filter[MessageStatus] | None = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ) -> Callable[[_MessageStatusCallback], _MessageStatusCallback]: ...
@@ -1766,14 +1550,14 @@ class _HandlerDecorators:
     @overload
     def on_message_status(
         self: None = None,
-        filters: Filter | None = None,
+        filters: Filter[MessageStatus] | None = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ) -> Callable[[_MessageStatusCallback], _MessageStatusCallback]: ...
 
     def on_message_status(
-        self: WhatsApp | Filter | _MessageStatusCallback | None = None,
-        filters: Filter | None = None,
+        self: WhatsApp | Filter[MessageStatus] | _MessageStatusCallback | None = None,
+        filters: Filter[MessageStatus] | None = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ) -> (
@@ -1812,34 +1596,37 @@ class _HandlerDecorators:
     @overload
     def on_group_message_statuses(
         self: WhatsApp,
-        filters: Filter | None = None,
+        filters: Filter[GroupMessageStatuses] | None = None,
         priority: int = 0,
     ) -> Callable[[_GroupMessageStatusesCallback], _GroupMessageStatusesCallback]: ...
 
     @overload
     def on_group_message_statuses(
         self: _GroupMessageStatusesCallback,
-        filters: Filter | None = None,
+        filters: Filter[GroupMessageStatuses] | None = None,
         priority: int = 0,
     ) -> _GroupMessageStatusesCallback: ...
 
     @overload
     def on_group_message_statuses(
-        self: Filter,
-        filters: Filter | None = None,
+        self: Filter[GroupMessageStatuses],
+        filters: Filter[GroupMessageStatuses] | None = None,
         priority: int = 0,
     ) -> Callable[[_GroupMessageStatusesCallback], _GroupMessageStatusesCallback]: ...
 
     @overload
     def on_group_message_statuses(
         self: None = None,
-        filters: Filter | None = None,
+        filters: Filter[GroupMessageStatuses] | None = None,
         priority: int = 0,
     ) -> Callable[[_GroupMessageStatusesCallback], _GroupMessageStatusesCallback]: ...
 
     def on_group_message_statuses(
-        self: WhatsApp | Filter | _GroupMessageStatusesCallback | None = None,
-        filters: Filter | None = None,
+        self: WhatsApp
+        | Filter[GroupMessageStatuses]
+        | _GroupMessageStatusesCallback
+        | None = None,
+        filters: Filter[GroupMessageStatuses] | None = None,
         priority: int = 0,
     ) -> (
         Callable[[_GroupMessageStatusesCallback], _GroupMessageStatusesCallback]
@@ -1848,7 +1635,7 @@ class _HandlerDecorators:
         """
         Decorator to register a function as a callback for incoming :class:`~pywa.types.group_message_status.GroupMessageStatus` (when a group message status changes, e.g. ``sent``, ``delivered``, ``read``, ``failed``).
 
-        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.GroupMessageStatusHandler`.
+        - Shortcut for :func:`~pywa.client.WhatsApp.add_handlers` with a :class:`~pywa.handlers.GroupMessageStatusesHandler`.
 
         **DO NOT USE THIS HANDLER WITHOUT FILTERS TO SEND MESSAGES, IT WILL CAUSE AN INFINITE LOOP!**
 
@@ -1874,34 +1661,37 @@ class _HandlerDecorators:
     @overload
     def on_phone_number_change(
         self: WhatsApp,
-        filters: Filter | None = None,
+        filters: Filter[PhoneNumberChange] | None = None,
         priority: int = 0,
     ) -> Callable[[_PhoneNumberChangeCallback], _PhoneNumberChangeCallback]: ...
 
     @overload
     def on_phone_number_change(
         self: _PhoneNumberChangeCallback,
-        filters: Filter | None = None,
+        filters: Filter[PhoneNumberChange] | None = None,
         priority: int = 0,
     ) -> _PhoneNumberChangeCallback: ...
 
     @overload
     def on_phone_number_change(
-        self: Filter,
-        filters: Filter | None = None,
+        self: Filter[PhoneNumberChange],
+        filters: Filter[PhoneNumberChange] | None = None,
         priority: int = 0,
     ) -> Callable[[_PhoneNumberChangeCallback], _PhoneNumberChangeCallback]: ...
 
     @overload
     def on_phone_number_change(
         self: None = None,
-        filters: Filter | None = None,
+        filters: Filter[PhoneNumberChange] | None = None,
         priority: int = 0,
     ) -> Callable[[_PhoneNumberChangeCallback], _PhoneNumberChangeCallback]: ...
 
     def on_phone_number_change(
-        self: WhatsApp | Filter | _PhoneNumberChangeCallback | None = None,
-        filters: Filter | None = None,
+        self: WhatsApp
+        | Filter[PhoneNumberChange]
+        | _PhoneNumberChangeCallback
+        | None = None,
+        filters: Filter[PhoneNumberChange] | None = None,
         priority: int = 0,
     ) -> (
         Callable[[_PhoneNumberChangeCallback], _PhoneNumberChangeCallback]
@@ -1934,34 +1724,34 @@ class _HandlerDecorators:
     @overload
     def on_identity_change(
         self: WhatsApp,
-        filters: Filter | None = None,
+        filters: Filter[IdentityChange] | None = None,
         priority: int = 0,
     ) -> Callable[[_IdentityChangeCallback], _IdentityChangeCallback]: ...
 
     @overload
     def on_identity_change(
         self: _IdentityChangeCallback,
-        filters: Filter | None = None,
+        filters: Filter[IdentityChange] | None = None,
         priority: int = 0,
     ) -> _IdentityChangeCallback: ...
 
     @overload
     def on_identity_change(
-        self: Filter,
-        filters: Filter | None = None,
+        self: Filter[IdentityChange],
+        filters: Filter[IdentityChange] | None = None,
         priority: int = 0,
     ) -> Callable[[_IdentityChangeCallback], _IdentityChangeCallback]: ...
 
     @overload
     def on_identity_change(
         self: None = None,
-        filters: Filter | None = None,
+        filters: Filter[IdentityChange] | None = None,
         priority: int = 0,
     ) -> Callable[[_IdentityChangeCallback], _IdentityChangeCallback]: ...
 
     def on_identity_change(
-        self: WhatsApp | Filter | _IdentityChangeCallback | None = None,
-        filters: Filter | None = None,
+        self: WhatsApp | Filter[IdentityChange] | _IdentityChangeCallback | None = None,
+        filters: Filter[IdentityChange] | None = None,
         priority: int = 0,
     ) -> (
         Callable[[_IdentityChangeCallback], _IdentityChangeCallback]
@@ -1994,34 +1784,37 @@ class _HandlerDecorators:
     @overload
     def on_template_status_update(
         self: WhatsApp,
-        filters: Filter | None = None,
+        filters: Filter[TemplateStatusUpdate] | None = None,
         priority: int = 0,
     ) -> Callable[[_TemplateStatusUpdateCallback], _TemplateStatusUpdateCallback]: ...
 
     @overload
     def on_template_status_update(
         self: _TemplateStatusUpdateCallback,
-        filters: Filter | None = None,
+        filters: Filter[TemplateStatusUpdate] | None = None,
         priority: int = 0,
     ) -> _TemplateStatusUpdateCallback: ...
 
     @overload
     def on_template_status_update(
-        self: Filter,
-        filters: Filter | None = None,
+        self: Filter[TemplateStatusUpdate],
+        filters: Filter[TemplateStatusUpdate] | None = None,
         priority: int = 0,
     ) -> Callable[[_TemplateStatusUpdateCallback], _TemplateStatusUpdateCallback]: ...
 
     @overload
     def on_template_status_update(
         self: None = None,
-        filters: Filter | None = None,
+        filters: Filter[TemplateStatusUpdate] | None = None,
         priority: int = 0,
     ) -> Callable[[_TemplateStatusUpdateCallback], _TemplateStatusUpdateCallback]: ...
 
     def on_template_status_update(
-        self: WhatsApp | Filter | _TemplateStatusUpdateCallback | None = None,
-        filters: Filter | None = None,
+        self: WhatsApp
+        | Filter[TemplateStatusUpdate]
+        | _TemplateStatusUpdateCallback
+        | None = None,
+        filters: Filter[TemplateStatusUpdate] | None = None,
         priority: int = 0,
     ) -> (
         Callable[[_TemplateStatusUpdateCallback], _TemplateStatusUpdateCallback]
@@ -2054,7 +1847,7 @@ class _HandlerDecorators:
     @overload
     def on_template_category_update(
         self: WhatsApp,
-        filters: Filter | None = None,
+        filters: Filter[TemplateCategoryUpdate] | None = None,
         priority: int = 0,
     ) -> Callable[
         [_TemplateCategoryUpdateCallback], _TemplateCategoryUpdateCallback
@@ -2063,14 +1856,14 @@ class _HandlerDecorators:
     @overload
     def on_template_category_update(
         self: _TemplateCategoryUpdateCallback,
-        filters: Filter | None = None,
+        filters: Filter[TemplateCategoryUpdate] | None = None,
         priority: int = 0,
     ) -> _TemplateCategoryUpdateCallback: ...
 
     @overload
     def on_template_category_update(
-        self: Filter,
-        filters: Filter | None = None,
+        self: Filter[TemplateCategoryUpdate],
+        filters: Filter[TemplateCategoryUpdate] | None = None,
         priority: int = 0,
     ) -> Callable[
         [_TemplateCategoryUpdateCallback], _TemplateCategoryUpdateCallback
@@ -2079,15 +1872,18 @@ class _HandlerDecorators:
     @overload
     def on_template_category_update(
         self: None = None,
-        filters: Filter | None = None,
+        filters: Filter[TemplateCategoryUpdate] | None = None,
         priority: int = 0,
     ) -> Callable[
         [_TemplateCategoryUpdateCallback], _TemplateCategoryUpdateCallback
     ]: ...
 
     def on_template_category_update(
-        self: WhatsApp | Filter | _TemplateCategoryUpdateCallback | None = None,
-        filters: Filter | None = None,
+        self: WhatsApp
+        | Filter[TemplateCategoryUpdate]
+        | _TemplateCategoryUpdateCallback
+        | None = None,
+        filters: Filter[TemplateCategoryUpdate] | None = None,
         priority: int = 0,
     ) -> (
         Callable[[_TemplateCategoryUpdateCallback], _TemplateCategoryUpdateCallback]
@@ -2120,34 +1916,37 @@ class _HandlerDecorators:
     @overload
     def on_template_quality_update(
         self: WhatsApp,
-        filters: Filter | None = None,
+        filters: Filter[TemplateQualityUpdate] | None = None,
         priority: int = 0,
     ) -> Callable[[_TemplateQualityUpdateCallback], _TemplateQualityUpdateCallback]: ...
 
     @overload
     def on_template_quality_update(
         self: _TemplateQualityUpdateCallback,
-        filters: Filter | None = None,
+        filters: Filter[TemplateQualityUpdate] | None = None,
         priority: int = 0,
     ) -> _TemplateQualityUpdateCallback: ...
 
     @overload
     def on_template_quality_update(
-        self: Filter,
-        filters: Filter | None = None,
+        self: Filter[TemplateQualityUpdate],
+        filters: Filter[TemplateQualityUpdate] | None = None,
         priority: int = 0,
     ) -> Callable[[_TemplateQualityUpdateCallback], _TemplateQualityUpdateCallback]: ...
 
     @overload
     def on_template_quality_update(
         self: None = None,
-        filters: Filter | None = None,
+        filters: Filter[TemplateQualityUpdate] | None = None,
         priority: int = 0,
     ) -> Callable[[_TemplateQualityUpdateCallback], _TemplateQualityUpdateCallback]: ...
 
     def on_template_quality_update(
-        self: WhatsApp | Filter | _TemplateQualityUpdateCallback | None = None,
-        filters: Filter | None = None,
+        self: WhatsApp
+        | Filter[TemplateQualityUpdate]
+        | _TemplateQualityUpdateCallback
+        | None = None,
+        filters: Filter[TemplateQualityUpdate] | None = None,
         priority: int = 0,
     ) -> (
         Callable[[_TemplateQualityUpdateCallback], _TemplateQualityUpdateCallback]
@@ -2180,7 +1979,7 @@ class _HandlerDecorators:
     @overload
     def on_template_components_update(
         self: WhatsApp,
-        filters: Filter | None = None,
+        filters: Filter[TemplateComponentsUpdate] | None = None,
         priority: int = 0,
     ) -> Callable[
         [_TemplateComponentsUpdateCallback], _TemplateComponentsUpdateCallback
@@ -2189,14 +1988,14 @@ class _HandlerDecorators:
     @overload
     def on_template_components_update(
         self: _TemplateComponentsUpdateCallback,
-        filters: Filter | None = None,
+        filters: Filter[TemplateComponentsUpdate] | None = None,
         priority: int = 0,
     ) -> _TemplateComponentsUpdateCallback: ...
 
     @overload
     def on_template_components_update(
-        self: Filter,
-        filters: Filter | None = None,
+        self: Filter[TemplateComponentsUpdate],
+        filters: Filter[TemplateComponentsUpdate] | None = None,
         priority: int = 0,
     ) -> Callable[
         [_TemplateComponentsUpdateCallback], _TemplateComponentsUpdateCallback
@@ -2205,15 +2004,18 @@ class _HandlerDecorators:
     @overload
     def on_template_components_update(
         self: None = None,
-        filters: Filter | None = None,
+        filters: Filter[TemplateComponentsUpdate] | None = None,
         priority: int = 0,
     ) -> Callable[
         [_TemplateComponentsUpdateCallback], _TemplateComponentsUpdateCallback
     ]: ...
 
     def on_template_components_update(
-        self: WhatsApp | Filter | _TemplateComponentsUpdateCallback | None = None,
-        filters: Filter | None = None,
+        self: WhatsApp
+        | Filter[TemplateComponentsUpdate]
+        | _TemplateComponentsUpdateCallback
+        | None = None,
+        filters: Filter[TemplateComponentsUpdate] | None = None,
         priority: int = 0,
     ) -> (
         Callable[[_TemplateComponentsUpdateCallback], _TemplateComponentsUpdateCallback]
@@ -2246,34 +2048,34 @@ class _HandlerDecorators:
     @overload
     def on_flow_completion(
         self: WhatsApp,
-        filters: Filter | None = None,
+        filters: Filter[FlowCompletion] | None = None,
         priority: int = 0,
     ) -> Callable[[_FlowCompletionCallback], _FlowCompletionCallback]: ...
 
     @overload
     def on_flow_completion(
         self: _FlowCompletionCallback,
-        filters: Filter | None = None,
+        filters: Filter[FlowCompletion] | None = None,
         priority: int = 0,
     ) -> _FlowCompletionCallback: ...
 
     @overload
     def on_flow_completion(
-        self: Filter,
-        filters: Filter | None = None,
+        self: Filter[FlowCompletion],
+        filters: Filter[FlowCompletion] | None = None,
         priority: int = 0,
     ) -> Callable[[_FlowCompletionCallback], _FlowCompletionCallback]: ...
 
     @overload
     def on_flow_completion(
         self: None = None,
-        filters: Filter | None = None,
+        filters: Filter[FlowCompletion] | None = None,
         priority: int = 0,
     ) -> Callable[[_FlowCompletionCallback], _FlowCompletionCallback]: ...
 
     def on_flow_completion(
-        self: WhatsApp | Filter | _FlowCompletionCallback | None = None,
-        filters: Filter | None = None,
+        self: WhatsApp | Filter[FlowCompletion] | _FlowCompletionCallback | None = None,
+        filters: Filter[FlowCompletion] | None = None,
         priority: int = 0,
     ) -> (
         Callable[[_FlowCompletionCallback], _FlowCompletionCallback]
@@ -2306,34 +2108,34 @@ class _HandlerDecorators:
     @overload
     def on_call_connect(
         self: WhatsApp,
-        filters: Filter | None = None,
+        filters: Filter[CallConnect] | None = None,
         priority: int = 0,
     ) -> Callable[[_CallConnectCallback], _CallConnectCallback]: ...
 
     @overload
     def on_call_connect(
         self: _CallConnectCallback,
-        filters: Filter | None = None,
+        filters: Filter[CallConnect] | None = None,
         priority: int = 0,
     ) -> _CallConnectCallback: ...
 
     @overload
     def on_call_connect(
-        self: Filter,
-        filters: Filter | None = None,
+        self: Filter[CallConnect],
+        filters: Filter[CallConnect] | None = None,
         priority: int = 0,
     ) -> Callable[[_CallConnectCallback], _CallConnectCallback]: ...
 
     @overload
     def on_call_connect(
         self: None = None,
-        filters: Filter | None = None,
+        filters: Filter[CallConnect] | None = None,
         priority: int = 0,
     ) -> Callable[[_CallConnectCallback], _CallConnectCallback]: ...
 
     def on_call_connect(
-        self: WhatsApp | Filter | _CallConnectCallback | None = None,
-        filters: Filter | None = None,
+        self: WhatsApp | Filter[CallConnect] | _CallConnectCallback | None = None,
+        filters: Filter[CallConnect] | None = None,
         priority: int = 0,
     ) -> Callable[[_CallConnectCallback], _CallConnectCallback] | _CallConnectCallback:
         """
@@ -2364,34 +2166,34 @@ class _HandlerDecorators:
     @overload
     def on_call_terminate(
         self: WhatsApp,
-        filters: Filter | None = None,
+        filters: Filter[CallTerminate] | None = None,
         priority: int = 0,
     ) -> Callable[[_CallTerminateCallback], _CallTerminateCallback]: ...
 
     @overload
     def on_call_terminate(
         self: _CallTerminateCallback,
-        filters: Filter | None = None,
+        filters: Filter[CallTerminate] | None = None,
         priority: int = 0,
     ) -> _CallTerminateCallback: ...
 
     @overload
     def on_call_terminate(
-        self: Filter,
-        filters: Filter | None = None,
+        self: Filter[CallTerminate],
+        filters: Filter[CallTerminate] | None = None,
         priority: int = 0,
     ) -> Callable[[_CallTerminateCallback], _CallTerminateCallback]: ...
 
     @overload
     def on_call_terminate(
         self: None = None,
-        filters: Filter | None = None,
+        filters: Filter[CallTerminate] | None = None,
         priority: int = 0,
     ) -> Callable[[_CallTerminateCallback], _CallTerminateCallback]: ...
 
     def on_call_terminate(
-        self: WhatsApp | Filter | _CallTerminateCallback | None = None,
-        filters: Filter | None = None,
+        self: WhatsApp | Filter[CallTerminate] | _CallTerminateCallback | None = None,
+        filters: Filter[CallTerminate] | None = None,
         priority: int = 0,
     ) -> (
         Callable[[_CallTerminateCallback], _CallTerminateCallback]
@@ -2424,7 +2226,7 @@ class _HandlerDecorators:
     @overload
     def on_call_status(
         self: WhatsApp,
-        filters: Filter | None = None,
+        filters: Filter[CallStatus] | None = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ) -> Callable[[_CallStatusCallback], _CallStatusCallback]: ...
@@ -2432,15 +2234,15 @@ class _HandlerDecorators:
     @overload
     def on_call_status(
         self: _CallStatusCallback,
-        filters: Filter | None = None,
+        filters: Filter[CallStatus] | None = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ) -> _CallStatusCallback: ...
 
     @overload
     def on_call_status(
-        self: Filter,
-        filters: Filter | None = None,
+        self: Filter[CallStatus],
+        filters: Filter[CallStatus] | None = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ) -> Callable[[_CallStatusCallback], _CallStatusCallback]: ...
@@ -2448,14 +2250,14 @@ class _HandlerDecorators:
     @overload
     def on_call_status(
         self: None = None,
-        filters: Filter | None = None,
+        filters: Filter[CallStatus] | None = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ) -> Callable[[_CallStatusCallback], _CallStatusCallback]: ...
 
     def on_call_status(
-        self: WhatsApp | Filter | _CallStatusCallback | None = None,
-        filters: Filter | None = None,
+        self: WhatsApp | Filter[CallStatus] | _CallStatusCallback | None = None,
+        filters: Filter[CallStatus] | None = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
     ) -> Callable[[_CallStatusCallback], _CallStatusCallback] | _CallStatusCallback:
@@ -2488,34 +2290,37 @@ class _HandlerDecorators:
     @overload
     def on_call_permission_update(
         self: WhatsApp,
-        filters: Filter | None = None,
+        filters: Filter[CallPermissionUpdate] | None = None,
         priority: int = 0,
     ) -> Callable[[_CallPermissionUpdateCallback], _CallPermissionUpdateCallback]: ...
 
     @overload
     def on_call_permission_update(
         self: _CallPermissionUpdateCallback,
-        filters: Filter | None = None,
+        filters: Filter[CallPermissionUpdate] | None = None,
         priority: int = 0,
     ) -> _CallPermissionUpdateCallback: ...
 
     @overload
     def on_call_permission_update(
-        self: Filter,
-        filters: Filter | None = None,
+        self: Filter[CallPermissionUpdate],
+        filters: Filter[CallPermissionUpdate] | None = None,
         priority: int = 0,
     ) -> Callable[[_CallPermissionUpdateCallback], _CallPermissionUpdateCallback]: ...
 
     @overload
     def on_call_permission_update(
         self: None = None,
-        filters: Filter | None = None,
+        filters: Filter[CallPermissionUpdate] | None = None,
         priority: int = 0,
     ) -> Callable[[_CallPermissionUpdateCallback], _CallPermissionUpdateCallback]: ...
 
     def on_call_permission_update(
-        self: WhatsApp | Filter | _CallPermissionUpdateCallback | None = None,
-        filters: Filter | None = None,
+        self: WhatsApp
+        | Filter[CallPermissionUpdate]
+        | _CallPermissionUpdateCallback
+        | None = None,
+        filters: Filter[CallPermissionUpdate] | None = None,
         priority: int = 0,
     ) -> (
         Callable[[_CallPermissionUpdateCallback], _CallPermissionUpdateCallback]
@@ -2550,7 +2355,7 @@ class _HandlerDecorators:
     @overload
     def on_user_marketing_preferences(
         self: WhatsApp,
-        filters: Filter | None = None,
+        filters: Filter[UserMarketingPreferences] | None = None,
         priority: int = 0,
     ) -> Callable[
         [_UserMarketingPreferencesCallback], _UserMarketingPreferencesCallback
@@ -2559,14 +2364,14 @@ class _HandlerDecorators:
     @overload
     def on_user_marketing_preferences(
         self: _UserMarketingPreferencesCallback,
-        filters: Filter | None = None,
+        filters: Filter[UserMarketingPreferences] | None = None,
         priority: int = 0,
     ) -> _UserMarketingPreferencesCallback: ...
 
     @overload
     def on_user_marketing_preferences(
-        self: Filter,
-        filters: Filter | None = None,
+        self: Filter[UserMarketingPreferences],
+        filters: Filter[UserMarketingPreferences] | None = None,
         priority: int = 0,
     ) -> Callable[
         [_UserMarketingPreferencesCallback], _UserMarketingPreferencesCallback
@@ -2575,15 +2380,18 @@ class _HandlerDecorators:
     @overload
     def on_user_marketing_preferences(
         self: None = None,
-        filters: Filter | None = None,
+        filters: Filter[UserMarketingPreferences] | None = None,
         priority: int = 0,
     ) -> Callable[
         [_UserMarketingPreferencesCallback], _UserMarketingPreferencesCallback
     ]: ...
 
     def on_user_marketing_preferences(
-        self: WhatsApp | Filter | _UserMarketingPreferencesCallback | None = None,
-        filters: Filter | None = None,
+        self: WhatsApp
+        | Filter[UserMarketingPreferences]
+        | _UserMarketingPreferencesCallback
+        | None = None,
+        filters: Filter[UserMarketingPreferences] | None = None,
         priority: int = 0,
     ) -> (
         Callable[[_UserMarketingPreferencesCallback], _UserMarketingPreferencesCallback]
@@ -2616,34 +2424,34 @@ class _HandlerDecorators:
     @overload
     def on_edited_message(
         self: WhatsApp,
-        filters: Filter | None = None,
+        filters: Filter[EditedMessage] | None = None,
         priority: int = 0,
     ) -> Callable[[_EditedMessageCallback], _EditedMessageCallback]: ...
 
     @overload
     def on_edited_message(
         self: _EditedMessageCallback,
-        filters: Filter | None = None,
+        filters: Filter[EditedMessage] | None = None,
         priority: int = 0,
     ) -> _EditedMessageCallback: ...
 
     @overload
     def on_edited_message(
-        self: Filter,
-        filters: Filter | None = None,
+        self: Filter[EditedMessage],
+        filters: Filter[EditedMessage] | None = None,
         priority: int = 0,
     ) -> Callable[[_EditedMessageCallback], _EditedMessageCallback]: ...
 
     @overload
     def on_edited_message(
         self: None = None,
-        filters: Filter | None = None,
+        filters: Filter[EditedMessage] | None = None,
         priority: int = 0,
     ) -> Callable[[_EditedMessageCallback], _EditedMessageCallback]: ...
 
     def on_edited_message(
-        self: WhatsApp | Filter | _EditedMessageCallback | None = None,
-        filters: Filter | None = None,
+        self: WhatsApp | Filter[EditedMessage] | _EditedMessageCallback | None = None,
+        filters: Filter[EditedMessage] | None = None,
         priority: int = 0,
     ) -> (
         Callable[[_EditedMessageCallback], _EditedMessageCallback]
@@ -2676,34 +2484,34 @@ class _HandlerDecorators:
     @overload
     def on_deleted_message(
         self: WhatsApp,
-        filters: Filter | None = None,
+        filters: Filter[DeletedMessage] | None = None,
         priority: int = 0,
     ) -> Callable[[_DeletedMessageCallback], _DeletedMessageCallback]: ...
 
     @overload
     def on_deleted_message(
         self: _DeletedMessageCallback,
-        filters: Filter | None = None,
+        filters: Filter[DeletedMessage] | None = None,
         priority: int = 0,
     ) -> _DeletedMessageCallback: ...
 
     @overload
     def on_deleted_message(
-        self: Filter,
-        filters: Filter | None = None,
+        self: Filter[DeletedMessage],
+        filters: Filter[DeletedMessage] | None = None,
         priority: int = 0,
     ) -> Callable[[_DeletedMessageCallback], _DeletedMessageCallback]: ...
 
     @overload
     def on_deleted_message(
         self: None = None,
-        filters: Filter | None = None,
+        filters: Filter[DeletedMessage] | None = None,
         priority: int = 0,
     ) -> Callable[[_DeletedMessageCallback], _DeletedMessageCallback]: ...
 
     def on_deleted_message(
-        self: WhatsApp | Filter | _DeletedMessageCallback | None = None,
-        filters: Filter | None = None,
+        self: WhatsApp | Filter[DeletedMessage] | _DeletedMessageCallback | None = None,
+        filters: Filter[DeletedMessage] | None = None,
         priority: int = 0,
     ) -> (
         Callable[[_DeletedMessageCallback], _DeletedMessageCallback]
@@ -2736,34 +2544,37 @@ class _HandlerDecorators:
     @overload
     def on_outgoing_message(
         self: WhatsApp,
-        filters: Filter | None = None,
+        filters: Filter[OutgoingMessage] | None = None,
         priority: int = 0,
     ) -> Callable[[_OutgoingMessageCallback], _OutgoingMessageCallback]: ...
 
     @overload
     def on_outgoing_message(
         self: _OutgoingMessageCallback,
-        filters: Filter | None = None,
+        filters: Filter[OutgoingMessage] | None = None,
         priority: int = 0,
     ) -> _OutgoingMessageCallback: ...
 
     @overload
     def on_outgoing_message(
-        self: Filter,
-        filters: Filter | None = None,
+        self: Filter[OutgoingMessage],
+        filters: Filter[OutgoingMessage] | None = None,
         priority: int = 0,
     ) -> Callable[[_OutgoingMessageCallback], _OutgoingMessageCallback]: ...
 
     @overload
     def on_outgoing_message(
         self: None = None,
-        filters: Filter | None = None,
+        filters: Filter[OutgoingMessage] | None = None,
         priority: int = 0,
     ) -> Callable[[_OutgoingMessageCallback], _OutgoingMessageCallback]: ...
 
     def on_outgoing_message(
-        self: WhatsApp | Filter | _OutgoingMessageCallback | None = None,
-        filters: Filter | None = None,
+        self: WhatsApp
+        | Filter[OutgoingMessage]
+        | _OutgoingMessageCallback
+        | None = None,
+        filters: Filter[OutgoingMessage] | None = None,
         priority: int = 0,
     ) -> (
         Callable[[_OutgoingMessageCallback], _OutgoingMessageCallback]
@@ -2796,34 +2607,37 @@ class _HandlerDecorators:
     @overload
     def on_outgoing_edited_message(
         self: WhatsApp,
-        filters: Filter | None = None,
+        filters: Filter[OutgoingEditedMessage] | None = None,
         priority: int = 0,
     ) -> Callable[[_OutgoingEditedMessageCallback], _OutgoingEditedMessageCallback]: ...
 
     @overload
     def on_outgoing_edited_message(
         self: _OutgoingEditedMessageCallback,
-        filters: Filter | None = None,
+        filters: Filter[OutgoingEditedMessage] | None = None,
         priority: int = 0,
     ) -> _OutgoingEditedMessageCallback: ...
 
     @overload
     def on_outgoing_edited_message(
-        self: Filter,
-        filters: Filter | None = None,
+        self: Filter[OutgoingEditedMessage],
+        filters: Filter[OutgoingEditedMessage] | None = None,
         priority: int = 0,
     ) -> Callable[[_OutgoingEditedMessageCallback], _OutgoingEditedMessageCallback]: ...
 
     @overload
     def on_outgoing_edited_message(
         self: None = None,
-        filters: Filter | None = None,
+        filters: Filter[OutgoingEditedMessage] | None = None,
         priority: int = 0,
     ) -> Callable[[_OutgoingEditedMessageCallback], _OutgoingEditedMessageCallback]: ...
 
     def on_outgoing_edited_message(
-        self: WhatsApp | Filter | _OutgoingEditedMessageCallback | None = None,
-        filters: Filter | None = None,
+        self: WhatsApp
+        | Filter[OutgoingEditedMessage]
+        | _OutgoingEditedMessageCallback
+        | None = None,
+        filters: Filter[OutgoingEditedMessage] | None = None,
         priority: int = 0,
     ) -> (
         Callable[[_OutgoingEditedMessageCallback], _OutgoingEditedMessageCallback]
@@ -2856,7 +2670,7 @@ class _HandlerDecorators:
     @overload
     def on_outgoing_deleted_message(
         self: WhatsApp,
-        filters: Filter | None = None,
+        filters: Filter[OutgoingDeletedMessage] | None = None,
         priority: int = 0,
     ) -> Callable[
         [_OutgoingDeletedMessageCallback], _OutgoingDeletedMessageCallback
@@ -2865,14 +2679,14 @@ class _HandlerDecorators:
     @overload
     def on_outgoing_deleted_message(
         self: _OutgoingDeletedMessageCallback,
-        filters: Filter | None = None,
+        filters: Filter[OutgoingDeletedMessage] | None = None,
         priority: int = 0,
     ) -> _OutgoingDeletedMessageCallback: ...
 
     @overload
     def on_outgoing_deleted_message(
-        self: Filter,
-        filters: Filter | None = None,
+        self: Filter[OutgoingDeletedMessage],
+        filters: Filter[OutgoingDeletedMessage] | None = None,
         priority: int = 0,
     ) -> Callable[
         [_OutgoingDeletedMessageCallback], _OutgoingDeletedMessageCallback
@@ -2881,15 +2695,18 @@ class _HandlerDecorators:
     @overload
     def on_outgoing_deleted_message(
         self: None = None,
-        filters: Filter | None = None,
+        filters: Filter[OutgoingDeletedMessage] | None = None,
         priority: int = 0,
     ) -> Callable[
         [_OutgoingDeletedMessageCallback], _OutgoingDeletedMessageCallback
     ]: ...
 
     def on_outgoing_deleted_message(
-        self: WhatsApp | Filter | _OutgoingDeletedMessageCallback | None = None,
-        filters: Filter | None = None,
+        self: WhatsApp
+        | Filter[OutgoingDeletedMessage]
+        | _OutgoingDeletedMessageCallback
+        | None = None,
+        filters: Filter[OutgoingDeletedMessage] | None = None,
         priority: int = 0,
     ) -> (
         Callable[[_OutgoingDeletedMessageCallback], _OutgoingDeletedMessageCallback]
@@ -2922,34 +2739,34 @@ class _HandlerDecorators:
     @overload
     def on_account_update(
         self: WhatsApp,
-        filters: Filter | None = None,
+        filters: Filter[AccountUpdate] | None = None,
         priority: int = 0,
     ) -> Callable[[_AccountUpdateCallback], _AccountUpdateCallback]: ...
 
     @overload
     def on_account_update(
         self: _AccountUpdateCallback,
-        filters: Filter | None = None,
+        filters: Filter[AccountUpdate] | None = None,
         priority: int = 0,
     ) -> _AccountUpdateCallback: ...
 
     @overload
     def on_account_update(
-        self: Filter,
-        filters: Filter | None = None,
+        self: Filter[AccountUpdate],
+        filters: Filter[AccountUpdate] | None = None,
         priority: int = 0,
     ) -> Callable[[_AccountUpdateCallback], _AccountUpdateCallback]: ...
 
     @overload
     def on_account_update(
         self: None = None,
-        filters: Filter | None = None,
+        filters: Filter[AccountUpdate] | None = None,
         priority: int = 0,
     ) -> Callable[[_AccountUpdateCallback], _AccountUpdateCallback]: ...
 
     def on_account_update(
-        self: WhatsApp | Filter | _AccountUpdateCallback | None = None,
-        filters: Filter | None = None,
+        self: WhatsApp | Filter[AccountUpdate] | _AccountUpdateCallback | None = None,
+        filters: Filter[AccountUpdate] | None = None,
         priority: int = 0,
     ) -> (
         Callable[[_AccountUpdateCallback], _AccountUpdateCallback]
@@ -3084,7 +2901,7 @@ _handlers_attr = "__pywa_handlers"
 def _register_func_handler(
     handler_type: type[Handler],
     callback: Callable,
-    filters: Filter | None,
+    filters: Filter[Any] | None,
     priority: int,
     **kwargs,
 ):
@@ -3120,7 +2937,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         self._main_handler = callback
         self._handlers: dict[
             tuple[FlowRequestActionType | str, str | None],
-            list[tuple[Filter | None, _FlowRequestHandlerT]],
+            list[tuple[Filter[FlowRequest] | None, _FlowRequestHandlerT]],
         ] = collections.defaultdict(list)  # {(action, screen?): [(filters?, callback)]}
         self._acknowledge_errors = acknowledge_errors
         self._private_key = private_key or wa._private_key
@@ -3163,7 +2980,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         callback: _FlowRequestHandlerT,
         action: FlowRequestActionType | str,
         screen: Screen | str | None = None,
-        filters: Filter | None = None,
+        filters: Filter[FlowRequest] | None = None,
     ) -> FlowRequestCallbackWrapper:
         """
         Add a handler to the current endpoint.
