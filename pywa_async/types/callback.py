@@ -46,7 +46,7 @@ class CallbackButton(BaseUserUpdateAsync, _CallbackButton[_CallbackDataT]):
         type: The message type (:class:`MessageType.INTERACTIVE` for :class:`~pywa.types.callback.Button` presses or :class:`MessageType.BUTTON` for :class:`~pywa.types.templates.QuickReplyButton` clicks).
         from_user: The user who sent the message.
         timestamp: The timestamp when the message was sent (in UTC).
-        reply_to_message: The message to which this callback button is a reply to.
+        reply_to_message: The message to which this callback button is a reply to. ``None`` when a template :class:`~pywa.types.templates.QuickReplyButton` is clicked (WhatsApp omits the ``context`` field for template ``button`` messages).
         data: The data of the button (the ``callback_data`` parameter you provided in :class:`~pywa.types.callback.Button` or :class:`~pywa.types.templates.QuickReplyButton`).
         title: The title of the button.
         shared_data: Shared data between handlers.
