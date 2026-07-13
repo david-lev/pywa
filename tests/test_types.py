@@ -312,10 +312,10 @@ def test_initiated_call():
         recipient_type=RecipientType.WA_ID,
         callee="16506666666",
     )
-    assert c.caller == wa.phone_id
+    assert c.from_phone_id == wa.phone_id
     assert c.chat.id == "16506666666"
     assert c.to == "16506666666"
-    assert c.callee == "16506666666"
+    assert c.chat.id == "16506666666"
     assert c == InitiatedCall(
         _client=wa,
         _recipient_type=RecipientType.WA_ID,
