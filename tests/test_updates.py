@@ -66,12 +66,29 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
         "media_with_url": [lambda m: m.media.url is not None],
     },
     "callback_button": {
-        "button": [lambda b: b.type == MessageType.INTERACTIVE],
-        "quick_reply": [lambda b: b.type == MessageType.BUTTON],
+        "button": [
+            lambda b: b.type == MessageType.INTERACTIVE,
+            lambda b: b.reply_to_message is not None,
+        ],
+        "quick_reply": [
+            lambda b: b.type == MessageType.BUTTON,
+            lambda b: b.reply_to_message is not None,
+        ],
+        "quick_reply_without_context": [
+            lambda b: b.type == MessageType.BUTTON,
+            lambda b: b.reply_to_message is None,
+        ],
     },
     "callback_selection": {
-        "callback": [lambda s: s.data is not None],
+        "callback": [
+            lambda s: s.data is not None,
+            lambda s: s.reply_to_message is not None,
+        ],
         "description": [lambda s: s.description is not None],
+        "callback_without_context": [
+            lambda s: s.data is not None,
+            lambda s: s.reply_to_message is None,
+        ],
     },
     "message_status": {
         "sent": [lambda s: s.status == MessageStatusType.SENT],
