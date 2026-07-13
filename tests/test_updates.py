@@ -80,15 +80,8 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
         ],
     },
     "callback_selection": {
-        "callback": [
-            lambda s: s.data is not None,
-            lambda s: s.reply_to_message is not None,
-        ],
+        "callback": [lambda s: s.data is not None],
         "description": [lambda s: s.description is not None],
-        "callback_without_context": [
-            lambda s: s.data is not None,
-            lambda s: s.reply_to_message is None,
-        ],
     },
     "message_status": {
         "sent": [lambda s: s.status == MessageStatusType.SENT],

@@ -258,7 +258,7 @@ class CallbackButton(BaseUserUpdate, Generic[_CallbackDataT]):
         type: The message type (:class:`MessageType.INTERACTIVE` for :class:`~pywa.types.callback.Button` presses or :class:`MessageType.BUTTON` for :class:`~pywa.types.templates.QuickReplyButton` clicks).
         from_user: The user who sent the message.
         timestamp: The timestamp when the message was sent (in UTC).
-        reply_to_message: The message to which this callback button is a reply to (``None`` when WhatsApp omits the ``context`` field).
+        reply_to_message: The message to which this callback button is a reply to. ``None`` when a template :class:`~pywa.types.templates.QuickReplyButton` is clicked (WhatsApp omits the ``context`` field for template ``button`` messages).
         data: The data of the button (the ``callback_data`` parameter you provided in :class:`~pywa.types.callback.Button` or :class:`~pywa.types.templates.QuickReplyButton`).
         title: The title of the button.
         shared_data: Shared data between handlers.
@@ -357,14 +357,14 @@ class CallbackSelection(BaseUserUpdate, Generic[_CallbackDataT]):
         type: The message type (always :class:`MessageType.INTERACTIVE`).
         from_user: The user who sent the message.
         timestamp: The timestamp when the message was sent (in UTC).
-        reply_to_message: The message to which this callback selection is a reply to (``None`` when WhatsApp omits the ``context`` field).
+        reply_to_message: The message to which this callback selection is a reply to.
         data: The data of the selection (the ``callback_data`` parameter you provided in :class:`~pywa.types.callback.SectionRow`).
         title: The title of the selection.
         description: The description of the selection (optional).
     """
 
     type: MessageType
-    reply_to_message: ReplyToMessage | None
+    reply_to_message: ReplyToMessage
     data: _CallbackDataT
     title: str
     description: str | None
@@ -377,7 +377,6 @@ class CallbackSelection(BaseUserUpdate, Generic[_CallbackDataT]):
         msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
             "messages"
         ][0]
-        context = msg.get("context", {})
         return cls(
             _client=client,
             raw=update,
@@ -387,9 +386,7 @@ class CallbackSelection(BaseUserUpdate, Generic[_CallbackDataT]):
             type=MessageType(msg["type"]),
             from_user=client._usr_cls.from_contact(value["contacts"][0], client=client),
             timestamp=helpers.timestamp_to_datetime(msg["timestamp"]),
-            reply_to_message=ReplyToMessage.from_dict(context)
-            if context.get("id")
-            else None,
+            reply_to_message=ReplyToMessage.from_dict(msg["context"]),
             data=msg["interactive"]["list_reply"]["id"],
             title=msg["interactive"]["list_reply"]["title"],
             description=msg["interactive"]["list_reply"].get("description"),
