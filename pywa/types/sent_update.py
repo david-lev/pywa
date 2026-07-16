@@ -69,11 +69,11 @@ class RecipientType(enum.Enum):
         if _BSUID_RE.fullmatch(s):
             return cls.BSUID
 
-        if re.sub(_PHONE_CLEAN_RE, "", s).isdigit():
-            return RecipientType.PHONE_NUMBER
-
-        if re.match(_PARENT_BSUID_RE, s):
+        if _PARENT_BSUID_RE.fullmatch(s):
             return cls.PARENT_BSUID
+
+        if _PHONE_CLEAN_RE.sub("", s).isdigit():
+            return cls.PHONE_NUMBER
 
         return cls.GROUP_ID
 
@@ -171,24 +171,24 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
     )
 
     @property
-    def recipient(self) -> str:
-        """Deprecated. Use :py:attr:`~pywa.types.SentMessage.chat.id` / :py:attr:`~pywa.types.SentMessage.to` instead."""
+    def recipient(self) -> None:
+        """Deprecated. Use ``sent.chat.id`` or ``sent.to`` instead."""
         warnings.warn(
             "Deprecated. Use `sent.chat.id` or `sent.to` instead.",
             PywaDeprecationWarning,
             stacklevel=2,
         )
-        return self._internal_sender
+        return self.chat.id
 
     @property
-    def sender(self) -> str:
-        """Deprecated. Use :py:attr:`~pywa.types.SentMessage.from_phone_id` instead."""
+    def sender(self) -> None:
+        """Deprecated. Use ``sent.from_phone_id`` instead."""
         warnings.warn(
             "Deprecated. Use `sent.from_phone_id` instead.",
             PywaDeprecationWarning,
             stacklevel=2,
         )
-        return self._internal_recipient
+        return self.from_phone_id
 
     @classmethod
     def from_sent_update(

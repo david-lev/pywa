@@ -42,10 +42,11 @@ __all__ = [
 
 import dataclasses
 import datetime
+import warnings
 from typing import TYPE_CHECKING, Generic
 
 from .. import _helpers as helpers
-from ..errors import WhatsAppError
+from ..errors import PywaDeprecationWarning, WhatsAppError
 from .base_update import BaseUpdate, BaseUserUpdate, RawUpdate, _ClientShortcuts  # noqa
 from .callback import CallbackData, _CallbackDataT
 from .others import (
@@ -67,8 +68,6 @@ class _CallShortcuts:
 
     id: str
     _client: WhatsApp
-    _internal_sender: str
-    _internal_recipient: str
 
     @property
     def message_id_to_reply(self) -> str:
@@ -76,16 +75,33 @@ class _CallShortcuts:
         raise ValueError("You cannot use `message_id_to_reply` to quote a call update.")
 
     @property
-    def caller(self) -> str:
+    def caller(self) -> None:
         """
-        The WhatsApp ID of the business phone number that initiated the call.
+        Deprecated. Use ``call.from_user.wa_id`` instead.
         """
-        return self._internal_recipient
+        warnings.warn(
+            "Deprecated. Use `call.chat.id` instead.",
+            PywaDeprecationWarning,
+            stacklevel=2,
+        )
+        return (
+            self.from_user.wa_id if hasattr(self, "from_user") else self.from_phone_id  # ty:ignore[unresolved-attribute]
+        )
 
     @property
-    def callee(self) -> str:
-        """The WhatsApp ID of the user that received the call."""
-        return self._internal_sender
+    def callee(self) -> None:
+        """
+        Deprecated. Use ``call.metadata.phone_number_id`` instead.
+        """
+        warnings.warn(
+            "Deprecated. Use `call.metadata.phone_number_id` instead.",
+            PywaDeprecationWarning,
+            stacklevel=2,
+        )
+
+        return (
+            self.metadata.phone_number_id if hasattr(self, "metadata") else self.chat.id  # ty:ignore[unresolved-attribute]
+        )
 
     def pre_accept(self, *, sdp: SessionDescription) -> SuccessResult:
         """

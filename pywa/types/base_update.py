@@ -1315,9 +1315,9 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
     """The WhatsApp Business Account ID that the update was sent to."""
 
     @property
-    def sender(self) -> str | None:
+    def sender(self) -> None:
         """
-        Deprecated. Use :py:attr:`~pywa.types.others.User.wa_id` instead.
+        Deprecated. Use ``update.from_user.wa_id`` instead.
         """
         warnings.warn(
             "Deprecated. Use `update.from_user.wa_id` instead.",
@@ -1327,9 +1327,9 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
         return self.from_user.wa_id
 
     @property
-    def recipient(self) -> str:
+    def recipient(self) -> None:
         """
-        Deprecated. Use :py:attr:`~pywa.types.others.Metadata.phone_number_id` instead.
+        Deprecated. Use ``update.metadata.phone_number_id`` instead.
         """
         warnings.warn(
             "Deprecated. Use `update.metadata.phone_number_id` instead.",

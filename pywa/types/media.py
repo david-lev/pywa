@@ -43,6 +43,9 @@ class UploadedBy(enum.Enum):
     BUSINESS = BUSINESS_UPLOADS_EXPIRATION_DAYS
     USER = USER_UPLOADS_EXPIRATION_DAYS
 
+    def __repr__(self) -> str:
+        return f"UploadedBy.{self.name}"
+
 
 class _MediaActions:
     _client: WhatsApp
