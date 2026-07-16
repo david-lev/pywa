@@ -3,7 +3,14 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-#### 4.3.0 (2026-08-07) **Latest**
+#### 4.3.1 (2026-08-17) **Latest**
+
+- [callback] treat missing message context as no `reply_to_message`
+- [types] deprecate `caller` and `callee` properties as part of BSUID changes
+- [sent_update] better recipient type resolving
+- [enums] adding copy-paste-compatible repr for `UploadedBy` and `UserIdentifier`
+
+#### 4.3.0 (2026-08-07)
 
 - [filters] make `Filter` class generic
 - [signups] adding support for creating listing and updating signups
