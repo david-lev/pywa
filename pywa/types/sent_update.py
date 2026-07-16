@@ -69,11 +69,11 @@ class RecipientType(enum.Enum):
         if _BSUID_RE.fullmatch(s):
             return cls.BSUID
 
-        if re.sub(_PHONE_CLEAN_RE, "", s).isdigit():
-            return RecipientType.PHONE_NUMBER
-
-        if re.match(_PARENT_BSUID_RE, s):
+        if _PARENT_BSUID_RE.fullmatch(s):
             return cls.PARENT_BSUID
+
+        if _PHONE_CLEAN_RE.sub("", s).isdigit():
+            return cls.PHONE_NUMBER
 
         return cls.GROUP_ID
 
