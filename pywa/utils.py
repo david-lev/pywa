@@ -416,6 +416,9 @@ class UserIdentifier(enum.Enum):
     def user_attr(self) -> str:
         return self.value
 
+    def __repr__(self) -> str:
+        return f"UserIdentifier.{self.name}"
+
 
 def start_ngrok_tunnel(
     *,

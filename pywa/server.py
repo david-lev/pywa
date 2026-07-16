@@ -287,13 +287,13 @@ class Server:
 
         match self._server_type:
             case utils.CustomServerType.STARLETTE:
-                _logger.info("Using Starlette")
+                _logger.debug("Using Starlette")
                 helpers.register_routes_starlette(wa=self)
             case utils.CustomServerType.FASTAPI:
-                _logger.info("Using FastAPI")
+                _logger.debug("Using FastAPI")
                 helpers.register_routes_fastapi(wa=self)
             case utils.CustomServerType.FLASK:
-                _logger.info("Using Flask")
+                _logger.debug("Using Flask")
                 helpers.register_routes_flask(wa=self)
             case _:
                 raise ValueError(
