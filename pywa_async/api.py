@@ -105,7 +105,6 @@ class GraphAPIAsync(GraphAPI):
                 "client_id": client_id,
                 "client_secret": client_secret,
             },
-            log_kwargs=False,
         )
 
     async def get_business_access_token(
@@ -142,7 +141,6 @@ class GraphAPIAsync(GraphAPI):
                 "client_secret": client_secret,
                 "code": code,
             },
-            log_kwargs=False,
         )
 
     async def set_app_callback_url(
@@ -403,7 +401,6 @@ class GraphAPIAsync(GraphAPI):
             method="POST",
             endpoint=f"/{phone_id}/media",
             files=files,
-            log_kwargs=False,
         )
 
     async def get_media_url(self, media_id: str) -> dict:
@@ -482,9 +479,7 @@ class GraphAPIAsync(GraphAPI):
             params=self._filter_none(phone_number_id=phone_number_id),
         )
 
-    async def send_raw_request(
-        self, method: str, endpoint: str, log_kwargs: bool = True, **kwargs
-    ) -> Any:
+    async def send_raw_request(self, method: str, endpoint: str, **kwargs) -> Any:
         """
         Send a raw request to WhatsApp Cloud API.
 
@@ -494,7 +489,6 @@ class GraphAPIAsync(GraphAPI):
         Args:
             method: The HTTP method to use (e.g. ``POST``, ``GET``, etc.).
             endpoint: The endpoint to send the message to (e.g. ``/{phone_id}/messages/``).
-            log_kwargs: Whether to log the kwargs or not (in debug mode).
             **kwargs: Additional arguments to send with the request (e.g. ``json={...}, headers={...}``).
 
         Example:
@@ -517,7 +511,6 @@ class GraphAPIAsync(GraphAPI):
         return await self._request(
             method=method,
             endpoint=endpoint,
-            log_kwargs=log_kwargs,
             **kwargs,
         )
 
@@ -1628,7 +1621,6 @@ class GraphAPIAsync(GraphAPI):
                 "asset_type": (None, "FLOW_JSON"),
                 "messaging_product": (None, "whatsapp"),
             },
-            log_kwargs=False,
         )
 
     async def publish_flow(
@@ -2247,7 +2239,6 @@ class GraphAPIAsync(GraphAPI):
                 ),
             },
             content=file,
-            log_kwargs=False,
         )
 
     async def get_upload_session(
