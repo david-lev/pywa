@@ -188,7 +188,8 @@ def serve_application(
         app_name, client = discover_app_instance(module_str, app)
         if client._server is not None:
             raise PywaCLIException(
-                f"The WhatsApp instance assigned to '{app_name}' in '{module_str}.py' is already configured with a {client._server_type.name} server."  # ty:ignore[unresolved-attribute]
+                f"The WhatsApp instance assigned to '{app_name}' in '{module_str}.py' is already configured with a {client._server_type.name} server."
+                # ty:ignore[unresolved-attribute]
             )
         client._uvicorn_workers = workers or 1
 
@@ -215,7 +216,6 @@ def serve_application(
     clean_kwargs["app"] = uvicorn_app_string
     clean_kwargs["factory"] = True
     clean_kwargs["log_config"] = None
-    clean_kwargs["access_log"] = False
 
     _configure_pywa_logger()
 
@@ -431,6 +431,12 @@ def main() -> None:
         type=int,
         help="Close Keep-Alive connections if no new data is received within this timeout (in seconds).",
     )
+    run_parser.add_argument(
+        "--access-log",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Enable/Disable HTTP access log. Default: False (off) for production runs.",
+    )
 
     # --- DEV PARSER ---
     dev_parser = subparsers.add_parser(
@@ -463,6 +469,12 @@ def main() -> None:
         "--reload-delay",
         type=float,
         help="Delay between previous and next check if application needs to be reloaded.",
+    )
+    dev_parser.add_argument(
+        "--access-log",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Enable/Disable HTTP access log. Default: True (on) for development runs.",
     )
 
     # ==========================================
