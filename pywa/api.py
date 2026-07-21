@@ -35,6 +35,7 @@ class GraphAPI:
             }
         )
         self._session = session
+        _logger.debug("GraphAPI initialized with base URL: %s", session.base_url)
 
     def __str__(self) -> str:
         return f"GraphAPI(session={self._session})"
@@ -53,16 +54,13 @@ class GraphAPI:
         """Join fields with a comma, or return None if empty."""
         return ",".join(fields) if fields else None
 
-    def _request(
-        self, method: str, endpoint: str, log_kwargs: bool = True, **kwargs
-    ) -> dict:
+    def _request(self, method: str, endpoint: str, **kwargs) -> dict:
         """
         Internal method to make a request to the WhatsApp Cloud API.
 
         Args:
             method: The HTTP method to use.
             endpoint: The endpoint to request.
-            log_kwargs: Whether to log the kwargs or not (in debug mode).
             **kwargs: Additional arguments to pass to the request.
 
         Returns:
@@ -71,19 +69,31 @@ class GraphAPI:
         Raises:
             WhatsAppError: If the request failed.
         """
+        kwargs.pop(
+            "log_kwargs", None
+        )  # backwards compatibility for old versions of pywa
         _logger.debug(
-            "Making request: %s %s with kwargs: %s",
+            "Making %s request to %s with kwargs: %s",
             method,
             endpoint,
-            kwargs if log_kwargs else "OMITTED",
+            {k: v if k != "files" else "<files>" for k, v in kwargs.items()},
         )
         try:
             res = self._session.request(method=method, url=endpoint, **kwargs)
-        except httpx.RequestError:
+        except (httpx.TimeoutException, httpx.ConnectError, httpx.ProxyError):
             _logger.info(
                 "You may want to provide your own `httpx.Client` instance. e.g. `WhatsApp(session=httpx.Client(timeout=..., proxies=...))`. See https://www.python-httpx.org/api/#client for more information."
             )
             raise
+        except httpx.RequestError:
+            _logger.debug("Request to %s failed: %s", endpoint)
+            raise
+        _logger.debug(
+            "Response code %d from %s: %s",
+            res.status_code,
+            endpoint,
+            res.text,
+        )
         if res.status_code >= 400:
             raise WhatsAppError.from_dict(error=res.json()["error"], response=res)
         return res.json()
@@ -115,7 +125,6 @@ class GraphAPI:
         return self._request(
             method="GET",
             endpoint="/oauth/access_token",
-            log_kwargs=False,
             params={
                 "grant_type": "client_credentials",
                 "client_id": client_id,
@@ -155,7 +164,6 @@ class GraphAPI:
         return self._request(
             method="GET",
             endpoint="/oauth/access_token",
-            log_kwargs=False,
             params={
                 "client_id": client_id,
                 "client_secret": client_secret,
@@ -415,9 +423,7 @@ class GraphAPI:
         }
         if ttl_minutes is not None:
             files["ttl_minutes"] = (None, str(ttl_minutes))
-        return self._request(
-            method="POST", endpoint=f"/{phone_id}/media", log_kwargs=False, files=files
-        )
+        return self._request(method="POST", endpoint=f"/{phone_id}/media", files=files)
 
     def get_media_url(self, media_id: str) -> dict:
         """
@@ -461,6 +467,7 @@ class GraphAPI:
         Returns:
             A context manager containing the response stream.
         """
+        _logger.debug("Streaming media from %s", media_url)
         return self._session.stream(
             method="GET",
             url=media_url,
@@ -494,9 +501,7 @@ class GraphAPI:
             params=self._filter_none(phone_number_id=phone_number_id),
         )
 
-    def send_raw_request(
-        self, method: str, endpoint: str, log_kwargs: bool = True, **kwargs
-    ) -> Any:
+    def send_raw_request(self, method: str, endpoint: str, **kwargs) -> Any:
         """
         Send a raw request to WhatsApp Cloud API.
 
@@ -506,7 +511,6 @@ class GraphAPI:
         Args:
             method: The HTTP method to use (e.g. ``POST``, ``GET``, etc.).
             endpoint: The endpoint to send the message to (e.g. ``/{phone_id}/messages/``).
-            log_kwargs: Whether to log the kwargs or not (in debug mode).
             **kwargs: Additional arguments to send with the request (e.g. ``json={...}, headers={...}``).
 
         Example:
@@ -526,9 +530,7 @@ class GraphAPI:
         Returns:
             The response from the WhatsApp Cloud API.
         """
-        return self._request(
-            method=method, endpoint=endpoint, log_kwargs=log_kwargs, **kwargs
-        )
+        return self._request(method=method, endpoint=endpoint, **kwargs)
 
     def send_message(
         self,
@@ -1621,7 +1623,6 @@ class GraphAPI:
         return self._request(
             method="POST",
             endpoint=f"/{flow_id}/assets",
-            log_kwargs=False,
             files={
                 "file": ("flow.json", flow_json, "application/json"),
                 "name": (None, "flow.json"),
@@ -2241,7 +2242,6 @@ class GraphAPI:
                 ),
             },
             content=file,
-            log_kwargs=False,
         )
 
     def get_upload_session(

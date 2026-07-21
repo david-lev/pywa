@@ -4,10 +4,9 @@ from contextlib import _AsyncGeneratorContextManager
 from typing import AsyncIterator
 
 from pywa.api import *  # noqa MUST BE IMPORTED FIRST
+from pywa.api import _logger  # noqa MUST BE IMPORTED FIRST
 
 from .errors import WhatsAppError
-
-_logger = logging.getLogger(__name__)
 
 
 class GraphAPIAsync(GraphAPI):
@@ -30,16 +29,13 @@ class GraphAPIAsync(GraphAPI):
     def __str__(self):
         return f"GraphAPIAsync(session={self._session!r})"
 
-    async def _request(
-        self, method: str, endpoint: str, log_kwargs: bool = True, **kwargs
-    ) -> dict:
+    async def _request(self, method: str, endpoint: str, **kwargs) -> dict:
         """
         Internal method to make a request to the WhatsApp Cloud API.
 
         Args:
             method: The HTTP method to use.
             endpoint: The endpoint to request.
-            log_kwargs: Whether to log the kwargs or not (in debug mode).
             **kwargs: Additional arguments to pass to the request.
 
         Returns:
@@ -48,19 +44,31 @@ class GraphAPIAsync(GraphAPI):
         Raises:
             WhatsAppError: If the request failed.
         """
+        kwargs.pop(
+            "log_kwargs", None
+        )  # backwards compatibility for old versions of pywa
         _logger.debug(
-            "Making request: %s %s with kwargs: %s",
+            "Making %s request to %s with kwargs: %s",
             method,
             endpoint,
-            kwargs if log_kwargs else "OMITTED",
+            {k: v if k != "files" else "<files>" for k, v in kwargs.items()},
         )
         try:
             res = await self._session.request(method=method, url=endpoint, **kwargs)
-        except httpx.RequestError:
+        except (httpx.TimeoutException, httpx.ConnectError, httpx.ProxyError):
             _logger.info(
                 "You may want to provide your own `httpx.Client` instance. e.g. `WhatsApp(session=httpx.Client(timeout=..., proxies=...))`. See https://www.python-httpx.org/api/#client for more information."
             )
             raise
+        except httpx.RequestError:
+            _logger.debug("Request to %s failed: %s", endpoint)
+            raise
+        _logger.debug(
+            "Response code %d from %s: %s",
+            res.status_code,
+            endpoint,
+            res.text,
+        )
         if res.status_code >= 400:
             raise WhatsAppError.from_dict(error=res.json()["error"], response=res)
         return res.json()
@@ -440,6 +448,7 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             A context manager containing the response stream.
         """
+        _logger.debug("Streaming media from %s", media_url)
         return self._session.stream(
             method="GET",
             url=media_url,
