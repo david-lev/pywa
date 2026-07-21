@@ -35,11 +35,12 @@ class FlowRequest(_FlowRequest):
 
     Attributes:
         version: The version of the ``data_api_version`` specified on the flow json.
-        flow_token: The flow token used to create the flow
+        flow_token: A Flow token generated and sent by you as part of the :class:`~pywa.types.callback.FlowButton`.
+        flow_token_signature: A Flow token signature is generated and sent by flows as part of the data exchange request payload. will only be sent with flows version >= 7.3 and data_api_version >=4.0. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/flows/guides/implementingyourflowendpoint#enhanced-endpoint-security>`_.
         action: The action that triggered the request.
         screen: The screen that triggered the request. If action is ``FlowRequestActionType.INIT`` or ``FlowRequestActionType.BACK``, this field may be ``None``.
         data: The data sent from the screen. If action is ``FlowRequestActionType.BACK`` or ``FlowRequestActionType.INIT``, this field may be ``None``.
-        raw: The raw data of the request.
+        raw: The raw data of the request (decrypted).
         raw_encrypted: The raw-encrypted data of the request.
     """
 

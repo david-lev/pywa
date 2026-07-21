@@ -618,6 +618,7 @@ def flow_request():
         version=...,
         action=FlowRequestActionType.DATA_EXCHANGE,
         flow_token="xyz",
+        flow_token_signature=...,
         screen="START",
         data={},
         raw=...,
