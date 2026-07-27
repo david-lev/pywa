@@ -1131,112 +1131,113 @@ _UNDERSCORE_FIELDS = {
 
 _PY_TO_JSON_TYPES = {
     str: "string",
-    bool: "boolean",  # MUST BE BEFORE int!!
+    bool: "boolean",  # MUST BE BEFORE int (bool is a subclass of int)
     int: "number",
     float: "number",
 }
 
-_DATA_SOURCE_SKIP_FIELDS = {
-    "on_select_action",
-    "on-select-action",
-    "on_unselect_action",
-    "on-unselect-action",
-}
-
-_NAVIGATION_ITEM_SKIP_FIELDS = {
-    "start",
-    "end",
-    "badge",
-    "tags",
-    "on-click-action",
-}
+# Omitted from ScreenData schema ``properties`` (still present in ``__example__``).
+_DATA_SOURCE_SKIP_FIELDS = frozenset(
+    {
+        "on_select_action",
+        "on-select-action",
+        "on_unselect_action",
+        "on-unselect-action",
+    }
+)
+_NAVIGATION_ITEM_SKIP_FIELDS = frozenset(
+    {
+        "start",
+        "end",
+        "badge",
+        "tags",
+        "on-click-action",
+    }
+)
 
 
 class _FlowJSONEncoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, _FlowExpr):
-            return o.to_str()
-        elif isinstance(o, _ScreenDatasContainer):
-            data = {}
-            for item in o:
-                if isinstance(item, ScreenDataUpdate):
-                    data[item.key] = item.new_value
-                    continue
+    def default(self, o: Any) -> str | dict:
+        match o:
+            case _FlowExpr():
+                return o.to_str()
+            case _ScreenDatasContainer():
+                return self._encode_screen_datas(o)
+            case DataSource() | NavigationItem():
+                return o.to_dict()
+            case datetime.date():
+                return o.strftime("%Y-%m-%d")
+            case re.Pattern():
+                return o.pattern
+            case _:
+                return super().default(o)
 
-                try:
-                    data[item.key] = dict(
-                        **self._get_json_type(item.example), __example__=item.example
-                    )
-                except KeyError as e:
-                    raise ValueError(
-                        f"ScreenData: Invalid example type {type(item.example)!r} for {item.key!r}."
-                    ) from e
-            return data
-        elif isinstance(o, (DataSource, NavigationItem)):
-            return o.to_dict()
-        elif isinstance(o, datetime.date):
-            return o.strftime("%Y-%m-%d")
-        elif isinstance(o, re.Pattern):
-            return o.pattern
-        return super().default(o)
+    def _encode_screen_datas(self, container: _ScreenDatasContainer) -> dict[str, Any]:
+        data: dict[str, Any] = {}
+        for item in container:
+            if isinstance(item, ScreenDataUpdate):
+                data[item.key] = item.new_value
+                continue
+            try:
+                schema = self._get_json_type(item.example)
+            except (TypeError, ValueError) as e:
+                raise ValueError(
+                    f"ScreenData: Invalid example type {type(item.example)!r} for {item.key!r}."
+                ) from e
+            data[item.key] = {**schema, "__example__": item.example}
+        return data
 
-    def _get_json_type(
-        self,
-        example: str
-        | int
-        | float
-        | bool
-        | DataSource
-        | Iterable[str | int | float | bool | DataSource | NavigationItem],
-    ) -> dict:
-        for (
-            py_type,
-            json_type,
-        ) in _PY_TO_JSON_TYPES.items():  # check for subtypes - e.g. enum
+    def _get_json_type(self, example: Any) -> dict[str, Any]:
+        """Infer a Flow JSON schema fragment from a Python example value."""
+        for py_type, json_type in _PY_TO_JSON_TYPES.items():
             if isinstance(example, py_type):
                 return {"type": json_type}
 
         if isinstance(example, (dict, DataSource)):
             return {"type": "object", "properties": self._get_obj_props(example)}
-        elif isinstance(example, Iterable):
-            try:
-                first = next(iter(example))
-            except StopIteration:
-                raise ValueError(
-                    "At least one example is required when using Iterable"
-                ) from None
-            if isinstance(first, (str, int, float, bool)):
-                return {
-                    "type": "array",
-                    "items": self._get_json_type(first),
-                }
-            elif isinstance(first, (dict, DataSource, NavigationItem)):
-                return {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": self._get_obj_props(first),
-                    },
-                }
-            else:
-                raise ValueError(f"Invalid example type {type(first)!r} for {first!r}.")
-        else:
-            raise KeyError(f"Invalid example type {type(example)!r} for {example!r}.")
 
-    def _get_obj_props(self, item: dict | DataSource | NavigationItem):
-        _skip_fields = (
-            _DATA_SOURCE_SKIP_FIELDS
-            if isinstance(item, DataSource)
-            else _NAVIGATION_ITEM_SKIP_FIELDS
-            if isinstance(item, NavigationItem)
-            else ()
-        )
+        if isinstance(example, Iterable) and not isinstance(example, (str, bytes)):
+            return self._get_array_type(example)
+
+        raise TypeError(f"Invalid example type {type(example)!r} for {example!r}.")
+
+    def _get_array_type(self, example: Iterable[Any]) -> dict[str, Any]:
+        try:
+            first = next(iter(example))
+        except StopIteration:
+            raise ValueError(
+                "At least one example is required when using Iterable"
+            ) from None
+
+        if isinstance(first, tuple(_PY_TO_JSON_TYPES.keys())):
+            return {"type": "array", "items": self._get_json_type(first)}
+
+        if isinstance(first, (dict, DataSource, NavigationItem)):
+            return {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": self._get_obj_props(first),
+                },
+            }
+
+        raise ValueError(f"Invalid example type {type(first)!r} for {first!r}.")
+
+    def _get_obj_props(
+        self, item: dict[str, Any] | DataSource | NavigationItem
+    ) -> dict[str, Any]:
+        if isinstance(item, DataSource):
+            skip = _DATA_SOURCE_SKIP_FIELDS
+        elif isinstance(item, NavigationItem):
+            skip = _NAVIGATION_ITEM_SKIP_FIELDS
+        else:
+            skip = frozenset()
+
+        entries = item.items() if isinstance(item, dict) else item.to_dict().items()
         return {
-            k: self._get_json_type(v)
-            for k, v in (
-                item.items() if isinstance(item, dict) else item.to_dict().items()
-            )
-            if v is not None and k not in _skip_fields
+            key: self._get_json_type(value)
+            for key, value in entries
+            if value is not None and key not in skip
         }
 
 
