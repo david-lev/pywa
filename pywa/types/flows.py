@@ -80,6 +80,8 @@ __all__ = [
     "ScreenDataRef",
     "ComponentRef",
     "FlowStr",
+    "Condition",
+    "MathExpression",
     "TextHeading",
     "TextSubheading",
     "TextBody",
@@ -1152,7 +1154,7 @@ _NAVIGATION_ITEM_SKIP_FIELDS = {
 
 class _FlowJSONEncoder(json.JSONEncoder):
     def default(self, o):
-        if isinstance(o, _Expr):
+        if isinstance(o, _FlowExpr):
             return o.to_str()
         elif isinstance(o, _ScreenDatasContainer):
             data = {}
@@ -1542,7 +1544,7 @@ class _ScreenDatasContainer(Sequence[ScreenData | ScreenDataUpdate]):
         return len(self._datas)
 
     def __repr__(self):
-        return f"ScreenDatasContainer({self._datas})"
+        return repr(self._datas)
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1683,136 +1685,164 @@ class FlowComponentType(helpers.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class _Expr(abc.ABC):
-    """Base for refs, conditions, and expressions"""
+_LiteralT: TypeAlias = bool | int | float | str
+_CompareOperatorT: TypeAlias = Literal["==", "!=", ">", ">=", "<", "<="]
+_LogicalOperatorT: TypeAlias = Literal["&&", "||", "!"]
+_ArithmeticOperatorT: TypeAlias = Literal["+", "-", "*", "/", "%"]
+
+
+class _FlowExpr(abc.ABC):
+    """Base for flow dynamic expressions rendered to Flow JSON strings."""
 
     @abc.abstractmethod
     def to_str(self) -> str: ...
 
+    def _fragment(self) -> str:
+        """Raw fragment for embedding in larger expressions (no backticks)."""
+        return self.to_str()
+
     def __str__(self) -> str:
         return self.to_str()
 
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.to_str()})"
+    @staticmethod
+    def _format_literal(val: _LiteralT) -> str:
+        match val:
+            case str():
+                return f"'{val}'"
+            case bool():
+                return str(val).lower()
+            case int() | float():
+                return str(val)
+            case _:
+                raise TypeError(f"Unsupported literal type: {type(val)!r}")
 
     @staticmethod
-    def _format_value(val: _Expr | bool | int | float | str) -> str:
-        if isinstance(val, _Expr):
-            return val.to_str()
-        elif isinstance(val, str):
-            return f"'{val}'"
-        elif isinstance(val, bool):
-            return str(val).lower()
-        return str(val)
+    def _format_operand(val: _ConditionOperandT) -> str:
+        if isinstance(val, _FlowExpr):
+            return val._fragment()
+        return _FlowExpr._format_literal(val)
 
 
-class _Math(_Expr, abc.ABC):
-    """Base for math expressions"""
+class _ArithmeticOpsMixin(_FlowExpr, abc.ABC):
+    """Mixin that adds arithmetic operators and builds :class:`MathExpression` nodes."""
 
-    def _to_math(self, left: _MathT, operator: str, right: _MathT) -> MathExpression:
-        return MathExpression(
-            f"({self._format_value(left)} {operator} {self._format_value(right)})"
-        )
+    def _binop(
+        self,
+        operator: _ArithmeticOperatorT,
+        other: _ArithmeticOperandT,
+        *,
+        reverse: bool = False,
+    ) -> MathExpression:
+        left, right = (other, self) if reverse else (self, other)
+        return MathExpression(left, operator, right)
 
-    def __add__(self, other: _MathT) -> MathExpression:
-        return self._to_math(self, "+", other)
+    def __add__(self, other: _ArithmeticOperandT) -> MathExpression:
+        return self._binop("+", other)
 
-    def __radd__(self, other: _MathT) -> MathExpression:
-        return self._to_math(other, "+", self)
+    def __radd__(self, other: _ArithmeticOperandT) -> MathExpression:
+        return self._binop("+", other, reverse=True)
 
-    def __sub__(self, other: _MathT) -> MathExpression:
-        return self._to_math(self, "-", other)
+    def __sub__(self, other: _ArithmeticOperandT) -> MathExpression:
+        return self._binop("-", other)
 
-    def __rsub__(self, other: _MathT) -> MathExpression:
-        return self._to_math(other, "-", self)
+    def __rsub__(self, other: _ArithmeticOperandT) -> MathExpression:
+        return self._binop("-", other, reverse=True)
 
-    def __mul__(self, other: _MathT) -> MathExpression:
-        return self._to_math(self, "*", other)
+    def __mul__(self, other: _ArithmeticOperandT) -> MathExpression:
+        return self._binop("*", other)
 
-    def __rmul__(self, other: _MathT) -> MathExpression:
-        return self._to_math(other, "*", self)
+    def __rmul__(self, other: _ArithmeticOperandT) -> MathExpression:
+        return self._binop("*", other, reverse=True)
 
-    def __truediv__(self, other: _MathT) -> MathExpression:
-        return self._to_math(self, "/", other)
+    def __truediv__(self, other: _ArithmeticOperandT) -> MathExpression:
+        return self._binop("/", other)
 
-    def __rtruediv__(self, other: _MathT) -> MathExpression:
-        return self._to_math(other, "/", self)
+    def __rtruediv__(self, other: _ArithmeticOperandT) -> MathExpression:
+        return self._binop("/", other, reverse=True)
 
-    def __mod__(self, other: _MathT) -> MathExpression:
-        return self._to_math(self, "%", other)
+    def __mod__(self, other: _ArithmeticOperandT) -> MathExpression:
+        return self._binop("%", other)
 
-    def __rmod__(self, other: _MathT) -> MathExpression:
-        return self._to_math(other, "%", self)
+    def __rmod__(self, other: _ArithmeticOperandT) -> MathExpression:
+        return self._binop("%", other, reverse=True)
 
 
-class _Combine(_Expr, abc.ABC):
-    """ "Base for combining refs and conditions"""
+_ArithmeticOperandT: TypeAlias = _ArithmeticOpsMixin | int | float
 
-    def _get_left_right(self, right: Ref | Condition) -> tuple[str, str]:
-        return self.to_str() if isinstance(
-            self, Ref
-        ) else self._expression, right.to_str() if isinstance(
-            right, Ref
-        ) else right._expression
 
-    def __and__(self, other: Ref | Condition) -> Condition:
-        left, right = self._get_left_right(other)
-        return Condition(f"({left} && {right})")
+class _LogicalOpsMixin(_FlowExpr, abc.ABC):
+    """Mixin that adds logical operators and builds :class:`Condition` nodes."""
 
-    def __or__(self, other: Ref | Condition) -> Condition:
-        left, right = self._get_left_right(other)
-        return Condition(f"({left} || {right})")
+    def _combine(
+        self, other: _LogicalOperandT, operator: _LogicalOperatorT
+    ) -> Condition:
+        if operator == "!":
+            raise ValueError("Use __invert__ for unary logical not")
+        return Condition(self, operator, other)
+
+    def __and__(self, other: _LogicalOperandT) -> Condition:
+        return self._combine(other, "&&")
+
+    def __or__(self, other: _LogicalOperandT) -> Condition:
+        return self._combine(other, "||")
 
     def __invert__(self) -> Condition:
-        return Condition(
-            f"!{self.to_str() if isinstance(self, Ref) else self._expression}"
-        )
+        return Condition(self, "!")
 
 
-class Ref(_Math, _Combine, Generic[_ScreenDataValTypeVar]):
+class _ComparableOpsMixin(_FlowExpr, abc.ABC):
+    """Mixin that adds comparison operators and builds :class:`Condition` nodes."""
+
+    def _to_condition(
+        self, right: _CompareOperandT, operator: _CompareOperatorT
+    ) -> Condition:
+        return Condition(self, operator, right)
+
+    def __eq__(self, other: _CompareOperandT) -> Condition:
+        return self._to_condition(other, "==")
+
+    def __ne__(self, other: _CompareOperandT) -> Condition:
+        return self._to_condition(other, "!=")
+
+    def __gt__(self, other: _OrderCompareOperandT) -> Condition:
+        return self._to_condition(other, ">")
+
+    def __ge__(self, other: _OrderCompareOperandT) -> Condition:
+        return self._to_condition(other, ">=")
+
+    def __lt__(self, other: _OrderCompareOperandT) -> Condition:
+        return self._to_condition(other, "<")
+
+    def __le__(self, other: _OrderCompareOperandT) -> Condition:
+        return self._to_condition(other, "<=")
+
+
+class Ref(_ArithmeticOpsMixin, _LogicalOpsMixin, _ComparableOpsMixin):
     """Base class for all references"""
+
+    __slots__ = ("_prefix", "_field", "_screen_id")
 
     def __init__(self, prefix: str, field: str, screen: Screen | str | None = None):
         self._prefix = prefix
         self._field = field
-        self._screen = (
-            f"screen.{screen.id if isinstance(screen, Screen) else screen}."
-            if screen
-            else ""
-        )
+        self._screen_id = screen.id if isinstance(screen, Screen) else screen
 
     def to_str(self) -> str:
+        screen_prefix = f"screen.{self._screen_id}." if self._screen_id else ""
         return "${%s%s.%s}" % (
-            self._screen,
+            screen_prefix,
             self._prefix,
             self._field,
         )
 
-    def _to_condition(
-        self, right: Ref | bool | int | float | str, operator: str
-    ) -> Condition:
-        return Condition(f"({self.to_str()} {operator} {self._format_value(right)})")
-
-    def __eq__(self, other: Ref | bool | int | float | str) -> Condition:
-        return self._to_condition(other, "==")
-
-    def __ne__(self, other: Ref | bool | int | float | str) -> Condition:
-        return self._to_condition(other, "!=")
-
-    def __gt__(self, other: Ref | int | float) -> Condition:
-        return self._to_condition(other, ">")
-
-    def __ge__(self, other: Ref | int | float) -> Condition:
-        return self._to_condition(other, ">=")
-
-    def __lt__(self, other: Ref | int | float) -> Condition:
-        return self._to_condition(other, "<")
-
-    def __le__(self, other: Ref | int | float) -> Condition:
-        return self._to_condition(other, "<=")
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}("
+            f"prefix={self._prefix!r}, field={self._field!r}, screen={self._screen_id!r})"
+        )
 
 
-class MathExpression(_Math):
+class MathExpression(_ArithmeticOpsMixin):
     """
     This class automatically created when using the arithmetic operators on :class:`Ref` objects.
 
@@ -1864,22 +1894,40 @@ class MathExpression(_Math):
           - :python:`age.ref % 20`
     """
 
-    def __init__(self, expression: str):
-        self._expression = expression
+    __slots__ = ("left", "operator", "right")
 
-    def __repr__(self) -> str:
-        return f"MathExpression({self._expression})"
+    def __init__(
+        self,
+        left: _ArithmeticOperandT,
+        operator: _ArithmeticOperatorT,
+        right: _ArithmeticOperandT,
+    ):
+        self.left = left
+        self.operator = operator
+        self.right = right
 
     def to_str(self) -> str:
-        return self._expression
+        return (
+            f"({self._format_operand(self.left)} {self.operator} "
+            f"{self._format_operand(self.right)})"
+        )
+
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}("
+            f"left={self.left!r}, operator={self.operator!r}, right={self.right!r})"
+        )
 
 
-_MathT: TypeAlias = _Math | MathExpression | Ref | int | float
+_CompareOperandT: TypeAlias = Ref | _LiteralT
+_OrderCompareOperandT: TypeAlias = Ref | int | float
+_ConditionOperandT: TypeAlias = _FlowExpr | _LiteralT
+_FlowStrValueT: TypeAlias = Ref | MathExpression
 
 _RefT = TypeVar("_RefT", bound=Ref)
 
 
-class Condition(_Combine):
+class Condition(_LogicalOpsMixin):
     """
     This class automatically created when using the comparison operators on :class:`Ref` objects.
 
@@ -1942,19 +1990,44 @@ class Condition(_Combine):
           - :python:`~opt_in.ref`
     """
 
-    def __init__(self, expression: str):
-        self._expression = expression
-        self.wrap_with_backticks = True
+    __slots__ = ("left", "operator", "right", "wrap_with_backticks")
 
-    def __repr__(self) -> str:
-        return f"Condition({self._expression})"
+    def __init__(
+        self,
+        left: _ConditionOperandT,
+        operator: _CompareOperatorT | _LogicalOperatorT,
+        right: _ConditionOperandT | None = None,
+        *,
+        wrap_with_backticks: bool = True,
+    ) -> None:
+        self.left = left
+        self.operator = operator
+        self.right = right
+        self.wrap_with_backticks = wrap_with_backticks
+
+    def _fragment(self) -> str:
+        if self.operator == "!":
+            return f"!{self._format_operand(self.left)}"
+        if self.right is None:
+            raise ValueError("Binary condition requires a right operand")
+        return (
+            f"({self._format_operand(self.left)} {self.operator} "
+            f"{self._format_operand(self.right)})"
+        )
 
     def to_str(self) -> str:
+        expression = self._fragment()
+        return expression if not self.wrap_with_backticks else f"`{expression}`"
+
+    def __repr__(self) -> str:
         return (
-            self._expression
-            if not self.wrap_with_backticks
-            else f"`{self._expression}`"
+            f"{self.__class__.__name__}("
+            f"left={self.left!r}, operator={self.operator!r}, right={self.right!r}, "
+            f"wrap_with_backticks={self.wrap_with_backticks!r})"
         )
+
+
+_LogicalOperandT: TypeAlias = Ref | Condition
 
 
 class ScreenDataRef(Ref, Generic[_ScreenDataValTypeVar]):
@@ -1991,6 +2064,11 @@ class ScreenDataRef(Ref, Generic[_ScreenDataValTypeVar]):
 
     def __init__(self, key: str, screen: Screen | str | None = None):
         super().__init__(prefix="data", field=key, screen=screen)
+
+    def __repr__(self) -> str:
+        if self._screen_id:
+            return f"{self.__class__.__name__}({self._field!r}, screen={self._screen_id!r})"
+        return f"{self.__class__.__name__}({self._field!r})"
 
 
 class ComponentRef(Ref, Generic[_ScreenDataValTypeVar]):
@@ -2029,8 +2107,13 @@ class ComponentRef(Ref, Generic[_ScreenDataValTypeVar]):
     def __init__(self, component_name: str, screen: Screen | str | None = None):
         super().__init__(prefix="form", field=component_name, screen=screen)
 
+    def __repr__(self) -> str:
+        if self._screen_id:
+            return f"{self.__class__.__name__}({self._field!r}, screen={self._screen_id!r})"
+        return f"{self.__class__.__name__}({self._field!r})"
 
-class FlowStr(_Expr):
+
+class FlowStr(_FlowExpr):
     """
     Dynamic string that uses variables and math expressions. This is a helper class to avoid all the
     escaping and wrapping with quotes when using string concatenation.
@@ -2067,7 +2150,9 @@ class FlowStr(_Expr):
 
     """
 
-    def __init__(self, string: str, **variables: Ref | MathExpression):
+    __slots__ = ("string", "variables")
+
+    def __init__(self, string: str, **variables: _FlowStrValueT):
         """
         Initialize the dynamic string.
 
@@ -2079,9 +2164,16 @@ class FlowStr(_Expr):
         self.variables = variables
 
     def to_str(self) -> str:
+        rendered = {
+            key: value.to_str() if isinstance(value, _FlowExpr) else value
+            for key, value in self.variables.items()
+        }
         escaped = re.sub(r"(?<!\\)([`'])", r"\\\\\1", self.string)
-        wrapped = re.sub(r"([^{}]+)(?=\{|$)", r" '\1' ", escaped)
-        return f"`{wrapped.format(**self.variables)}`"
+        wrapped = re.sub(r"([^{}]+)(?={|$)", r" '\1' ", escaped)
+        return f"`{wrapped.format(**rendered)}`"
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(string={self.string!r}, {', '.join(f'{k}={v!r}' for k, v in self.variables.items())})"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
