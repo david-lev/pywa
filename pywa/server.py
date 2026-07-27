@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Callable
 
 from . import _helpers as helpers
 from . import errors, handlers, utils
-from .errors import PywaDeprecationWarning
+from .errors import PywaDeprecationWarning, PywaWarning
 from .types import AccountUpdate, MessageType, RawUpdate, UserPreferenceCategory
 from .types.base_update import (
     BaseUpdate,
@@ -280,7 +280,7 @@ class Server:
             warnings.warn(
                 message="No `app_secret` provided. Signature validation will be disabled "
                 "(not recommended! set `validate_updates=False` to suppress this warning)",
-                category=UserWarning,
+                category=PywaWarning,
                 stacklevel=1,
             )
             self._validate_updates = False

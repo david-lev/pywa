@@ -10,11 +10,15 @@ from typing import ClassVar, Iterable, Type
 import httpx
 
 
-class PywaDeprecationWarning(UserWarning):
+class PywaWarning(UserWarning):
+    """Base warning for all warnings raised by pywa."""
+
+
+class PywaDeprecationWarning(PywaWarning):
     """Warning for deprecated features in pywa."""
 
 
-class PywaUnknownEnumMemberWarning(UserWarning):
+class PywaUnknownEnumMemberWarning(PywaWarning):
     """Warning for unknown enum members in pywa."""
 
 

@@ -14,6 +14,7 @@ import warnings
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from . import utils
+from .errors import PywaWarning
 
 if TYPE_CHECKING:
     from .client import WhatsApp
@@ -191,7 +192,7 @@ def _warn_anyio_thread_limit(wa: "WhatsApp") -> None:
                 f"  1. [RECOMMENDED] Migrate to `pywa_async` for fully non-blocking asynchronous listeners.\n"
                 f"  2. Enforce strict, shorter `timeout` values on all `.wait_for_...` calls to free up threads faster.\n"
                 f"  3. {starlette_instructions if wa._server_type == utils.CustomServerType.STARLETTE else fastapi_instructions}\n",
-                RuntimeWarning,
+                PywaWarning,
                 stacklevel=3,
             )
 
@@ -262,7 +263,7 @@ class _Listeners:
         if timeout is None:
             warnings.warn(
                 "Listening without a `timeout` is highly discouraged as it can lead to memory leaks if the listener is never stopped.",
-                UserWarning,
+                PywaWarning,
                 stacklevel=3,
             )
         _warn_anyio_thread_limit(self)
