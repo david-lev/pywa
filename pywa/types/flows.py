@@ -1269,6 +1269,32 @@ class FlowJSON:
             self.data_api_version = str(self.data_api_version)
             utils.Version.FLOW_DATA_API.validate_min_version(self.data_api_version)
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> FlowJSON:
+        """
+        Construct a :class:`FlowJSON` from a parsed Flow JSON dict.
+
+        - Parses screens, layouts, components, actions, screen data, refs,
+          conditions, math expressions and :class:`FlowStr` values into typed objects.
+        """
+        from . import _flows_from_json
+
+        return _flows_from_json.parse_flow_json(data)
+
+    @classmethod
+    def from_json(cls, json_str: str | bytes) -> FlowJSON:
+        """
+        Construct a :class:`FlowJSON` from a Flow JSON string.
+
+        Example::
+
+            >>> flow = FlowJSON.from_json(pathlib.Path("flow.json").read_text())
+            >>> flow.screens[0].id
+        """
+        from . import _flows_from_json
+
+        return _flows_from_json.parse_flow_json_str(json_str)
+
     def to_json(self):
         return json.dumps(
             dataclasses.asdict(
