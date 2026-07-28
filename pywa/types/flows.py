@@ -1615,8 +1615,7 @@ class LayoutType(helpers.StrEnum):
         SINGLE_COLUMN: A vertical flexbox container that stacks the components in a single column.
     """
 
-    _check_value = None
-    _modify_value = None
+    _normalize = lambda s: s.replace("_", " ").title().replace(" ", "")  # noqa: E731
 
     SINGLE_COLUMN = "SingleColumnLayout"
 
@@ -1655,8 +1654,7 @@ class Component(abc.ABC):
 class FlowComponentType(helpers.StrEnum):
     """Internal component types"""
 
-    _check_value = None
-    _modify_value = None
+    _normalize = lambda s: s.replace("_", " ").title().replace(" ", "")  # noqa: E731
 
     FORM = "Form"
     TEXT_HEADING = "TextHeading"
@@ -2352,8 +2350,7 @@ class FontWeight(helpers.StrEnum):
         NORMAL: Normal text
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     BOLD = "bold"
     ITALIC = "italic"
@@ -2580,8 +2577,7 @@ class InputType(helpers.StrEnum):
         PHONE: A phone number (keyboard layout is numeric, with a special character for the + symbol).
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     TEXT = "text"
     NUMBER = "number"
@@ -2601,8 +2597,7 @@ class LabelVariant(helpers.StrEnum):
         LARGE: Label will have a more prominent style and will be displayed across multiple lines if needed.
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     LARGE = "large"
 
@@ -2722,8 +2717,7 @@ class MediaSize(helpers.StrEnum):
         LARGE: Large size
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     REGULAR = "regular"
     LARGE = "large"
@@ -3278,8 +3272,7 @@ class CalendarPickerMode(helpers.StrEnum):
         RANGE: Allows to select start and end dates.
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     SINGLE = "single"
     RANGE = "range"
@@ -3301,8 +3294,7 @@ class CalendarDay(helpers.StrEnum):
         SUN: Sunday
     """
 
-    _check_value = str.istitle
-    _modify_value = str.title
+    _normalize = str.title
 
     MON = "Mon"
     TUE = "Tue"
@@ -3467,8 +3459,7 @@ class ScaleType(helpers.StrEnum):
         CONTAIN: Image is contained within the image container with the original aspect ratio.
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     COVER = "cover"
     CONTAIN = "contain"
@@ -3590,8 +3581,7 @@ class PhotoSource(helpers.StrEnum):
         GALLERY: User can only take a photo
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     CAMERA_GALLERY = "camera_gallery"
     CAMERA = "camera"
@@ -3815,8 +3805,7 @@ class FlowActionType(helpers.StrEnum):
          (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#update-data-action>`_).
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     COMPLETE = "complete"
     DATA_EXCHANGE = "data_exchange"
@@ -3836,8 +3825,7 @@ class NextType(helpers.StrEnum):
         PLUGIN: Trigger a plugin
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     SCREEN = "screen"
     PLUGIN = "plugin"

@@ -76,8 +76,7 @@ class MessageType(helpers.StrEnum):
     EDIT = "edit"
     REVOKE = "revoke"
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
 
 class InteractiveType(helpers.StrEnum):
@@ -88,8 +87,7 @@ class InteractiveType(helpers.StrEnum):
 
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     BUTTON = "button"
     CTA_URL = "cta_url"
@@ -390,8 +388,7 @@ class ContactsOrigin(helpers.StrEnum):
 
     UNKNOWN = "UNKNOWN"
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
 
 class ContactList(tuple[Contact, ...]):
@@ -771,8 +768,7 @@ class BusinessVerificationStatus(helpers.StrEnum):
 
     UNKNOWN = "UNKNOWN"
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
 
 class MarketingMessagesLiteAPIStatus(helpers.StrEnum):
@@ -1677,8 +1673,7 @@ class UsernameStatusType(helpers.StrEnum):
         DELETED: Indicates the username has been deleted via the WhatsApp Business app.
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     APPROVED = "approved"
     RESERVED = "reserved"

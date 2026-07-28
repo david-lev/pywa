@@ -301,8 +301,7 @@ class CallPermissionResponse(helpers.StrEnum):
         REJECT: The user rejected the call permission request.
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     ACCEPT = "accept"
     REJECT = "reject"
@@ -319,8 +318,7 @@ class CallPermissionResponseSource(helpers.StrEnum):
         AUTOMATIC: An automatic permission approval due to the WhatsApp user initiating the call
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     USER_ACTION = "user_action"
     AUTOMATIC = "automatic"
@@ -360,8 +358,7 @@ class CallEvent(helpers.StrEnum):
         TERMINATE: The call is terminated.
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     CONNECT = "connect"
     TERMINATE = "terminate"
@@ -1020,8 +1017,7 @@ class CallPermissionStatus(helpers.StrEnum):
         TEMPORARY: Temporary permission granted.
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     NO_PERMISSION = "no_permission"
     TEMPORARY = "temporary"

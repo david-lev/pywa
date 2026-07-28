@@ -37,8 +37,7 @@ class GroupJoinApprovalMode(helpers.StrEnum):
 
     UNKNOWN = "UNKNOWN"
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)

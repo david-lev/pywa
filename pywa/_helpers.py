@@ -44,48 +44,50 @@ DOWNLOAD_CHUNK_SIZE = 64 * 1024
 
 
 class StrEnum(str, enum.Enum):
-    """A string-based enum that allows for custom handling of missing values."""
+    """A string-based enum with forward compatibility for unknown API values."""
 
-    _check_value: ClassVar[Callable[[str], bool] | None] = str.isupper
-    """Check if the value needs to be modified or not."""
-    _modify_value: ClassVar[Callable[[str], str] | None] = str.upper
-    """Modify the value if needed."""
+    _normalize: ClassVar[Callable[[str], str] | None] = str.upper
+    """
+    Normalizes incoming values before attempting a lookup.
 
-    def __str__(self):
-        """Return the string representation of the enum member."""
+    Set to ``None`` to disable normalization.
+    """
+
+    def __str__(self) -> str:
         return self.value
 
-    def __repr__(self):
-        return f"{self.__class__.__name__}.{self.name}"
-
-    def __init_subclass__(cls, *args, **kwargs):
-        """Ensure that the enum has an 'UNKNOWN' member to handle missing values."""
-        if list(cls) and not hasattr(
-            cls, "UNKNOWN"
-        ):  # in python3.10 __init_subclass__ does not have access to enum members
-            raise TypeError(
-                f"Enum {cls.__name__} must have an 'UNKNOWN' member to handle missing values."
-            )
-        return super().__init_subclass__(*args, **kwargs)
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}.{self.name}"
 
     @classmethod
-    def _missing_(cls, value: str):
-        """Handle missing values in the enum."""
-        if callable(cls._check_value) and not cls._check_value(value):
-            return cls(cls._modify_value(value))
+    def _missing_(cls, value: object):
+        if not isinstance(value, str):
+            return super()._missing_(value)
+        if cls._normalize is not None:
+            member = cls._value2member_map_.get(cls._normalize(value))
+            if member is not None:
+                return member
 
         warnings.warn(
             message=(
-                f"Unknown value '{value}' for enum '{cls.__name__}'. Defaulting to '{cls.__name__}.UNKNOWN'.\n"
-                "This usually means the WhatsApp API introduced a new value that your current version of pywa doesn't recognize.\n"
+                f"Unknown {cls.__name__} value: '{value}'"
+                f"Defaulting to {cls.__name__}.UNKNOWN.\n"
+                "This usually means the WhatsApp API introduced a new value "
+                "that your current version of pywa doesn't recognize.\n"
                 "Please upgrade to the latest version (`pip install -U pywa`).\n"
-                "If you are already on the latest version, please report this on https://github.com/david-lev/pywa/issues."
+                "If you are already on the latest version, please report this at:\n"
+                "https://github.com/david-lev/pywa/issues"
             ),
             category=PywaUnknownEnumMemberWarning,
             stacklevel=4,
         )
-        # noinspection PyUnresolvedReferences
-        return cls.UNKNOWN
+
+        try:
+            return cls.UNKNOWN
+        except AttributeError:
+            raise TypeError(
+                f"{cls.__name__} must define an UNKNOWN enum member."
+            ) from None
 
 
 class FromDict:

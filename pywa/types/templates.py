@@ -666,8 +666,7 @@ class ParamType(helpers.StrEnum):
     `'Parameter object' on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages#parameter-object>`_
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     TEXT = "text"
     CURRENCY = "currency"
@@ -698,8 +697,7 @@ class TemplateLanguage(helpers.StrEnum):
     <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/supported-languages>`_
     """
 
-    _check_value = None
-    _modify_value = None
+    _normalize = None
 
     AFRIKAANS = "af"
     ALBANIAN = "sq"

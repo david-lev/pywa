@@ -43,8 +43,7 @@ class MessageStatusType(helpers.StrEnum):
         FAILED: failed — Indicates failure to send or deliver the message to the WhatsApp user's device (WhatsApp UI equivalent: Red error triangle).
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     SENT = "sent"
     DELIVERED = "delivered"
@@ -72,8 +71,7 @@ class ConversationCategory(helpers.StrEnum):
         UNKNOWN: The conversation category is unknown.
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     AUTHENTICATION = "authentication"
     AUTHENTICATION_INTERNATIONAL = "authentication_international"
@@ -232,8 +230,7 @@ class PricingType(helpers.StrEnum):
         FREE_ENTRY_POINT: Indicates the message is free because it is part of a `free-entry point conversation <https://developers.facebook.com/docs/whatsapp/pricing#free-entry-point-conversations>`_.
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     REGULAR = "regular"
     FREE_CUSTOMER_SERVICE = "free_customer_service"
@@ -257,8 +254,7 @@ class PricingCategory(helpers.StrEnum):
         GENERAL_PURPOSE_AI: Indicates a `general-purpose AI <https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing/ai-providers>`_ rate applied.
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     AUTHENTICATION = "authentication"
     AUTHENTICATION_INTERNATIONAL = "authentication_international"
