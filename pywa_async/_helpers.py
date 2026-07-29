@@ -195,7 +195,11 @@ async def internal_upload_media(
             )
         case MediaSource.BYTES_GEN:
             media_info = MediaInfo(
-                content=GeneratorStreamer(media),
+                content=(
+                    GeneratorStreamer(generator=media)
+                    if USE_FAKE_GEN_STREAM
+                    else b"".join(media)
+                ),
                 filename=None,
                 mime_type=None,
                 length=None,
@@ -221,16 +225,25 @@ async def internal_upload_media(
         or media_info.filename
         or media_types_default_filenames.get(media_type, "file.txt")
     )
+    final_mimetype = (
+        mime_type
+        or media_info.mime_type
+        or media_types_default_mime_types.get(media_type, "text/plain")
+    )
     try:
+        logger.debug(
+            "Uploading media to WhatsApp servers: filename=%s, mime_type=%s, length=%s",
+            final_filename,
+            final_mimetype,
+            media_info.length,
+        )
         return Media(
             _client=wa,
             _id=(
                 await wa.api.upload_media(
                     phone_id=phone_id,
                     media=media_info.content,
-                    mime_type=mime_type
-                    or media_info.mime_type
-                    or media_types_default_mime_types.get(media_type, "text/plain"),
+                    mime_type=final_mimetype,
                     filename=final_filename,
                     ttl_minutes=ttl_minutes,
                 )
@@ -371,7 +384,14 @@ async def internal_upload_file(
             )
         if media_info.length is None:
             raise ValueError("Media must have a known length.")
-
+        final_filename = media_info.filename or fallback_filename
+        final_mimetype = mime_type or media_info.mime_type or fallback_mime_type
+        logger.debug(
+            "Uploading file to Resumable Upload API: filename=%s, mime_type=%s, length=%s",
+            final_filename,
+            final_mimetype,
+            media_info.length,
+        )
         return (
             await wa.api.upload_file(
                 upload_session_id=(
@@ -382,11 +402,9 @@ async def internal_upload_file(
                             method_arg="app_id",
                             client_arg="app_id",
                         ),
-                        file_name=media_info.filename or fallback_filename,
+                        file_name=final_filename,
                         file_length=media_info.length,
-                        file_type=mime_type
-                        or media_info.mime_type
-                        or fallback_mime_type,
+                        file_type=final_mimetype,
                     )
                 )["id"],
                 file=media_info.content,

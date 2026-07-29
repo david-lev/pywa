@@ -38,9 +38,10 @@ if TYPE_CHECKING:
     from pywa import WhatsApp
 
 
-_logger = logging.getLogger(__name__)
+logger = logging.getLogger("pywa.helpers")
 
 DOWNLOAD_CHUNK_SIZE = 64 * 1024
+USE_FAKE_GEN_STREAM = True
 
 
 class StrEnum(str, enum.Enum):
@@ -237,53 +238,55 @@ WA_MEDIA_PATTERN = re.compile(
 def detect_media_source(
     media: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
 ) -> MediaSource:
+    source: MediaSource
     if isinstance(media, (str, pathlib.Path, int)):
-        media = str(media)
-        if media.startswith(("https://", "http://")):
-            if re.match(
-                WA_MEDIA_PATTERN,
-                media,
-            ):
-                _logger.debug("Detected media source as WhatsApp media URL")
-                return MediaSource.MEDIA_URL
-            _logger.debug("Detected media source as external URL")
-            return MediaSource.EXTERNAL_URL
-        elif media.isdigit():
-            _logger.debug("Detected media source as WhatsApp media ID")
-            return MediaSource.MEDIA_ID
-        elif pathlib.Path(media).is_file():
-            _logger.debug("Detected media source as file path")
-            return MediaSource.PATH
-        elif re.match(FILE_HANDLE_PATTERN, media):
-            _logger.debug("Detected media source as file handle")
-            return MediaSource.FILE_HANDLE
-        elif re.match(BASE64_DATA_URI_PATTERN, media):
-            _logger.debug("Detected media source as base64 data URI")
-            return MediaSource.BASE64_DATA_URI
-        elif len(media) % 4 == 0 and re.match(BASE64_PATTERN, media):
-            _logger.debug("Detected media source as base64 string")
-            return MediaSource.BASE64
+        media_str = str(media)
+        if media_str.startswith(("https://", "http://")):
+            if re.match(WA_MEDIA_PATTERN, media_str):
+                source = MediaSource.MEDIA_URL
+            else:
+                source = MediaSource.EXTERNAL_URL
+        elif media_str.isdigit():
+            source = MediaSource.MEDIA_ID
+        elif pathlib.Path(media_str).is_file():
+            source = MediaSource.PATH
+        elif re.match(FILE_HANDLE_PATTERN, media_str):
+            source = MediaSource.FILE_HANDLE
+        elif re.match(BASE64_DATA_URI_PATTERN, media_str):
+            source = MediaSource.BASE64_DATA_URI
+        elif len(media_str) % 4 == 0 and re.match(BASE64_PATTERN, media_str):
+            source = MediaSource.BASE64
         else:
             raise ValueError(
-                f"String media must be a valid URL, existing file path, WhatsApp media ID, file handle, or base64 string. not: {media[:30]}{'...' if len(media) > 30 else ''}"
+                f"String media must be a valid URL, existing file path, WhatsApp media ID, file handle, or base64 string. not: {media_str[:30]}{'...' if len(media_str) > 30 else ''}"
             )
     elif isinstance(media, Media):
-        _logger.debug("Detected media source as WhatsApp Media object")
-        return MediaSource.MEDIA_OBJ
+        source = MediaSource.MEDIA_OBJ
     elif isinstance(media, bytes):
-        _logger.debug("Detected media source as bytes")
-        return MediaSource.BYTES
+        source = MediaSource.BYTES
     elif isinstance(media, io.IOBase):
-        _logger.debug("Detected media source as file like object")
-        return MediaSource.FILE_OBJ
+        source = MediaSource.FILE_OBJ
     elif isinstance(media, Iterable):
-        _logger.debug("Detected media source as bytes generator")
-        return MediaSource.BYTES_GEN
+        source = MediaSource.BYTES_GEN
     elif isinstance(media, AsyncIterable):
-        _logger.debug("Detected media source as async bytes generator")
-        return MediaSource.ASYNC_BYTES_GEN
+        source = MediaSource.ASYNC_BYTES_GEN
     else:
         raise TypeError(f"Invalid media type: {type(media)}")
+
+    logger.debug(
+        "Detected media source for %s: %s",
+        media
+        if source
+        not in {
+            MediaSource.BYTES,
+            MediaSource.FILE_OBJ,
+            MediaSource.BYTES_GEN,
+            MediaSource.ASYNC_BYTES_GEN,
+        }
+        else type(media),
+        source.name,
+    )
+    return source
 
 
 def resolve_media_param(
@@ -373,7 +376,9 @@ class GeneratorStreamer(Iterable):
 
 
 class MediaInfo(NamedTuple):
-    content: bytes | BinaryIO | GeneratorStreamer | AsyncIterator[bytes]
+    content: (
+        bytes | BinaryIO | GeneratorStreamer | Iterator[bytes] | AsyncIterator[bytes]
+    )
     filename: str | None
     mime_type: str | None
     length: int | None
@@ -393,7 +398,13 @@ def get_media_from_url(
         length: int | None = int(res.headers.get("Content-Length", 0)) or None
         gen = res.iter_bytes(chunk_size=download_chunk_size)
         return MediaInfo(
-            content=gen if stream else GeneratorStreamer(generator=gen, length=length),
+            content=gen
+            if stream
+            else (
+                GeneratorStreamer(generator=gen, length=length)
+                if USE_FAKE_GEN_STREAM
+                else b"".join(gen)
+            ),
             filename=get_filename_from_httpx_response_headers(res.headers)
             or pathlib.Path(url).name,
             mime_type=res.headers.get("Content-Type") or mimetypes.guess_type(url)[0],
@@ -506,7 +517,13 @@ def get_media_from_media_id_or_obj_or_url(
     length: int | None = int(res.headers.get("Content-Length", 0)) or None
     gen = res.iter_bytes(chunk_size=download_chunk_size)
     return MediaInfo(
-        content=gen if stream else GeneratorStreamer(generator=gen, length=length),
+        content=gen
+        if stream
+        else (
+            GeneratorStreamer(generator=gen, length=length)
+            if USE_FAKE_GEN_STREAM
+            else b"".join(gen)
+        ),
         filename=filename or get_filename_from_httpx_response_headers(res.headers),
         mime_type=mime_type or res.headers.get("Content-Type"),
         length=length,
@@ -562,7 +579,11 @@ def internal_upload_media(
             )
         case MediaSource.BYTES_GEN:
             media_info = MediaInfo(
-                content=GeneratorStreamer(media),
+                content=(
+                    GeneratorStreamer(generator=media)
+                    if USE_FAKE_GEN_STREAM
+                    else b"".join(media)
+                ),
                 filename=None,
                 mime_type=None,
                 length=None,
@@ -580,15 +601,24 @@ def internal_upload_media(
         or media_info.filename
         or media_types_default_filenames.get(media_type, "file.txt")
     )
+    final_mimetype = (
+        mime_type
+        or media_info.mime_type
+        or media_types_default_mime_types.get(media_type, "text/plain")
+    )
     try:
+        logger.debug(
+            "Uploading media to WhatsApp servers: filename=%s, mime_type=%s, length=%s",
+            final_filename,
+            final_mimetype,
+            media_info.length,
+        )
         return Media(
             _client=wa,
             _id=wa.api.upload_media(
                 phone_id=phone_id,
                 media=media_info.content,
-                mime_type=mime_type
-                or media_info.mime_type
-                or media_types_default_mime_types.get(media_type, "text/plain"),
+                mime_type=final_mimetype,
                 filename=final_filename,
                 ttl_minutes=ttl_minutes,
             )["id"],
@@ -718,6 +748,14 @@ def internal_upload_file(
             )
         if media_info.length is None:
             raise ValueError("Media must have a known length.")
+        final_filename = media_info.filename or fallback_filename
+        final_mimetype = mime_type or media_info.mime_type or fallback_mime_type
+        logger.debug(
+            "Uploading file to Resumable Upload API: filename=%s, mime_type=%s, length=%s",
+            final_filename,
+            final_mimetype,
+            media_info.length,
+        )
         return wa.api.upload_file(
             upload_session_id=wa.api.create_upload_session(
                 app_id=resolve_arg(
@@ -726,9 +764,9 @@ def internal_upload_file(
                     method_arg="app_id",
                     client_arg="app_id",
                 ),
-                file_name=media_info.filename or fallback_filename,
+                file_name=final_filename,
                 file_length=media_info.length,
-                file_type=mime_type or media_info.mime_type or fallback_mime_type,
+                file_type=final_mimetype,
             )["id"],
             file=media_info.content,
             file_offset=0,
@@ -883,7 +921,7 @@ def resolve_recipient(to: str | int) -> tuple[dict[str, str | None], RecipientTy
     if not to:
         raise ValueError(f"Recipient cannot be empty. got: {to!r}")
     recipient_type = RecipientType.from_recipient(to)
-    _logger.debug(f"Resolved recipient {to} to type {recipient_type}")
+    logger.debug(f"Resolved recipient {to} to type {recipient_type}")
     to = str(to)
     match recipient_type:
         case RecipientType.WA_ID | RecipientType.PHONE_NUMBER:
