@@ -14,6 +14,7 @@ from . import errors, handlers, utils
 from ._logging import (
     ENV_LOG_LEVEL,
     bind_update_logger,
+    format_banner,
     get_update_hash,
     setup_console_logging,
 )
@@ -176,11 +177,23 @@ class Server:
         # ASGI factory) just applied.
         os.environ[ENV_LOG_LEVEL] = str(log_level)
         app = self._setup_and_get_starlette_app()
+        _logger.info(
+            format_banner(
+                [
+                    "🚀  Starting Pywa server",
+                    f"🌐  Server URL:   http://{host}:{port}",
+                    f"📝  Log Level:    {log_level}",
+                    "💡  Tip:          Use the `pywa` CLI (`pywa dev`/`pywa run`) for hot-reload, "
+                    "multi-worker support and other features (`pywa run --help`)",
+                ]
+            )
+        )
         uvicorn.run(
             app=app,
             host=host,
             port=port,
             log_config=None,
+            access_log=False,
         )
 
     def webhook_challenge_handler(

@@ -84,6 +84,12 @@ def bind_update_logger(
     )
 
 
+def format_banner(lines: list[str]) -> str:
+    """Box a list of lines into the startup banner shared by the CLI and ``Server.run``."""
+    width = 40
+    return "\n" + "\n".join([lines[0], "-" * width, *lines[1:], "-" * width])
+
+
 def resolve_log_level(level: str | int) -> int:
     if isinstance(level, int):
         return level

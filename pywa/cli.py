@@ -19,7 +19,7 @@ import time
 from typing import TypedDict
 
 from . import __version__ as pywa_version
-from ._logging import ENV_LOG_LEVEL, setup_console_logging
+from ._logging import ENV_LOG_LEVEL, format_banner, setup_console_logging
 from .client import WhatsApp
 
 _logger = logging.getLogger(__name__)
@@ -204,18 +204,16 @@ def serve_application(
     setup_console_logging(log_level)
 
     mode = "development" if command == "dev" else "production"
-    banner = [
+    banner_lines = [
         f"🚀  Starting Pywa in {mode} mode",
-        "-" * 40,
         f"📦  Module Path:  {sys_path}",
         f"🔍  App Instance: {base_import_string}",
         f"🌐  Server URL:   http://{host}:{port}",
         f"📝  Log Level:    {log_level}",
     ]
     if command == "dev":
-        banner.append("⚠️  Auto-reload:  Enabled (Use 'pywa run' for production)")
-    banner.append("-" * 40)
-    _logger.info("\n" + "\n".join(banner))
+        banner_lines.append("⚠️  Auto-reload:  Enabled (Use 'pywa run' for production)")
+    _logger.info(format_banner(banner_lines))
 
     clean_kwargs = {k: v for k, v in uvicorn_kwargs.items() if v is not None}
 
