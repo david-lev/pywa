@@ -12,7 +12,7 @@ order taking, OTP verification, WhatsApp Flows, calls, groups, and more — in t
 download them straight from the CLI, no cloning required:
 
 .. code-block:: bash
-
+    pywa new                            # Generate a basic echo-bot template
     pywa new examples                   # List the official example bots
     pywa new examples 02-order-bot      # Download one — ready to run with `pywa dev`
 

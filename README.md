@@ -121,6 +121,7 @@ browse and download a full, ready-to-run bot (order taking, OTP verification, Wh
 see the [CLI guide](https://pywa.readthedocs.io/en/latest/content/cli.html#browsing-and-downloading-example-bots) for the full list):
 
 ```bash
+pywa new                            # # Generate a basic echo-bot template
 pywa new examples                   # List the official example bots
 pywa new examples 02-order-bot      # Download one — ready to run with `pywa dev`
 ```

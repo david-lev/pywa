@@ -81,6 +81,7 @@ dev = [
     "ruff~=0.14",
     "pre-commit~=4.5",
     "cryptography>=46,<47",
+    "python-dotenv~=1.0",
 ]
 
 docs = [
