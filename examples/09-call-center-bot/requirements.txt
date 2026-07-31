@@ -1,0 +1,3 @@
+pywa[server]
+python-dotenv
+ngrok

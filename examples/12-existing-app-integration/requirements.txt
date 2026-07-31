@@ -1,0 +1,3 @@
+pywa[fastapi]
+python-dotenv
+ngrok

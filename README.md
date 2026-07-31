@@ -15,6 +15,7 @@
 <p align="center">
   <a href="https://pypi.org/project/pywa/"><img src="https://img.shields.io/pypi/v/pywa?color=%2334D058&label=pypi" alt="PyPI Version"/></a>
   <a href="https://pepy.tech/project/pywa"><img src="https://static.pepy.tech/badge/pywa" alt="Downloads"/></a>
+  <a href="pyproject.toml"><img src="https://img.shields.io/badge/python-3.10%2B-3776ab?color=%2334D058" alt="Python Versions"/></a>
   <a href="https://github.com/david-lev/pywa/actions/workflows/tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/david-lev/pywa/tests.yml?label=tests" alt="Tests"/></a>
   <a href="https://pywa.readthedocs.io"><img src="https://readthedocs.org/projects/pywa/badge/?version=latest&" alt="Docs"/></a>
   <a href="https://github.com/david-lev/pywa/blob/master/LICENSE"><img src="https://img.shields.io/github/license/david-lev/pywa?color=%2334D058" alt="License"/></a>
@@ -79,7 +80,7 @@ pip install -U "pywa[server]"
   </tr>
   <tr>
     <td>🧰 <strong>CLI Tools</strong></td>
-    <td><code>pywa dev</code> for local development, <code>pywa run</code> for production</td>
+    <td><code>pywa dev</code>/<code>pywa run</code> to serve, <code>pywa new</code> to scaffold a project or grab a full example bot, <code>pywa send</code> to message from the terminal</td>
   </tr>
 </table>
 
@@ -113,6 +114,15 @@ Start the webhook server:
 ```bash
 pywa dev    # Local development
 pywa run    # Production
+```
+
+Don't want to start from scratch? `pywa new` scaffolds a working project, and `pywa new examples` lets you
+browse and download a full, ready-to-run bot (order taking, OTP verification, WhatsApp Flows, calls, and more —
+see the [CLI guide](https://pywa.readthedocs.io/en/latest/content/cli.html#browsing-and-downloading-example-bots) for the full list):
+
+```bash
+pywa new examples                   # List the official example bots
+pywa new examples 02-order-bot      # Download one — ready to run with `pywa dev`
 ```
 
 ### 2. Rich Messages — Buttons, Media & More
@@ -387,6 +397,7 @@ Full documentation is available at **[pywa.readthedocs.io](https://pywa.readthed
 | [Templates](https://pywa.readthedocs.io/en/latest/content/templates/overview.html)    | Create, send, and manage message templates      |
 | [Flows](https://pywa.readthedocs.io/en/latest/content/flows/overview.html)            | Build interactive multi-screen flows            |
 | [Calls](https://pywa.readthedocs.io/en/latest/content/calls/overview.html)            | Handle voice call events                        |
+| [CLI](https://pywa.readthedocs.io/en/latest/content/cli.html)                         | `dev`/`run` servers, project scaffolding, example bots, and sending messages from the terminal |
 
 ---
 

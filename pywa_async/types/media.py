@@ -4,6 +4,7 @@ from __future__ import annotations
 
 __all__ = [
     "Media",
+    "ArrivedMedia",
     "Image",
     "Video",
     "Sticker",
