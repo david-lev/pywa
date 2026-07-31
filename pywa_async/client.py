@@ -7,7 +7,6 @@ __all__ = ["WhatsApp"]
 import datetime
 import hashlib
 import json
-import logging
 import mimetypes
 import pathlib
 from types import ModuleType
@@ -190,8 +189,6 @@ from .types.templates import (
 )
 from .types.user import User
 from .utils import FastAPI, Flask, UserIdentifier
-
-_logger = logging.getLogger(__name__)
 
 
 class WhatsApp(Server, _AsyncListeners, _WhatsApp):

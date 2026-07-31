@@ -191,7 +191,7 @@ The best practice is to use the Template object you created earlier as a referen
 .. code-block:: python
     :caption: send_template_with_object.py
     :linenos:
-    :emphasize-lines: 11, 19, 22, 37-38, 40-42
+    :emphasize-lines: 11, 19, 22, 37, 39-41
 
     from pywa import WhatsApp
     from pywa.types.templates import *
@@ -229,8 +229,7 @@ The best practice is to use the Template object you created earlier as a referen
 
     wa.send_template(
         to="972123456789",
-        name=order_confirmation.name,
-        language=order_confirmation.language,
+        template=order_confirmation,
         params=[
             bdy.params(name="Jane Doe", order_id=67890, delivery_date=DateTime(fallback_value="September 10, 2025")),
             qrb.params(callback_data="contact-support", index=0),
@@ -337,7 +336,7 @@ When sending a media template, you can use the same approach as before, but now 
 .. code-block:: python
     :caption: send_media_template.py
     :linenos:
-    :emphasize-lines: 6, 17
+    :emphasize-lines: 6, 16
 
     media_template = Template(
         name="media_template",
@@ -352,8 +351,7 @@ When sending a media template, you can use the same approach as before, but now 
 
     wa.send_template(
         to="972123456789",
-        name=media_template.name,
-        language=media_template.language,
+        template=media_template,
         params=[
             hi.params(image="https://www.my-cdn.com/image.jpg"),
         ],
