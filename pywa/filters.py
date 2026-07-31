@@ -161,6 +161,9 @@ class Filter(Generic[_T]):
     def __invert__(self) -> Filter[_T]:
         return NotFilter(self)
 
+    def __repr__(self) -> str:
+        return self.__class__.__name__
+
 
 class AndFilter(Filter[_T]):
     def __init__(self, left: Filter[_T], right: Filter[_T]):
@@ -177,6 +180,9 @@ class AndFilter(Filter[_T]):
 
     def has_async(self) -> bool:
         return self.left.has_async() or self.right.has_async()
+
+    def __repr__(self) -> str:
+        return f"({self.left!r} & {self.right!r})"
 
 
 class OrFilter(Filter[_T]):
@@ -195,6 +201,9 @@ class OrFilter(Filter[_T]):
     def has_async(self) -> bool:
         return self.left.has_async() or self.right.has_async()
 
+    def __repr__(self) -> str:
+        return f"({self.left!r} | {self.right!r})"
+
 
 class NotFilter(Filter[_T]):
     def __init__(self, fil: Filter[_T]):
@@ -208,6 +217,9 @@ class NotFilter(Filter[_T]):
 
     def has_async(self) -> bool:
         return self.filter.has_async()
+
+    def __repr__(self) -> str:
+        return f"~{self.filter!r}"
 
 
 @overload
@@ -289,10 +301,10 @@ def new(
     )()
 
 
-true: Filter[Any] = new(lambda _, __: True, name="true")
+true: Filter[Any] = new(lambda _, __: True, name="filters.true")
 """Filter that always returns True."""
 
-false: Filter[Any] = new(lambda _, __: False, name="false")
+false: Filter[Any] = new(lambda _, __: False, name="filters.false")
 """Filter that always returns False."""
 
 
@@ -303,7 +315,7 @@ def webhook_fields(*fields: str) -> Filter[types.RawUpdate]:
     >>> filters.webhook_fields("messages")
     """
     _fields = set(fields)
-    return new(lambda _, r: r.field in _fields, name="webhook_fields")
+    return new(lambda _, r: r.field in _fields, name="filters.webhook_fields")
 
 
 forwarded: Filter[types.Message] = new(
@@ -317,7 +329,7 @@ Filter for forwarded messages.
 """
 
 forwarded_many_times: Filter[types.Message] = new(
-    lambda _, m: m.forwarded_many_times, name="forwarded_many_times"
+    lambda _, m: m.forwarded_many_times, name="filters.forwarded_many_times"
 )
 """
 Filter for messages that have been forwarded many times.
@@ -326,7 +338,7 @@ Filter for messages that have been forwarded many times.
 """
 
 reply: Filter[types.Message] = new(
-    lambda _, m: m.reply_to_message is not None, name="reply"
+    lambda _, m: m.reply_to_message is not None, name="filters.reply"
 )
 """
 Filter for messages that reply to another message.
@@ -335,7 +347,7 @@ Filter for messages that reply to another message.
 """
 
 without_wa_id: Filter[types.base_update.BaseUserUpdate] = new(
-    lambda _, u: u.from_user.wa_id is None, name="without_wa_id"
+    lambda _, u: u.from_user.wa_id is None, name="filters.without_wa_id"
 )
 """
 Filter for updates that their sender doesn't have a ``wa_id`` (when the user enables username)
@@ -348,7 +360,7 @@ def update_id(id_: str) -> Filter[types.base_update.BaseUpdate]:
 
     >>> update_id("wamid.HBKHUIyNTM4NjAfiefhwojfMTNFQ0Q2MERGRjVDMUHUIGGA=")
     """
-    return new(lambda _, u: u.id == id_, name="update_id")
+    return new(lambda _, u: u.id == id_, name="filters.update_id")
 
 
 def waba_id(id_: str) -> Filter[types.base_update.BaseUpdate]:
@@ -357,7 +369,7 @@ def waba_id(id_: str) -> Filter[types.base_update.BaseUpdate]:
 
     >>> waba_id("105102735943269")
     """
-    return new(lambda _, u: getattr(u, "waba_id", u.id) == id_, name="waba_id")
+    return new(lambda _, u: getattr(u, "waba_id", u.id) == id_, name="filters.waba_id")
 
 
 def replays_to(*msg_ids: str) -> Filter[types.Message]:
@@ -387,12 +399,12 @@ Filter for messages that user sends to ask about a product
 """
 
 private: Filter[types.Message] = new(
-    lambda _, m: m.chat.type == chat.ChatType.PRIVATE, name="private"
+    lambda _, m: m.chat.type == chat.ChatType.PRIVATE, name="filters.private"
 )
 """Filter for messages that are sent in private chats."""
 
 group: Filter[types.Message] = new(
-    lambda _, m: m.chat.type == chat.ChatType.GROUP, name="group"
+    lambda _, m: m.chat.type == chat.ChatType.GROUP, name="filters.group"
 )
 """Filter for messages that are sent in group chats."""
 
@@ -469,7 +481,7 @@ def from_users(
             or user.username in processed_ids
         )
 
-    return new(filter_func, name="from_users")
+    return new(filter_func, name="filters.from_users")
 
 
 def from_countries(
@@ -501,7 +513,7 @@ def from_groups(*group_ids: str) -> Filter[base_update.BaseUserUpdate]:
 
     >>> from_groups("Y2FwaV9ncm91cDoxNzA1NTU1MDEzOToxMjAzNjM0MDQ2OTQyMzM4MjAZD")
     """
-    return new(lambda _, m: m.chat.id in group_ids, name="from_groups")
+    return new(lambda _, m: m.chat.id in group_ids, name="filters.from_groups")
 
 
 def matches(*strings: str, ignore_case: bool = False) -> Filter[Any]:
@@ -669,7 +681,7 @@ def regex(*patterns: str | re.Pattern, flags: int = 0) -> Filter[Any]:
 
 
 message: Filter[types.Message] = new(
-    lambda _, m: isinstance(m, types.Message), name="message"
+    lambda _, m: isinstance(m, types.Message), name="filters.message"
 )
 """Filter for all messages."""
 
@@ -700,7 +712,7 @@ def extensions(*exts: str) -> Filter[types.Message]:
     )
 
 
-media: Filter[types.Message] = new(lambda _, m: m.has_media, name="media")
+media: Filter[types.Message] = new(lambda _, m: m.has_media, name="filters.media")
 """Filter for media messages (images, videos, documents, audio, stickers)."""
 
 is_command: Filter[types.Message] = new(
@@ -744,7 +756,7 @@ def command(
 
 
 text: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.TEXT, name="text"
+    lambda _, m: m.type == types.MessageType.TEXT, name="filters.text"
 )
 """Filter for text messages."""
 
@@ -755,22 +767,22 @@ has_caption: Filter[types.Message] = new(
 """Filter for media messages that have a caption."""
 
 image: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.IMAGE, name="image"
+    lambda _, m: m.type == types.MessageType.IMAGE, name="filters.image"
 )
 """Filter for image messages."""
 
 video: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.VIDEO, name="video"
+    lambda _, m: m.type == types.MessageType.VIDEO, name="filters.video"
 )
 """Filter for video messages."""
 
 document: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.DOCUMENT, name="document"
+    lambda _, m: m.type == types.MessageType.DOCUMENT, name="filters.document"
 )
 """Filter for document messages."""
 
 audio: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.AUDIO, name="audio"
+    lambda _, m: m.type == types.MessageType.AUDIO, name="filters.audio"
 )
 """Filter for audio messages (both voice notes and audio files)."""
 
@@ -781,12 +793,13 @@ audio_only: Filter[types.Message] = new(
 """Filter for audio messages that are not voice notes."""
 
 voice: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.AUDIO and m.audio.voice, name="voice"
+    lambda _, m: m.type == types.MessageType.AUDIO and m.audio.voice,
+    name="filters.voice",
 )
 """Filter for audio messages that are voice notes."""
 
 sticker: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.STICKER, name="sticker"
+    lambda _, m: m.type == types.MessageType.STICKER, name="filters.sticker"
 )
 """Filter for sticker messages (both static and animated)."""
 
@@ -803,7 +816,7 @@ static_sticker: Filter[types.Message] = new(
 """Filter for static sticker messages."""
 
 location: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.LOCATION, name="location"
+    lambda _, m: m.type == types.MessageType.LOCATION, name="filters.location"
 )
 """Filter for location messages."""
 
@@ -838,7 +851,7 @@ def location_in_radius(
 
 
 reaction: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.REACTION, name="reaction"
+    lambda _, m: m.type == types.MessageType.REACTION, name="filters.reaction"
 )
 """Filter for reaction messages (both added and removed)."""
 
@@ -870,7 +883,7 @@ def reaction_emojis(*emojis: str) -> Filter[types.Message]:
 
 
 contacts: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.CONTACTS, name="contacts"
+    lambda _, m: m.type == types.MessageType.CONTACTS, name="filters.contacts"
 )
 """Filter for contacts messages."""
 
@@ -902,51 +915,55 @@ contacts_has_wa: Filter[types.Message] = new(
 """Filter for contacts messages that have a WhatsApp account."""
 
 order: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.ORDER, name="order"
+    lambda _, m: m.type == types.MessageType.ORDER, name="filters.order"
 )
 """Filter for order messages."""
 
 unsupported: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.UNSUPPORTED, name="unsupported"
+    lambda _, m: m.type == types.MessageType.UNSUPPORTED, name="filters.unsupported"
 )
 """Filter for all unsupported messages."""
 
 callback_button: Filter[types.CallbackButton] = new(
-    lambda _, c: isinstance(c, types.CallbackButton), name="callback_button"
+    lambda _, c: isinstance(c, types.CallbackButton), name="filters.callback_button"
 )
 """Filter for callback buttons."""
 
 callback_selection: Filter[types.CallbackSelection] = new(
-    lambda _, c: isinstance(c, types.CallbackSelection), name="callback_selection"
+    lambda _, c: isinstance(c, types.CallbackSelection),
+    name="filters.callback_selection",
 )
 """Filter for callback selections."""
 
 message_status: Filter[types.MessageStatus] = new(
-    lambda _, s: isinstance(s, types.MessageStatus), name="message_status"
+    lambda _, s: isinstance(s, types.MessageStatus), name="filters.message_status"
 )
 
 sent: Filter[types.MessageStatus] = new(
-    lambda _, s: s.status == types.MessageStatusType.SENT, name="status_sent"
+    lambda _, s: s.status == types.MessageStatusType.SENT, name="filters.status_sent"
 )
 """Filter for messages that have been sent."""
 
 delivered: Filter[types.MessageStatus] = new(
-    lambda _, s: s.status == types.MessageStatusType.DELIVERED, name="status_delivered"
+    lambda _, s: s.status == types.MessageStatusType.DELIVERED,
+    name="filters.status_delivered",
 )
 """Filter for messages that have been delivered."""
 
 read: Filter[types.MessageStatus] = new(
-    lambda _, s: s.status == types.MessageStatusType.READ, name="status_read"
+    lambda _, s: s.status == types.MessageStatusType.READ, name="filters.status_read"
 )
 """Filter for messages that have been read."""
 
 failed: Filter[types.MessageStatus] = new(
-    lambda _, s: s.status == types.MessageStatusType.FAILED, name="status_failed"
+    lambda _, s: s.status == types.MessageStatusType.FAILED,
+    name="filters.status_failed",
 )
 """Filter for status updates of messages that have failed to send."""
 
 played: Filter[types.MessageStatus] = new(
-    lambda _, s: s.status == types.MessageStatusType.PLAYED, name="status_played"
+    lambda _, s: s.status == types.MessageStatusType.PLAYED,
+    name="filters.status_played",
 )
 """Filter for status updates of voice messages that have been played."""
 
@@ -980,12 +997,13 @@ def failed_with(
 
 
 with_tracker: Filter[types.MessageStatus] = new(
-    lambda _, s: s.tracker is not None, name="with_tracker"
+    lambda _, s: s.tracker is not None, name="filters.with_tracker"
 )
 """Filter for status updates that have a tracker."""
 
 template_status: Filter[types.TemplateStatusUpdate] = new(
-    lambda _, s: isinstance(s, types.TemplateStatusUpdate), name="template_status"
+    lambda _, s: isinstance(s, types.TemplateStatusUpdate),
+    name="filters.template_status",
 )
 """Filters for template status updates."""
 
@@ -1000,12 +1018,14 @@ template_status_rejected: Filter[types.TemplateStatusUpdate] = new(
 )
 
 template_quality: Filter[types.TemplateQualityUpdate] = new(
-    lambda _, s: isinstance(s, types.TemplateQualityUpdate), name="template_quality"
+    lambda _, s: isinstance(s, types.TemplateQualityUpdate),
+    name="filters.template_quality",
 )
 """Filters for template quality updates."""
 
 template_category: Filter[types.TemplateCategoryUpdate] = new(
-    lambda _, s: isinstance(s, types.TemplateCategoryUpdate), name="template_category"
+    lambda _, s: isinstance(s, types.TemplateCategoryUpdate),
+    name="filters.template_category",
 )
 """Filters for template category updates."""
 
@@ -1016,12 +1036,12 @@ template_components: Filter[types.TemplateComponentsUpdate] = new(
 """Filters for template components updates."""
 
 flow_completion: Filter[types.FlowCompletion] = new(
-    lambda _, f: isinstance(f, types.FlowCompletion), name="flow_completion"
+    lambda _, f: isinstance(f, types.FlowCompletion), name="filters.flow_completion"
 )
 """Filter for flow completion updates."""
 
 call_connect: Filter[types.CallConnect] = new(
-    lambda _, c: isinstance(c, types.CallConnect), name="call_connect"
+    lambda _, c: isinstance(c, types.CallConnect), name="filters.call_connect"
 )
 """Filter for call connect updates."""
 
@@ -1036,7 +1056,7 @@ incoming_call: Filter[types.CallConnect] = new(
 """Filter for incoming call updates."""
 
 call_status: Filter[types.CallStatus] = new(
-    lambda _, c: isinstance(c, types.CallStatus), name="call_status"
+    lambda _, c: isinstance(c, types.CallStatus), name="filters.call_status"
 )
 """Filter for call status updates."""
 
@@ -1045,10 +1065,12 @@ call_answered: Filter[types.CallStatus] = new(
     name="call_answered",
 )
 call_rejected: Filter[types.CallStatus] = new(
-    lambda _, c: c.status == types.calls.CallStatusType.REJECTED, name="call_rejected"
+    lambda _, c: c.status == types.calls.CallStatusType.REJECTED,
+    name="filters.call_rejected",
 )
 call_ringing: Filter[types.CallStatus] = new(
-    lambda _, c: c.status == types.calls.CallStatusType.RINGING, name="call_ringing"
+    lambda _, c: c.status == types.calls.CallStatusType.RINGING,
+    name="filters.call_ringing",
 )
 
 call_permission_update: Filter[types.CallPermissionUpdate] = new(
@@ -1067,17 +1089,18 @@ call_permission_rejected: Filter[types.CallPermissionUpdate] = new(
 )
 
 call_terminate: Filter[types.CallTerminate] = new(
-    lambda _, c: isinstance(c, types.CallTerminate), name="call_terminate"
+    lambda _, c: isinstance(c, types.CallTerminate), name="filters.call_terminate"
 )
 """Filter for call terminate updates."""
 
 phone_number_change: Filter[types.PhoneNumberChange] = new(
-    lambda _, c: isinstance(c, types.PhoneNumberChange), name="phone_number_change"
+    lambda _, c: isinstance(c, types.PhoneNumberChange),
+    name="filters.phone_number_change",
 )
 """Filter for phone number change updates."""
 
 identity_change: Filter[types.IdentityChange] = new(
-    lambda _, c: isinstance(c, types.IdentityChange), name="identity_change"
+    lambda _, c: isinstance(c, types.IdentityChange), name="filters.identity_change"
 )
 """Filter for identity change updates."""
 
@@ -1099,7 +1122,7 @@ user_marketing_preferences_resume: Filter[types.UserMarketingPreferences] = new(
 """Filter for user marketing preferences updates that indicate the user has requested to resume receiving marketing messages."""
 
 account_update: Filter[types.AccountUpdate] = new(
-    lambda _, u: isinstance(u, types.AccountUpdate), name="account_update"
+    lambda _, u: isinstance(u, types.AccountUpdate), name="filters.account_update"
 )
 """Filter for account update updates."""
 

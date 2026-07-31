@@ -15,7 +15,6 @@
 <p align="center">
   <a href="https://pypi.org/project/pywa/"><img src="https://img.shields.io/pypi/v/pywa?color=%2334D058&label=pypi" alt="PyPI Version"/></a>
   <a href="https://pepy.tech/project/pywa"><img src="https://static.pepy.tech/badge/pywa" alt="Downloads"/></a>
-  <a href="https://pypi.org/project/pywa/"><img src="https://img.shields.io/pypi/pyversions/pywa?color=%2334D058" alt="Python Versions"/></a>
   <a href="https://github.com/david-lev/pywa/actions/workflows/tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/david-lev/pywa/tests.yml?label=tests" alt="Tests"/></a>
   <a href="https://pywa.readthedocs.io"><img src="https://readthedocs.org/projects/pywa/badge/?version=latest&" alt="Docs"/></a>
   <a href="https://github.com/david-lev/pywa/blob/master/LICENSE"><img src="https://img.shields.io/github/license/david-lev/pywa?color=%2334D058" alt="License"/></a>
