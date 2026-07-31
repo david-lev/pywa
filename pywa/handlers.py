@@ -243,24 +243,32 @@ class Handler(Generic[_UpdateType]):
         self._priority = priority
         self._is_async_callback = helpers.is_async_callable(callback)
 
-    def check(self, wa: WhatsApp, update: _UpdateType) -> bool:
-        return self._filters is None or self._filters.check_sync(wa, update)
+    def check(self, wa: WhatsApp, update: _UpdateType) -> _UpdateType | None:
+        """Return the update (possibly transformed) if this handler should handle it, else ``None``."""
+        if self._filters is not None and not self._filters.check_sync(wa, update):
+            return None
+        return update
 
     def handle(self, wa: WhatsApp, update: _UpdateType) -> bool:
-        if not self.check(wa, update):
+        if (checked_update := self.check(wa, update)) is None:
             return False
-        self._callback(wa, update)
+        self._callback(wa, checked_update)
         return True
 
-    async def acheck(self, wa: WhatsApp, update: _UpdateType) -> bool:
-        return self._filters is None or await self._filters.check_async(wa, update)
+    async def acheck(self, wa: WhatsApp, update: _UpdateType) -> _UpdateType | None:
+        """Return the update (possibly transformed) if this handler should handle it, else ``None``."""
+        if self._filters is not None and not await self._filters.check_async(
+            wa, update
+        ):
+            return None
+        return update
 
     async def ahandle(self, wa: WhatsApp, update: _UpdateType) -> bool:
-        if not await self.acheck(wa, update):
+        if (checked_update := await self.acheck(wa, update)) is None:
             return False
-        await self._callback(wa, update) if self._is_async_callback else self._callback(
-            wa, update
-        )
+        await self._callback(
+            wa, checked_update
+        ) if self._is_async_callback else self._callback(wa, checked_update)
         return True
 
     @staticmethod
@@ -341,17 +349,15 @@ class _FactoryHandler(Generic[_UpdateType], Handler[_UpdateType]):
             )
         return update
 
-    def handle(self, wa: WhatsApp, update: _UpdateType) -> bool:
-        update = self._process_update(update)
-        if update is None:
-            return False
-        return super().handle(wa, update)
+    def check(self, wa: WhatsApp, update: _UpdateType) -> _UpdateType | None:
+        if (processed_update := self._process_update(update)) is None:
+            return None
+        return super().check(wa, processed_update)
 
-    async def ahandle(self, wa: WhatsApp, update: _UpdateType) -> bool:
-        update = self._process_update(update)
-        if update is None:
-            return False
-        return await super().ahandle(wa, update)
+    async def acheck(self, wa: WhatsApp, update: _UpdateType) -> _UpdateType | None:
+        if (processed_update := self._process_update(update)) is None:
+            return None
+        return await super().acheck(wa, processed_update)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(callback={self._callback}, filters={self._filters}, factory={self._factory}, priority={self._priority})"

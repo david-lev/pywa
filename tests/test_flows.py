@@ -3,11 +3,12 @@ import datetime
 import importlib
 import json
 import pathlib
+import re
 from typing import Callable
 
 import pytest
 
-from pywa import WhatsApp, filters
+from pywa import WhatsApp, filters, types
 from pywa.handlers import FlowCompletionHandler
 from pywa.types.flows import (
     ComponentRef,
@@ -34,6 +35,9 @@ from pywa.types.flows import (
 )
 from pywa.utils import Version
 
+flows_all = {name: getattr(types.flows, name) for name in types.flows.__all__}
+flows_all.update({"datetime": datetime, "re": re})
+
 
 def test_flows_to_json():
     for version in pathlib.Path("tests/data/flows").iterdir():
@@ -51,6 +55,16 @@ def test_flows_to_json():
                     assert example_dict["version"] == version.name.replace("_", ".")
                     assert obj_dict == example_dict, (
                         f"Flow {version.name=} {flow_name=} does not match example"
+                    )
+                    assert (
+                        json.loads(
+                            eval(
+                                repr(getattr(obj_examples, flow_name)), flows_all
+                            ).to_json()
+                        )
+                        == example_dict
+                    ), (
+                        f"After eval(repr(...)) the flow {version.name=} {flow_name=} does not match example"
                     )
 
 

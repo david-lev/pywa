@@ -2,6 +2,7 @@ import json
 import pathlib
 
 from pywa import WhatsApp
+from pywa._logging import get_update_hash
 from pywa.types.base_update import BaseUpdate, RawUpdate
 from pywa_async import WhatsApp as WhatsAppAsync
 
@@ -21,7 +22,11 @@ for client, update_files in CLIENTS.items():
         update_files[file] = {
             update_name: client._handlers_to_updates[
                 client._get_handler_type(
-                    RawUpdate(json.dumps(raw_update).encode("utf-8"), hmac_header=None)
+                    RawUpdate(
+                        (encoded := json.dumps(raw_update).encode("utf-8")),
+                        hmac_header=None,
+                        update_hash=get_update_hash(encoded),
+                    )
                 )
             ].from_update(client=client, update=raw_update)
             for update_name, raw_update in update_name_to_raw_update.items()

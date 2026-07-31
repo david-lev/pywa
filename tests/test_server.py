@@ -1,4 +1,23 @@
+import io
+import json
+import logging
+import pathlib
+import re
+
+import pytest
+
+from pywa import WhatsApp
 from pywa import utils as pywa_utils
+from pywa._logging import (
+    ColorFormatter,
+    _color_enabled,
+    bind_update_logger,
+    get_update_hash,
+    resolve_log_level,
+    setup_console_logging,
+)
+from pywa.errors import PywaWarning
+from pywa.types.base_update import RawUpdate
 
 
 def test_webhook_updates_validator():
@@ -88,4 +107,232 @@ def test_flow_request_media_decryptor():
             },
         )
         == b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xff\xdb\x00\x84\x00\x06\x06\x06\x06\x07\x06\x07\x08\x08\x07\n\x0b\n\x0b\n\x0f\x0e\x0c\x0c\x0e\x0f\x16\x10\x11\x10\x11\x10\x16"\x15\x19\x15\x15\x19\x15"\x1e$\x1e\x1c\x1e$\x1e6*&&*6>424>LDDL_Z_||\xa7\x01\x06\x06\x06\x06\x07\x06\x07\x08\x08\x07\n\x0b\n\x0b\n\x0f\x0e\x0c\x0c\x0e\x0f\x16\x10\x11\x10\x11\x10\x16"\x15\x19\x15\x15\x19\x15"\x1e$\x1e\x1c\x1e$\x1e6*&&*6>424>LDDL_Z_||\xa7\xff\xc2\x00\x11\x08\x00\x01\x00\x01\x03\x01"\x00\x02\x11\x01\x03\x11\x01\xff\xc4\x00\'\x00\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x06\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xda\x00\x0c\x03\x01\x00\x02\x10\x03\x10\x00\x00\x02\xaa\x07\xff\xc4\x00\x02\xff\xda\x00\x0c\x03\x01\x00\x02\x00\x03\x00\x00\x00!\x03\xff\xc4\x00\x02\xff\xda\x00\x0c\x03\x01\x00\x02\x00\x03\x00\x00\x00\x10\xf3\xff\xc4\x00\x14\x11\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xda\x00\x08\x01\x02\x01\x01?\x00\x7f\xff\xc4\x00\x14\x11\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xda\x00\x08\x01\x03\x01\x01?\x00\x7f\xff\xc4\x00\x14\x10\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xda\x00\x08\x01\x01\x00\x01?\x02\x7f\xff\xc4\x00\x14\x10\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xda\x00\x08\x01\x01\x00\x01?!\x7f\xff\xc4\x00\x14\x10\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xda\x00\x08\x01\x01\x00\x01?\x10\x7f\xff\xd9'
+    )
+
+
+class _FakeTTYStream(io.StringIO):
+    def isatty(self):
+        return True
+
+
+class _FakeNonTTYStream(io.StringIO):
+    def isatty(self):
+        return False
+
+
+def test_color_enabled_respects_no_color(monkeypatch):
+    monkeypatch.setenv("NO_COLOR", "1")
+    monkeypatch.delenv("FORCE_COLOR", raising=False)
+    assert _color_enabled(_FakeTTYStream()) is False
+
+
+def test_color_enabled_respects_force_color(monkeypatch):
+    monkeypatch.setenv("FORCE_COLOR", "1")
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    assert _color_enabled(_FakeNonTTYStream()) is True
+
+
+def test_color_enabled_auto_detects_tty(monkeypatch):
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    monkeypatch.delenv("FORCE_COLOR", raising=False)
+    assert _color_enabled(_FakeTTYStream()) is True
+    assert _color_enabled(_FakeNonTTYStream()) is False
+
+
+def _make_record(msg: str, level: int = logging.INFO) -> logging.LogRecord:
+    return logging.LogRecord("pywa.server", level, __file__, 1, msg, None, None)
+
+
+def test_color_formatter_emits_ansi_when_enabled():
+    formatter = ColorFormatter(use_color=True)
+    output = formatter.format(_make_record("hello"))
+    assert "\x1b[" in output
+
+
+def test_color_formatter_plain_when_disabled():
+    formatter = ColorFormatter(use_color=False)
+    output = formatter.format(_make_record("hello"))
+    assert "\x1b[" not in output
+
+
+def test_bind_update_logger_includes_hash_and_endpoint(caplog):
+    caplog.set_level(logging.INFO, logger="pywa.test_bind")
+    logger = logging.getLogger("pywa.test_bind")
+    log = bind_update_logger(logger, "abcdef0123456789", "/webhook")
+    log.info("hello")
+    assert "[abcdef01] [/webhook] hello" in caplog.records[-1].getMessage()
+
+
+def test_plain_logger_omits_context(caplog):
+    caplog.set_level(logging.INFO, logger="pywa.test_plain")
+    logger = logging.getLogger("pywa.test_plain")
+    logger.info("hello")
+    assert caplog.records[-1].getMessage() == "hello"
+
+
+def test_resolve_log_level_trace():
+    assert resolve_log_level("trace") == 5
+    assert logging.getLevelName(5) == "TRACE"
+
+
+def test_resolve_log_level_int_passthrough():
+    assert resolve_log_level(logging.DEBUG) == logging.DEBUG
+
+
+def test_resolve_log_level_invalid():
+    with pytest.raises(ValueError):
+        resolve_log_level("nonsense")
+
+
+@pytest.fixture
+def clean_logging():
+    root = logging.getLogger()
+    affected_loggers = [
+        "pywa",
+        "pywa.cli",
+        "uvicorn.error",
+        "uvicorn.access",
+    ]
+    original_handlers = root.handlers[:]
+    original_levels = {name: logging.getLogger(name).level for name in affected_loggers}
+    yield
+    root.handlers[:] = original_handlers
+    for name, level in original_levels.items():
+        logging.getLogger(name).setLevel(level)
+
+
+def test_setup_console_logging_idempotent(clean_logging):
+    setup_console_logging("info", stream=io.StringIO())
+    setup_console_logging("info", stream=io.StringIO())
+    root = logging.getLogger()
+    sentinel_handlers = [
+        h for h in root.handlers if getattr(h, "_pywa_console_handler", False)
+    ]
+    assert len(sentinel_handlers) == 1
+
+
+def test_setup_console_logging_sets_pywa_level_not_root(clean_logging):
+    root_level_before = logging.getLogger().level
+    with pytest.warns(PywaWarning):
+        setup_console_logging("debug", stream=io.StringIO())
+    assert logging.getLogger("pywa").getEffectiveLevel() == logging.DEBUG
+    assert logging.getLogger().level == root_level_before
+
+
+def test_setup_console_logging_warns_on_debug(clean_logging):
+    with pytest.warns(PywaWarning):
+        setup_console_logging("debug", stream=io.StringIO())
+
+
+def test_setup_console_logging_no_warning_on_info(clean_logging, recwarn):
+    setup_console_logging("info", stream=io.StringIO())
+    assert not any(issubclass(w.category, PywaWarning) for w in recwarn.list)
+
+
+def test_setup_console_logging_no_duplicate_warning_for_same_level(
+    clean_logging, recwarn
+):
+    setup_console_logging("debug", stream=io.StringIO())
+    recwarn.clear()
+    setup_console_logging("debug", stream=io.StringIO())
+    assert not any(issubclass(w.category, PywaWarning) for w in recwarn.list)
+
+
+def test_setup_console_logging_keeps_uvicorn_chatter_quiet_regardless_of_level(
+    clean_logging,
+):
+    with pytest.warns(PywaWarning):
+        setup_console_logging("debug", stream=io.StringIO())
+    assert logging.getLogger("uvicorn.error").getEffectiveLevel() == logging.WARNING
+    assert logging.getLogger("uvicorn.asgi").getEffectiveLevel() == logging.WARNING
+
+
+def test_setup_console_logging_keeps_uvicorn_access_at_info(clean_logging):
+    setup_console_logging("warning", stream=io.StringIO())
+    assert logging.getLogger("uvicorn.access").getEffectiveLevel() == logging.INFO
+
+
+def test_setup_console_logging_pins_cli_banner_to_info(clean_logging):
+    setup_console_logging("warning", stream=io.StringIO())
+    assert logging.getLogger("pywa.cli").getEffectiveLevel() == logging.INFO
+
+
+_MESSAGE_UPDATE = json.loads(
+    pathlib.Path("tests/data/updates/message.json").read_text()
+)["text"]
+_PHONE_NUMBER = "972987654321"
+_MESSAGE_TEXT = "Body Text"
+_CONTACT_NAME = "Test Name"
+
+
+def _make_client() -> WhatsApp:
+    return WhatsApp(phone_id="1122334455667", token="xyz", filter_updates=False)
+
+
+def test_pii_absent_at_info(caplog):
+    wa = _make_client()
+    caplog.set_level(logging.INFO, logger="pywa")
+    wa.webhook_update_handler(json.dumps(_MESSAGE_UPDATE).encode())
+    combined = "\n".join(r.getMessage() for r in caplog.records)
+    assert _PHONE_NUMBER not in combined
+    assert _MESSAGE_TEXT not in combined
+
+
+def test_pii_present_at_debug(caplog):
+    wa = _make_client()
+    caplog.set_level(logging.DEBUG, logger="pywa")
+    wa.webhook_update_handler(json.dumps(_MESSAGE_UPDATE).encode())
+    combined = "\n".join(r.getMessage() for r in caplog.records)
+    assert _PHONE_NUMBER in combined
+    assert _MESSAGE_TEXT in combined
+
+
+_UNKNOWN_SHAPE_UPDATE = {
+    "object": "whatsapp_business_account",
+    "entry": [
+        {
+            "id": "1234567890987654321",
+            "changes": [
+                {
+                    "value": {
+                        "messaging_product": "whatsapp",
+                        "metadata": {
+                            "display_phone_number": "972123456789",
+                            "phone_number_id": "1122334455667",
+                        },
+                        "contacts": [
+                            {
+                                "profile": {"name": _CONTACT_NAME},
+                                "wa_id": _PHONE_NUMBER,
+                            }
+                        ],
+                    },
+                    "field": "messages",
+                }
+            ],
+        }
+    ],
+}
+
+
+def test_unknown_update_shape_does_not_leak_payload_at_warning(caplog):
+    wa = _make_client()
+    caplog.set_level(logging.WARNING, logger="pywa")
+    encoded = json.dumps(_UNKNOWN_SHAPE_UPDATE).encode()
+    raw = RawUpdate(encoded, hmac_header=None, update_hash=get_update_hash(encoded))
+    wa._get_handler_type(raw)
+    warning_records = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert warning_records
+    combined = " ".join(r.getMessage() for r in warning_records)
+    assert _CONTACT_NAME not in combined
+    assert _PHONE_NUMBER not in combined
+
+
+def test_call_handlers_summary_line(caplog):
+    wa = _make_client()
+    caplog.set_level(logging.INFO, logger="pywa")
+    wa.webhook_update_handler(json.dumps(_MESSAGE_UPDATE).encode())
+    assert any(
+        re.search(r"\[.{8}] \[.+] Finished processing update", r.getMessage())
+        for r in caplog.records
     )

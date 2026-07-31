@@ -189,12 +189,14 @@ class RawUpdate(dict, _HandlingFlow):
 
     raw: bytes
     hmac_header: str | None
+    _update_hash: str
     shared_data: dict
 
-    def __init__(self, /, u: bytes, *, hmac_header: str | None):
+    def __init__(self, /, u: bytes, *, hmac_header: str | None, update_hash: str):
         super().__init__(json.loads(u))
         self.raw = u
         self.hmac_header = hmac_header
+        self._update_hash = update_hash
         self.shared_data = {}
 
     @property

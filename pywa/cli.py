@@ -19,19 +19,10 @@ import time
 from typing import TypedDict
 
 from . import __version__ as pywa_version
+from ._logging import ENV_LOG_LEVEL, setup_console_logging
 from .client import WhatsApp
 
-
-def _configure_pywa_logger() -> None:
-    logger = logging.getLogger("pywa")
-    logger.setLevel(logging.INFO)
-    if not any(
-        getattr(handler, "_pywa_cli_handler", False) for handler in logger.handlers
-    ):
-        handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter("%(levelname)s:%(name)s: %(message)s"))
-        handler._pywa_cli_handler = True
-        logger.addHandler(handler)
+_logger = logging.getLogger(__name__)
 
 
 class PywaCLIException(Exception):
@@ -201,23 +192,36 @@ def serve_application(
     host = uvicorn_kwargs.get("host", "127.0.0.1")
     port = uvicorn_kwargs.get("port", 8000)
 
+    # Popped (not just read) so it never reaches uvicorn.run(): passing it through would
+    # make uvicorn's own Config.configure_logging() re-set uvicorn.error/access/asgi to
+    # this level, clobbering the pinned levels setup_console_logging() just applied.
+    log_level = uvicorn_kwargs.pop("log_level", None) or "info"
+
+    # `--reload`/multi-worker runs spawn a subprocess that re-imports the app fresh, so
+    # the env var is what actually reaches the worker; this direct call only styles the
+    # parent/reloader process's own logs (e.g. its "watching for changes" messages).
+    os.environ[ENV_LOG_LEVEL] = log_level
+    setup_console_logging(log_level)
+
     mode = "development" if command == "dev" else "production"
-    print(f"\n🚀  Starting Pywa in {mode} mode")
-    print("-" * 40)
-    print(f"📦  Module Path:  {sys_path}")
-    print(f"🔍  App Instance: {base_import_string}")
-    print(f"🌐  Server URL:   http://{host}:{port}")
+    banner = [
+        f"🚀  Starting Pywa in {mode} mode",
+        "-" * 40,
+        f"📦  Module Path:  {sys_path}",
+        f"🔍  App Instance: {base_import_string}",
+        f"🌐  Server URL:   http://{host}:{port}",
+        f"📝  Log Level:    {log_level}",
+    ]
     if command == "dev":
-        print("⚠️  Auto-reload:  Enabled (Use 'pywa run' for production)")
-    print("-" * 40 + "\n")
+        banner.append("⚠️  Auto-reload:  Enabled (Use 'pywa run' for production)")
+    banner.append("-" * 40)
+    _logger.info("\n" + "\n".join(banner))
 
     clean_kwargs = {k: v for k, v in uvicorn_kwargs.items() if v is not None}
 
     clean_kwargs["app"] = uvicorn_app_string
     clean_kwargs["factory"] = True
     clean_kwargs["log_config"] = None
-
-    _configure_pywa_logger()
 
     uvicorn.run(**clean_kwargs)
 
@@ -229,12 +233,16 @@ def send_messages(
     reply_to_message_id: str | None,
     token: str,
     phone_id: str,
+    verbose: bool = False,
     **kwargs,
 ):
     if not token or not phone_id:
         raise PywaCLIException(
             "WhatsApp API token and phone ID are required. Provide them via --token, --phone-id or set PYWA_TOKEN and PYWA_PHONE_ID environment variables."
         )
+
+    if verbose:
+        setup_console_logging("debug")
 
     wa = WhatsApp(phone_id=phone_id, token=token)
     uploaded_media = None
@@ -329,306 +337,314 @@ def generate_code(target: str | None, is_async: bool, out_path: pathlib.Path) ->
         print(f"✅ Created new Pywa project at {out_file.resolve()}")
 
 
+parser = argparse.ArgumentParser(
+    prog="pywa",
+    description="Pywa CLI - A command-line toolkit to run, test, and manage Pywa WhatsApp applications.",
+    epilog=(
+        "Examples:\n"
+        "  pywa dev                          # Run the app in development mode with auto-reload\n"
+        "  pywa run                          # Run the app in production mode\n"
+        "  pywa new --async -o ./my_bot      # Create a new async Pywa project\n"
+        '  pywa send text --to 123 "Hello"   # Send a text message to a user'
+    ),
+    formatter_class=argparse.RawTextHelpFormatter,
+)
+parser.add_argument(
+    "--version",
+    "-v",
+    action="version",
+    version="%(prog)s " + pywa_version,
+)
+
+subparsers = parser.add_subparsers(
+    dest="command", required=True, help="Available commands"
+)
+
+# ==========================================
+# SERVE PARSER (Shared logic for run/dev)
+# ==========================================
+serve_parser = argparse.ArgumentParser(add_help=False)
+serve_parser.add_argument(
+    "path",
+    nargs="?",
+    type=str,
+    help="Path to the python file containing the WhatsApp instance (e.g., 'main.py').",
+)
+serve_parser.add_argument(
+    "--host",
+    type=str,
+    default="127.0.0.1",
+    help="Bind socket to this host. Default: 127.0.0.1",
+)
+serve_parser.add_argument(
+    "--port", type=int, default=8000, help="Bind socket to this port. Default: 8000"
+)
+serve_parser.add_argument(
+    "--app",
+    type=str,
+    help="The explicit variable name of the WhatsApp instance (e.g., 'wa').",
+)
+serve_parser.add_argument(
+    "--entrypoint",
+    type=str,
+    help="Explicit entrypoint string (e.g., 'main:wa'). Overrides `path` and `--app`.",
+)
+
+serve_parser.add_argument(
+    "--log-level",
+    type=str,
+    choices=["critical", "error", "warning", "info", "debug", "trace"],
+    help="Log level.",
+)
+serve_parser.add_argument("--ssl-keyfile", type=str, help="SSL key file.")
+serve_parser.add_argument(
+    "--ssl-certfile",
+    type=str,
+    help="SSL certificate file.",
+)
+
+# --- RUN PARSER ---
+run_parser = subparsers.add_parser(
+    "run",
+    parents=[serve_parser],
+    help="Run the client in production mode.",
+    description="Run the Pywa WhatsApp client in production mode using a high-performance ASGI server.",
+    epilog=(
+        "Examples:\n"
+        "  pywa run\n"
+        "  pywa run my_bot.py\n"
+        "  pywa run my_bot:wa\n"
+        "  pywa run --port 8080 --host mydomain.com\n"
+    ),
+    formatter_class=argparse.RawTextHelpFormatter,
+)
+run_parser.add_argument(
+    "--workers",
+    type=int,
+    help="Number of worker processes.",
+)
+run_parser.add_argument(
+    "--proxy-headers",
+    action=argparse.BooleanOptionalAction,
+    help="Enable/Disable X-Forwarded-Proto, X-Forwarded-For to populate url scheme and remote address info.",
+)
+run_parser.add_argument(
+    "--forwarded-allow-ips",
+    type=str,
+    help="Comma separated list of IPs to trust with proxy headers. The literal '*' means trust everything.",
+)
+run_parser.add_argument(
+    "--timeout-keep-alive",
+    type=int,
+    help="Close Keep-Alive connections if no new data is received within this timeout (in seconds).",
+)
+run_parser.add_argument(
+    "--access-log",
+    action=argparse.BooleanOptionalAction,
+    default=False,
+    help="Enable/Disable HTTP access log. Default: False (off) for production runs.",
+)
+
+# --- DEV PARSER ---
+dev_parser = subparsers.add_parser(
+    "dev",
+    parents=[serve_parser],
+    help="Run the client in development mode with auto-reload enabled.",
+    description="Run the Pywa WhatsApp client in development mode. Automatically reloads the server when code changes are detected.",
+    epilog=(
+        "Examples:\n"
+        "  pywa dev\n"
+        "  pywa dev my_bot.py\n"
+        "  pywa dev my_bot.py --reload-dir ./src"
+    ),
+    formatter_class=argparse.RawTextHelpFormatter,
+)
+dev_parser.add_argument(
+    "--reload",
+    action=argparse.BooleanOptionalAction,
+    default=True,
+    help="Enable auto-reload. Default: True",
+)
+dev_parser.add_argument(
+    "--reload-dir",
+    action="append",
+    dest="reload_dirs",
+    type=str,
+    help="Set reload directories explicitly, instead of using the current working directory.",
+)
+dev_parser.add_argument(
+    "--reload-delay",
+    type=float,
+    help="Delay between previous and next check if application needs to be reloaded.",
+)
+dev_parser.add_argument(
+    "--access-log",
+    action=argparse.BooleanOptionalAction,
+    default=True,
+    help="Enable/Disable HTTP access log. Default: True (on) for development runs.",
+)
+
+# ==========================================
+# SEND PARSER
+# ==========================================
+send_common_parser = argparse.ArgumentParser(add_help=False)
+send_common_parser.add_argument(
+    "--to",
+    nargs="+",
+    required=True,
+    help="One or multiple recipient phone numbers/IDs (space separated)",
+)
+send_common_parser.add_argument(
+    "--delay",
+    type=float,
+    default=0.0,
+    help="Delay in seconds between sending messages (default: 0)",
+)
+send_common_parser.add_argument(
+    "--reply-to", dest="reply_to_message_id", help="Message ID to reply to"
+)
+send_common_parser.add_argument(
+    "--token", default=os.environ.get("PYWA_TOKEN"), help="WhatsApp Cloud API Token"
+)
+send_common_parser.add_argument(
+    "--phone-id", default=os.environ.get("PYWA_PHONE_ID"), help="WhatsApp Phone ID"
+)
+send_common_parser.add_argument(
+    "--verbose",
+    action="store_true",
+    help="Display debug logs from Pywa",
+)
+
+send_parser = subparsers.add_parser(
+    "send",
+    help="Send messages to users",
+    description="Send messages directly from the command line. Useful for testing, notifications, or basic scripting.",
+    epilog=(
+        "Authentication Note:\n"
+        "  You must provide credentials using --token and --phone-id,\n"
+        "  or by setting the `PYWA_TOKEN` and `PYWA_PHONE_ID` environment variables.\n\n"
+        "Examples:\n"
+        '  pywa send text --to 1234567890 "Hello there"\n'
+        '  pywa send image --to 1234567890 ./cat.jpg --caption "Cute cat"\n'
+        "  pywa send video --to 1234567890 https://example.com/video.mp4\n"
+        '  pywa send document --to 1234567890 ~/Documents/passport.pdf --filename "My Passport"\n'
+        '  pywa send location --to 1234567890 37.7749 -122.4194 --name "San Francisco"'
+    ),
+    formatter_class=argparse.RawTextHelpFormatter,
+)
+send_subparsers = send_parser.add_subparsers(
+    dest="send_type", required=True, help="Type of message to send"
+)
+
+# Text
+send_text = send_subparsers.add_parser(
+    "text", parents=[send_common_parser], help="Send a text message"
+)
+send_text.add_argument("text", help="The text message body")
+send_text.add_argument(
+    "--preview-url",
+    action="store_true",
+    help="Enable URL preview if text contains links",
+)
+
+# Location
+send_loc = send_subparsers.add_parser(
+    "location", parents=[send_common_parser], help="Send a location"
+)
+send_loc.add_argument("latitude", type=float, help="Latitude coordinate")
+send_loc.add_argument("longitude", type=float, help="Longitude coordinate")
+send_loc.add_argument("--name", help="Name of the location")
+send_loc.add_argument("--address", help="Address of the location")
+
+
+class MediaConfig(TypedDict, total=False):
+    caption: bool
+    aliases: list[str]
+    extra: list[tuple[str, dict[str, str]]]
+
+
+media_configs: dict[str, MediaConfig] = {
+    "image": {"caption": True, "aliases": ["img", "pic"]},
+    "video": {"caption": True, "aliases": ["vid"]},
+    "document": {
+        "caption": True,
+        "aliases": ["doc"],
+        "extra": [("--filename", {"help": "Optional filename to display"})],
+    },
+    "audio": {
+        "caption": False,
+        "aliases": ["aud"],
+        "extra": [
+            ("--is-voice", {"action": "store_true", "help": "Send as a voice note"})
+        ],
+    },
+    "voice": {
+        "caption": False,
+        "aliases": [],
+    },
+    "sticker": {"caption": False, "aliases": []},
+}
+
+media_common_parser = argparse.ArgumentParser(
+    add_help=False, parents=[send_common_parser]
+)
+media_common_parser.add_argument("media", help="Path/URL/ID of the media to send")
+media_common_parser.add_argument("--mime-type", help="Optional MIME type")
+
+for m_type, config in media_configs.items():
+    p = send_subparsers.add_parser(
+        m_type,
+        parents=[media_common_parser],
+        help=f"Send a {m_type}",
+        aliases=config.get("aliases", []),
+    )
+
+    if config.get("caption"):
+        p.add_argument("--caption", help=f"{m_type.capitalize()} caption")
+
+    for arg_name, arg_kwargs in config.get("extra", []):
+        p.add_argument(arg_name, **arg_kwargs)  # ty:ignore[invalid-argument-type]
+
+# ==========================================
+# NEW PARSER
+# ==========================================
+new_common_parser = argparse.ArgumentParser(add_help=False)
+new_common_parser.add_argument(
+    "--async",
+    action="store_true",
+    dest="is_async",
+    help="Generate an asynchronous code",
+)
+
+new_common_parser.add_argument(
+    "--out",
+    "-o",
+    type=pathlib.Path,
+    default=pathlib.Path.cwd(),
+    help="Output directory path (default: current directory '.')",
+)
+new_parser = subparsers.add_parser(
+    "new",
+    help="Create a new Pywa project",
+    parents=[new_common_parser],
+    description="Initialize a new Pywa project with ready-to-use boilerplate code.",
+    epilog=(
+        "Examples:\n"
+        "  pywa new                            # Create a sync project in the current directory\n"
+        "  pywa new --async                    # Create an async project in the current directory\n"
+        "  pywa new project -o ./my_bot        # Create a sync project in a specific directory\n"
+    ),
+    formatter_class=argparse.RawTextHelpFormatter,
+)
+new_subparsers = new_parser.add_subparsers(dest="target", required=False)
+new_subparsers.add_parser(
+    "project",
+    parents=[new_common_parser],
+    help="Create a new Pywa project (default)",
+)
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        prog="pywa",
-        description="Pywa CLI - A command-line toolkit to run, test, and manage Pywa WhatsApp applications.",
-        epilog=(
-            "Examples:\n"
-            "  pywa dev                          # Run the app in development mode with auto-reload\n"
-            "  pywa run                          # Run the app in production mode\n"
-            "  pywa new --async -o ./my_bot      # Create a new async Pywa project\n"
-            '  pywa send text --to 123 "Hello"   # Send a text message to a user'
-        ),
-        formatter_class=argparse.RawTextHelpFormatter,
-    )
-    parser.add_argument(
-        "--version",
-        "-v",
-        action="version",
-        version="%(prog)s " + pywa_version,
-    )
-
-    subparsers = parser.add_subparsers(
-        dest="command", required=True, help="Available commands"
-    )
-
-    # ==========================================
-    # SERVE PARSER (Shared logic for run/dev)
-    # ==========================================
-    serve_parser = argparse.ArgumentParser(add_help=False)
-    serve_parser.add_argument(
-        "path",
-        nargs="?",
-        type=str,
-        help="Path to the python file containing the WhatsApp instance (e.g., 'main.py').",
-    )
-    serve_parser.add_argument(
-        "--host",
-        type=str,
-        default="127.0.0.1",
-        help="Bind socket to this host. Default: 127.0.0.1",
-    )
-    serve_parser.add_argument(
-        "--port", type=int, default=8000, help="Bind socket to this port. Default: 8000"
-    )
-    serve_parser.add_argument(
-        "--app",
-        type=str,
-        help="The explicit variable name of the WhatsApp instance (e.g., 'wa').",
-    )
-    serve_parser.add_argument(
-        "--entrypoint",
-        type=str,
-        help="Explicit entrypoint string (e.g., 'main:wa'). Overrides `path` and `--app`.",
-    )
-
-    serve_parser.add_argument(
-        "--log-level",
-        type=str,
-        choices=["critical", "error", "warning", "info", "debug", "trace"],
-        help="Log level.",
-    )
-    serve_parser.add_argument("--ssl-keyfile", type=str, help="SSL key file.")
-    serve_parser.add_argument(
-        "--ssl-certfile",
-        type=str,
-        help="SSL certificate file.",
-    )
-
-    # --- RUN PARSER ---
-    run_parser = subparsers.add_parser(
-        "run",
-        parents=[serve_parser],
-        help="Run the client in production mode.",
-        description="Run the Pywa WhatsApp client in production mode using a high-performance ASGI server.",
-        epilog=(
-            "Examples:\n"
-            "  pywa run\n"
-            "  pywa run my_bot.py\n"
-            "  pywa run my_bot:wa\n"
-            "  pywa run --port 8080 --host mydomain.com\n"
-        ),
-        formatter_class=argparse.RawTextHelpFormatter,
-    )
-    run_parser.add_argument(
-        "--workers",
-        type=int,
-        help="Number of worker processes.",
-    )
-    run_parser.add_argument(
-        "--proxy-headers",
-        action=argparse.BooleanOptionalAction,
-        help="Enable/Disable X-Forwarded-Proto, X-Forwarded-For to populate url scheme and remote address info.",
-    )
-    run_parser.add_argument(
-        "--forwarded-allow-ips",
-        type=str,
-        help="Comma separated list of IPs to trust with proxy headers. The literal '*' means trust everything.",
-    )
-    run_parser.add_argument(
-        "--timeout-keep-alive",
-        type=int,
-        help="Close Keep-Alive connections if no new data is received within this timeout (in seconds).",
-    )
-    run_parser.add_argument(
-        "--access-log",
-        action=argparse.BooleanOptionalAction,
-        default=False,
-        help="Enable/Disable HTTP access log. Default: False (off) for production runs.",
-    )
-
-    # --- DEV PARSER ---
-    dev_parser = subparsers.add_parser(
-        "dev",
-        parents=[serve_parser],
-        help="Run the client in development mode with auto-reload enabled.",
-        description="Run the Pywa WhatsApp client in development mode. Automatically reloads the server when code changes are detected.",
-        epilog=(
-            "Examples:\n"
-            "  pywa dev\n"
-            "  pywa dev my_bot.py\n"
-            "  pywa dev my_bot.py --reload-dir ./src"
-        ),
-        formatter_class=argparse.RawTextHelpFormatter,
-    )
-    dev_parser.add_argument(
-        "--reload",
-        action=argparse.BooleanOptionalAction,
-        default=True,
-        help="Enable auto-reload. Default: True",
-    )
-    dev_parser.add_argument(
-        "--reload-dir",
-        action="append",
-        dest="reload_dirs",
-        type=str,
-        help="Set reload directories explicitly, instead of using the current working directory.",
-    )
-    dev_parser.add_argument(
-        "--reload-delay",
-        type=float,
-        help="Delay between previous and next check if application needs to be reloaded.",
-    )
-    dev_parser.add_argument(
-        "--access-log",
-        action=argparse.BooleanOptionalAction,
-        default=True,
-        help="Enable/Disable HTTP access log. Default: True (on) for development runs.",
-    )
-
-    # ==========================================
-    # SEND PARSER
-    # ==========================================
-    send_common_parser = argparse.ArgumentParser(add_help=False)
-    send_common_parser.add_argument(
-        "--to",
-        nargs="+",
-        required=True,
-        help="One or multiple recipient phone numbers/IDs (space separated)",
-    )
-    send_common_parser.add_argument(
-        "--delay",
-        type=float,
-        default=0.0,
-        help="Delay in seconds between sending messages (default: 0)",
-    )
-    send_common_parser.add_argument(
-        "--reply-to", dest="reply_to_message_id", help="Message ID to reply to"
-    )
-    send_common_parser.add_argument(
-        "--token", default=os.environ.get("PYWA_TOKEN"), help="WhatsApp Cloud API Token"
-    )
-    send_common_parser.add_argument(
-        "--phone-id", default=os.environ.get("PYWA_PHONE_ID"), help="WhatsApp Phone ID"
-    )
-
-    send_parser = subparsers.add_parser(
-        "send",
-        help="Send messages to users",
-        description="Send messages directly from the command line. Useful for testing, notifications, or basic scripting.",
-        epilog=(
-            "Authentication Note:\n"
-            "  You must provide credentials using --token and --phone-id,\n"
-            "  or by setting the `PYWA_TOKEN` and `PYWA_PHONE_ID` environment variables.\n\n"
-            "Examples:\n"
-            '  pywa send text --to 1234567890 "Hello there"\n'
-            '  pywa send image --to 1234567890 ./cat.jpg --caption "Cute cat"\n'
-            "  pywa send video --to 1234567890 https://example.com/video.mp4\n"
-            '  pywa send document --to 1234567890 ~/Documents/passport.pdf --filename "My Passport"\n'
-            '  pywa send location --to 1234567890 37.7749 -122.4194 --name "San Francisco"'
-        ),
-        formatter_class=argparse.RawTextHelpFormatter,
-    )
-    send_subparsers = send_parser.add_subparsers(
-        dest="send_type", required=True, help="Type of message to send"
-    )
-
-    # Text
-    send_text = send_subparsers.add_parser(
-        "text", parents=[send_common_parser], help="Send a text message"
-    )
-    send_text.add_argument("text", help="The text message body")
-    send_text.add_argument(
-        "--preview-url",
-        action="store_true",
-        help="Enable URL preview if text contains links",
-    )
-
-    # Location
-    send_loc = send_subparsers.add_parser(
-        "location", parents=[send_common_parser], help="Send a location"
-    )
-    send_loc.add_argument("latitude", type=float, help="Latitude coordinate")
-    send_loc.add_argument("longitude", type=float, help="Longitude coordinate")
-    send_loc.add_argument("--name", help="Name of the location")
-    send_loc.add_argument("--address", help="Address of the location")
-
-    class MediaConfig(TypedDict, total=False):
-        caption: bool
-        aliases: list[str]
-        extra: list[tuple[str, dict[str, str]]]
-
-    media_configs: dict[str, MediaConfig] = {
-        "image": {"caption": True, "aliases": ["img", "pic"]},
-        "video": {"caption": True, "aliases": ["vid"]},
-        "document": {
-            "caption": True,
-            "aliases": ["doc"],
-            "extra": [("--filename", {"help": "Optional filename to display"})],
-        },
-        "audio": {
-            "caption": False,
-            "aliases": ["aud"],
-            "extra": [
-                ("--is-voice", {"action": "store_true", "help": "Send as a voice note"})
-            ],
-        },
-        "voice": {
-            "caption": False,
-            "aliases": [],
-        },
-        "sticker": {"caption": False, "aliases": []},
-    }
-
-    media_common_parser = argparse.ArgumentParser(
-        add_help=False, parents=[send_common_parser]
-    )
-    media_common_parser.add_argument("media", help="Path/URL/ID of the media to send")
-    media_common_parser.add_argument("--mime-type", help="Optional MIME type")
-
-    for m_type, config in media_configs.items():
-        p = send_subparsers.add_parser(
-            m_type,
-            parents=[media_common_parser],
-            help=f"Send a {m_type}",
-            aliases=config.get("aliases", []),
-        )
-
-        if config.get("caption"):
-            p.add_argument("--caption", help=f"{m_type.capitalize()} caption")
-
-        for arg_name, arg_kwargs in config.get("extra", []):
-            p.add_argument(arg_name, **arg_kwargs)  # ty:ignore[invalid-argument-type]
-
-    # ==========================================
-    # NEW PARSER
-    # ==========================================
-    new_common_parser = argparse.ArgumentParser(add_help=False)
-    new_common_parser.add_argument(
-        "--async",
-        action="store_true",
-        dest="is_async",
-        help="Generate an asynchronous code",
-    )
-
-    new_common_parser.add_argument(
-        "--out",
-        "-o",
-        type=pathlib.Path,
-        default=pathlib.Path.cwd(),
-        help="Output directory path (default: current directory '.')",
-    )
-    new_parser = subparsers.add_parser(
-        "new",
-        help="Create a new Pywa project",
-        parents=[new_common_parser],
-        description="Initialize a new Pywa project with ready-to-use boilerplate code.",
-        epilog=(
-            "Examples:\n"
-            "  pywa new                            # Create a sync project in the current directory\n"
-            "  pywa new --async                    # Create an async project in the current directory\n"
-            "  pywa new project -o ./my_bot        # Create a sync project in a specific directory\n"
-        ),
-        formatter_class=argparse.RawTextHelpFormatter,
-    )
-    new_subparsers = new_parser.add_subparsers(dest="target", required=False)
-    new_subparsers.add_parser(
-        "project",
-        parents=[new_common_parser],
-        help="Create a new Pywa project (default)",
-    )
-    # --- EXECUTION ---
     args = parser.parse_args()
 
     try:
