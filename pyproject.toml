@@ -73,6 +73,11 @@ server = [
     "starlette>=0.32.0",
     "uvicorn[standard]>=0.25.0"
 ]
+flask = ["flask[async]"]
+fastapi = ["fastapi[standard]"]
+cryptography = ["cryptography"]
+
+[dependency-groups]
 dev = [
     "pytest~=9.0",
     "pytest-cov~=7.0",
@@ -84,21 +89,18 @@ dev = [
     "python-dotenv~=1.0",
     "fastapi>=0.115,<1.0",
     "ngrok~=1.0",
+    "ty>=0.0.65",
 ]
-
 docs = [
     "sphinx-book-theme~=1.1",
     "sphinx-copybutton~=0.5",
     "sphinxext-opengraph~=0.13",
     "sphinx-togglebutton~=0.4",
-    "myst-parser~=5.0",
+    "myst-parser~=4.0",
     "sphinxcontrib-googleanalytics~=0.5",
     "sphinx-last-updated-by-git~=0.3",
     "sphinx-favicon~=1.0",
 ]
-flask = ["flask[async]"]
-fastapi = ["fastapi[standard]"]
-cryptography = ["cryptography"]
 
 [project.scripts]
 pywa = "pywa.cli:main"
