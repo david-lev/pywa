@@ -82,6 +82,8 @@ dev = [
     "pre-commit~=4.5",
     "cryptography>=46,<47",
     "python-dotenv~=1.0",
+    "fastapi>=0.115,<1.0",
+    "ngrok~=1.0",
 ]
 
 docs = [

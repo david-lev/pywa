@@ -17,6 +17,7 @@
   <a href="https://pepy.tech/project/pywa"><img src="https://static.pepy.tech/badge/pywa" alt="Downloads"/></a>
   <a href="pyproject.toml"><img src="https://img.shields.io/badge/python-3.10%2B-3776ab?color=%2334D058" alt="Python Versions"/></a>
   <a href="https://github.com/david-lev/pywa/actions/workflows/tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/david-lev/pywa/tests.yml?label=tests" alt="Tests"/></a>
+  <a href="https://results.pre-commit.ci/latest/github/david-lev/pywa/master"><img src="https://results.pre-commit.ci/badge/github/david-lev/pywa/master.svg" alt="pre-commit.ci status"/></a>
   <a href="https://pywa.readthedocs.io"><img src="https://readthedocs.org/projects/pywa/badge/?version=latest&" alt="Docs"/></a>
   <a href="https://github.com/david-lev/pywa/blob/master/LICENSE"><img src="https://img.shields.io/github/license/david-lev/pywa?color=%2334D058" alt="License"/></a>
   <a href="https://www.codefactor.io/repository/github/david-lev/pywa/overview/master"><img src="https://www.codefactor.io/repository/github/david-lev/pywa/badge/master" alt="Code Quality"/></a>
