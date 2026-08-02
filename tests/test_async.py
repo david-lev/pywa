@@ -1,4 +1,7 @@
 import inspect
+import json
+import logging
+import pathlib
 
 import pytest
 
@@ -603,3 +606,36 @@ def _check_docs(
             raise AssertionError(
                 f"Method {method_name} has different docstrings in {async_obj}"
             ) from None
+
+
+def test_import_pywa_async_succeeds():
+    import pywa_async
+
+    assert pywa_async.WhatsApp is WhatsAppAsync
+
+
+_ASYNC_MESSAGE_UPDATE = json.loads(
+    pathlib.Path("tests/data/updates/message.json").read_text()
+)["text"]
+_ASYNC_PHONE_NUMBER = "972987654321"
+_ASYNC_MESSAGE_TEXT = "Body Text"
+
+
+@pytest.mark.asyncio
+async def test_pii_absent_at_info_async(caplog):
+    wa = WhatsAppAsync(phone_id="1122334455667", token="xyz", filter_updates=False)
+    caplog.set_level(logging.INFO, logger="pywa")
+    await wa.webhook_update_handler(json.dumps(_ASYNC_MESSAGE_UPDATE).encode())
+    combined = "\n".join(r.getMessage() for r in caplog.records)
+    assert _ASYNC_PHONE_NUMBER not in combined
+    assert _ASYNC_MESSAGE_TEXT not in combined
+
+
+@pytest.mark.asyncio
+async def test_pii_present_at_debug_async(caplog):
+    wa = WhatsAppAsync(phone_id="1122334455667", token="xyz", filter_updates=False)
+    caplog.set_level(logging.DEBUG, logger="pywa")
+    await wa.webhook_update_handler(json.dumps(_ASYNC_MESSAGE_UPDATE).encode())
+    combined = "\n".join(r.getMessage() for r in caplog.records)
+    assert _ASYNC_PHONE_NUMBER in combined
+    assert _ASYNC_MESSAGE_TEXT in combined

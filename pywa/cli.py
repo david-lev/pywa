@@ -21,23 +21,14 @@ from typing import TypedDict
 import httpx
 
 from . import __version__ as pywa_version
+from ._logging import ENV_LOG_LEVEL, format_banner, setup_console_logging
 from .client import WhatsApp
 
 GITHUB_REPO = "david-lev/pywa"
 GITHUB_API_BASE = "https://api.github.com/repos"
 GITHUB_RAW_BASE = "https://raw.githubusercontent.com"
 
-
-def _configure_pywa_logger() -> None:
-    logger = logging.getLogger("pywa")
-    logger.setLevel(logging.INFO)
-    if not any(
-        getattr(handler, "_pywa_cli_handler", False) for handler in logger.handlers
-    ):
-        handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter("%(levelname)s:%(name)s: %(message)s"))
-        handler._pywa_cli_handler = True
-        logger.addHandler(handler)
+_logger = logging.getLogger(__name__)
 
 
 class PywaCLIException(Exception):
@@ -206,24 +197,32 @@ def serve_application(
 
     host = uvicorn_kwargs.get("host", "127.0.0.1")
     port = uvicorn_kwargs.get("port", 8000)
+    default_log_level = "debug" if command == "dev" else "info"
+    log_level = uvicorn_kwargs.pop("log_level", None) or default_log_level
+
+    # `--reload`/multi-worker runs spawn a subprocess that re-imports the app fresh, so
+    # the env var is what actually reaches the worker; this direct call only styles the
+    # parent/reloader process's own logs (e.g. its "watching for changes" messages).
+    os.environ[ENV_LOG_LEVEL] = log_level
+    setup_console_logging(log_level)
 
     mode = "development" if command == "dev" else "production"
-    print(f"\n🚀  Starting Pywa in {mode} mode")
-    print("-" * 40)
-    print(f"📦  Module Path:  {sys_path}")
-    print(f"🔍  App Instance: {base_import_string}")
-    print(f"🌐  Server URL:   http://{host}:{port}")
+    banner_lines = [
+        f"🚀  Starting Pywa in {mode} mode",
+        f"📦  Module Path:  {sys_path}",
+        f"🔍  App Instance: {base_import_string}",
+        f"🌐  Server URL:   http://{host}:{port}",
+        f"📝  Log Level:    {log_level}",
+    ]
     if command == "dev":
-        print("⚠️  Auto-reload:  Enabled (Use 'pywa run' for production)")
-    print("-" * 40 + "\n")
+        banner_lines.append("⚠️  Auto-reload:  Enabled (Use 'pywa run' for production)")
+    _logger.info(format_banner(banner_lines))
 
     clean_kwargs = {k: v for k, v in uvicorn_kwargs.items() if v is not None}
 
     clean_kwargs["app"] = uvicorn_app_string
     clean_kwargs["factory"] = True
     clean_kwargs["log_config"] = None
-
-    _configure_pywa_logger()
 
     uvicorn.run(**clean_kwargs)
 
@@ -235,12 +234,16 @@ def send_messages(
     reply_to_message_id: str | None,
     token: str,
     phone_id: str,
+    verbose: bool = False,
     **kwargs,
 ):
     if not token or not phone_id:
         raise PywaCLIException(
             "WhatsApp API token and phone ID are required. Provide them via --token, --phone-id or set PYWA_TOKEN and PYWA_PHONE_ID environment variables."
         )
+
+    if verbose:
+        setup_console_logging("debug")
 
     wa = WhatsApp(phone_id=phone_id, token=token)
     uploaded_media = None
@@ -486,7 +489,7 @@ def main() -> None:
         "--log-level",
         type=str,
         choices=["critical", "error", "warning", "info", "debug", "trace"],
-        help="Log level.",
+        help="Log level. Default: info for `run`, debug for `dev`.",
     )
     serve_parser.add_argument("--ssl-keyfile", type=str, help="SSL key file.")
     serve_parser.add_argument(
@@ -600,6 +603,11 @@ def main() -> None:
     )
     send_common_parser.add_argument(
         "--phone-id", default=os.environ.get("PYWA_PHONE_ID"), help="WhatsApp Phone ID"
+    )
+    send_common_parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Display debug logs from Pywa",
     )
 
     send_parser = subparsers.add_parser(
