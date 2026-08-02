@@ -191,11 +191,8 @@ def serve_application(
 
     host = uvicorn_kwargs.get("host", "127.0.0.1")
     port = uvicorn_kwargs.get("port", 8000)
-
-    # Popped (not just read) so it never reaches uvicorn.run(): passing it through would
-    # make uvicorn's own Config.configure_logging() re-set uvicorn.error/access/asgi to
-    # this level, clobbering the pinned levels setup_console_logging() just applied.
-    log_level = uvicorn_kwargs.pop("log_level", None) or "info"
+    default_log_level = "debug" if command == "dev" else "info"
+    log_level = uvicorn_kwargs.pop("log_level", None) or default_log_level
 
     # `--reload`/multi-worker runs spawn a subprocess that re-imports the app fresh, so
     # the env var is what actually reaches the worker; this direct call only styles the
@@ -392,7 +389,7 @@ serve_parser.add_argument(
     "--log-level",
     type=str,
     choices=["critical", "error", "warning", "info", "debug", "trace"],
-    help="Log level.",
+    help="Log level. Default: info for `run`, debug for `dev`.",
 )
 serve_parser.add_argument("--ssl-keyfile", type=str, help="SSL key file.")
 serve_parser.add_argument(

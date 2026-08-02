@@ -212,7 +212,7 @@ class Server:
             A tuple containing the challenge and the status code.
         """
         if vt == self._verify_token:
-            _logger.info(
+            _logger.debug(
                 "[%s] Passed verification challenge",
                 self._webhook_endpoint,
             )
@@ -309,8 +309,6 @@ class Server:
 
         if log.isEnabledFor(logging.DEBUG):
             log.debug("Received raw update: %s", raw_update)
-        else:
-            log.info("Received update")
 
         if self._skip_duplicate_updates:
             with self._cache_lock:
@@ -344,22 +342,22 @@ class Server:
 
         match self._server_type:
             case utils.CustomServerType.STARLETTE:
-                _logger.info(
+                _logger.debug(
                     "Registered Starlette routes at %s", self._webhook_endpoint
                 )
                 helpers.register_routes_starlette(wa=self)
             case utils.CustomServerType.FASTAPI:
-                _logger.info("Registered FastAPI routes at %s", self._webhook_endpoint)
+                _logger.debug("Registered FastAPI routes at %s", self._webhook_endpoint)
                 helpers.register_routes_fastapi(wa=self)
             case utils.CustomServerType.FLASK:
-                _logger.info("Registered Flask routes at %s", self._webhook_endpoint)
+                _logger.debug("Registered Flask routes at %s", self._webhook_endpoint)
                 helpers.register_routes_flask(wa=self)
             case _:
                 raise ValueError(
                     f"The `server` must be one of {utils.CustomServerType.protocols_names()}, but got {type(self._server)}"
                 )
         for wrapper in self._flow_handlers_to_register:
-            _logger.info(
+            _logger.debug(
                 "Registered flow request handler at %s%s",
                 self._webhook_endpoint,
                 wrapper._endpoint,
@@ -392,9 +390,9 @@ class Server:
                 handler_type = None
 
             if handler_type is None:
-                log.info("No handler resolved for update (field=%s)", raw_update.field)
+                log.debug("No handler resolved for update (field=%s)", raw_update.field)
                 return
-            log.info("Dispatched to %s", handler_type.__name__)
+            log.debug("Dispatched to %s", handler_type.__name__)
             try:
                 constructed_update: BaseUpdate = self._handlers_to_updates[
                     handler_type
@@ -468,7 +466,7 @@ class Server:
         for identifier in listener_identifiers:
             listener = self._listeners.get(identifier)
             if listener is not None:
-                log.info("Found matching listener")
+                log.debug("Found matching listener")
                 break
         else:
             return False
@@ -601,7 +599,7 @@ class Server:
 
             if not res["success"]:
                 raise RuntimeError("Failed to register callback URL.")
-            _logger.info(
+            _logger.debug(
                 "Callback URL '%s' registered successfully", self._callback_url
             )
         except errors.WhatsAppError as e:

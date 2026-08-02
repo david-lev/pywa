@@ -100,7 +100,6 @@ class Server:
             )
             return "Bad Request", 400
 
-        log.info("Received update")
         if log.isEnabledFor(logging.DEBUG):
             log.debug("Received raw update: %s", raw_update)
 
@@ -143,7 +142,7 @@ class Server:
             if handler_type is None:
                 log.info("No handler resolved for update (field=%s)", raw_update.field)
                 return
-            log.info("Dispatched to %s", handler_type.__name__)
+            log.debug("Dispatched to %s", handler_type.__name__)
             try:
                 constructed_update: BaseUpdate = self._handlers_to_updates[
                     handler_type
