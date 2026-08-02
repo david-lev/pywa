@@ -84,12 +84,14 @@ dev = [
     "pytest-asyncio~=1.3",
     "pytest-mock~=3.15",
     "ruff~=0.14",
+    "ty>=0.0.65",
     "pre-commit~=4.5",
     "cryptography>=46,<47",
     "python-dotenv~=1.0",
     "fastapi>=0.115,<1.0",
+    "flask[async]",
     "ngrok~=1.0",
-    "ty>=0.0.65",
+    "uvicorn[standard]>=0.25.0",
 ]
 docs = [
     "sphinx-book-theme~=1.1",
@@ -111,7 +113,6 @@ pywa = "pywa.cli:main"
 "Source Code" = "https://github.com/david-lev/pywa"
 "Funding" = "https://github.com/sponsors/david-lev"
 "Changelog" = "https://github.com/david-lev/pywa/blob/master/CHANGELOG.md"
-
 
 [tool.ruff]
 extend-exclude = [

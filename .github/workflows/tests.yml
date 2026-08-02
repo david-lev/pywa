@@ -16,8 +16,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, macos-latest, windows-latest ]
-        python-version: [ '3.10', '3.11', '3.12', '3.13', '3.14' ]
+        include:
+          # Every supported Python version, on the cheapest runner.
+          - { os: ubuntu-latest, python-version: '3.10' }
+          - { os: ubuntu-latest, python-version: '3.11' }
+          - { os: ubuntu-latest, python-version: '3.12' }
+          - { os: ubuntu-latest, python-version: '3.13' }
+          - { os: ubuntu-latest, python-version: '3.14' }
+          # Min/max Python only on macOS/Windows, to catch OS-specific issues.
+          - { os: macos-latest, python-version: '3.10' }
+          - { os: macos-latest, python-version: '3.14' }
+          - { os: windows-latest, python-version: '3.10' }
+          - { os: windows-latest, python-version: '3.14' }
 
     steps:
       - uses: actions/checkout@v6

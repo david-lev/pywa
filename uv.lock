@@ -1509,6 +1509,7 @@ server = [
 dev = [
     { name = "cryptography" },
     { name = "fastapi" },
+    { name = "flask", extra = ["async"] },
     { name = "ngrok", version = "1.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "ngrok", version = "1.7.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "pre-commit" },
@@ -1519,6 +1520,7 @@ dev = [
     { name = "python-dotenv" },
     { name = "ruff" },
     { name = "ty" },
+    { name = "uvicorn", extra = ["standard"] },
 ]
 docs = [
     { name = "myst-parser" },
@@ -1547,6 +1549,7 @@ provides-extras = ["server", "flask", "fastapi", "cryptography"]
 dev = [
     { name = "cryptography", specifier = ">=46,<47" },
     { name = "fastapi", specifier = ">=0.115,<1.0" },
+    { name = "flask", extras = ["async"] },
     { name = "ngrok", specifier = "~=1.0" },
     { name = "pre-commit", specifier = "~=4.5" },
     { name = "pytest", specifier = "~=9.0" },
@@ -1556,6 +1559,7 @@ dev = [
     { name = "python-dotenv", specifier = "~=1.0" },
     { name = "ruff", specifier = "~=0.14" },
     { name = "ty", specifier = ">=0.0.65" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.25.0" },
 ]
 docs = [
     { name = "myst-parser", specifier = "~=4.0" },

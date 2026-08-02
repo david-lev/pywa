@@ -4,6 +4,7 @@
 ci:
   autoupdate_branch: dev
   autoupdate_schedule: quarterly
+  skip: [ty]
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -12,13 +13,11 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+      - id: check-toml
       - id: check-added-large-files
       - id: check-executables-have-shebangs
       - id: check-illegal-windows-names
       - id: check-json
-#      - id: detect-private-key
-#      - id: pretty-format-json
-#        args: [ --autofix ]
 
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -27,3 +26,8 @@ repos:
       - id: ruff-check
         args: [ --fix ]
       - id: ruff-format
+
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.12.1
+    hooks:
+      - id: uv-lock
