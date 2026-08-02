@@ -44,6 +44,25 @@ D8SsbEVopM4IbnZi0X5WWyHreEjfBrcP6+/o+3vzi+sq76v17PXlalypi4kuUjAD
 """
 
 
+def test_flow_private_key_is_parsed_once_per_key():
+    """The private key does not change per request, so it is not re-parsed per request."""
+    pywa_utils._load_flow_private_key.cache_clear()
+
+    first = pywa_utils._load_flow_private_key(private_key, "pywa")
+    second = pywa_utils._load_flow_private_key(private_key, "pywa")
+    assert first is second
+    assert pywa_utils._load_flow_private_key.cache_info().hits == 1
+
+    # The password is part of the cache key, so a wrong one is not served
+    # the key a correct one loaded.
+    try:
+        pywa_utils._load_flow_private_key(private_key, "not-the-password")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("a wrong password must not be served the cached key")
+
+
 def test_default_flow_request_decryptor_encryptor():
     payload = {
         "encrypted_flow_data": "sCTmBCqjs0GkkX6n/nyZDuyjpaijuelY3I/8rlr1ZIEymEzCMnDGQdxQ9OGaKw0CEaWSgc/GLhuixa8NTQNYXAyVfTaU9H2FWEabWUb8nbZYRdYy81XHUkDCodl4SvBhhufEag==",

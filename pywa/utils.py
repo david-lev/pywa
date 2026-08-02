@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import dataclasses
 import enum
+import functools
 import hashlib
 import hmac
 import importlib
@@ -183,6 +184,27 @@ Returns:
 """
 
 
+@functools.lru_cache(maxsize=8)
+def _load_flow_private_key(private_key: str, password: str | None):
+    """
+    Load and cache a flow's RSA private key.
+
+    Parsing a PEM is expensive — ``cryptography`` validates the RSA key
+    material on load — and it was being done once per flow request, which
+    made it the dominant cost of every data exchange: ~56ms against ~2.8ms
+    for the decryption it enables, with or without a password on the key.
+
+    The key does not change for the life of a process, so it is parsed
+    once per ``(private_key, password)`` pair. The cache is bounded and
+    its keys come from the developer's own configuration, never from a
+    request.
+    """
+    return load_pem_private_key(
+        data=private_key.encode("utf-8"),
+        password=password.encode("utf-8") if password else None,
+    )
+
+
 def default_flow_request_decryptor(
     encrypted_flow_data_b64: str,
     encrypted_aes_key_b64: str,
@@ -218,10 +240,7 @@ def default_flow_request_decryptor(
 
     flow_data = base64.b64decode(encrypted_flow_data_b64)
     iv = base64.b64decode(initial_vector_b64)
-    aes_key = load_pem_private_key(
-        data=private_key.encode("utf-8"),
-        password=password.encode("utf-8") if password else None,
-    ).decrypt(
+    aes_key = _load_flow_private_key(private_key, password).decrypt(
         base64.b64decode(encrypted_aes_key_b64),
         OAEP(
             mgf=MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None
