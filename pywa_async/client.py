@@ -453,6 +453,155 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
     send_text = send_message  # alias
 
+    async def _send_media_with_buttons(
+        self,
+        *,
+        to: str | int,
+        media: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
+        media_type: Literal["image", "video", "document"],
+        caption: str | None,
+        footer: str | None,
+        buttons: Iterable[Button] | URLButton | FlowButton | None,
+        filename: str | None,
+        mime_type: str | None,
+        reply_to_message_id: str | None,
+        tracker: str | CallbackData | None,
+        identity_key_hash: str | None,
+        sender: str | int | None,
+    ) -> SentMediaMessage:
+        """Internal method shared by :meth:`send_image`, :meth:`send_video` and :meth:`send_document`."""
+        sender = helpers.resolve_arg(
+            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
+        )
+        recipient, recipient_type = helpers.resolve_recipient(to)
+        (
+            is_url,
+            uploaded,
+            resolved_media,
+            fallback_filename,
+        ) = await helpers.resolve_media_param(
+            wa=self,
+            media=media,
+            mime_type=mime_type,
+            filename=filename,
+            media_type=media_type,
+            phone_id=sender,
+        )
+        if filename is utils.MISSING:
+            filename = fallback_filename
+        media_msg = helpers.get_media_msg(
+            media=resolved_media,
+            is_url=is_url,
+            caption=caption,
+            filename=filename,
+            is_interactive=bool(buttons),
+        )
+        if not buttons:
+            return SentMediaMessage.from_sent_update(
+                client=self,
+                update=await self.api.send_message(
+                    sender=sender,
+                    **recipient,
+                    typ=media_type,
+                    msg=media_msg,
+                    reply_to_message_id=reply_to_message_id,
+                    biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                    recipient_identity_key_hash=identity_key_hash,
+                ),
+                from_phone_id=sender,
+                recipient_type=recipient_type,
+                uploaded_media=resolved_media if uploaded else None,
+            )
+        if not caption:
+            article = "an" if media_type[0] in "aeiou" else "a"
+            raise ValueError(
+                f"A caption must be provided when sending {article} {media_type} with buttons."
+            )
+        typ, kb = helpers.resolve_buttons_param(buttons)
+        return SentMediaMessage.from_sent_update(
+            client=self,
+            update=await self.api.send_message(
+                sender=sender,
+                **recipient,
+                typ="interactive",
+                msg=helpers.get_interactive_msg(
+                    typ=typ,
+                    action=kb,
+                    header={
+                        "type": media_type,
+                        media_type: media_msg,
+                    },
+                    body=caption,
+                    footer=footer,
+                ),
+                reply_to_message_id=reply_to_message_id,
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                recipient_identity_key_hash=identity_key_hash,
+            ),
+            from_phone_id=sender,
+            recipient_type=recipient_type,
+            interactive_type=typ,
+            uploaded_media=resolved_media if uploaded else None,
+        )
+
+    async def _send_media(
+        self,
+        *,
+        to: str | int,
+        media: str
+        | int
+        | Media
+        | pathlib.Path
+        | bytes
+        | BinaryIO
+        | Iterator[bytes]
+        | AsyncIterator[bytes],
+        media_type: Literal["audio", "sticker"],
+        is_voice: bool | None = None,
+        mime_type: str | None,
+        reply_to_message_id: str | None,
+        tracker: str | CallbackData | None,
+        identity_key_hash: str | None,
+        sender: str | int | None,
+    ) -> SentMediaMessage:
+        """Internal method shared by :meth:`send_audio` and :meth:`send_sticker`."""
+        sender = helpers.resolve_arg(
+            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
+        )
+        recipient, recipient_type = helpers.resolve_recipient(to)
+        is_url, uploaded, resolved_media, _ = await helpers.resolve_media_param(
+            wa=self,
+            media=media,
+            mime_type=mime_type,
+            filename=None,
+            media_type=media_type,
+            phone_id=sender,
+        )
+        return SentMediaMessage.from_sent_update(
+            client=self,
+            update=await self.api.send_message(
+                sender=sender,
+                **recipient,
+                typ=media_type,
+                msg=helpers.get_media_msg(
+                    media=resolved_media, is_url=is_url, is_voice=is_voice
+                ),
+                reply_to_message_id=reply_to_message_id,
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                recipient_identity_key_hash=identity_key_hash,
+            ),
+            from_phone_id=sender,
+            recipient_type=recipient_type,
+            uploaded_media=resolved_media if uploaded else None,
+        )
+
     async def send_image(
         self,
         to: str | int,
@@ -507,66 +656,19 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             The sent image message.
         """
-        sender = helpers.resolve_arg(
-            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
-        )
-        recipient, recipient_type = helpers.resolve_recipient(to)
-        is_url, uploaded, media, _ = await helpers.resolve_media_param(
-            wa=self,
+        return await self._send_media_with_buttons(
+            to=to,
             media=image,
-            mime_type=mime_type,
-            filename=None,
             media_type="image",
-            phone_id=sender,
-        )
-        media_msg = helpers.get_media_msg(
-            media=media, is_url=is_url, caption=caption, is_interactive=bool(buttons)
-        )
-        if not buttons:
-            return SentMediaMessage.from_sent_update(
-                client=self,
-                update=await self.api.send_message(
-                    sender=sender,
-                    **recipient,
-                    typ="image",
-                    msg=media_msg,
-                    reply_to_message_id=reply_to_message_id,
-                    biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-                    recipient_identity_key_hash=identity_key_hash,
-                ),
-                from_phone_id=sender,
-                recipient_type=recipient_type,
-                uploaded_media=media if uploaded else None,
-            )
-        if not caption:
-            raise ValueError(
-                "A caption must be provided when sending an image with buttons."
-            )
-        typ, kb = helpers.resolve_buttons_param(buttons)
-        return SentMediaMessage.from_sent_update(
-            client=self,
-            update=await self.api.send_message(
-                sender=sender,
-                **recipient,
-                typ="interactive",
-                msg=helpers.get_interactive_msg(
-                    typ=typ,
-                    action=kb,
-                    header={
-                        "type": "image",
-                        "image": media_msg,
-                    },
-                    body=caption,
-                    footer=footer,
-                ),
-                reply_to_message_id=reply_to_message_id,
-                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-                recipient_identity_key_hash=identity_key_hash,
-            ),
-            from_phone_id=sender,
-            recipient_type=recipient_type,
-            interactive_type=typ,
-            uploaded_media=media if uploaded else None,
+            caption=caption,
+            footer=footer,
+            buttons=buttons,
+            filename=None,
+            mime_type=mime_type,
+            reply_to_message_id=reply_to_message_id,
+            tracker=tracker,
+            identity_key_hash=identity_key_hash,
+            sender=sender,
         )
 
     async def send_video(
@@ -623,66 +725,19 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             The sent video message.
         """
-        sender = helpers.resolve_arg(
-            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
-        )
-        recipient, recipient_type = helpers.resolve_recipient(to)
-        is_url, uploaded, media, _ = await helpers.resolve_media_param(
-            wa=self,
+        return await self._send_media_with_buttons(
+            to=to,
             media=video,
-            mime_type=mime_type,
-            filename=None,
             media_type="video",
-            phone_id=sender,
-        )
-        media_msg = helpers.get_media_msg(
-            media=media, is_url=is_url, caption=caption, is_interactive=bool(buttons)
-        )
-        if not buttons:
-            return SentMediaMessage.from_sent_update(
-                client=self,
-                update=await self.api.send_message(
-                    sender=sender,
-                    **recipient,
-                    typ="video",
-                    msg=media_msg,
-                    reply_to_message_id=reply_to_message_id,
-                    biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-                    recipient_identity_key_hash=identity_key_hash,
-                ),
-                from_phone_id=sender,
-                recipient_type=recipient_type,
-                uploaded_media=media if uploaded else None,
-            )
-        if not caption:
-            raise ValueError(
-                "A caption must be provided when sending a video with buttons."
-            )
-        typ, kb = helpers.resolve_buttons_param(buttons)
-        return SentMediaMessage.from_sent_update(
-            client=self,
-            update=await self.api.send_message(
-                sender=sender,
-                **recipient,
-                typ="interactive",
-                msg=helpers.get_interactive_msg(
-                    typ=typ,
-                    action=kb,
-                    header={
-                        "type": "video",
-                        "video": media_msg,
-                    },
-                    body=caption,
-                    footer=footer,
-                ),
-                reply_to_message_id=reply_to_message_id,
-                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-                recipient_identity_key_hash=identity_key_hash,
-            ),
-            from_phone_id=sender,
-            recipient_type=recipient_type,
-            interactive_type=typ,
-            uploaded_media=media if uploaded else None,
+            caption=caption,
+            footer=footer,
+            buttons=buttons,
+            filename=None,
+            mime_type=mime_type,
+            reply_to_message_id=reply_to_message_id,
+            tracker=tracker,
+            identity_key_hash=identity_key_hash,
+            sender=sender,
         )
 
     async def send_document(
@@ -741,73 +796,19 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             The sent document message.
         """
-
-        sender = helpers.resolve_arg(
-            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
-        )
-        recipient, recipient_type = helpers.resolve_recipient(to)
-        is_url, uploaded, media, fallback_filename = await helpers.resolve_media_param(
-            wa=self,
+        return await self._send_media_with_buttons(
+            to=to,
             media=document,
-            mime_type=mime_type,
-            filename=filename,
             media_type="document",
-            phone_id=sender,
-        )
-        if filename is utils.MISSING:
-            filename = fallback_filename
-        media_msg = helpers.get_media_msg(
-            media=media,
-            is_url=is_url,
             caption=caption,
+            footer=footer,
+            buttons=buttons,
             filename=filename,
-            is_interactive=bool(buttons),
-        )
-        if not buttons:
-            return SentMediaMessage.from_sent_update(
-                client=self,
-                update=await self.api.send_message(
-                    sender=sender,
-                    **recipient,
-                    typ="document",
-                    msg=media_msg,
-                    reply_to_message_id=reply_to_message_id,
-                    biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-                    recipient_identity_key_hash=identity_key_hash,
-                ),
-                from_phone_id=sender,
-                recipient_type=recipient_type,
-                uploaded_media=media if uploaded else None,
-            )
-        if not caption:
-            raise ValueError(
-                "A caption must be provided when sending a document with buttons."
-            )
-        typ, kb = helpers.resolve_buttons_param(buttons)
-        return SentMediaMessage.from_sent_update(
-            client=self,
-            update=await self.api.send_message(
-                sender=sender,
-                **recipient,
-                typ="interactive",
-                msg=helpers.get_interactive_msg(
-                    typ=typ,
-                    action=kb,
-                    header={
-                        "type": "document",
-                        "document": media_msg,
-                    },
-                    body=caption,
-                    footer=footer,
-                ),
-                reply_to_message_id=reply_to_message_id,
-                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-                recipient_identity_key_hash=identity_key_hash,
-            ),
-            from_phone_id=sender,
-            recipient_type=recipient_type,
-            interactive_type=typ,
-            uploaded_media=media if uploaded else None,
+            mime_type=mime_type,
+            reply_to_message_id=reply_to_message_id,
+            tracker=tracker,
+            identity_key_hash=identity_key_hash,
+            sender=sender,
         )
 
     async def send_audio(
@@ -858,35 +859,16 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             The sent audio message.
         """
-
-        sender = helpers.resolve_arg(
-            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
-        )
-        recipient, recipient_type = helpers.resolve_recipient(to)
-        is_url, uploaded, media, _ = await helpers.resolve_media_param(
-            wa=self,
+        return await self._send_media(
+            to=to,
             media=audio,
-            mime_type=mime_type,
-            filename=None,
             media_type="audio",
-            phone_id=sender,
-        )
-        return SentMediaMessage.from_sent_update(
-            client=self,
-            update=await self.api.send_message(
-                sender=sender,
-                **recipient,
-                typ="audio",
-                msg=helpers.get_media_msg(
-                    media=media, is_url=is_url, is_voice=is_voice
-                ),
-                reply_to_message_id=reply_to_message_id,
-                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-                recipient_identity_key_hash=identity_key_hash,
-            ),
-            from_phone_id=sender,
-            recipient_type=recipient_type,
-            uploaded_media=media if uploaded else None,
+            is_voice=is_voice,
+            mime_type=mime_type,
+            reply_to_message_id=reply_to_message_id,
+            tracker=tracker,
+            identity_key_hash=identity_key_hash,
+            sender=sender,
         )
 
     async def send_voice(
@@ -1000,33 +982,15 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Returns:
             The sent sticker message.
         """
-
-        sender = helpers.resolve_arg(
-            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
-        )
-        recipient, recipient_type = helpers.resolve_recipient(to)
-        is_url, uploaded, media, _ = await helpers.resolve_media_param(
-            wa=self,
+        return await self._send_media(
+            to=to,
             media=sticker,
-            mime_type=mime_type,
-            filename=None,
             media_type="sticker",
-            phone_id=sender,
-        )
-        return SentMediaMessage.from_sent_update(
-            client=self,
-            update=await self.api.send_message(
-                sender=sender,
-                **recipient,
-                typ="sticker",
-                msg=helpers.get_media_msg(media=media, is_url=is_url),
-                reply_to_message_id=reply_to_message_id,
-                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-                recipient_identity_key_hash=identity_key_hash,
-            ),
-            from_phone_id=sender,
-            recipient_type=recipient_type,
-            uploaded_media=media if uploaded else None,
+            mime_type=mime_type,
+            reply_to_message_id=reply_to_message_id,
+            tracker=tracker,
+            identity_key_hash=identity_key_hash,
+            sender=sender,
         )
 
     async def send_reaction(
