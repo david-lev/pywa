@@ -11,7 +11,7 @@ __all__ = [
 import dataclasses
 import threading
 import warnings
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from . import utils
 from .errors import PywaWarning
@@ -277,12 +277,14 @@ class _Listeners:
         self._listeners[to] = listener
         try:
             if not listener.event.wait(timeout):
+                assert timeout is not None  # `.wait(None)` never times out
                 raise ListenerTimeout(timeout) from None
 
             if listener.exception:
                 raise listener.exception
 
-            return listener.result
+            assert listener.result is not None
+            return cast("_UpdateT", listener.result)
         finally:
             self._remove_listener(identifier=to)
 

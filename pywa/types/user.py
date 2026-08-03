@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from ..client import WhatsApp
@@ -109,7 +109,7 @@ class User(BaseUser):
     def from_dict(cls, data: dict, client: WhatsApp) -> User:
         return cls(
             _client=client,
-            bsuid=data.get("user_id"),
+            bsuid=cast(str, data.get("user_id")),
             wa_id=data.get("wa_id"),
             name=None,
             username=None,

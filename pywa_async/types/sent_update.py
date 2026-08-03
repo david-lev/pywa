@@ -288,18 +288,22 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
             ListenerStopped: If the listener was stopped manually.
         """
         if cancel_if_delivered:
-            cancelers = (
+            cancelers = cast(
+                "pywa_filters.Filter[BaseUserUpdate] | None",
                 (cancelers | pywa_filters.delivered)
                 if cancelers
-                else pywa_filters.delivered
+                else pywa_filters.delivered,
             )
-        return await self._client.listen(
-            to=self.listener_identifier,
-            filters=pywa_filters.message_status
-            & pywa_filters.failed
-            & (filters or pywa_filters.true),
-            cancelers=cancelers,
-            timeout=timeout,
+        return cast(
+            MessageStatus,
+            await self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.message_status
+                & pywa_filters.failed
+                & (filters or pywa_filters.true),
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
         )
 
     async def wait_for_click(
@@ -353,12 +357,15 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
                 if cancelers
                 else ignore_updates_canceler
             )
-        return await self._client.listen(
-            to=self.listener_identifier,
-            filters=pywa_filters.callback_button
-            & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
-            cancelers=cancelers,
-            timeout=timeout,
+        return cast(
+            CallbackButton,
+            await self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.callback_button
+                & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
         )
 
     async def wait_for_selection(
@@ -396,12 +403,15 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
                 if cancelers
                 else ignore_updates_canceler
             )
-        return await self._client.listen(
-            to=self.listener_identifier,
-            filters=pywa_filters.callback_selection
-            & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
-            cancelers=cancelers,
-            timeout=timeout,
+        return cast(
+            CallbackSelection,
+            await self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.callback_selection
+                & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
         )
 
     async def wait_for_completion(
@@ -450,12 +460,15 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
                 if cancelers
                 else ignore_updates_canceler
             )
-        return await self._client.listen(
-            to=self.listener_identifier,
-            filters=pywa_filters.flow_completion
-            & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
-            cancelers=cancelers,
-            timeout=timeout,
+        return cast(
+            FlowCompletion,
+            await self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.flow_completion
+                & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
         )
 
     async def wait_for_call_permission(
@@ -510,12 +523,15 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
                 if cancelers
                 else ignore_updates_canceler
             )
-        return await self._client.listen(
-            to=self.listener_identifier,
-            filters=pywa_filters.call_permission_update
-            & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
-            cancelers=cancelers,
-            timeout=timeout,
+        return cast(
+            CallPermissionUpdate,
+            await self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.call_permission_update
+                & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
         )
 
     async def wait_for_incoming_voice_call(

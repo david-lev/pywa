@@ -494,6 +494,7 @@ def test_same_signature(overrides):
             (WhatsAppSync.update_business_profile, ("profile_picture",)),
             (WhatsAppSync.update_group_settings, ("profile_picture",)),
             (GraphAPISync.upload_file, ("file",)),
+            (GraphAPISync.update_group_info, ("profile_picture_file",)),
             (GroupDetailsSync.update, ("profile_picture",)),
         )
     }

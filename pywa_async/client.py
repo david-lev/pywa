@@ -18,6 +18,8 @@ from typing import (
     Iterable,
     Iterator,
     Literal,
+    Sequence,
+    cast,
 )
 
 import httpx
@@ -62,7 +64,7 @@ from .handlers import (
     TemplateStatusUpdateHandler,
     UserMarketingPreferencesHandler,
 )
-from .listeners import _AsyncListeners
+from .listeners import BaseListenerIdentifier, Listener, _AsyncListeners
 from .server import Server
 from .types import (
     AccountUpdate,
@@ -199,8 +201,9 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     _httpx_client = httpx.AsyncClient
     _async_allowed = True
     api: GraphAPIAsync  # IDE type hinting
+    _listeners: dict[BaseListenerIdentifier, Listener]  # IDE type hinting
 
-    _handlers_to_updates: dict[type[Handler], BaseUpdate] = {
+    _handlers_to_updates: dict[type[Handler], type[BaseUpdate]] = {
         MessageHandler: Message,
         MessageStatusHandler: MessageStatus,
         GroupMessageStatusesHandler: GroupMessageStatuses,
@@ -318,7 +321,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         super().__init__(
             phone_id=phone_id,
             token=token,
-            session=session,
+            session=cast("httpx.Client | None", session),
             server=server,
             webhook_endpoint=webhook_endpoint,
             verify_token=verify_token,
@@ -1386,7 +1389,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 sender=sender,
                 **recipient,
                 typ="contacts",
-                msg=tuple(c.to_dict() for c in contact)
+                msg=tuple(c.to_dict() for c in cast("Iterable[Contact]", contact))
                 if isinstance(contact, Iterable)
                 else (contact.to_dict(),),
                 reply_to_message_id=reply_to_message_id,
@@ -2610,8 +2613,8 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
     async def update_commerce_settings(
         self,
-        is_catalog_visible: bool = None,
-        is_cart_enabled: bool = None,
+        is_catalog_visible: bool | None = None,
+        is_cart_enabled: bool | None = None,
         *,
         phone_id: str | int | None = None,
     ) -> SuccessResult:
@@ -2803,7 +2806,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         to: str | int,
         name: str | None = None,
         language: TemplateLanguage | None = None,
-        params: list[BaseParams | dict] | None = None,
+        params: Sequence[BaseParams | dict] | None = None,
         *,
         template: Template | None = None,
         use_mm_lite_api: bool = False,
@@ -2906,7 +2909,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 sender=sender,
                 params=params,
             )
-        template = {
+        template_payload = {
             "name": name,
             "language": {"code": language.value},
             **(
@@ -2926,7 +2929,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                 sender=sender,
                 **recipient,
                 typ="template",
-                msg=template,
+                msg=template_payload,
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
                 recipient_identity_key_hash=identity_key_hash,
@@ -2935,7 +2938,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             else await self.api.send_marketing_message(
                 sender=sender,
                 **recipient,
-                template=template,
+                template=template_payload,
                 message_activity_sharing=message_activity_sharing,
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
@@ -3094,7 +3097,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             )
         return UpdatedTemplate.from_dict(
             data=await self.api.update_template(
-                template_id=template_id,
+                template_id=str(template_id),
                 template=json.loads(
                     _TemplateUpdate(
                         category=new_category,
@@ -3146,7 +3149,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                     client_arg="waba_id",
                 ),
                 template_name=template_name,
-                template_id=template_id,
+                template_id=str(template_id) if template_id is not None else None,
             )
         )
 
@@ -3262,7 +3265,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             )
         return TemplatesCompareResult.from_dict(
             data=await self.api.compare_templates(
-                template_id=template_id,
+                template_id=str(template_id),
                 template_ids=tuple(map(str, template_ids)),
                 start=str(
                     int(start.timestamp())
@@ -4777,7 +4780,9 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         return GroupInviteLink(
             _client=self,
             _group_id=group_id,
-            link=await self.api.get_group_invite_link(group_id=group_id)["invite_link"],
+            link=(await self.api.get_group_invite_link(group_id=group_id))[
+                "invite_link"
+            ],
         )
 
     async def reset_group_invite_link(

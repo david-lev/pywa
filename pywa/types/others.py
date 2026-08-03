@@ -226,6 +226,8 @@ class Contact:
 
     def to_dict(self) -> dict[str, Any]:
         """Get the contact as a dict."""
+        if self.name is None:
+            raise ValueError("Contact must have a name")
         return {
             "name": dataclasses.asdict(self.name),
             "birthday": self.birthday,
@@ -245,7 +247,7 @@ class Contact:
             for s in (
                 "BEGIN:VCARD",
                 "VERSION:3.0",
-                f"FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:{self.name.formatted_name}",
+                f"FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:{self.name.formatted_name if self.name else 'Unknown'}",
                 f"BDAY:{self.birthday}" if self.birthday else None,
                 "\n".join(
                     f"TEL;type={phone.type}:{phone.phone}" for phone in self.phones
@@ -848,7 +850,7 @@ class WhatsAppBusinessAccount(helpers.APIObject):
     id: str
     name: str
     timezone_id: str
-    message_template_namespace: str
+    message_template_namespace: str | None
     status: str | None
     business_verification_status: BusinessVerificationStatus | None
     is_enabled_for_insights: bool | None
@@ -1006,8 +1008,8 @@ class Command:
     @classmethod
     def from_dict(cls, data: dict):
         return cls(
-            name=data.get("command_name"),
-            description=data.get("command_description"),
+            name=data["command_name"],
+            description=data["command_description"],
         )
 
     def to_dict(self):
@@ -1037,7 +1039,7 @@ class ConversationalAutomation:
     @classmethod
     def from_dict(cls, data: dict):
         return cls(
-            id=data.get("id"),
+            id=data["id"],
             ice_breakers=tuple(data.get("prompts", ())) or None,
             commands=tuple(
                 Command.from_dict(command) for command in data.get("commands", ())
@@ -1124,7 +1126,7 @@ class BusinessPhoneNumber(helpers.APIObject):
     @classmethod
     def from_dict(cls, data: dict):
         return cls(
-            id=data.get("id"),
+            id=data["id"],
             verified_name=data.get("verified_name"),
             display_phone_number=data.get("display_phone_number"),
             status=data.get("status"),
@@ -1140,7 +1142,7 @@ class BusinessPhoneNumber(helpers.APIObject):
             new_name_status=data.get("new_name_status"),
             code_verification_status=data.get("code_verification_status"),
             account_mode=data.get("account_mode"),
-            is_on_biz_app=data.get("is_on_biz_app"),
+            is_on_biz_app=data.get("is_on_biz_app", False),
             is_official_business_account=data.get(
                 "is_official_business_account", False
             ),
@@ -1256,7 +1258,7 @@ class QRCode(helpers.APIObject):
         return self._client.delete_qr_code(code=self.code, phone_id=self._phone_id)
 
     @classmethod
-    def from_dict(cls, data: dict, client: WhatsApp, phone_id: str) -> QRCode:
+    def from_dict(cls: type[_T], data: dict, client: WhatsApp, phone_id: str) -> _T:
         return cls(
             _client=client,
             _phone_id=phone_id,
@@ -1782,7 +1784,7 @@ class SignupDetails(helpers.APIObject, _CommonSignup):
     website_url: str | None
 
     @classmethod
-    def from_dict(cls, data: dict, client: WhatsApp) -> SignupDetails:
+    def from_dict(cls: type[_T], data: dict, client: WhatsApp) -> _T:
         return cls(
             _client=client,
             id=data["id"],

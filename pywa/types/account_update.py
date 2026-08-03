@@ -344,11 +344,12 @@ class VolumeTierInfo:
 
     @classmethod
     def from_dict(cls, data: dict):
+        current_tier, max_tier = data["tier"].split(":")
         return cls(
             tier_update_time=datetime.datetime.fromtimestamp(
                 data["tier_update_time"], tz=datetime.timezone.utc
             ),
-            tier=tuple(int(c) for c in data["tier"].split(":")),
+            tier=(int(current_tier), int(max_tier)),
             pricing_category=PricingCategory(data["pricing_category"]),
             effective_month=datetime.datetime.strptime(
                 data["effective_month"], "%Y-%m"

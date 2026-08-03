@@ -95,6 +95,10 @@ from typing import (
 from ..errors import PywaDeprecationWarning
 
 _T = TypeVar("_T")
+_TemplateComponentT = TypeVar("_TemplateComponentT", bound="TemplateBaseComponent")
+_TextComponentT = TypeVar("_TextComponentT", bound="_BaseTextComponent")
+_TextParamsT = TypeVar("_TextParamsT", bound="_BaseTextComponent._Params")
+_BaseParamsT = TypeVar("_BaseParamsT", bound="BaseParams")
 
 from .. import _helpers as helpers
 from .. import utils
@@ -275,7 +279,7 @@ class TemplateStatusUpdate(BaseTemplateUpdate):
     @property
     def listener_identifiers(
         self,
-    ) -> Generator[TemplateStatusUpdateListenerIdentifier, ...] | None:
+    ) -> Generator[TemplateStatusUpdateListenerIdentifier]:
         yield TemplateStatusUpdateListenerIdentifier(
             template_id=self.template_id,
         )
@@ -955,13 +959,20 @@ class TemplateBaseComponent(abc.ABC):
     type: ComponentType
 
     @classmethod
-    def from_dict(cls, data: dict) -> TemplateBaseComponent:
+    def from_dict(cls: type[_TemplateComponentT], data: dict) -> _TemplateComponentT:
         # noinspection PyArgumentList
         return cls(
             **{
                 k: v
                 for k, v in data.items()
-                if k in {f.name for f in dataclasses.fields(cls) if f.init}
+                if k
+                in {
+                    f.name
+                    for f in dataclasses.fields(
+                        cast("type[helpers.DataclassInstance]", cls)
+                    )
+                    if f.init
+                }
             }
         )
 
@@ -973,7 +984,7 @@ class TemplateBaseComponent(abc.ABC):
             dict: The dictionary representation of the component.
         """
         return dataclasses.asdict(
-            obj=self,
+            obj=cast("helpers.DataclassInstance", self),
             dict_factory=lambda d: {k: v for (k, v) in d if v is not None},
         )
 
@@ -1162,8 +1173,10 @@ class _BaseTextComponent:
 
     def __repr__(self):
         if self.param_format == ParamFormat.POSITIONAL:
+            assert isinstance(self.example, tuple)
             return f"{self.__class__.__name__}(text={self.text!r}, {', '.join(map(repr, self.example))})"
         elif self.param_format == ParamFormat.NAMED:
+            assert isinstance(self.example, dict)
             return f"{self.__class__.__name__}(text={self.text!r}, {', '.join(f'{k}={v!r}' for k, v in self.example.items())})"
         return f"{self.__class__.__name__}(text={self.text!r})"
 
@@ -1205,6 +1218,7 @@ class _BaseTextComponent:
             ValueError: If the component does not use named parameters.
         """
         if self.param_format == ParamFormat.NAMED:
+            assert isinstance(self.example, dict)
             return tuple(self.example.keys())
         raise ValueError("This component does not use named parameters!")
 
@@ -1217,6 +1231,7 @@ class _BaseTextComponent:
             **override_named: Named arguments to override the example values (no need to provide all).
         """
         if self.param_format == ParamFormat.POSITIONAL:
+            assert isinstance(self.example, tuple)
             if override_named:
                 raise ValueError(
                     "You can't use named overrides for positional parameters!"
@@ -1238,6 +1253,7 @@ class _BaseTextComponent:
             )  # Adjust for zero-based indexing
             return txt.format(*example)
         elif self.param_format == ParamFormat.NAMED:
+            assert isinstance(self.example, dict)
             if override_positionals:
                 raise ValueError(
                     "You can't use positional overrides for named parameters!"
@@ -1272,6 +1288,7 @@ class _BaseTextComponent:
             return
 
         if self.param_format == ParamFormat.POSITIONAL:
+            assert isinstance(self.example, tuple)
             if named:
                 raise ValueError(
                     f"{self.__class__.__name__} does not accept named parameters when using positional format."
@@ -1281,6 +1298,7 @@ class _BaseTextComponent:
                     f"{self.__class__.__name__} requires {len(self.example)} positional parameters, got {len(positionals)}."
                 )
         elif self.param_format == ParamFormat.NAMED:
+            assert isinstance(self.example, dict)
             if positionals:
                 raise ValueError(
                     f"{self.__class__.__name__} does not accept positional parameters when using named format."
@@ -1299,6 +1317,7 @@ class _BaseTextComponent:
     def to_dict(self) -> dict:
         match self.param_format:
             case ParamFormat.POSITIONAL:
+                assert isinstance(self.example, tuple)
                 return {
                     "type": self.type.value,
                     "text": self.text,
@@ -1309,6 +1328,7 @@ class _BaseTextComponent:
                     },
                 }
             case ParamFormat.NAMED:
+                assert isinstance(self.example, dict)
                 return {
                     "type": self.type.value,
                     "text": self.text,
@@ -1323,7 +1343,7 @@ class _BaseTextComponent:
                 return {"type": self.type.value, "text": self.text}
 
     @classmethod
-    def from_dict(cls, data: dict) -> _BaseTextComponent:
+    def from_dict(cls: type[_TextComponentT], data: dict) -> _TextComponentT:
         if "example" in data:
             example = next(iter(data["example"].values()))
             if isinstance(example, list):
@@ -1386,9 +1406,9 @@ class _BaseTextComponent:
 
     def _params(
         *positionals,
-        _params_cls: type[_BaseTextComponent],
+        _params_cls: type[_TextParamsT],
         **named,
-    ) -> _BaseTextComponent._Params:
+    ) -> _TextParamsT:
         if positionals and isinstance(
             positionals[0], _BaseTextComponent
         ):  # BodyText(...).params("David")
@@ -1397,7 +1417,7 @@ class _BaseTextComponent:
             return _params_cls(*positionals, **named)
 
         self.validate(*positionals, **named)
-        return self._Params(*positionals, **named)
+        return cast(_TextParamsT, self._Params(*positionals, **named))
 
 
 class HeaderText(_BaseTextComponent, BaseHeaderComponent):
@@ -2145,7 +2165,12 @@ class Buttons(TemplateBaseComponent):
 
     @classmethod
     def from_dict(cls, data: dict) -> Buttons:
-        return cls(buttons=[_parse_component(button) for button in data["buttons"]])
+        return cls(
+            buttons=cast(
+                "list[BaseButtonComponent | dict]",
+                [_parse_component(button) for button in data["buttons"]],
+            )
+        )
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -2324,9 +2349,10 @@ class FlowButton(BaseButtonComponent):
             flow_id=data.get("flow_id"),
             flow_name=data.get("flow_name"),
             flow_json=data.get("flow_json"),
-            flow_action=FlowActionType(data["flow_action"])
-            if "flow_action" in data
-            else None,
+            flow_action=cast(
+                "Literal[FlowActionType.DATA_EXCHANGE, FlowActionType.NAVIGATE] | None",
+                FlowActionType(data["flow_action"]) if "flow_action" in data else None,
+            ),
             navigate_screen=data.get("navigate_screen"),
             icon=FlowButtonIcon(data["icon"]) if "icon" in data else None,
         )
@@ -3518,8 +3544,9 @@ class CarouselCard:
             Clear the media cache for the params in the card (if you using the same params object more than 30 days, the media ID will be expired, so you need to reupload the media).
             """
             for param in self.params:
-                if hasattr(param, "clear_media_cache"):
-                    param.clear_media_cache()
+                clear_media_cache = getattr(param, "clear_media_cache", None)
+                if clear_media_cache is not None:
+                    clear_media_cache()
 
     @staticmethod
     def params(*, params: list[BaseParams], index: int) -> CarouselCard._Params:
@@ -3657,9 +3684,23 @@ class AuthenticationFooter(BaseFooterComponent):
          Minimum 1, maximum 90.
     """
 
-    code_expiration_minutes: int
+    code_expiration_minutes: int | None = None
 
 
+@overload
+def _find_comp(
+    *,
+    comp_type: type[_T],
+    cmps: list[TemplateBaseComponent | dict],
+    first_match: Literal[True],
+) -> _T | None: ...
+@overload
+def _find_comp(
+    *,
+    comp_type: type[_T],
+    cmps: list[TemplateBaseComponent | dict],
+    first_match: Literal[False],
+) -> list[_T]: ...
 def _find_comp(
     *, comp_type: type[_T], cmps: list[TemplateBaseComponent | dict], first_match: bool
 ) -> _T | list[_T] | None:
@@ -3742,7 +3783,9 @@ class _BaseTemplateActions:
             or []
         )
 
-    def validate_params(self, params: list[BaseParams] | None) -> NoReturn | None:
+    def validate_params(
+        self, params: Sequence[BaseParams | dict] | None
+    ) -> NoReturn | None:
         """
         Validate the provided parameters against the template's components.
 
@@ -3880,6 +3923,8 @@ class _TemplateUpdate(Template):
         init=False,
         repr=False,
     )
+    category: TemplateCategory | None = None
+    components: Sequence[TemplateBaseComponent | dict] | None = None
 
 
 _comp_types_to_component: dict[ComponentType, type[TemplateBaseComponent]] = {
@@ -3998,7 +4043,7 @@ class _TemplateJSONEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-def _template_to_json(template: Template | LibraryTemplate) -> str:
+def _template_to_json(template: "helpers.DataclassInstance") -> str:
     return json.dumps(
         dataclasses.asdict(
             obj=template,
@@ -4010,18 +4055,18 @@ def _template_to_json(template: Template | LibraryTemplate) -> str:
     )
 
 
-def _is_component_required_params(comp: TemplateBaseComponent) -> bool:
+def _is_component_required_params(comp: TemplateBaseComponent | dict) -> bool:
     if isinstance(comp, Buttons):
         return any(_is_component_required_params(button) for button in comp.buttons)
     return hasattr(comp, "_Params") and getattr(comp, "_params_required", True)
 
 
 def _collect_required_components(
-    components: list[TemplateBaseComponent],
-) -> list[TemplateBaseComponent]:
+    components: list[TemplateBaseComponent | dict],
+) -> list[TemplateBaseComponent | dict]:
     required = []
 
-    def visit(comp: TemplateBaseComponent) -> None:
+    def visit(comp: TemplateBaseComponent | dict) -> None:
         if not _is_component_required_params(comp):
             return
         required.append(comp)
@@ -4037,17 +4082,18 @@ def _collect_required_components(
 
 
 def _find_param_for_component(
-    params: list[BaseParams], param_type: type[BaseParams]
-) -> BaseParams | None:
+    params: list[BaseParams], param_type: type[_BaseParamsT]
+) -> _BaseParamsT | None:
     for i, p in enumerate(params):
         if isinstance(p, param_type):
-            return params.pop(i)
+            params.pop(i)
+            return p
     return None
 
 
 def _validate_params(
-    components: list[TemplateBaseComponent | dict],
-    params: list[BaseParams] = None,
+    components: Sequence[TemplateBaseComponent | dict],
+    params: Sequence[BaseParams | dict] | None = None,
 ) -> None:
     real_params = [
         p
@@ -4067,13 +4113,18 @@ def _validate_params(
     for comp in components:
         if isinstance(comp, Buttons):
             for i, button in enumerate(comp.buttons):
-                if not _is_component_required_params(button):
+                if isinstance(button, dict) or not _is_component_required_params(
+                    button
+                ):
                     continue
+                button_params_cls = getattr(button, "_Params", None)
+                assert button_params_cls is not None
                 button_param = next(
                     (
                         p
                         for p in remaining_params
-                        if isinstance(p, button._Params) and p.index == i
+                        if isinstance(p, button_params_cls)
+                        and getattr(p, "index", None) == i
                     ),
                     None,
                 )
@@ -4106,14 +4157,18 @@ def _validate_params(
 
     missing = []
     for comp in required_comps:
-        if isinstance(comp, (Buttons, Carousel)):
+        if isinstance(comp, (Buttons, Carousel)) or isinstance(comp, dict):
             continue
-        param = _find_param_for_component(remaining_params, comp._Params)
+        comp_params_cls = getattr(comp, "_Params", None)
+        assert comp_params_cls is not None
+        param = _find_param_for_component(remaining_params, comp_params_cls)
         if param is None:
             missing.append(comp)
             continue
         if isinstance(param, _BaseTextComponent._Params):
-            comp.validate(*param.positionals, **param.named)
+            comp_validate = getattr(comp, "validate", None)
+            assert comp_validate is not None
+            comp_validate(*param.positionals, **param.named)
 
     errors = []
     if missing:
@@ -4169,8 +4224,8 @@ class TemplateDetails(helpers.APIObject, _BaseTemplateActions):
     degrees_of_freedom_spec: DegreesOfFreedomSpec | None
 
     @classmethod
-    def from_dict(cls, data: dict, client: WhatsApp) -> TemplateDetails:
-        return TemplateDetails(
+    def from_dict(cls: type[_T], data: dict, client: WhatsApp) -> _T:
+        return cls(
             _client=client,
             id=data["id"],
             name=data["name"],
@@ -4569,7 +4624,7 @@ class MigrateTemplatesResult:
             PywaDeprecationWarning,
             stacklevel=2,
         )
-        return self.migrated
+        return self.migrated  # ty: ignore[invalid-return-type]
 
     @property
     def failed_templates(self) -> None:
@@ -4581,7 +4636,7 @@ class MigrateTemplatesResult:
             PywaDeprecationWarning,
             stacklevel=2,
         )
-        return self.failed
+        return self.failed  # ty: ignore[invalid-return-type]
 
 
 @dataclasses.dataclass(kw_only=True, slots=True, frozen=True)
@@ -4661,14 +4716,11 @@ class _CreatedAndUpdatedTemplateActions:
             cancelers = (
                 cancelers or pywa_filters.false | pywa_filters.template_status_rejected
             )
-        return cast(
-            TemplateStatusUpdate,
-            self._client.listen(
-                to=TemplateStatusUpdateListenerIdentifier(template_id=self.id),
-                filters=pywa_filters.template_status_approved,
-                cancelers=cancelers,
-                timeout=timeout,
-            ),
+        return self._client.listen(
+            to=TemplateStatusUpdateListenerIdentifier(template_id=self.id),
+            filters=pywa_filters.template_status_approved,
+            cancelers=cancelers,
+            timeout=timeout,
         )
 
 
@@ -4686,7 +4738,7 @@ class CreatedTemplate(_CreatedAndUpdatedTemplateActions):
     status: TemplateStatus
 
     @classmethod
-    def from_dict(cls, data: dict, client: WhatsApp) -> CreatedTemplate:
+    def from_dict(cls: type[_T], data: dict, client: WhatsApp) -> _T:
         """
         Create a CreatedTemplate instance from a dictionary.
 
@@ -4721,7 +4773,7 @@ class UpdatedTemplate(_CreatedAndUpdatedTemplateActions):
     success: bool
 
     @classmethod
-    def from_dict(cls, data: dict, client: WhatsApp) -> UpdatedTemplate:
+    def from_dict(cls: type[_T], data: dict, client: WhatsApp) -> _T:
         return cls(
             _client=client,
             success=data["success"],
@@ -4749,7 +4801,7 @@ class CreatedTemplates(Sequence[CreatedTemplate]):
     templates: tuple[CreatedTemplate, ...]
 
     @classmethod
-    def from_dict(cls, data: dict, client: WhatsApp) -> CreatedTemplates:
+    def from_dict(cls: type[_T], data: dict, client: WhatsApp) -> _T:
         """
         Create a CreatedTemplates instance from a dictionary.
 
@@ -4775,7 +4827,9 @@ class CreatedTemplates(Sequence[CreatedTemplate]):
     def __getitem__(
         self, index: int | slice
     ) -> CreatedTemplate | list[CreatedTemplate]:
-        return self._data[index]
+        if isinstance(index, slice):
+            return list(self.templates[index])
+        return self.templates[index]
 
     def __len__(self) -> int:
-        return len(self._data)
+        return len(self.templates)

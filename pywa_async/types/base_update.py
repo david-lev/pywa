@@ -57,7 +57,7 @@ class _ClientShortcutsAsync:
     _client: WhatsAppAsync
     _internal_sender: str
     _internal_recipient: str
-    _get_reply_to: Callable[[bool], str]
+    _get_reply_to: Callable[..., str]
 
     async def reply_text(
         self,

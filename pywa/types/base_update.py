@@ -1326,7 +1326,7 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
             PywaDeprecationWarning,
             stacklevel=2,
         )
-        return self.from_user.wa_id
+        return self.from_user.wa_id  # ty: ignore[invalid-return-type]
 
     @property
     def recipient(self) -> None:
@@ -1338,7 +1338,7 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
             PywaDeprecationWarning,
             stacklevel=2,
         )
-        return self._internal_recipient
+        return self._internal_recipient  # ty: ignore[invalid-return-type]
 
     @property
     def _internal_sender(self) -> str:

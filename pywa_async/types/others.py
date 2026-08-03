@@ -1,18 +1,70 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
-from pywa.types.others import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.others import (
     _T,
 )
+from pywa.types.others import BlockedUser as BlockedUser
+from pywa.types.others import BlockUserFailure as BlockUserFailure
+from pywa.types.others import BusinessInfo as BusinessInfo
+from pywa.types.others import BusinessPhoneNumber as BusinessPhoneNumber
+from pywa.types.others import BusinessProfile as BusinessProfile
+from pywa.types.others import BusinessVerificationStatus as BusinessVerificationStatus
+from pywa.types.others import Command as Command
+from pywa.types.others import CommerceSettings as CommerceSettings
+from pywa.types.others import Contact as Contact
+from pywa.types.others import ContactList as ContactList
+from pywa.types.others import ContactsOrigin as ContactsOrigin
+from pywa.types.others import ConversationalAutomation as ConversationalAutomation
+from pywa.types.others import (
+    CreatedBusinessPhoneNumber as CreatedBusinessPhoneNumber,
+)
+from pywa.types.others import CreatedSignup as CreatedSignup
+from pywa.types.others import FacebookApplication as FacebookApplication
+from pywa.types.others import Industry as Industry
+from pywa.types.others import InteractiveType as InteractiveType
+from pywa.types.others import Location as Location
+from pywa.types.others import (
+    MarketingMessagesLiteAPIStatus as MarketingMessagesLiteAPIStatus,
+)
+from pywa.types.others import (
+    MarketingMessagesOnboardingStatus as MarketingMessagesOnboardingStatus,
+)
+from pywa.types.others import MessageType as MessageType
+from pywa.types.others import Metadata as Metadata
+from pywa.types.others import Order as Order
+from pywa.types.others import Pagination as Pagination
+from pywa.types.others import Product as Product
+from pywa.types.others import ProductsSection as ProductsSection
 from pywa.types.others import (
     QRCode as _QRCode,
 )
+from pywa.types.others import QRCodeImageType as QRCodeImageType
+from pywa.types.others import Reaction as Reaction
+from pywa.types.others import Referral as Referral
+from pywa.types.others import ReferredProduct as ReferredProduct
+from pywa.types.others import ReplyToMessage as ReplyToMessage
 from pywa.types.others import (
     Result as _Result,
 )
 from pywa.types.others import SignupDetails as _SignupDetails
+from pywa.types.others import SignupStatus as SignupStatus
+from pywa.types.others import StorageConfiguration as StorageConfiguration
+from pywa.types.others import StorageStatus as StorageStatus
+from pywa.types.others import SuccessResult as SuccessResult
+from pywa.types.others import UnblockedUser as UnblockedUser
+from pywa.types.others import Unsupported as Unsupported
+from pywa.types.others import (
+    UserIdentityChangeSettings as UserIdentityChangeSettings,
+)
+from pywa.types.others import UsernameStatus as UsernameStatus
+from pywa.types.others import UsernameStatusType as UsernameStatusType
+from pywa.types.others import UsersBlockedResult as UsersBlockedResult
+from pywa.types.others import UsersUnblockedResult as UsersUnblockedResult
+from pywa.types.others import WhatsAppBusinessAccount as WhatsAppBusinessAccount
 
 if TYPE_CHECKING:
     from ..client import WhatsApp as WhatsAppAsync
@@ -260,7 +312,7 @@ class Result(_Result[_T], Sequence[_T]):
         before_data = []
         after_data = []
 
-        prev = self
+        prev: Result[_T] = self
         while prev.has_previous:
             if sleep > 0:
                 await asyncio.sleep(sleep)
@@ -268,7 +320,7 @@ class Result(_Result[_T], Sequence[_T]):
             # noinspection PyProtectedMember
             before_data = prev._data + before_data
 
-        next_page = self
+        next_page: Result[_T] = self
         while next_page.has_next:
             if sleep > 0:
                 await asyncio.sleep(sleep)

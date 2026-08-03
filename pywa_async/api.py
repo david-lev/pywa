@@ -1,12 +1,18 @@
 """The internal API for the WhatsApp client."""
 
 from contextlib import _AsyncGeneratorContextManager
-from typing import AsyncIterator
+from typing import TYPE_CHECKING, AsyncIterator
 
 from pywa.api import *  # noqa MUST BE IMPORTED FIRST
-from pywa.api import _logger  # noqa MUST BE IMPORTED FIRST
+from pywa.api import (
+    _logger,  # noqa MUST BE IMPORTED FIRST
+    _UnpauseTemplateResult,  # noqa MUST BE IMPORTED FIRST
+)
 
 from .errors import WhatsAppError
+
+if TYPE_CHECKING:
+    from ._helpers import GeneratorStreamer
 
 
 class GraphAPIAsync(GraphAPI):
@@ -22,7 +28,7 @@ class GraphAPIAsync(GraphAPI):
     ):
         super().__init__(
             token=token,
-            session=session,  # noqa
+            session=cast("httpx.Client", session),  # noqa
             api_version=api_version,
         )
 
@@ -364,7 +370,7 @@ class GraphAPIAsync(GraphAPI):
     async def upload_media(
         self,
         phone_id: str,
-        media: bytes | str | BinaryIO | Iterator[bytes],
+        media: bytes | str | BinaryIO | Iterator[bytes] | "GeneratorStreamer",
         mime_type: str,
         filename: str,
         ttl_minutes: int | None = None,
@@ -521,7 +527,7 @@ class GraphAPIAsync(GraphAPI):
         recipient: str | None,
         recipient_type: str,
         typ: str,
-        msg: dict,
+        msg: dict | tuple,
         reply_to_message_id: str | None = None,
         biz_opaque_callback_data: str | None = None,
         recipient_identity_key_hash: str | None = None,
@@ -567,8 +573,8 @@ class GraphAPIAsync(GraphAPI):
     async def send_marketing_message(
         self,
         sender: str,
-        to: str,
-        recipient: str,
+        to: str | None,
+        recipient: str | None,
         recipient_type: str,
         template: dict,
         reply_to_message_id: str | None = None,
@@ -596,10 +602,13 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             The response from the WhatsApp Cloud API.
         """
+        if not to and not recipient:
+            raise ValueError("Either 'to' or 'recipient' must be provided")
         body = self._filter_none(
             messaging_product="whatsapp",
             recipient_type=recipient_type,
             to=to,
+            recipient=recipient,
             type="template",
             template=template,
             context={"message_id": reply_to_message_id}
@@ -1005,7 +1014,7 @@ class GraphAPIAsync(GraphAPI):
     async def update_conversational_automation(
         self,
         phone_id: str,
-        prompts: tuple[dict] | None = None,
+        prompts: tuple[str, ...] | None = None,
         commands: str | None = None,
     ) -> dict[str, bool]:
         """
@@ -1430,7 +1439,7 @@ class GraphAPIAsync(GraphAPI):
             ),
         )
 
-    async def unpause_template(self, template_id: str) -> dict[str, bool | str]:
+    async def unpause_template(self, template_id: str) -> _UnpauseTemplateResult:
         """
         Unpause a message template.
 
@@ -1442,9 +1451,9 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             A dict with the success status of the operation.
         """
-        return await self._request(
-            method="POST",
-            endpoint=f"/{template_id}/unpause",
+        return cast(
+            _UnpauseTemplateResult,
+            await self._request(method="POST", endpoint=f"/{template_id}/unpause"),
         )
 
     async def upsert_message_templates(
@@ -2209,7 +2218,7 @@ class GraphAPIAsync(GraphAPI):
     async def upload_file(
         self,
         upload_session_id: str,
-        file: bytes | AsyncIterator[bytes],
+        file: bytes | AsyncIterator[bytes] | BinaryIO,
         file_offset: int = 0,
         content_length: int | None = None,
     ) -> dict:
@@ -2552,7 +2561,13 @@ class GraphAPIAsync(GraphAPI):
         subject: str | None = None,
         description: str | None = None,
         profile_picture_file: (
-            bytes | str | pathlib.Path | BinaryIO | Iterator[bytes] | None
+            bytes
+            | str
+            | pathlib.Path
+            | BinaryIO
+            | Iterator[bytes]
+            | AsyncIterator[bytes]
+            | None
         ) = None,
     ) -> dict:
         """

@@ -123,6 +123,7 @@ from typing import (
     Generic,
     Iterable,
     TypeVar,
+    cast,
     overload,
 )
 
@@ -136,7 +137,6 @@ if TYPE_CHECKING:
     from pywa.client import WhatsApp
 
 _T = TypeVar("_T", contravariant=True)
-_U = TypeVar("_U", contravariant=True)
 _V = TypeVar("_V")
 
 
@@ -155,8 +155,14 @@ class Filter(Generic[_T]):
     def __and__(self, other: Filter[_T]) -> Filter[_T]:
         return AndFilter(self, other)
 
-    def __or__(self, other: Filter[_U]) -> Filter[_T | _U]:
+    def __rand__(self, other: Filter[_T]) -> Filter[_T]:
+        return AndFilter(other, self)
+
+    def __or__(self, other: Filter[_T]) -> Filter[_T]:
         return OrFilter(self, other)
+
+    def __ror__(self, other: Filter[_T]) -> Filter[_T]:
+        return OrFilter(other, self)
 
     def __invert__(self) -> Filter[_T]:
         return NotFilter(self)
@@ -186,7 +192,7 @@ class AndFilter(Filter[_T]):
 
 
 class OrFilter(Filter[_T]):
-    def __init__(self, left: Filter[Any], right: Filter[Any]):
+    def __init__(self, left: Filter[_T], right: Filter[_T]):
         self.left = left
         self.right = right
 
@@ -276,14 +282,16 @@ def new(
     if not callable(func):
         raise Exception
     is_async = helpers.is_async_callable(func)
+    sync_func = cast("Callable[[WhatsApp, Any], bool]", func)
+    async_func = cast("Callable[[WhatsApp, Any], Awaitable[bool]]", func)
 
     def check_sync(self, wa: WhatsApp, update: Any) -> bool:
-        return func(wa, update)
+        return sync_func(wa, update)
 
     async def check_async(self, wa: WhatsApp, update: Any) -> bool:
         if is_async:
-            return await func(wa, update)
-        return func(wa, update)
+            return await async_func(wa, update)
+        return sync_func(wa, update)
 
     def has_async(self) -> bool:
         return is_async
@@ -372,9 +380,9 @@ def waba_id(id_: str) -> Filter[types.base_update.BaseUpdate]:
     return new(lambda _, u: getattr(u, "waba_id", u.id) == id_, name="filters.waba_id")
 
 
-def replays_to(*msg_ids: str) -> Filter[types.Message]:
+def replays_to(*msg_ids: str) -> Filter[Any]:
     """
-    Filter for messages that reply to any of the given message ids.
+    Filter for updates that reply to any of the given message ids.
 
     >>> replays_to("wamid.HBKHUIyNTM4NjAfiefhwojfMTNFQ0Q2MERGRjVDMUHUIGGA=")
     """
@@ -410,7 +418,9 @@ group: Filter[types.Message] = new(
 
 
 def sent_to(
-    *, display_phone_number: str = None, phone_number_id: str = None
+    *,
+    display_phone_number: str | None = None,
+    phone_number_id: str | None = None,
 ) -> Filter[base_update.BaseUserUpdate]:
     """
     Filter for updates that are sent to the given phone number.
@@ -436,7 +446,7 @@ def sent_to(
 
 
 sent_to_me: Filter[base_update.BaseUserUpdate] = new(
-    lambda wa, m: sent_to(phone_number_id=wa.phone_id).check_sync(wa, m),
+    lambda wa, m: sent_to(phone_number_id=str(wa.phone_id)).check_sync(wa, m),
     name="sent_to_me",
 )
 """
@@ -501,7 +511,7 @@ def from_countries(
     return new(
         lambda _, m: (
             m.from_user.country_code in country_codes  # country_code always exists
-            or (m.from_user.wa_id and m.from_user.wa_id.startswith(phone_prefixes))
+            or bool(m.from_user.wa_id and m.from_user.wa_id.startswith(phone_prefixes))
         ),
         name="from_countries",
     )
@@ -513,7 +523,12 @@ def from_groups(*group_ids: str) -> Filter[base_update.BaseUserUpdate]:
 
     >>> from_groups("Y2FwaV9ncm91cDoxNzA1NTU1MDEzOToxMjAzNjM0MDQ2OTQyMzM4MjAZD")
     """
-    return new(lambda _, m: m.chat.id in group_ids, name="filters.from_groups")
+    return new(
+        lambda _, m: (
+            (chat := getattr(m, "chat", None)) is not None and chat.id in group_ids
+        ),
+        name="filters.from_groups",
+    )
 
 
 def matches(*strings: str, ignore_case: bool = False) -> Filter[Any]:
@@ -695,7 +710,7 @@ def mimetypes(*mmtps: str) -> Filter[types.Message]:
     >>> mimetypes("application/pdf", "image/png")
     """
     return new(
-        lambda _, m: m.media.mime_type in mmtps,
+        lambda _, m: m.media is not None and m.media.mime_type in mmtps,
         name="mimetypes",
     )
 
@@ -707,7 +722,7 @@ def extensions(*exts: str) -> Filter[types.Message]:
     >>> extensions(".pdf", ".png")
     """
     return new(
-        lambda _, m: m.media.extension in exts,
+        lambda _, m: m.media is not None and m.media.extension in exts,
         name="extensions",
     )
 
@@ -716,7 +731,11 @@ media: Filter[types.Message] = new(lambda _, m: m.has_media, name="filters.media
 """Filter for media messages (images, videos, documents, audio, stickers)."""
 
 is_command: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.TEXT and m.text.startswith(("/", "!")),
+    lambda _, m: (
+        m.type == types.MessageType.TEXT
+        and m.text is not None
+        and m.text.startswith(("/", "!"))
+    ),
     name="is_command",
 )
 """
@@ -746,6 +765,7 @@ def command(
     return new(
         lambda _, m: (
             m.type == types.MessageType.TEXT
+            and m.text is not None
             and (
                 m.text[0] in prefixes
                 and (m.text[1:].lower() if ignore_case else m.text[1:]).startswith(cmds)
@@ -787,13 +807,13 @@ audio: Filter[types.Message] = new(
 """Filter for audio messages (both voice notes and audio files)."""
 
 audio_only: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.AUDIO and not m.audio.voice,
+    lambda _, m: m.audio is not None and not m.audio.voice,
     name="audio_only",
 )
 """Filter for audio messages that are not voice notes."""
 
 voice: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.AUDIO and m.audio.voice,
+    lambda _, m: m.audio is not None and m.audio.voice,
     name="filters.voice",
 )
 """Filter for audio messages that are voice notes."""
@@ -804,13 +824,13 @@ sticker: Filter[types.Message] = new(
 """Filter for sticker messages (both static and animated)."""
 
 animated_sticker: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.STICKER and m.sticker.animated,
+    lambda _, m: m.sticker is not None and m.sticker.animated,
     name="animated_sticker",
 )
 """Filter for animated sticker messages."""
 
 static_sticker: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.STICKER and not m.sticker.animated,
+    lambda _, m: m.sticker is not None and not m.sticker.animated,
     name="static_sticker",
 )
 """Filter for static sticker messages."""
@@ -821,7 +841,7 @@ location: Filter[types.Message] = new(
 """Filter for location messages."""
 
 current_location: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.LOCATION and m.location.current_location,
+    lambda _, m: m.location is not None and m.location.current_location,
     name="current_location",
 )
 """Filter for location messages that are current locations."""
@@ -843,7 +863,7 @@ def location_in_radius(
 
     return new(
         lambda _, m: (
-            m.type == types.MessageType.LOCATION
+            m.location is not None
             and m.location.in_radius(lat=lat, lon=lon, radius=radius)
         ),
         name="location_in_radius",
@@ -856,13 +876,13 @@ reaction: Filter[types.Message] = new(
 """Filter for reaction messages (both added and removed)."""
 
 reaction_added: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.REACTION and m.reaction.emoji is not None,
+    lambda _, m: m.reaction is not None and m.reaction.emoji is not None,
     name="reaction_added",
 )
 """Filter for reaction messages that were added to a message."""
 
 reaction_removed: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.REACTION and m.reaction.emoji is None,
+    lambda _, m: m.reaction is not None and m.reaction.emoji is None,
     name="reaction_removed",
 )
 """Filter for reaction messages that were removed from a message."""
@@ -875,9 +895,7 @@ def reaction_emojis(*emojis: str) -> Filter[types.Message]:
     >>> reaction_emojis("👍","👎")
     """
     return new(
-        lambda _, m: (
-            m.type == types.MessageType.REACTION and m.reaction.emoji in emojis
-        ),
+        lambda _, m: m.reaction is not None and m.reaction.emoji in emojis,
         name="reaction_emojis",
     )
 
@@ -889,8 +907,7 @@ contacts: Filter[types.Message] = new(
 
 contact_info_shared: Filter[types.Message] = new(
     lambda _, m: (
-        m.type == types.MessageType.CONTACTS
-        and m.contacts.origin == ContactsOrigin.CONTACT_REQUEST
+        m.contacts is not None and m.contacts.origin == ContactsOrigin.CONTACT_REQUEST
     ),
     name="contact_info_shared",
 )
@@ -898,7 +915,7 @@ contact_info_shared: Filter[types.Message] = new(
 
 contacts_has_wa: Filter[types.Message] = new(
     lambda _, m: (
-        m.type == types.MessageType.CONTACTS
+        m.contacts is not None
         and (
             any(
                 (
@@ -982,14 +999,14 @@ def failed_with(
     """
     error_codes = tuple(c for c in errors if isinstance(c, int))
     exceptions = tuple(
-        e for e in errors if e not in error_codes and issubclass(e, WhatsAppError)
+        e for e in errors if isinstance(e, type) and issubclass(e, WhatsAppError)
     )
     return new(
         lambda _, s: (
             s.status == types.MessageStatusType.FAILED
             and (
                 any((isinstance(s.error, e) for e in exceptions))
-                or s.error.code in error_codes
+                or (s.error is not None and s.error.code in error_codes)
             )
         ),
         name="status_failed_with",

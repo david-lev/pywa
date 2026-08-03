@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import datetime
 import functools
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, overload
 
 from pywa.listeners import TemplateStatusUpdateListenerIdentifier
 from pywa.types.templates import *  # noqa MUST BE IMPORTED FIRST
@@ -408,6 +407,7 @@ class TemplatesResult(Result[TemplateDetails]):
 
 class _CreatedAndUpdatedTemplateActionsAsync:
     _client: WhatsAppAsync
+    id: str
 
     async def get(self) -> TemplateDetails:
         """
@@ -448,14 +448,11 @@ class _CreatedAndUpdatedTemplateActionsAsync:
             cancelers = (
                 cancelers or pywa_filters.false | pywa_filters.template_status_rejected
             )
-        return cast(
-            TemplateStatusUpdate,
-            await self._client.listen(
-                to=TemplateStatusUpdateListenerIdentifier(template_id=self.id),
-                filters=pywa_filters.template_status_approved,
-                cancelers=cancelers,
-                timeout=timeout,
-            ),
+        return await self._client.listen(
+            to=TemplateStatusUpdateListenerIdentifier(template_id=self.id),
+            filters=pywa_filters.template_status_approved,
+            cancelers=cancelers,
+            timeout=timeout,
         )
 
 
@@ -482,7 +479,7 @@ class UpdatedTemplate(_CreatedAndUpdatedTemplateActionsAsync, _UpdatedTemplate):
     """
 
 
-class CreatedTemplates(_CreatedTemplates, Sequence[CreatedTemplate]):
+class CreatedTemplates(_CreatedTemplates):
     """
     Represents a collection of created WhatsApp Templates.
 
@@ -491,3 +488,19 @@ class CreatedTemplates(_CreatedTemplates, Sequence[CreatedTemplate]):
     """
 
     templates: tuple[CreatedTemplate, ...]
+
+    @overload
+    def __getitem__(self, index: int) -> CreatedTemplate: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> list[CreatedTemplate]: ...
+
+    def __getitem__(
+        self, index: int | slice
+    ) -> CreatedTemplate | list[CreatedTemplate]:
+        if isinstance(index, slice):
+            return list(self.templates[index])
+        return self.templates[index]
+
+    def __len__(self) -> int:
+        return len(self.templates)

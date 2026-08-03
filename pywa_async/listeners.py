@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from pywa.listeners import *  # noqa MUST BE IMPORTED FIRST
 from pywa.listeners import (
@@ -50,7 +50,7 @@ class ListenerCanceled(_ListenerCanceled):
     update: BaseUpdate | BaseUserUpdateAsync | None
 
     def __init__(self, update: BaseUpdate | BaseUserUpdateAsync | None = None):
-        super().__init__(update)
+        super().__init__(cast("BaseUpdate | None", update))
 
 
 _UpdateT = TypeVar("_UpdateT", bound="BaseUpdate")
@@ -86,7 +86,7 @@ class Listener(_Listener):
         return not self.filters or await self.filters.check_async(wa, update)
 
     async def apply_cancelers(self, wa: WhatsApp, update: BaseUpdate) -> bool:
-        return self.cancelers and await self.cancelers.check_async(wa, update)
+        return bool(self.cancelers) and await self.cancelers.check_async(wa, update)
 
 
 class _AsyncListeners:
@@ -160,6 +160,9 @@ class _AsyncListeners:
         )
         self._listeners[to] = listener
         try:
-            return await asyncio.wait_for(listener.future, timeout=timeout)
+            return cast(
+                "_UpdateT", await asyncio.wait_for(listener.future, timeout=timeout)
+            )
         except asyncio.TimeoutError:
+            assert timeout is not None  # `asyncio.wait_for(..., None)` never times out
             raise ListenerTimeout(timeout) from None

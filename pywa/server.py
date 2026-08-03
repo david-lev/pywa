@@ -89,7 +89,7 @@ class Server:
         else:
             self._server_type = None
 
-    def _setup_and_get_starlette_app(self):
+    def _setup_and_get_starlette_app(self: "WhatsApp"):
         # This is the ASGI factory uvicorn calls to build the app - including fresh,
         # in a subprocess that re-imports everything, when running with `--reload` or
         # multiple workers. Configuring logging here (rather than only where `run()`/the
@@ -197,8 +197,8 @@ class Server:
         )
 
     def webhook_challenge_handler(
-        self: "WhatsApp", vt: str, ch: str
-    ) -> tuple[str, int]:
+        self: "WhatsApp", vt: str | None, ch: str | None
+    ) -> tuple[str | None, int]:
         """
         Handle the verification challenge from the webhook manually.
 
@@ -246,6 +246,9 @@ class Server:
             )
             return "Unauthorized", 401
 
+        assert (
+            self._app_secret is not None
+        )  # guaranteed when `_validate_updates` is True
         if not utils.webhook_updates_validator(
             app_secret=self._app_secret,
             request_body=update,
@@ -427,7 +430,9 @@ class Server:
             _logger, _update_hash_of(update), self._webhook_endpoint
         )
         for handler in self._handlers[handler_type]:
-            callback_name = handler._callback.__name__
+            callback_name = getattr(
+                handler._callback, "__name__", repr(handler._callback)
+            )
             try:
                 log.debug("Checking if handler %s should handle the update", handler)
                 checked_update = handler.check(self, update)
@@ -569,30 +574,37 @@ class Server:
         This is a non-blocking function that registers the callback URL.
         It must be called after the server is running so that the challenge can be verified.
         """
+        assert self._callback_url is not None
+        assert self._verify_token is not None
         try:
             match self._callback_url_scope:
                 case utils.CallbackURLScope.APP:
+                    assert self._app_id is not None
+                    assert self._app_secret is not None
                     app_access_token = self.api.get_app_access_token(
-                        client_id=self._app_id, client_secret=self._app_secret
+                        client_id=int(self._app_id),
+                        client_secret=self._app_secret,
                     )
                     res = self.api.set_app_callback_url(
-                        app_id=self._app_id,
+                        app_id=int(self._app_id),
                         access_token=app_access_token["access_token"],
                         callback_url=self._callback_url,
                         verify_token=self._verify_token,
                         fields=tuple(self._webhook_fields),
                     )
                 case utils.CallbackURLScope.WABA:
+                    assert self.waba_id is not None
                     res = self.api.set_waba_alternate_callback_url(
-                        waba_id=self.waba_id,
+                        waba_id=str(self.waba_id),
                         override_callback_uri=self._callback_url,
                         verify_token=self._verify_token,
                     )
                 case utils.CallbackURLScope.PHONE:
+                    assert self.phone_id is not None
                     res = self.api.set_phone_alternate_callback_url(
                         override_callback_uri=self._callback_url,
                         verify_token=self._verify_token,
-                        phone_id=self.phone_id,
+                        phone_id=str(self.phone_id),
                     )
                 case _:
                     raise ValueError("Invalid callback URL scope")

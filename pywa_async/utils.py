@@ -1,10 +1,13 @@
-from pywa.utils import *  # noqa MUST BE IMPORTED FIRST
+from typing import Any
+
 import httpx
+
+from pywa.utils import *  # noqa MUST BE IMPORTED FIRST
 from pywa.utils import _flow_request_media_decryptor
 
 
 async def flow_request_media_decryptor(
-    encrypted_media: dict[str, str | dict[str, str]],
+    encrypted_media: dict[str, Any],
     dl_session: httpx.AsyncClient | None = None,
 ) -> FlowRequestDecryptedMedia:
     """

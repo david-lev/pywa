@@ -12,6 +12,7 @@ exclude = ["tests*", "docs*"]
 
 [tool.setuptools.package-data]
 pywa = ["py.typed"]
+pywa_async = ["py.typed"]
 
 [project]
 name = "pywa"
@@ -134,3 +135,14 @@ ignore = [
     "E402",
     "F405",
 ]
+
+[tool.ty.src]
+include = ["pywa*"]
+
+[[tool.ty.overrides]]
+# `pywa_async` mirrors `pywa` but overrides every networking method as `async def`,
+# which is intentionally not Liskov-substitutable for the sync base class.
+include = ["pywa_async/**"]
+
+[tool.ty.overrides.rules]
+invalid-method-override = "ignore"

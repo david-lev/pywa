@@ -97,7 +97,7 @@ class SystemType(helpers.StrEnum):
     UNKNOWN = "UNKNOWN"
 
     @classmethod
-    def _missing_(cls, value: str):
+    def _missing_(cls, value: str):  # ty: ignore[invalid-method-override]
         # the documentation very confusing about the values of system types
         if (
             value == "customer_changed_number"

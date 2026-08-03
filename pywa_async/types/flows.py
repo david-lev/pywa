@@ -76,6 +76,8 @@ class FlowRequest(_FlowRequest):
             KeyError: If the key is not found in the data.
             IndexError: If the index is out of range.
         """
+        if not self.data:
+            raise ValueError("No data to decrypt.")
         return await utils.flow_request_media_decryptor(
             encrypted_media=self.data[key][index],
             dl_session=dl_session,

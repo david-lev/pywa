@@ -151,6 +151,8 @@ failed_canceler = pywa_filters.new(_failed_canceler)
 new_update_canceler = pywa_filters.new(_new_update_canceler)
 
 _SentMessageType = TypeVar("_SentMessageType", bound="SentMessage")
+_SentTemplateType = TypeVar("_SentTemplateType", bound="SentTemplate")
+_T = TypeVar("_T")
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -178,7 +180,7 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
             PywaDeprecationWarning,
             stacklevel=2,
         )
-        return self.chat.id
+        return self.chat.id  # ty: ignore[invalid-return-type]
 
     @property
     def sender(self) -> None:
@@ -188,11 +190,11 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
             PywaDeprecationWarning,
             stacklevel=2,
         )
-        return self.from_phone_id
+        return self.from_phone_id  # ty: ignore[invalid-return-type]
 
     @classmethod
     def from_sent_update(
-        cls,
+        cls: type[_SentMessageType],
         *,
         client: WhatsApp,
         update: dict,
@@ -200,7 +202,7 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
         recipient_type: RecipientType,
         interactive_type: InteractiveType | None = None,
         **kwargs,
-    ) -> SentMessage:
+    ) -> _SentMessageType:
         # noinspection PyArgumentList
         return cls(
             _client=client,
@@ -338,11 +340,14 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
             cancelers = (
                 (cancelers | new_update_canceler) if cancelers else new_update_canceler
             )
-        return self._client.listen(
-            to=self.listener_identifier,
-            filters=pywa_filters.update_id(self.id) & pywa_filters.read,
-            cancelers=cancelers,
-            timeout=timeout,
+        return cast(
+            MessageStatus,
+            self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.update_id(self.id) & pywa_filters.read,
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
         )
 
     def wait_until_delivered(
@@ -437,10 +442,11 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
             ListenerStopped: If the listener was stopped manually.
         """
         if cancel_if_delivered:
-            cancelers = (
+            cancelers = cast(
+                "pywa_filters.Filter[BaseUserUpdate] | None",
                 (cancelers | pywa_filters.delivered)
                 if cancelers
-                else pywa_filters.delivered
+                else pywa_filters.delivered,
             )
         return self._client.listen(
             to=self.listener_identifier,
@@ -502,12 +508,15 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
                 if cancelers
                 else ignore_updates_canceler
             )
-        return self._client.listen(
-            to=self.listener_identifier,
-            filters=pywa_filters.callback_button
-            & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
-            cancelers=cancelers,
-            timeout=timeout,
+        return cast(
+            CallbackButton,
+            self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.callback_button
+                & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
         )
 
     def wait_for_selection(
@@ -545,12 +554,15 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
                 if cancelers
                 else ignore_updates_canceler
             )
-        return self._client.listen(
-            to=self.listener_identifier,
-            filters=pywa_filters.callback_selection
-            & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
-            cancelers=cancelers,
-            timeout=timeout,
+        return cast(
+            CallbackSelection,
+            self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.callback_selection
+                & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
         )
 
     def wait_for_completion(
@@ -976,29 +988,26 @@ class SentTemplate(SentMessage):
 
     @classmethod
     def from_sent_update(
-        cls,
+        cls: type[_SentTemplateType],
         *,
         client: WhatsApp,
         update: dict,
         from_phone_id: str,
         recipient_type: RecipientType,
         **kwargs,
-    ) -> SentTemplate:
+    ) -> _SentTemplateType:
         msg = update["messages"][0]
-        return cast(
-            SentTemplate,
-            super(SentTemplate, cls).from_sent_update(
-                client=client,
-                update=update,
-                from_phone_id=from_phone_id,
-                recipient_type=recipient_type,
-                status=(
-                    SentTemplateStatus(msg["message_status"])
-                    if "message_status" in msg
-                    else None
-                ),
-                **kwargs,
+        return super(SentTemplate, cls).from_sent_update(
+            client=client,
+            update=update,
+            from_phone_id=from_phone_id,
+            recipient_type=recipient_type,
+            status=(
+                SentTemplateStatus(msg["message_status"])
+                if "message_status" in msg
+                else None
             ),
+            **kwargs,
         )
 
 
@@ -1018,13 +1027,13 @@ class InitiatedCall(_SentUpdate, _CallShortcuts):
 
     @classmethod
     def from_sent_update(
-        cls,
+        cls: type[_T],
         client: WhatsApp,
         update: dict,
         from_phone_id: str,
         recipient_type: RecipientType,
         callee: str,
-    ) -> InitiatedCall:
+    ) -> _T:
         return cls(
             _client=client,
             _recipient_type=recipient_type,

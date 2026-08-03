@@ -7,7 +7,7 @@ import logging
 import os
 import sys
 import warnings
-from typing import TextIO
+from typing import TextIO, cast
 
 from .errors import PywaWarning
 
@@ -69,8 +69,8 @@ def _context_prefix(update_hash: str | None, endpoint: str | None) -> str:
 class _UpdateLoggerAdapter(logging.LoggerAdapter):
     def process(self, msg, kwargs):
         extra = kwargs.setdefault("extra", {})
-        update_hash = self.extra.get("update_hash")
-        endpoint = self.extra.get("endpoint")
+        update_hash = cast("str | None", (self.extra or {}).get("update_hash"))
+        endpoint = cast("str | None", (self.extra or {}).get("endpoint"))
         extra.setdefault("update_hash", update_hash)
         extra.setdefault("endpoint", endpoint)
         return f"{_context_prefix(update_hash, endpoint)}{msg}", kwargs

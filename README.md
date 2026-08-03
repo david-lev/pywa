@@ -145,7 +145,9 @@ wa.send_message(
 )
 
 # Images, documents, audio — one-liners
-wa.send_image(to="9876543210", image="https://example.com/photo.jpg", caption="Check this out!")
+wa.send_image(
+    to="9876543210", image="https://example.com/photo.jpg", caption="Check this out!"
+)
 wa.send_document(to="9876543210", document="report.pdf")
 ```
 
@@ -217,10 +219,16 @@ wa.create_template(
             ht := HeaderText("Your order #{{order_id}} has shipped!", order_id="12345"),
             bt := BodyText("Track it with code {{code}}.", code="ABC123"),
             FooterText(text="Powered by PyWa"),
-            Buttons(buttons=[
-                url := URLButton(text="Track Order", url="https://example.com/track/{{1}}", example="12345"),
-                QuickReplyButton(text="Unsubscribe"),
-            ]),
+            Buttons(
+                buttons=[
+                    url := URLButton(
+                        text="Track Order",
+                        url="https://example.com/track/{{1}}",
+                        example="12345",
+                    ),
+                    QuickReplyButton(text="Unsubscribe"),
+                ]
+            ),
         ],
     ),
 )
@@ -254,27 +262,43 @@ my_flow = FlowJSON(
         Screen(
             id="SIGNUP",
             title="Join Our Newsletter",
-            layout=Layout(children=[
-                TextHeading(text="Subscribe for updates"),
-                name := TextInput(name="name", label="Name", input_type=InputType.TEXT),
-                email := TextInput(name="email", label="Email", input_type=InputType.EMAIL, required=True),
-                Footer(
-                    label="Subscribe",
-                    on_click_action=CompleteAction(
-                        payload={"name": name.ref, "email": email.ref}
+            layout=Layout(
+                children=[
+                    TextHeading(text="Subscribe for updates"),
+                    name := TextInput(
+                        name="name", label="Name", input_type=InputType.TEXT
                     ),
-                ),
-            ]),
+                    email := TextInput(
+                        name="email",
+                        label="Email",
+                        input_type=InputType.EMAIL,
+                        required=True,
+                    ),
+                    Footer(
+                        label="Subscribe",
+                        on_click_action=CompleteAction(
+                            payload={"name": name.ref, "email": email.ref}
+                        ),
+                    ),
+                ]
+            ),
         )
     ]
 )
 
-wa.create_flow(name="newsletter_signup", categories=[FlowCategory.SIGN_UP], flow_json=my_flow, publish=True)
+wa.create_flow(
+    name="newsletter_signup",
+    categories=[FlowCategory.SIGN_UP],
+    flow_json=my_flow,
+    publish=True,
+)
 
 
 @wa.on_flow_completion
 def on_signup(_: WhatsApp, flow: types.FlowCompletion):
-    flow.reply(text=f"Welcome, {flow.response['name']}! You're subscribed at {flow.response['email']}.")
+    flow.reply(
+        text=f"Welcome, {flow.response['name']}! You're subscribed at {flow.response['email']}."
+    )
 ```
 
 ### 8. Account & Resource Management
@@ -288,7 +312,9 @@ wa = WhatsApp(phone_id="1234567890", token="EAA...", waba_id=123456)
 
 # Business profile
 profile = wa.get_business_profile()
-wa.update_business_profile(about="Powered by PyWa", description="We build bots!", profile_picture="profile.jpg")
+wa.update_business_profile(
+    about="Powered by PyWa", description="We build bots!", profile_picture="profile.jpg"
+)
 
 # Media management
 media = wa.upload_media(media="photo.jpg")
@@ -310,8 +336,7 @@ wa.get_group_join_requests()
 
 # Commerce
 wa.get_commerce_settings()
-wa.update_commerce_settings(is_catalog_visible=True, is_cart_enabled=
-True)
+wa.update_commerce_settings(is_catalog_visible=True, is_cart_enabled=True)
 # User management
 wa.block_users(users=["9876543210"])
 blocked = wa.get_blocked_users()
@@ -348,7 +373,9 @@ shared_wabas = wa.get_shared_business_accounts()
 owned_wabas = wa.get_owned_business_accounts()
 
 # Provision phone numbers on a WABA
-phone = wa.create_phone_number(country_calling_code="1", phone_number="5551234567", verified_name="John Doe")
+phone = wa.create_phone_number(
+    country_calling_code="1", phone_number="5551234567", verified_name="John Doe"
+)
 wa.request_verification_code(phone_id=phone.id, code_method="SMS")
 wa.verify_phone_number(code="123456", phone_id=phone.id)
 wa.register_phone_number(phone_id=phone.id)
@@ -359,7 +386,9 @@ wa.override_phone_callback_url(callback_url="https://your-platform.com/phone/456
 
 # Migrate templates & flows between WABAs
 wa.migrate_templates(source_waba_id=111111, destination_waba_id=222222)
-wa.migrate_flows(source_waba_id=111111, destination_waba_id=222222, source_flow_names=["flow_1"])
+wa.migrate_flows(
+    source_waba_id=111111, destination_waba_id=222222, source_flow_names=["flow_1"]
+)
 ```
 
 ---

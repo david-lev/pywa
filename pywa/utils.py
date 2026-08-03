@@ -7,25 +7,20 @@ import functools
 import hashlib
 import hmac
 import importlib
+import importlib.util
 import json
 import logging
 import warnings
-from typing import Any, Callable, Iterable, Protocol, TypeAlias
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Protocol, TypeAlias
 
 import httpx
 
 from .errors import PywaDeprecationWarning
 
-try:
-    from cryptography.hazmat.backends import default_backend
-    from cryptography.hazmat.primitives.asymmetric.padding import MGF1, OAEP, hashes
-    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-    from cryptography.hazmat.primitives.padding import PKCS7
-    from cryptography.hazmat.primitives.serialization import load_pem_private_key
+if TYPE_CHECKING:
+    from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 
-    is_cryptography_installed = True
-except ImportError:
-    is_cryptography_installed = False
+is_cryptography_installed = importlib.util.find_spec("cryptography") is not None
 
 _logger = logging.getLogger(__name__)
 
@@ -63,6 +58,9 @@ class Flask(Protocol):
 
 class CustomServerType(enum.Enum):
     """Enum for the supported server types."""
+
+    protocol: type
+    server: Callable
 
     FASTAPI = ("FastAPI", FastAPI, lambda: importlib.import_module("fastapi").FastAPI)
     STARLETTE = (
@@ -110,6 +108,8 @@ class Version(enum.Enum):
         FLOW_DATA_API: (MIN_VERSION: str, LATEST_VERSION: str)
         FLOW_MSG: (MIN_VERSION: str, LATEST_VERSION: str)
     """
+
+    min: str
 
     # KEY = (MIN_VERSION: str, LATEST_VERSION: str)
     GRAPH_API = ("17.0", "25.0")
@@ -185,7 +185,7 @@ Returns:
 
 
 @functools.lru_cache(maxsize=8)
-def _load_flow_private_key(private_key: str, password: str | None):
+def _load_flow_private_key(private_key: str, password: str | None) -> RSAPrivateKey:
     """
     Load and cache a flow's RSA private key.
 
@@ -199,10 +199,16 @@ def _load_flow_private_key(private_key: str, password: str | None):
     its keys come from the developer's own configuration, never from a
     request.
     """
-    return load_pem_private_key(
+    from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
+    from cryptography.hazmat.primitives.serialization import load_pem_private_key
+
+    rsa_key = load_pem_private_key(
         data=private_key.encode("utf-8"),
         password=password.encode("utf-8") if password else None,
     )
+    if not isinstance(rsa_key, RSAPrivateKey):
+        raise TypeError("Private key is not an RSA private key")
+    return rsa_key
 
 
 def default_flow_request_decryptor(
@@ -237,6 +243,8 @@ def default_flow_request_decryptor(
         >>> @wa.on_flow_request("/sign-up-flow", request_decryptor=default_flow_request_decryptor)
         ... def on_sign_up_request(_: WhatsApp, flow: FlowRequest) -> FlowResponse | None: ...
     """
+    from cryptography.hazmat.primitives.asymmetric.padding import MGF1, OAEP, hashes
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
     flow_data = base64.b64decode(encrypted_flow_data_b64)
     iv = base64.b64decode(initial_vector_b64)
@@ -298,6 +306,7 @@ def default_flow_response_encryptor(response: dict, aes_key: bytes, iv: bytes) -
         >>> @wa.on_flow_request("/sign-up-flow", response_encryptor=default_flow_response_encryptor)
         ... def on_sign_up_request(_: WhatsApp, flow: FlowRequest) -> FlowResponse | None: ...
     """
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
     flipped_iv = bytearray()
     for byte in iv:
@@ -394,6 +403,9 @@ def _flow_request_media_decryptor(
     cdn_file: bytes, encryption_metadata: dict[str, str]
 ) -> bytes:
     """The actual implementation of the media decryption."""
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+    from cryptography.hazmat.primitives.padding import PKCS7
 
     ciphertext = cdn_file[:-10]
     sha256 = hashlib.sha256(cdn_file)

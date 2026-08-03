@@ -240,7 +240,7 @@ class CallPermissionUpdate(BaseUserUpdate):
     """
 
     type: MessageType
-    reply_to_message: ReplyToMessage
+    reply_to_message: ReplyToMessage | None
     response: CallPermissionResponse
     response_source: CallPermissionResponseSource
     expiration_timestamp: datetime.datetime | None = None

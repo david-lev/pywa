@@ -19,10 +19,12 @@ from typing import (
     Generic,
     Iterable,
     Literal,
+    Mapping,
     NoReturn,
     Type,
     TypeAlias,
     TypeVar,
+    cast,
     overload,
 )
 from urllib import parse as urllib_parse
@@ -131,6 +133,7 @@ __all__ = [
 ]
 
 _FlowResMediaType = TypeVar("_FlowResMediaType", bound=ArrivedMedia)
+_T = TypeVar("_T")
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
@@ -223,11 +226,14 @@ class FlowCompletion(BaseUserUpdate):
             ValueError: If the response has no data.
             IndexError: If the index is out of range.
         """
-        return media_cls.from_dict(
-            client=self._client,
-            data=self.response[key][index],
-            arrived_at=self.timestamp,
-            received_to=self.metadata.phone_number_id,
+        return cast(
+            _FlowResMediaType,
+            media_cls.from_dict(
+                client=self._client,
+                data=self.response[key][index],
+                arrived_at=self.timestamp,
+                received_to=self.metadata.phone_number_id,
+            ),
         )
 
 
@@ -275,7 +281,7 @@ class FlowRequest:
     screen: str | None
     data: dict[str, Any] | None
     raw: dict[str, Any] = dataclasses.field(repr=False, hash=False, compare=False)
-    raw_encrypted: dict[str, str] = dataclasses.field(
+    raw_encrypted: Mapping[str, str] = dataclasses.field(
         repr=False, hash=False, compare=False
     )
 
@@ -342,7 +348,7 @@ class FlowRequest:
         raise FlowTokenNoLongerValid(error_message)
 
     @classmethod
-    def from_dict(cls, data: dict, raw_encrypted: dict):
+    def from_dict(cls, data: dict, raw_encrypted: Mapping):
         return cls(
             version=data["version"],
             action=FlowRequestActionType(data["action"]),
@@ -470,7 +476,7 @@ class FlowResponse:
                 )
 
     def to_dict(self) -> dict:
-        data = self.data.copy()
+        data = cast(dict[str, Any], self.data.copy())
         if not self.close_flow and self.error_message:
             data["error_message"] = self.error_message
         for key, val in data.items():
@@ -808,7 +814,7 @@ class FlowDetails(helpers.APIObject):
         return tuple(fields)
 
     @classmethod
-    def from_dict(cls, data: dict, client: WhatsApp) -> FlowDetails:
+    def from_dict(cls: type[_T], data: dict, client: WhatsApp) -> _T:
         return cls(
             _client=client,
             id=data["id"],
@@ -1585,7 +1591,7 @@ class Screen:
 
     id: str
     title: str | None = None
-    data: list[ScreenData] | dict[str, dict] | None = None
+    data: list[ScreenData] | dict[str, dict] | _ScreenDatasContainer | None = None
     terminal: bool | None = None
     success: bool | None = None
     refresh_on_back: bool | None = None
@@ -1596,7 +1602,9 @@ class Screen:
         # preventing `data` from being converted to a Iterable[dict] by `dataclasses.asdict()`
         # this is because we need to extract the key attr from the ScreenData and use it as the key in the json data obj
         self.data = (
-            _ScreenDatasContainer(self.data)  # type: ignore
+            _ScreenDatasContainer(
+                cast("list[ScreenData | ScreenDataUpdate]", self.data)
+            )
             if isinstance(self.data, Iterable) and not isinstance(self.data, dict)
             else self.data
         )
@@ -1797,10 +1805,10 @@ class _ComparableOpsMixin(_FlowExpr, abc.ABC):
     ) -> Condition:
         return Condition(self, operator, right)
 
-    def __eq__(self, other: _CompareOperandT) -> Condition:
+    def __eq__(self, other: _CompareOperandT) -> Condition:  # ty: ignore[invalid-method-override]
         return self._to_condition(other, "==")
 
-    def __ne__(self, other: _CompareOperandT) -> Condition:
+    def __ne__(self, other: _CompareOperandT) -> Condition:  # ty: ignore[invalid-method-override]
         return self._to_condition(other, "!=")
 
     def __gt__(self, other: _OrderCompareOperandT) -> Condition:
@@ -2209,33 +2217,40 @@ class Form(Component):
         # Extract init-value's from children
         init_values = self.init_values or {}
         for child in self.children:
-            if getattr(child, "init_value", None) is not None:
+            if not isinstance(child, FormComponent):
+                continue
+            if child.init_value is not None:
                 if isinstance(self.init_values, Ref | str):
                     raise ValueError(
                         f"No need to set init value for {child.name!r} if form init values is a dynamic ScreenDataRef"
                     )
+                assert isinstance(init_values, dict)
                 if child.name in init_values:
                     raise ValueError(
                         f"Duplicate init value for {child.name!r} in form {self.name!r}"
                     )
                 init_values[child.name] = child.init_value
-                child.init_value = None
+                setattr(child, "init_value", None)  # noqa: B010
         self.init_values = init_values or None
 
         # Extract error-message's from children
         error_messages = self.error_messages or {}
         for child in self.children:
-            if getattr(child, "error_message", None) is not None:
+            if not isinstance(child, FormComponent):
+                continue
+            child_error_message = getattr(child, "error_message", None)
+            if child_error_message is not None:
                 if isinstance(self.error_messages, Ref | str):
                     raise ValueError(
                         f"No need to set error msg for {child.name!r} if form error messages is a dynamic ScreenDataRef"
                     )
+                assert isinstance(error_messages, dict)
                 if child.name in error_messages:
                     raise ValueError(
                         f"Duplicate error msg for {child.name!r} in form {self.name!r}"
                     )
-                error_messages[child.name] = child.error_message
-                child.error_message = None
+                error_messages[child.name] = child_error_message
+                setattr(child, "error_message", None)  # noqa: B010
         self.error_messages = error_messages or None
 
 
@@ -3307,7 +3322,9 @@ class CalendarDay(helpers.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-_StartEndTypeVar = TypeVar("_StartEndTypeVar", bound=datetime.date | str | bool)
+_StartEndTypeVar = TypeVar(
+    "_StartEndTypeVar", bound="datetime.date | str | bool | DataExchangeAction"
+)
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)

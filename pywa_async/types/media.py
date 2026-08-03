@@ -18,9 +18,10 @@ import datetime
 import pathlib
 from typing import TYPE_CHECKING, Any, AsyncGenerator, Awaitable, Coroutine, Generator
 
-from pywa.types.media import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.media import (
     URL_EXPIRATION_MINUTES,
+    ArrivedMedia,
+    UploadedBy,
 )
 from pywa.types.media import (
     Audio as _Audio,
@@ -33,7 +34,7 @@ from pywa.types.media import (
 )
 from pywa.types.media import (
     Media as _Media,
-)  # noqa MUST BE IMPORTED FIRST
+)
 from pywa.types.media import (
     MediaURL as _MediaURL,
 )
@@ -54,14 +55,18 @@ if TYPE_CHECKING:
 class _MediaActionsAsync:
     _client: WhatsApp
     id: str
+    uploaded_at: datetime.datetime
+    uploaded_to: str
+    url: str | None
 
     async def get_media_url(self) -> str:
         """Gets the URL of the media. (expires after 5 minutes)"""
-        if getattr(self, "url", None):
+        url: str | None = getattr(self, "url", None)
+        if url:
             if (
                 datetime.datetime.now(datetime.timezone.utc) - self.uploaded_at
             ) < datetime.timedelta(minutes=URL_EXPIRATION_MINUTES):
-                return self.url
+                return url
         return (await self._client.get_media_url(media_id=self.id)).url
 
     async def download(
@@ -185,14 +190,15 @@ class _MediaActionsAsync:
             to_phone_id: The phone ID to upload the media to (if not provided, the media owner's phone ID will be used).
             override_filename: The filename to use for the re-uploaded media (if not provided, the original filename will be used if available).
         """
+        url: str | None = getattr(self, "url", None)
         return await self._client.upload_media(
             media=self.id
             if (
-                not getattr(self, "url", None)
+                not url
                 or (datetime.datetime.now(datetime.timezone.utc) - self.uploaded_at)
                 > datetime.timedelta(minutes=URL_EXPIRATION_MINUTES)
             )
-            else self.url,
+            else url,
             phone_id=to_phone_id or self.uploaded_to,
             filename=override_filename,
         )
@@ -250,7 +256,7 @@ class PendingMedia(Awaitable[Media]):
         return self._handle_caching().__await__()
 
     async def __aenter__(self) -> "Media":
-        media = await self
+        media: Media = await self
         return await media.__aenter__()
 
     async def __aexit__(self, exc_type, exc_value, traceback):
@@ -354,6 +360,7 @@ class MediaURL(_MediaActionsAsync, _MediaURL):
     """
 
     _client: WhatsApp
+    url: str
 
     async def get_media_url(self) -> str:
         """Gets the URL of the media. (expires after 5 minutes)"""

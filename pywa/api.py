@@ -3,7 +3,7 @@
 import logging
 import pathlib
 from contextlib import _GeneratorContextManager
-from typing import Any, BinaryIO, Iterator
+from typing import TYPE_CHECKING, Any, BinaryIO, Iterator, TypedDict, cast
 
 import httpx
 
@@ -11,7 +11,15 @@ import pywa
 
 from .errors import WhatsAppError
 
+if TYPE_CHECKING:
+    from ._helpers import GeneratorStreamer
+
 _logger = logging.getLogger(__name__)
+
+
+class _UnpauseTemplateResult(TypedDict):
+    success: bool
+    reason: str | None
 
 
 class GraphAPI:
@@ -44,7 +52,7 @@ class GraphAPI:
         return self.__str__()
 
     @staticmethod
-    def _filter_none(obj: dict | None = None, **kwargs) -> dict:
+    def _filter_none(obj: dict | None = None, /, **kwargs) -> dict:
         """Merge dict and kwargs, removing None values."""
         data = (obj or {}) | kwargs
         return {k: v for k, v in data.items() if v is not None}
@@ -390,7 +398,7 @@ class GraphAPI:
     def upload_media(
         self,
         phone_id: str,
-        media: bytes | str | BinaryIO | Iterator[bytes],
+        media: bytes | str | BinaryIO | Iterator[bytes] | "GeneratorStreamer",
         mime_type: str,
         filename: str,
         ttl_minutes: int | None = None,
@@ -539,7 +547,7 @@ class GraphAPI:
         recipient: str | None,
         recipient_type: str,
         typ: str,
-        msg: dict,
+        msg: dict | tuple,
         reply_to_message_id: str | None = None,
         biz_opaque_callback_data: str | None = None,
         recipient_identity_key_hash: str | None = None,
@@ -583,8 +591,8 @@ class GraphAPI:
     def send_marketing_message(
         self,
         sender: str,
-        to: str,
-        recipient: str,
+        to: str | None,
+        recipient: str | None,
         recipient_type: str,
         template: dict,
         reply_to_message_id: str | None = None,
@@ -612,10 +620,13 @@ class GraphAPI:
         Returns:
             The response from the WhatsApp Cloud API.
         """
+        if not to and not recipient:
+            raise ValueError("Either 'to' or 'recipient' must be provided")
         body = self._filter_none(
             messaging_product="whatsapp",
             recipient_type=recipient_type,
             to=to,
+            recipient=recipient,
             type="template",
             template=template,
             context={"message_id": reply_to_message_id}
@@ -1026,7 +1037,7 @@ class GraphAPI:
     def update_conversational_automation(
         self,
         phone_id: str,
-        prompts: tuple[dict] | None = None,
+        prompts: tuple[str, ...] | None = None,
         commands: str | None = None,
     ) -> dict[str, bool]:
         """
@@ -1450,7 +1461,7 @@ class GraphAPI:
             ),
         )
 
-    def unpause_template(self, template_id: str) -> dict[str, bool | str]:
+    def unpause_template(self, template_id: str) -> _UnpauseTemplateResult:
         """
         Unpause a message template.
 
@@ -1462,7 +1473,10 @@ class GraphAPI:
         Returns:
             A dict with the success status of the operation.
         """
-        return self._request(method="POST", endpoint=f"/{template_id}/unpause")
+        return cast(
+            _UnpauseTemplateResult,
+            self._request(method="POST", endpoint=f"/{template_id}/unpause"),
+        )
 
     def upsert_message_templates(
         self,
@@ -2212,7 +2226,7 @@ class GraphAPI:
     def upload_file(
         self,
         upload_session_id: str,
-        file: bytes | Iterator[bytes],
+        file: bytes | Iterator[bytes] | BinaryIO | "GeneratorStreamer",
         file_offset: int = 0,
         content_length: int | None = None,
     ) -> dict:
