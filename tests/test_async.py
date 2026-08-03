@@ -478,6 +478,8 @@ def test_same_signature(overrides):
             (FlowRequestSync.decrypt_media, ("dl_session",)),
             (WhatsAppSync.webhook_update_handler, ("self",)),
             (WhatsAppSync.webhook_challenge_handler, ("self",)),
+            (WhatsAppSync._send_media_with_buttons, ("media",)),
+            (WhatsAppSync._send_media, ("media",)),
             (WhatsAppSync.send_image, ("image",)),
             (MessageSync.reply_image, ("image",)),
             (WhatsAppSync.send_video, ("video",)),

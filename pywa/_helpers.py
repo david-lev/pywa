@@ -3,7 +3,7 @@ import dataclasses
 import datetime
 import enum
 import functools
-import importlib
+import importlib.util
 import inspect
 import io
 import itertools
@@ -1194,11 +1194,7 @@ def resolve_callback_data(data: str | CallbackData) -> str:
 
 def is_installed(lib: str) -> bool:
     """Check if the library is installed."""
-    try:
-        importlib.import_module(lib)
-        return True
-    except ImportError:
-        return False
+    return importlib.util.find_spec(lib) is not None
 
 
 def rename_func(extended_with: str) -> Callable:

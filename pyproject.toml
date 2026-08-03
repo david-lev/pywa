@@ -146,3 +146,17 @@ include = ["pywa_async/**"]
 
 [tool.ty.overrides.rules]
 invalid-method-override = "ignore"
+
+[tool.coverage.run]
+source = ["pywa", "pywa_async"]
+omit = ["pywa/__main__.py"]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "def __repr__",
+    "\\.\\.\\.",
+]
