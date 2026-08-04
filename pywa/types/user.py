@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 @dataclasses.dataclass(frozen=True, slots=True)
 class BaseUser:
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
-    bsuid: str
+    bsuid: str | None
     wa_id: str | None
     username: str | None
     parent_bsuid: str | None
@@ -92,7 +92,7 @@ class User(BaseUser):
         profile = data.get("profile", {})  # TODO `profile` should not be optional
         return cls(
             _client=client,
-            bsuid=data["user_id"],
+            bsuid=data.get("user_id"),
             wa_id=data.get("wa_id") or None,  # avoid empty string
             name=profile.get("name"),
             username=profile.get("username"),
@@ -101,9 +101,13 @@ class User(BaseUser):
         )
 
     @property
-    def country_code(self) -> str:
-        """The user’s `ISO 3166 alpha-2 <https://www.iso.org/iso-3166-country-codes.html>`_ two-letter country code"""
-        return self.bsuid.split(".")[0]
+    def country_code(self) -> str | None:
+        """
+        The user’s `ISO 3166 alpha-2 <https://www.iso.org/iso-3166-country-codes.html>`_ two-letter country code
+
+        ``None`` when the contact carries no BSUID to derive it from.
+        """
+        return self.bsuid.split(".")[0] if self.bsuid else None
 
     @classmethod
     def from_dict(cls, data: dict, client: WhatsApp) -> User:

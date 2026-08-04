@@ -482,3 +482,22 @@ def test_repr(wa_result, fake_item_factory, response_data):
     assert "Result" in r
     assert "has_next=True" in r
     assert "has_previous=True" in r
+
+
+def test_user_from_contact_without_bsuid():
+    """A contact may carry only `wa_id` — e.g. a status for an undeliverable send."""
+    user = types.User.from_contact(data={"wa_id": "1234567890"}, client=wa)
+    assert user.wa_id == "1234567890"
+    assert user.bsuid is None
+    assert user.country_code is None
+    assert user.name is None
+
+
+def test_user_from_contact_with_bsuid():
+    user = types.User.from_contact(
+        data={"wa_id": "1234567890", "user_id": "IL.123", "profile": {"name": "Ori"}},
+        client=wa,
+    )
+    assert user.bsuid == "IL.123"
+    assert user.country_code == "IL"
+    assert user.name == "Ori"
