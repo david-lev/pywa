@@ -1193,6 +1193,9 @@ class QRCodeImageType(helpers.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
+_QRCodeType = TypeVar("_QRCodeType", bound="QRCode")
+
+
 @dataclasses.dataclass(frozen=True, slots=True)
 class QRCode(helpers.APIObject):
     """
@@ -1258,7 +1261,9 @@ class QRCode(helpers.APIObject):
         return self._client.delete_qr_code(code=self.code, phone_id=self._phone_id)
 
     @classmethod
-    def from_dict(cls: type[_T], data: dict, client: WhatsApp, phone_id: str) -> _T:
+    def from_dict(
+        cls: type[_QRCodeType], data: dict, client: WhatsApp, phone_id: str
+    ) -> _QRCodeType:
         return cls(
             _client=client,
             _phone_id=phone_id,
@@ -1754,6 +1759,9 @@ class SignupStatus(helpers.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
+_SignupDetailsType = TypeVar("_SignupDetailsType", bound="SignupDetails")
+
+
 @dataclasses.dataclass(frozen=True, slots=True)
 class SignupDetails(helpers.APIObject, _CommonSignup):
     """
@@ -1784,7 +1792,9 @@ class SignupDetails(helpers.APIObject, _CommonSignup):
     website_url: str | None
 
     @classmethod
-    def from_dict(cls: type[_T], data: dict, client: WhatsApp) -> _T:
+    def from_dict(
+        cls: type[_SignupDetailsType], data: dict, client: WhatsApp
+    ) -> _SignupDetailsType:
         return cls(
             _client=client,
             id=data["id"],

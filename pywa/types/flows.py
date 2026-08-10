@@ -133,7 +133,7 @@ __all__ = [
 ]
 
 _FlowResMediaType = TypeVar("_FlowResMediaType", bound=ArrivedMedia)
-_T = TypeVar("_T")
+_FlowDetailsType = TypeVar("_FlowDetailsType", bound="FlowDetails")
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
@@ -814,7 +814,9 @@ class FlowDetails(helpers.APIObject):
         return tuple(fields)
 
     @classmethod
-    def from_dict(cls: type[_T], data: dict, client: WhatsApp) -> _T:
+    def from_dict(
+        cls: type[_FlowDetailsType], data: dict, client: WhatsApp
+    ) -> _FlowDetailsType:
         return cls(
             _client=client,
             id=data["id"],

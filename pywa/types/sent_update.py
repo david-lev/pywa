@@ -152,7 +152,7 @@ new_update_canceler = pywa_filters.new(_new_update_canceler)
 
 _SentMessageType = TypeVar("_SentMessageType", bound="SentMessage")
 _SentTemplateType = TypeVar("_SentTemplateType", bound="SentTemplate")
-_T = TypeVar("_T")
+_InitiatedCallType = TypeVar("_InitiatedCallType", bound="InitiatedCall")
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -1027,13 +1027,13 @@ class InitiatedCall(_SentUpdate, _CallShortcuts):
 
     @classmethod
     def from_sent_update(
-        cls: type[_T],
+        cls: type[_InitiatedCallType],
         client: WhatsApp,
         update: dict,
         from_phone_id: str,
         recipient_type: RecipientType,
         callee: str,
-    ) -> _T:
+    ) -> _InitiatedCallType:
         return cls(
             _client=client,
             _recipient_type=recipient_type,

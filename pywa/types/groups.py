@@ -23,7 +23,7 @@ from .user import BaseUser
 if TYPE_CHECKING:
     from pywa import WhatsApp
 
-_T = TypeVar("_T")
+_GroupDetailsType = TypeVar("_GroupDetailsType", bound="GroupDetails")
 
 
 class GroupJoinApprovalMode(helpers.StrEnum):
@@ -70,7 +70,9 @@ class GroupDetails(helpers.APIObject):
     join_approval_mode: GroupJoinApprovalMode
 
     @classmethod
-    def from_dict(cls: type[_T], data: dict, client: WhatsApp) -> _T:
+    def from_dict(
+        cls: type[_GroupDetailsType], data: dict, client: WhatsApp
+    ) -> _GroupDetailsType:
         return cls(
             _client=client,
             id=data["id"],

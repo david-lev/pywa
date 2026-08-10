@@ -4182,6 +4182,9 @@ def _validate_params(
         raise ValueError("; ".join(errors))
 
 
+_TemplateDetailsType = TypeVar("_TemplateDetailsType", bound="TemplateDetails")
+
+
 @dataclasses.dataclass(kw_only=True, slots=True, frozen=True)
 class TemplateDetails(helpers.APIObject, _BaseTemplateActions):
     """
@@ -4224,7 +4227,9 @@ class TemplateDetails(helpers.APIObject, _BaseTemplateActions):
     degrees_of_freedom_spec: DegreesOfFreedomSpec | None
 
     @classmethod
-    def from_dict(cls: type[_T], data: dict, client: WhatsApp) -> _T:
+    def from_dict(
+        cls: type[_TemplateDetailsType], data: dict, client: WhatsApp
+    ) -> _TemplateDetailsType:
         return cls(
             _client=client,
             id=data["id"],
@@ -4724,6 +4729,9 @@ class _CreatedAndUpdatedTemplateActions:
         )
 
 
+_CreatedTemplateType = TypeVar("_CreatedTemplateType", bound="CreatedTemplate")
+
+
 @dataclasses.dataclass(frozen=True, slots=True)
 class CreatedTemplate(_CreatedAndUpdatedTemplateActions):
     """
@@ -4738,7 +4746,9 @@ class CreatedTemplate(_CreatedAndUpdatedTemplateActions):
     status: TemplateStatus
 
     @classmethod
-    def from_dict(cls: type[_T], data: dict, client: WhatsApp) -> _T:
+    def from_dict(
+        cls: type[_CreatedTemplateType], data: dict, client: WhatsApp
+    ) -> _CreatedTemplateType:
         """
         Create a CreatedTemplate instance from a dictionary.
 
@@ -4757,6 +4767,9 @@ class CreatedTemplate(_CreatedAndUpdatedTemplateActions):
         )
 
 
+_UpdatedTemplateType = TypeVar("_UpdatedTemplateType", bound="UpdatedTemplate")
+
+
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class UpdatedTemplate(_CreatedAndUpdatedTemplateActions):
     """
@@ -4773,7 +4786,9 @@ class UpdatedTemplate(_CreatedAndUpdatedTemplateActions):
     success: bool
 
     @classmethod
-    def from_dict(cls: type[_T], data: dict, client: WhatsApp) -> _T:
+    def from_dict(
+        cls: type[_UpdatedTemplateType], data: dict, client: WhatsApp
+    ) -> _UpdatedTemplateType:
         return cls(
             _client=client,
             success=data["success"],
@@ -4789,6 +4804,9 @@ class UpdatedTemplate(_CreatedAndUpdatedTemplateActions):
         return self.success
 
 
+_CreatedTemplatesType = TypeVar("_CreatedTemplatesType", bound="CreatedTemplates")
+
+
 @dataclasses.dataclass(frozen=True, slots=True)
 class CreatedTemplates(Sequence[CreatedTemplate]):
     """
@@ -4801,7 +4819,9 @@ class CreatedTemplates(Sequence[CreatedTemplate]):
     templates: tuple[CreatedTemplate, ...]
 
     @classmethod
-    def from_dict(cls: type[_T], data: dict, client: WhatsApp) -> _T:
+    def from_dict(
+        cls: type[_CreatedTemplatesType], data: dict, client: WhatsApp
+    ) -> _CreatedTemplatesType:
         """
         Create a CreatedTemplates instance from a dictionary.
 
