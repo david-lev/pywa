@@ -1,23 +1,16 @@
 [build-system]
-requires = ["setuptools>=68.0.0"]
-build-backend = "setuptools.build_meta"
+requires = ["uv_build>=0.12.3,<0.13"]
+build-backend = "uv_build"
 
-[tool.setuptools.dynamic]
-version = { attr = "pywa.__version__" }
-readme = { file = "README.md", content-type = "text/markdown" }
-
-[tool.setuptools.packages.find]
-include = ["pywa*"]
-exclude = ["tests*", "docs*"]
-
-[tool.setuptools.package-data]
-pywa = ["py.typed"]
-pywa_async = ["py.typed"]
+[tool.uv.build-backend]
+module-name = ["pywa", "pywa_async"]
+module-root = ""
 
 [project]
 name = "pywa"
+version = "4.3.1"
 description = "🚀 Build WhatsApp Bots in Python • Fast, Effortless, Powerful"
-dynamic = ["version", "readme"]
+readme = "README.md"
 license = "MIT"
 license-files = [
     "LICENSE",
@@ -93,6 +86,7 @@ dev = [
     "flask[async]",
     "ngrok~=1.0",
     "uvicorn[standard]>=0.25.0",
+    "tomli>=2.0; python_version<'3.11'",
 ]
 docs = [
     "sphinx-book-theme~=1.1",

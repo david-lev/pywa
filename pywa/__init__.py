@@ -6,9 +6,11 @@
 - 📦 `PyPI <https://pypi.org/project/pywa>`_
 """
 
+import importlib.metadata
+
 from pywa.client import WhatsApp
 from pywa.utils import Version
 
-__version__ = "4.3.1"
+__version__ = importlib.metadata.version("pywa")
 __author__ = "David Lev"
 __license__ = "MIT"

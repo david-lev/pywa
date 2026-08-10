@@ -1485,6 +1485,7 @@ wheels = [
 
 [[package]]
 name = "pywa"
+version = "4.3.1"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
@@ -1519,6 +1520,7 @@ dev = [
     { name = "pytest-mock" },
     { name = "python-dotenv" },
     { name = "ruff" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
     { name = "ty" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -1558,6 +1560,7 @@ dev = [
     { name = "pytest-mock", specifier = "~=3.15" },
     { name = "python-dotenv", specifier = "~=1.0" },
     { name = "ruff", specifier = "~=0.14" },
+    { name = "tomli", marker = "python_full_version < '3.11'", specifier = ">=2.0" },
     { name = "ty", specifier = ">=0.0.65" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.25.0" },
 ]
