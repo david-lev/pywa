@@ -13,6 +13,7 @@ body:
       label: Short summary
       description: One-line summary of the bug
       placeholder: e.g. Sending a message fails with 500
+    validations:
       required: true
   - type: textarea
     id: steps
@@ -20,6 +21,7 @@ body:
       label: Steps to reproduce
       description: Provide step-by-step instructions to reproduce the bug
       placeholder: 1) ...\n2) ...\n3) ...
+    validations:
       required: true
   - type: textarea
     id: expected
