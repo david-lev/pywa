@@ -1078,7 +1078,7 @@ class BusinessPhoneNumber(helpers.APIObject):
         is_official_business_account: Indicates if phone number is associated with an Official Business Account.
         is_pin_enabled: Returns True if a pin for two-step verification is enabled.
         is_preverified_number: Returns true if the phone number was pre-verified
-        messaging_limit_tier: Current messaging limit tier.
+        whatsapp_business_manager_messaging_limit: Current messaging limit tier.
         search_visibility: The availability of the phone_number in the WhatsApp Business search.
         platform_type: Platform the business phone number is registered with. Values can be CLOUD_API, ON_PREMISE, or NOT_APPLICABLE.
          If NOT_APPLICABLE, the number is not registered with Cloud API or On-Premises API.
@@ -1109,7 +1109,6 @@ class BusinessPhoneNumber(helpers.APIObject):
     is_official_business_account: bool
     is_pin_enabled: bool
     is_preverified_number: bool
-    messaging_limit_tier: str | None
     search_visibility: str | None
     platform_type: str | None
     throughput: dict[str, str] | None
@@ -1121,6 +1120,7 @@ class BusinessPhoneNumber(helpers.APIObject):
     # username: str | None
     country_code: str | None
     country_dial_code: str | None
+    whatsapp_business_manager_messaging_limit: str | None
 
     @classmethod
     def from_dict(cls, data: dict):
@@ -1147,7 +1147,9 @@ class BusinessPhoneNumber(helpers.APIObject):
             ),
             is_pin_enabled=data.get("is_pin_enabled", False),
             is_preverified_number=data.get("is_preverified_number", False),
-            messaging_limit_tier=data.get("messaging_limit_tier"),
+            whatsapp_business_manager_messaging_limit=data.get(
+                "whatsapp_business_manager_messaging_limit"
+            ),
             search_visibility=data.get("search_visibility"),
             platform_type=data.get("platform_type"),
             throughput=data.get("throughput"),
@@ -1171,6 +1173,17 @@ class BusinessPhoneNumber(helpers.APIObject):
         # TODO revert when username feature is available? https://github.com/david-lev/pywa/issues/214
         warnings.warn(
             "BusinessPhoneNumber.username is empty for now. to get your username use `wa.get_current_username()` instead.",
+            PywaDeprecationWarning,
+            stacklevel=2,
+        )
+
+    @property
+    def messaging_limit_tier(self) -> None:
+        """
+        This property is deprecated and will always return None.
+        """
+        warnings.warn(
+            "BusinessPhoneNumber.messaging_limit_tier is deprecated, use BusinessPhoneNumber.whatsapp_business_manager_messaging_limit instead",
             PywaDeprecationWarning,
             stacklevel=2,
         )
