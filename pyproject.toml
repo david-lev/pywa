@@ -80,7 +80,7 @@ dev = [
     "ruff~=0.16",
     "ty>=0.0.65",
     "pre-commit~=4.5",
-    "cryptography>=46,<47",
+    "cryptography>=46,<51",
     "python-dotenv~=1.0",
     "fastapi>=0.115,<1.0",
     "flask[async]",
