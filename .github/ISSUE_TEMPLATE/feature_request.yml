@@ -11,15 +11,13 @@ body:
     id: summary
     attributes:
       label: Short summary
-      validations:
-        required: true
+      required: true
   - type: textarea
     id: problem
     attributes:
       label: Problem to solve
       description: Describe the problem or pain point this feature would address
-      validations:
-        required: true
+      required: true
   - type: textarea
     id: solution
     attributes:
