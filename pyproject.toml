@@ -122,7 +122,8 @@ ignore = [
 extend-select = ["T20", "E711", "E712", "E731", "E741"]
 
 [tool.ruff.lint.per-file-ignores]
-"pywa*/types/__init__.py" = ["I001"]
+"pywa/types/__init__.py" = ["I001"]
+"pywa_async/types/__init__.py" = ["I001"]
 "pywa/cli.py" = ["T201"]
 "tests/test_flows.py" = ["E712"]
 "tests/smoke_test.py" = ["T201"]
