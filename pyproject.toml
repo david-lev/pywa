@@ -8,7 +8,7 @@ module-root = ""
 
 [project]
 name = "pywa"
-version = "4.3.1"
+version = "4.4.0"
 description = "🚀 Build WhatsApp Bots in Python • Fast, Effortless, Powerful"
 readme = "README.md"
 license = "MIT"

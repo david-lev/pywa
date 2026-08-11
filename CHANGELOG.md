@@ -3,7 +3,20 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
-#### 4.3.1 (2026-08-17) **Latest**
+
+#### 4.4.0 (2026-11-08) **Latest**
+
+- [server] enhance logging infrastructure with update hash and context binding
+- [cli] add commands to list and download official example bots from GitHub
+- [cli] add `--access-log` option to command line arguments for production and development
+- [flows] expose `Condition` and `MathExpression` tp allow `repr(FlowJSON)` to be copy-paste
+- [flows] adding `flow_token_signature` to `FlowRequest`
+- [helpers] allowing to disable `GeneratorStreamer` usage with the `USE_FAKE_GEN_STREAM` flag when uploading media from url
+- [helpers] cache the flow private key instead of parsing it per request
+- [project] adding `ty` for type checking and linting
+- [project] update dependency management to use `uv` for installation and syncing
+
+#### 4.3.1 (2026-17-07)
 
 - [callback] treat missing message context as no `reply_to_message`
 - [types] deprecate `caller` and `callee` properties as part of BSUID changes
